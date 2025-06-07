@@ -10,33 +10,6 @@
 
 namespace query::detail {
 
-	void QueryGraph::setEntry(NodeID node, NodeID from) {
-		query_stack_size++;
-
-		if (node_data.contains(node)) {
-			if (node_data.at(node).color == Color::Visiting) {
-				// Detect and print the cycle
-				std::cerr << "Cycle detected in dependency graph: \n";
-				NodeID              current = from;
-				std::vector<NodeID> cycle;
-
-				cycle.push_back(node);
-				while (current != node && node_data.contains(current)) {
-					cycle.push_back(current);
-					current = node_data.at(current).parent;
-				}
-				cycle.push_back(node);
-
-				debugPrintNodes(cycle, std::cerr);
-
-				throw base::NotYetImplemented("Query Cycle!");
-			}
-		}
-		node_data.insert_or_assign(
-			node, NodeData{ .color = Color::Visiting, .dependencies = {}, .parent = from }
-		);
-	}
-
 	QueryGraph::DependencyStatus QueryGraph::addDependency(NodeID from, NodeID to) {
 		CORE_ASSERT(
 			node_deps.contains(from), "Node not found in dep graph, call the given query first."
@@ -87,7 +60,7 @@ namespace query::detail {
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
 		std::vector<NodeID> all_nodes;
-		for (const auto& [k, _]: node_data) all_nodes.push_back(k);
+		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
 		debugPrintNodes(all_nodes, out);
 	}
 
@@ -97,23 +70,23 @@ namespace query::detail {
 
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
-		for (auto& [k, v]: node_data) index[k] = id++;
-		for (auto& [k, v]: node_data)
-			for (auto& dep: v.dependencies) out << index[k] << " " << index[dep] << "\n";
+		for (auto& [k, v]: node_deps) index[k] = id++;
+		for (auto& [k, v]: node_deps)
+			for (auto& dep: v) out << index[k] << " " << index[dep] << "\n";
 	}
 
 	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
 		std::string spacing(25, ' ');
 		for (const auto& n: nodes) {
-			const auto& node_data_entry = node_data.at(n);
+			const auto& node_data_entry = node_deps.at(n);
 			out << "    > Query - " << std::setw(5) << std::left;
 			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
 			out << " Key " << n.hash.val << " :=>\n";
-			for (const auto& dep: node_data_entry.dependencies) {
+			for (const auto& dep: node_data_entry) {
 				out << spacing << "(Q: \"" << dep.q_id.getData().name << "\", "
 					<< "K: " << dep.hash.val << "),\n";
 			}
-			if (!node_data_entry.dependencies.empty()) out << '\n';
+			if (!node_data_entry.empty()) out << '\n';
 		}
 	}
 }

@@ -13,14 +13,6 @@ namespace query::detail {
 
 	class QueryGraph {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
-
-		/**
-		 * @brief Helper function to print nodes and their dependencies.
-		 * @param nodes Vector of NodeIDs to print.
-		 * @param out Output stream to print to.
-		 */
-		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
-
 		/*
 		 * for direct acces to node_deps
 		 */
