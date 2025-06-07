@@ -12,8 +12,6 @@ namespace query::detail {
 
 	class QueryState;
 
-	class QueryState;
-
 	class QueryGraph {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 
@@ -81,14 +79,14 @@ namespace query::detail {
 		 * @brief Serializes the QueryGraph into a vector of bytes.
 		 * @return A vector of bytes representing the serialized QueryGraph.
 		 */
-		[[nodiscard]] std::vector<uint8_t> serialize() const;
+		[[nodiscard]] std::vector<u8> serialize() const;
 
 		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.
 		 * @param data The vector of bytes to deserialize from.
 		 * @return A deserialized QueryGraph object.
 		 */
-		static QueryGraph deserialize(const std::vector<uint8_t>& data);
+		static QueryGraph deserialize(const std::vector<u8>& data);
 
 		~QueryGraph() = default;
 	};
