@@ -56,7 +56,7 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 		}
 	};
 
-	inline static std::map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache{};
+	inline static std::map<UKHash, query::CacheEntry<QResult>> cache{};
 
 	// static auto provide(Context& context, QKey key) -> PResult;
 
@@ -67,14 +67,14 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 		return SquareValue(context, key);
 	}
 
-	static auto load(query::QueryUnstableHash key) -> LoadResult {
+	static auto load(UKHash key) -> LoadResult {
 		if (cache.contains(key))
 			return cache.at(key);
 		else
 			return {};
 	}
 
-	static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
+	static auto store(UKHash key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
@@ -87,20 +87,20 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query1);
  ************/
 
 struct IMPLEMENT_QUERY(Query2, uint64_t) {
-	inline static std::map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache;
+	inline static std::map<UKHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<Query1>(key + 1);
 	}
 
-	static auto load(query::QueryUnstableHash key) -> LoadResult {
+	static auto load(UKHash key) -> LoadResult {
 		if (cache.contains(key))
 			return cache.at(key);
 		else
 			return {};
 	}
 
-	static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
+	static auto store(UKHash key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
@@ -113,20 +113,20 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
  *****************/
 
 struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
-	inline static std::map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache;
+	inline static std::map<UKHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<CyclicQuery>((key + 1) % 5);
 	}
 
-	static auto load(query::QueryUnstableHash key) -> LoadResult {
+	static auto load(UKHash key) -> LoadResult {
 		if (cache.contains(key))
 			return cache.at(key);
 		else
 			return {};
 	}
 
-	static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
+	static auto store(UKHash key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}

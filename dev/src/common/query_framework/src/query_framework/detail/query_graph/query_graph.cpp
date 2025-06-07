@@ -59,19 +59,9 @@ namespace query::detail {
 
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
-		std::string spacing(25, ' ');
-		for (auto& [k, v]: node_deps) {
-			out << "    ";
-			out << "> Query - " << std::setw(5) << std::left;
-			out << k.q_id.asInt() << std::setw(30) << std::left << "\"" << k.q_id.getData().name
-				<< "\"";
-			out << " Key " << k.hash.val << " :=>\n";
-			for (auto& dep: v) {
-				out << spacing << "(Q: " << "\"" << dep.q_id.getData().name << "\", "
-					<< "K: " << dep.hash.val << "),\n";
-			}
-			if (!v.empty()) out << '\n';
-		}
+		std::vector<NodeID> all_nodes;
+		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
+		debugPrintNodes(all_nodes, out);
 	}
 
 	void QueryGraph::debugPrintForDrawing(std::ostream& out) const {
@@ -85,4 +75,18 @@ namespace query::detail {
 			for (auto& dep: v) out << index[k] << " " << index[dep] << "\n";
 	}
 
+	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
+		std::string spacing(25, ' ');
+		for (const auto& n: nodes) {
+			const auto& node_data_entry = node_deps.at(n);
+			out << "    > Query - " << std::setw(5) << std::left;
+			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
+			out << " Key " << n.hash.val << " :=>\n";
+			for (const auto& dep: node_data_entry) {
+				out << spacing << "(Q: \"" << dep.q_id.getData().name << "\", "
+					<< "K: " << dep.hash.val << "),\n";
+			}
+			if (!node_data_entry.empty()) out << '\n';
+		}
+	}
 }
