@@ -25,6 +25,7 @@ namespace query::detail {
 		 * for direct acces to node_deps
 		 */
 		friend class QueryState;
+
 	public:
 		QueryGraph()                             = default;
 		QueryGraph(const QueryGraph&)            = delete;
