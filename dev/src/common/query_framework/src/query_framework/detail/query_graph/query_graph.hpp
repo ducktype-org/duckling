@@ -9,40 +9,22 @@
 
 namespace query::detail {
 
+	class QueryState;
+
 	class QueryGraph {
-		/**
-		 * @brief Color of a node in the graph that is used for cycle detection.
-		 */
-		enum class Color {
-			Visiting,
-			Done,
-		};
+		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 
 		/**
-		 * @brief Data structure that holds information about a node in the graph.
+		 * @brief Helper function to print nodes and their dependencies.
+		 * @param nodes Vector of NodeIDs to print.
+		 * @param out Output stream to print to.
 		 */
-		struct NodeData final {
-			Color               color;
-			std::vector<NodeID> dependencies;
+		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
-			/**
-			 * @brief NodeID of last node "calling" this query.
-			 * Should only hold value when color==Visiting.
-			 * Used for cycle recovery.
-			 */
-			NodeID parent;
-		};
-
-		/**
-		 * Amount of actively calculating queries.
+		/*
+		 * for direct acces to node_deps
 		 */
-		u64 query_stack_size = 0;
-
-		/**
-		 * The actual data of the graph.
-		 */
-		base::HashMap<NodeID, NodeData> node_data;
-
+		friend class QueryState;
 
 	public:
 		QueryGraph()                             = default;
@@ -54,28 +36,10 @@ namespace query::detail {
 		enum class DependencyStatus { OK, Cycle };
 
 		/**
-		 * @brief Marks beginning of new query calculation.
-		 * The graph will add a node to a graph or update its data if it already exists.
-		 * @note @p called_by is used only for cycle recovery, addDependency has to be always called
-		 * explicitly.
-		 */
-		void setEntry(detail::NodeID node, detail::NodeID called_by);
-
-		/**
-		 * @brief Marks exit of a query calculation.
-		 */
-		void setExit(detail::NodeID node);
-
-		/**
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
 		 */
 		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
-
-		[[nodiscard]]
-		u64 queryStackSize() const {
-			return query_stack_size;
-		}
 
 		/**
 		 * Returns all dependencies of a @p node_id.

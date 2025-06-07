@@ -1,9 +1,11 @@
 #include "context.hpp"
 
+#include "detail/query_graph/query_state.hpp"
+
 namespace query {
 	dia::Logger Context::logger{};
 
-	detail::QueryGraph Context::main_query_graph{};
+	detail::QueryState Context::main_query_state{};
 
 	void Context::log(Box<dia::Message> message) {
 		assertActive();
