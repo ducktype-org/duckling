@@ -9,6 +9,8 @@
 
 namespace query::detail {
 
+	class QueryState;
+
 	class QueryGraph {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 
@@ -19,6 +21,10 @@ namespace query::detail {
 		 */
 		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
+		/*
+		 * for direct acces to node_deps
+		 */
+		friend class QueryState;
 	public:
 		QueryGraph()                             = default;
 		QueryGraph(const QueryGraph&)            = delete;
@@ -27,15 +33,6 @@ namespace query::detail {
 		QueryGraph& operator=(QueryGraph&&)      = delete;
 
 		enum class DependencyStatus { OK, Cycle };
-
-		/*
-		 * @brief Adds a node to the graph.
-		 * @param node_id The ID of the node to add.
-		 * @note This function should be called only from query_state
-		*/
-		void addNode(detail::NodeID node_id) {
-			node_deps.insert_or_assign(node_id, std::vector<NodeID>{});
-		}
 
 		/**
 		 * @brief Marks that given query depends on another query.
