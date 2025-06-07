@@ -14,7 +14,8 @@ namespace term_ui {
             }
         }
 
-        void print(std::ostream& out) const {
+        void print(std::ostream& out, bool use_color) const {
+            USE_COLOR = use_color;
             for (auto &diag : diags) {
                 diag.print(out);
                 out << std::string(TERM_UI_SEPARATOR_WIDTH, '-') << std::endl;

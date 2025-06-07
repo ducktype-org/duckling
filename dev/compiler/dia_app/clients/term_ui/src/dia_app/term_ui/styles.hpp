@@ -5,6 +5,8 @@
 
 namespace term_ui {
 
+    extern bool USE_COLOR;
+
     inline void reset_styles(std::ostream& out) {
         out << rang::fg::reset << rang::style::reset;
     }
@@ -17,7 +19,7 @@ namespace term_ui {
         Docs
     };
 
-    StyleType style_type_of(view::InfoType type) {
+    inline StyleType style_type_of(view::InfoType type) {
         switch (type) {
             case view::InfoType::Error: return StyleType::Error;
             case view::InfoType::Warning: return StyleType::Warning;
@@ -46,7 +48,10 @@ namespace term_ui {
             lowering_char(lowering_char), lowering_attach_char(lowering_attach_char) {}
         
         void prepare(std::ostream& out) const {
-            out << color << style;
+            if (USE_COLOR) {
+                out << color;
+            }
+            out << style;
         }
 
         void printWith(const std::string &text, std::ostream& out) const {
@@ -75,70 +80,13 @@ namespace term_ui {
         }
     };
 
-    const Style ERROR_STYLE(
-        "error",
-        "E",
-        true,
-        rang::fg::red,
-        rang::style::bold,
-        rang::style::bold,
-        '^',
-        '|',
-        'Y'
-    );
-    const Style WARNING_STYLE(
-        "warning",
-        "W",
-        true,
-        rang::fg::yellow,
-        rang::style::bold,
-        rang::style::bold,
-        '^',
-        '|',
-        'Y'
-    );
-    const Style NOTE_STYLE(
-        "note",
-        "N",
-        false,
-        rang::fg::blue,
-        rang::style::bold,
-        rang::style::reset,
-        '~',
-        '|',
-        'v'
-    );
-    const Style HINT_STYLE(
-        "hint",
-        "H",
-        false,
-        rang::fg::green,
-        rang::style::bold,
-        rang::style::reset,
-        '+',
-        '|',
-        '+'
-    );
-    const Style DOCS_STYLE(
-        "docs",
-        "D",
-        false,
-        rang::fg::cyan,
-        rang::style::bold,
-        rang::style::reset,
-        '~',
-        '|',
-        '?'
-    );
+    extern const Style ERROR_STYLE;
+    extern const Style WARNING_STYLE;
+    extern const Style NOTE_STYLE;
+    extern const Style HINT_STYLE;
+    extern const Style DOCS_STYLE;
 
-    const Style LINE_START_STYLE(
-        "",
-        "",
-        false,
-        rang::fg::reset,
-        rang::style::bold,
-        rang::style::reset
-    );
+    extern const Style LINE_START_STYLE;
 
     inline Style get_style(StyleType type) {
         switch(type) {

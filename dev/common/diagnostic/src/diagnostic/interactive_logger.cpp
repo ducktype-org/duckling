@@ -12,7 +12,8 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 
 	// Format and print the static message to the terminal.
 	term_ui::View term_msg(*vm_data);
-	term_msg.print(std::cerr);
+	bool use_color = true;
+	term_msg.print(std::cerr, use_color);
 	delete vm_data;
 	
 	if (dump_static) {

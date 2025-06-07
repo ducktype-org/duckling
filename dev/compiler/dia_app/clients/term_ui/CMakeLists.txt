@@ -12,6 +12,7 @@ add_executable(term_ui
     src/dia_app/term_ui/line.hpp
     src/dia_app/term_ui/main.cpp
     src/dia_app/term_ui/styles.hpp
+    src/dia_app/term_ui/styles.cpp
     src/dia_app/term_ui/view.hpp
 )
 target_link_libraries(term_ui PUBLIC JSON rang VIEW_MANAGER)
@@ -27,6 +28,7 @@ add_library(TERM_UI
     src/dia_app/term_ui/info.hpp
     src/dia_app/term_ui/line.hpp
     src/dia_app/term_ui/styles.hpp
+    src/dia_app/term_ui/styles.cpp
     src/dia_app/term_ui/view.hpp
 )
 
