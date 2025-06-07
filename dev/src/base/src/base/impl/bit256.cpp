@@ -11,9 +11,7 @@ namespace base {
 				ret += std::string_view("0123456789abcdef").at(((d >> (60 - i * 4)) & 0xF));
 		return ret;
 	}
-}
 
-namespace std {
 	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256) {
 		std::string ret;
 		ret += '{';

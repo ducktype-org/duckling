@@ -46,6 +46,11 @@ namespace base {
 		}
 
 		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
+
+		/**
+		 * @brief Outputs the Bit256 object to a stream in the format {a, b, c, d}.
+		 */
+		friend std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256);
 	};
 }
 
@@ -59,6 +64,4 @@ namespace std {
 			return hash;
 		}
 	};
-
-	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256);
 }

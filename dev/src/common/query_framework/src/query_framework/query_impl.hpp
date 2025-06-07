@@ -95,6 +95,7 @@ namespace query::detail {
 		using PResult     = PResult_tp;
 		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
+		using UKHash = query::UKHash<QKey>;
 
 		using Context = ::query::Context;
 

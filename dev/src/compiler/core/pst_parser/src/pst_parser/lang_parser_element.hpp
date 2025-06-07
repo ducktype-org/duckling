@@ -8,7 +8,6 @@
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
 
-#include <base/bit256.hpp>
 #include <base/box.hpp>
 #include <base/ref.hpp>
 

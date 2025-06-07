@@ -6,14 +6,14 @@
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_COPY                                                                      \
-	static inline base::HashMap<query::UKHash<QueryType::QKey>, query::CacheEntry<PResult>> cache; \
-	static auto load(query::UKHash<QueryType::QKey> key_hash) -> LoadResult {                      \
+	static inline base::HashMap<UKHash, query::CacheEntry<PResult>> cache; \
+	static auto load(UKHash key_hash) -> LoadResult {                      \
 		if (const auto& value = cache.atMaybe(key_hash)) {                                         \
 			return QResWithACD{ value->data, value->acd };                                         \
 		}                                                                                          \
 		return {};                                                                                 \
 	}                                                                                              \
-	static auto store(query::UKHash<QueryType::QKey> key_hash, PResult res, query::ACD acd)        \
+	static auto store(UKHash key_hash, PResult res, query::ACD acd)        \
 		-> QResult {                                                                               \
 		cache.put(key_hash, { std::move(res), acd });                                              \
 		return cache.at(key_hash).data;                                                            \
@@ -35,14 +35,14 @@
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                                 \
-	static inline base::HashMap<query::UKHash<QueryType::QKey>, query::CacheEntry<PResult>> cache; \
-	static auto load(query::UKHash<QueryType::QKey> key_hash) -> LoadResult {                      \
+	static inline base::HashMap<UKHash, query::CacheEntry<PResult>> cache; \
+	static auto load(UKHash key_hash) -> LoadResult {                      \
 		if (const auto& value = cache.atMaybe(key_hash)) {                                         \
 			return QResWithACD{ value->data, value->acd };                                         \
 		}                                                                                          \
 		return {};                                                                                 \
 	}                                                                                              \
-	static auto store(query::UKHash<QueryType::QKey> key_hash, PResult res, query::ACD acd)        \
+	static auto store(UKHash key_hash, PResult res, query::ACD acd)        \
 		-> QResult {                                                                               \
 		cache.put(key_hash, { std::move(res), acd });                                              \
 		return cache.at(key_hash).data;                                                            \
@@ -61,15 +61,15 @@
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_REF                                                                      \
-	static inline base::StableHashMap<query::UKHash<QueryType::QKey>, query::CacheEntry<PResult>> \
+	static inline base::StableHashMap<UKHash, query::CacheEntry<PResult>> \
 				cache;                                                                            \
-	static auto load(query::UKHash<QueryType::QKey> key_hash) -> LoadResult {                     \
+	static auto load(UKHash key_hash) -> LoadResult {                     \
 		if (auto value = cache.atMaybe(key_hash)) {                                               \
 			return QResWithACD{ CRef<PResult>(&value->data), value->acd };                        \
 		}                                                                                         \
 		return {};                                                                                \
 	}                                                                                             \
-	static auto store(query::UKHash<QueryType::QKey> key_hash, PResult res, query::ACD acd)       \
+	static auto store(UKHash key_hash, PResult res, query::ACD acd)       \
 		-> QResult {                                                                              \
 		cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });                   \
 		return CRef<PResult>(&cache[key_hash].data);                                              \
@@ -85,8 +85,8 @@
  * is expected to be faster than trying to look it up in a cache.
  */
 #define QUERY_AUTO_NO_CACHE                                                                        \
-	static auto store(query::UKHash<QueryType::QKey>, PResult res, const query::ACD&) -> QResult { \
+	static auto store(UKHash, PResult res, const query::ACD&) -> QResult { \
 		return QResult{ std::move(res) }; /* NOLINT(clang-diagnostic-redundant-move) */            \
 	}                                                                                              \
                                                                                                    \
-	static auto load(query::UKHash<QueryType::QKey>) -> LoadResult { return {}; }
+	static auto load(UKHash) -> LoadResult { return {}; }
