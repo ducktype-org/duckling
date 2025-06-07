@@ -359,7 +359,7 @@ private:
 	}
 
 	void testDeps() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
 			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
@@ -395,7 +395,7 @@ private:
 	}
 
 	void testSideInput() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
@@ -474,7 +474,7 @@ private:
 	}
 
 	void debugPrintTest() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 		// just check if it compiles and don't throw
 		std::stringstream s;
 		graph.debugPrintForDrawing(s);

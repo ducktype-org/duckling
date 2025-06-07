@@ -38,22 +38,18 @@ namespace query::detail {
 	}
 
 	QueryGraph::DependencyStatus QueryGraph::addDependency(NodeID from, NodeID to) {
-		node_data.at(from).dependencies.emplace_back(to);
+		CORE_ASSERT(
+			node_deps.contains(from), "Node not found in dep graph, call the given query first."
+		);
+		node_deps.at(from).emplace_back(to);
 
 		// @TODO: see if cycle was created inside dep and propagate as if I was cyclic
 		return DependencyStatus::OK;
 	}
 
-	void QueryGraph::setExit(NodeID node) {
-		CORE_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
-		query_stack_size--;
-
-		node_data.at(node).color = Color::Done;
-	}
-
 	std::vector<NodeID> QueryGraph::getNodeDeps(detail::NodeID node_id) const {
 		CORE_ASSERT(
-			node_data.contains(node_id), "Node not found in dep graph, call the given query first."
+			node_deps.contains(node_id), "Node not found in dep graph, call the given query first."
 		);
 
 		// some simple bfs for now:
@@ -68,8 +64,8 @@ namespace query::detail {
 			if (visited.contains(visited_node_id)) continue;
 			visited.insert(visited_node_id);
 
-			const auto& node = node_data.at(visited_node_id);
-			for (auto& dep: node.dependencies)
+			const auto& node = node_deps.at(visited_node_id);
+			for (auto& dep: node)
 				if (!visited.contains(dep)) queue.push(dep);
 		}
 
@@ -97,7 +93,7 @@ namespace query::detail {
 
 	void QueryGraph::debugPrintForDrawing(std::ostream& out) const {
 		out << "Dep Graph: \n";
-		out << node_data.size() << "\n";
+		out << node_deps.size() << "\n";
 
 		std::map<NodeID, u64> index;
 		u64                   id = 0;

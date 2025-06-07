@@ -1,6 +1,7 @@
 add_library(QueryFramework
 	src/query_framework/detail/utils/logs.cpp
 	src/query_framework/detail/query_graph/query_graph.cpp
+	src/query_framework/detail/query_graph/query_state.cpp
 	src/query_framework/detail/query_data/query_id.cpp
 	src/query_framework/utils/with_context_do.cpp
 	src/query_framework/context.cpp

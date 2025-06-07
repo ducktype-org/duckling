@@ -89,7 +89,7 @@ namespace compiler::helios {
 
 	std::vector<SymID> getAllHeliosSymbols() {
 		CORE_ASSERT(
-			query::Context::getGraph().queryStackSize() == 0,
+			query::Context::getState().queryStackSize() == 0,
 			"getAllHeliosSymbols called from within query!"
 		);
 		std::vector<SymID> output;

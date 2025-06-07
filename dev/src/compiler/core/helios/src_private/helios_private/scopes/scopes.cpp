@@ -64,7 +64,7 @@ namespace compiler::helios {
 
 	std::vector<ScopeID> getAllHeliosScopes() {
 		CORE_ASSERT(
-			query::Context::getGraph().queryStackSize() == 0,
+			query::Context::getState().queryStackSize() == 0,
 			"getAllHeliosScopes called from within query!"
 		);
 		std::vector<ScopeID> out;

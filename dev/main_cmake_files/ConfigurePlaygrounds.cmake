@@ -1,4 +1,5 @@
-# Common functions:
+option(BUILD_GRAPHVIZ_PLAYGROUNDS "Build playgrounds requiring Graphviz" ${GRAPHVIZ_LIBRARIES_FOUND})
+
 add_custom_target(build_all_playgrounds)
 
 function(duck_add_playground playground_base_name playground_user_source USES)
@@ -7,14 +8,26 @@ function(duck_add_playground playground_base_name playground_user_source USES)
 		set(playground_source ${playground_base_name}_playground.cpp)
 
 		if(${playground_source} STREQUAL ${playground_user_source})
-			add_executable(${playground_name} ${CMAKE_CURRENT_LIST_DIR}/${playground_name}.cpp)
-			target_link_libraries(${playground_name} ${ARGN})
-			set_target_properties(${playground_name} PROPERTIES
-				RUNTIME_OUTPUT_DIRECTORY ${PLAYGROUND_OUTPUT_DIRECTORY}
-			)
+			set(skip_playground FALSE)
+			if(NOT BUILD_GRAPHVIZ_PLAYGROUNDS)
+				foreach(dep IN LISTS ARGN)
+					if(dep STREQUAL "System::gvc" OR dep STREQUAL "System::cgraph" OR dep STREQUAL "System::cdt")
+						set(skip_playground TRUE)
+					endif()
+				endforeach()
+			endif()
+			if(skip_playground)
+				message(NOTICE "Skipping playground ${playground_name} because BUILD_GRAPHVIZ_PLAYGROUNDS is OFF and it depends on Graphviz libraries")
+			else()
+				add_executable(${playground_name} ${CMAKE_CURRENT_LIST_DIR}/${playground_name}.cpp)
+				target_link_libraries(${playground_name} ${ARGN})
+				set_target_properties(${playground_name} PROPERTIES
+					RUNTIME_OUTPUT_DIRECTORY ${PLAYGROUND_OUTPUT_DIRECTORY}
+				)
 
-			set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
-			add_dependencies(build_all_playgrounds ${playground_name})
+				set_target_properties(${playground_name} PROPERTIES EXCLUDE_FROM_ALL true)
+				add_dependencies(build_all_playgrounds ${playground_name})
+			endif()
 		else()
 			message(FATAL_ERROR "Playground `${playground_base_name}` source file should be `${playground_source}` but is `${playground_user_source}`")
 		endif()
