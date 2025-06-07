@@ -37,7 +37,7 @@ namespace base {
 		[[nodiscard]] std::string toStringHex() const;
 
 		constexpr bool operator<(const Bit256& other) const noexcept {
-			for (size_t i = 4;
+			for (usize i = 4;
 			     i-- > 0;) {  // Iterate from the most significant to the least significant
 				if (data.at(i) < other.data.at(i)) return true;
 				if (data.at(i) > other.data.at(i)) return false;
