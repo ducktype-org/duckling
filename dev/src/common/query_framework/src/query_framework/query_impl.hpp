@@ -95,15 +95,18 @@ namespace query::detail {
 		using PResult     = PResult_tp;
 		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
-		using UKHash      = query::UKHash<QKey>;
+		/**
+		 * Unstable key hash type
+		 */
+		using UKHash = query::UKHash<QKey>;
 
 		using Context = ::query::Context;
 
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(u64 | Bit256 key_hash) -> LoadResult;
-		 *  static auto store(u64 | Bit256 key_hash, PResult res, query::ACD acd) ->
+		 *  static auto load(UKHash key_hash) -> LoadResult;
+		 *  static auto store(UKHash key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
 		 */
 		static constexpr bool CACHE_ON_DISK = false;

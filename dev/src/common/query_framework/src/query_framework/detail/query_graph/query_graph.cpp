@@ -99,6 +99,9 @@ namespace query::detail {
 		std::vector<NodeID> all_nodes;
 		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
 		debugPrintNodes(all_nodes, out);
+		std::vector<NodeID> all_nodes;
+		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
+		debugPrintNodes(all_nodes, out);
 	}
 
 	void QueryGraph::debugPrintForDrawing(std::ostream& out) const {
