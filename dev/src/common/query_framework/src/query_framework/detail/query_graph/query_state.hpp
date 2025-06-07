@@ -17,11 +17,7 @@ namespace query::detail {
 		};
 
 		/**
-<<<<<<< HEAD
-		 * @brief Data structure that holds information about a node in the graph.
-=======
 		 * @brief Data structure that holds (non-graph) information about a node in the graph.
->>>>>>> make-unstable-hash-64-or-256
 		 */
 		struct NodeData final {
 			Color color;

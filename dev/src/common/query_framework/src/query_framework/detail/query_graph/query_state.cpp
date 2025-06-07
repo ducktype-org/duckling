@@ -8,11 +8,6 @@ namespace query::detail {
 
 		if (node_data.contains(node)) {
 			if (node_data.at(node).color == Color::Visiting) {
-<<<<<<< HEAD
-				// @TODO: cycle mark
-				std::cerr << "Dep graph at cycle: \n";
-				query_graph.debugPrint(std::cerr);
-=======
 				// Detect and print the cycle
 				std::cerr << "Cycle detected in dependency graph: \n";
 				NodeID              current = from;
@@ -26,7 +21,6 @@ namespace query::detail {
 				cycle.push_back(node);
 
 				query_graph.debugPrintNodes(cycle, std::cerr);
->>>>>>> make-unstable-hash-64-or-256
 				throw base::NotYetImplemented("Query Cycle!");
 			}
 		}
