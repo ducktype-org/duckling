@@ -111,8 +111,7 @@ namespace query::detail {
 		for (const auto& n: nodes) {
 			const auto& node_data_entry = node_data.at(n);
 			out << "    > Query - " << std::setw(5) << std::left;
-			out << n.q_id.asInt() << "\"" << n.q_id.getData().name
-				<< "\"";
+			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
 			out << " Key " << n.hash.val << " :=>\n";
 			for (const auto& dep: node_data_entry.dependencies) {
 				out << spacing << "(Q: \"" << dep.q_id.getData().name << "\", "

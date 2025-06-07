@@ -19,9 +19,7 @@ namespace std {
 		ret += '{';
 		for (size_t i = 0; i < bit256.data.size(); ++i) {
 			ret += std::to_string(bit256.data.at(i));
-			if (i < bit256.data.size() - 1) {
-				ret += ", ";
-			}
+			if (i < bit256.data.size() - 1) ret += ", ";
 		}
 		ret += '}';
 		os << ret;
