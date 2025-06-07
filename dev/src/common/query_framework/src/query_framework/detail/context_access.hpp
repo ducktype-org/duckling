@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../context.hpp"
-#include "query_framework/detail/query_graph/query_state.hpp"
+#include "query_graph/query_state.hpp"
 
 namespace query::detail {
 	/**
