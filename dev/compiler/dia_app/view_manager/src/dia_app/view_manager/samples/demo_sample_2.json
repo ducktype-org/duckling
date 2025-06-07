@@ -129,8 +129,12 @@
         },
         "explore_edges": [
           {
-            "description": "[Q]evalType [*]",
-            "handle": 1
+            "handle": 1,
+            "name": "query",
+            "params": {
+              "is_main": "true",
+              "query_name": "evalType"
+            }
           }
         ],
         "metadata": {
@@ -250,12 +254,20 @@
         },
         "explore_edges": [
           {
-            "description": "[Q]getArgs [*]",
-            "handle": 2
+            "handle": 2,
+            "name": "query",
+            "params": {
+              "is_main": "true",
+              "query_name": "getArgs"
+            }
           },
           {
-            "description": "[Q]instantiateType",
-            "handle": 5
+            "handle": 5,
+            "name": "query",
+            "params": {
+              "is_main": "false",
+              "query_name": "instantiateType"
+            }
           }
         ],
         "metadata": {
@@ -299,12 +311,20 @@
       {
         "explore_edges": [
           {
-            "description": "[Q]evalType",
-            "handle": 6
+            "handle": 6,
+            "name": "query",
+            "params": {
+              "is_main": "false",
+              "query_name": "evalType"
+            }
           },
           {
-            "description": "[Q]evalType (2) [*]",
-            "handle": 3
+            "handle": 3,
+            "name": "query",
+            "params": {
+              "is_main": "true",
+              "query_name": "evalType"
+            }
           }
         ],
         "metadata": {
@@ -464,12 +484,20 @@
         },
         "explore_edges": [
           {
-            "description": "[Q]instantiateType [*]",
-            "handle": 4
+            "handle": 4,
+            "name": "query",
+            "params": {
+              "is_main": "true",
+              "query_name": "instantiateType"
+            }
           },
           {
-            "description": "[Q]getArgs",
-            "handle": 7
+            "handle": 7,
+            "name": "query",
+            "params": {
+              "is_main": "false",
+              "query_name": "getArgs"
+            }
           }
         ],
         "metadata": {
@@ -632,8 +660,12 @@
       {
         "explore_edges": [
           {
-            "description": "[Q]evalType",
-            "handle": 8
+            "handle": 8,
+            "name": "query",
+            "params": {
+              "is_main": "false",
+              "query_name": "evalType"
+            }
           }
         ],
         "metadata": {
