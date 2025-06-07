@@ -23,7 +23,7 @@ namespace {
 		T,
 		std::void_t<
 			decltype(std::declval<T>().serialize()),
-			decltype(T::deserialize(std::declval<const std::vector<uint8_t>&>(), std::declval<usize&>())
+			decltype(T::deserialize(std::declval<const std::vector<uint8_t>&>(), std::declval<const usize&>())
 	        ),
 			decltype(T::serializedSize())>>: std::true_type {};
 
