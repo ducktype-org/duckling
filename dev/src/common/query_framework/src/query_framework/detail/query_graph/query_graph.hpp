@@ -28,6 +28,15 @@ namespace query::detail {
 
 		enum class DependencyStatus { OK, Cycle };
 
+		/*
+		 * @brief Adds a node to the graph.
+		 * @param node_id The ID of the node to add.
+		 * @note This function should be called only from query_state
+		*/
+		void addNode(detail::NodeID node_id) {
+			node_deps.insert_or_assign(node_id, std::vector<NodeID>{});
+		}
+
 		/**
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.

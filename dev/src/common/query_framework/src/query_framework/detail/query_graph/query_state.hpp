@@ -43,7 +43,7 @@ namespace query::detail {
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.
 		 */
-		QueryGraph query_graph{};
+		QueryGraph query_graph;
 
 	public:
 		QueryState()                             = default;

@@ -15,6 +15,7 @@ namespace query::detail {
 			}
 		}
 		node_data.insert_or_assign(node, NodeData{ .color = Color::Visiting, .parent = from });
+        query_graph.addNode(node);
 	}
 
 	void QueryState::setExit(NodeID node) {
