@@ -23,8 +23,9 @@ namespace {
 		T,
 		std::void_t<
 			decltype(std::declval<T>().serialize()),
-			decltype(T::deserialize(std::declval<const std::vector<uint8_t>&>(), std::declval<const usize&>())
-	        ),
+			decltype(T::deserialize(
+				std::declval<const std::vector<uint8_t>&>(), std::declval<const usize&>()
+			)),
 			decltype(T::serializedSize())>>: std::true_type {};
 
 	template<typename T>
@@ -96,9 +97,6 @@ namespace query::detail {
 
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
-		std::vector<NodeID> all_nodes;
-		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
-		debugPrintNodes(all_nodes, out);
 		std::vector<NodeID> all_nodes;
 		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
 		debugPrintNodes(all_nodes, out);
