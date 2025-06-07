@@ -20,6 +20,7 @@ namespace query::detail {
 				NodeID              current = from;
 				std::vector<NodeID> cycle;
 
+				cycle.push_back(node);
 				while (current != node && node_data.contains(current)) {
 					cycle.push_back(current);
 					current = node_data.at(current).parent;
@@ -110,7 +111,7 @@ namespace query::detail {
 		for (const auto& n: nodes) {
 			const auto& node_data_entry = node_data.at(n);
 			out << "    > Query - " << std::setw(5) << std::left;
-			out << n.q_id.asInt() << std::setw(30) << std::left << "\"" << n.q_id.getData().name
+			out << n.q_id.asInt() << "\"" << n.q_id.getData().name
 				<< "\"";
 			out << " Key " << n.hash.val << " :=>\n";
 			for (const auto& dep: node_data_entry.dependencies) {

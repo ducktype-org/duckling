@@ -15,6 +15,16 @@ namespace base {
 
 namespace std {
 	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256) {
-		return os << bit256.toStringHex();
+		std::string ret;
+		ret += '{';
+		for (size_t i = 0; i < bit256.data.size(); ++i) {
+			ret += std::to_string(bit256.data.at(i));
+			if (i < bit256.data.size() - 1) {
+				ret += ", ";
+			}
+		}
+		ret += '}';
+		os << ret;
+		return os;
 	}
 }
