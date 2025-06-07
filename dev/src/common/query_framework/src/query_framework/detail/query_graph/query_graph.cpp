@@ -11,7 +11,11 @@
 namespace query::detail {
 
 	QueryGraph::DependencyStatus QueryGraph::addDependency(NodeID from, NodeID to) {
+		std::cout << "Adding dependency from " << from.q_id.getData().name << " to "
+		          << to.q_id.getData().name << "\n";
 		node_deps.at(from).emplace_back(to);
+		std::cout << "Added dependency from " << from.q_id.getData().name << " to "
+		          << to.q_id.getData().name << "\n";
 
 		// @TODO: see if cycle was created inside dep and propagate as if I was cyclic
 		return DependencyStatus::OK;
