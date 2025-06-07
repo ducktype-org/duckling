@@ -1,6 +1,6 @@
 #include "context.hpp"
 
-#include "query_framework/detail/query_graph/query_state.hpp"
+#include "detail/query_graph/query_state.hpp"
 
 namespace query {
 	dia::Logger Context::logger{};
