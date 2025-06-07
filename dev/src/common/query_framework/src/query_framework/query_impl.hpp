@@ -61,10 +61,10 @@ namespace query::detail {
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(ContextAccess::getGraph()->setExit(node_id));
+			defer(ContextAccess::getState()->setExit(node_id));
 
 			// prolog:
-			ContextAccess::getGraph()->setEntry(node_id, from);
+			ContextAccess::getState()->setEntry(node_id, from);
 
 			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 

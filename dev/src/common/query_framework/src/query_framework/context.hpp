@@ -8,6 +8,7 @@
 #include "detail/query_graph/node_id.hpp"
 #include "detail/query_graph/node_making.hpp"  // IWYU pragma: export
 #include "detail/query_graph/query_graph.hpp"
+#include "detail/query_graph/query_state.hpp"
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -40,9 +41,9 @@ namespace query {
 		friend struct query::detail::ContextAccess;
 
 		/**
-		 * Main query graph, that query calls work on.
+		 * Main query state, that query calls work on.
 		 */
-		static detail::QueryGraph main_query_graph;
+		static detail::QueryState main_query_state;
 
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
@@ -59,7 +60,7 @@ namespace query {
 		auto query(typename OthQuery::QKey key) -> decltype(auto) {
 			assertActive();
 			detail::NodeID dep_id = makeNodeID(OthQuery::id, key);
-			main_query_graph.addDependency(my_node, dep_id);
+			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
 
 			this->active = false;
 			defer(this->active = true);
@@ -74,9 +75,9 @@ namespace query {
 		void log(Box<dia::Message> message);
 
 		/**
-		 * @brief Returns a const reference to the main query graph.
+		 * @brief Returns a const reference to the main query state.
 		 * Can be safely used outside query framework.
 		 */
-		static const detail::QueryGraph& getGraph() { return main_query_graph; }
+		static const detail::QueryState& getState() { return main_query_state; }
 	};
 }

@@ -25,7 +25,7 @@ namespace pst {
 		auto viewDependentTokens(query::detail::NodeID id) {
 			using namespace std::views;
 
-			auto nodes = query::Context::getGraph().getNodeDepsFiltered(
+			auto nodes = query::Context::getState().getGraph().getNodeDepsFiltered(
 				id, detail::PSTAccessSideInput::getID()
 			);
 
