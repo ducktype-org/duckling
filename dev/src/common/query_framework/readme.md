@@ -52,8 +52,8 @@ Each query in this model consist of following main components:
 * `QResult` -- Query Result, a data type returned from the query.
 * `PResult` -- Provider Result, a data type returned from the query provider function. This type will more often than not be equal (or almost equal) to `QResult`. The purpose of `PResult` is just to simplify the code of Query Providers.
 * `provide` function -- Query Provider, a function with a signature similar to `QKey -> PResult`. This function performs the actual computation that calculates the query result and performs compilation steps.
-* `store` function -- A function with a signature similar to `(u64 | Bit256), PResult -> QResult`. This function stores the result of provider computation in some cache/table/database and returns the final Query result.
-* `load` function -- A function with a signature similar to `(u64 | Bit256) -> QResult?`. This function checks if the Query result is not already present in cache. It returns an optional holding the Query Result.
+* `store` function -- A function with a signature similar to `(UKHash), PResult -> QResult`. This function stores the result of provider computation in some cache/table/database and returns the final Query result.
+* `load` function -- A function with a signature similar to `(UKHash) -> QResult?`. This function checks if the Query result is not already present in cache. It returns an optional holding the Query Result.
 
 @note 
 Actual types of the `provide`, `load`, and `store` functions are slightly different and are explained in sections related to writing them.
@@ -137,10 +137,10 @@ After all of the above is done, the only thing left is to write query `provide`,
         static auto provide(Context& context, QKey key) -> PResult {
             /* ... */
         }
-        static auto load((u64 | Bit256) key) -> LoadResult {
+        static auto load((UKHash) key) -> LoadResult {
             /* ... */
         }
-        static auto store((u64 | Bit256) key, PResult res, query::ACD acd) -> QResult {
+        static auto store((UKHash) key, PResult res, query::ACD acd) -> QResult {
             /* ... */
         }
     }
@@ -244,7 +244,7 @@ There are two very simple concepts to unravel before we can go into implementati
 Now we can finally write the functions:
 
 ~~~~~cpp
-    static auto load((u64 | Bit256) key) -> LoadResult {
+    static auto load((UKHash) key) -> LoadResult {
         if (/* cache miss */) {
             return {}; // empty optional
         }
@@ -255,7 +255,7 @@ Now we can finally write the functions:
         }
     }
 
-    static auto store((u64 | Bit256) key, PResult q_res, query::ACD acd) -> QResult {
+    static auto store((UKHash) key, PResult q_res, query::ACD acd) -> QResult {
         // maybe perform some simple computation arising from the fact that
         // PResult != QResult:
         
