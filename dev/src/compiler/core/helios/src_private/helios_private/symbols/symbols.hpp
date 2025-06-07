@@ -14,6 +14,7 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
+#include <base/bit256.hpp>
 #include <base/string_id.hpp>
 
 namespace compiler::helios {
@@ -48,7 +49,7 @@ namespace compiler::helios {
 		bool follow_wildcards;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
+		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**

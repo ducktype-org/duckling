@@ -6,13 +6,17 @@
 
 #include <query_framework/detail/query_data/query_id.hpp>  // IWYU pragma: export
 
+#include <base/bit256.hpp>
+
+#include <functional>
+
 namespace query::detail {
 
 	/**
 	 * @brief Type representing hash value for all key-types.
 	 */
 	struct KeyHash final {
-		u64 val;
+		base::Bit256 val;
 	};
 
 	/**
@@ -40,7 +44,7 @@ struct std::hash<query::detail::NodeID> final {
 		auto l = key.q_id;
 		auto r = key.hash.val;
 
-		// this is questionable:
-		return l.asInt() * 9'223'372'036'854'775'783UL + r;
+		// This is questionable
+		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r);
 	}
 };

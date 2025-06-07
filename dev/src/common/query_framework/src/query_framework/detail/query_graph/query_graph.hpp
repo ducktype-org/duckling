@@ -12,6 +12,8 @@ namespace query::detail {
 
 	class QueryState;
 
+	class QueryState;
+
 	class QueryGraph {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 

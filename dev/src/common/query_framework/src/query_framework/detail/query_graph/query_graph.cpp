@@ -59,19 +59,9 @@ namespace query::detail {
 
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
-		std::string spacing(25, ' ');
-		for (auto& [k, v]: node_deps) {
-			out << "    ";
-			out << "> Query - " << std::setw(5) << std::left;
-			out << k.q_id.asInt() << std::setw(30) << std::left << "\"" << k.q_id.getData().name
-				<< "\"";
-			out << " Key " << k.hash.val << " :=>\n";
-			for (auto& dep: v) {
-				out << spacing << "(Q: " << "\"" << dep.q_id.getData().name << "\", "
-					<< "K: " << dep.hash.val << "),\n";
-			}
-			if (!v.empty()) out << '\n';
-		}
+		std::vector<NodeID> all_nodes;
+		for (const auto& [k, _]: node_deps) all_nodes.push_back(k);
+		debugPrintNodes(all_nodes, out);
 	}
 
 	void QueryGraph::debugPrintForDrawing(std::ostream& out) const {
