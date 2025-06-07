@@ -171,17 +171,28 @@ namespace dia_app {
     }
     namespace dia_file {
         struct ParamData;
+        struct DisplayElement;
+        using Ptr = std::shared_ptr<DisplayElement>;
     }
     // A stateless info params handle for lazy fetching of infos.
     using InfoHandle = uint;
     struct InfoParamsHandle;
 
+    // An explore edge for the state manager (with evaluated description).
     struct ExploreEdge {
         std::string description;
         InfoHandle handle;
 
         ExploreEdge(const std::string &description, InfoHandle handle) :
             description(description), handle(handle) {}
+    };
+    // An explore edge from the diagnostic file.
+    struct ExploreEdgeParams {
+        std::string name;
+        std::map<std::string, dia_file::Ptr> params;
+        InfoHandle handle;
+
+        ExploreEdgeParams(const json &edge);
     };
 
     // A data handle for accessing and modifying the entities and secondary_infos
@@ -213,7 +224,10 @@ namespace dia_app {
         using ParamData = dia_file::ParamData;
 
         const TemplateData &template_data;
+        // Auxiliary parameters for explore edges templates (shadow param_data).
+        std::map<std::string, dia_file::Ptr> aux_params;
         const ParamData &param_data;
+
         std::map<std::string, json> &entities;
         std::vector<ParamData> &secondary_infos;
         std::map<InfoHandle, InfoParamsHandle> &info_handles;
@@ -223,8 +237,10 @@ namespace dia_app {
             const ParamData &param_data,
             DataHandle data_handle
         );
+        TemplateDataHandle with_aux_params(const std::map<std::string, dia_file::Ptr> &aux_params) const;
 
         DataHandle toDataHandle() const;
+
     };
 
     // A handle for the lazy evaluation of alt_content.

@@ -34,6 +34,22 @@ description:
         - param: "arguments"
         - "."
 
+explore_edges:
+  query:
+    content:
+      - "[Q]"
+      - param: "query_name"
+      - case:
+          param: "is_main"
+        of:
+          "true": " [*]"
+          "[other]": []
+    params:
+      query_name:
+        description: "Name of the query called in this edge."
+      is_main:
+        description: "Whether this edge is the main edge in the graph."
+
 params:
   query_name:
     description: "Name of the computed query."

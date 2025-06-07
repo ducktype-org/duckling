@@ -54,9 +54,15 @@ namespace dia_app {
 			}
 
 			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
-				assert(handle.param_data.params.count(param));
-				// Deep copy so independent transformations
-				return handle.param_data.params.at(param)->copy();
+				assert(handle.aux_params.count(param) || handle.param_data.params.count(param));
+				
+				// Auxiliary parameters shadow the base ones.
+				if (handle.aux_params.contains(param)) {
+					// Deep copy so independent transformations
+					return handle.aux_params.at(param)->copy();
+				} else {
+					return handle.param_data.params.at(param)->copy();
+				}
 			}
 		};
 

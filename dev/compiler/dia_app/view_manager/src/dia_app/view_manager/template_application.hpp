@@ -40,8 +40,7 @@ namespace message_template {
 
         Info(TemplateDataHandle handle) :
             metadata(handle.template_data.metadata),
-            code(handle.param_data.code),
-            explore_edges(handle.param_data.explore_edges) {
+            code(handle.param_data.code) {
 
             header_message = apply(handle.template_data.header_message, handle);
             ASSUME(header_message, "no header message after template application");
@@ -52,6 +51,16 @@ namespace message_template {
 
             // Description can be nullptr.
             description = apply(handle.template_data.description, handle);
+
+            for (auto &edge : handle.param_data.explore_edges) {
+                auto edge_template = handle.template_data.explore_edges.at(edge.name);
+                // Remember to include auxiliary parameters included in the explore edge.
+                auto description_ptr = apply(edge_template, handle.with_aux_params(edge.params));
+                // In explore edges only plain text is displayed.
+                auto description = description_ptr->toText(handle.toDataHandle());
+
+                explore_edges.emplace_back(description, edge.handle);
+            }
         }
     };
 

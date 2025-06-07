@@ -8,6 +8,17 @@ namespace dia_app {
 	std::string MESSAGE_TEMPLATE_PATH
 		= "../compiler/dia_app/view_manager/src/dia_app/view_manager/templates/";
 
+	ExploreEdgeParams::ExploreEdgeParams(const json &edge)  {
+		ASSUME_OBJ(edge);
+		ASSUME_HAS_STR_ASSIGN(edge, name);
+		ASSUME_HAS_UINT_ASSIGN(edge, handle);
+		ASSUME_HAS(edge, "params");
+		ASSUME_OBJ(edge["params"]);
+		for (auto &[key, val] : edge["params"].items()) {
+			params.insert({key, dia_file::parse(val)});
+		}
+	}
+
 	DataHandle::DataHandle(
 		std::map<std::string, json>&            entities,
 		std::vector<ParamData>&                 secondary_infos,
@@ -25,6 +36,12 @@ namespace dia_app {
 		  entities(data_handle.entities),
 		  secondary_infos(data_handle.secondary_infos),
 		  info_handles(data_handle.info_handles) {}
+
+	TemplateDataHandle TemplateDataHandle::with_aux_params(const std::map<std::string, dia_file::Ptr> &aux_params) const {
+		TemplateDataHandle res(*this);
+		res.aux_params = aux_params;
+		return res;
+	}
 
 	DataHandle TemplateDataHandle::toDataHandle() const {
 		return DataHandle(entities, secondary_infos, info_handles);

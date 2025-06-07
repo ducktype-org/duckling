@@ -50,6 +50,7 @@ namespace dia_app {
 			Ptr                                   header_message;
 			std::map<std::string, PointerMessage> pointer_messages;
 			Ptr                                   description;
+			std::map<std::string, Ptr>			  explore_edges;
 
 			TemplateData(const dia_file::ParamData& params) {
 				// Fetch the message template.
@@ -79,15 +80,24 @@ namespace dia_app {
 				}
 
 				// Parse parameters.
-				const YAML::Node& declared_params = template_yaml["params"];
-				if (declared_params && declared_params.IsMap()) {
-					// Did not provide more than available.
-					for (const auto& it: params.params) assert(declared_params[it.first]);
-					// Did not provide fewer than necessary.
-					for (const auto& it: declared_params) {
-						const YAML::Node& val = it.second;
-						if (!val["optional"] || !val["optional"].as<bool>())
-							assert(params.params.count(it.first.as<std::string>()));
+				verify_params(template_yaml["params"], params.params);
+
+				// Parse explore edge micro templates.
+				const YAML::Node& edge_templates = template_yaml["explore_edges"];
+				if (edge_templates && edge_templates.IsMap()) {
+					// Parse all edge templates.
+					for (const auto& it: edge_templates) {
+						const std::string key = it.first.as<std::string>();
+						assert(it.second["content"]);
+						
+						explore_edges[key] = parse(it.second["content"]);
+
+						// Verify params of all users of this edge template.
+						for (const auto& e: params.explore_edges) {
+							if (e.name == key) {
+								verify_params(it.second["params"], e.params);
+							}
+						}
 					}
 				}
 
@@ -108,6 +118,22 @@ namespace dia_app {
 
 				// - description
 				if (template_yaml["description"]) description = parse(template_yaml["description"]);
+			}
+
+		private:
+			// Verify whether there are enough provided params and that no surplus params
+			// were provided.
+			void verify_params(const YAML::Node& declared_params, const std::map<std::string, dia_file::Ptr>& provided_params) const {
+				if (declared_params && declared_params.IsMap()) {
+					// Did not provide more than available.
+					for (const auto& it: provided_params) assert(declared_params[it.first]);
+					// Did not provide fewer than necessary.
+					for (const auto& it: declared_params) {
+						const YAML::Node& val = it.second;
+						if (!val["optional"] || !val["optional"].as<bool>())
+							assert(provided_params.count(it.first.as<std::string>()));
+					}
+				}
 			}
 		};
 
