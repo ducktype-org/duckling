@@ -17,7 +17,7 @@ namespace query::detail {
 		};
 
 		/**
-		 * @brief Data structure that holds information about a node in the graph.
+		 * @brief Data structure that holds (non-graph) information about a node in the graph.
 		 */
 		struct NodeData final {
 			Color color;
