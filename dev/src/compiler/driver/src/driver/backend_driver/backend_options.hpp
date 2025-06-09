@@ -25,6 +25,4 @@ namespace compiler::driver {
 		std::vector<base::StrID> external_objects_files;
 		std::vector<base::StrID> external_libs;
 	};
-
-
 }

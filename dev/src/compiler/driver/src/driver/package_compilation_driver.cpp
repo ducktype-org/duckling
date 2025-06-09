@@ -12,8 +12,14 @@
 
 namespace compiler::driver {
 
-	// this is a quick hack, change it in this PR:
-	MRef<artifacts::ArtifactCollection> main_collection;
+	// this is a quick hack, it will change with future driver refactor:
+	MRef<artifacts::ArtifactCollection> root_collection;
+	void setRootArtifactCollection(
+		Ref<artifacts::ArtifactCollection> collection
+	) {
+		CORE_ASSERT(root_collection == nullptr, "Root collection already set");
+		root_collection = collection;
+	}
 
 	BackendOptions getBackendOptions(BackendType type) {
 		if (type == BackendType::LLVM) {
@@ -52,27 +58,45 @@ namespace compiler::driver {
 		}
 	}
 
-	DECLARE_QUERY(CompilerModuleToLLVM, frontend::ModuleID, artifacts::FileArtifact);
+	struct KeyOf_CompileModule final {
+		frontend::ModuleID module_id;
+		BackendType    backend_type;
 
-	struct IMPLEMENT_QUERY(CompilerModuleToLLVM, artifacts::FileArtifact) {
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return {module_id.asInt(), std::to_underlying(backend_type)};
+		}
+	};
+
+	/**
+	 * Query that produces QBC/.o file for given Duckling module.
+	 */
+	DECLARE_QUERY(CompileModule, KeyOf_CompileModule, artifacts::FileArtifact);
+
+	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
 		static Ref<artifacts::ArtifactCollection> getCollection() {
-			// this is far from pretty:
-			return main_collection->subCollectionAtOrNew(base::StrID("query"))
+			// this should be automated in the future with some query component:
+			return root_collection->subCollectionAtOrNew(base::StrID("query"))
 			    ->subCollectionAtOrNew(base::StrID(
-					base::strConcat("query", CompilerModuleToLLVM::getID().asInt()).c_str()
+					base::strConcat("query", CompileModule::getID().asInt()).c_str()
 				));
 		}
 
-		static auto provide(query::Context& ctx, frontend::ModuleID module_id)
+		static auto provide(query::Context& ctx, QKey key)
 			-> artifacts::FileArtifact {
 			using namespace compiler;
-			auto hout         = ctx.query<helios::QueryModuleHOUT>(module_id);
-			auto binary_diver = HoutToBinaryDriver{ getBackendOptions(BackendType::LLVM) };
+			auto hout         = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
-			auto output = getCollection()->fileArtifactAtOrNew(
-				base::StrID(base::strConcat("module_", module_id.asInt(), ".o").c_str())
-			);
-			auto module_name = base::StrID(base::strConcat("module_", module_id.asInt()).c_str());
+			// here we create now backend driver per each query call,
+			// which might be suboptimal
+			auto binary_diver = HoutToBinaryDriver{ getBackendOptions(BackendType::LLVM) };
+			
+			// Note: in the future it should use stable hashing for incremental
+			// compilation. For now its ok.
+			auto output_name = key.queryUnstablePerfectHash().toStringHex();
+
+			auto output = getCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
+			auto module_name = base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
 			binary_diver.compileHOUTUnit(ctx, &hout, module_name, output);
 
@@ -82,7 +106,7 @@ namespace compiler::driver {
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(CompilerModuleToLLVM);
+	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	PackageCompilationDriver::PackageCompilationDriver(
 		BackendType backend, fs::FilePath package_location, std::filesystem::path artifact_location
@@ -90,7 +114,7 @@ namespace compiler::driver {
 		  backend{ backend },
 		  package_location(std::move(package_location)),
 		  root_artifact_collection(std::move(artifact_location)) {
-		main_collection = &root_artifact_collection;
+		setRootArtifactCollection(&root_artifact_collection);
 	}
 
 	void PackageCompilationDriver::compilerEntirePackageIntoBinary() {
@@ -99,9 +123,10 @@ namespace compiler::driver {
 
 		std::vector<artifacts::FileArtifact> objects;
 
+		// this is std::function, so it can be recursive
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			objects.emplace_back(query::entryPoint<CompilerModuleToLLVM>(module_id));
+			objects.emplace_back(query::entryPoint<CompileModule>({module_id, this->backend}));
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};

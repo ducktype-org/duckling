@@ -1,4 +1,4 @@
 \page driver-module Driver
 
 Driver module is resposible for encapsulating high-level compiler operations and initializations into simple drivers or functions, that call the core compiler components underneath.
-Driver module for example automates process of transforming HUs into binary outputs, compilation of a package and all high-level operations of incremental compilation.
+Driver module for example automates process of initializing query framework state, transforming HUs into binary outputs, compilation of a package and all high-level operations of incremental compilation.

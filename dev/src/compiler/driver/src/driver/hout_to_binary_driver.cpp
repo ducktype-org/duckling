@@ -29,7 +29,7 @@ namespace compiler::driver {
 
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
-		backend_driver->compileModule(ctx, module_data, output_artifact);
+		backend_driver->compileModule(ctx, module_data, std::move(output_artifact));
 	}
 
 	std::expected<RunOutput, std::string> HoutToBinaryDriver::run() {

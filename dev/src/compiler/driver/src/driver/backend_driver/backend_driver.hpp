@@ -58,6 +58,4 @@ namespace compiler::driver {
 	};
 
 	Box<BackendDriver> createBackendDriver(CRef<BackendOptions> options);
-
-
 }

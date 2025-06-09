@@ -18,6 +18,7 @@
 #include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -279,17 +280,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Path to the module")
 		             .required()
 		             .build());
-		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-		             .addShortName('o')
-		             .addLongName("output")
-		             .addShortDesc("Link the ouptut to the output file")
-		             .conditional(
-						 [](const clap::ParsingResult& result) {
-							 return not(result.isParam("output") && result.isFlag("dvm-backend"));
-						 },
-						 "Currently DVM backend doesn't support linking. "
-					 )
-		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("dump-llvm-ir")
 		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
@@ -345,25 +335,37 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			},
 		};
 
-		// tmp:
-		throw "failed";
+		// mock collection for purpose of compilation of single module:
+		artifacts::ArtifactCollection base_artifact_collection{
+			"./duck_build/",
+		};
+		auto output_name = backend_type == driver::BackendType::DVM
+		                   ? "module.qbc"
+		                   : "module.o";
+		auto output_artifact = base_artifact_collection.fileArtifactAtOrNew(
+			base::StrID(output_name)
+		);
 
-		// driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+		int exit_code = 0;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			driver.compileHOUTUnit(
+				ctx,
+				&top_level,
+				base::StrID("main_module"),
+				output_artifact
+			);
+			if (options.isFlag("dvm-run")) {
+				auto run_result = driver.run();
+				if (run_result.has_value()) {
+					exit_code = run_result.value().exit_code;
+				} else {
+					std::cerr << "Error: " << run_result.error() << "\n";
+					exit_code = 1;
+				}
+			}
+		});
 
-		// if (options.isParam("output"))
-		// 	driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
-
-		// if (options.isFlag("dvm-run")) {
-		// 	auto run_result = driver.run();
-		// 	if (run_result.has_value()) {
-		// 		return run_result.value().exit_code;
-		// 	} else {
-		// 		std::cerr << "Error: " << run_result.error() << "\n";
-		// 		return 1;
-		// 	}
-		// }
-
-		return 0;
+		return exit_code;
 	});
 	commands.add("compile_package", "compile given package into a binary.", [&]() {
 		// modify clap as needed:
@@ -395,32 +397,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			"./duck_build/",
 		};
 		driver.compilerEntirePackageIntoBinary();
-
-		// @TODO: error handling
-		// using namespace compiler;
-		// auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-		// auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
-
-		// driver::HoutToBinaryDriver driver{
-		// 	driver::BackendOptions{
-		// 		.backend_type           = driver::BackendType::LLVM,
-		// 		.compile_to_assembly    = false,
-		// 		.dump_llvm_ir           = false,
-		// 		.dvm_code_only_memory   = false,
-		// 		.add_builtin_library    = true,
-		// 		.external_objects_files = {},
-		// 		.external_libs          = {},
-		// 	},
-		// };
-
-		// u64 i = 0;
-		// for (const auto& module: modules)
-		// 	driver.compileHOUTUnit(
-		// 		&module, base::StrID(base::strConcat("main_module", i++).c_str())
-		// 	);
-
-		// driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
 
 		return 0;
 	});
