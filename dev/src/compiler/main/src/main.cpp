@@ -382,9 +382,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
-		auto backend_type
-			= options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM : compiler::driver::BackendType::LLVM;
+		auto path_to_compile   = options.getValue<fs::FilePath>("module").value();
+		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
+		                                                       : compiler::driver::BackendType::LLVM;
 		auto artifact_location = options.getValue<fs::FilePath>("artifact-location").value();
 
 		defer(printContextErrors());

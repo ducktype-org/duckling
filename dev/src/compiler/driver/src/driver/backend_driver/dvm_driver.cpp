@@ -23,10 +23,7 @@ namespace compiler::driver {
 		vm::code::CodeCollection code_collection = module.build();
 
 		if (not options->dvm_code_only_memory) {
-			std::ofstream dvm_file(
-				output_artifact.FILE,
-				std::ios::binary
-			);
+			std::ofstream dvm_file(output_artifact.FILE, std::ios::binary);
 			if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 			vm::code::serialize(code_collection, dvm_file);
 			dvm_file.close();
