@@ -77,14 +77,14 @@ namespace query::detail {
 		 * @brief Serializes the QueryGraph into a vector of bytes.
 		 * @return A vector of bytes representing the serialized QueryGraph.
 		 */
-		[[nodiscard]] std::vector<uint8_t> serialize() const;
+		[[nodiscard]] std::vector<byte> serialize() const;
 
 		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.
 		 * @param data The vector of bytes to deserialize from.
 		 * @return A deserialized QueryGraph object.
 		 */
-		static QueryGraph deserialize(const std::vector<uint8_t>& data);
+		static QueryGraph deserialize(const std::vector<byte>& data);
 
 		/**
 		 * @brief Compares this QueryGraph with another for equality. For testing purposes.

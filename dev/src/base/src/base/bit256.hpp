@@ -4,7 +4,6 @@
 
 #include <array>
 #include <string>
-#include <vector>
 
 namespace base {
 	/**
@@ -21,6 +20,8 @@ namespace base {
 				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
 		}
 
+		constexpr Bit256(const std::array<u64, 4>& arr) noexcept: data(arr) {}
+
 		constexpr Bit256(u64 a, u64 b, u64 c, u64 d) noexcept: data{ a, b, c, d } {}
 
 		constexpr Bit256(u64 a, u64 b, u64 c) noexcept: data{ a, b, c, 0 } {}
@@ -36,21 +37,6 @@ namespace base {
 		 * @brief Converts the 256-bit integer into a hexadecimal string representation.
 		 */
 		[[nodiscard]] std::string toStringHex() const;
-
-		/**
-		 * @brief Serialize the Bit256 object into a vector of bytes
-		 */
-		[[nodiscard]] std::vector<uint8_t> serialize() const;
-
-		/**
-		 * @brief Deserialize a Bit256 object from a vector of bytes
-		 */
-		static Bit256 deserialize(const std::vector<uint8_t>& buffer, const usize& offset);
-
-		/**
-		 * @brief Returns the size of the serialized Bit256 object in bytes.
-		 */
-		[[nodiscard]] static constexpr usize serializedSize() noexcept { return sizeof(data); }
 
 		constexpr bool operator<(const Bit256& other) const noexcept {
 			for (usize i = 4;

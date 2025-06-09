@@ -14,38 +14,6 @@
 #include <set>
 #include <vector>
 
-namespace {
-	template<typename T, typename = void>
-	struct has_serialization_methods: std::false_type {};
-
-	template<typename T>
-	struct has_serialization_methods<
-		T,
-		std::void_t<
-			decltype(std::declval<T>().serialize()),
-			decltype(T::deserialize(
-				std::declval<const std::vector<uint8_t>&>(), std::declval<const usize&>()
-			)),
-			decltype(T::serializedSize())>>: std::true_type {};
-
-	template<typename T>
-	constexpr bool HAS_SERIALIZATION_METHODS_V = has_serialization_methods<T>::value;
-
-	template<typename T>
-	constexpr usize sizeOfType() {
-		if constexpr (std::is_trivial_v<T>) {
-			return sizeof(T);
-		} else {
-			static_assert(
-				HAS_SERIALIZATION_METHODS_V<T>,
-				"Type must either be trivial or have serialize, deserialize, and serializedSize "
-				"methods."
-			);
-			return T::serializedSize();
-		}
-	}
-}
-
 namespace query::detail {
 
 	QueryGraph::DependencyStatus QueryGraph::addDependency(NodeID from, NodeID to) {
@@ -144,14 +112,14 @@ namespace query::detail {
 		return true;
 	}
 
-	std::vector<uint8_t> QueryGraph::serialize() const {
-		using HType   = decltype(NodeID::hash.val);
+	std::vector<byte> QueryGraph::serialize() const {
+		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
 
 		const usize node_id_size
-			= sizeOfType<QIDType>() + sizeOfType<HType>();  // Size of NodeID (q_id and hash)
+			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
-		std::vector<uint8_t> buffer;
+		std::vector<byte> buffer;
 
 		// Calculate the total size of the serialized data
 		usize total_size = sizeof(usize);  // map_size
@@ -165,36 +133,24 @@ namespace query::detail {
 		auto write = [&](const auto& value) -> void {
 			using T = std::decay_t<decltype(value)>;
 
-			if constexpr (std::is_trivial_v<T>) {
-				// For trivial types, use memcpy
-				buffer.insert(
-					buffer.end(),
-					reinterpret_cast<const uint8_t*>(&value),
-					reinterpret_cast<const uint8_t*>(&value) + sizeof(T)
-				);
-			} else {
-				// For non-trivial types, use their serialize method
-				auto serialized_data = value.serialize();
-				buffer.insert(buffer.end(), serialized_data.begin(), serialized_data.end());
-			}
+			auto serialized_value = std::bit_cast<std::array<byte, sizeof(T)>>(value);
+			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
 		};
 
 		auto write_node_id = [&](const NodeID& node) -> void {
 			write(node.q_id.val);
-			write(node.hash.val);
+			write(node.hash.val.data);
 		};
 
 		// Serialize the size of the node_deps map
-		usize map_size = node_deps.size();
-		write(map_size);
+		write(node_deps.size());
 
 		// Serialize each entry in the map
 		for (const auto& [node, deps]: node_deps) {
 			write_node_id(node);
 
 			// Serialize the dependencies vector size
-			usize deps_size = deps.size();
-			write(deps_size);
+			write(deps.size());
 
 			// Serialize each dependency (NodeID)
 			for (const auto& dep: deps) write_node_id(dep);
@@ -203,44 +159,39 @@ namespace query::detail {
 		return buffer;
 	}
 
-	QueryGraph QueryGraph::deserialize(const std::vector<uint8_t>& data) {
+	QueryGraph QueryGraph::deserialize(const std::vector<byte>& data) {
 		using HType   = decltype(NodeID::hash.val);
+		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
+		// Compile-time check to ensure HVType and QIDType are trivial
+		static_assert(std::is_trivial_v<HVType>, "HVType must be a trivial type.");
+		static_assert(std::is_trivial_v<QIDType>, "QIDType must be a trivial type.");
 
 		QueryGraph  graph;
 		usize       offset    = 0;
 		const usize data_size = data.size();
 		const usize node_id_size
-			= sizeOfType<QIDType>() + sizeOfType<HType>();  // Size of NodeID (q_id and hash)
+			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
 		auto read = [&](auto& dest) -> void {
 			using T = std::decay_t<decltype(dest)>;
 
-			if constexpr (std::is_trivial_v<T>) {
-				// For trivial types, use memcpy
-				if (offset + sizeof(T) > data_size)
-					throw std::out_of_range("Buffer size exceeded during deserialization");
+			if (offset + sizeof(T) > data_size)
+				throw std::out_of_range("Buffer size exceeded during deserialization");
 
-				std::memcpy(&dest, data.data() + offset, sizeof(T));
-				offset += sizeof(T);
-			} else {
-				// For non-trivial types, use their deserialize method
-				if (offset + T::serializedSize() > data_size)
-					throw std::out_of_range("Buffer size exceeded during deserialization");
+			std::memcpy(&dest, data.data() + offset, sizeof(T));
 
-				dest = T::deserialize(data, offset);
-				offset += T::serializedSize();
-			}
+			offset += sizeof(T);
 		};
 
 		auto read_node_id = [&]() -> NodeID {
 			QIDType q_id = 0;
 			read(q_id);
 
-			HType hash;
+			HVType hash;
 			read(hash);
 
-			return NodeID{ .q_id = QueryID(q_id), .hash = { hash } };
+			return NodeID{ .q_id = QueryID(q_id), .hash = { HType(hash) } };
 		};
 
 		// Deserialize the size of the node_deps map
@@ -265,8 +216,13 @@ namespace query::detail {
 			for (usize j = 0; j < deps_size; ++j) deps.emplace_back(read_node_id());
 
 			// Add the deserialized entry to the graph
-			graph.node_deps.insert_or_assign(node, std::move(deps));
+			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));
+			if (!inserted)
+				throw std::runtime_error("Duplicate node detected during deserialization");
 		}
+
+		// Check here oif offset is equal to data_size
+		CORE_ASSERT(offset == data_size, "Deserialization did not consume the entire buffer");
 
 		return graph;
 	}
