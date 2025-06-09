@@ -6,6 +6,7 @@
 #include <base/bit256.hpp>
 #include <base/ints.hpp>  // IWYU pragma: export
 
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
@@ -116,7 +117,7 @@ namespace query::detail {
 		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
 
-		const usize node_id_size
+		constexpr usize node_id_size
 			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
 		std::vector<byte> buffer;
@@ -159,7 +160,7 @@ namespace query::detail {
 		return buffer;
 	}
 
-	QueryGraph QueryGraph::deserialize(const std::vector<byte>& data) {
+	QueryGraph QueryGraph::deserialize(std::span<const byte> data) {
 		using HType   = decltype(NodeID::hash.val);
 		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
@@ -167,11 +168,13 @@ namespace query::detail {
 		static_assert(std::is_trivial_v<HVType>, "HVType must be a trivial type.");
 		static_assert(std::is_trivial_v<QIDType>, "QIDType must be a trivial type.");
 
+		constexpr usize node_id_size
+			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
+
 		QueryGraph  graph;
 		usize       offset    = 0;
 		const usize data_size = data.size();
-		const usize node_id_size
-			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
+
 
 		auto read = [&](auto& dest) -> void {
 			using T = std::decay_t<decltype(dest)>;

@@ -1,10 +1,5 @@
 #include "../bit256.hpp"
 
-#include <base/ints.hpp>
-
-#include <cstring>
-#include <string_view>
-
 namespace base {
 	std::string Bit256::toStringHex() const {
 		std::string ret;

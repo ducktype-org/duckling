@@ -4,7 +4,6 @@
 
 #include <base/maps.hpp>
 
-#include <cstring>
 #include <ostream>
 #include <vector>
 
@@ -84,7 +83,7 @@ namespace query::detail {
 		 * @param data The vector of bytes to deserialize from.
 		 * @return A deserialized QueryGraph object.
 		 */
-		static QueryGraph deserialize(const std::vector<byte>& data);
+		static QueryGraph deserialize(std::span<const byte> data);
 
 		/**
 		 * @brief Compares this QueryGraph with another for equality. For testing purposes.
