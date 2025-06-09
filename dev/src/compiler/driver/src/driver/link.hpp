@@ -12,7 +12,7 @@ namespace compiler::driver {
 	/**
 	 * Links given files (assumed to be object files) into a single executable file.
 	 * In the future it will be changed to a query, to automatically support caching.
-	 * @note: we can add additional object/library files here when needed.  
+	 * @note: we can add additional object/library files here when needed.
 	 */
 	void link(
 		artifacts::FileArtifact              output,

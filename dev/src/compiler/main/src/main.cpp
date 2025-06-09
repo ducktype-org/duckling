@@ -339,21 +339,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		artifacts::ArtifactCollection base_artifact_collection{
 			"./duck_build/",
 		};
-		auto output_name = backend_type == driver::BackendType::DVM
-		                   ? "module.qbc"
-		                   : "module.o";
-		auto output_artifact = base_artifact_collection.fileArtifactAtOrNew(
-			base::StrID(output_name)
-		);
+		auto output_name = backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
+		auto output_artifact
+			= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
 
 		int exit_code = 0;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			driver.compileHOUTUnit(
-				ctx,
-				&top_level,
-				base::StrID("main_module"),
-				output_artifact
-			);
+			driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
 			if (options.isFlag("dvm-run")) {
 				auto run_result = driver.run();
 				if (run_result.has_value()) {

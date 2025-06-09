@@ -14,9 +14,8 @@ namespace compiler::driver {
 
 	// this is a quick hack, it will change with future driver refactor:
 	MRef<artifacts::ArtifactCollection> root_collection;
-	void setRootArtifactCollection(
-		Ref<artifacts::ArtifactCollection> collection
-	) {
+
+	void setRootArtifactCollection(Ref<artifacts::ArtifactCollection> collection) {
 		CORE_ASSERT(root_collection == nullptr, "Root collection already set");
 		root_collection = collection;
 	}
@@ -60,11 +59,11 @@ namespace compiler::driver {
 
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
-		BackendType    backend_type;
+		BackendType        backend_type;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return {module_id.asInt(), std::to_underlying(backend_type)};
+			return { module_id.asInt(), std::to_underlying(backend_type) };
 		}
 	};
 
@@ -77,26 +76,26 @@ namespace compiler::driver {
 		static Ref<artifacts::ArtifactCollection> getCollection() {
 			// this should be automated in the future with some query component:
 			return root_collection->subCollectionAtOrNew(base::StrID("query"))
-			    ->subCollectionAtOrNew(base::StrID(
-					base::strConcat("query", CompileModule::getID().asInt()).c_str()
-				));
+			    ->subCollectionAtOrNew(
+					base::StrID(base::strConcat("query", CompileModule::getID().asInt()).c_str())
+				);
 		}
 
-		static auto provide(query::Context& ctx, QKey key)
-			-> artifacts::FileArtifact {
+		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			using namespace compiler;
-			auto hout         = ctx.query<helios::QueryModuleHOUT>(key.module_id);
+			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
 			// here we create now backend driver per each query call,
 			// which might be suboptimal
 			auto binary_diver = HoutToBinaryDriver{ getBackendOptions(BackendType::LLVM) };
-			
+
 			// Note: in the future it should use stable hashing for incremental
 			// compilation. For now its ok.
 			auto output_name = key.queryUnstablePerfectHash().toStringHex();
 
 			auto output = getCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
-			auto module_name = base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
+			auto module_name
+				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
 			binary_diver.compileHOUTUnit(ctx, &hout, module_name, output);
 
@@ -126,7 +125,7 @@ namespace compiler::driver {
 		// this is std::function, so it can be recursive
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			objects.emplace_back(query::entryPoint<CompileModule>({module_id, this->backend}));
+			objects.emplace_back(query::entryPoint<CompileModule>({ module_id, this->backend }));
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};
