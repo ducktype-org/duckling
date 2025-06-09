@@ -87,7 +87,7 @@ namespace compiler::driver {
 
 			// here we create now backend driver per each query call,
 			// which might be suboptimal
-			auto binary_diver = HoutToBinaryDriver{ getBackendOptions(BackendType::LLVM) };
+			auto binary_diver = HoutToBinaryDriver{ getBackendOptions(key.backend_type) };
 
 			// Note: in the future it should use stable hashing for incremental
 			// compilation. For now its ok.

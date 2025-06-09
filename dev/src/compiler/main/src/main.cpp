@@ -286,7 +286,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("dvm-backend")
-		             .addShortDesc("Compile to DVM bytcode.")
+		             .addShortDesc("Compile to DVM bytecode.")
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("compile-to-assembly")
@@ -368,25 +368,31 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		// clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-		//              .addShortName('o')
-		//              .addLongName("output")
-		//              .addShortDesc("Path to the output file")
-		//              .required()
-		//              .build());
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('a')
+		             .addLongName("artifact-location")
+		             .addShortDesc("Path to the top-level folder with build artifacts")
+		             .required()
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("dvm-backend")
+		             .addShortDesc("Compile to DVM bytecode instead of exe.")
+		             .build());
 
 		auto options = configureDuckMainWith(clap, command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto backend_type
+			= options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM : compiler::driver::BackendType::LLVM;
+		auto artifact_location = options.getValue<fs::FilePath>("artifact-location").value();
 
 		defer(printContextErrors());
 
 		compiler::driver::PackageCompilationDriver driver{
-			// for the moment:
-			compiler::driver::BackendType::LLVM,
+			backend_type,
 			path_to_compile,
-			// for the moment:
-			"./duck_build/",
+			artifact_location.absolutePath(),
 		};
 		driver.compilerEntirePackageIntoBinary();
 
