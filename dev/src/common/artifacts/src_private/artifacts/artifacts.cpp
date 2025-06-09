@@ -214,7 +214,7 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNe
 ) {
 	match_optional(blobArtifactAtMaybe(artifact_name)) {
 		opt_some(artifact) return artifact;
-		opt_none return blobArtifactAt(artifact_name);
+		opt_none return blobArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
