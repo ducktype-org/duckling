@@ -16,9 +16,10 @@ namespace query::detail {
 	private:
 		u64 val;
 
-		constexpr QueryID(u64 val): val(val) {}
+		constexpr explicit QueryID(u64 val): val(val) {}
 
 		friend struct QueryIDMaker;
+		friend class QueryGraph;
 
 	public:
 		[[nodiscard]]

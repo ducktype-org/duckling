@@ -20,6 +20,8 @@ namespace base {
 				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
 		}
 
+		constexpr Bit256(const std::array<u64, 4>& arr) noexcept: data(arr) {}
+
 		constexpr Bit256(u64 a, u64 b, u64 c, u64 d) noexcept: data{ a, b, c, d } {}
 
 		constexpr Bit256(u64 a, u64 b, u64 c) noexcept: data{ a, b, c, 0 } {}
