@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../all.hpp"
+#include "../mutability.hpp"
 #include "queries.hpp"
 
 #include <helios/scope_symbol_id.hpp>
@@ -299,8 +300,6 @@ namespace tsh::internal {
 	};
 
 	class RawPointerAbstractTypeImpl final: public AbstractTypeImpl {
-		bool is_mutable;
-
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -312,13 +311,13 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::RawPointer;
 
-		explicit RawPointerAbstractTypeImpl(const bool is_mutable): is_mutable(is_mutable) {
+		explicit RawPointerAbstractTypeImpl(const Mutability mutability): mutability(mutability) {
 			representation = "raw_pointer";
 		}
 
 		[[nodiscard]]
 		bool isMutable() const {
-			return is_mutable;
+			return mutability == Mutability::Mutable;
 		}
 
 		[[nodiscard]]
@@ -328,8 +327,12 @@ namespace tsh::internal {
 			// because we forbid implicit type specification in this context.
 			return target.getKind() == Kind::Bool
 			    || (target.getKind() == Kind::RawPointer
-			        && (is_mutable || !RawPointerAbstractType(target).isMutable()));
+			        && (mutability == Mutability::Mutable
+			            || !RawPointerAbstractType(target).isMutable()));
 		}
+
+	private:
+		Mutability mutability;
 	};
 
 	class PointerAbstractTypeImpl final: public AbstractTypeImpl {

@@ -89,7 +89,7 @@ namespace compiler::helios {
 
 	std::vector<SymID> getAllHeliosSymbols() {
 		CORE_ASSERT(
-			query::Context::getGraph().queryStackSize() == 0,
+			query::Context::getState().queryStackSize() == 0,
 			"getAllHeliosSymbols called from within query!"
 		);
 		std::vector<SymID> output;
@@ -347,11 +347,13 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
-					auto unit_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryUnitType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
+					[[maybe_unused]]
+					auto unit_type
+						= tsh::SymbolType<>(
+							ctx.query<tsh::QueryUnitType>({}),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable
+						);
 
 					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
 						= {
@@ -493,12 +495,11 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
 
-	u64 KeyOf_LookupInSymbol::queryUnstablePerfectHash() const {
+	base::Bit256 KeyOf_LookupInSymbol::queryUnstablePerfectHash() const {
 		auto hash_1 = symbol.queryUnstablePerfectHash();
 		auto hash_2 = std::hash<base::StrID>()(name);
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
+		return { hash_1, hash_2, static_cast<u64>(follow_wildcards) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {

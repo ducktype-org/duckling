@@ -40,7 +40,7 @@ DECLARE_QUERY(FibonacciSum, Key2, u64);
  * Q1: *
  * * * */
 struct IMPLEMENT_QUERY(Fibonacci, u64) {
-	inline static std::map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache;
+	inline static std::map<UKHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		if (key.v == 0)
@@ -52,14 +52,14 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 			     + context.query<Fibonacci>({ key.v - 2 });
 	}
 
-	static auto load(query::QueryUnstableHash key_hash) -> LoadResult {
+	static auto load(UKHash key_hash) -> LoadResult {
 		if (cache.contains(key_hash))
 			return cache.at(key_hash);
 		else
 			return {};
 	}
 
-	static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) -> QResult {
+	static auto store(UKHash key_hash, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key_hash, { .data = res, .acd = acd } });
 		return res;
 	}
@@ -90,15 +90,10 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 		return res;
 	}
 
-	static auto load([[maybe_unused]] query::QueryUnstableHash key_hash) -> LoadResult {
-		return {};
-	}
+	static auto load([[maybe_unused]] UKHash key_hash) -> LoadResult { return {}; }
 
-	static auto store(
-		[[maybe_unused]] query::QueryUnstableHash key_hash,
-		PResult                                   res,
-		[[maybe_unused]] query::ACD               acd
-	) -> QResult {
+	static auto store([[maybe_unused]] UKHash key_hash, PResult res, [[maybe_unused]] query::ACD acd)
+		-> QResult {
 		return QResult(res);
 	}
 };
@@ -364,7 +359,7 @@ private:
 	}
 
 	void testDeps() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
 			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
@@ -400,7 +395,7 @@ private:
 	}
 
 	void testSideInput() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
@@ -479,7 +474,7 @@ private:
 	}
 
 	void debugPrintTest() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 		// just check if it compiles and don't throw
 		std::stringstream s;
 		graph.debugPrintForDrawing(s);
