@@ -14,6 +14,7 @@
 #include <base/string_id.hpp>
 
 #include <memory>
+#include <variant>
 #include <vector>
 
 namespace compiler::helios {
@@ -25,6 +26,7 @@ namespace compiler::helios {
 		// Forward declaration:
 		struct CodeBlock;
 		struct Parameter;
+		struct Expr;
 	}
 
 	/**
@@ -96,6 +98,20 @@ namespace compiler::helios {
 		friend ImplementationOf_QueryCodeOFFun;
 	};
 
+	enum class HOUTGlobalDataType { 
+		Constant,
+		Variable
+	};
+
+	struct HOUTGlobalConst {
+		// @TODO: CTV from TS:
+		i64 value;
+	};
+
+	struct HOUTGlobalVariable {
+		std::shared_ptr<code::Expr> initial_value;
+	};
+
 	/**
 	 * @brief Represents a constant
 	 * @note: this is a mock
@@ -108,12 +124,15 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
-		// @TODO: CTV from TS:
-		i64 value;
+		HOUTGlobalDataType data_type;
+
+		using DType = std::variant<HOUTGlobalConst, HOUTGlobalVariable>;
+
+		DType value;
 
 		tsh::SymbolType<> type;
 
-		HOUTGlobalData(SymID symbol, query::Context& ctx);
+		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
 		std::string debugPrint() const;

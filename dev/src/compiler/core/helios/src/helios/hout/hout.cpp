@@ -80,7 +80,7 @@ namespace compiler::helios {
 		);
 	}
 
-	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
+	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, GL value):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
 		  value(ctx.query<QueryConstValueOf>(symbol).expect(
