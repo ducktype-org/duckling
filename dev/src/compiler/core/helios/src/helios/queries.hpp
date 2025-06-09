@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include "helios/hout/elements/expr.hpp"
 #include "hout/hout.hpp"
 #include "scope_symbol_id.hpp"
 

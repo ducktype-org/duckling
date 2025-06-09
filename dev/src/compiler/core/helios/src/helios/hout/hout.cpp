@@ -7,6 +7,9 @@
 #include <helios_private/scopes/scopes.hpp>  // for parent
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
+#include "../symbols/simple.hpp"
+#include "helios/hout/elements/expr.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 #include <sstream>
 
@@ -80,13 +83,15 @@ namespace compiler::helios {
 		);
 	}
 
-	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, GL value):
+	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(ctx.query<QueryConstValueOf>(symbol).expect(
-			  "Handling errors in HOUT is not supported yet"
-		  )),
+		  data_type(data_type),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
-		  )) {}
+		  )) {
+			if (data_type == HOUTGlobalDataType::Constant) {
+				
+			}
+		  }
 }

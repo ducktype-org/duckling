@@ -19,6 +19,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
+#include "helios/symbols/symbol_kind.hpp"
 
 namespace compiler::helios {
 
@@ -32,7 +33,9 @@ namespace compiler::helios {
 
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
-					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+					if (kind(sym) == SymbolKind::Variable) 
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
 						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
@@ -78,7 +81,9 @@ namespace compiler::helios {
 
 			for (auto sym: *symbols_in_module_root) {
 				// grab constants:
-				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+				if (kind(sym) == SymbolKind::Variable) 
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
@@ -376,4 +381,54 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOFFun);
+
+	struct IMPLEMENT_QUERY(QueryInitExprtOfVaraible, base::Optional<Box<code::Expr>>) {
+
+		struct HOUTVariableMaker final: public pst::PstVisitorPanicky {
+			query::Context& ctx;
+			SymID           original_symbol;
+
+			base::Optional<Box<code::Expr>> out;
+
+			HOUTVariableMaker(query::Context& ctx, SymID symbol):
+				  ctx(ctx),
+				  original_symbol(symbol) {}
+
+			// @TODO: make failure more explicit
+
+			void visitVariable(pst::Access<pst::Variable> stmt) final {
+				// @TODO: create function here...
+				// - create types, attributes, flags, ...
+				// @TODO: rest, flags, attributes, etc
+
+				auto value = stmt->getValue();
+
+					if (!value.empty()) {
+						auto initial_value
+							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
+
+						if (initial_value.hasError()) {
+							// we just fail here, because we can't continue without correct initial
+							// expression
+							return;
+						}
+
+						out = std::move(initial_value.value());
+					}
+				}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
+			);
+			stmt(ctx, key)->dynamicCast<pst::Variable>().value()->getValue().value().unlock(ctx);
+
+			return std::move(var_maker.out);
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInitExprtOfVaraible);
 }

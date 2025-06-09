@@ -11,6 +11,7 @@
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <base/box.hpp>
 #include <base/string_id.hpp>
 
 #include <memory>
@@ -109,7 +110,7 @@ namespace compiler::helios {
 	};
 
 	struct HOUTGlobalVariable {
-		std::shared_ptr<code::Expr> initial_value;
+		Box<code::Expr> initial_value;
 	};
 
 	/**
