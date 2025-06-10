@@ -388,12 +388,7 @@ private:
 					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
 						auto const_value
 							= std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
-						this->assertTrue(
-							const_value == val,
-							base::strConcat(
-								"Bad constant value, expected: ", val, ", got: ", const_value
-							)
-						);
+						ASSERT_EQUAL(val, const_value);
 						return;
 					} else {
 						this->fail(base::strConcat("Expected constant but found: ", name.strView()));
@@ -985,7 +980,7 @@ private:
 		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
-			assertTrue(false, base::strConcat("Function ", name.strView(), " not found"));
+			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
@@ -1053,14 +1048,14 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/global_viariables")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
-			assertTrue(false, base::strConcat("Function ", name.strView(), " not found"));
+			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 

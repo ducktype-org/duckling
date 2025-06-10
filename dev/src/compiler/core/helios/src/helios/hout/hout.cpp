@@ -88,7 +88,8 @@ namespace compiler::helios {
 		  original_name(name(symbol)),
 		  data_type(data_type),
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
-			  if (data_type == HOUTGlobalDataType::Variable) {
+			  switch (data_type) {
+			  case HOUTGlobalDataType::Variable:
 				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
 					  std::move(ctx.query<QueryHoutOfExpr>(stmt(ctx, symbol)
 				                                               ->dynamicCast<pst::Variable>()
@@ -99,10 +100,12 @@ namespace compiler::helios {
 				                                               ->getExpr())
 				                    .expect("Handling errors in HOUT is not supported yet"))
 				  ) };
-			  } else {
+			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ) };
+			  default:
+				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
