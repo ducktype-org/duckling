@@ -13,6 +13,7 @@ namespace aaa {
     }
 
     const aha:i32 = 8;
+    var aaaaa:i32 = 100;
 }
 
 namespace bbb {
