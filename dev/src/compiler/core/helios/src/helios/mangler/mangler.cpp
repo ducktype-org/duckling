@@ -14,7 +14,6 @@
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
-#include <ranges>
 #include <string_view>
 
 /**
@@ -277,7 +276,7 @@ namespace compiler::helios::mangler {
 
 	}  // namespace detail
 
-	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<std::string>) {
+	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<base::StrID>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
@@ -296,7 +295,7 @@ namespace compiler::helios::mangler {
 			std::string mangled_name
 				= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
 
-			return mangled_name;
+			return base::StrID{mangled_name.c_str()};
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -304,5 +303,9 @@ namespace compiler::helios::mangler {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
 
-
-}  // namespace compiler::helios::mangler
+	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
+		return ctx.query<QueryMangledSymbol>(
+			KeyOf_MangledSymbol{ .symbol = sym_id }
+		).value();
+	}
+}

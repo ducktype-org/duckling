@@ -19,6 +19,7 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
+#include <helios/mangler/mangler.hpp>
 
 #include <base/variant.hpp>
 
@@ -401,7 +402,7 @@ namespace compiler::lir {
 					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 				return Function{
-					.name               = key.function->name,
+					.mangled_name       = helios::mangler::getSimpleMangledName(ctx, key.function->helios_id),
 					.return_type_layout = return_type,
 					.parameter_layouts  = std::move(parameter_types),
 					.blocks             = std::move(blocks),

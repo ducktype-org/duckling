@@ -23,6 +23,7 @@ LLVM_INCLUDE_END()
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -147,15 +148,14 @@ namespace compiler::backend_llvm {
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
-		// @TODO: work here on mangled name instead #510
-
+		
 		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(lir_function.name.strView())) return func;
+		if (auto func = module->getFunction(lir_function.mangled_name.strView())) return func;
 
 		auto& context = module->getContext();
 
 		return module->getOrInsertFunction(
-			lir_function.name.strView(),
+			lir_function.mangled_name.strView(),
 			getFunType(context, lir_function.parameter_layouts, lir_function.return_type_layout)
 		);
 	}
@@ -165,18 +165,16 @@ namespace compiler::backend_llvm {
 	 */
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromSymID(
 		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
-	) {
-		// @TODO: work here on mangled name instead #510
-
+	) {		
 		auto& context = module->getContext();
-		auto  name    = compiler::helios::name(sym_id);
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, sym_id);
 
 		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(name.strView())) return func;
+		if (auto func = module->getFunction(mangled_name.strView())) return func;
 
 		auto types = getParameterAndResultFromSymID(ctx, sym_id);
 		return module->getOrInsertFunction(
-			name.strView(), getFunType(context, types.parameters, types.result_type)
+			mangled_name.strView(), getFunType(context, types.parameters, types.result_type)
 		);
 	}
 
