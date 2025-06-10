@@ -33,7 +33,6 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include <iostream>
 #include <type_traits>
 
 using namespace compiler::helios::test_utils;
