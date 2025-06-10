@@ -6,8 +6,8 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/hout/visitors.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_class_symbol_data.hpp>
