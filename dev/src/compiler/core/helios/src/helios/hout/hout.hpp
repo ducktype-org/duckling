@@ -28,7 +28,6 @@ namespace compiler::helios {
 		// Forward declaration:
 		struct CodeBlock;
 		struct Parameter;
-		struct Expr;
 	}
 
 	/**
