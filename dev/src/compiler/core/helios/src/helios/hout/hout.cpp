@@ -100,7 +100,9 @@ namespace compiler::helios {
 				                    .expect("Handling errors in HOUT is not supported yet"))
 				  ) };
 			  } else {
-				  return HOUTGlobalConst{ 0 };
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
+					  "Handling errors in HOUT is not supported yet"
+				  ) };
 			  }
 		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
