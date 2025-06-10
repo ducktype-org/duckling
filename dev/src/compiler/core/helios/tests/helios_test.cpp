@@ -383,8 +383,19 @@ private:
 			auto name = base::StrID(str);
 			for (auto& gb: hout->glob_data) {
 				if (gb.original_name == name) {
-					this->assertTrue(gb.value == val, "Bad constant value");
-					return;
+					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
+						auto const_value
+							= std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
+						this->assertTrue(
+							const_value == val,
+							base::strConcat(
+								"Bad constant value, expected: ", val, ", got: ", const_value
+							)
+						);
+						return;
+					} else {
+						this->fail(base::strConcat("Expected constant but found: ", name.strView()));
+					}
 				}
 			}
 			this->fail(base::strConcat("No constant of name: ", name.strView()));
@@ -975,12 +986,12 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.value() << '\n';
 
-		auto cnst = hout_unit.glob_data[1];
-		std::cerr << "\nConstant name: " << cnst.original_name.strView() << '\n';
-		auto mangled_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ cnst.helios_symbol, 321, "metadata_v321" }
+		auto glob = hout_unit.glob_data[1];
+		std::cerr << "\nGlobal Variable name: " << glob.original_name.strView() << '\n';
+		auto mangled_glob = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ glob.helios_symbol, 321, "metadata_v321" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_cnst.value() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_glob.value() << '\n';
 
 		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
@@ -1002,7 +1013,7 @@ private:
 		ASSERT_EQUAL(
 			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.value()
 		);
-		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_cnst.value());
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.value());
 
 		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.value());
 		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.value());
