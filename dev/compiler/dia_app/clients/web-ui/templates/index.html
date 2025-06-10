@@ -151,6 +151,17 @@
             background-color: #ebf8ff;
         }
 
+        /* Styles for clickable components */
+        .text-component[onclick],
+        .code-component[onclick] {
+            border-bottom: 1px dashed #4299e1;
+        }
+
+        .text-component[onclick]:hover,
+        .code-component[onclick]:hover {
+            background-color: #ebf8ff;
+        }
+
         .edges {
             display: flex;
             gap: 6px;
@@ -192,9 +203,9 @@
             {# Handle protobuf objects #}
             {%- set component_type = comp.WhichOneof('component') -%}
             {%- if component_type == 'text_component' -%}
-                <span class="text-component">{{- comp.text_component.content -}}</span>
+                <span class="text-component" {%- if comp.text_component.component_id -%}onclick="handleComponentClick(event, {{- comp.text_component.component_id -}})" style="cursor: pointer;"{%- endif -%}>{{- comp.text_component.content -}}</span>
             {%- elif component_type == 'code_component' -%}
-                <span class="code-component">{{- comp.code_component.content -}}</span>
+                <span class="code-component" {%- if comp.code_component.component_id -%}onclick="handleComponentClick(event, {{- comp.code_component.component_id -}})" style="cursor: pointer;"{%- endif -%}>{{- comp.code_component.content -}}</span>
             {%- elif component_type == 'concat_component' -%}
                 <span class="concat-component">{%- for child in comp.concat_component.components -%}{{- render_nohl_component(child) -}}{%- endfor -%}</span>
             {%- elif component_type == 'interactive_component' -%}
@@ -211,7 +222,7 @@
             {# Handle protobuf objects #}
             {%- set component_type = comp.WhichOneof('component') -%}
             {%- if component_type == 'code_component' -%}
-                <span class="code-component" data-tags="{{- comp.code_component.hl_tags | join(',') -}}">{{- comp.code_component.content -}}</span>
+                <span class="code-component" data-tags="{{- comp.code_component.hl_tags | join(',') -}}" {%- if comp.code_component.component_id -%}onclick="handleComponentClick(event, {{- comp.code_component.component_id -}})" style="cursor: pointer;"{%- endif -%}>{{- comp.code_component.content -}}</span>
             {%- elif component_type == 'concat_component' -%}
                 <span class="concat-component">{%- for child in comp.concat_component.components -%}{{- render_hl_component(child) -}}{%- endfor -%}</span>
             {%- elif component_type == 'interactive_component' -%}
