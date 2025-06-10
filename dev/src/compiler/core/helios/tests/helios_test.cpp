@@ -1,3 +1,5 @@
+#include "helios/hout/hout.hpp"
+
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -31,6 +33,7 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include <iostream>
 #include <type_traits>
 
 using namespace compiler::helios::test_utils;
@@ -62,6 +65,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testGlobalVariableExpressions);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -215,7 +219,7 @@ private:
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
 		ASSERT_EQUAL(hout->functions.size(), 3);
-		ASSERT_EQUAL(hout->glob_data.size(), 2);
+		ASSERT_EQUAL(hout->glob_data.size(), 3);
 
 		// just for cov and to see if it does not throw:
 		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
@@ -235,7 +239,7 @@ private:
 		}
 
 		ASSERT_EQUAL(functions, 3);
-		ASSERT_EQUAL(glob_data, 4);
+		ASSERT_EQUAL(glob_data, 5);
 	}
 
 	void testModuleHOUT() {
@@ -979,31 +983,60 @@ private:
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		auto goo = hout_unit.functions[1];
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+			for (const auto& fun: unit.functions)
+				if (fun.original_name == name) return fun;
+			assertTrue(false, base::strConcat("Function ", name.strView(), " not found"));
+			return {};
+		};
+
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+			for (const auto& glob: unit.glob_data)
+				if (glob.original_name == name) return glob;
+			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
+			return {};
+		};
+
+		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
 		std::cerr << "\nFunction name: " << goo.original_name.strView() << '\n';
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ goo.original_symbol, 123, "metadata_v123" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.value() << '\n';
 
-		auto glob = hout_unit.glob_data[1];
+		auto glob = find_global(hout_unit, base::StrID("B")).value();
 		std::cerr << "\nGlobal Variable name: " << glob.original_name.strView() << '\n';
+		std::cerr << "Expression: ";
+		std::get<compiler::helios::HOUTGlobalVariable>(glob.value)
+			.initial_value.get()
+			->ref()
+			->debugPrint(std::cerr);
+		std::cerr << '\n';
 		auto mangled_glob = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ glob.helios_symbol, 321, "metadata_v321" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_glob.value() << '\n';
 
+		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
+		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
+		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ g_const.helios_symbol, 321, "metadata_v321" }
+		);
+		std::cerr << "Mangled symbol: " << mangled_g_const.value() << '\n';
+
 		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
 
-		auto sub_fun = sub_hout_unit.functions[0];
+		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
 		std::cerr << "\nSub function name: " << sub_fun.original_name.strView() << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ sub_fun.original_symbol, 5, "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.value() << '\n';
 
-		auto sub_cnst = sub_hout_unit.glob_data[0];
+		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
 		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ sub_cnst.helios_symbol, 5, "metadata_v5" }
@@ -1015,8 +1048,50 @@ private:
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.value());
 
+		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.value());
+
 		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.value());
 		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.value());
+	}
+
+	void testGlobalVariableExpressions() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
+		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+			for (const auto& fun: unit.functions)
+				if (fun.original_name == name) return fun;
+			assertTrue(false, base::strConcat("Function ", name.strView(), " not found"));
+			return {};
+		};
+
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+			for (const auto& glob: unit.glob_data)
+				if (glob.original_name == name) return glob;
+			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
+			return {};
+		};
+
+		auto glob1 = find_global(hout_unit, base::StrID("B")).value();
+		auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
+
+		Ref<const compiler::helios::code::Expr> expr1
+			= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value.get()->ref();
+		Ref<const compiler::helios::code::Expr> expr2
+			= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value.get()->ref();
+
+		ASSERT_EQUAL(
+			compiler::helios::code::BuiltinBinary::IntegerAdd,
+			dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr1)->operation
+		);
+		ASSERT_EQUAL(
+			dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee,
+			find_function(hout_unit, base::StrID("foooo")).value().original_symbol
+		);
+		expr1->debugPrint(std::cerr);
+		std::cerr << '\n';
 	}
 };
 
