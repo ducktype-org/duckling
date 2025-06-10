@@ -1,7 +1,5 @@
 #include "queries.hpp"
 
-#include "helios/symbols/symbol_kind.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>

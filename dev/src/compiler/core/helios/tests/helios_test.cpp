@@ -1,5 +1,3 @@
-#include "helios/hout/hout.hpp"
-
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -9,6 +7,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_class_symbol_data.hpp>
