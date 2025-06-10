@@ -108,13 +108,22 @@ namespace compiler::helios {
 	};
 
 	struct HOUTGlobalVariable {
-		std::shared_ptr<Box<code::Expr>> initial_value;
+		std::shared_ptr<Box<code::Expr>> initial_value; ///< The initial value of the variable.
 	};
 
 	/**
-	 * @brief Represents a constant
-	 * @note: this is a mock
-	 * @TODO: make it represent more general stuff
+	 * @brief Represents global data in the HOUT module.
+	 * 
+	 * This structure is used to store information about global constants and variables
+	 * in the HOUT representation of a module. It supports two types of global data:
+	 * constants and variables, distinguished by the `data_type` field.
+	 * 
+	 * - Constants are represented using `HOUTGlobalConst`.
+	 * - Variables are represented using `HOUTGlobalVariable`.
+	 * 
+	 * The `value` field is a variant that holds either a constant or a variable,
+	 * depending on the `data_type`. This structure also includes metadata such as
+	 * the original name, symbol ID, and type of the global data.
 	 */
 	struct HOUTGlobalData {
 		// @TODO: decide if HOUT functions global data contain its HELIOS SymID

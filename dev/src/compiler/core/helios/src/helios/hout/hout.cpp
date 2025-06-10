@@ -71,16 +71,16 @@ namespace compiler::helios {
 	}
 
 	std::string HOUTGlobalData::debugPrint() const {
-		return base::strConcat(
-			"const ",
-			original_name,
-			" (",
-			"Symbol ",
-			helios_symbol.queryUnstablePerfectHash(),
-			")"
-			" := ",
-			"\n"
-		);
+		std::stringstream out;
+		if (std::holds_alternative<HOUTGlobalConst>(value)) {
+			auto const_value = std::get<HOUTGlobalConst>(value).value;
+			out << "const " << original_name.strView() << " = " << const_value << "\n";
+		} else if (std::holds_alternative<HOUTGlobalVariable>(value)) {
+			out << "var " << original_name.strView() << " = ";
+			std::get<HOUTGlobalVariable>(value).initial_value.get()->ref()->debugPrint(out);
+			out << "\n";
+		}
+		return out.str();
 	}
 
 	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type):
