@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
+#include "elements/expr.hpp"  // IWYU pragma: export
 
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/types.hpp>
@@ -99,10 +100,7 @@ namespace compiler::helios {
 		friend ImplementationOf_QueryCodeOFFun;
 	};
 
-	enum class HOUTGlobalDataType { 
-		Constant,
-		Variable
-	};
+	enum class HOUTGlobalDataType { Constant, Variable };
 
 	struct HOUTGlobalConst {
 		// @TODO: CTV from TS:
@@ -110,7 +108,7 @@ namespace compiler::helios {
 	};
 
 	struct HOUTGlobalVariable {
-		Box<code::Expr> initial_value;
+		std::shared_ptr<Box<code::Expr>> initial_value;
 	};
 
 	/**
@@ -127,9 +125,7 @@ namespace compiler::helios {
 
 		HOUTGlobalDataType data_type;
 
-		using DType = std::variant<HOUTGlobalConst, HOUTGlobalVariable>;
-
-		DType value;
+		std::variant<HOUTGlobalConst, HOUTGlobalVariable> value;
 
 		tsh::SymbolType<> type;
 

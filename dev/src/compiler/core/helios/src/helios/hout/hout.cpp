@@ -1,16 +1,17 @@
 #include "hout.hpp"
 
+#include "../symbols/simple.hpp"
 #include "elements.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>  // for parent
 #include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <query_framework/context.hpp>
-#include "../symbols/simple.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "pst_parser/pst_visitor.hpp"
 
+#include <memory>
 #include <sstream>
 
 namespace compiler::helios {
@@ -78,7 +79,6 @@ namespace compiler::helios {
 			helios_symbol.queryUnstablePerfectHash(),
 			")"
 			" := ",
-			value,
 			"\n"
 		);
 	}
@@ -87,11 +87,23 @@ namespace compiler::helios {
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
 		  data_type(data_type),
+		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
+			  if (data_type == HOUTGlobalDataType::Variable) {
+				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
+					  std::move(ctx.query<QueryHoutOfExpr>(stmt(ctx, symbol)
+				                                               ->dynamicCast<pst::Variable>()
+				                                               .value()
+				                                               ->getValue()
+				                                               .value()
+				                                               .unlock(ctx)
+				                                               ->getExpr())
+				                    .expect("Handling errors in HOUT is not supported yet"))
+				  ) };
+			  } else {
+				  return HOUTGlobalConst{ 0 };
+			  }
+		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
-		  )) {
-			if (data_type == HOUTGlobalDataType::Constant) {
-				
-			}
-		  }
+		  )) {}
 }
