@@ -2,7 +2,7 @@
 
 #include <helios/symbols/simple.hpp>
 
-#include "base/optional.hpp"
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <iomanip>

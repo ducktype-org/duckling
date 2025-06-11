@@ -6,34 +6,32 @@
 
 #include "mir_lowering.hpp"
 
-#include "helios/hout/hout.hpp"
 #include "mir_lifetimes.hpp"
-#include "query_framework/query_cache_macros.hpp"
-#include "typesystem/higher/internal/abstract_type_impl.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/higher/types.hpp"
 
 #include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/symbol_type.hpp>
+#include <typesystem/higher/types.hpp>
 
-#include "base/optional.hpp"
-#include "base/str_utils.hpp"
-#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
+#include <base/str_utils.hpp>
+#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <iostream>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -816,7 +814,7 @@ namespace compiler::mir {
 			CORE_ASSERT(
 				location_value_result.isLocal() || location_value_result.isGlobal(),
 				"Left side of assignment statement doesn't contain reference to local variable or "
-			    "a global variable."
+				"a global variable."
 			);
 			if (location_value_result.isLocal()) {
 				auto local = location_value_result.get<LocalRef>();

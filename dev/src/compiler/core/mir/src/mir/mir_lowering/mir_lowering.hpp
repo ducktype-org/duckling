@@ -7,8 +7,6 @@
 #include <helios/hout/hout.hpp>
 #include <query_framework/query_int.hpp>
 
-#include "base/ref.hpp"
-
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
