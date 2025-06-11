@@ -150,7 +150,7 @@ namespace dia_app {
 
 		class InteractiveComponent;
 		using id_to_interactive_component_mapping_t
-			= std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>;
+			= std::unordered_map<component_id_t, std::weak_ptr<Component>>;
 
 		class InteractiveComponent: public Component {
 		public:
@@ -206,7 +206,7 @@ namespace dia_app {
 		};
         
 		struct CreationContext {
-			std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
+			std::shared_ptr<id_to_interactive_component_mapping_t> id_to_component;
 			std::shared_ptr<id_to_view_constructor_mapping_t>      id_to_view_constructor;
 			std::unique_ptr<std::map<std::string, hl_id_t>>        hl_name_to_id;
 			std::optional<DataHandle>                              data_handle;

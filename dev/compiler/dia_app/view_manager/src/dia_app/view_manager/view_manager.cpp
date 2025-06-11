@@ -92,8 +92,8 @@ namespace dia_app {
 			debug("ViewManager::registerInteraction begin");
 			debug(id);
 			debug(print(interaction_type));
-			auto ptr = creation_context->id_to_interactive_component->find(id);
-			if (ptr == creation_context->id_to_interactive_component->end()) {
+			auto ptr = creation_context->id_to_component->find(id);
+			if (ptr == creation_context->id_to_component->end()) {
 				debug("Component with id not found!");
 				debug("ViewManager::registerInteraction end");
 				response->set_status("Component with given id doesn't exist!");

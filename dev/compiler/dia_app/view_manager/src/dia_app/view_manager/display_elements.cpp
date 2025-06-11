@@ -61,7 +61,12 @@ namespace dia_app {
 			accumulateData(creation_context, acc_data);
 			// This element involves no computations,
 			// so caching can be skipped.
-			return std::make_shared<TextComponent>(view_manager::getNewId(),creation_context->view_constructor, this->content, acc_data.getAssocInfos());
+			auto id = view_manager::getNewId();
+			auto result = std::make_shared<TextComponent>(id,creation_context->view_constructor, this->content, acc_data.getAssocInfos());
+			creation_context->id_to_component->emplace(
+				id, std::weak_ptr<Component>(result)
+			);
+			return result;
 		}
 
 		// ---------------- ConcatElement ---------------- //
@@ -225,12 +230,12 @@ namespace dia_app {
                     view_manager::getNewId(),
                     primary,
                     alternative,
-                    creation_context->id_to_interactive_component
+                    creation_context->id_to_component
                 );
                 primary->parent = result;
                 alternative->parent = result;
-				creation_context->id_to_interactive_component->emplace(
-					result->getId(), std::weak_ptr<InteractiveComponent>(result)
+				creation_context->id_to_component->emplace(
+					result->getId(), std::weak_ptr<Component>(result)
 				);
 				this->generated_component = static_pointer_cast<Component>(result);
 			}
@@ -388,8 +393,12 @@ namespace dia_app {
 						return creation_context->hl_name_to_id->at(group);
 					}
 				);
+				auto id = view_manager::getNewId();
 				auto result = std::make_shared<CodeComponent>(
-					view_manager::getNewId(), creation_context->view_constructor, this->content, std::move(tags), acc_data.getAssocInfos()
+					id, creation_context->view_constructor, this->content, std::move(tags), acc_data.getAssocInfos()
+				);
+				creation_context->id_to_component->emplace(
+					id, std::weak_ptr<Component>(result)
 				);
 				this->generated_component = std::static_pointer_cast<Component>(result);
 			}

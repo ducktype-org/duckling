@@ -420,7 +420,7 @@ namespace dia_app {
 			std::optional<DataHandle>                              data_handle,
 			std::weak_ptr<ViewConstructor>                         view_constructor
 		) : 
-			id_to_interactive_component(std::move(id_to_interactive_component)),
+			id_to_component(std::move(id_to_interactive_component)),
 			id_to_view_constructor(std::move(id_to_view_constructor)),
 			hl_name_to_id(std::move(hl_name_to_id)),
 			data_handle(std::move(data_handle)),
