@@ -1,12 +1,10 @@
 #pragma once
 #include <iostream>
-#include <algorithm>
 #include <expected>
-#include <set>
 #include <json/json.hpp>
 #include <yaml-cpp/yaml.h>
 
-#ifndef DEBUG
+#ifdef DEBUG
 auto&operator<<(auto&o,std::pair<auto,auto>p){return o<<"("<<p.first<<", "<<p.second<<")";}
 auto operator<<(auto&o,auto x)->decltype(x.end(),o){o<<"{";int i=0;for(auto e:x)o<<","+!i++<<e;return o<<"}";}
 #define debug(X...)std::cerr<<"["#X"]: ",[](auto...$){((std::cerr<<$<<"; "),...)<<std::endl;}(X)

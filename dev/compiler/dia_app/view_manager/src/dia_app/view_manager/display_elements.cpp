@@ -52,7 +52,7 @@ namespace dia_app {
 			accumulateData(acc_data);
 			// This element involves no computations,
 			// so caching can be skipped.
-			return std::make_shared<TextComponent>(creation_context->view_constructor, this->content, acc_data.getAssocInfos());
+			return std::make_shared<TextComponent>(view_manager::getNewId(),creation_context->view_constructor, this->content, acc_data.getAssocInfos());
 		}
 
 		// ---------------- ConcatElement ---------------- //
@@ -380,7 +380,7 @@ namespace dia_app {
 					}
 				);
 				auto result = std::make_shared<CodeComponent>(
-					creation_context->view_constructor, this->content, std::move(tags), acc_data.getAssocInfos()
+					view_manager::getNewId(), creation_context->view_constructor, this->content, std::move(tags), acc_data.getAssocInfos()
 				);
 				this->generated_component = std::static_pointer_cast<Component>(result);
 			}

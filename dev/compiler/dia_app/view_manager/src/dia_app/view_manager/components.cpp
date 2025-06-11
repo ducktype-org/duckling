@@ -47,11 +47,13 @@ namespace dia_app {
 		// TextComponent
 
 		TextComponent::TextComponent(
+			component_id_t id,
 			std::weak_ptr<ViewConstructor> view_constructor,
 			std::string                    content,
 			std::vector<side_entry_id_t>   assoc_side_entries
 		):
 			  Component(std::move(view_constructor)),
+			  id(id),
 			  content(std::move(content)),
 			  assoc_side_entries(std::move(assoc_side_entries)) {}
 
@@ -64,12 +66,13 @@ namespace dia_app {
 			);
 			auto left = line_suffix_data_t<::view::NoHlComponent>{ std::move(result) };
 			auto mid  = std::vector<line_data_t<::view::NoHlComponent>>{};
+			debug(this->assoc_side_entries);
 			debug("TextComponent::getNoHlView() end");
 			return { std::move(left), std::move(mid) };
 		}
 
 		std::shared_ptr<Component> TextComponent::deepCopy() {
-			auto result = std::make_shared<TextComponent>(this->view_constructor, this->content, this->assoc_side_entries);
+			auto result = std::make_shared<TextComponent>(getNewId(), this->view_constructor, this->content, this->assoc_side_entries);
 			result->parent = this->parent;
 			return std::static_pointer_cast<Component>(result);
 		}
@@ -86,12 +89,14 @@ namespace dia_app {
 		// CodeComponent
 
 		CodeComponent::CodeComponent(
+			component_id_t id,
             std::weak_ptr<ViewConstructor> view_constructor,
 			std::string                  content,
 			std::vector<hl_id_t>         tags,
 			std::vector<side_entry_id_t> assoc_side_entries
 		):
 			  Component(std::move(view_constructor)),
+			  id(id),
 			  content(std::move(content)),
 			  tags(std::move(tags)),
 			  assoc_side_entries(std::move(assoc_side_entries)) {}
@@ -108,6 +113,7 @@ namespace dia_app {
 			);
 			auto left = line_suffix_data_t<::view::HlComponent>{ std::move(result) };
 			auto mid  = std::vector<line_data_t<::view::HlComponent>>{};
+			debug(this->assoc_side_entries);
 			debug("CodeComponent::getHlView() end");
 			return { std::move(left), std::move(mid) };
 		}
@@ -121,12 +127,14 @@ namespace dia_app {
 			);
 			auto left = line_suffix_data_t<::view::NoHlComponent>{ std::move(result) };
 			auto mid  = std::vector<line_data_t<::view::NoHlComponent>>{};
+			debug(this->assoc_side_entries);
 			debug("CodeComponent::getNoHlView() end");
 			return { std::move(left), std::move(mid) };
 		}
 
 		std::shared_ptr<Component> CodeComponent::deepCopy() {
 			auto result = std::make_shared<CodeComponent>(
+				getNewId(),
 				this->view_constructor, this->content, this->tags, this->assoc_side_entries
 			);
 			result->parent = this->parent;
@@ -343,11 +351,20 @@ namespace dia_app {
 			return std::static_pointer_cast<Component>(result);
 		}
 
+		std::string print(InteractiveComponent::Status status) {
+			switch (status) {
+				case InteractiveComponent::Status::Primary: return "Primary";
+				case InteractiveComponent::Status::Alternative: return "Alternative";
+			}
+			assert(false);
+		}
+
 		void InteractiveComponent::registerInteraction(
 			InteractionType interaction_type, InteractionContext& interaction_context
 		) {
 			debug("InteractiveComponent::registerInteraction begin");
 			debug(print(interaction_type));
+			debug(print(this->status));
 			if (this->status == Status::Primary
 			    && interaction_type == InteractionType::ClickInteractive) {
 				debug("Switching to alternative content");

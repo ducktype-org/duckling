@@ -81,14 +81,16 @@ namespace dia_app {
 
 		class TextComponent: public Component {
 		private:
+			component_id_t id;
 			std::string                  content;
 			std::vector<side_entry_id_t> assoc_side_entries;
 
 		public:
 			TextComponent(
+				component_id_t id,
 				std::weak_ptr<ViewConstructor> view_constructor,
 				std::string                    content,
-				std::vector<side_entry_id_t>   accos_side_entries
+				std::vector<side_entry_id_t>   assoc_side_entries
 			);
 
 			component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
@@ -102,12 +104,14 @@ namespace dia_app {
 
 		class CodeComponent: public Component {
 		private:
+			component_id_t id;
 			std::string                  content;
 			std::vector<hl_id_t>         tags;
 			std::vector<side_entry_id_t> assoc_side_entries;
 
 		public:
 			CodeComponent(
+				component_id_t id,
 				std::weak_ptr<ViewConstructor> view_constructor,
 				std::string                    content,
 				std::vector<hl_id_t>           tags,

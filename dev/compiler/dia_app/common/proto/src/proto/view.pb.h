@@ -756,10 +756,11 @@ class NoHlTextComponent final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kAssocSideEntriesFieldNumber = 2,
-    kContentFieldNumber = 1,
+    kAssocSideEntriesFieldNumber = 3,
+    kContentFieldNumber = 2,
+    kComponentIdFieldNumber = 1,
   };
-  // repeated uint32 assoc_side_entries = 2;
+  // repeated uint32 assoc_side_entries = 3;
   int assoc_side_entries_size() const;
   private:
   int _internal_assoc_side_entries_size() const;
@@ -777,7 +778,7 @@ class NoHlTextComponent final
   ::google::protobuf::RepeatedField<::uint32_t>* _internal_mutable_assoc_side_entries();
 
   public:
-  // string content = 1;
+  // string content = 2;
   void clear_content() ;
   const std::string& content() const;
   template <typename Arg_ = const std::string&, typename... Args_>
@@ -793,12 +794,22 @@ class NoHlTextComponent final
   std::string* _internal_mutable_content();
 
   public:
+  // uint32 component_id = 1;
+  void clear_component_id() ;
+  ::uint32_t component_id() const;
+  void set_component_id(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_component_id() const;
+  void _internal_set_component_id(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:view.NoHlTextComponent)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 0,
+      2, 3, 0,
       38, 2>
       _table_;
 
@@ -819,6 +830,7 @@ class NoHlTextComponent final
     ::google::protobuf::RepeatedField<::uint32_t> assoc_side_entries_;
     ::google::protobuf::internal::CachedSize _assoc_side_entries_cached_byte_size_;
     ::google::protobuf::internal::ArenaStringPtr content_;
+    ::uint32_t component_id_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -974,10 +986,11 @@ class NoHlCodeComponent final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kAssocSideEntriesFieldNumber = 2,
-    kContentFieldNumber = 1,
+    kAssocSideEntriesFieldNumber = 3,
+    kContentFieldNumber = 2,
+    kComponentIdFieldNumber = 1,
   };
-  // repeated uint32 assoc_side_entries = 2;
+  // repeated uint32 assoc_side_entries = 3;
   int assoc_side_entries_size() const;
   private:
   int _internal_assoc_side_entries_size() const;
@@ -995,7 +1008,7 @@ class NoHlCodeComponent final
   ::google::protobuf::RepeatedField<::uint32_t>* _internal_mutable_assoc_side_entries();
 
   public:
-  // string content = 1;
+  // string content = 2;
   void clear_content() ;
   const std::string& content() const;
   template <typename Arg_ = const std::string&, typename... Args_>
@@ -1011,12 +1024,22 @@ class NoHlCodeComponent final
   std::string* _internal_mutable_content();
 
   public:
+  // uint32 component_id = 1;
+  void clear_component_id() ;
+  ::uint32_t component_id() const;
+  void set_component_id(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_component_id() const;
+  void _internal_set_component_id(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:view.NoHlCodeComponent)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 0,
+      2, 3, 0,
       38, 2>
       _table_;
 
@@ -1037,6 +1060,7 @@ class NoHlCodeComponent final
     ::google::protobuf::RepeatedField<::uint32_t> assoc_side_entries_;
     ::google::protobuf::internal::CachedSize _assoc_side_entries_cached_byte_size_;
     ::google::protobuf::internal::ArenaStringPtr content_;
+    ::uint32_t component_id_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -1395,11 +1419,12 @@ class HlCodeComponent final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kAssocSideInfosFieldNumber = 2,
-    kHlTagsFieldNumber = 3,
-    kContentFieldNumber = 1,
+    kAssocSideInfosFieldNumber = 3,
+    kHlTagsFieldNumber = 4,
+    kContentFieldNumber = 2,
+    kComponentIdFieldNumber = 1,
   };
-  // repeated uint32 assoc_side_infos = 2;
+  // repeated uint32 assoc_side_infos = 3;
   int assoc_side_infos_size() const;
   private:
   int _internal_assoc_side_infos_size() const;
@@ -1417,7 +1442,7 @@ class HlCodeComponent final
   ::google::protobuf::RepeatedField<::uint32_t>* _internal_mutable_assoc_side_infos();
 
   public:
-  // repeated uint32 hl_tags = 3;
+  // repeated uint32 hl_tags = 4;
   int hl_tags_size() const;
   private:
   int _internal_hl_tags_size() const;
@@ -1435,7 +1460,7 @@ class HlCodeComponent final
   ::google::protobuf::RepeatedField<::uint32_t>* _internal_mutable_hl_tags();
 
   public:
-  // string content = 1;
+  // string content = 2;
   void clear_content() ;
   const std::string& content() const;
   template <typename Arg_ = const std::string&, typename... Args_>
@@ -1451,12 +1476,22 @@ class HlCodeComponent final
   std::string* _internal_mutable_content();
 
   public:
+  // uint32 component_id = 1;
+  void clear_component_id() ;
+  ::uint32_t component_id() const;
+  void set_component_id(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_component_id() const;
+  void _internal_set_component_id(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:view.HlCodeComponent)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 0,
+      2, 4, 0,
       36, 2>
       _table_;
 
@@ -1479,6 +1514,7 @@ class HlCodeComponent final
     ::google::protobuf::RepeatedField<::uint32_t> hl_tags_;
     ::google::protobuf::internal::CachedSize _hl_tags_cached_byte_size_;
     ::google::protobuf::internal::ArenaStringPtr content_;
+    ::uint32_t component_id_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -6317,7 +6353,29 @@ class ViewResponse final
 
 // NoHlTextComponent
 
-// string content = 1;
+// uint32 component_id = 1;
+inline void NoHlTextComponent::clear_component_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.component_id_ = 0u;
+}
+inline ::uint32_t NoHlTextComponent::component_id() const {
+  // @@protoc_insertion_point(field_get:view.NoHlTextComponent.component_id)
+  return _internal_component_id();
+}
+inline void NoHlTextComponent::set_component_id(::uint32_t value) {
+  _internal_set_component_id(value);
+  // @@protoc_insertion_point(field_set:view.NoHlTextComponent.component_id)
+}
+inline ::uint32_t NoHlTextComponent::_internal_component_id() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.component_id_;
+}
+inline void NoHlTextComponent::_internal_set_component_id(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.component_id_ = value;
+}
+
+// string content = 2;
 inline void NoHlTextComponent::clear_content() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.content_.ClearToEmpty();
@@ -6365,7 +6423,7 @@ inline void NoHlTextComponent::set_allocated_content(std::string* value) {
   // @@protoc_insertion_point(field_set_allocated:view.NoHlTextComponent.content)
 }
 
-// repeated uint32 assoc_side_entries = 2;
+// repeated uint32 assoc_side_entries = 3;
 inline int NoHlTextComponent::_internal_assoc_side_entries_size() const {
   return _internal_assoc_side_entries().size();
 }
@@ -6414,7 +6472,29 @@ inline ::google::protobuf::RepeatedField<::uint32_t>* NoHlTextComponent::_intern
 
 // NoHlCodeComponent
 
-// string content = 1;
+// uint32 component_id = 1;
+inline void NoHlCodeComponent::clear_component_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.component_id_ = 0u;
+}
+inline ::uint32_t NoHlCodeComponent::component_id() const {
+  // @@protoc_insertion_point(field_get:view.NoHlCodeComponent.component_id)
+  return _internal_component_id();
+}
+inline void NoHlCodeComponent::set_component_id(::uint32_t value) {
+  _internal_set_component_id(value);
+  // @@protoc_insertion_point(field_set:view.NoHlCodeComponent.component_id)
+}
+inline ::uint32_t NoHlCodeComponent::_internal_component_id() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.component_id_;
+}
+inline void NoHlCodeComponent::_internal_set_component_id(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.component_id_ = value;
+}
+
+// string content = 2;
 inline void NoHlCodeComponent::clear_content() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.content_.ClearToEmpty();
@@ -6462,7 +6542,7 @@ inline void NoHlCodeComponent::set_allocated_content(std::string* value) {
   // @@protoc_insertion_point(field_set_allocated:view.NoHlCodeComponent.content)
 }
 
-// repeated uint32 assoc_side_entries = 2;
+// repeated uint32 assoc_side_entries = 3;
 inline int NoHlCodeComponent::_internal_assoc_side_entries_size() const {
   return _internal_assoc_side_entries().size();
 }
@@ -7037,7 +7117,29 @@ inline NoHlComponent::ComponentCase NoHlComponent::component_case() const {
 
 // HlCodeComponent
 
-// string content = 1;
+// uint32 component_id = 1;
+inline void HlCodeComponent::clear_component_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.component_id_ = 0u;
+}
+inline ::uint32_t HlCodeComponent::component_id() const {
+  // @@protoc_insertion_point(field_get:view.HlCodeComponent.component_id)
+  return _internal_component_id();
+}
+inline void HlCodeComponent::set_component_id(::uint32_t value) {
+  _internal_set_component_id(value);
+  // @@protoc_insertion_point(field_set:view.HlCodeComponent.component_id)
+}
+inline ::uint32_t HlCodeComponent::_internal_component_id() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.component_id_;
+}
+inline void HlCodeComponent::_internal_set_component_id(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.component_id_ = value;
+}
+
+// string content = 2;
 inline void HlCodeComponent::clear_content() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.content_.ClearToEmpty();
@@ -7085,7 +7187,7 @@ inline void HlCodeComponent::set_allocated_content(std::string* value) {
   // @@protoc_insertion_point(field_set_allocated:view.HlCodeComponent.content)
 }
 
-// repeated uint32 assoc_side_infos = 2;
+// repeated uint32 assoc_side_infos = 3;
 inline int HlCodeComponent::_internal_assoc_side_infos_size() const {
   return _internal_assoc_side_infos().size();
 }
@@ -7130,7 +7232,7 @@ inline ::google::protobuf::RepeatedField<::uint32_t>* HlCodeComponent::_internal
   return &_impl_.assoc_side_infos_;
 }
 
-// repeated uint32 hl_tags = 3;
+// repeated uint32 hl_tags = 4;
 inline int HlCodeComponent::_internal_hl_tags_size() const {
   return _internal_hl_tags().size();
 }
