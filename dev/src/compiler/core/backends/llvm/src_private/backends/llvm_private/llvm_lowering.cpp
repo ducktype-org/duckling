@@ -22,8 +22,8 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
-#include <helios/symbols/simple.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/simple.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -148,7 +148,6 @@ namespace compiler::backend_llvm {
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
-		
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(lir_function.mangled_name.strView())) return func;
 
@@ -165,9 +164,9 @@ namespace compiler::backend_llvm {
 	 */
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromSymID(
 		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
-	) {		
-		auto& context = module->getContext();
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, sym_id);
+	) {
+		auto& context      = module->getContext();
+		auto  mangled_name = helios::mangler::getSimpleMangledName(ctx, sym_id);
 
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(mangled_name.strView())) return func;

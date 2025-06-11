@@ -1,11 +1,11 @@
 #include "get_parameter_types.hpp"
 
 #include <backends/dvm/backend.hpp>
-#include <helios/symbols/simple.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
 #include <query_framework/context.hpp>
+#include <typesystem/lower/type_layout.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
@@ -106,7 +106,7 @@ namespace compiler::backend_vm {
 		}
 
 		struct AddLirFuncContext final {
-			query::Context& ctx;
+			query::Context&     ctx;
 			CRef<lir::Function> lir_func;
 			Function            bytecode_func;
 
@@ -121,8 +121,9 @@ namespace compiler::backend_vm {
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
 			AddLirFuncContext(
-				query::Context& ctx,
-				CRef<lir::Function> lir_function, const vm::StableTypeIdNameMap<TypeOfData>& type_map
+				query::Context&                            ctx,
+				CRef<lir::Function>                        lir_function,
+				const vm::StableTypeIdNameMap<TypeOfData>& type_map
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
@@ -148,10 +149,12 @@ namespace compiler::backend_vm {
 
 		void initLocals(AddLirFuncContext& ctx) {
 			CORE_ASSERT(
-				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)),
+				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)
+			    ),
 				"Type not functional"
 			);
-			auto func_type_tod = std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
+			auto func_type_tod
+				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
 
 			// Save locals offset
 			for (const auto& var: ctx.lir_func->local_list) {
@@ -234,7 +237,9 @@ namespace compiler::backend_vm {
 					if (lir_instruction.operation == lir::Operation::Call) {
 						const auto callee_helios_id
 							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-						auto name = compiler::helios::mangler::getSimpleMangledName(query_ctx, callee_helios_id);
+						auto name = compiler::helios::mangler::getSimpleMangledName(
+							query_ctx, callee_helios_id
+						);
 						auto called_func_signature
 							= getParameterAndResultFromSymID(query_ctx, callee_helios_id);
 
@@ -318,7 +323,9 @@ namespace compiler::backend_vm {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
-					return vm::opargs::FunctionName(helios::mangler::getSimpleMangledName(ctx.ctx, function.helios_id));
+					return vm::opargs::FunctionName(
+						helios::mangler::getSimpleMangledName(ctx.ctx, function.helios_id)
+					);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}

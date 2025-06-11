@@ -278,11 +278,8 @@ namespace compiler::helios::mangler {
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<base::StrID>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-
 			// a quick hack:
-			if (name(key.symbol).str() == "main") {
-				return base::StrID{ "main" };
-			}
+			if (name(key.symbol).str() == "main") return base::StrID{ "main" };
 
 			using namespace std::literals::string_view_literals;
 
@@ -301,7 +298,7 @@ namespace compiler::helios::mangler {
 			std::string mangled_name
 				= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
 
-			return base::StrID{mangled_name.c_str()};
+			return base::StrID{ mangled_name.c_str() };
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -310,8 +307,6 @@ namespace compiler::helios::mangler {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
-		return ctx.query<QueryMangledSymbol>(
-			KeyOf_MangledSymbol{ .symbol = sym_id }
-		).value();
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol = sym_id }).value();
 	}
 }
