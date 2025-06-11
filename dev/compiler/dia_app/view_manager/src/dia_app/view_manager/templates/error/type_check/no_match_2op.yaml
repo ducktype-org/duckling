@@ -10,11 +10,7 @@ header_message:
   - "no matching `"
   - param: "operator"
   - "` "
-  - on: "operator"
-    include:
-      type: "docs"
-      family: "operator"
-      name: "general"
+  - "operator"
   - " for types `"
   - param: "left_type"
   - "`"
