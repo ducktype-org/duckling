@@ -74,13 +74,11 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 
 inline constexpr NoHlTextComponent::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : assoc_side_entries_{},
-        _assoc_side_entries_cached_byte_size_{0},
+      : _cached_size_{0},
         content_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        component_id_{0u},
-        _cached_size_{0} {}
+        component_id_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR NoHlTextComponent::NoHlTextComponent(::_pbi::ConstantInitialized)
@@ -104,13 +102,11 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 
 inline constexpr NoHlCodeComponent::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : assoc_side_entries_{},
-        _assoc_side_entries_cached_byte_size_{0},
+      : _cached_size_{0},
         content_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        component_id_{0u},
-        _cached_size_{0} {}
+        component_id_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR NoHlCodeComponent::NoHlCodeComponent(::_pbi::ConstantInitialized)
@@ -160,15 +156,13 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 
 inline constexpr HlCodeComponent::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : assoc_side_infos_{},
-        _assoc_side_infos_cached_byte_size_{0},
+      : _cached_size_{0},
         hl_tags_{},
         _hl_tags_cached_byte_size_{0},
         content_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        component_id_{0u},
-        _cached_size_{0} {}
+        component_id_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR HlCodeComponent::HlCodeComponent(::_pbi::ConstantInitialized)
@@ -778,7 +772,7 @@ static constexpr const ::_pb::ServiceDescriptor**
 const ::uint32_t
     TableStruct_view_2eproto::offsets[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
         protodesc_cold) = {
-        ~0u,  // no _has_bits_
+        PROTOBUF_FIELD_OFFSET(::view::NoHlTextComponent, _impl_._has_bits_),
         PROTOBUF_FIELD_OFFSET(::view::NoHlTextComponent, _internal_metadata_),
         ~0u,  // no _extensions_
         ~0u,  // no _oneof_case_
@@ -788,8 +782,9 @@ const ::uint32_t
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::NoHlTextComponent, _impl_.component_id_),
         PROTOBUF_FIELD_OFFSET(::view::NoHlTextComponent, _impl_.content_),
-        PROTOBUF_FIELD_OFFSET(::view::NoHlTextComponent, _impl_.assoc_side_entries_),
-        ~0u,  // no _has_bits_
+        0,
+        ~0u,
+        PROTOBUF_FIELD_OFFSET(::view::NoHlCodeComponent, _impl_._has_bits_),
         PROTOBUF_FIELD_OFFSET(::view::NoHlCodeComponent, _internal_metadata_),
         ~0u,  // no _extensions_
         ~0u,  // no _oneof_case_
@@ -799,7 +794,8 @@ const ::uint32_t
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::NoHlCodeComponent, _impl_.component_id_),
         PROTOBUF_FIELD_OFFSET(::view::NoHlCodeComponent, _impl_.content_),
-        PROTOBUF_FIELD_OFFSET(::view::NoHlCodeComponent, _impl_.assoc_side_entries_),
+        0,
+        ~0u,
         ~0u,  // no _has_bits_
         PROTOBUF_FIELD_OFFSET(::view::NoHlConcatComponent, _internal_metadata_),
         ~0u,  // no _extensions_
@@ -836,7 +832,7 @@ const ::uint32_t
         ::_pbi::kInvalidFieldOffsetTag,
         ::_pbi::kInvalidFieldOffsetTag,
         PROTOBUF_FIELD_OFFSET(::view::NoHlComponent, _impl_.component_),
-        ~0u,  // no _has_bits_
+        PROTOBUF_FIELD_OFFSET(::view::HlCodeComponent, _impl_._has_bits_),
         PROTOBUF_FIELD_OFFSET(::view::HlCodeComponent, _internal_metadata_),
         ~0u,  // no _extensions_
         ~0u,  // no _oneof_case_
@@ -846,8 +842,10 @@ const ::uint32_t
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::HlCodeComponent, _impl_.component_id_),
         PROTOBUF_FIELD_OFFSET(::view::HlCodeComponent, _impl_.content_),
-        PROTOBUF_FIELD_OFFSET(::view::HlCodeComponent, _impl_.assoc_side_infos_),
         PROTOBUF_FIELD_OFFSET(::view::HlCodeComponent, _impl_.hl_tags_),
+        0,
+        ~0u,
+        ~0u,
         ~0u,  // no _has_bits_
         PROTOBUF_FIELD_OFFSET(::view::HlConcatComponent, _internal_metadata_),
         ~0u,  // no _extensions_
@@ -1095,34 +1093,34 @@ const ::uint32_t
 
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-        {0, -1, -1, sizeof(::view::NoHlTextComponent)},
-        {11, -1, -1, sizeof(::view::NoHlCodeComponent)},
-        {22, -1, -1, sizeof(::view::NoHlConcatComponent)},
-        {31, 42, -1, sizeof(::view::NoHlInteractiveComponent)},
-        {45, -1, -1, sizeof(::view::NoHlComponent)},
-        {58, -1, -1, sizeof(::view::HlCodeComponent)},
-        {70, -1, -1, sizeof(::view::HlConcatComponent)},
-        {79, 90, -1, sizeof(::view::HlInteractiveComponent)},
-        {93, -1, -1, sizeof(::view::HlComponent)},
-        {105, -1, -1, sizeof(::view::CodeMetadata)},
-        {116, 126, -1, sizeof(::view::CodeLine)},
-        {128, 140, -1, sizeof(::view::HlMessage)},
-        {144, 155, -1, sizeof(::view::CodeSection)},
-        {158, -1, -1, sizeof(::view::Diagnostic)},
-        {167, 178, -1, sizeof(::view::Info)},
-        {181, -1, -1, sizeof(::view::Metadata)},
-        {191, -1, -1, sizeof(::view::Section)},
-        {202, -1, -1, sizeof(::view::SideEdge)},
-        {212, 225, -1, sizeof(::view::SideInfo)},
-        {230, -1, -1, sizeof(::view::SidePath)},
-        {239, -1, -1, sizeof(::view::ViewRequest)},
-        {247, -1, -1, sizeof(::view::ViewResponse)},
-        {257, -1, -1, sizeof(::view::ClickRequest)},
-        {267, -1, -1, sizeof(::view::ClickResponse)},
-        {276, -1, -1, sizeof(::view::CloseSideInfoRequest)},
-        {285, -1, -1, sizeof(::view::CloseSideInfoResponse)},
-        {294, -1, -1, sizeof(::view::EdgeRequest)},
-        {304, -1, -1, sizeof(::view::EdgeResponse)},
+        {0, 10, -1, sizeof(::view::NoHlTextComponent)},
+        {12, 22, -1, sizeof(::view::NoHlCodeComponent)},
+        {24, -1, -1, sizeof(::view::NoHlConcatComponent)},
+        {33, 44, -1, sizeof(::view::NoHlInteractiveComponent)},
+        {47, -1, -1, sizeof(::view::NoHlComponent)},
+        {60, 71, -1, sizeof(::view::HlCodeComponent)},
+        {74, -1, -1, sizeof(::view::HlConcatComponent)},
+        {83, 94, -1, sizeof(::view::HlInteractiveComponent)},
+        {97, -1, -1, sizeof(::view::HlComponent)},
+        {109, -1, -1, sizeof(::view::CodeMetadata)},
+        {120, 130, -1, sizeof(::view::CodeLine)},
+        {132, 144, -1, sizeof(::view::HlMessage)},
+        {148, 159, -1, sizeof(::view::CodeSection)},
+        {162, -1, -1, sizeof(::view::Diagnostic)},
+        {171, 182, -1, sizeof(::view::Info)},
+        {185, -1, -1, sizeof(::view::Metadata)},
+        {195, -1, -1, sizeof(::view::Section)},
+        {206, -1, -1, sizeof(::view::SideEdge)},
+        {216, 229, -1, sizeof(::view::SideInfo)},
+        {234, -1, -1, sizeof(::view::SidePath)},
+        {243, -1, -1, sizeof(::view::ViewRequest)},
+        {251, -1, -1, sizeof(::view::ViewResponse)},
+        {261, -1, -1, sizeof(::view::ClickRequest)},
+        {271, -1, -1, sizeof(::view::ClickResponse)},
+        {280, -1, -1, sizeof(::view::CloseSideInfoRequest)},
+        {289, -1, -1, sizeof(::view::CloseSideInfoResponse)},
+        {298, -1, -1, sizeof(::view::EdgeRequest)},
+        {308, -1, -1, sizeof(::view::EdgeResponse)},
 };
 static const ::_pb::Message* const file_default_instances[] = {
     &::view::_NoHlTextComponent_default_instance_._instance,
@@ -1156,86 +1154,86 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 const char descriptor_table_protodef_view_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIABLE(
     protodesc_cold) = {
-    "\n\nview.proto\022\004view\"V\n\021NoHlTextComponent\022"
-    "\024\n\014component_id\030\001 \001(\r\022\017\n\007content\030\002 \001(\t\022\032"
-    "\n\022assoc_side_entries\030\003 \003(\r\"V\n\021NoHlCodeCo"
-    "mponent\022\024\n\014component_id\030\001 \001(\r\022\017\n\007content"
-    "\030\002 \001(\t\022\032\n\022assoc_side_entries\030\003 \003(\r\">\n\023No"
-    "HlConcatComponent\022\'\n\ncomponents\030\001 \003(\0132\023."
-    "view.NoHlComponent\"\210\001\n\030NoHlInteractiveCo"
-    "mponent\022\024\n\014component_id\030\001 \001(\r\022&\n\006status\030"
-    "\002 \001(\0162\026.view.VisibilityStatus\022.\n\021primary"
-    "_component\030\003 \001(\0132\023.view.NoHlComponent\"\372\001"
-    "\n\rNoHlComponent\0221\n\016text_component\030\001 \001(\0132"
-    "\027.view.NoHlTextComponentH\000\0221\n\016code_compo"
-    "nent\030\002 \001(\0132\027.view.NoHlCodeComponentH\000\0225\n"
-    "\020concat_component\030\003 \001(\0132\031.view.NoHlConca"
-    "tComponentH\000\022\?\n\025interactive_component\030\004 "
-    "\001(\0132\036.view.NoHlInteractiveComponentH\000B\013\n"
-    "\tcomponent\"c\n\017HlCodeComponent\022\024\n\014compone"
-    "nt_id\030\001 \001(\r\022\017\n\007content\030\002 \001(\t\022\030\n\020assoc_si"
-    "de_infos\030\003 \003(\r\022\017\n\007hl_tags\030\004 \003(\r\":\n\021HlCon"
-    "catComponent\022%\n\ncomponents\030\001 \003(\0132\021.view."
-    "HlComponent\"\204\001\n\026HlInteractiveComponent\022\024"
-    "\n\014component_id\030\001 \001(\r\022&\n\006status\030\002 \001(\0162\026.v"
-    "iew.VisibilityStatus\022,\n\021primary_componen"
-    "t\030\003 \001(\0132\021.view.HlComponent\"\277\001\n\013HlCompone"
-    "nt\022/\n\016code_component\030\001 \001(\0132\025.view.HlCode"
-    "ComponentH\000\0223\n\020concat_component\030\002 \001(\0132\027."
-    "view.HlConcatComponentH\000\022=\n\025interactive_"
-    "component\030\003 \001(\0132\034.view.HlInteractiveComp"
-    "onentH\000B\013\n\tcomponent\">\n\014CodeMetadata\022\020\n\010"
-    "filename\030\001 \001(\t\022\014\n\004line\030\002 \001(\r\022\016\n\006column\030\003"
-    " \001(\r\"X\n\010CodeLine\022\030\n\013line_number\030\001 \001(\rH\000\210"
-    "\001\001\022\"\n\007content\030\002 \001(\0132\021.view.HlComponentB\016"
-    "\n\014_line_number\"n\n\tHlMessage\022\013\n\003tag\030\001 \001(\r"
-    "\022\020\n\010priority\030\002 \001(\r\022\034\n\004type\030\003 \001(\0162\016.view."
-    "InfoType\022$\n\007message\030\004 \001(\0132\023.view.NoHlCom"
-    "ponent\"x\n\013CodeSection\022$\n\010metadata\030\001 \001(\0132"
-    "\022.view.CodeMetadata\022\035\n\005lines\030\002 \003(\0132\016.vie"
-    "w.CodeLine\022$\n\013hl_messages\030\003 \003(\0132\017.view.H"
-    "lMessage\"\'\n\nDiagnostic\022\031\n\005infos\030\001 \003(\0132\n."
-    "view.Info\"n\n\004Info\022 \n\010metadata\030\001 \001(\0132\016.vi"
-    "ew.Metadata\022#\n\006header\030\002 \001(\0132\023.view.NoHlC"
-    "omponent\022\037\n\010sections\030\003 \003(\0132\r.view.Sectio"
-    "n\"6\n\010Metadata\022\034\n\004type\030\001 \001(\0162\016.view.InfoT"
-    "ype\022\014\n\004code\030\002 \001(\r\"l\n\007Section\022)\n\014code_sec"
-    "tion\030\001 \001(\0132\021.view.CodeSectionH\000\022+\n\014text_"
-    "section\030\002 \001(\0132\023.view.NoHlComponentH\000B\t\n\007"
-    "section\"0\n\010SideEdge\022\017\n\007edge_id\030\001 \001(\r\022\023\n\013"
-    "description\030\002 \001(\t\"\247\001\n\010SideInfo\022\024\n\014side_i"
-    "nfo_id\030\001 \001(\r\022 \n\010metadata\030\002 \001(\0132\016.view.Me"
-    "tadata\022#\n\006header\030\003 \001(\0132\023.view.NoHlCompon"
-    "ent\022\037\n\010sections\030\004 \003(\0132\r.view.Section\022\035\n\005"
-    "edges\030\005 \003(\0132\016.view.SideEdge\")\n\010SidePath\022"
-    "\035\n\005infos\030\001 \003(\0132\016.view.SideInfo\"\r\n\013ViewRe"
-    "quest\"Y\n\014ViewResponse\022%\n\013diagnostics\030\001 \003"
-    "(\0132\020.view.Diagnostic\022\"\n\nside_paths\030\002 \003(\013"
-    "2\016.view.SidePath\"I\n\014ClickRequest\022\024\n\014comp"
-    "onent_id\030\001 \001(\r\022#\n\nclick_type\030\002 \001(\0162\017.vie"
-    "w.ClickType\"\037\n\rClickResponse\022\016\n\006status\030\001"
-    " \001(\t\",\n\024CloseSideInfoRequest\022\024\n\014side_inf"
-    "o_id\030\001 \001(\r\"\'\n\025CloseSideInfoResponse\022\016\n\006s"
-    "tatus\030\001 \001(\t\"4\n\013EdgeRequest\022\024\n\014side_info_"
-    "id\030\001 \001(\r\022\017\n\007edge_id\030\002 \001(\r\"\036\n\014EdgeRespons"
-    "e\022\016\n\006status\030\001 \001(\t*0\n\020VisibilityStatus\022\013\n"
-    "\007Primary\020\000\022\017\n\013Alternative\020\001*@\n\010InfoType\022"
-    "\t\n\005Error\020\000\022\013\n\007Warning\020\001\022\010\n\004Note\020\002\022\010\n\004Hin"
-    "t\020\003\022\010\n\004Docs\020\004*M\n\tClickType\022\t\n\005CLICK\020\000\022\025\n"
-    "\021CLICK_INTERACTIVE\020\001\022\036\n\032CLICK_INTERACTIV"
-    "E_ROLLBACK\020\0022\355\001\n\013ViewService\0220\n\007GetView\022"
-    "\021.view.ViewRequest\032\022.view.ViewResponse\0220"
-    "\n\005Click\022\022.view.ClickRequest\032\023.view.Click"
-    "Response\022H\n\rCloseSideInfo\022\032.view.CloseSi"
-    "deInfoRequest\032\033.view.CloseSideInfoRespon"
-    "se\0220\n\007GetEdge\022\021.view.EdgeRequest\032\022.view."
-    "EdgeResponseb\006proto3"
+    "\n\nview.proto\022\004view\"P\n\021NoHlTextComponent\022"
+    "\031\n\014component_id\030\001 \001(\rH\000\210\001\001\022\017\n\007content\030\002 "
+    "\001(\tB\017\n\r_component_id\"P\n\021NoHlCodeComponen"
+    "t\022\031\n\014component_id\030\001 \001(\rH\000\210\001\001\022\017\n\007content\030"
+    "\002 \001(\tB\017\n\r_component_id\">\n\023NoHlConcatComp"
+    "onent\022\'\n\ncomponents\030\001 \003(\0132\023.view.NoHlCom"
+    "ponent\"\210\001\n\030NoHlInteractiveComponent\022\024\n\014c"
+    "omponent_id\030\001 \001(\r\022&\n\006status\030\002 \001(\0162\026.view"
+    ".VisibilityStatus\022.\n\021primary_component\030\003"
+    " \001(\0132\023.view.NoHlComponent\"\372\001\n\rNoHlCompon"
+    "ent\0221\n\016text_component\030\001 \001(\0132\027.view.NoHlT"
+    "extComponentH\000\0221\n\016code_component\030\002 \001(\0132\027"
+    ".view.NoHlCodeComponentH\000\0225\n\020concat_comp"
+    "onent\030\003 \001(\0132\031.view.NoHlConcatComponentH\000"
+    "\022\?\n\025interactive_component\030\004 \001(\0132\036.view.N"
+    "oHlInteractiveComponentH\000B\013\n\tcomponent\"_"
+    "\n\017HlCodeComponent\022\031\n\014component_id\030\001 \001(\rH"
+    "\000\210\001\001\022\017\n\007content\030\002 \001(\t\022\017\n\007hl_tags\030\003 \003(\rB\017"
+    "\n\r_component_id\":\n\021HlConcatComponent\022%\n\n"
+    "components\030\001 \003(\0132\021.view.HlComponent\"\204\001\n\026"
+    "HlInteractiveComponent\022\024\n\014component_id\030\001"
+    " \001(\r\022&\n\006status\030\002 \001(\0162\026.view.VisibilitySt"
+    "atus\022,\n\021primary_component\030\003 \001(\0132\021.view.H"
+    "lComponent\"\277\001\n\013HlComponent\022/\n\016code_compo"
+    "nent\030\001 \001(\0132\025.view.HlCodeComponentH\000\0223\n\020c"
+    "oncat_component\030\002 \001(\0132\027.view.HlConcatCom"
+    "ponentH\000\022=\n\025interactive_component\030\003 \001(\0132"
+    "\034.view.HlInteractiveComponentH\000B\013\n\tcompo"
+    "nent\">\n\014CodeMetadata\022\020\n\010filename\030\001 \001(\t\022\014"
+    "\n\004line\030\002 \001(\r\022\016\n\006column\030\003 \001(\r\"X\n\010CodeLine"
+    "\022\030\n\013line_number\030\001 \001(\rH\000\210\001\001\022\"\n\007content\030\002 "
+    "\001(\0132\021.view.HlComponentB\016\n\014_line_number\"n"
+    "\n\tHlMessage\022\013\n\003tag\030\001 \001(\r\022\020\n\010priority\030\002 \001"
+    "(\r\022\034\n\004type\030\003 \001(\0162\016.view.InfoType\022$\n\007mess"
+    "age\030\004 \001(\0132\023.view.NoHlComponent\"x\n\013CodeSe"
+    "ction\022$\n\010metadata\030\001 \001(\0132\022.view.CodeMetad"
+    "ata\022\035\n\005lines\030\002 \003(\0132\016.view.CodeLine\022$\n\013hl"
+    "_messages\030\003 \003(\0132\017.view.HlMessage\"\'\n\nDiag"
+    "nostic\022\031\n\005infos\030\001 \003(\0132\n.view.Info\"n\n\004Inf"
+    "o\022 \n\010metadata\030\001 \001(\0132\016.view.Metadata\022#\n\006h"
+    "eader\030\002 \001(\0132\023.view.NoHlComponent\022\037\n\010sect"
+    "ions\030\003 \003(\0132\r.view.Section\"6\n\010Metadata\022\034\n"
+    "\004type\030\001 \001(\0162\016.view.InfoType\022\014\n\004code\030\002 \001("
+    "\r\"l\n\007Section\022)\n\014code_section\030\001 \001(\0132\021.vie"
+    "w.CodeSectionH\000\022+\n\014text_section\030\002 \001(\0132\023."
+    "view.NoHlComponentH\000B\t\n\007section\"0\n\010SideE"
+    "dge\022\017\n\007edge_id\030\001 \001(\r\022\023\n\013description\030\002 \001("
+    "\t\"\247\001\n\010SideInfo\022\024\n\014side_info_id\030\001 \001(\r\022 \n\010"
+    "metadata\030\002 \001(\0132\016.view.Metadata\022#\n\006header"
+    "\030\003 \001(\0132\023.view.NoHlComponent\022\037\n\010sections\030"
+    "\004 \003(\0132\r.view.Section\022\035\n\005edges\030\005 \003(\0132\016.vi"
+    "ew.SideEdge\")\n\010SidePath\022\035\n\005infos\030\001 \003(\0132\016"
+    ".view.SideInfo\"\r\n\013ViewRequest\"Y\n\014ViewRes"
+    "ponse\022%\n\013diagnostics\030\001 \003(\0132\020.view.Diagno"
+    "stic\022\"\n\nside_paths\030\002 \003(\0132\016.view.SidePath"
+    "\"I\n\014ClickRequest\022\024\n\014component_id\030\001 \001(\r\022#"
+    "\n\nclick_type\030\002 \001(\0162\017.view.ClickType\"\037\n\rC"
+    "lickResponse\022\016\n\006status\030\001 \001(\t\",\n\024CloseSid"
+    "eInfoRequest\022\024\n\014side_info_id\030\001 \001(\r\"\'\n\025Cl"
+    "oseSideInfoResponse\022\016\n\006status\030\001 \001(\t\"4\n\013E"
+    "dgeRequest\022\024\n\014side_info_id\030\001 \001(\r\022\017\n\007edge"
+    "_id\030\002 \001(\r\"\036\n\014EdgeResponse\022\016\n\006status\030\001 \001("
+    "\t*0\n\020VisibilityStatus\022\013\n\007Primary\020\000\022\017\n\013Al"
+    "ternative\020\001*@\n\010InfoType\022\t\n\005Error\020\000\022\013\n\007Wa"
+    "rning\020\001\022\010\n\004Note\020\002\022\010\n\004Hint\020\003\022\010\n\004Docs\020\004*M\n"
+    "\tClickType\022\t\n\005CLICK\020\000\022\025\n\021CLICK_INTERACTI"
+    "VE\020\001\022\036\n\032CLICK_INTERACTIVE_ROLLBACK\020\0022\355\001\n"
+    "\013ViewService\0220\n\007GetView\022\021.view.ViewReque"
+    "st\032\022.view.ViewResponse\0220\n\005Click\022\022.view.C"
+    "lickRequest\032\023.view.ClickResponse\022H\n\rClos"
+    "eSideInfo\022\032.view.CloseSideInfoRequest\032\033."
+    "view.CloseSideInfoResponse\0220\n\007GetEdge\022\021."
+    "view.EdgeRequest\032\022.view.EdgeResponseb\006pr"
+    "oto3"
 };
 static ::absl::once_flag descriptor_table_view_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_view_2eproto = {
     false,
     false,
-    2940,
+    2924,
     descriptor_table_protodef_view_2eproto,
     "view.proto",
     &descriptor_table_view_2eproto_once,
@@ -1280,6 +1278,10 @@ bool ClickType_IsValid(int value) {
 
 class NoHlTextComponent::_Internal {
  public:
+  using HasBits =
+      decltype(std::declval<NoHlTextComponent>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_._has_bits_);
 };
 
 NoHlTextComponent::NoHlTextComponent(::google::protobuf::Arena* arena)
@@ -1294,10 +1296,9 @@ NoHlTextComponent::NoHlTextComponent(::google::protobuf::Arena* arena)
 inline PROTOBUF_NDEBUG_INLINE NoHlTextComponent::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from, const ::view::NoHlTextComponent& from_msg)
-      : assoc_side_entries_{visibility, arena, from.assoc_side_entries_},
-        _assoc_side_entries_cached_byte_size_{0},
-        content_(arena, from.content_),
-        _cached_size_{0} {}
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        content_(arena, from.content_) {}
 
 NoHlTextComponent::NoHlTextComponent(
     ::google::protobuf::Arena* arena,
@@ -1319,10 +1320,8 @@ NoHlTextComponent::NoHlTextComponent(
 inline PROTOBUF_NDEBUG_INLINE NoHlTextComponent::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : assoc_side_entries_{visibility, arena},
-        _assoc_side_entries_cached_byte_size_{0},
-        content_(arena),
-        _cached_size_{0} {}
+      : _cached_size_{0},
+        content_(arena) {}
 
 inline void NoHlTextComponent::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -1345,20 +1344,8 @@ inline void* NoHlTextComponent::PlacementNew_(const void*, void* mem,
   return ::new (mem) NoHlTextComponent(arena);
 }
 constexpr auto NoHlTextComponent::InternalNewImpl_() {
-  constexpr auto arena_bits = ::google::protobuf::internal::EncodePlacementArenaOffsets({
-      PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.assoc_side_entries_) +
-          decltype(NoHlTextComponent::_impl_.assoc_side_entries_)::
-              InternalGetArenaOffset(
-                  ::google::protobuf::Message::internal_visibility()),
-  });
-  if (arena_bits.has_value()) {
-    return ::google::protobuf::internal::MessageCreator::CopyInit(
-        sizeof(NoHlTextComponent), alignof(NoHlTextComponent), *arena_bits);
-  } else {
-    return ::google::protobuf::internal::MessageCreator(&NoHlTextComponent::PlacementNew_,
-                                 sizeof(NoHlTextComponent),
-                                 alignof(NoHlTextComponent));
-  }
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(NoHlTextComponent),
+                                            alignof(NoHlTextComponent));
 }
 PROTOBUF_CONSTINIT
 PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
@@ -1388,15 +1375,15 @@ const ::google::protobuf::internal::ClassData* NoHlTextComponent::GetClassData()
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 0, 38, 2> NoHlTextComponent::_table_ = {
+const ::_pbi::TcParseTable<1, 2, 0, 38, 2> NoHlTextComponent::_table_ = {
   {
-    0,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_._has_bits_),
     0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
+    2, 8,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
+    4294967292,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
+    2,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     _class_data_.base(),
@@ -1406,28 +1393,21 @@ const ::_pbi::TcParseTable<2, 3, 0, 38, 2> NoHlTextComponent::_table_ = {
     ::_pbi::TcParser::GetTable<::view::NoHlTextComponent>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    {::_pbi::TcParser::MiniParse, {}},
-    // uint32 component_id = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NoHlTextComponent, _impl_.component_id_), 63>(),
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.component_id_)}},
     // string content = 2;
     {::_pbi::TcParser::FastUS1,
      {18, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.content_)}},
-    // repeated uint32 assoc_side_entries = 3;
-    {::_pbi::TcParser::FastV32P1,
-     {26, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.assoc_side_entries_)}},
+    // optional uint32 component_id = 1;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NoHlTextComponent, _impl_.component_id_), 0>(),
+     {8, 0, 0, PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.component_id_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // uint32 component_id = 1;
-    {PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.component_id_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
+    // optional uint32 component_id = 1;
+    {PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.component_id_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     // string content = 2;
-    {PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.content_), 0, 0,
+    {PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.content_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
-    // repeated uint32 assoc_side_entries = 3;
-    {PROTOBUF_FIELD_OFFSET(NoHlTextComponent, _impl_.assoc_side_entries_), 0, 0,
-    (0 | ::_fl::kFcRepeated | ::_fl::kPackedUInt32)},
   }},
   // no aux_entries
   {{
@@ -1444,9 +1424,9 @@ PROTOBUF_NOINLINE void NoHlTextComponent::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.assoc_side_entries_.Clear();
   _impl_.content_.ClearToEmpty();
   _impl_.component_id_ = 0u;
+  _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -1465,8 +1445,9 @@ PROTOBUF_NOINLINE void NoHlTextComponent::Clear() {
           ::uint32_t cached_has_bits = 0;
           (void)cached_has_bits;
 
-          // uint32 component_id = 1;
-          if (this_._internal_component_id() != 0) {
+          cached_has_bits = this_._impl_._has_bits_[0];
+          // optional uint32 component_id = 1;
+          if (cached_has_bits & 0x00000001u) {
             target = stream->EnsureSpace(target);
             target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
                 1, this_._internal_component_id(), target);
@@ -1478,15 +1459,6 @@ PROTOBUF_NOINLINE void NoHlTextComponent::Clear() {
             ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
                 _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "view.NoHlTextComponent.content");
             target = stream->WriteStringMaybeAliased(2, _s, target);
-          }
-
-          // repeated uint32 assoc_side_entries = 3;
-          {
-            int byte_size = this_._impl_._assoc_side_entries_cached_byte_size_.Get();
-            if (byte_size > 0) {
-              target = stream->WriteUInt32Packed(
-                  3, this_._internal_assoc_side_entries(), byte_size, target);
-            }
           }
 
           if (PROTOBUF_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -1514,22 +1486,16 @@ PROTOBUF_NOINLINE void NoHlTextComponent::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // repeated uint32 assoc_side_entries = 3;
-            {
-              total_size +=
-                  ::_pbi::WireFormatLite::UInt32SizeWithPackedTagSize(
-                      this_._internal_assoc_side_entries(), 1,
-                      this_._impl_._assoc_side_entries_cached_byte_size_);
-            }
-          }
-           {
             // string content = 2;
             if (!this_._internal_content().empty()) {
               total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                               this_._internal_content());
             }
-            // uint32 component_id = 1;
-            if (this_._internal_component_id() != 0) {
+          }
+           {
+            // optional uint32 component_id = 1;
+            cached_has_bits = this_._impl_._has_bits_[0];
+            if (cached_has_bits & 0x00000001u) {
               total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
                   this_._internal_component_id());
             }
@@ -1546,13 +1512,14 @@ void NoHlTextComponent::MergeImpl(::google::protobuf::MessageLite& to_msg, const
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  _this->_internal_mutable_assoc_side_entries()->MergeFrom(from._internal_assoc_side_entries());
   if (!from._internal_content().empty()) {
     _this->_internal_set_content(from._internal_content());
   }
-  if (from._internal_component_id() != 0) {
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
     _this->_impl_.component_id_ = from._impl_.component_id_;
   }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -1569,7 +1536,7 @@ void NoHlTextComponent::InternalSwap(NoHlTextComponent* PROTOBUF_RESTRICT other)
   auto* arena = GetArena();
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.assoc_side_entries_.InternalSwap(&other->_impl_.assoc_side_entries_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.content_, &other->_impl_.content_, arena);
         swap(_impl_.component_id_, other->_impl_.component_id_);
 }
@@ -1581,6 +1548,10 @@ void NoHlTextComponent::InternalSwap(NoHlTextComponent* PROTOBUF_RESTRICT other)
 
 class NoHlCodeComponent::_Internal {
  public:
+  using HasBits =
+      decltype(std::declval<NoHlCodeComponent>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_._has_bits_);
 };
 
 NoHlCodeComponent::NoHlCodeComponent(::google::protobuf::Arena* arena)
@@ -1595,10 +1566,9 @@ NoHlCodeComponent::NoHlCodeComponent(::google::protobuf::Arena* arena)
 inline PROTOBUF_NDEBUG_INLINE NoHlCodeComponent::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from, const ::view::NoHlCodeComponent& from_msg)
-      : assoc_side_entries_{visibility, arena, from.assoc_side_entries_},
-        _assoc_side_entries_cached_byte_size_{0},
-        content_(arena, from.content_),
-        _cached_size_{0} {}
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
+        content_(arena, from.content_) {}
 
 NoHlCodeComponent::NoHlCodeComponent(
     ::google::protobuf::Arena* arena,
@@ -1620,10 +1590,8 @@ NoHlCodeComponent::NoHlCodeComponent(
 inline PROTOBUF_NDEBUG_INLINE NoHlCodeComponent::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : assoc_side_entries_{visibility, arena},
-        _assoc_side_entries_cached_byte_size_{0},
-        content_(arena),
-        _cached_size_{0} {}
+      : _cached_size_{0},
+        content_(arena) {}
 
 inline void NoHlCodeComponent::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -1646,20 +1614,8 @@ inline void* NoHlCodeComponent::PlacementNew_(const void*, void* mem,
   return ::new (mem) NoHlCodeComponent(arena);
 }
 constexpr auto NoHlCodeComponent::InternalNewImpl_() {
-  constexpr auto arena_bits = ::google::protobuf::internal::EncodePlacementArenaOffsets({
-      PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.assoc_side_entries_) +
-          decltype(NoHlCodeComponent::_impl_.assoc_side_entries_)::
-              InternalGetArenaOffset(
-                  ::google::protobuf::Message::internal_visibility()),
-  });
-  if (arena_bits.has_value()) {
-    return ::google::protobuf::internal::MessageCreator::CopyInit(
-        sizeof(NoHlCodeComponent), alignof(NoHlCodeComponent), *arena_bits);
-  } else {
-    return ::google::protobuf::internal::MessageCreator(&NoHlCodeComponent::PlacementNew_,
-                                 sizeof(NoHlCodeComponent),
-                                 alignof(NoHlCodeComponent));
-  }
+  return ::google::protobuf::internal::MessageCreator::CopyInit(sizeof(NoHlCodeComponent),
+                                            alignof(NoHlCodeComponent));
 }
 PROTOBUF_CONSTINIT
 PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
@@ -1689,15 +1645,15 @@ const ::google::protobuf::internal::ClassData* NoHlCodeComponent::GetClassData()
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 0, 38, 2> NoHlCodeComponent::_table_ = {
+const ::_pbi::TcParseTable<1, 2, 0, 38, 2> NoHlCodeComponent::_table_ = {
   {
-    0,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_._has_bits_),
     0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
+    2, 8,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
+    4294967292,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
+    2,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     _class_data_.base(),
@@ -1707,28 +1663,21 @@ const ::_pbi::TcParseTable<2, 3, 0, 38, 2> NoHlCodeComponent::_table_ = {
     ::_pbi::TcParser::GetTable<::view::NoHlCodeComponent>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    {::_pbi::TcParser::MiniParse, {}},
-    // uint32 component_id = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NoHlCodeComponent, _impl_.component_id_), 63>(),
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.component_id_)}},
     // string content = 2;
     {::_pbi::TcParser::FastUS1,
      {18, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.content_)}},
-    // repeated uint32 assoc_side_entries = 3;
-    {::_pbi::TcParser::FastV32P1,
-     {26, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.assoc_side_entries_)}},
+    // optional uint32 component_id = 1;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NoHlCodeComponent, _impl_.component_id_), 0>(),
+     {8, 0, 0, PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.component_id_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // uint32 component_id = 1;
-    {PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.component_id_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
+    // optional uint32 component_id = 1;
+    {PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.component_id_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     // string content = 2;
-    {PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.content_), 0, 0,
+    {PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.content_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
-    // repeated uint32 assoc_side_entries = 3;
-    {PROTOBUF_FIELD_OFFSET(NoHlCodeComponent, _impl_.assoc_side_entries_), 0, 0,
-    (0 | ::_fl::kFcRepeated | ::_fl::kPackedUInt32)},
   }},
   // no aux_entries
   {{
@@ -1745,9 +1694,9 @@ PROTOBUF_NOINLINE void NoHlCodeComponent::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.assoc_side_entries_.Clear();
   _impl_.content_.ClearToEmpty();
   _impl_.component_id_ = 0u;
+  _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -1766,8 +1715,9 @@ PROTOBUF_NOINLINE void NoHlCodeComponent::Clear() {
           ::uint32_t cached_has_bits = 0;
           (void)cached_has_bits;
 
-          // uint32 component_id = 1;
-          if (this_._internal_component_id() != 0) {
+          cached_has_bits = this_._impl_._has_bits_[0];
+          // optional uint32 component_id = 1;
+          if (cached_has_bits & 0x00000001u) {
             target = stream->EnsureSpace(target);
             target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
                 1, this_._internal_component_id(), target);
@@ -1779,15 +1729,6 @@ PROTOBUF_NOINLINE void NoHlCodeComponent::Clear() {
             ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
                 _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "view.NoHlCodeComponent.content");
             target = stream->WriteStringMaybeAliased(2, _s, target);
-          }
-
-          // repeated uint32 assoc_side_entries = 3;
-          {
-            int byte_size = this_._impl_._assoc_side_entries_cached_byte_size_.Get();
-            if (byte_size > 0) {
-              target = stream->WriteUInt32Packed(
-                  3, this_._internal_assoc_side_entries(), byte_size, target);
-            }
           }
 
           if (PROTOBUF_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -1815,22 +1756,16 @@ PROTOBUF_NOINLINE void NoHlCodeComponent::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // repeated uint32 assoc_side_entries = 3;
-            {
-              total_size +=
-                  ::_pbi::WireFormatLite::UInt32SizeWithPackedTagSize(
-                      this_._internal_assoc_side_entries(), 1,
-                      this_._impl_._assoc_side_entries_cached_byte_size_);
-            }
-          }
-           {
             // string content = 2;
             if (!this_._internal_content().empty()) {
               total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                               this_._internal_content());
             }
-            // uint32 component_id = 1;
-            if (this_._internal_component_id() != 0) {
+          }
+           {
+            // optional uint32 component_id = 1;
+            cached_has_bits = this_._impl_._has_bits_[0];
+            if (cached_has_bits & 0x00000001u) {
               total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
                   this_._internal_component_id());
             }
@@ -1847,13 +1782,14 @@ void NoHlCodeComponent::MergeImpl(::google::protobuf::MessageLite& to_msg, const
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  _this->_internal_mutable_assoc_side_entries()->MergeFrom(from._internal_assoc_side_entries());
   if (!from._internal_content().empty()) {
     _this->_internal_set_content(from._internal_content());
   }
-  if (from._internal_component_id() != 0) {
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
     _this->_impl_.component_id_ = from._impl_.component_id_;
   }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -1870,7 +1806,7 @@ void NoHlCodeComponent::InternalSwap(NoHlCodeComponent* PROTOBUF_RESTRICT other)
   auto* arena = GetArena();
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.assoc_side_entries_.InternalSwap(&other->_impl_.assoc_side_entries_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.content_, &other->_impl_.content_, arena);
         swap(_impl_.component_id_, other->_impl_.component_id_);
 }
@@ -2886,6 +2822,10 @@ void NoHlComponent::InternalSwap(NoHlComponent* PROTOBUF_RESTRICT other) {
 
 class HlCodeComponent::_Internal {
  public:
+  using HasBits =
+      decltype(std::declval<HlCodeComponent>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_._has_bits_);
 };
 
 HlCodeComponent::HlCodeComponent(::google::protobuf::Arena* arena)
@@ -2900,12 +2840,11 @@ HlCodeComponent::HlCodeComponent(::google::protobuf::Arena* arena)
 inline PROTOBUF_NDEBUG_INLINE HlCodeComponent::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from, const ::view::HlCodeComponent& from_msg)
-      : assoc_side_infos_{visibility, arena, from.assoc_side_infos_},
-        _assoc_side_infos_cached_byte_size_{0},
+      : _has_bits_{from._has_bits_},
+        _cached_size_{0},
         hl_tags_{visibility, arena, from.hl_tags_},
         _hl_tags_cached_byte_size_{0},
-        content_(arena, from.content_),
-        _cached_size_{0} {}
+        content_(arena, from.content_) {}
 
 HlCodeComponent::HlCodeComponent(
     ::google::protobuf::Arena* arena,
@@ -2927,12 +2866,10 @@ HlCodeComponent::HlCodeComponent(
 inline PROTOBUF_NDEBUG_INLINE HlCodeComponent::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : assoc_side_infos_{visibility, arena},
-        _assoc_side_infos_cached_byte_size_{0},
+      : _cached_size_{0},
         hl_tags_{visibility, arena},
         _hl_tags_cached_byte_size_{0},
-        content_(arena),
-        _cached_size_{0} {}
+        content_(arena) {}
 
 inline void HlCodeComponent::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -2956,10 +2893,6 @@ inline void* HlCodeComponent::PlacementNew_(const void*, void* mem,
 }
 constexpr auto HlCodeComponent::InternalNewImpl_() {
   constexpr auto arena_bits = ::google::protobuf::internal::EncodePlacementArenaOffsets({
-      PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.assoc_side_infos_) +
-          decltype(HlCodeComponent::_impl_.assoc_side_infos_)::
-              InternalGetArenaOffset(
-                  ::google::protobuf::Message::internal_visibility()),
       PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.hl_tags_) +
           decltype(HlCodeComponent::_impl_.hl_tags_)::
               InternalGetArenaOffset(
@@ -3002,15 +2935,15 @@ const ::google::protobuf::internal::ClassData* HlCodeComponent::GetClassData() c
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 4, 0, 36, 2> HlCodeComponent::_table_ = {
+const ::_pbi::TcParseTable<2, 3, 0, 36, 2> HlCodeComponent::_table_ = {
   {
-    0,  // no _has_bits_
+    PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_._has_bits_),
     0, // no _extensions_
-    4, 24,  // max_field_number, fast_idx_mask
+    3, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967280,  // skipmap
+    4294967288,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    4,  // num_field_entries
+    3,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     _class_data_.base(),
@@ -3020,32 +2953,27 @@ const ::_pbi::TcParseTable<2, 4, 0, 36, 2> HlCodeComponent::_table_ = {
     ::_pbi::TcParser::GetTable<::view::HlCodeComponent>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // repeated uint32 hl_tags = 4;
-    {::_pbi::TcParser::FastV32P1,
-     {34, 63, 0, PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.hl_tags_)}},
-    // uint32 component_id = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlCodeComponent, _impl_.component_id_), 63>(),
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.component_id_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    // optional uint32 component_id = 1;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlCodeComponent, _impl_.component_id_), 0>(),
+     {8, 0, 0, PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.component_id_)}},
     // string content = 2;
     {::_pbi::TcParser::FastUS1,
      {18, 63, 0, PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.content_)}},
-    // repeated uint32 assoc_side_infos = 3;
+    // repeated uint32 hl_tags = 3;
     {::_pbi::TcParser::FastV32P1,
-     {26, 63, 0, PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.assoc_side_infos_)}},
+     {26, 63, 0, PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.hl_tags_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // uint32 component_id = 1;
-    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.component_id_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
+    // optional uint32 component_id = 1;
+    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.component_id_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     // string content = 2;
-    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.content_), 0, 0,
+    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.content_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
-    // repeated uint32 assoc_side_infos = 3;
-    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.assoc_side_infos_), 0, 0,
-    (0 | ::_fl::kFcRepeated | ::_fl::kPackedUInt32)},
-    // repeated uint32 hl_tags = 4;
-    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.hl_tags_), 0, 0,
+    // repeated uint32 hl_tags = 3;
+    {PROTOBUF_FIELD_OFFSET(HlCodeComponent, _impl_.hl_tags_), -1, 0,
     (0 | ::_fl::kFcRepeated | ::_fl::kPackedUInt32)},
   }},
   // no aux_entries
@@ -3063,10 +2991,10 @@ PROTOBUF_NOINLINE void HlCodeComponent::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.assoc_side_infos_.Clear();
   _impl_.hl_tags_.Clear();
   _impl_.content_.ClearToEmpty();
   _impl_.component_id_ = 0u;
+  _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -3085,8 +3013,9 @@ PROTOBUF_NOINLINE void HlCodeComponent::Clear() {
           ::uint32_t cached_has_bits = 0;
           (void)cached_has_bits;
 
-          // uint32 component_id = 1;
-          if (this_._internal_component_id() != 0) {
+          cached_has_bits = this_._impl_._has_bits_[0];
+          // optional uint32 component_id = 1;
+          if (cached_has_bits & 0x00000001u) {
             target = stream->EnsureSpace(target);
             target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
                 1, this_._internal_component_id(), target);
@@ -3100,21 +3029,12 @@ PROTOBUF_NOINLINE void HlCodeComponent::Clear() {
             target = stream->WriteStringMaybeAliased(2, _s, target);
           }
 
-          // repeated uint32 assoc_side_infos = 3;
-          {
-            int byte_size = this_._impl_._assoc_side_infos_cached_byte_size_.Get();
-            if (byte_size > 0) {
-              target = stream->WriteUInt32Packed(
-                  3, this_._internal_assoc_side_infos(), byte_size, target);
-            }
-          }
-
-          // repeated uint32 hl_tags = 4;
+          // repeated uint32 hl_tags = 3;
           {
             int byte_size = this_._impl_._hl_tags_cached_byte_size_.Get();
             if (byte_size > 0) {
               target = stream->WriteUInt32Packed(
-                  4, this_._internal_hl_tags(), byte_size, target);
+                  3, this_._internal_hl_tags(), byte_size, target);
             }
           }
 
@@ -3143,14 +3063,7 @@ PROTOBUF_NOINLINE void HlCodeComponent::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // repeated uint32 assoc_side_infos = 3;
-            {
-              total_size +=
-                  ::_pbi::WireFormatLite::UInt32SizeWithPackedTagSize(
-                      this_._internal_assoc_side_infos(), 1,
-                      this_._impl_._assoc_side_infos_cached_byte_size_);
-            }
-            // repeated uint32 hl_tags = 4;
+            // repeated uint32 hl_tags = 3;
             {
               total_size +=
                   ::_pbi::WireFormatLite::UInt32SizeWithPackedTagSize(
@@ -3164,8 +3077,11 @@ PROTOBUF_NOINLINE void HlCodeComponent::Clear() {
               total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                               this_._internal_content());
             }
-            // uint32 component_id = 1;
-            if (this_._internal_component_id() != 0) {
+          }
+           {
+            // optional uint32 component_id = 1;
+            cached_has_bits = this_._impl_._has_bits_[0];
+            if (cached_has_bits & 0x00000001u) {
               total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
                   this_._internal_component_id());
             }
@@ -3182,14 +3098,15 @@ void HlCodeComponent::MergeImpl(::google::protobuf::MessageLite& to_msg, const :
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  _this->_internal_mutable_assoc_side_infos()->MergeFrom(from._internal_assoc_side_infos());
   _this->_internal_mutable_hl_tags()->MergeFrom(from._internal_hl_tags());
   if (!from._internal_content().empty()) {
     _this->_internal_set_content(from._internal_content());
   }
-  if (from._internal_component_id() != 0) {
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (cached_has_bits & 0x00000001u) {
     _this->_impl_.component_id_ = from._impl_.component_id_;
   }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -3206,7 +3123,7 @@ void HlCodeComponent::InternalSwap(HlCodeComponent* PROTOBUF_RESTRICT other) {
   auto* arena = GetArena();
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.assoc_side_infos_.InternalSwap(&other->_impl_.assoc_side_infos_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   _impl_.hl_tags_.InternalSwap(&other->_impl_.hl_tags_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.content_, &other->_impl_.content_, arena);
         swap(_impl_.component_id_, other->_impl_.component_id_);

@@ -10,15 +10,13 @@ enum VisibilityStatus {
 // ---------- COMPONENTS WITHOUT HIGHLIGHT ---------- //
 
 message NoHlTextComponent {
-    uint32 component_id = 1;
+    optional uint32 component_id = 1;
     string content = 2;
-    repeated uint32 assoc_side_entries = 3;
 }
 
 message NoHlCodeComponent {
-    uint32 component_id = 1;
+    optional uint32 component_id = 1;
     string content = 2;
-    repeated uint32 assoc_side_entries = 3;
 }
 
 message NoHlConcatComponent {
@@ -47,10 +45,9 @@ message NoHlComponent {
 //       so there is no need for a text component.
 
 message HlCodeComponent {
-    uint32 component_id = 1;
+    optional uint32 component_id = 1;
     string content = 2;
-    repeated uint32 assoc_side_infos = 3;
-    repeated uint32 hl_tags = 4;
+    repeated uint32 hl_tags = 3;
 }
 
 message HlConcatComponent {
