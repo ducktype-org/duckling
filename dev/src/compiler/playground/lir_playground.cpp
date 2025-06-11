@@ -41,10 +41,9 @@ int main(int argc, const char* argv[]) {
 
 	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
-
-	for (auto& fun: top_level->functions) {
+	for (auto& fun: top_level.functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
