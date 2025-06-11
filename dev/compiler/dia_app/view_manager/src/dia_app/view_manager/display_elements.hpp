@@ -69,10 +69,7 @@ namespace dia_app {
 
 			// Append this element's data (assoc_infos and groups)
 			// to the provided accumulators.
-			void accumulateData(AccData& acc) const {
-				acc.assoc_infos.insert(assoc_infos.begin(), assoc_infos.end());
-				acc.groups.insert(groups.begin(), groups.end());
-			}
+			void accumulateData(std::shared_ptr<view_manager::CreationContext> creation_context, AccData& acc) const;
 
 			// Convert this element to a view manager component
 			// and cache the result.

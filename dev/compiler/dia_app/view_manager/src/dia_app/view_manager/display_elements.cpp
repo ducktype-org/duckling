@@ -12,6 +12,15 @@ namespace dia_app {
 		void                 fetch_entity(EntityHandle entity_handle, DataHandle data_handle);
 		std::set<InfoHandle> scan_entity_metadata(const json& entity, DataHandle handle);
 
+		void DisplayElement::accumulateData(std::shared_ptr<view_manager::CreationContext> creation_context, AccData& acc) const {
+			// Evaluate all associated infos with this element (there may be more
+			// than just in the assoc_infos field).
+			auto new_infos = getAssocInfos(creation_context->data_handle.value());
+
+			acc.assoc_infos.insert(new_infos.begin(), new_infos.end());
+			acc.groups.insert(groups.begin(), groups.end());
+		}
+
 		// ---------------- TextElement ---------------- //
 
 		TextElement::TextElement(const json& elem_json) {
@@ -49,7 +58,7 @@ namespace dia_app {
 		std::shared_ptr<Component> TextElement::toComponentImpl(
 			std::shared_ptr<CreationContext> creation_context, AccData acc_data
 		) {
-			accumulateData(acc_data);
+			accumulateData(creation_context, acc_data);
 			// This element involves no computations,
 			// so caching can be skipped.
 			return std::make_shared<TextComponent>(view_manager::getNewId(),creation_context->view_constructor, this->content, acc_data.getAssocInfos());
@@ -100,7 +109,7 @@ namespace dia_app {
 		std::shared_ptr<Component> ConcatElement::toComponentImpl(
 			std::shared_ptr<CreationContext> creation_context, AccData acc_data
 		) {
-			accumulateData(acc_data);
+			accumulateData(creation_context, acc_data);
 			if (!this->generated_component) {
 				std::vector<std::shared_ptr<Component>> sons(ssize(this->elems));
 				transform(
@@ -207,7 +216,7 @@ namespace dia_app {
 		std::shared_ptr<Component> InteractElement::toComponentImpl(
 			std::shared_ptr<CreationContext> creation_context, AccData acc_data
 		) {
-			accumulateData(acc_data);
+			accumulateData(creation_context, acc_data);
 			if (!this->generated_component) {
 				auto primary     = this->content->toComponentImpl(creation_context, acc_data);
 				auto alternative = this->alt_content->toComponentImpl(creation_context, acc_data);
@@ -259,7 +268,7 @@ namespace dia_app {
 		std::shared_ptr<Component> LazyElement::toComponentImpl(
 			std::shared_ptr<CreationContext> creation_context, AccData acc_data
 		) {
-			accumulateData(acc_data);
+			accumulateData(creation_context, acc_data);
 			// This element does not correspond to any component in the result,
 			// thus the caching can be skipped.
 			return evaluated(creation_context->data_handle.value())
@@ -329,7 +338,7 @@ namespace dia_app {
 		std::shared_ptr<view_manager::Component> EntityElement::toComponentImpl(
 			std::shared_ptr<CreationContext> creation_context, AccData acc_data
 		) {
-			accumulateData(acc_data);
+			accumulateData(creation_context, acc_data);
 			// This element does not correspond to any component in the result,
 			// thus the caching can be skipped.
 			return this->content->toComponentImpl(creation_context, acc_data);
@@ -367,7 +376,7 @@ namespace dia_app {
 		std::shared_ptr<Component> CodeElement::toComponentImpl(
 			std::shared_ptr<CreationContext> creation_context, AccData acc_data
 		) {
-			accumulateData(acc_data);
+			accumulateData(creation_context, acc_data);
 			if (!this->generated_component) {
 				auto                 groups = acc_data.getGroups();
 				std::vector<hl_id_t> tags(ssize(groups));
