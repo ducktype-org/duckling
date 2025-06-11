@@ -1084,46 +1084,6 @@ private:
 		expr1->debugPrint(std::cerr);
 		std::cerr << '\n';
 	}
-
-	void testGlobalVariableExpressions() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
-		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
-
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
-			for (const auto& fun: unit.functions)
-				if (fun.original_name == name) return fun;
-			assertTrue(false, base::strConcat("Function ", name.strView(), " not found"));
-			return {};
-		};
-
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
-			for (const auto& glob: unit.glob_data)
-				if (glob.original_name == name) return glob;
-			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
-			return {};
-		};
-
-		auto glob1 = find_global(hout_unit, base::StrID("B")).value();
-		auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
-
-		Ref<const compiler::helios::code::Expr> expr1
-			= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value.get()->ref();
-		Ref<const compiler::helios::code::Expr> expr2
-			= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value.get()->ref();
-
-		ASSERT_EQUAL(
-			compiler::helios::code::BuiltinBinary::IntegerAdd,
-			dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr1)->operation
-		);
-		ASSERT_EQUAL(
-			dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee,
-			find_function(hout_unit, base::StrID("foooo")).value().original_symbol
-		);
-		expr1->debugPrint(std::cerr);
-		std::cerr << '\n';
-	}
 };
 
 TESTER_COMMON_MAIN("/src/compiler/core/helios/tests/");

@@ -414,7 +414,7 @@ namespace compiler::lir {
 
 				return Function{
 					.mangled_name
-					= helios::mangler::getSimpleMangledName(ctx, key.function->helios_id),
+					= helios::mangler::getSimpleMangledName(ctx, key.function->helios_id.value()),
 					.return_type_layout = return_type,
 					.parameter_layouts  = std::move(parameter_types),
 					.blocks             = std::move(blocks),

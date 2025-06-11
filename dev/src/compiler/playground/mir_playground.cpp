@@ -46,7 +46,7 @@ int notMain(int argc, const char* const* argv) {
 
 	auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
-	for (auto& glob_data: top_level->glob_data) {
+	for (auto& glob_data: top_level.glob_data) {
 		if (std::holds_alternative<helios::HOUTGlobalConst>(glob_data.value)) continue;
 		CRef mir_fun
 			= &query::entryPoint<compiler::mir::LowerGlobalDataToMirCtor>({ glob_data })->value();

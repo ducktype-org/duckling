@@ -223,12 +223,6 @@ namespace compiler::mir {
 		void debugPrint(std::ostream& output, bool detailed = false) const;
 	};
 
-	struct MirGlobalData {
-		helios::SymID sym_id;            ///< HELIOS symbol ID of the global data.
-
-		std::vector<MirGlobal> globals;  ///< List of global variables.
-	};
-
 	/**
 	 * @brief Structure representing any MIR value.
 	 */
