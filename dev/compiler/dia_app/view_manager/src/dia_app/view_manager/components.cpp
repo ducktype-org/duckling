@@ -61,12 +61,12 @@ namespace dia_app {
 			debug("TextComponent::getNoHlView() begin");
 			auto result = std::make_unique<::view::NoHlComponent>();
 			result->mutable_text_component()->set_content(this->content);
-			result->mutable_text_component()->mutable_assoc_side_entries()->Add(
-				this->assoc_side_entries.begin(), this->assoc_side_entries.end()
-			);
+			if (this->assoc_side_entries.empty() == false) {
+				result->mutable_text_component()->set_component_id(this->id);
+			}
 			auto left = line_suffix_data_t<::view::NoHlComponent>{ std::move(result) };
 			auto mid  = std::vector<line_data_t<::view::NoHlComponent>>{};
-			debug(this->assoc_side_entries);
+			debug(this->content, this->assoc_side_entries);
 			debug("TextComponent::getNoHlView() end");
 			return { std::move(left), std::move(mid) };
 		}
@@ -108,9 +108,9 @@ namespace dia_app {
 			result->mutable_code_component()->mutable_hl_tags()->Add(
 				this->tags.begin(), this->tags.end()
 			);
-			result->mutable_code_component()->mutable_assoc_side_infos()->Add(
-				this->assoc_side_entries.begin(), this->assoc_side_entries.end()
-			);
+			if (this->assoc_side_entries.empty() == false) {
+				result->mutable_code_component()->set_component_id(this->id);
+			}
 			auto left = line_suffix_data_t<::view::HlComponent>{ std::move(result) };
 			auto mid  = std::vector<line_data_t<::view::HlComponent>>{};
 			debug(this->assoc_side_entries);
@@ -122,9 +122,9 @@ namespace dia_app {
 			debug("CodeComponent::getNoHlView() begin");
 			auto result = std::make_unique<::view::NoHlComponent>();
 			result->mutable_code_component()->set_content(this->content);
-			result->mutable_code_component()->mutable_assoc_side_entries()->Add(
-				this->assoc_side_entries.begin(), this->assoc_side_entries.end()
-			);
+			if (this->assoc_side_entries.empty() == false) {
+				result->mutable_code_component()->set_component_id(this->id);
+			}
 			auto left = line_suffix_data_t<::view::NoHlComponent>{ std::move(result) };
 			auto mid  = std::vector<line_data_t<::view::NoHlComponent>>{};
 			debug(this->assoc_side_entries);
