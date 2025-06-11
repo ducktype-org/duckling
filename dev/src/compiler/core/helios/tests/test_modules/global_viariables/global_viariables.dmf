@@ -1,0 +1,15 @@
+
+namespace Nmspc {
+    var B: i64 = 4 + 4;
+}
+
+fun foooo(a: i32) -> i32 = {
+    return a;
+}
+
+namespace Mspc {
+
+    const ABC: i64 = 4 + 4;
+
+    var XB: i64 = foooo(10);
+}

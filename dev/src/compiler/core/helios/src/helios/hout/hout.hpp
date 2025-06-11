@@ -101,12 +101,17 @@ namespace compiler::helios {
 
 	enum class HOUTGlobalDataType { Constant, Variable };
 
-	struct HOUTGlobalConst {
+	struct HOUTGlobalConst final {
 		// @TODO: CTV from TS:
 		i64 value;
 	};
 
-	struct HOUTGlobalVariable {
+	struct HOUTGlobalVariable final {
+		// We cannot use Box<code::Expr> here because we use AUTO_CACHE_COPY,
+		// and the HOUTUnit is copied during runtime. Also, the problem with the
+		// copy constructor will go away once we pass HOUT expressions around as
+		// references.
+		// @TODO: Make this better.
 		std::shared_ptr<Box<code::Expr>> initial_value;  ///< The initial value of the variable.
 	};
 
@@ -124,7 +129,7 @@ namespace compiler::helios {
 	 * depending on the `data_type`. This structure also includes metadata such as
 	 * the original name, symbol ID, and type of the global data.
 	 */
-	struct HOUTGlobalData {
+	struct HOUTGlobalData final {
 		// @TODO: decide if HOUT functions global data contain its HELIOS SymID
 		// Currently it is here for pretty printing
 		SymID helios_symbol;
@@ -138,9 +143,6 @@ namespace compiler::helios {
 		tsh::SymbolType<> type;
 
 		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
-
-		HOUTGlobalData(const HOUTGlobalData&) = default;
-		HOUTGlobalData(HOUTGlobalData&&)      = default;
 
 		[[nodiscard]]
 		std::string debugPrint() const;

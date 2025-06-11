@@ -199,8 +199,7 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		// @TODO: is this name mangled somehow:?
-		base::StrID name;
+		base::StrID mangled_name;
 
 		tsl::TypeLayout              return_type_layout;
 		std::vector<tsl::TypeLayout> parameter_layouts;

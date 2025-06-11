@@ -1,8 +1,10 @@
 #include "get_parameter_types.hpp"
 
 #include <backends/dvm/backend.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <query_framework/context.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/exceptions.hpp>
@@ -103,7 +105,8 @@ namespace compiler::backend_vm {
 			return vm::code::FunctionType{ function_name, param_type_names, result_type_name };
 		}
 
-		struct AddLirFuncContext {
+		struct AddLirFuncContext final {
+			query::Context&     ctx;
 			CRef<lir::Function> lir_func;
 			Function            bytecode_func;
 
@@ -118,10 +121,13 @@ namespace compiler::backend_vm {
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
 			AddLirFuncContext(
-				CRef<lir::Function> lir_function, const vm::StableTypeIdNameMap<TypeOfData>& type_map
+				query::Context&                            ctx,
+				CRef<lir::Function>                        lir_function,
+				const vm::StableTypeIdNameMap<TypeOfData>& type_map
 			):
+				  ctx(ctx),
 				  lir_func(lir_function),
-				  bytecode_func(Function({}, lir_function->name, {})),
+				  bytecode_func(Function({}, lir_function->mangled_name, {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(typeName(type), type);
@@ -143,10 +149,12 @@ namespace compiler::backend_vm {
 
 		void initLocals(AddLirFuncContext& ctx) {
 			CORE_ASSERT(
-				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->name)),
+				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)
+			    ),
 				"Type not functional"
 			);
-			auto func_type_tod = std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->name));
+			auto func_type_tod
+				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
 
 			// Save locals offset
 			for (const auto& var: ctx.lir_func->local_list) {
@@ -194,9 +202,9 @@ namespace compiler::backend_vm {
 			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
 			types.push_back(result_type);
 
-			if (lir_function->name != "main") {
+			if (lir_function->mangled_name != "main") {
 				types.emplace_back(getFunctionTypeFromLayouts(
-					lir_function->name,
+					lir_function->mangled_name,
 					lir_function->parameter_layouts,
 					lir_function->return_type_layout
 				));
@@ -229,7 +237,9 @@ namespace compiler::backend_vm {
 					if (lir_instruction.operation == lir::Operation::Call) {
 						const auto callee_helios_id
 							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-						auto name = compiler::helios::name(callee_helios_id);
+						auto name = compiler::helios::mangler::getSimpleMangledName(
+							query_ctx, callee_helios_id
+						);
 						auto called_func_signature
 							= getParameterAndResultFromSymID(query_ctx, callee_helios_id);
 
@@ -313,7 +323,9 @@ namespace compiler::backend_vm {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
-					return vm::opargs::FunctionName(helios::name(function.helios_id));
+					return vm::opargs::FunctionName(
+						helios::mangler::getSimpleMangledName(ctx.ctx, function.helios_id)
+					);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
@@ -577,9 +589,9 @@ namespace compiler::backend_vm {
 		CodeCollection compiled_functions;
 
 		for (const auto& lir_function: functions) {
-			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
+			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
 
-			AddLirFuncContext ctx(lir_function, valid_program.types());
+			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types());
 			initLocals(ctx);
 
 			for (auto&& lir_block: lir_function->block_order) registerBlock(ctx, lir_block);

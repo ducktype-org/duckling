@@ -5,7 +5,7 @@
 
 namespace compiler::helios::mangler {
 
-	struct KeyOf_MangledSymbol {
+	struct KeyOf_MangledSymbol final {
 		SymID                       symbol;
 		u64                         mangling_scheme_version = 0;
 		base::Optional<std::string> additional_metadata     = std::nullopt;
@@ -19,6 +19,8 @@ namespace compiler::helios::mangler {
 	/**
 	 * @brief Gets the mangled name of a symbol from SymID.
 	 */
-	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::Optional<std::string>);
+	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID);
 
-}  // namespace compiler::helios::mangler
+	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
+
+}
