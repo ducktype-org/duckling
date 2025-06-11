@@ -2,6 +2,7 @@ var c: i32 = 20;
 var g: i32 = hoo();
 
 fun foo() = {
+	c = g;
 	var a: i32 = 23;
 	while (9) {
 		var b: i32 = 7;

@@ -12,24 +12,17 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/exceptions.hpp>
-#include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <stack>
@@ -294,7 +287,7 @@ namespace compiler::mir {
 		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
 			  function_type(tsh::SymbolType<tsh::FunctionAbstractType>(
 								ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
-									->expect("Handling errors in HOUT is not supported yet")
+									->expect("Handling errors in MIR is not supported yet")
 			  )
 		                        .getType()),
 			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
@@ -816,27 +809,24 @@ namespace compiler::mir {
 				"Left side of assignment statement doesn't contain reference to local variable or "
 				"a global variable."
 			);
-			if (location_value_result.isLocal()) {
-				auto local = location_value_result.get<LocalRef>();
-				target_construction_hole.fill(Instruction{
-					Operation::Assign,
-					{ local },
-					{ new_value },
-					{},
-					assignment_scope,
-				});
-				output({ l_continuation });
-			} else {
-				auto global = location_value_result.get<MirGlobal>();
-				target_construction_hole.fill(Instruction{
-					Operation::Assign,
-					{ global },
-					{ new_value },
-					{},
-					assignment_scope,
-				});
-				output({ l_continuation });
-			}
+			std::visit(
+				[&](auto&& ref) {
+					using T = std::decay_t<decltype(ref)>;
+					if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T, MirGlobal>) {
+						target_construction_hole.fill(Instruction{
+							Operation::Assign,
+							{ ref },
+							{ new_value },
+							{},
+							assignment_scope,
+						});
+						output({ l_continuation });
+					} else {
+						CORE_PANIC("Assignment to unsupported MIRValue type");
+					}
+				},
+				location_value_result.getVariant()
+			);
 		}
 	};
 
@@ -890,6 +880,7 @@ namespace compiler::mir {
 			if (optional_local.has_value()) {
 				output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
 			} else {
+				//@TODO: chack if the symbol is a real global variable.
 				output({ .begin = continuation,
 				         .value = MIRValue{
 							 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) } });
@@ -1282,13 +1273,14 @@ namespace compiler::mir {
 			auto global_init_expr
 				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
 
-			auto function_type
-				= ctx.query<tsh::QueryFunctionType>({ {},
-			                                          tsh::SymbolType{
-														  ctx.query<tsh::QueryUnitType>({}),
-														  tsh::ReferenceKind::Direct,
-														  tsh::Mutability::Immutable,
-													  } });
+			auto function_type = ctx.query<tsh::QueryFunctionType>({
+				{},
+				tsh::SymbolType{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				},
+			});
 
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
@@ -1340,5 +1332,5 @@ namespace compiler::mir {
 		QUERY_AUTO_CACHE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMirCtor);
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMirCtor)
 }

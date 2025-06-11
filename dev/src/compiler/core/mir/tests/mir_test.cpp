@@ -129,8 +129,14 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
 			// those assertions might change when we improve mir generaration:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
+			// Check that the first instruction assigns to a global
+			{
+				const auto& instr = foo_mir.blocks[BlockID(7)].instructions.at(0);
+				ASSERT_TRUE(std::holds_alternative<compiler::mir::MirGlobal>(instr.output.value()));
+			}
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 1);

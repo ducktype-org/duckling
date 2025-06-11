@@ -228,7 +228,7 @@ namespace compiler::mir {
 	 */
 	struct MIRValue final {
 	private:
-		// @TODO: global, literal, ...
+		// @TODO: literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
 		using ValueType
@@ -428,9 +428,11 @@ namespace compiler::mir {
 		 */
 		ScopeRef no_lifetime_scope;
 
-		// helios ID for hashes, ... this it temporary?
-		// pushing this ID all the way here is problematic
-		// it should be optional at best
+		/**
+		 * HELIOS SymID releted to the function.
+		 * Functions without a helios_id are functions created for eg. from expressions
+		 */
+		// @TODO: implement the alternative to helios_id, for eg. "function source"
 		base::Optional<helios::SymID> helios_id;
 
 		Function()                = delete;

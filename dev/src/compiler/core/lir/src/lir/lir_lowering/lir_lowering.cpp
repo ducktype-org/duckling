@@ -23,8 +23,6 @@
 
 #include <base/variant.hpp>
 
-#include <variant>
-
 // @opt: make switch-cases in this file "sorted"
 
 namespace compiler::lir {
@@ -150,7 +148,7 @@ namespace compiler::lir {
 					}
 					variant_default { CORE_PANIC("Unhandled variant in getLocal"); }
 				}
-				return mir_to_lir_local.begin()->second;  // this is just to avoid linter warning
+				CORE_UNREACHABLE();
 			}
 
 			/**

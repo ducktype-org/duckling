@@ -24,7 +24,7 @@ namespace compiler::mir {
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>);
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>)
 
 	struct KeyOf_LowerGlobalDataToMirFunction {
 		helios::HOUTGlobalData global_data;
