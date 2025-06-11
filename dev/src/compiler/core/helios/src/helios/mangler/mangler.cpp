@@ -278,6 +278,12 @@ namespace compiler::helios::mangler {
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<base::StrID>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
+
+			// a quick hack:
+			if (name(key.symbol).str() == "main") {
+				return base::StrID{ "main" };
+			}
+
 			using namespace std::literals::string_view_literals;
 
 			if (!detail::isManglable(key.symbol))
