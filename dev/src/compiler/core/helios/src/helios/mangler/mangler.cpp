@@ -43,7 +43,6 @@ namespace compiler::helios::mangler {
 		enum class ManglingKind {
 			NoMangling,        //< No mangling is performed, e.g. for built-in symbols
 			StandardMangling,  //< Standard mangling machinery is used
-			Invalid,           //< Mangling does not make sense for this symbol
 		};
 
 		/**
@@ -66,7 +65,7 @@ namespace compiler::helios::mangler {
 				return ManglingKind::NoMangling;
 
 			default:
-				return ManglingKind::Invalid;
+				CORE_PANIC("Invalid symbol kind for mangling.");
 			}
 		}
 
@@ -286,9 +285,10 @@ namespace compiler::helios::mangler {
 
 	}  // namespace detail
 
-	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<base::StrID>) {
+	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// a temporary hack:
+			// @TODO: fix it when we do #895
 			if (name(key.symbol).str() == "main") return base::StrID{ "main" };
 
 			using namespace std::literals::string_view_literals;
@@ -313,10 +313,6 @@ namespace compiler::helios::mangler {
 
 				return base::StrID{ mangled_name.c_str() };
 			}
-			case detail::ManglingKind::Invalid:
-				// @todo: wrong symbol kind -- error types will be added in
-				// the next PR
-				return std::nullopt;
 			default:
 				CORE_UNREACHABLE();
 			}
@@ -329,6 +325,6 @@ namespace compiler::helios::mangler {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
-		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol = sym_id }).value();
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol = sym_id });
 	}
 }

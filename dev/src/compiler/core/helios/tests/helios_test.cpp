@@ -997,7 +997,7 @@ private:
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ goo.original_symbol, 123, "metadata_v123" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_goo.value().strView() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
 		auto glob = find_global(hout_unit, base::StrID("B")).value();
 		std::cerr << "\nGlobal Variable name: " << glob.original_name.strView() << '\n';
@@ -1010,14 +1010,14 @@ private:
 		auto mangled_glob = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ glob.helios_symbol, 321, "metadata_v321" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_glob.value().strView() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_glob.strView() << '\n';
 
 		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
 		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
 		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ g_const.helios_symbol, 321, "metadata_v321" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_g_const.value().strView() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
 		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
@@ -1027,24 +1027,22 @@ private:
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ sub_fun.original_symbol, 5, "metadata_v5" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_sub_fun.value().strView() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
 
 		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
 		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ sub_cnst.helios_symbol, 5, "metadata_v5" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_sub_cnst.value().strView() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
-		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.value().str()
-		);
-		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.value().str());
+		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.str());
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.str());
 
-		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.value().str());
+		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
-		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.value().str());
-		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.value().str());
+		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.str());
+		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
 	void testGlobalVariableExpressions() {
