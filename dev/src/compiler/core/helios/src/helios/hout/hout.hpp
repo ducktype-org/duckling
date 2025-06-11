@@ -139,6 +139,9 @@ namespace compiler::helios {
 
 		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
+		HOUTGlobalData(const HOUTGlobalData&) = default;
+		HOUTGlobalData(HOUTGlobalData&&)      = default;
+
 		[[nodiscard]]
 		std::string debugPrint() const;
 	};

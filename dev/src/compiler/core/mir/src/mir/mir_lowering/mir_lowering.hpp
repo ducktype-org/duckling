@@ -7,6 +7,8 @@
 #include <helios/hout/hout.hpp>
 #include <query_framework/query_int.hpp>
 
+#include "base/ref.hpp"
+
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
@@ -24,7 +26,22 @@ namespace compiler::mir {
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>);
+
+	struct KeyOf_LowerGlobalDataToMirFunction {
+		helios::HOUTGlobalData global_data;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
+	};
+
+	using LowerGlobalDataToMirFunctionResult
+		= helios::errors::HResult<Function, helios::errors::Failed>;
+
+	/**
+	 * @brief Creates a ctor function for a global data.
+	 */
+	DECLARE_QUERY(LowerGlobalDataToMirCtor, KeyOf_LowerGlobalDataToMirFunction, CRef<LowerGlobalDataToMirFunctionResult>)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.

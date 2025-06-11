@@ -86,6 +86,14 @@ private:
 			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
+			auto globals = unit->glob_data;
+			ASSERT_EQUAL(2, globals.size());
+			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
+
+			auto& c_ctor
+				= ctx.query<compiler::mir::LowerGlobalDataToMirCtor>({ globals.at(0) })->value();
+			ASSERT_TRUE(c_ctor.name.strView().starts_with("_GLOBAL_c"));
+
 			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 

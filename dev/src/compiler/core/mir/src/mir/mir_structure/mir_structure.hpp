@@ -6,6 +6,9 @@
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "base/ints.hpp"
+#include "base/optional.hpp"
+#include "base/string_id.hpp"
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -199,6 +202,33 @@ namespace compiler::mir {
 		bool operator==(const MirLocal& other) const { return id == other.id; }
 	};
 
+	struct MirGlobal final {
+		/**
+		 * @brief HELIOS SymID of the global variable.
+		 * It is used to reference the global variable in the code.
+		 */
+		helios::SymID helios_id;
+
+		/**
+		 * @brief Type of the global variable.
+		 */
+		tsh::SymbolType<> type;
+
+		MirGlobal(helios::SymID helios_id, tsh::SymbolType<> type):
+			  helios_id(helios_id),
+			  type(type) {}
+
+		bool operator==(const MirGlobal& other) const = default;
+
+		void debugPrint(std::ostream& output, bool detailed = false) const;
+	};
+
+	struct MirGlobalData {
+		helios::SymID sym_id;            ///< HELIOS symbol ID of the global data.
+
+		std::vector<MirGlobal> globals;  ///< List of global variables.
+	};
+
 	/**
 	 * @brief Structure representing any MIR value.
 	 */
@@ -208,7 +238,7 @@ namespace compiler::mir {
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
 		using ValueType
-			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
+			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
 
 		ValueType value;
 
@@ -224,6 +254,8 @@ namespace compiler::mir {
 		MIRValue(BlockID value): value(value) {}
 
 		MIRValue(MirFunctionLiteral value): value(value) {}
+
+		MIRValue(MirGlobal value): value(value) {}
 
 		bool operator==(const MIRValue& other) const = default;
 
@@ -250,6 +282,11 @@ namespace compiler::mir {
 		bool isLocal() const {
 			return std::holds_alternative<LocalRef>(value);
 		}
+
+		[[nodiscard]]
+		bool isGlobal() const {
+			return std::holds_alternative<MirGlobal>(value);
+		}
 	};
 
 	/**
@@ -275,7 +312,7 @@ namespace compiler::mir {
 	struct Instruction final {
 		Operation operation = Operation::Uninitialized;
 
-		base::Optional<LocalRef> output;
+		base::Optional<std::variant<LocalRef, MirGlobal>> output;
 
 		std::vector<MIRValue> arguments;
 
@@ -299,11 +336,11 @@ namespace compiler::mir {
 		Instruction(Instruction&&) = default;
 
 		Instruction(
-			Operation                  operation,
-			base::Optional<LocalRef>   output,
-			std::vector<MIRValue>      arguments,
-			std::vector<OperationFlag> flags,
-			ScopeRef                   scope
+			Operation                                         operation,
+			base::Optional<std::variant<LocalRef, MirGlobal>> output,
+			std::vector<MIRValue>                             arguments,
+			std::vector<OperationFlag>                        flags,
+			ScopeRef                                          scope
 		):
 			  operation(operation),
 			  output(output),
@@ -400,7 +437,7 @@ namespace compiler::mir {
 		// helios ID for hashes, ... this it temporary?
 		// pushing this ID all the way here is problematic
 		// it should be optional at best
-		helios::SymID helios_id;
+		base::Optional<helios::SymID> helios_id;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
@@ -420,7 +457,7 @@ namespace compiler::mir {
 			base::StableVector<const MirLocal>  local_list,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			ScopeRef                            no_lifetime_scope,
-			helios::SymID                       helios_id
+			base::Optional<helios::SymID>       helios_id
 		);
 
 		[[nodiscard]]

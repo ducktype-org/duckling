@@ -1,3 +1,6 @@
+var c: i32 = 20;
+var g: i32 = hoo();
+
 fun foo() = {
 	var a: i32 = 23;
 	while (9) {

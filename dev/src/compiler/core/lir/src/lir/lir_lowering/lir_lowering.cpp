@@ -22,6 +22,8 @@
 
 #include <base/variant.hpp>
 
+#include <variant>
+
 // @opt: make switch-cases in this file "sorted"
 
 namespace compiler::lir {
@@ -139,7 +141,16 @@ namespace compiler::lir {
 			 * @param mir_local
 			 * @return LocalRef
 			 */
-			LocalRef getLocal(mir::LocalRef mir_local) { return mir_to_lir_local.at(mir_local); }
+			LocalRef getLocal(std::variant<mir::LocalRef, mir::MirGlobal> mir_local) {
+				variant_match(mir_local) {
+					variant_case(mir::LocalRef, local) { return mir_to_lir_local.at(local); }
+					variant_case(mir::MirGlobal, global) {
+						CORE_PANIC("MIR Global Not Implemented yet!");
+					}
+					variant_default { CORE_PANIC("Unhandled variant in getLocal"); }
+				}
+				return mir_to_lir_local.begin()->second;  // this is just to avoid linter warning
+			}
 
 			/**
 			 * @brief Converts MIR location to LIR location.

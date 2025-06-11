@@ -6,7 +6,12 @@
 
 #include "mir_lowering.hpp"
 
+#include "helios/hout/hout.hpp"
 #include "mir_lifetimes.hpp"
+#include "query_framework/query_cache_macros.hpp"
+#include "typesystem/higher/internal/abstract_type_impl.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+#include "typesystem/higher/types.hpp"
 
 #include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
@@ -20,11 +25,15 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/optional.hpp"
+#include "base/str_utils.hpp"
+#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/variant.hpp>
 
+#include <iostream>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -35,6 +44,10 @@ namespace compiler::mir {
 
 	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
 		return function.queryUnstablePerfectHash();
+	}
+
+	u64 KeyOf_LowerGlobalDataToMirFunction::queryUnstablePerfectHash() const {
+		return global_data.helios_symbol.queryUnstablePerfectHash();
 	}
 
 	struct InstructionHole;
@@ -254,6 +267,7 @@ namespace compiler::mir {
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
+		tsh::FunctionAbstractType        function_type;
 
 		LifetimeScopeTree lifetime_scope_tree;
 
@@ -275,11 +289,27 @@ namespace compiler::mir {
 		 */
 		ScopeRef no_lifetime_scope;
 
-		query::Context& ctx;
-		helios::SymID   helios_symbol;
+		query::Context&               ctx;
+		base::Optional<helios::SymID> helios_symbol;
 
 	public:
 		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
+			  function_type(tsh::SymbolType<tsh::FunctionAbstractType>(
+								ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
+									->expect("Handling errors in HOUT is not supported yet")
+			  )
+		                        .getType()),
+			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
+			  no_lifetime_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
+			  ctx(ctx),
+			  helios_symbol(helios_symbol) {}
+
+		FunctionBuilder(
+			query::Context&           ctx,
+			const helios::SymID       helios_symbol,
+			tsh::FunctionAbstractType function_type
+		):
+			  function_type(function_type),
 			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  no_lifetime_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  ctx(ctx),
@@ -307,14 +337,6 @@ namespace compiler::mir {
 				if (block.id != entry_block_id)  // entry block is already added to the block_order
 					block_order.emplace_back(block.id);
 			}
-
-			const auto function_type
-				= tsh::SymbolType<tsh::FunctionAbstractType>(
-					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
-						  ->expect("Handling errors in HOUT is not supported yet")
-				)
-			          .getType();
-
 			// we sanity check here, that all local variable have a lifetime scope,
 			for (auto& local: local_list)
 				CORE_ASSERT(local->scope.has_value(), "Local variable without lifetime scope");
@@ -408,11 +430,11 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		MutLocalRef findLocal(const helios::SymID helios_id) const {
+		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id) const {
 			// @TODO: Optimize into a hashmap.
 			for (const auto& local: local_list)
 				if (local->helios_id == helios_id) return local.refMut();
-			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
+			return {};
 		}
 
 		[[nodiscard]]
@@ -453,7 +475,7 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		helios::SymID getHeliosSymbol() const {
-			return helios_symbol;
+			return helios_symbol.value();
 		}
 	};
 
@@ -742,8 +764,14 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			auto local = function.findLocal(stmt.helios_symbol);
+			auto optional_local = function.findLocal(stmt.helios_symbol);
 
+			CORE_ASSERT(
+				optional_local.has_value(),
+				"Variable statement refers to local variable that is not defined in the function."
+			);
+
+			auto local = optional_local.value();
 			// we set the lifetime scope of the local variable here
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
@@ -786,18 +814,31 @@ namespace compiler::mir {
 				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
 
 			CORE_ASSERT(
-				location_value_result.isLocal(),
-				"Left side of assignment statement doesn't contain reference to local variable."
+				location_value_result.isLocal() || location_value_result.isGlobal(),
+				"Left side of assignment statement doesn't contain reference to local variable or "
+			    "a global variable."
 			);
-			auto local = location_value_result.get<LocalRef>();
-			target_construction_hole.fill(Instruction{
-				Operation::Assign,
-				{ local },
-				{ new_value },
-				{},
-				assignment_scope,
-			});
-			output({ l_continuation });
+			if (location_value_result.isLocal()) {
+				auto local = location_value_result.get<LocalRef>();
+				target_construction_hole.fill(Instruction{
+					Operation::Assign,
+					{ local },
+					{ new_value },
+					{},
+					assignment_scope,
+				});
+				output({ l_continuation });
+			} else {
+				auto global = location_value_result.get<MirGlobal>();
+				target_construction_hole.fill(Instruction{
+					Operation::Assign,
+					{ global },
+					{ new_value },
+					{},
+					assignment_scope,
+				});
+				output({ l_continuation });
+			}
 		}
 	};
 
@@ -846,8 +887,15 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ .begin = continuation,
-			         .value = MIRValue{ LocalRef(function.findLocal(expr.symbol).get()) } });
+			auto optional_local = function.findLocal(expr.symbol);
+
+			if (optional_local.has_value()) {
+				output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
+			} else {
+				output({ .begin = continuation,
+				         .value = MIRValue{
+							 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) } });
+			}
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -1227,4 +1275,72 @@ namespace compiler::mir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
+
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMirCtor, LowerGlobalDataToMirFunctionResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data.value))
+				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
+
+			auto global_init_expr
+				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
+
+			auto function_type
+				= ctx.query<tsh::QueryFunctionType>({ {},
+			                                          tsh::SymbolType{
+														  ctx.query<tsh::QueryUnitType>({}),
+														  tsh::ReferenceKind::Direct,
+														  tsh::Mutability::Immutable,
+													  } });
+
+			// first step: lowering to pre-mir (cfg+quad)
+			// create function builder
+			FunctionBuilder function_builder{ ctx, key.global_data.helios_symbol, function_type };
+			function_builder.setName(
+				base::StrID(base::strConcat(
+								"_GLOBAL_",
+								key.global_data.original_name,
+								key.global_data.helios_symbol.queryUnstablePerfectHash()
+				)
+			                    .c_str())
+			);
+
+			auto last_block = function_builder.newBlock();
+			last_block->setTerminator(
+				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
+			);
+
+			auto assing_instr = last_block->addHole();
+
+			auto lowerexpr_res = lowerExpr(
+				*global_init_expr.get(),
+				last_block,
+				function_builder,
+				function_builder.getTopLevelScope()
+			);
+
+			assing_instr.fill(Instruction{
+				Operation::Assign,
+				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+				{ lowerexpr_res.value },
+				{},
+				function_builder.getTopLevelScope(),
+			});
+
+			function_builder.setEntry(lowerexpr_res.begin);
+
+			auto function_no_lifetime = function_builder.build();
+
+			// second step: lifetime stuff
+			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			return function_reachable;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMirCtor);
 }
