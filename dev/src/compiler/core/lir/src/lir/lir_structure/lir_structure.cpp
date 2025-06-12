@@ -2,11 +2,13 @@
 
 #include <helios/symbols/simple.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/maps.hpp>
 #include <base/variant.hpp>
 
 #include <iomanip>
 #include <set>
+#include <variant>
 
 namespace compiler::lir {
 
@@ -95,6 +97,18 @@ namespace compiler::lir {
 			loc_output << "Local(" << local_id[local] << ")";
 		}
 
+		void printGlobal(const LirGlobal& global, std::ostream& loc_output) const {
+			loc_output << "Global(" << name(global.helios_id).strView() << ")";
+		}
+
+		void printOutput(const std::variant<LocalRef, LirGlobal>& output, std::ostream& loc_output) {
+			variant_match(output) {
+				variant_case(LocalRef, local) { printLocal(local, loc_output); }
+				variant_case(LirGlobal, global) { printGlobal(global, loc_output); }
+				variant_default { CORE_PANIC("Unhandled variant in printOutput"); }
+			}
+		}
+
 		void printLocation(const LIRValue& location) {
 			variant_match(location.getVariant()) {
 				variant_case(i64, value) { output << value; }
@@ -115,7 +129,7 @@ namespace compiler::lir {
 			output << std::left << std::setw(12);
 			std::stringstream output_value;
 			if (instruction.output.has_value()) {
-				printLocal(instruction.output.value(), output_value);
+				printOutput(instruction.output.value(), output_value);
 				output_value << " :=";
 			}
 			output << output_value.str() << " ";

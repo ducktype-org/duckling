@@ -321,9 +321,21 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
+		lir::LocalRef getOutput(std::variant<lir::LocalRef, lir::LirGlobal> output) {
+			variant_match(output) {
+				variant_case(lir::LocalRef, local) { return local; }
+				variant_case(lir::LirGlobal, global) {
+					throw base::NotYetImplemented(
+						"output of type LirGlobal is not supported in llvm lowering yet"
+					);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 #define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                         \
 	{                                                                                \
-		const auto output = lir_instruction.output.value();                          \
+		const auto output = getOutput(lir_instruction.output.value());               \
 		const auto lhs    = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
 		const auto rhs    = lirValue2LLVM(lir_instruction.arguments.at(1), builder); \
 		const auto value  = builder.Create##op(lhs, rhs);                            \
@@ -365,7 +377,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Assign: {
-				const auto output = lir_instruction.output.value();
+				const auto output = getOutput(lir_instruction.output.value());
 				const auto value  = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
@@ -389,7 +401,7 @@ namespace compiler::backend_llvm {
 			case IntegerSLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
 			case IntegerNeg: {
-				const auto output   = lir_instruction.output.value();
+				const auto output   = getOutput(lir_instruction.output.value());
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNeg(argument);
 				builder.CreateStore(value, local_register_map[output].get());
@@ -400,7 +412,7 @@ namespace compiler::backend_llvm {
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
 			case BooleanNot: {
-				const auto output   = lir_instruction.output.value();
+				const auto output   = getOutput(lir_instruction.output.value());
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNot(argument);
 				builder.CreateStore(value, local_register_map[output].get());
@@ -409,7 +421,7 @@ namespace compiler::backend_llvm {
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
-				const auto output = lir_instruction.output.value();
+				const auto output = getOutput(lir_instruction.output.value());
 
 				const auto callee_helios_id
 					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;

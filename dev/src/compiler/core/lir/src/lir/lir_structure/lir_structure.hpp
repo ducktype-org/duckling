@@ -1,6 +1,7 @@
 #pragma once
 
 #include "function_forward.hpp"
+#include "mir/mir_structure/mir_structure.hpp"
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -8,6 +9,10 @@
 #include <base/ok_bad.hpp>
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
+
+#include <memory>
+#include <utility>
+#include <variant>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
@@ -71,11 +76,35 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Global variable in LIR.
+	 * layout is in shared_ptr, so the LirGlobal can be copied
+	 */
+	struct LirGlobal final {
+		/**
+		 * @brief HELIOS id of the variable.
+		 */
+		helios::SymID helios_id;
+
+		std::shared_ptr<tsl::TypeLayout> layout;
+
+	private:
+		LirGlobal(const helios::SymID helios_id, tsl::TypeLayout layout):
+			  helios_id(helios_id),
+			  layout(std::make_shared<tsl::TypeLayout>(layout)) {}
+
+		friend Function;
+
+	public:
+		// note: don't use it outside lir lowering:
+		static LirGlobal fromMir(query::Context& ctx, mir::MirGlobal mir_global);
+	};
+
+	/**
 	 * @brief Any value in LIR representation
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
 		ValueType value;
 
 	public:
@@ -88,6 +117,8 @@ namespace compiler::lir {
 		LIRValue(BlockRef value): value(value) {}
 
 		LIRValue(FunctionLiteral value): value(value) {}
+
+		LIRValue(LirGlobal value): value(value) {}
 
 		bool operator==(const LIRValue& other) const = default;
 
@@ -163,9 +194,10 @@ namespace compiler::lir {
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
-		Operation                operation = Operation::Uninitialized;
-		base::Optional<LocalRef> output;
-		std::vector<LIRValue>    arguments;
+		Operation operation = Operation::Uninitialized;
+		using OutputType    = base::Optional<std::variant<LocalRef, LirGlobal>>;
+		OutputType            output;
+		std::vector<LIRValue> arguments;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -173,15 +205,11 @@ namespace compiler::lir {
 		Instruction(const Instruction&) = default;
 		Instruction(Instruction&&)      = default;
 
-		Instruction& operator=(Instruction&&) = default;
+		Instruction& operator=(Instruction&& other) noexcept = default;
 
-		Instruction(
-			const Operation                operation,
-			const base::Optional<LocalRef> output,
-			std::vector<LIRValue>          arguments
-		):
+		Instruction(const Operation operation, OutputType output, std::vector<LIRValue> arguments):
 			  operation(operation),
-			  output(output),
+			  output(std::move(output)),
 			  arguments(std::move(arguments)) {}
 	};
 

@@ -7,18 +7,19 @@
 
 #include <iomanip>
 #include <sstream>
+#include <variant>
 
 namespace compiler::mir {
 	Function::Function(
-		base::StrID                         name,
-		tsh::SymbolType<>                   return_type,
-		std::vector<tsh::SymbolType<>>      parameter_types,
-		base::StableHashMap<BlockID, Block> blocks,
-		std::vector<BlockID>                block_order,
-		base::StableVector<const MirLocal>  local_list,
-		LifetimeScopeTree                   lifetime_scope_tree,
-		ScopeRef                            no_lifetime_scope,
-		base::Optional<helios::SymID>       helios_id
+		base::StrID                                                      name,
+		tsh::SymbolType<>                                                return_type,
+		std::vector<tsh::SymbolType<>>                                   parameter_types,
+		base::StableHashMap<BlockID, Block>                              blocks,
+		std::vector<BlockID>                                             block_order,
+		base::StableVector<const MirLocal>                               local_list,
+		LifetimeScopeTree                                                lifetime_scope_tree,
+		ScopeRef                                                         no_lifetime_scope,
+		base::Optional<std::variant<FunctionSymId, GlobalVariableSymId>> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -31,7 +32,9 @@ namespace compiler::mir {
 		  helios_id(helios_id) {}
 
 	u64 Function::queryUnstablePerfectHash() const {
-		return helios_id.value().queryUnstablePerfectHash();
+		return std::visit(
+			[](const auto& id) { return id.id.queryUnstablePerfectHash(); }, this->helios_id.value()
+		);
 	}
 
 	bool isTerminating(Operation op) {

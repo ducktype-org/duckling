@@ -386,6 +386,14 @@ namespace compiler::mir {
 		ScopeRef beginScope() const;
 	};
 
+	struct FunctionSymId final {
+		helios::SymID id;
+	};
+
+	struct GlobalVariableSymId final {
+		helios::SymID id;
+	};
+
 	/**
 	 * @brief Function in MIR.
 	 */
@@ -432,8 +440,9 @@ namespace compiler::mir {
 		 * HELIOS SymID releted to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
-		// @TODO: implement the alternative to helios_id, for eg. "function source"
-		base::Optional<helios::SymID> helios_id;
+		using HSymID = std::variant<FunctionSymId, GlobalVariableSymId>;
+
+		base::Optional<HSymID> helios_id;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
@@ -453,7 +462,7 @@ namespace compiler::mir {
 			base::StableVector<const MirLocal>  local_list,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			ScopeRef                            no_lifetime_scope,
-			base::Optional<helios::SymID>       helios_id
+			base::Optional<HSymID>              helios_id
 		);
 
 		[[nodiscard]]
