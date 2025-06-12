@@ -63,7 +63,9 @@ namespace compiler::lir {
 	LirGlobal LirGlobal::fromMir(query::Context& ctx, mir::MirGlobal mir_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
-		return LirGlobal{ mir_global.helios_id, type_layout };
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+
+		return LirGlobal{ mir_global.helios_id, type_layout, mangled_name };
 	}
 
 	/**
@@ -429,9 +431,12 @@ namespace compiler::lir {
 					return helios::mangler::getSimpleMangledName(ctx, name.id);
 				}
 				variant_case(mir::GlobalVariableSymId, name) {
-					throw base::NotYetImplemented(
-						"ctor mangling for GlobalVariable is not implemented yet"
-					);
+					//@TODO: Add suport to mangling ctors of globals to helios mangler
+					return base::StrID(base::strConcat(
+										   "_ctor_GLOBAL_",
+										   helios::mangler::getSimpleMangledName(ctx, name.id)
+					)
+					                       .c_str());
 				}
 			}
 			CORE_UNREACHABLE();

@@ -1,0 +1,11 @@
+var g: i32 = 100;
+
+fun foo() = {
+	var a: i64 = 23;
+	g = a;
+	if (9) {
+		var b: i32 = 7;
+	}
+	return 0;
+}
+

@@ -86,10 +86,17 @@ namespace compiler::lir {
 
 		std::shared_ptr<tsl::TypeLayout> layout;
 
+		base::StrID mangled_name;
+
 	private:
-		LirGlobal(const helios::SymID helios_id, const tsl::TypeLayout& layout):
+		LirGlobal(
+			const helios::SymID    helios_id,
+			const tsl::TypeLayout& layout,
+			const base::StrID&     mangled_name
+		):
 			  helios_id(helios_id),
-			  layout(std::make_shared<tsl::TypeLayout>(layout)) {}
+			  layout(std::make_shared<tsl::TypeLayout>(layout)),
+			  mangled_name(mangled_name) {}
 
 		friend Function;
 

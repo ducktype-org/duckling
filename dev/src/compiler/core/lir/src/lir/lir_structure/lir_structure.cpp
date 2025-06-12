@@ -97,7 +97,7 @@ namespace compiler::lir {
 		}
 
 		void printGlobal(const LirGlobal& global, std::ostream& loc_output) const {
-			loc_output << "Global(" << name(global.helios_id).strView() << ")";
+			loc_output << "Global(" << global.mangled_name.strView() << ")";
 		}
 
 		void printOutput(const std::variant<LocalRef, LirGlobal>& output, std::ostream& loc_output) {

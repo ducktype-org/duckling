@@ -15,6 +15,8 @@
 #include <tester/tester.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include <base/variant.hpp>
+
 using namespace tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
@@ -37,6 +39,7 @@ public:
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
 		TESTER_ADD_TEST(functionParametersTest);
+		TESTER_ADD_TEST(testGlobals);
 	}
 
 private:
@@ -47,6 +50,10 @@ private:
 			base::StrID,
 			std::tuple<CRef<helios::HOUTFunction>, CRef<mir::Function>, CRef<lir::Function>>>
 			funcs{};
+		base::Map<
+			base::StrID,
+			std::tuple<helios::HOUTGlobalData, CRef<mir::Function>, CRef<lir::Function>>>
+			ctors{};
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
 			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name.data())));
@@ -58,6 +65,18 @@ private:
 
 		[[nodiscard]] CRef<lir::Function> lirFunc(std::string_view name) const {
 			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name.data())));
+		}
+
+		[[nodiscard]] helios::HOUTGlobalData houtGlobal(std::string_view name) const {
+			return std::get<helios::HOUTGlobalData>(ctors.at(base::StrID(name.data())));
+		}
+
+		[[nodiscard]] CRef<mir::Function> mirGlobalCtor(std::string_view name) const {
+			return std::get<CRef<mir::Function>>(ctors.at(base::StrID(name.data())));
+		}
+
+		[[nodiscard]] CRef<lir::Function> lirGlobalCtor(std::string_view name) const {
+			return std::get<CRef<lir::Function>>(ctors.at(base::StrID(name.data())));
 		}
 	};
 
@@ -78,6 +97,27 @@ private:
 					hout_func.original_name, std::make_tuple(CRef(&hout_func), mir_func, lir_func)
 				);
 			}
+			for (const auto& hout_glob: unit->glob_data) {
+				variant_match(hout_glob.value) {
+					variant_case(helios::HOUTGlobalVariable, var) {
+						CRef mir_func
+							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+						result.ctors.put(
+							hout_glob.original_name, std::make_tuple(hout_glob, mir_func, lir_func)
+						);
+					}
+					variant_case(helios::HOUTGlobalConst, cnst) {
+						//@TODO: create global constant ctors if nessesary
+					}
+					variant_default {
+						fail(base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_glob.original_name.strView()
+						));
+					}
+				}
+			}
 		});
 		return result;
 	}
@@ -88,6 +128,7 @@ private:
 		auto foo_lir = module.lirFunc("foo");
 
 		withContextDo([&](query::Context& ctx) {
+			foo_lir->debugPrint(ctx, std::cout);
 			// this might change in the future:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
@@ -193,6 +234,63 @@ private:
 				for (auto& arg: instruction.arguments) validate_value(arg);
 			for (auto& arg: block->terminator.arguments) validate_value(arg);
 		}
+	}
+
+	void testGlobals() {
+		auto module = getLirOfModule(path("modules/globals"));
+		ASSERT_EQUAL(1, module.funcs.size());
+		auto foo_lir = module.lirFunc("foo");
+		auto g_ctor  = module.lirGlobalCtor("g");
+
+		withContextDo([&](query::Context& ctx) {
+			// This might change in the future:
+
+			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
+
+			// Check local variable 'a'
+			bool found_a = false;
+			for (auto& local: foo_lir->local_list) {
+				if (local->helios_id.has_value() && helios::name(local->helios_id.value()) == "a") {
+					found_a = true;
+					ASSERT_EQUAL(
+						local->layout.getSourceType(),
+						ctx.query<tsh::QueryIntegralType>(
+							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						)
+					);
+				}
+			}
+			ASSERT_TRUE(found_a);
+
+			// Check that there is an assignment to a LirGlobal in the instructions in foo_lir
+			bool found_global_assign = false;
+			for (const auto& block: foo_lir->blocks) {
+				for (const auto& instr: block->instructions) {
+					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
+						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
+							found_global_assign = true;
+					}
+				}
+			}
+			ASSERT_TRUE(found_global_assign);
+
+			// Check that there is an assignment to a LirGlobal in the instructions in g_ctor
+			bool found_global_assign_ctor = false;
+			for (const auto& block: g_ctor->blocks) {
+				for (const auto& instr: block->instructions) {
+					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
+						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
+							found_global_assign_ctor = true;
+					}
+				}
+			}
+			ASSERT_TRUE(found_global_assign_ctor);
+
+			// Test debug print:
+			std::stringstream foo_str;
+			foo_lir->debugPrint(ctx, foo_str);
+		});
 	}
 };
 
