@@ -787,7 +787,7 @@ namespace compiler::mir {
 				 CORE_ASSERT(
 					 optional_local.has_value(),
 					 "Variable statement refers to local variable that is not defined in the "
-		             "function."
+					 "function."
 				 );
 
 				 auto local = optional_local.value();
@@ -838,7 +838,7 @@ namespace compiler::mir {
 				 CORE_ASSERT(
 					 location_value_result.isLocal() || location_value_result.isGlobal(),
 					 "Left side of assignment statement doesn't contain reference to local "
-		             "variable or "
+					 "variable or "
 					 "a global variable."
 				 );
 				 std::visit(

@@ -2,7 +2,6 @@
 
 #include <helios/symbols/simple.hpp>
 
-#include "base/exceptions.hpp"
 #include <base/maps.hpp>
 #include <base/variant.hpp>
 

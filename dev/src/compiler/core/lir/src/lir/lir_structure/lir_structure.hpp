@@ -1,7 +1,6 @@
 #pragma once
 
 #include "function_forward.hpp"
-#include "mir/mir_structure/mir_structure.hpp"
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -88,7 +87,7 @@ namespace compiler::lir {
 		std::shared_ptr<tsl::TypeLayout> layout;
 
 	private:
-		LirGlobal(const helios::SymID helios_id, tsl::TypeLayout layout):
+		LirGlobal(const helios::SymID helios_id, const tsl::TypeLayout& layout):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)) {}
 

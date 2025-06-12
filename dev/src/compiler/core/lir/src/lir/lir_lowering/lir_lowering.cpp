@@ -21,8 +21,6 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
-#include "base/exceptions.hpp"
-#include "base/optional.hpp"
 #include <base/variant.hpp>
 
 #include <variant>

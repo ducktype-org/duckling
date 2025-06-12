@@ -4,6 +4,7 @@
 
 namespace compiler::mir {
 	struct MirLocal;
+	struct MirGlobal;
 
 	/**
 	 * @brief Reference to MIR Local variable data.
