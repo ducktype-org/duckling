@@ -27,6 +27,14 @@ namespace compiler::backend_llvm {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
+	void Module::addGlobalToModule(const lir::LirGlobal& lir_global) {
+		addGlobalToModuleImpl(impl.refMut(), lir_global);
+	}
+
+	void Module::addFunctionToModuleCtors(query::Context& ctx, CRef<lir::Function> lir_function) {
+		addFunctionToModuleCtorsImpl(ctx, impl.refMut(), lir_function);
+	}
+
 	base::OkBad Module::verify() const {
 		std::cerr << "LLVMVerification: \n";
 		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());

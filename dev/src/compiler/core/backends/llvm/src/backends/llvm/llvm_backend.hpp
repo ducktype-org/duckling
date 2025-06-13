@@ -53,6 +53,10 @@ namespace compiler::backend_llvm {
 
 		void addFunctionToModule(query::Context&, CRef<lir::Function> lir_function);
 
+		void addGlobalToModule(const lir::LirGlobal& lir_global);
+
+		void addFunctionToModuleCtors(query::Context& ctx, CRef<lir::Function> lir_function);
+
 		void debugPrint() const;
 
 		/**

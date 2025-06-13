@@ -20,4 +20,10 @@ namespace compiler::backend_llvm {
 	void addFunctionToModuleImpl(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	);
+
+	void addFunctionToModuleCtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	);
+
+	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global);
 }

@@ -2,6 +2,7 @@
 
 #include "../lir_structure/lir_structure.hpp"
 
+#include <helios/hout/hout.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 namespace compiler::lir {
@@ -17,4 +18,8 @@ namespace compiler::lir {
 	 * Generates TSL types
 	 */
 	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, CRef<Function>)
+
+	lir::LirGlobal lowerGlobalDataToLirGlobal(
+		const helios::HOUTGlobalData& global_data, query::Context& ctx
+	);
 }
