@@ -549,7 +549,7 @@ namespace compiler::backend_llvm {
 	) {
 		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		auto             fun = lir2llvm.createFunction();
-		//@TODO: 65535 is default priority for global constructors in LLVM.
+		// 65535 is default priority for global constructors in LLVM.
 		// there is also a 4 parameter Constant * Data = nullptr with is the pointer to global
 		// variabble associated with the constructor. but the problem is that the the order of
 		// functions with the same priority is not defined. so we propably want tocreate one global
