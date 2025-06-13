@@ -1,13 +1,17 @@
 #include "hout.hpp"
 
+#include "../symbols/simple.hpp"
 #include "elements.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>  // for parent
 #include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <query_framework/context.hpp>
 
+#include <memory>
 #include <sstream>
 
 namespace compiler::helios {
@@ -67,25 +71,43 @@ namespace compiler::helios {
 	}
 
 	std::string HOUTGlobalData::debugPrint() const {
-		return base::strConcat(
-			"const ",
-			original_name,
-			" (",
-			"Symbol ",
-			helios_symbol.queryUnstablePerfectHash(),
-			")"
-			" := ",
-			value,
-			"\n"
-		);
+		std::stringstream out;
+		if (std::holds_alternative<HOUTGlobalConst>(value)) {
+			auto const_value = std::get<HOUTGlobalConst>(value).value;
+			out << "const " << original_name.strView() << " = " << const_value << "\n";
+		} else if (std::holds_alternative<HOUTGlobalVariable>(value)) {
+			out << "var " << original_name.strView() << " = ";
+			std::get<HOUTGlobalVariable>(value).initial_value.get()->ref()->debugPrint(out);
+			out << "\n";
+		}
+		return out.str();
 	}
 
-	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
+	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(ctx.query<QueryConstValueOf>(symbol).expect(
-			  "Handling errors in HOUT is not supported yet"
-		  )),
+		  data_type(data_type),
+		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
+			  switch (data_type) {
+			  case HOUTGlobalDataType::Variable:
+				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
+					  std::move(ctx.query<QueryHoutOfExpr>(stmt(ctx, symbol)
+				                                               ->dynamicCast<pst::Variable>()
+				                                               .value()
+				                                               ->getValue()
+				                                               .value()
+				                                               .unlock(ctx)
+				                                               ->getExpr())
+				                    .expect("Handling errors in HOUT is not supported yet"))
+				  ) };
+			  case HOUTGlobalDataType::Constant:
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
+					  "Handling errors in HOUT is not supported yet"
+				  ) };
+			  default:
+				  CORE_PANIC("Unhandled HOUTGlobalDataType");
+			  }
+		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
 		  )) {}

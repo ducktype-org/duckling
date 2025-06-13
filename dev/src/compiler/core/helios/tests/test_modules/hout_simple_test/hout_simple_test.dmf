@@ -16,6 +16,8 @@ fun foo3() = {
 
 const A: i64 = 2;
 
+var B: i64 = 4;
+
 alias foo2_alias = foo2;
 alias A_alias = A;
 

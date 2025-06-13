@@ -1,3 +1,4 @@
+#include <query_framework/detail/query_graph/node_id.hpp>
 #include <query_framework/detail/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
@@ -336,6 +337,7 @@ public:
 		TESTER_ADD_TEST(cycleDetectionTest);
 		TESTER_ADD_TEST(debugPrintTest);
 		TESTER_ADD_TEST(testContextSanityCheck);
+		TESTER_ADD_TEST(serializeDeserializeGraphTest);
 	}
 
 private:
@@ -507,6 +509,37 @@ private:
 			context_leak::use_leaked_query_happened,
 			"Something else happened, the test is inconclusive"
 		);
+	}
+
+	void serializeDeserializeGraphTest() {
+		// Create a query graph by making some query calls
+		query::entryPoint<Fibonacci>(Key1{ 10 });
+
+		const auto& graph = query::Context::getState().getGraph();
+		// Serialize the graph
+		auto serialized_data = graph.serialize();
+
+		auto deserialized_graph = query::detail::QueryGraph::deserialize(serialized_data);
+
+		auto serialized_data2 = deserialized_graph.serialize();
+
+		auto deserialized_graph2 = query::detail::QueryGraph::deserialize(serialized_data2);
+
+		ASSERT_EQUAL(serialized_data.size(), serialized_data2.size());
+
+		ASSERT_TRUE(graph.compare(deserialized_graph));
+		ASSERT_TRUE(deserialized_graph2.compare(graph));
+
+		query::entryPoint<Fibonacci>(Key1{ 30 });
+
+		const auto& graph2 = query::Context::getState().getGraph();
+
+		auto serialized_data3    = graph2.serialize();
+		auto deserialized_graph3 = query::detail::QueryGraph::deserialize(serialized_data3);
+
+		ASSERT_TRUE(serialized_data3.size() != serialized_data2.size());
+		ASSERT_TRUE(graph2.compare(deserialized_graph3));
+		ASSERT_TRUE(!deserialized_graph3.compare(deserialized_graph2));
 	}
 };
 
