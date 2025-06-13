@@ -541,6 +541,7 @@ namespace compiler::lir {
 
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
 
+		//@TODO: change FunctionLiteral to have mangled name and the type layout
 		auto mangled_name = base::StrID(base::strConcat("_GLOBAL_CTOR").c_str());
 
 		Block entry_block;

@@ -40,6 +40,8 @@ public:
 		TESTER_ADD_TEST(functionCallTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
+		TESTER_ADD_TEST(testFromFunctionLiterals);
+		TESTER_ADD_TEST(testLirGlobal);
 	}
 
 private:
@@ -294,6 +296,35 @@ private:
 			// Test debug print:
 			std::stringstream foo_str;
 			foo_lir->debugPrint(ctx, foo_str);
+		});
+	}
+
+	void testFromFunctionLiterals() {
+		auto module      = getLirOfModule(path("modules/globals"));
+		auto g           = module.houtGlobal("g");
+		auto some_global = module.houtGlobal("some_global");
+
+		withContextDo([&](query::Context& ctx) {
+			std::vector<lir::FunctionLiteral> function_literals
+				= { lir::FunctionLiteral(g.helios_symbol),
+				    lir::FunctionLiteral(some_global.helios_symbol) };
+			std::stringstream foo_str;
+			lir::fromFunctionLiterals(ctx, function_literals).debugPrint(ctx, foo_str);
+			std::cerr << "\n";
+		});
+	}
+
+	void testLirGlobal() {
+		auto module      = getLirOfModule(path("modules/globals"));
+		auto g           = module.houtGlobal("g");
+		auto some_global = module.houtGlobal("some_global");
+
+		withContextDo([&](query::Context& ctx) {
+			auto g_lir           = lir::LirGlobal::fromHOUT(ctx, g);
+			auto some_global_lir = lir::LirGlobal::fromHOUT(ctx, some_global);
+			ASSERT_EQUAL(lir::LirGlobalType::Variable, some_global_lir.type);
+			ASSERT_EQUAL(lir::LirGlobalType::Variable, g_lir.type);
+			ASSERT_EQUAL(false, g_lir.inital_value.has_value());
 		});
 	}
 };

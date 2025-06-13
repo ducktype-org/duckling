@@ -1,4 +1,5 @@
 var g: i32 = 100;
+var some_global: i64 = 42;
 
 fun foo() = {
 	var a: i64 = 23;
