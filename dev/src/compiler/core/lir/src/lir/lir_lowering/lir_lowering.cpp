@@ -21,6 +21,7 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
 #include <variant>
@@ -66,6 +67,33 @@ namespace compiler::lir {
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 
 		return LirGlobal{ mir_global.helios_id, type_layout, mangled_name };
+	}
+
+	LirGlobal LirGlobal::fromHout(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
+
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
+
+		variant_match(hout_global.value) {
+			variant_case(helios::HOUTGlobalConst, name) {
+				return LirGlobal{
+					hout_global.helios_symbol, type_layout, mangled_name, LirGlobalType::Constant
+				};
+			}
+			variant_case(helios::HOUTGlobalVariable, name) {
+				return LirGlobal{
+					hout_global.helios_symbol, type_layout, mangled_name, LirGlobalType::Variable
+				};
+			}
+			variant_default {
+				CORE_PANIC(
+					"Unhandled HOUTGlobalData type in LirGlobal::fromHout: ",
+					hout_global.original_name.strView()
+				);
+			}
+		}
+
+		CORE_UNREACHABLE();
 	}
 
 	/**
