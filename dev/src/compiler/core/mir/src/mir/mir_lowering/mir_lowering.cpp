@@ -302,9 +302,7 @@ namespace compiler::mir {
 				  }
 
 				  CORE_UNREACHABLE();
-			  }
-
-		                    ()),
+			  }()),
 			  lifetime_scope_tree(),
 			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  no_lifetime_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
@@ -524,7 +522,7 @@ namespace compiler::mir {
 				variant_default {
 					CORE_PANIC(
 						"The Function wasn't created from HOUTFunction, so you should not use "
-					    "collect."
+						"collect."
 					);
 				}
 			}
