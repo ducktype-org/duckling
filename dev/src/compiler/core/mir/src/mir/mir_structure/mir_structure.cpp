@@ -2,6 +2,7 @@
 
 #include <helios/symbols/simple.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
@@ -11,15 +12,15 @@
 
 namespace compiler::mir {
 	Function::Function(
-		base::StrID                                                      name,
-		tsh::SymbolType<>                                                return_type,
-		std::vector<tsh::SymbolType<>>                                   parameter_types,
-		base::StableHashMap<BlockID, Block>                              blocks,
-		std::vector<BlockID>                                             block_order,
-		base::StableVector<const MirLocal>                               local_list,
-		LifetimeScopeTree                                                lifetime_scope_tree,
-		ScopeRef                                                         no_lifetime_scope,
-		base::Optional<std::variant<FunctionSymId, GlobalVariableSymId>> helios_id
+		base::StrID                                                     name,
+		tsh::SymbolType<>                                               return_type,
+		std::vector<tsh::SymbolType<>>                                  parameter_types,
+		base::StableHashMap<BlockID, Block>                             blocks,
+		std::vector<BlockID>                                            block_order,
+		base::StableVector<const MirLocal>                              local_list,
+		LifetimeScopeTree                                               lifetime_scope_tree,
+		ScopeRef                                                        no_lifetime_scope,
+		base::Optional<std::variant<FunctionSymID, GlobalVariableCTOR>> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -32,9 +33,13 @@ namespace compiler::mir {
 		  helios_id(helios_id) {}
 
 	u64 Function::queryUnstablePerfectHash() const {
-		return std::visit(
-			[](const auto& id) { return id.id.queryUnstablePerfectHash(); }, this->helios_id.value()
-		);
+		variant_match(this->helios_id.value()) {
+			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
+			variant_case(GlobalVariableCTOR, global_ctor) {
+				return global_ctor.global_var_id.queryUnstablePerfectHash();
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	bool isTerminating(Operation op) {

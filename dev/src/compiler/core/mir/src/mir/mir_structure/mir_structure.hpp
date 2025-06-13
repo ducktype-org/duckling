@@ -202,6 +202,20 @@ namespace compiler::mir {
 		bool operator==(const MirLocal& other) const { return id == other.id; }
 	};
 
+	/**
+	 * @brief Represents a global value in MIR.
+	 *
+	 * This structure is used to reference a global variable in MIR code. It is directly connected
+	 * to the value from HOUT global data, allowing the MIR to operate on global variables defined
+	 * at the HOUT level.
+	 *
+	 * @details
+	 * - The `helios_id` field is the HELIOS SymID of the global variable, used for referencing.
+	 * - The `type` field stores the type of the global variable.
+	 *
+	 * This structure enables MIR instructions to refer to and manipulate global variables that
+	 * originate from HOUT global data.
+	 */
 	struct MirGlobal final {
 		/**
 		 * @brief HELIOS SymID of the global variable.
@@ -386,12 +400,12 @@ namespace compiler::mir {
 		ScopeRef beginScope() const;
 	};
 
-	struct FunctionSymId final {
+	struct FunctionSymID final {
 		helios::SymID id;
 	};
 
-	struct GlobalVariableSymId final {
-		helios::SymID id;
+	struct GlobalVariableCTOR final {
+		helios::SymID global_var_id;
 	};
 
 	/**
@@ -440,7 +454,7 @@ namespace compiler::mir {
 		 * HELIOS SymID releted to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
-		using HSymID = std::variant<FunctionSymId, GlobalVariableSymId>;
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
 
 		base::Optional<HSymID> helios_id;
 

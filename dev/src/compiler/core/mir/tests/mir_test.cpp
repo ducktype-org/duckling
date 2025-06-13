@@ -90,6 +90,7 @@ private:
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
 
+			// @TODO #906 change it to whatever is produced by the mangler
 			auto& c_ctor
 				= ctx.query<compiler::mir::LowerGlobalDataToMirCtor>({ globals.at(0) })->value();
 			ASSERT_TRUE(c_ctor.name.strView().starts_with("_GLOBAL_c"));

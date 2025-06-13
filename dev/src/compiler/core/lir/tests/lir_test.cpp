@@ -15,6 +15,7 @@
 #include <tester/tester.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
 using namespace tsh;
@@ -109,6 +110,11 @@ private:
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						//@TODO: create global constant ctors if nessesary
+						CORE_PANIC(
+							"Creating ctors for constant variables is not implemented yet. "
+							"Global constant: ",
+							hout_glob.original_name.strView()
+						);
 					}
 					variant_default {
 						fail(base::strConcat(
@@ -128,7 +134,6 @@ private:
 		auto foo_lir = module.lirFunc("foo");
 
 		withContextDo([&](query::Context& ctx) {
-			foo_lir->debugPrint(ctx, std::cout);
 			// this might change in the future:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 

@@ -4,8 +4,7 @@ fun foo() = {
 	var a: i64 = 23;
 	g = a;
 	if (9) {
-		var b: i32 = 7;
+		var b: i32 = g;
 	}
 	return 0;
 }
-

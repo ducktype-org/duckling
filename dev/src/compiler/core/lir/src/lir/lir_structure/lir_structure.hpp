@@ -6,8 +6,8 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/optional.hpp"
 #include <base/ok_bad.hpp>
+#include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
 
@@ -94,6 +94,7 @@ namespace compiler::lir {
 
 		LirGlobalType type;
 
+		//@TODO: change it to CTV
 		base::Optional<u64> inital_value;
 
 	private:
@@ -113,10 +114,12 @@ namespace compiler::lir {
 		friend Function;
 
 	public:
-		// note: don't use it outside lir lowering:
-		static LirGlobal fromMir(query::Context& ctx, mir::MirGlobal mir_global);
+		/**
+		 * @note Do not use this function outside of LIR lowering.
+		 */
+		static LirGlobal fromMIR(query::Context& ctx, mir::MirGlobal mir_global);
 
-		static LirGlobal fromHout(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+		static LirGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
 
 	/**
@@ -196,9 +199,11 @@ namespace compiler::lir {
 		friend LocalRef;
 
 	public:
-		// note: don't use it outside lir lowering:
+		/**
+		 * @note Do not use this function outside of LIR lowering.
+		 */
 
-		static LirLocal fromMir(query::Context& ctx, mir::LocalRef mir_local);
+		static LirLocal fromMIR(query::Context& ctx, mir::LocalRef mir_local);
 
 		/**
 		 * @brief Crates unique local with bool-type, and without
@@ -225,7 +230,7 @@ namespace compiler::lir {
 		Instruction(const Instruction&) = default;
 		Instruction(Instruction&&)      = default;
 
-		Instruction& operator=(Instruction&& other) noexcept = default;
+		Instruction& operator=(Instruction&&) noexcept = default;
 
 		Instruction(const Operation operation, OutputType output, std::vector<LIRValue> arguments):
 			  operation(operation),

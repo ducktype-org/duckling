@@ -42,9 +42,9 @@ int main(int argc, const char* argv[]) {
 
 	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
+	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
-	for (const auto& hout_glob: top_level.glob_data) {
+	for (const auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
@@ -56,12 +56,14 @@ int main(int argc, const char* argv[]) {
 				}
 				variant_case(helios::HOUTGlobalConst, cnst) {
 					//@TODO: create global constant ctors if nessesary
+					std::cerr << "skiping generation of ctor for global constant: "
+							  << hout_glob.original_name.strView() << "\n";
 				}
 			}
 		});
 	}
 
-	for (auto& fun: top_level.functions) {
+	for (auto& fun: top_level->functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
