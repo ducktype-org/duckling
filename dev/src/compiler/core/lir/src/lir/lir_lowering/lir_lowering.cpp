@@ -525,4 +525,33 @@ namespace compiler::lir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
+
+	Function fromFunctionLiterals(
+		query::Context& ctx, const std::vector<FunctionLiteral>& function_literals
+	){
+		auto function_type = ctx.query<tsh::QueryFunctionType>({
+				{},
+				tsh::SymbolType{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				},
+		});
+
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
+
+		Block entry_block;
+		entry_block.terminator = Instruction{
+			   Operation::ReturnVoid, {}, {} };
+		for( const auto& function_literal: function_literals) {
+			entry_block.instructions.push_back(
+				Instruction{
+					Operation::Call,
+					{ },
+					{}
+				}
+			);
+		}
+
+	}
 }
