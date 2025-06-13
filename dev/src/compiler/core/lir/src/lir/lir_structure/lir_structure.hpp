@@ -2,6 +2,7 @@
 
 #include "function_forward.hpp"
 
+#include <helios/hout/hout.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -74,6 +75,8 @@ namespace compiler::lir {
 		helios::SymID helios_id;
 	};
 
+	enum class LirGlobalType { Variable, Constant };
+
 	/**
 	 * @brief Global variable in LIR.
 	 * layout is in shared_ptr, so the LirGlobal can be copied
@@ -88,21 +91,27 @@ namespace compiler::lir {
 
 		base::StrID mangled_name;
 
+		LirGlobalType type;
+
 	private:
 		LirGlobal(
 			const helios::SymID    helios_id,
 			const tsl::TypeLayout& layout,
-			const base::StrID&     mangled_name
+			const base::StrID&     mangled_name,
+			const LirGlobalType    type = LirGlobalType::Variable
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),
-			  mangled_name(mangled_name) {}
+			  mangled_name(mangled_name),
+			  type(type) {}
 
 		friend Function;
 
 	public:
 		// note: don't use it outside lir lowering:
 		static LirGlobal fromMir(query::Context& ctx, mir::MirGlobal mir_global);
+
+		static LirGlobal fromHout(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
 
 	/**
