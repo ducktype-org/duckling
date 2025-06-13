@@ -6,6 +6,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/optional.hpp"
 #include <base/ok_bad.hpp>
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -93,17 +94,21 @@ namespace compiler::lir {
 
 		LirGlobalType type;
 
+		base::Optional<u64> inital_value;
+
 	private:
 		LirGlobal(
 			const helios::SymID    helios_id,
 			const tsl::TypeLayout& layout,
 			const base::StrID&     mangled_name,
-			const LirGlobalType    type = LirGlobalType::Variable
+			const LirGlobalType    type         = LirGlobalType::Variable,
+			base::Optional<u64>    inital_value = {}
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),
 			  mangled_name(mangled_name),
-			  type(type) {}
+			  type(type),
+			  inital_value(inital_value) {}
 
 		friend Function;
 

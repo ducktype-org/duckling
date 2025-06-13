@@ -76,9 +76,11 @@ namespace compiler::lir {
 
 		variant_match(hout_global.value) {
 			variant_case(helios::HOUTGlobalConst, name) {
-				return LirGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LirGlobalType::Constant
-				};
+				return LirGlobal{ hout_global.helios_symbol,
+					              type_layout,
+					              mangled_name,
+					              LirGlobalType::Constant,
+					              name.value };
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {
 				return LirGlobal{
