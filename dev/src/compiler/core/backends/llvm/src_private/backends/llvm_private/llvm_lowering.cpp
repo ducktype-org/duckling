@@ -203,7 +203,14 @@ namespace compiler::backend_llvm {
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
-		global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
+		if (lir_global.inital_value.has_value()) {
+			global->setInitializer(llvm::ConstantInt::getSigned(
+				global->getValueType(), static_cast<int64_t>(lir_global.inital_value.value())
+			));
+		} else {
+			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
+		}
+
 		return global;
 	}
 
