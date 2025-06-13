@@ -15,7 +15,6 @@
 #include <tester/tester.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
 using namespace tsh;
