@@ -201,7 +201,7 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-		global->setConstant(false);
+		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
 		global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		return global;
