@@ -20,6 +20,8 @@ namespace base {
 				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
 		}
 
+		constexpr Bit256(const std::array<u64, 4>& arr) noexcept: data(arr) {}
+
 		constexpr Bit256(u64 a, u64 b, u64 c, u64 d) noexcept: data{ a, b, c, d } {}
 
 		constexpr Bit256(u64 a, u64 b, u64 c) noexcept: data{ a, b, c, 0 } {}
@@ -35,5 +37,33 @@ namespace base {
 		 * @brief Converts the 256-bit integer into a hexadecimal string representation.
 		 */
 		[[nodiscard]] std::string toStringHex() const;
+
+		constexpr bool operator<(const Bit256& other) const noexcept {
+			for (usize i = 4;
+			     i-- > 0;) {  // Iterate from the most significant to the least significant
+				if (data.at(i) < other.data.at(i)) return true;
+				if (data.at(i) > other.data.at(i)) return false;
+			}
+			return false;
+		}
+
+		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
+
+		/**
+		 * @brief Outputs the Bit256 object to a stream in the format {a, b, c, d}.
+		 */
+		friend std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256);
+	};
+}
+
+namespace std {
+	template<>
+	struct hash<base::Bit256> {
+		std::size_t operator()(const base::Bit256& bit256) const noexcept {
+			std::size_t hash = 0;
+			for (const auto& value: bit256.data)
+				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
+			return hash;
+		}
 	};
 }

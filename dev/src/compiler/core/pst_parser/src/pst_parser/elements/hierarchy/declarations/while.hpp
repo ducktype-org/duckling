@@ -25,6 +25,14 @@ namespace pst {
 			return "While";
 		}
 
+		[[nodiscard]]
+		AccessLocked<ExprHolder> getCondition() const;
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getBody() const {
+			return body.give();
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

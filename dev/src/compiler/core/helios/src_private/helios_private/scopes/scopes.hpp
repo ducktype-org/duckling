@@ -26,6 +26,7 @@
 #include <pst_parser/lang_parser_state.hpp>
 #include <query_framework/query_int.hpp>
 
+#include <base/bit256.hpp>
 #include <base/string_id.hpp>
 
 namespace compiler::helios {
@@ -92,7 +93,7 @@ namespace compiler::helios {
 		bool        with_wildcards;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
+		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**

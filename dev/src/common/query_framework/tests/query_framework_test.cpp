@@ -1,3 +1,4 @@
+#include <query_framework/detail/query_graph/node_id.hpp>
 #include <query_framework/detail/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
@@ -40,7 +41,7 @@ DECLARE_QUERY(FibonacciSum, Key2, u64);
  * Q1: *
  * * * */
 struct IMPLEMENT_QUERY(Fibonacci, u64) {
-	inline static std::map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache;
+	inline static std::map<UKHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		if (key.v == 0)
@@ -52,14 +53,14 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 			     + context.query<Fibonacci>({ key.v - 2 });
 	}
 
-	static auto load(query::QueryUnstableHash key_hash) -> LoadResult {
+	static auto load(UKHash key_hash) -> LoadResult {
 		if (cache.contains(key_hash))
 			return cache.at(key_hash);
 		else
 			return {};
 	}
 
-	static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) -> QResult {
+	static auto store(UKHash key_hash, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key_hash, { .data = res, .acd = acd } });
 		return res;
 	}
@@ -90,15 +91,10 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 		return res;
 	}
 
-	static auto load([[maybe_unused]] query::QueryUnstableHash key_hash) -> LoadResult {
-		return {};
-	}
+	static auto load([[maybe_unused]] UKHash key_hash) -> LoadResult { return {}; }
 
-	static auto store(
-		[[maybe_unused]] query::QueryUnstableHash key_hash,
-		PResult                                   res,
-		[[maybe_unused]] query::ACD               acd
-	) -> QResult {
+	static auto store([[maybe_unused]] UKHash key_hash, PResult res, [[maybe_unused]] query::ACD acd)
+		-> QResult {
 		return QResult(res);
 	}
 };
@@ -341,6 +337,7 @@ public:
 		TESTER_ADD_TEST(cycleDetectionTest);
 		TESTER_ADD_TEST(debugPrintTest);
 		TESTER_ADD_TEST(testContextSanityCheck);
+		TESTER_ADD_TEST(serializeDeserializeGraphTest);
 	}
 
 private:
@@ -364,7 +361,7 @@ private:
 	}
 
 	void testDeps() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
 			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
@@ -400,7 +397,7 @@ private:
 	}
 
 	void testSideInput() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
@@ -479,7 +476,7 @@ private:
 	}
 
 	void debugPrintTest() {
-		const auto& graph = query::Context::getGraph();
+		const auto& graph = query::Context::getState().getGraph();
 		// just check if it compiles and don't throw
 		std::stringstream s;
 		graph.debugPrintForDrawing(s);
@@ -512,6 +509,37 @@ private:
 			context_leak::use_leaked_query_happened,
 			"Something else happened, the test is inconclusive"
 		);
+	}
+
+	void serializeDeserializeGraphTest() {
+		// Create a query graph by making some query calls
+		query::entryPoint<Fibonacci>(Key1{ 10 });
+
+		const auto& graph = query::Context::getState().getGraph();
+		// Serialize the graph
+		auto serialized_data = graph.serialize();
+
+		auto deserialized_graph = query::detail::QueryGraph::deserialize(serialized_data);
+
+		auto serialized_data2 = deserialized_graph.serialize();
+
+		auto deserialized_graph2 = query::detail::QueryGraph::deserialize(serialized_data2);
+
+		ASSERT_EQUAL(serialized_data.size(), serialized_data2.size());
+
+		ASSERT_TRUE(graph.compare(deserialized_graph));
+		ASSERT_TRUE(deserialized_graph2.compare(graph));
+
+		query::entryPoint<Fibonacci>(Key1{ 30 });
+
+		const auto& graph2 = query::Context::getState().getGraph();
+
+		auto serialized_data3    = graph2.serialize();
+		auto deserialized_graph3 = query::detail::QueryGraph::deserialize(serialized_data3);
+
+		ASSERT_TRUE(serialized_data3.size() != serialized_data2.size());
+		ASSERT_TRUE(graph2.compare(deserialized_graph3));
+		ASSERT_TRUE(!deserialized_graph3.compare(deserialized_graph2));
 	}
 };
 

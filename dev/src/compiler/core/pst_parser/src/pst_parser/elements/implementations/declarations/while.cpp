@@ -26,5 +26,7 @@ namespace pst {
 		out << "}";
 	}
 
+	AccessLocked<ExprHolder> While::getCondition() const { return condition.internal()->getExpr(); }
+
 	void While::acceptVisitor(PstVisitor& visitor) const { visitor.visitWhile(*this); }
 }

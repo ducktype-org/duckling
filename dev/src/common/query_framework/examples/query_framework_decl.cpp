@@ -37,7 +37,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 	/**
 	 * Lets define some cache:
 	 */
-	inline static base::Map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache;
+	inline static base::Map<UKHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// lets call Query2:
@@ -55,14 +55,14 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 		return PResult{ key.v };
 	}
 
-	static auto load(query::QueryUnstableHash key_hash) -> LoadResult {
+	static auto load(UKHash key_hash) -> LoadResult {
 		if (cache.contains(key_hash))
 			return cache.at(key_hash);
 		else
 			return {};
 	}
 
-	static auto store(query::QueryUnstableHash key_hash, PResult q_res, query::ACD acd) -> QResult {
+	static auto store(UKHash key_hash, PResult q_res, query::ACD acd) -> QResult {
 		QResult res = { q_res.v };
 		cache.put(key_hash, { .data = res, .acd = acd });
 		return res;
@@ -80,14 +80,10 @@ struct IMPLEMENT_QUERY(Query2, std::string) {
 		return std::to_string(key);
 	}
 
-	static auto load([[maybe_unused]] query::QueryUnstableHash key_hash) -> LoadResult {
-		return {};
-	}
+	static auto load([[maybe_unused]] UKHash key_hash) -> LoadResult { return {}; }
 
 	static auto store(
-		[[maybe_unused]] query::QueryUnstableHash key_hash,
-		PResult                                   p_res,
-		[[maybe_unused]] query::ACD               acd
+		[[maybe_unused]] UKHash key_hash, PResult p_res, [[maybe_unused]] query::ACD acd
 	) -> QResult {
 		// Here explicit conversion to QResult in not needed, but is left as an example:
 		return QResult{ std::move(p_res) };

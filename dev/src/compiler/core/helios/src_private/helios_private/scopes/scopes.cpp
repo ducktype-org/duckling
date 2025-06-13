@@ -64,7 +64,7 @@ namespace compiler::helios {
 
 	std::vector<ScopeID> getAllHeliosScopes() {
 		CORE_ASSERT(
-			query::Context::getGraph().queryStackSize() == 0,
+			query::Context::getState().queryStackSize() == 0,
 			"getAllHeliosScopes called from within query!"
 		);
 		std::vector<ScopeID> out;
@@ -393,6 +393,13 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
+			void visitWhile(pst::Access<pst::While>) override {
+				// Scope of "while →(...)← {}"
+				// @TODO: check if "While" defines any variables in its condition
+				// and add them here.
+				output(std::vector<SymID>{});
+			}
+
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>());
 			}
@@ -511,8 +518,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<query::QueryUnstableHash, query::CacheEntry<pst::PST<pst::Stmt>>>
-			cache;
+		static inline base::HashMap<UKHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// In the future calculate resulting string in comp time
@@ -537,13 +543,13 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto load(query::QueryUnstableHash key) -> LoadResult {
+		static auto load(UKHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
 				return QResWithACD{ extractResult(value.value().data), value->acd };
 			return {};
 		}
 
-		static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
+		static auto store(UKHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}
@@ -577,12 +583,11 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
-	u64 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
+	base::Bit256 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
 		auto hash_1 = scope.queryUnstablePerfectHash();
 		auto hash_2 = std::hash<base::StrID>()(name);
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
+		return { hash_1, hash_2, static_cast<u64>(with_wildcards) };
 	}
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {

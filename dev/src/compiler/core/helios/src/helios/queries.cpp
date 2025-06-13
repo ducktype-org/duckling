@@ -32,7 +32,10 @@ namespace compiler::helios {
 
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
-					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+					if (kind(sym) == SymbolKind::Const)
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+					if (kind(sym) == SymbolKind::Variable)
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
 						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
@@ -78,7 +81,10 @@ namespace compiler::helios {
 
 			for (auto sym: *symbols_in_module_root) {
 				// grab constants:
-				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+				if (kind(sym) == SymbolKind::Const)
+					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+				if (kind(sym) == SymbolKind::Variable)
+					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
@@ -142,6 +148,63 @@ namespace compiler::helios {
 
 			void visitUsing(pst::Access<pst::Using>) override { empty = true; }
 
+			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
+				CORE_ASSERT(
+					assignment->getAssignmentType() == base::StrID("="),
+					"Unsupported assignment type"
+				);
+
+				auto var = assignment->getVariables();
+				auto val = assignment->getValue();
+
+				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).expect(
+					"Not handling errors here yet... (lhs)"
+				);
+				auto new_value_expr = ctx.query<QueryHoutOfExpr>({ val }).expect(
+					"Not handling errors here yet... (rhs)"
+				);
+
+				auto location_value_category
+					= location_expr->expression_type.getValueCategory().getCategory();
+				if (location_value_category == tsh::PrimaryCategory::Literal) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							assignment->getSourcePosition(),
+							"Left side of assignment can't be a literal."
+						)
+					);
+					return;  // fail
+				}
+
+				auto location_type  = location_expr->expression_type.getSymbolType();
+				auto new_value_type = new_value_expr->expression_type.getSymbolType();
+
+				auto new_value_coerced = coerceExpression(std::move(new_value_expr), location_type);
+
+				if (new_value_coerced.hasError()) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							assignment->getSourcePosition(),
+							base::strConcat(
+								"Bad type passed to assignment\n",
+								"Expected: ",
+								location_type.toString(),
+								"\n",
+								"Got: ",
+								new_value_type.toString(),
+								"\n"
+							)
+						)
+					);
+					return;  // fail
+				}
+
+
+				output(code::AssignmentStmt(
+					std::move(location_expr), std::move(new_value_coerced.value())
+				));
+			}
+
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
 				// @TODO: handle null here
 				auto inner_expr = stmt->getExpr().unlock(ctx)->getExpr().unlock(ctx);
@@ -149,29 +212,7 @@ namespace compiler::helios {
 				// here if we encounter an assignment expression
 				// we should create an assignment statement:
 				if (auto assignment_opt = inner_expr.dynamicCast<pst::expr::Assignment>()) {
-					auto assignment = assignment_opt.value();
-					CORE_ASSERT(
-						assignment->getAssignmentType() == base::StrID("="),
-						"Unsupported assignment type"
-					);
-
-					auto var = assignment->getVariables();
-					auto val = assignment->getValue();
-
-					auto lhs = ctx.query<QueryHoutOfExpr>({ var }).expect(
-						"Not handling errors here yet... (lhs)"
-					);
-
-					auto rhs = ctx.query<QueryHoutOfExpr>({ val }).expect(
-						"Not handling errors here yet... (rhs)"
-					);
-
-					// for now we only support lhs being an identifier:
-					// @TODO #470: make it generic.
-
-					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
-
-					output(code::AssignmentStmt(std::move(rhs), dynamic_casted_lhs->symbol));
+					handleAssignmentExpr(assignment_opt.value());
 					return;
 				}
 
@@ -193,6 +234,16 @@ namespace compiler::helios {
 				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
 
 				output(code::IfStmt(std::move(condition), std::move(body)));
+			}
+
+			void visitWhile(pst::Access<pst::While> stmt) override {
+				auto condition
+					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
+				          .expect("Not handling errors here yet");
+
+				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
+
+				output(code::WhileStmt(std::move(condition), std::move(body)));
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {

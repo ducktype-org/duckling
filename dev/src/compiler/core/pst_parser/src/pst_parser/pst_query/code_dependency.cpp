@@ -25,12 +25,15 @@ namespace pst {
 		auto viewDependentTokens(query::detail::NodeID id) {
 			using namespace std::views;
 
-			auto nodes = query::Context::getGraph().getNodeDepsFiltered(
+			auto nodes = query::Context::getState().getGraph().getNodeDepsFiltered(
 				id, detail::PSTAccessSideInput::getID()
 			);
 
-			static auto get_pst_node
-				= [](query::detail::NodeID lid) { return LangElement::getByID(lid.hash.val); };
+			// We can retrieve the LangElement ID from the NodeId hash, because
+			// LangElement ID is used as the first element of the unstable hash value.
+			static auto get_pst_node = [](query::detail::NodeID lid) {
+				return LangElement::getByID(lid.hash.val.data.at(0));
+			};
 			static auto get_tokens = [](AccessLocked<LangElement> locked) {
 				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
 			};
