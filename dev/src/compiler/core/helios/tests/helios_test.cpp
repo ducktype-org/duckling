@@ -64,6 +64,8 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
+
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1083,6 +1085,41 @@ private:
 		);
 		expr1->debugPrint(std::cerr);
 		std::cerr << '\n';
+	}
+
+	/**
+	 * This checks if all consts and vars in the module have proper types.
+	 */
+	void testTypeOfConstAndVar() {
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
+
+		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto f64_type   = query::entryPoint<tsh::QueryFloatType>(64);
+		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
+
+		auto foo            = getChain("foo", root_scope).back();
+		auto foo_body_scope = getFunctionBodyScope(foo);
+
+
+		// ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
+		// ASSERT_EQUAL(f64_type, getTypeOf("EasyFloat", root_scope));
+		// ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", root_scope));
+		// ASSERT_EQUAL(str_type, getTypeOf("EasyString", root_scope));
+
+		// ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		// ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloat", root_scope));
+		// ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
+		// ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+
+		// const auto tuple_int_int_V = getTypeOf("TupleVII", root_scope);
+		// const auto tuple_int_int_C = getTypeOf("TupleCII", root_scope);
+		// const auto tuple_int_int_abstract_type
+		// 	= query::entryPoint<tsh::QueryTupleType>({ { st(int64_type), st(int64_type) } });
+		// ASSERT_EQUAL(tuple_int_int_V, tuple_int_int_abstract_type);
+		// ASSERT_EQUAL(tuple_int_int_C, tuple_int_int_abstract_type);
+
 	}
 };
 

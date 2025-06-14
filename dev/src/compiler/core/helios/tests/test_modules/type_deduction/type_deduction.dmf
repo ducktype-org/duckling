@@ -1,0 +1,20 @@
+fun foo() = {
+    let EasyInt = 1;
+    let EasyFloat = 2.0;
+
+    let EasyBool: = true;
+
+    let EasyString = "Hello World!";
+
+    let TupleVII = (1, 2);
+}
+
+const SimpleInt = 3;
+const SimpleFloat = 4.0;
+
+const SimpleBool = false;
+
+const SimpleString = "sudo rm -rf *";
+
+const TupleCII = (6, 7);
+
