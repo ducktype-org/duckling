@@ -1,9 +1,12 @@
 #include <driver/hout_to_binary_driver.hpp>
+#include <driver/link.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <artifacts/artifacts.hpp>
 
 #include <base/string_id.hpp>
 
@@ -22,6 +25,15 @@ public:
 	}
 
 private:
+	/**
+	 * Returns a mock collection for testing purposes.
+	 * The collection is created in a temporary directory.
+	 */
+	static Ref<artifacts::ArtifactCollection> getMockCollection() {
+		static artifacts::ArtifactCollection collection(fs::FilePath::createTempDirectory().absolutePath());
+		return &collection;
+	}
+
 	void executableGenerated() {
 		using namespace compiler;
 		auto module
@@ -38,15 +50,24 @@ private:
 			.external_libs          = {},
 		});
 
-		// This method can fail on module verification
-		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
-		driver.link(base::StrID("test_module_exe"));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto obj = getMockCollection()->fileArtifactNew(
+				base::StrID("test_module.o")
+			);
+			auto exe = getMockCollection()->fileArtifactNew(
+				base::StrID("test_module_exe")
+			);
 
-		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
-		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");
-
-		std::filesystem::remove("test_module_exe");
-		std::filesystem::remove("test_module.o");
+			// This method can fail on module verification
+			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
+			driver::link(exe, {obj}, {});
+			
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+			
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
+		});
 	}
 
 	void assemblyAndLLVMGenerated() {

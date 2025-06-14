@@ -9,4 +9,4 @@ add_library(Driver
 
 make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts)
 
-duck_add_test(compiler driver tests/driver_test.cpp USES Driver)
+duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
