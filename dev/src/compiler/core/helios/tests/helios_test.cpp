@@ -1091,7 +1091,7 @@ private:
 	 * This checks if all consts and vars in the module have proper types.
 	 */
 	void testTypeOfConstAndVar() {
-		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/type_deduction")));
 
 		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
 		const auto f64_type   = query::entryPoint<tsh::QueryFloatType>(64);
