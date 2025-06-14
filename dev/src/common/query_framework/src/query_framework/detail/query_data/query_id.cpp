@@ -21,9 +21,9 @@ struct std::hash<query::detail::QueryID> {
 namespace query::detail {
 
 	struct QueryIDMaker {
-		static constexpr QueryID make(u64 val) { return { val }; }
+		static constexpr QueryID make(u64 val) { return { QueryID(val) }; }
 
-		static constexpr QueryID next(QueryID id) { return { id.val + 1 }; }
+		static constexpr QueryID next(QueryID id) { return { QueryID(id.val + 1) }; }
 	};
 
 	namespace {

@@ -1,7 +1,7 @@
 const A: i64 = 1;
 
 namespace Nmspc {
-    var B: i64 = 2;
+    var B: i64 = 4 + 4;
 }
 
 fun foooo(a: i32) -> i32 = {
@@ -13,6 +13,7 @@ namespace Mspc {
         const Cnst: i64 = 3;
 
         fun goooo(a: i32, b: f64) -> i32 = {
+            var x: i64 = 5;
             return a;
         }
         
@@ -21,12 +22,14 @@ namespace Mspc {
         }
     }
 
-    const ABC: i64 = 4;
+    const ABC: i64 = 4 + 4;
+
+    var XB: i64 = foooo(10);
 }
 
 namespace P {
     class MyClass {
-        a: i32 = 0;
+        a: i32 = 1;
     }
 
     fun barrr() -> i32 = {

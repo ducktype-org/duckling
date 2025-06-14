@@ -32,7 +32,10 @@ namespace compiler::helios {
 
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
-					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+					if (kind(sym) == SymbolKind::Const)
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+					if (kind(sym) == SymbolKind::Variable)
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
 						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
@@ -78,7 +81,10 @@ namespace compiler::helios {
 
 			for (auto sym: *symbols_in_module_root) {
 				// grab constants:
-				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+				if (kind(sym) == SymbolKind::Const)
+					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+				if (kind(sym) == SymbolKind::Variable)
+					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));

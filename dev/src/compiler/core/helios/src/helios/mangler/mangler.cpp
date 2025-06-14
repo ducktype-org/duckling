@@ -14,7 +14,6 @@
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
-#include <ranges>
 #include <string_view>
 
 /**
@@ -41,10 +40,15 @@ namespace compiler::helios::mangler {
 
 	namespace detail {
 
+		enum class ManglingKind {
+			NoMangling,        //< No mangling is performed, e.g. for built-in symbols
+			StandardMangling,  //< Standard mangling machinery is used
+		};
+
 		/**
-		 * @brief Checks if the symbol can be mangled
+		 * @brief Checks the kind of mangling that should be used for the symbol
 		 */
-		bool isManglable(SymID symbol_id) {
+		ManglingKind manglingKind(SymID symbol_id) {
 			switch (kind(symbol_id)) {
 			case SymbolKind::Variable:
 			case SymbolKind::Field:
@@ -55,9 +59,13 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor:
-				return true;
+				return ManglingKind::StandardMangling;
+
+			case SymbolKind::BuiltinFunction:
+				return ManglingKind::NoMangling;
+
 			default:
-				return false;
+				CORE_PANIC("Invalid symbol kind for mangling.");
 			}
 		}
 
@@ -277,26 +285,38 @@ namespace compiler::helios::mangler {
 
 	}  // namespace detail
 
-	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<std::string>) {
+	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			// a temporary hack:
+			// @TODO: fix it when we do #895
+			if (name(key.symbol).str() == "main") return base::StrID{ "main" };
+
 			using namespace std::literals::string_view_literals;
 
-			if (!detail::isManglable(key.symbol))
-				return std::nullopt;  // @todo: wrong symbol kind -- error types will be added in
-				                      // the next PR
+			auto mangling_kind = detail::manglingKind(key.symbol);
 
-			// note: global identifiers starting with underscore and a capital letter are reserved
-			// in C Q seems to be free and stands for both query and quack
-			constexpr auto language_prefix = "_Q"sv;
+			switch (mangling_kind) {
+			case detail::ManglingKind::NoMangling:
+				return compiler::helios::name(key.symbol);
+			case detail::ManglingKind::StandardMangling: {
+				// note: global identifiers starting with underscore and a capital letter are
+				// reserved in C Q seems to be free and stands for both query and quack
+				constexpr auto language_prefix = "_Q"sv;
 
-			const auto mangling_scheme_version = detail::compactNumber(key.mangling_scheme_version);
-			std::string encoding               = detail::symbolEncoding(ctx, key.symbol);
-			std::string metadata               = detail::optMetadata(key.additional_metadata);
+				const auto mangling_scheme_version
+					= detail::compactNumber(key.mangling_scheme_version);
+				std::string encoding = detail::symbolEncoding(ctx, key.symbol);
+				std::string metadata = detail::optMetadata(key.additional_metadata);
 
-			std::string mangled_name
-				= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
+				std::string mangled_name
+					= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
 
-			return mangled_name;
+				return base::StrID{ mangled_name.c_str() };
+			}
+			default:
+				CORE_UNREACHABLE();
+			}
+			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -304,5 +324,7 @@ namespace compiler::helios::mangler {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
 
-
-}  // namespace compiler::helios::mangler
+	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id) {
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ .symbol = sym_id });
+	}
+}

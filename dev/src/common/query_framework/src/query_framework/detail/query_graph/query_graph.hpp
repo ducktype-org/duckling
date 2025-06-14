@@ -27,7 +27,7 @@ namespace query::detail {
 	public:
 		QueryGraph()                             = default;
 		QueryGraph(const QueryGraph&)            = delete;
-		QueryGraph(QueryGraph&&)                 = delete;
+		QueryGraph(QueryGraph&&)                 = default;
 		QueryGraph& operator=(const QueryGraph&) = delete;
 		QueryGraph& operator=(QueryGraph&&)      = delete;
 
@@ -71,6 +71,26 @@ namespace query::detail {
 			detail::NodeID node_id = makeNodeID(Query::getID(), key);
 			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
+
+		/**
+		 * @brief Serializes the QueryGraph into a vector of bytes.
+		 * @return A vector of bytes representing the serialized QueryGraph.
+		 */
+		[[nodiscard]] std::vector<byte> serialize() const;
+
+		/**
+		 * @brief Deserializes a QueryGraph from a vector of bytes.
+		 * @param data The vector of bytes to deserialize from.
+		 * @return A deserialized QueryGraph object.
+		 */
+		static QueryGraph deserialize(std::span<const byte> data);
+
+		/**
+		 * @brief Compares this QueryGraph with another for equality. For testing purposes.
+		 * @param other The other QueryGraph to compare with.
+		 * @return True if the graphs are equal, false otherwise.
+		 */
+		[[nodiscard]] bool compare(const QueryGraph& other) const;
 
 		~QueryGraph() = default;
 	};
