@@ -34,7 +34,6 @@ namespace pst {
 	}
 
 	MBox<For> For::parse(LangParserState& state) {
-		// @TODO: attr list
 		auto position = state.getPosition();
 		auto out      = makeBox<For>(position);
 
