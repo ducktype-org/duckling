@@ -6,7 +6,6 @@
 
 namespace pst {
 	MBox<If> If::parse(LangParserState& state) {
-		// @TODO: attr list
 		auto position = state.getPosition();
 		auto out      = makeBox<If>(position);
 

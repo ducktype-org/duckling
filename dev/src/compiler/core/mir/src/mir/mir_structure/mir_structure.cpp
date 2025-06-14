@@ -72,7 +72,15 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "[MIR] Function " << name.strView() << ": TODO -> "
+		output << "[MIR] Function " << name.strView() << ": ";
+		output << "(";
+		std::string_view separator = "";
+		for (auto& type: this->parameter_types) {
+			output << separator << type.toString();
+			separator = ", ";
+		}
+		output << ")";
+		output << " -> "
 			   << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {

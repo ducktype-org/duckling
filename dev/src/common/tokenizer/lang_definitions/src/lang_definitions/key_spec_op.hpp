@@ -29,7 +29,6 @@ namespace lang_def {
 		NotAKeyword,
 
 		// Non-code declaration
-		// @TODO: struct or class?
 		Fun,
 		Class,
 		Namespace,
