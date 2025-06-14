@@ -80,8 +80,7 @@ namespace compiler::mir {
 			separator = ", ";
 		}
 		output << ")";
-		output << " -> "
-			   << this->return_type.toString() << "\n";
+		output << " -> " << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";
