@@ -20,8 +20,8 @@ namespace compiler::driver {
 		 * Do not saves the compiled DBC to file.
 		 * Useful when wanting to run the compiled bytecode.
 		 */
-		bool                     dvm_code_only_memory;
-		bool                     add_builtin_library;
+		bool dvm_code_only_memory;
+		bool add_builtin_library;
 
 		// this PR: remove
 		std::vector<base::StrID> external_objects_files;

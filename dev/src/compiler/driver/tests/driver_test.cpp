@@ -1,3 +1,4 @@
+#include <artifacts/artifacts.hpp>
 #include <driver/hout_to_binary_driver.hpp>
 #include <driver/link.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -6,7 +7,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <artifacts/artifacts.hpp>
 
 #include <base/string_id.hpp>
 
@@ -30,7 +30,9 @@ private:
 	 * The collection is created in a temporary directory.
 	 */
 	Box<artifacts::ArtifactCollection> createMockCollection() {
-		return base::makeBox<artifacts::ArtifactCollection>(fs::FilePath::createTempDirectory().absolutePath());
+		return base::makeBox<artifacts::ArtifactCollection>(
+			fs::FilePath::createTempDirectory().absolutePath()
+		);
 	}
 
 	void executableGenerated() {
@@ -51,20 +53,16 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto obj = collection->fileArtifactNew(
-				base::StrID("test_module.o")
-			);
-			auto exe = collection->fileArtifactNew(
-				base::StrID("test_module_exe")
-			);
+			auto obj        = collection->fileArtifactNew(base::StrID("test_module.o"));
+			auto exe        = collection->fileArtifactNew(base::StrID("test_module_exe"));
 
 			// This method can fail on module verification
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
-			driver::link(exe, {obj}, {});
-			
+			driver::link(exe, { obj }, {});
+
 			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
 			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
-			
+
 			std::filesystem::remove(exe.FILE);
 			std::filesystem::remove(obj.FILE);
 		});
@@ -88,23 +86,18 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto obj = collection->fileArtifactNew(
-				base::StrID("test_module.o")
-			);
-			auto exe = collection->fileArtifactNew(
-				base::StrID("test_module_exe")
-			);
+			auto obj        = collection->fileArtifactNew(base::StrID("test_module.o"));
+			auto exe        = collection->fileArtifactNew(base::StrID("test_module_exe"));
 
 			// This method can fail on module verification
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
-			driver::link(exe, {obj}, {});
+			driver::link(exe, { obj }, {});
 
 			assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
 			assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");
 
 			std::filesystem::remove("test_module.s");
 			std::filesystem::remove("test_module.ll");
-
 		});
 	}
 
@@ -126,9 +119,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto qbc_obj = collection->fileArtifactNew(
-				base::StrID("test_module.qbc")
-			);
+			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
 
 			auto run_result = driver.run();
@@ -154,20 +145,16 @@ private:
 		});
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto obj = collection->fileArtifactNew(
-				base::StrID("test_module.o")
-			);
-			auto exe = collection->fileArtifactNew(
-				base::StrID("test_module_exe")
-			);
+			auto obj        = collection->fileArtifactNew(base::StrID("test_module.o"));
+			auto exe        = collection->fileArtifactNew(base::StrID("test_module_exe"));
 
 			// This method can fail on module verification
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
-			driver::link(exe, {obj}, {});
+			driver::link(exe, { obj }, {});
 
 			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
 			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
-			
+
 			std::filesystem::remove(exe.FILE);
 			std::filesystem::remove(obj.FILE);
 		});
