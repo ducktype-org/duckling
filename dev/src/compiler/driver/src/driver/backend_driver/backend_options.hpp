@@ -2,8 +2,6 @@
 
 #include <base/string_id.hpp>
 
-#include <vector>
-
 namespace compiler::driver {
 
 	enum class BackendType : std::uint8_t { LLVM, DVM };

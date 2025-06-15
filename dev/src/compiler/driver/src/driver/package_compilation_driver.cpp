@@ -28,8 +28,6 @@ namespace compiler::driver {
 				.dump_llvm_ir           = false,
 				.dvm_code_only_memory   = false,
 				.add_builtin_library    = true,
-				.external_objects_files = {},
-				.external_libs          = {},
 			};
 		} else if (type == BackendType::DVM) {
 			return BackendOptions{
@@ -38,8 +36,6 @@ namespace compiler::driver {
 				.dump_llvm_ir           = false,
 				.dvm_code_only_memory   = false,
 				.add_builtin_library    = true,
-				.external_objects_files = {},
-				.external_libs          = {},
 			};
 		} else {
 			CORE_UNREACHABLE();
