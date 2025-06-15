@@ -22,6 +22,8 @@ namespace compiler::driver {
 		 */
 		bool                     dvm_code_only_memory;
 		bool                     add_builtin_library;
+
+		// this PR: remove
 		std::vector<base::StrID> external_objects_files;
 		std::vector<base::StrID> external_libs;
 	};

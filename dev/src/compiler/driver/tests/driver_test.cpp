@@ -26,12 +26,11 @@ public:
 
 private:
 	/**
-	 * Returns a mock collection for testing purposes.
+	 * Creates a mock collection for testing purposes.
 	 * The collection is created in a temporary directory.
 	 */
-	static Ref<artifacts::ArtifactCollection> getMockCollection() {
-		static artifacts::ArtifactCollection collection(fs::FilePath::createTempDirectory().absolutePath());
-		return &collection;
+	Box<artifacts::ArtifactCollection> createMockCollection() {
+		return base::makeBox<artifacts::ArtifactCollection>(fs::FilePath::createTempDirectory().absolutePath());
 	}
 
 	void executableGenerated() {
@@ -51,10 +50,11 @@ private:
 		});
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto obj = getMockCollection()->fileArtifactNew(
+			auto collection = createMockCollection();
+			auto obj = collection->fileArtifactNew(
 				base::StrID("test_module.o")
 			);
-			auto exe = getMockCollection()->fileArtifactNew(
+			auto exe = collection->fileArtifactNew(
 				base::StrID("test_module_exe")
 			);
 
@@ -86,15 +86,26 @@ private:
 			.external_libs          = {},
 		});
 
-		// This method can fail on module verification
-		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
-		driver.link(base::StrID("test_module_exe"));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto obj = collection->fileArtifactNew(
+				base::StrID("test_module.o")
+			);
+			auto exe = collection->fileArtifactNew(
+				base::StrID("test_module_exe")
+			);
 
-		assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
-		assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");
+			// This method can fail on module verification
+			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
+			driver::link(exe, {obj}, {});
 
-		std::filesystem::remove("test_module.s");
-		std::filesystem::remove("test_module.ll");
+			assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
+			assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");
+
+			std::filesystem::remove("test_module.s");
+			std::filesystem::remove("test_module.ll");
+
+		});
 	}
 
 	void dvmBackendRuns() {
@@ -113,11 +124,17 @@ private:
 			.external_libs          = {},
 		});
 
-		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto qbc_obj = collection->fileArtifactNew(
+				base::StrID("test_module.qbc")
+			);
+			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
 
-		auto run_result = driver.run();
-		ASSERT_TRUE(run_result.has_value());
-		ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
+			auto run_result = driver.run();
+			ASSERT_TRUE(run_result.has_value());
+			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
+		});
 	}
 
 	void builtinCompiles() {
@@ -135,16 +152,25 @@ private:
 			.external_objects_files = {},
 			.external_libs          = {},
 		});
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto obj = collection->fileArtifactNew(
+				base::StrID("test_module.o")
+			);
+			auto exe = collection->fileArtifactNew(
+				base::StrID("test_module_exe")
+			);
 
-		// This method can fail on module verification
-		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
-		driver.link(base::StrID("test_module_exe"));
+			// This method can fail on module verification
+			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
+			driver::link(exe, {obj}, {});
 
-		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
-		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");
-
-		std::filesystem::remove("test_module_exe");
-		std::filesystem::remove("test_module.o");
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+			
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
+		});
 	}
 };
 
