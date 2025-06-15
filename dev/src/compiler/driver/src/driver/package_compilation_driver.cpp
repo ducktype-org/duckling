@@ -23,19 +23,19 @@ namespace compiler::driver {
 	BackendOptions getBackendOptions(BackendType type) {
 		if (type == BackendType::LLVM) {
 			return BackendOptions{
-				.backend_type           = type,
-				.compile_to_assembly    = false,
-				.dump_llvm_ir           = false,
-				.dvm_code_only_memory   = false,
-				.add_builtin_library    = true,
+				.backend_type         = type,
+				.compile_to_assembly  = false,
+				.dump_llvm_ir         = false,
+				.dvm_code_only_memory = false,
+				.add_builtin_library  = true,
 			};
 		} else if (type == BackendType::DVM) {
 			return BackendOptions{
-				.backend_type           = type,
-				.compile_to_assembly    = false,
-				.dump_llvm_ir           = false,
-				.dvm_code_only_memory   = false,
-				.add_builtin_library    = true,
+				.backend_type         = type,
+				.compile_to_assembly  = false,
+				.dump_llvm_ir         = false,
+				.dvm_code_only_memory = false,
+				.add_builtin_library  = true,
 			};
 		} else {
 			CORE_UNREACHABLE();
