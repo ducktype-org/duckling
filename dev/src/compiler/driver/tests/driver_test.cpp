@@ -42,13 +42,11 @@ private:
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
-			.backend_type           = driver::BackendType::LLVM,
-			.compile_to_assembly    = false,
-			.dump_llvm_ir           = false,
-			.dvm_code_only_memory   = false,
-			.add_builtin_library    = false,
-			.external_objects_files = {},
-			.external_libs          = {},
+			.backend_type         = driver::BackendType::LLVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
 		});
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -75,13 +73,11 @@ private:
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
-			.backend_type           = driver::BackendType::LLVM,
-			.compile_to_assembly    = true,
-			.dump_llvm_ir           = true,
-			.dvm_code_only_memory   = false,
-			.add_builtin_library    = false,
-			.external_objects_files = {},
-			.external_libs          = {},
+			.backend_type         = driver::BackendType::LLVM,
+			.compile_to_assembly  = true,
+			.dump_llvm_ir         = true,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
 		});
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -108,13 +104,11 @@ private:
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
-			.backend_type           = driver::BackendType::DVM,
-			.compile_to_assembly    = false,
-			.dump_llvm_ir           = false,
-			.dvm_code_only_memory   = false,
-			.add_builtin_library    = false,
-			.external_objects_files = {},
-			.external_libs          = {},
+			.backend_type         = driver::BackendType::DVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
 		});
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -135,13 +129,11 @@ private:
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
-			.backend_type           = driver::BackendType::LLVM,
-			.compile_to_assembly    = false,
-			.dump_llvm_ir           = false,
-			.dvm_code_only_memory   = false,
-			.add_builtin_library    = true,
-			.external_objects_files = {},
-			.external_libs          = {},
+			.backend_type         = driver::BackendType::LLVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = true,
 		});
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();

@@ -325,13 +325,11 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		driver::HoutToBinaryDriver driver{
 			driver::BackendOptions{
-				.backend_type           = backend_type,
-				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
-				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
-				.dvm_code_only_memory   = options.isFlag("dvm-run"),
-				.add_builtin_library    = options.isFlag("add-builtin-library"),
-				.external_objects_files = {},
-				.external_libs          = {},
+				.backend_type         = backend_type,
+				.compile_to_assembly  = options.isFlag("compile-to-assembly"),
+				.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
+				.dvm_code_only_memory = options.isFlag("dvm-run"),
+				.add_builtin_library  = options.isFlag("add-builtin-library"),
 			},
 		};
 
