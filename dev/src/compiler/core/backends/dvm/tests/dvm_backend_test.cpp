@@ -37,12 +37,42 @@ private:
 		using namespace compiler;
 
 		std::vector<CRef<lir::Function>> funcs;
+		std::vector<lir::LirGlobal>      globals;
 		base::StrID                      module_name;
 		vm::code::CodeCollection         code;
+
+		//@TODO: add ctors to DVM ctors when implemented
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+
+			for (auto& hout_glob: top_level->glob_data) {
+				auto lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				globals.push_back(lir_glob);
+				variant_match(hout_glob.value) {
+					variant_case(helios::HOUTGlobalVariable, var) {
+						CRef mir_func
+							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+						funcs.emplace_back(lir_func);
+					}
+					variant_case(helios::HOUTGlobalConst, cnst) {
+						/* TODO: create global constant ctors if necessary */
+						fail(base::strConcat(
+							"Creating ctors for constant variables is not implemented yet. ",
+							"Global constant: ",
+							hout_glob.original_name.strView()
+						));
+					}
+					variant_default {
+						fail(base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_glob.original_name.strView()
+						));
+					}
+				}
+			}
 			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>(
@@ -50,7 +80,7 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
-			backend_vm::Module m{ ctx, module_name, funcs };
+			backend_vm::Module m{ ctx, module_name, funcs, globals };
 			code = m.build();
 		});
 		return code;

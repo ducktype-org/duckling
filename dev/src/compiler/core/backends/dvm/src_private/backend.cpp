@@ -587,17 +587,28 @@ namespace compiler::backend_vm {
 	Module::Module(
 		query::Context&                         query_ctx,
 		base::StrID                             module_id,
-		const std::vector<CRef<lir::Function>>& functions
+		const std::vector<CRef<lir::Function>>& functions,
+		const std::vector<lir::LirGlobal>&      globals
 	):
 		  module_id(module_id),
 		  valid_program(ValidProgram::withBuiltins()) {
 		CodeCollection compiled_types;
+		CodeCollection global_data;
 
 		for (const auto& lir_function: functions)
 			insertTypesUsedByFunction(compiled_types.types, lir_function);
 
+		for (const auto& lir_global: globals) {
+			auto global_type = getTypeFromLayout(*lir_global.layout);
+			compiled_types.types.push_back(global_type);
+			//@TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			global_data.global_data.push_back(GlobalData{
+				{}, lir_global.mangled_name, typeName(global_type) });
+		}
+
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);
+		valid_program.insertCode(global_data);
 
 		CodeCollection compiled_functions;
 
