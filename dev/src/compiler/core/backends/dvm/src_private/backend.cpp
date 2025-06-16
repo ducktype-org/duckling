@@ -262,7 +262,9 @@ namespace compiler::backend_vm {
 			pushInstruction(ctx.bytecode_func, instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
 
-		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, base::StrID name) {
+		vm::opargs::OpCodeArg outputToOpArg(
+			vm::code::TypeOfData type, base::StrID name, bool is_global = false
+		) {
 			variant_match(type) {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
@@ -274,13 +276,23 @@ namespace compiler::backend_vm {
 							", size: ",
 							primitive.size
 						));
-					if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
-					if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
-					if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
-					if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
+					if (is_global) {
+						if (primitive.size == 8) return vm::opargs::GlobalI64{ name };
+						if (primitive.size == 4) return vm::opargs::GlobalI32{ name };
+						if (primitive.size == 2) return vm::opargs::GlobalI16{ name };
+						if (primitive.size == 1) return vm::opargs::GlobalI8{ name };
+					} else {
+						if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
+						if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
+						if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
+						if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
+					}
 				}
 				variant_case(vm::code::PointerType, pointer) {
-					return vm::opargs::StackLocalPtr(name);
+					if (is_global)
+						return vm::opargs::GlobalPtr(name);
+					else
+						return vm::opargs::StackLocalPtr(name);
 				}
 
 				INVALID_CASE(vm::code::StaticTableType, "output target");
@@ -292,24 +304,20 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		lir::LocalRef getOutput(std::variant<lir::LocalRef, lir::LirGlobal> output) {
-			variant_match(output) {
-				variant_case(lir::LocalRef, local) { return local; }
-				variant_case(lir::LirGlobal, global) {
-					throw base::NotYetImplemented(
-						"output of type LirGlobal is not supported in llvm lowering yet"
-					);
-				}
-			}
-			CORE_UNREACHABLE();
-		}
-
 		vm::opargs::OpCodeArg lirOutputToOpArg(
 			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
 		) {
-			const lir::LocalRef output   = getOutput(lir_instruction.output.value());
-			auto&&              var_type = ctx.lir_local_types[output];
-			return outputToOpArg(var_type, ctx.lir_local_to_name[output]);
+			variant_match(lir_instruction.output.value()) {
+				variant_case(lir::LocalRef, local) {
+					auto&& var_type = ctx.lir_local_types[local];
+					return outputToOpArg(var_type, ctx.lir_local_to_name[local]);
+				}
+				variant_case(lir::LirGlobal, global) {
+					auto vm_type = getTypeFromLayout(*global.layout);
+					return outputToOpArg(vm_type, global.mangled_name, true);
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
@@ -318,14 +326,19 @@ namespace compiler::backend_vm {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) return vm::opargs::Immediate{ value };
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
-				variant_case(
-					lir::LocalRef, local_ref
-				) return vm::opargs::StackLocalI64{ ctx.lir_local_to_name[local_ref] };
+				variant_case(lir::LocalRef, local_ref) {
+					auto&& var_type = ctx.lir_local_types[local_ref];
+					return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
+				}
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
 					return vm::opargs::FunctionName(function.mangled_name);
+				}
+				variant_case(lir::LirGlobal, global) {
+					auto vm_type = getTypeFromLayout(*global.layout);
+					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
