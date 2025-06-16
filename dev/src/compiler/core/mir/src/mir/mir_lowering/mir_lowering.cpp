@@ -287,7 +287,7 @@ namespace compiler::mir {
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
 		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
-		base::Optional<HSymID> helios_symbol;
+		HSymID helios_symbol;
 
 	public:
 		FunctionBuilder(query::Context& ctx, const HSymID helios_symbol):
@@ -481,7 +481,7 @@ namespace compiler::mir {
 		 * This is needed only for some assertins.
 		 */
 		[[nodiscard]]
-		base::Optional<HSymID> getHeliosSymbol() const {
+		HSymID getHeliosSymbol() const {
 			return helios_symbol;
 		}
 	};
@@ -511,11 +511,7 @@ namespace compiler::mir {
 		 */
 		void collect(const helios::HOUTFunction& hout_function) {
 			auto function_helios_symbol = function.getHeliosSymbol();
-			CORE_ASSERT(
-				function_helios_symbol.has_value(),
-				"The Function wasn't created from HOUTFunction, so you should not use collect."
-			);
-			variant_match(function_helios_symbol.value()) {
+			variant_match(function_helios_symbol) {
 				variant_case(FunctionSymID, function_sym) {
 					CORE_ASSERT(
 						function_sym.id == hout_function.original_symbol,

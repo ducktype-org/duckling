@@ -13,7 +13,6 @@
 
 #include <memory>
 #include <utility>
-#include <variant>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
@@ -119,6 +118,9 @@ namespace compiler::lir {
 		 */
 		static LirGlobal fromMIR(query::Context& ctx, mir::MirGlobal mir_global);
 
+		/**
+		 * @note Do not use this function outside of LIR lowering.
+		 */
 		static LirGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
 

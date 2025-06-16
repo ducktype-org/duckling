@@ -24,7 +24,6 @@
 #include <base/variant.hpp>
 
 #include <utility>
-#include <variant>
 
 // @opt: make switch-cases in this file "sorted"
 
@@ -461,7 +460,7 @@ namespace compiler::lir {
 					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 				auto mangled_name = [&]() {
-					variant_match(key.function->helios_id.value()) {
+					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
@@ -526,7 +525,9 @@ namespace compiler::lir {
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
 
 	Function fromFunctionLiterals(
-		query::Context& ctx, const std::vector<FunctionLiteral>& function_literals
+		query::Context&                     ctx,
+		const std::vector<FunctionLiteral>& function_literals,
+		const base::StrID&                  mangled_name
 	) {
 		CORE_ASSERT(function_literals.size() > 0, "Function literals should not be empty");
 
@@ -540,9 +541,6 @@ namespace compiler::lir {
 		});
 
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
-
-		//@TODO: change FunctionLiteral to have mangled name and the type layout
-		auto mangled_name = base::StrID(base::strConcat("_GLOBAL_CTOR").c_str());
 
 		Block entry_block;
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };

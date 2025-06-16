@@ -309,8 +309,8 @@ private:
 				= { lir::FunctionLiteral(g.helios_symbol),
 				    lir::FunctionLiteral(some_global.helios_symbol) };
 			std::stringstream foo_str;
-			lir::fromFunctionLiterals(ctx, function_literals).debugPrint(ctx, foo_str);
-			std::cerr << "\n";
+			lir::fromFunctionLiterals(ctx, function_literals, base::StrID("_MODULE_CTOR_globals"))
+				.debugPrint(ctx, foo_str);
 		});
 	}
 

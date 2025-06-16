@@ -24,6 +24,8 @@ namespace compiler::lir {
 	 * In the provided order.
 	 */
 	Function fromFunctionLiterals(
-		query::Context& ctx, const std::vector<FunctionLiteral>& function_literals
+		query::Context&                     ctx,
+		const std::vector<FunctionLiteral>& function_literals,
+		const base::StrID&                  mangled_name
 	);
 }

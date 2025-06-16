@@ -456,7 +456,7 @@ namespace compiler::mir {
 		 */
 		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
 
-		base::Optional<HSymID> helios_id;
+		HSymID helios_id;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
@@ -476,7 +476,7 @@ namespace compiler::mir {
 			base::StableVector<const MirLocal>  local_list,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			ScopeRef                            no_lifetime_scope,
-			base::Optional<HSymID>              helios_id
+			HSymID                              helios_id
 		);
 
 		[[nodiscard]]
