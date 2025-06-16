@@ -7,6 +7,7 @@
 
 #include <iomanip>
 #include <set>
+#include <variant>
 
 namespace compiler::lir {
 
@@ -95,7 +96,19 @@ namespace compiler::lir {
 			loc_output << "Local(" << local_id[local] << ")";
 		}
 
-		void printLocation(const LIRValue& location) {
+		void printGlobal(const LirGlobal& global, std::ostream& loc_output) const {
+			loc_output << "Global(" << global.mangled_name.strView() << ")";
+		}
+
+		void printOutput(const std::variant<LocalRef, LirGlobal>& output, std::ostream& loc_output) {
+			variant_match(output) {
+				variant_case(LocalRef, local) { printLocal(local, loc_output); }
+				variant_case(LirGlobal, global) { printGlobal(global, loc_output); }
+				variant_default { CORE_PANIC("Unhandled variant in printOutput"); }
+			}
+		}
+
+		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
 				variant_case(i64, value) { output << value; }
 				variant_case(bool, value) { output << (value ? "true" : "false"); }
@@ -104,7 +117,8 @@ namespace compiler::lir {
 				variant_case(FunctionLiteral, func) {
 					output << "Func(" << func.helios_id.queryUnstablePerfectHash() << ")";
 				}
-				variant_default { CORE_PANIC("Unhandled variant in printLocation"); }
+				variant_case(LirGlobal, global) { printGlobal(global, output); }
+				variant_default { CORE_PANIC("Unhandled variant in printValue"); }
 			}
 		}
 
@@ -115,7 +129,7 @@ namespace compiler::lir {
 			output << std::left << std::setw(12);
 			std::stringstream output_value;
 			if (instruction.output.has_value()) {
-				printLocal(instruction.output.value(), output_value);
+				printOutput(instruction.output.value(), output_value);
 				output_value << " :=";
 			}
 			output << output_value.str() << " ";
@@ -127,7 +141,7 @@ namespace compiler::lir {
 			for (auto arg: instruction.arguments) {
 				output << sep;
 				sep = ", ";
-				printLocation(arg);
+				printValue(arg);
 			}
 
 			// restore flags

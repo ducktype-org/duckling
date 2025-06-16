@@ -302,10 +302,22 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
+		lir::LocalRef getOutput(std::variant<lir::LocalRef, lir::LirGlobal> output) {
+			variant_match(output) {
+				variant_case(lir::LocalRef, local) { return local; }
+				variant_case(lir::LirGlobal, global) {
+					throw base::NotYetImplemented(
+						"output of type LirGlobal is not supported in llvm lowering yet"
+					);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 		vm::opargs::OpCodeArg lirOutputToOpArg(
 			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
 		) {
-			const lir::LocalRef output   = lir_instruction.output.value();
+			const lir::LocalRef output   = getOutput(lir_instruction.output.value());
 			auto&&              var_type = ctx.lir_local_types[output];
 			return outputToOpArg(var_type, ctx.lir_local_to_name[output]);
 		}
