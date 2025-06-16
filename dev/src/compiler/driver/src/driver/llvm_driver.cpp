@@ -3,6 +3,7 @@
 #include "llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <system_command/system_command.hpp>
 
@@ -10,6 +11,43 @@ namespace compiler::driver {
 
 	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module) {
 		backend_llvm::Module mod(lir_module.module_id);
+
+		std::vector<lir::FunctionLiteral> ctors_literals;
+		std::vector<lir::FunctionLiteral> dtors_literals;
+
+		for (const auto& global: lir_module.globals) {
+			mod.addGlobalToModule(global.first);
+			if (global.second.has_value()) {
+				auto& [ctor, dtor] = global.second.value();
+				mod.addFunctionToModule(ctx, ctor);
+				//@TODO: add legit dtors when implemented
+				// mod.addFunctionToModule(ctx, dtor);
+				ctors_literals.push_back(lir::getFunctionLiteralfromFunction(*ctor));
+				dtors_literals.push_back(lir::getFunctionLiteralfromFunction(*dtor));
+			}
+		}
+
+		if (!ctors_literals.empty()) {
+			auto module_ctor = lir::fromFunctionLiterals(
+				ctx,
+				ctors_literals,
+				base::StrID(base::strConcat("_CTOR_MODULE_", lir_module.module_id.str()).c_str())
+			);
+			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
+		}
+
+		if (!dtors_literals.empty()) {
+			std::vector<lir::FunctionLiteral> reversed_dtors(
+				dtors_literals.rbegin(), dtors_literals.rend()
+			);
+			auto module_dtor = lir::fromFunctionLiterals(
+				ctx,
+				reversed_dtors,
+				base::StrID(base::strConcat("_DTOR_MODULE_", lir_module.module_id.str()).c_str())
+			);
+			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
+		}
+
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);
 

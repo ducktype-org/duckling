@@ -37,9 +37,12 @@ private:
 		using namespace compiler;
 
 		std::vector<CRef<lir::Function>> funcs;
-		std::vector<lir::LirGlobal>      globals;
-		base::StrID                      module_name;
-		vm::code::CodeCollection         code;
+		std::vector<std::pair<
+			lir::LirGlobal,
+			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>
+								 globals;
+		base::StrID              module_name;
+		vm::code::CodeCollection code;
 
 		//@TODO: add ctors to DVM ctors when implemented
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -49,13 +52,16 @@ private:
 
 			for (auto& hout_glob: top_level->glob_data) {
 				auto lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
-				globals.push_back(lir_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
 							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
 						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
-						funcs.emplace_back(lir_func);
+						globals.emplace_back(
+							lir_glob,
+							//@TODO: add legit dtors when implemented
+							std::make_pair(lir_func, lir_func)
+						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						/* TODO: create global constant ctors if necessary */

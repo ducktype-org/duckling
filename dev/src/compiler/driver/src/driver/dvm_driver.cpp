@@ -15,7 +15,7 @@
 
 namespace compiler::driver {
 	void DVMDriver::compileModule(query::Context& query_ctx, const BackendModuleData& data) {
-		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, {} };
+		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, data.globals };
 		vm::code::CodeCollection code_collection = module.build();
 
 		if (not options->dvm_code_only_memory) {

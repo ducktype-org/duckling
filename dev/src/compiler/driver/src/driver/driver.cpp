@@ -27,7 +27,32 @@ namespace compiler::driver {
 
 	void Driver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
 		std::vector<CRef<lir::Function>> functions;
+		std::vector<std::pair<
+			lir::LirGlobal,
+			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>
+			globals;
+		globals.reserve(hout_unit->glob_data.size());
 		functions.reserve(hout_unit->functions.size());
+
+		for (const auto& hout_global: hout_unit->glob_data) {
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto lir_global = lir::LirGlobal::fromHOUT(ctx, hout_global);
+
+				variant_match(hout_global.value) {
+					variant_case(helios::HOUTGlobalVariable, var) {
+						CRef mir_function
+							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_global })->value();
+						auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+						globals.emplace_back(
+							lir_global,
+							//@TODO: add legit dtors when implemented
+							std::make_pair(lir_function, lir_function)
+						);
+					}
+					variant_default { globals.emplace_back(lir_global, std::nullopt); }
+				}
+			});
+		}
 
 		for (const auto& hout_function: hout_unit->functions) {
 			CRef mir_function
@@ -36,7 +61,10 @@ namespace compiler::driver {
 			functions.push_back(lir_function);
 		}
 
-		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
+		//@TODO: add dtors when implemented
+		BackendModuleData module_data{ .module_id = module_id,
+			                           .functions = functions,
+			                           .globals   = globals };
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			backend_driver->compileModule(ctx, module_data);

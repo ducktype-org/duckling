@@ -585,34 +585,49 @@ namespace compiler::backend_vm {
 	}
 
 	Module::Module(
-		query::Context&                         query_ctx,
-		base::StrID                             module_id,
-		const std::vector<CRef<lir::Function>>& functions,
-		const std::vector<lir::LirGlobal>&      globals
+		query::Context&                                                            query_ctx,
+		base::StrID                                                                module_id,
+		const std::vector<CRef<lir::Function>>&                                    functions,
+		const std::vector<std::pair<
+			lir::LirGlobal,
+			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>& globals
 	):
 		  module_id(module_id),
 		  valid_program(ValidProgram::withBuiltins()) {
-		CodeCollection compiled_types;
-		CodeCollection global_data;
+		CodeCollection                   compiled_types;
+		CodeCollection                   global_data;
+		std::vector<CRef<lir::Function>> ctors;
+		std::vector<CRef<lir::Function>> dtors;
 
 		for (const auto& lir_function: functions)
 			insertTypesUsedByFunction(compiled_types.types, lir_function);
 
-		for (const auto& lir_global: globals) {
+		for (const auto& global: globals) {
+			auto lir_global  = global.first;
 			auto global_type = getTypeFromLayout(*lir_global.layout);
 			compiled_types.types.push_back(global_type);
 			//@TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
 			global_data.global_data.push_back(GlobalData{
 				{}, lir_global.mangled_name, typeName(global_type) });
+
+			//@TODO: handle ctors and dtors in DMV propably
+			if (global.second.has_value()) {
+				insertTypesUsedByFunction(compiled_types.types, global.second->first);
+				insertTypesUsedByFunction(compiled_types.types, global.second->second);
+				ctors.emplace_back(global.second->first);
+				dtors.emplace_back(global.second->second);
+			}
 		}
 
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);
+
+		// Insert and validate global data:
 		valid_program.insertCode(global_data);
 
 		CodeCollection compiled_functions;
 
-		for (const auto& lir_function: functions) {
+		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
 
 			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types());
@@ -629,8 +644,13 @@ namespace compiler::backend_vm {
 			}
 
 			compiled_functions.functions.emplace_back(std::move(ctx.bytecode_func));
-		}
+		};
 
+		for (const auto& ctor: ctors) process_function(ctor);
+
+		//@TODO: add dtors when implemented
+
+		for (const auto& lir_function: functions) process_function(lir_function);
 		// Insert and validate functions:
 		valid_program.insertCode(compiled_functions);
 	}

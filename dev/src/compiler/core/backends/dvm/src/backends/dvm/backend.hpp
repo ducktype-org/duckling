@@ -18,10 +18,12 @@ namespace compiler::backend_vm {
 
 	public:
 		Module(
-			query::Context&                         ctx,
-			base::StrID                             module_id,
-			const std::vector<CRef<lir::Function>>& functions,
-			const std::vector<lir::LirGlobal>&      globals
+			query::Context&                                                            ctx,
+			base::StrID                                                                module_id,
+			const std::vector<CRef<lir::Function>>&                                    functions,
+			const std::vector<std::pair<
+				lir::LirGlobal,
+				base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>& globals
 		);
 
 		/**

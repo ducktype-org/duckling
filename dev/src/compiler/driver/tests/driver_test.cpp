@@ -19,6 +19,7 @@ public:
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(builtinCompiles);
+		TESTER_ADD_TEST(globalsTest);
 	}
 
 private:
@@ -116,6 +117,46 @@ private:
 
 		std::filesystem::remove("test_module_exe");
 		std::filesystem::remove("test_module.o");
+	}
+
+	void globalsTest() {
+		using namespace compiler;
+		auto module
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/globals")));
+		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
+
+		// Test with LLVM backend
+		driver::Driver llvm_driver({ .backend_type           = driver::BackendType::LLVM,
+		                             .compile_to_assembly    = false,
+		                             .dump_llvm_ir           = false,
+		                             .dvm_code_only_memory   = false,
+		                             .add_builtin_library    = false,
+		                             .external_objects_files = {},
+		                             .external_libs          = {} });
+
+		llvm_driver.compileHOUTUnit(top_level, base::StrID("globals_module"));
+		llvm_driver.link(base::StrID("globals_module_exe"));
+
+		assertTrue(std::filesystem::exists("globals_module_exe"), "LLVM Output file does not exist");
+		assertTrue(std::filesystem::exists("globals_module.o"), "LLVM Object file does not exist");
+
+		std::filesystem::remove("globals_module_exe");
+		std::filesystem::remove("globals_module.o");
+
+		// Test with DVM backend
+		driver::Driver dvm_driver({ .backend_type           = driver::BackendType::DVM,
+		                            .compile_to_assembly    = false,
+		                            .dump_llvm_ir           = false,
+		                            .dvm_code_only_memory   = false,
+		                            .add_builtin_library    = false,
+		                            .external_objects_files = {},
+		                            .external_libs          = {} });
+
+		dvm_driver.compileHOUTUnit(top_level, base::StrID("globals_module"));
+
+		auto run_result = dvm_driver.run();
+		ASSERT_TRUE(run_result.has_value());
+		ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 	}
 };
 
