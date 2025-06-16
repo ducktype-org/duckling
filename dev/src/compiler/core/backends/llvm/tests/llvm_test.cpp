@@ -58,6 +58,11 @@ private:
 								"Global constant: ",
 								hout_glob.original_name.strView()
 							));
+						} else {
+							fail(base::strConcat(
+								"Unexpected global data type in module: ",
+								hout_glob.original_name.strView()
+							));
 						}
 					},
 					hout_glob.value
