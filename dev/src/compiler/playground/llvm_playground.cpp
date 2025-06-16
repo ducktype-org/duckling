@@ -49,7 +49,7 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			lir::LirGlobal lir_glob = lir::LirGlobal::fromHout(ctx, hout_glob);
+			lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
 			llvm_module.addGlobalToModule(lir_glob);
 
 			variant_match(hout_glob.value) {

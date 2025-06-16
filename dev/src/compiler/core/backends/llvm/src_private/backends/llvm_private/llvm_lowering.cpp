@@ -163,18 +163,20 @@ namespace compiler::backend_llvm {
 	/**
 	 * Same as getOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
 	 */
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromSymID(
-		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
+		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
 		auto& context      = module->getContext();
-		auto  mangled_name = helios::mangler::getSimpleMangledName(ctx, sym_id);
+		auto  mangled_name = function_literal.mangled_name;
 
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(mangled_name.strView())) return func;
 
-		auto types = getParameterAndResultFromSymID(ctx, sym_id);
 		return module->getOrInsertFunction(
-			mangled_name.strView(), getFunType(context, types.parameters, types.result_type)
+			mangled_name.strView(),
+			getFunType(
+				context, *function_literal.parameter_layouts, *function_literal.return_type_layout
+			)
 		);
 	}
 
@@ -468,12 +470,11 @@ namespace compiler::backend_llvm {
 
 				const auto output = lir_instruction.output.value();
 
-				const auto callee_helios_id
-					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-
 				// I'm not sure if this is the efficient way to do it, but for now it is
 				// simple enough and works without some additional mechanism in the pipeline:
-				auto callee = getOrInsertFunctionPrototypeFromSymID(ctx, module, callee_helios_id);
+				auto callee = getOrInsertFunctionPrototypeFromLiteral(
+					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
+				);
 
 				const auto args = lirValueList2LLVM(
 					std::vector(

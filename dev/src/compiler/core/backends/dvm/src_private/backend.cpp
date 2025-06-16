@@ -235,16 +235,12 @@ namespace compiler::backend_vm {
 			for (const auto& lir_block: lir_function->block_order) {
 				for (const auto& lir_instruction: lir_block->instructions) {
 					if (lir_instruction.operation == lir::Operation::Call) {
-						const auto callee_helios_id
-							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-						auto name = compiler::helios::mangler::getSimpleMangledName(
-							query_ctx, callee_helios_id
-						);
-						auto called_func_signature
-							= getParameterAndResultFromSymID(query_ctx, callee_helios_id);
-
+						auto func_literal
+							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 						types.emplace_back(getFunctionTypeFromLayouts(
-							name, called_func_signature.parameters, called_func_signature.result_type
+							func_literal.mangled_name,
+							*func_literal.parameter_layouts,
+							*func_literal.return_type_layout
 						));
 					}
 				}
@@ -335,9 +331,7 @@ namespace compiler::backend_vm {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
-					return vm::opargs::FunctionName(
-						helios::mangler::getSimpleMangledName(ctx.ctx, function.helios_id)
-					);
+					return vm::opargs::FunctionName(function.mangled_name);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
