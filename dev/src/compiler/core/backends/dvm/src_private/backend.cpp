@@ -228,9 +228,7 @@ namespace compiler::backend_vm {
 		 * code. Used to add function types for functions that are not in the current module.
 		 */
 		void insertCalledFunctionTypes(
-			query::Context&          query_ctx,
-			std::vector<TypeOfData>& types,
-			CRef<lir::Function>      lir_function
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			for (const auto& lir_block: lir_function->block_order) {
 				for (const auto& lir_instruction: lir_block->instructions) {
@@ -248,13 +246,11 @@ namespace compiler::backend_vm {
 		}
 
 		void insertTypesUsedByFunction(
-			query::Context&          query_ctx,
-			std::vector<TypeOfData>& types,
-			CRef<lir::Function>      lir_function
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			insertFunctionSignatureType(types, lir_function);
 			insertFunctionLocalTypes(types, lir_function);
-			insertCalledFunctionTypes(query_ctx, types, lir_function);
+			insertCalledFunctionTypes(types, lir_function);
 		}
 
 		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -587,7 +583,7 @@ namespace compiler::backend_vm {
 		CodeCollection compiled_types;
 
 		for (const auto& lir_function: functions)
-			insertTypesUsedByFunction(query_ctx, compiled_types.types, lir_function);
+			insertTypesUsedByFunction(compiled_types.types, lir_function);
 
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);

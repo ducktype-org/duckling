@@ -57,6 +57,8 @@ namespace compiler::backend_llvm {
 
 		void addFunctionToModuleCtors(query::Context& ctx, CRef<lir::Function> lir_function);
 
+		void addFunctionToModuleDtors(query::Context& ctx, CRef<lir::Function> lir_function);
+
 		void debugPrint() const;
 
 		/**

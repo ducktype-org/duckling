@@ -468,10 +468,6 @@ namespace compiler::backend_llvm {
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
-				const auto output = lir_instruction.output.value();
-
-				// I'm not sure if this is the efficient way to do it, but for now it is
-				// simple enough and works without some additional mechanism in the pipeline:
 				auto callee = getOrInsertFunctionPrototypeFromLiteral(
 					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
 				);
@@ -482,8 +478,19 @@ namespace compiler::backend_llvm {
 					),
 					builder
 				);
-				const auto value = builder.CreateCall(callee, args);
-				storeOutput(output, value, builder);
+
+				if (lir_instruction.output.has_value()) {
+					const auto output = lir_instruction.output.value();
+					const auto value  = builder.CreateCall(callee, args);
+					storeOutput(output, value, builder);
+				} else {
+					CORE_ASSERT(
+						callee.getFunctionType()->getReturnType()->isVoidTy(),
+						"call to non void function without output "
+					);
+					builder.CreateCall(callee, args);
+				}
+
 				break;
 			}
 			default:
@@ -567,5 +574,13 @@ namespace compiler::backend_llvm {
 
 	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global) {
 		addGlobalVariable(module->module.refMut(), lir_global);
+	}
+
+	void addFunctionToModuleDtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		auto             fun = lir2llvm.createFunction();
+		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 }

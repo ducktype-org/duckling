@@ -47,6 +47,8 @@ int main(int argc, const char* argv[]) {
 
 	auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
 
+	std::vector<lir::FunctionLiteral> ctors;
+
 	for (auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
@@ -60,7 +62,9 @@ int main(int argc, const char* argv[]) {
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n\n\n";
 
-					llvm_module.addFunctionToModuleCtors(ctx, lir_func);
+					ctors.push_back(lir::getFunctionLiteralfromFunction(*lir_func));
+
+					llvm_module.addFunctionToModule(ctx, lir_func);
 				}
 				variant_case(helios::HOUTGlobalConst, cnst) {
 					//@TODO: create global constant ctors if nessesary
@@ -68,6 +72,45 @@ int main(int argc, const char* argv[]) {
 			}
 
 			auto v = llvm_module.verify();
+
+			if (v.isOk())
+				std::cerr << "LLVM verification passed\n\n";
+			else
+				std::cerr << "LLVM verification failed\n\n";
+		});
+	}
+
+	// Add module ctors and dtors to module CTOR and DITOR functions
+	if (!ctors.empty()) {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			//@TODO: fix this proper module global ctor mangling
+			auto module_ctor = lir::fromFunctionLiterals(
+				ctx,
+				ctors,
+				base::StrID(
+					base::strConcat("_MODULE_CTOR_", frontend::moduleName(root).str()).c_str()
+				)
+			);
+			llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
+			auto v = llvm_module.verify();
+
+			if (v.isOk())
+				std::cerr << "LLVM verification passed\n\n";
+			else
+				std::cerr << "LLVM verification failed\n\n";
+
+			//@TODO: fix this proper module global dtor mangling
+			//@TODO: add legit dtors
+			std::vector<lir::FunctionLiteral> reversed_ctors(ctors.rbegin(), ctors.rend());
+			auto                              module_dtor = lir::fromFunctionLiterals(
+                ctx,
+                reversed_ctors,
+                base::StrID(
+                    base::strConcat("_MODULE_DTOR_", frontend::moduleName(root).str()).c_str()
+                )
+            );
+			llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
+			v = llvm_module.verify();
 
 			if (v.isOk())
 				std::cerr << "LLVM verification passed\n\n";
