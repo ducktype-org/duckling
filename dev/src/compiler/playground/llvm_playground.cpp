@@ -1,5 +1,3 @@
-#include "lir/lir_structure/lir_structure.hpp"
-
 #include <backends/llvm/llvm_backend.hpp>
 #include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
