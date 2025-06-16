@@ -19,7 +19,6 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-#include "get_parameter_types.hpp"
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>

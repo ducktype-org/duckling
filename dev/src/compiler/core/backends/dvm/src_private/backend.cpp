@@ -1,5 +1,3 @@
-#include "get_parameter_types.hpp"
-
 #include <backends/dvm/backend.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/simple.hpp>
