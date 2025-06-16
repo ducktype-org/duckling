@@ -21,10 +21,9 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
-#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
-#include <variant>
+#include <utility>
 
 // @opt: make switch-cases in this file "sorted"
 
@@ -48,7 +47,7 @@ namespace compiler::lir {
 	 * @param mir_local
 	 * @return LirLocal
 	 */
-	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
+	LirLocal LirLocal::fromMIR(query::Context& ctx, mir::LocalRef mir_local) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
 		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
@@ -61,7 +60,7 @@ namespace compiler::lir {
 		return LirLocal{ bool_layout };
 	}
 
-	LirGlobal LirGlobal::fromMir(query::Context& ctx, mir::MirGlobal mir_global) {
+	LirGlobal LirGlobal::fromMIR(query::Context& ctx, mir::MirGlobal mir_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
@@ -69,18 +68,17 @@ namespace compiler::lir {
 		return LirGlobal{ mir_global.helios_id, type_layout, mangled_name };
 	}
 
-	LirGlobal LirGlobal::fromHout(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
+	LirGlobal LirGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
 
 		variant_match(hout_global.value) {
 			variant_case(helios::HOUTGlobalConst, name) {
-				return LirGlobal{ hout_global.helios_symbol,
-					              type_layout,
-					              mangled_name,
-					              LirGlobalType::Constant,
-					              name.value };
+				return LirGlobal{
+					hout_global.helios_symbol, type_layout, mangled_name,
+					LirGlobalType::Constant,   name.value,
+				};
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {
 				return LirGlobal{
@@ -89,7 +87,7 @@ namespace compiler::lir {
 			}
 			variant_default {
 				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LirGlobal::fromHout: ",
+					"Unhandled HOUTGlobalData type in LirGlobal::fromHOUT: ",
 					hout_global.original_name.strView()
 				);
 			}
@@ -183,7 +181,7 @@ namespace compiler::lir {
 			LocalRef getLocal(mir::LocalRef mir_local) { return mir_to_lir_local.at(mir_local); }
 
 			LirGlobal getGlobal(mir::MirGlobal mir_global) {
-				return LirGlobal::fromMir(ctx, mir_global);
+				return LirGlobal::fromMIR(ctx, mir_global);
 			}
 
 			base::Optional<std::variant<LocalRef, LirGlobal>> getOutput(
@@ -233,7 +231,7 @@ namespace compiler::lir {
 			 */
 			void makeLocals() {
 				for (const auto& mir_local: key.function->local_list) {
-					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
+					auto lir_local     = LirLocal::fromMIR(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
 					locals.pushBack(std::move(lir_local));
@@ -462,16 +460,16 @@ namespace compiler::lir {
 					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 				auto mangled_name = [&]() {
-					variant_match(key.function->helios_id.value()) {
-						variant_case(mir::FunctionSymId, name) {
+					variant_match(key.function->helios_id) {
+						variant_case(mir::FunctionSymID, name) {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
-						variant_case(mir::GlobalVariableSymId, name) {
-							//@TODO: Add suport to mangling ctors of globals to helios mangler
+						variant_case(mir::GlobalVariableCTOR, name) {
+							//@TODO: Add suport to mangling ctors of globals to helios mangler #906
 							return base::StrID(
 								base::strConcat(
 									"_ctor_GLOBAL_",
-									helios::mangler::getSimpleMangledName(ctx, name.id)
+									helios::mangler::getSimpleMangledName(ctx, name.global_var_id)
 								)
 									.c_str()
 							);
@@ -525,4 +523,47 @@ namespace compiler::lir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
+
+	Function fromFunctionLiterals(
+		query::Context&                     ctx,
+		const std::vector<FunctionLiteral>& function_literals,
+		const base::StrID&                  mangled_name
+	) {
+		CORE_ASSERT(function_literals.size() > 0, "Function literals should not be empty");
+
+		auto function_type = ctx.query<tsh::QueryFunctionType>({
+			{},
+			tsh::SymbolType{
+				ctx.query<tsh::QueryUnitType>({}),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			},
+		});
+
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
+
+		Block entry_block;
+		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+		for (const auto& function_literal: function_literals) {
+			entry_block.instructions.push_back(Instruction{
+				Operation::Call,
+				{},
+				{ LIRValue{ FunctionLiteral{ function_literal } } },
+			});
+		}
+
+		base::StableVector<Block> blocks;
+		blocks.emplaceBack(std::move(entry_block));
+
+		BlockRef entry_block_ref = blocks.last();
+
+		return Function{
+			.mangled_name       = mangled_name,
+			.return_type_layout = return_type,
+			.parameter_layouts  = {},
+			.blocks             = std::move(blocks),
+			.local_list         = {},
+			.block_order        = { entry_block_ref },
+		};
+	}
 }

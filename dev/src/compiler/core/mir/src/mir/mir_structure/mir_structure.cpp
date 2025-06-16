@@ -11,15 +11,15 @@
 
 namespace compiler::mir {
 	Function::Function(
-		base::StrID                                                      name,
-		tsh::SymbolType<>                                                return_type,
-		std::vector<tsh::SymbolType<>>                                   parameter_types,
-		base::StableHashMap<BlockID, Block>                              blocks,
-		std::vector<BlockID>                                             block_order,
-		base::StableVector<const MirLocal>                               local_list,
-		LifetimeScopeTree                                                lifetime_scope_tree,
-		ScopeRef                                                         no_lifetime_scope,
-		base::Optional<std::variant<FunctionSymId, GlobalVariableSymId>> helios_id
+		base::StrID                                     name,
+		tsh::SymbolType<>                               return_type,
+		std::vector<tsh::SymbolType<>>                  parameter_types,
+		base::StableHashMap<BlockID, Block>             blocks,
+		std::vector<BlockID>                            block_order,
+		base::StableVector<const MirLocal>              local_list,
+		LifetimeScopeTree                               lifetime_scope_tree,
+		ScopeRef                                        no_lifetime_scope,
+		std::variant<FunctionSymID, GlobalVariableCTOR> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -32,9 +32,13 @@ namespace compiler::mir {
 		  helios_id(helios_id) {}
 
 	u64 Function::queryUnstablePerfectHash() const {
-		return std::visit(
-			[](const auto& id) { return id.id.queryUnstablePerfectHash(); }, this->helios_id.value()
-		);
+		variant_match(this->helios_id) {
+			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
+			variant_case(GlobalVariableCTOR, global_ctor) {
+				return global_ctor.global_var_id.queryUnstablePerfectHash();
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	bool isTerminating(Operation op) {
@@ -78,8 +82,15 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "[MIR] Function " << name.strView() << ": TODO -> "
-			   << this->return_type.toString() << "\n";
+		output << "[MIR] Function " << name.strView() << ": ";
+		output << "(";
+		std::string_view separator = "";
+		for (auto& type: this->parameter_types) {
+			output << separator << type.toString();
+			separator = ", ";
+		}
+		output << ")";
+		output << " -> " << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";

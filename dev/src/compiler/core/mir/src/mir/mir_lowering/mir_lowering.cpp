@@ -282,21 +282,25 @@ namespace compiler::mir {
 
 		query::Context& ctx;
 
-		using HSymID = std::variant<FunctionSymId, GlobalVariableSymId>;
-		base::Optional<HSymID> helios_symbol;
+		/**
+		 * HELIOS SymID releted to the function.
+		 * Functions without a helios_id are functions created for eg. from expressions
+		 */
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
+		HSymID helios_symbol;
 
 	public:
 		FunctionBuilder(query::Context& ctx, const HSymID helios_symbol):
 			  function_type([&]() {
 				  variant_match(helios_symbol) {
-					  variant_case(FunctionSymId, fun_sym) {
+					  variant_case(FunctionSymID, fun_sym) {
 						  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
 					          ->expect("Handling errors in MIR is not supported yet")
 					          .getType();
 					  }
 					  variant_default {
 						  CORE_PANIC(
-							  "FunctionBuilder constructor should be called only with FunctionSymId"
+							  "FunctionBuilder constructor should be called only with FunctionSymID"
 						  );
 					  }
 				  }
@@ -477,7 +481,7 @@ namespace compiler::mir {
 		 * This is needed only for some assertins.
 		 */
 		[[nodiscard]]
-		base::Optional<HSymID> getHeliosSymbol() const {
+		HSymID getHeliosSymbol() const {
 			return helios_symbol;
 		}
 	};
@@ -507,12 +511,8 @@ namespace compiler::mir {
 		 */
 		void collect(const helios::HOUTFunction& hout_function) {
 			auto function_helios_symbol = function.getHeliosSymbol();
-			CORE_ASSERT(
-				function_helios_symbol.has_value(),
-				"The Function wasn't created from HOUTFunction, so you should not use collect."
-			);
-			variant_match(function_helios_symbol.value()) {
-				variant_case(FunctionSymId, function_sym) {
+			variant_match(function_helios_symbol) {
+				variant_case(FunctionSymID, function_sym) {
 					CORE_ASSERT(
 						function_sym.id == hout_function.original_symbol,
 						"Bad function passed to LocalVarCollectionVisitor"
@@ -1177,7 +1177,7 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
-		FunctionBuilder function_builder{ ctx, FunctionSymId{ function.original_symbol } };
+		FunctionBuilder function_builder{ ctx, FunctionSymID{ function.original_symbol } };
 		function_builder.setName(function.original_name);
 
 		LocalVarCollectionVisitor visitor{ function_builder };
@@ -1237,13 +1237,12 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a
-	 mock-up.
+	 * mock-up.
 	 *
 	 * This function deals with this terminator:
 	 * * if block doesn't exists it means that it was unreachable, we do nothing
 	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
 	 * * if block is reachable and function returns value, throws missing return error
-
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
 	helios::errors::HResult<Function, helios::errors::Failed> finalizeFunctionEnd(
@@ -1316,7 +1315,7 @@ namespace compiler::mir {
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
 			FunctionBuilder function_builder{ ctx,
-				                              GlobalVariableSymId{ key.global_data.helios_symbol },
+				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
 				                              function_type };
 			function_builder.setName(
 				base::StrID(base::strConcat(
