@@ -300,16 +300,15 @@ private:
 	}
 
 	void testFromFunctionLiterals() {
-		auto module      = getLirOfModule(path("modules/globals"));
-		auto g           = module.houtGlobal("g");
-		auto some_global = module.houtGlobal("some_global");
+		auto module           = getLirOfModule(path("modules/globals"));
+		auto g_ctor           = module.lirGlobalCtor("g");
+		auto some_global_ctor = module.lirGlobalCtor("some_global");
 
 		withContextDo([&](query::Context& ctx) {
-			std::vector<lir::FunctionLiteral> function_literals
-				= { lir::FunctionLiteral(g.helios_symbol),
-				    lir::FunctionLiteral(some_global.helios_symbol) };
 			std::stringstream foo_str;
-			lir::fromFunctionLiterals(ctx, function_literals, base::StrID("_MODULE_CTOR_globals"))
+			lir::fromLIRFunctions(
+				ctx, { g_ctor, some_global_ctor }, base::StrID("_MODULE_CTOR_globals")
+			)
 				.debugPrint(ctx, foo_str);
 		});
 	}

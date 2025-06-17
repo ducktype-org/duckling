@@ -8,6 +8,7 @@
 #include <tester/tester.hpp>
 
 #include <base/exceptions.hpp>
+#include <base/variant.hpp>
 
 #include <utility>
 
@@ -25,22 +26,83 @@ public:
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
+		TESTER_ADD_TEST(globalVariablesTest);
 	}
 
 private:
 	auto getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		backend_llvm::Module llvm_module(base::StrID("test_module"));
+		backend_llvm::Module             llvm_module(base::StrID("test_module"));
+		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
+			for (auto& hout_glob: top_level->glob_data) {
+				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				llvm_module.addGlobalToModule(lir_glob);
+				variant_match(hout_glob.value) {
+					variant_case(helios::HOUTGlobalVariable, var) {
+						CRef mir_func
+							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+
+						mir_func->debugPrint(std::cerr);
+						std::cerr << "\n\n\n";
+
+						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+
+						lir_func->debugPrint(ctx, std::cerr);
+						std::cerr << "\n\n\n";
+
+						ctors.push_back(lir_func);
+
+						llvm_module.addFunctionToModule(ctx, lir_func);
+					}
+					variant_case(helios::HOUTGlobalConst, cnst) {
+						fail(base::strConcat(
+							"Creating ctors for constant variables is not implemented yet. "
+							"Global constant: ",
+							hout_glob.original_name.strView()
+						));
+					}
+					variant_default {
+						fail(base::strConcat(
+							"Unexpected global data type of: ", hout_glob.original_name
+						));
+					}
+				}
+			}
+
+			if (!ctors.empty()) {
+				// Add module ctors
+				// @TODO: fix this: add proper module global ctor mangling
+				auto module_ctor = lir::fromLIRFunctions(
+					ctx,
+					ctors,
+					base::StrID(
+						base::strConcat("_MODULE_CTOR_", frontend::moduleName(module).str()).c_str()
+					)
+				);
+				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
+
+				// Add module dtors (for now empty)
+				// @TODO: fix this: add proper module global dtor mangling
+				// @TODO: add a legit dtors
+				auto module_dtor = lir::fromLIRFunctions(
+					ctx,
+					{},
+					base::StrID(
+						base::strConcat("_MODULE_DTOR_", frontend::moduleName(module).str()).c_str()
+					)
+				);
+				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
+			}
+
 			for (auto& fun: top_level->functions) {
 				CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
-
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});
@@ -107,6 +169,8 @@ private:
 			"LLVM incorrect code didn't throw"
 		);
 	}
+
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
 };
 
 

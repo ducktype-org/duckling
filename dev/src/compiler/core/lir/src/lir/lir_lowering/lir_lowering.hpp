@@ -19,13 +19,13 @@ namespace compiler::lir {
 	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, CRef<Function>)
 
 	/**
-	 * @brief Creates a LIR function that call each function literal in the list
+	 * @brief Creates a LIR function that call each function in the list (in the provided order).
 	 * This was useful to create one module ctor, that calls all ctors of globals
-	 * In the provided order.
+	 * In the provided order. Same for dtors.
 	 */
-	Function fromFunctionLiterals(
-		query::Context&                     ctx,
-		const std::vector<FunctionLiteral>& function_literals,
-		const base::StrID&                  mangled_name
+	Function fromLIRFunctions(
+		query::Context&                    ctx,
+		const std::vector<CRef<Function>>& functions,
+		const base::StrID&                 mangled_name
 	);
 }
