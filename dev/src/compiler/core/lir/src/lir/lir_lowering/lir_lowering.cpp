@@ -16,6 +16,7 @@
 #include "../lir_structure/lir_structure.hpp"
 
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
@@ -37,6 +38,9 @@ namespace compiler::lir {
 	u64 KeyOf_LowerToLirFunction::queryUnstablePerfectHash() const {
 		return function->queryUnstablePerfectHash();
 	}
+
+	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id);
+	FunctionLiteral getFunctionLiteralfromFunction(CRef<Function> function);
 
 	/**
 	 * @brief Creates LIR local data from MIR local data.
@@ -216,7 +220,7 @@ namespace compiler::lir {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
 					}
 					variant_case(mir::MirFunctionLiteral, func) {
-						return LIRValue{ FunctionLiteral{ func.helios_id } };
+						return getFunctionLiteralfromHELIOSID(ctx, func.helios_id);
 					}
 				}
 				CORE_PANIC("Unhandled variant in getLocation");
@@ -465,7 +469,7 @@ namespace compiler::lir {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
 						variant_case(mir::GlobalVariableCTOR, name) {
-							//@TODO: Add suport to mangling ctors of globals to helios mangler #906
+							// @TODO: Add suport to mangling ctors of globals to helios mangler #906
 							return base::StrID(
 								base::strConcat(
 									"_ctor_GLOBAL_",
@@ -524,13 +528,11 @@ namespace compiler::lir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
 
-	Function fromFunctionLiterals(
-		query::Context&                     ctx,
-		const std::vector<FunctionLiteral>& function_literals,
-		const base::StrID&                  mangled_name
+	Function fromLIRFunctions(
+		query::Context&                    ctx,
+		const std::vector<CRef<Function>>& functions,
+		const base::StrID&                 mangled_name
 	) {
-		CORE_ASSERT(function_literals.size() > 0, "Function literals should not be empty");
-
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
 			{},
 			tsh::SymbolType{
@@ -544,11 +546,12 @@ namespace compiler::lir {
 
 		Block entry_block;
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
-		for (const auto& function_literal: function_literals) {
+
+		for (const auto& function: functions) {
 			entry_block.instructions.push_back(Instruction{
 				Operation::Call,
 				{},
-				{ LIRValue{ FunctionLiteral{ function_literal } } },
+				{ LIRValue{ FunctionLiteral{ getFunctionLiteralfromFunction(function) } } },
 			});
 		}
 
@@ -564,6 +567,36 @@ namespace compiler::lir {
 			.blocks             = std::move(blocks),
 			.local_list         = {},
 			.block_order        = { entry_block_ref },
+		};
+	}
+
+	FunctionLiteral getFunctionLiteralfromFunction(CRef<Function> function) {
+		return FunctionLiteral{
+			.mangled_name = function->mangled_name,
+			.parameter_layouts
+			= std::make_shared<std::vector<tsl::TypeLayout>>(function->parameter_layouts),
+			.return_type_layout = std::make_shared<tsl::TypeLayout>(function->return_type_layout),
+		};
+	}
+
+	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
+		tsh::FunctionAbstractType type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)
+		                                     ->expect("Handling errors in MIR is not supported yet")
+		                                     .getType();
+
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
+		std::vector<tsl::TypeLayout> parameter_types;
+		parameter_types.reserve(type.getParameterTypes().size());
+		for (const auto& param: type.getParameterTypes())
+			parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
+		return FunctionLiteral{
+			.mangled_name = mangled_name,
+			.parameter_layouts
+			= std::make_shared<std::vector<tsl::TypeLayout>>(std::move(parameter_types)),
+			.return_type_layout = std::make_shared<tsl::TypeLayout>(std::move(return_type)),
 		};
 	}
 }

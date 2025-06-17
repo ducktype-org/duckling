@@ -7,4 +7,5 @@
 
 namespace compiler::lir {
 	struct Function;
+	struct LirGlobal;
 }
