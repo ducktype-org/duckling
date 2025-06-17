@@ -25,7 +25,7 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      self-hosted-labels: '["build", "ubuntu-24.04"]'
+      self-hosted-labels: '["debug", "release"]'
       github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
     secrets: inherit
 
@@ -71,6 +71,8 @@ jobs:
         run: |
           if [[ "${{ matrix.build-type }}" == "Debug" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=6" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.build-type }}" == "Release" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+            echo "jobs=3" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
