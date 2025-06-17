@@ -11,8 +11,8 @@ namespace compiler::backend_llvm {
 	 * @param output_type Type of the output file (object or assembly).
 	 */
 	void compileModuleToObject(
-		Ref<ModuleImpl>       module_impl,
+		Ref<ModuleImpl>              module_impl,
 		const std::filesystem::path& output_file,
-		CompilationOutputType output_type
+		CompilationOutputType        output_type
 	);
 }

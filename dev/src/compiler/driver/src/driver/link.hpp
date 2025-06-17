@@ -17,6 +17,6 @@ namespace compiler::driver {
 	void link(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
-		LinkOptions                          options
+		LinkOptions                                 options
 	);
 }

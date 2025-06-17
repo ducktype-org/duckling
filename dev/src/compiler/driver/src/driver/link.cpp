@@ -8,7 +8,7 @@ namespace compiler::driver {
 	void link(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
-		LinkOptions                          options
+		LinkOptions                                 options
 	) {
 		// Link the object file.
 		// Use the default system linker - for Ubuntu it is advised to use gcc.

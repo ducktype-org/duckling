@@ -99,9 +99,9 @@ namespace compiler::backend_llvm {
 	 * @brief Compiles the module to an object file or assembly file.
 	 */
 	void compileModuleToObject(
-		Ref<ModuleImpl>       module_impl,
+		Ref<ModuleImpl>              module_impl,
 		const std::filesystem::path& output_file,
-		CompilationOutputType output_type
+		CompilationOutputType        output_type
 	) {
 		auto m              = module_impl->module.refMut();
 		auto target_triple  = llvm::sys::getDefaultTargetTriple();
