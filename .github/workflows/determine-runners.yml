@@ -44,6 +44,8 @@ jobs:
 
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
+          echo "Runners fetched: ${runners}"
+
           available_runners_json="["
           first=true
 
