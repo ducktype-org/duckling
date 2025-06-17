@@ -1094,7 +1094,7 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/type_deduction")));
 
 		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
-		const auto f64_type   = query::entryPoint<tsh::QueryFloatType>(64);
+		const auto f64_type   = query::entryPoint<tsh::QueryFloatType>(32);
 		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
 		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
 
@@ -1102,23 +1102,38 @@ private:
 		auto foo_body_scope = getFunctionBodyScope(foo);
 
 
-		// ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
-		// ASSERT_EQUAL(f64_type, getTypeOf("EasyFloat", root_scope));
-		// ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", root_scope));
-		// ASSERT_EQUAL(str_type, getTypeOf("EasyString", root_scope));
+		ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
+		std::cerr << "Should be f64, but is " << getTypeOf("EasyFloat", foo_body_scope).toString() << '\n';
+		// ASSERT_EQUAL(f64_type, getTypeOf("EasyFloat", foo_body_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
 
-		// ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		std::cerr << "Should be f64, but is " << getTypeOf("SimpleFloat", foo_body_scope).toString() << '\n';
 		// ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloat", root_scope));
-		// ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
-		// ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+		const auto tuple_int_int_V = getTypeOf("TupleVII", foo_body_scope);
+		const auto tuple_int_int_C = getTypeOf("TupleCII", root_scope);
+		const auto tuple_string_int_V = getTypeOf("TupleVSI", foo_body_scope);
+		const auto tuple_string_int_C = getTypeOf("TupleCSI", root_scope);
+
+		const auto tuple_int_int_abstract_type
+			= query::entryPoint<tsh::QueryTupleType>({ { st(int64_type), st(int64_type) } });
+		const auto tuple_string_int_abstract_type
+			= query::entryPoint<tsh::QueryTupleType>({ { st(str_type), st(int64_type) } });
 
 
-		// const auto tuple_int_int_V = getTypeOf("TupleVII", root_scope);
-		// const auto tuple_int_int_C = getTypeOf("TupleCII", root_scope);
-		// const auto tuple_int_int_abstract_type
-		// 	= query::entryPoint<tsh::QueryTupleType>({ { st(int64_type), st(int64_type) } });
+		std::cerr << "Should be Tuple(i64, i64), but is " << tuple_int_int_V.toString() << '\n';
+		std::cerr << "Should be Tuple(i64, i64), but is " << tuple_int_int_C.toString() << '\n';
+		std::cerr << "Should be Tuple(string, i64), but is " << tuple_string_int_V.toString() << '\n';
+		std::cerr << "Should be Tuple(string, i64), but is " << tuple_string_int_C.toString() << '\n';
+
 		// ASSERT_EQUAL(tuple_int_int_V, tuple_int_int_abstract_type);
 		// ASSERT_EQUAL(tuple_int_int_C, tuple_int_int_abstract_type);
+		// ASSERT_EQUAL(tuple_string_int_V, tuple_string_int_abstract_type);
+		// ASSERT_EQUAL(tuple_string_int_C, tuple_string_int_abstract_type);
 
 	}
 };
