@@ -67,9 +67,9 @@ jobs:
             first=false
 
             if [ -n "$runner" ]; then
-              available_runners_json+="{\"group\":\"SelfHostedRunners\",\"label\":\"$label\"}"
+              available_runners_json+="{\"group\":\"SelfHostedRunners\",\"labels\":\"$label\"}"
             else
-              available_runners_json+="{\"label\":\"$github_label\"}"
+              available_runners_json+="{\"labels\":\"$github_label\"}"
             fi
           done
 
