@@ -44,7 +44,9 @@ jobs:
 
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
-          available_runners=()
+          available_runners_json="["
+          first=true
+
           for i in $(seq 0 $(($(echo "$self_hosted_labels" | jq length) - 1))); do
             label=$(echo "$self_hosted_labels" | jq -r ".[$i]")
             github_label=$(echo "$github_labels" | jq -r ".[$i]")
@@ -59,13 +61,18 @@ jobs:
                 ) | .name' | \
               head -1)
 
+            if [ "$first" = false ]; then
+              available_runners_json+=","
+            fi
+            first=false
+
             if [ -n "$runner" ]; then
-              available_runners+=("{\"group\":\"SelfHostedRunners\",\"label\":\"$label\"}")
+              available_runners_json+="{\"group\":\"SelfHostedRunners\",\"label\":\"$label\"}"
             else
-              available_runners+=("{\"label\":\"$github_label\"}")
+              available_runners_json+="{\"label\":\"$github_label\"}"
             fi
           done
 
-          echo "Available runners: ${available_runners[@]}"
-          runners_json=$(printf '%s\n' "${available_runners[@]}" | jq -s '.')
-          echo -n "runners=$runners_json" >> $GITHUB_OUTPUT
+          available_runners_json+="]"
+          echo "Available runners: ${available_runners_json}"
+          echo "runners=$available_runners_json" >> $GITHUB_OUTPUT
