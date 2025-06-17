@@ -287,7 +287,6 @@ DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
 DEF_OPCODE(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // dereferences pointer and stores into local
 DEF_OPCODE(load_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
-// loads effective address of struct field
 
 // stores reference to local object of any type T in pointer<T>
 DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
@@ -295,6 +294,7 @@ DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // ========= STRUCTURE OPERATIONS ========
 
 // expects `ext_field` to be the next instruction
+// loads effective address of struct field
 DEF_OPCODE(
 	structLea_lptr_lptr,
 	vm::opargs::StackLocalPtr /* destination */,
