@@ -1,6 +1,6 @@
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
 # With Windows building removed because it's very dependent on version
-# @TODO: It might be possible to add include directory automaticly from target
+# @TODO: It might be possible to add include directory automatically from target
 
 include(ExternalProject)
 
@@ -57,9 +57,10 @@ function(FindOrBuildICU)
 			set(ICU_CONTROL "MD5=6786f210e101e0440582ba2d9a057aed")
 
 			FetchContent_Declare(
-			ubuntu-icu
-			URL ${ICU_RELEASE}
-			URL_HASH ${ICU_CONTROL}
+				ubuntu-icu
+				URL ${ICU_RELEASE}
+				URL_HASH ${ICU_CONTROL}
+				SYSTEM
 			)
 
 			FetchContent_MakeAvailable(ubuntu-icu)
