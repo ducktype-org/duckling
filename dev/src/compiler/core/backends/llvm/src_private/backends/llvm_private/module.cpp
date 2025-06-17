@@ -56,8 +56,10 @@ namespace compiler::backend_llvm {
 		impl->module->print(ir_output_stream, nullptr);
 	}
 
-	void Module::compile(std::filesystem::path output_file, CompilationOutputType output_type) {
-		compileModuleToObject(impl.refMut(), std::move(output_file), output_type);
+	void Module::compile(
+		const std::filesystem::path& output_file, CompilationOutputType output_type
+	) {
+		compileModuleToObject(impl.refMut(), output_file, output_type);
 	}
 
 	u64 Module::getFunctionCount(bool including_prototypes) const {

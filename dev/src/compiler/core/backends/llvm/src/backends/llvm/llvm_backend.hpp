@@ -103,7 +103,7 @@ namespace compiler::backend_llvm {
 		 * @param output_file Path where the output file will be saved.
 		 * @param output_type Type of the output file.
 		 */
-		void compile(std::filesystem::path output_file, CompilationOutputType output_type);
+		void compile(const std::filesystem::path& output_file, CompilationOutputType output_type);
 
 		/**
 		 * Returns the number of functions in the module.
