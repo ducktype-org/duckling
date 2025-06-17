@@ -15,8 +15,8 @@ namespace compiler::driver {
 	 * @note: we can add additional object/library files here when needed.
 	 */
 	void link(
-		artifacts::FileArtifact              output,
-		std::vector<artifacts::FileArtifact> inputs,
+		const artifacts::FileArtifact&              output,
+		const std::vector<artifacts::FileArtifact>& inputs,
 		LinkOptions                          options
 	);
 }

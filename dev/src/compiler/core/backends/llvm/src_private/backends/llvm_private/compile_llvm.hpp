@@ -12,7 +12,7 @@ namespace compiler::backend_llvm {
 	 */
 	void compileModuleToObject(
 		Ref<ModuleImpl>       module_impl,
-		std::filesystem::path output_file,
+		const std::filesystem::path& output_file,
 		CompilationOutputType output_type
 	);
 }

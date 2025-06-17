@@ -24,7 +24,7 @@ namespace compiler::driver {
 	class HoutToBinaryDriver final {
 	public:
 		HoutToBinaryDriver(BackendOptions opts):
-			  options(std::move(opts)),
+			  options(opts),
 			  backend_driver(createBackendDriver(&options)) {}
 
 		/**
