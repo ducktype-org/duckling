@@ -115,7 +115,7 @@ namespace compiler::lir {
 				variant_case(LocalRef, local) { printLocal(local, output); }
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {
-					output << "Func(" << func.helios_id.queryUnstablePerfectHash() << ")";
+					output << "Func(" << func.mangled_name.strView() << ")";
 				}
 				variant_case(LirGlobal, global) { printGlobal(global, output); }
 				variant_default { CORE_PANIC("Unhandled variant in printValue"); }
