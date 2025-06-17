@@ -70,7 +70,9 @@ int main(int argc, const char* argv[]) {
 					llvm_module.addFunctionToModule(ctx, lir_func);
 				}
 				variant_case(helios::HOUTGlobalConst, cnst) {
-					//@TODO: create global constant ctors if nessesary
+					// @TODO: create global constant ctors if nessesary
+					std::cerr << "skiping generation of ctor for global constant: "
+							  << hout_glob.original_name.strView() << "\n";
 				}
 			}
 

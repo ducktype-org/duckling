@@ -485,7 +485,7 @@ namespace compiler::backend_llvm {
 					CORE_ASSERT(
 						callee.getFunctionType()->getReturnType()->isVoidTy(),
 						"call to non void function without output – this may be valid, feel free "
-						"to remove assertion in the compiler internals change."
+						"to remove assertion if the compiler internals change."
 					);
 					builder.CreateCall(callee, args);
 				}
