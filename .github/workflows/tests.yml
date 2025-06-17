@@ -25,8 +25,8 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      self-hosted-label: 'build'
-      github-label: 'ubuntu-24.04'
+      self-hosted-labels: '["build", "ubuntu-24.04"]'
+      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
     secrets: inherit
 
   build:
@@ -48,7 +48,7 @@ jobs:
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 20  # (Per matrix run)
-    runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runner1) || fromJson(needs.determine-runners.outputs.runner2) }}
+    runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
@@ -58,9 +58,9 @@ jobs:
       - name: Set self-hosted flag
         id: set-self-hosted
         run: |
-          if [[ "${{ matrix.build-type }}" == "Debug" && "${{ needs.determine-runners.outputs.runner1 }}" == *"SelfHostedRunners"* ]]; then
+          if [[ "${{ matrix.build-type }}" == "Debug" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "Release" && "${{ needs.determine-runners.outputs.runner2 }}" == *"SelfHostedRunners"* ]]; then
+          elif [[ "${{ matrix.build-type }}" == "Release" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
           else
             echo "is-self-hosted=false" >> $GITHUB_OUTPUT
@@ -69,8 +69,8 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
-          if [[ "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=4" >> $GITHUB_OUTPUT
+          if [[ "${{ matrix.build-type }}" == "Debug" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+            echo "jobs=6" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
