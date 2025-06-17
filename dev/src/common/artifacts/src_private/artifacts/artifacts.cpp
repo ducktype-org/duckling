@@ -23,9 +23,7 @@ base::RawView artifacts::BlobArtifact::getDataView() const {
 artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	  PATH(std::move(root)) {
 	CORE_ASSERT(std::filesystem::exists(PATH), "ArtifactCollection path does not exist");
-	CORE_ASSERT(
-		std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory"
-	);
+	CORE_ASSERT(std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory");
 	loadData();
 }
 
