@@ -37,9 +37,10 @@ private:
 		using namespace compiler;
 
 		std::vector<CRef<lir::Function>> funcs;
-		std::vector<std::pair<
+		std::vector<std::tuple<
 			lir::LirGlobal,
-			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>
+			base::Optional<CRef<lir::Function>>,
+			base::Optional<CRef<lir::Function>>>>
 								 globals;
 		base::StrID              module_name;
 		vm::code::CodeCollection code;
@@ -59,8 +60,9 @@ private:
 						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 						globals.emplace_back(
 							lir_glob,
-							//@TODO: add legit dtors when implemented
-							std::make_pair(lir_func, lir_func)
+							// @TODO: add legit dtors when implemented
+							lir_func,
+							std::nullopt
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {

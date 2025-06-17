@@ -27,9 +27,10 @@ namespace compiler::driver {
 
 	void Driver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
 		std::vector<CRef<lir::Function>> functions;
-		std::vector<std::pair<
+		std::vector<std::tuple<
 			lir::LirGlobal,
-			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>
+			base::Optional<CRef<lir::Function>>,
+			base::Optional<CRef<lir::Function>>>>
 			globals;
 		globals.reserve(hout_unit->glob_data.size());
 		functions.reserve(hout_unit->functions.size());
@@ -45,11 +46,15 @@ namespace compiler::driver {
 						auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
 						globals.emplace_back(
 							lir_global,
-							//@TODO: add legit dtors when implemented
-							std::make_pair(lir_function, lir_function)
+							// @TODO: add legit dtors when implemented
+							lir_function,
+							std::nullopt
 						);
 					}
-					variant_default { globals.emplace_back(lir_global, std::nullopt); }
+					// @TODO: add ctors and dtors for Global Consts when implemented
+					variant_default {
+						globals.emplace_back(lir_global, std::nullopt, std::nullopt);
+					}
 				}
 			});
 		}

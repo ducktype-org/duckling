@@ -583,12 +583,13 @@ namespace compiler::backend_vm {
 	}
 
 	Module::Module(
-		query::Context&                                                            query_ctx,
-		base::StrID                                                                module_id,
-		const std::vector<CRef<lir::Function>>&                                    functions,
-		const std::vector<std::pair<
+		query::Context&                            query_ctx,
+		base::StrID                                module_id,
+		const std::vector<CRef<lir::Function>>&    functions,
+		const std::vector<std::tuple<
 			lir::LirGlobal,
-			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>& globals
+			base::Optional<CRef<lir::Function>>,
+			base::Optional<CRef<lir::Function>>>>& globals
 	):
 		  module_id(module_id),
 		  valid_program(ValidProgram::withBuiltins()) {
@@ -601,19 +602,23 @@ namespace compiler::backend_vm {
 			insertTypesUsedByFunction(compiled_types.types, lir_function);
 
 		for (const auto& global: globals) {
-			auto lir_global  = global.first;
-			auto global_type = getTypeFromLayout(*lir_global.layout);
+			const auto& lir_global  = std::get<0>(global);
+			const auto& ctor_opt    = std::get<1>(global);
+			const auto& dtor_opt    = std::get<2>(global);
+			auto        global_type = getTypeFromLayout(*lir_global.layout);
 			compiled_types.types.push_back(global_type);
-			//@TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
 			global_data.global_data.push_back(GlobalData{
 				{}, lir_global.mangled_name, typeName(global_type) });
 
-			//@TODO: handle ctors and dtors in DMV propably
-			if (global.second.has_value()) {
-				insertTypesUsedByFunction(compiled_types.types, global.second->first);
-				insertTypesUsedByFunction(compiled_types.types, global.second->second);
-				ctors.emplace_back(global.second->first);
-				dtors.emplace_back(global.second->second);
+			// @TODO: handle ctors and dtors in DMV propably
+			if (ctor_opt.has_value()) {
+				insertTypesUsedByFunction(compiled_types.types, ctor_opt.value());
+				ctors.emplace_back(ctor_opt.value());
+			}
+			if (dtor_opt.has_value()) {
+				insertTypesUsedByFunction(compiled_types.types, dtor_opt.value());
+				dtors.emplace_back(dtor_opt.value());
 			}
 		}
 

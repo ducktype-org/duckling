@@ -558,13 +558,6 @@ namespace compiler::backend_llvm {
 		return lir2llvm.createFunction();
 	}
 
-	llvm::Function* addFunctionToModuleInternal(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
-	) {
-		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
-		return lir2llvm.createFunction();
-	}
-
 	void addFunctionToModuleImpl(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	) {

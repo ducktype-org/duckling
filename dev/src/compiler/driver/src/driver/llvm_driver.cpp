@@ -12,39 +12,40 @@ namespace compiler::driver {
 	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module) {
 		backend_llvm::Module mod(lir_module.module_id);
 
-		std::vector<lir::FunctionLiteral> ctors_literals;
-		std::vector<lir::FunctionLiteral> dtors_literals;
+		std::vector<CRef<lir::Function>> ctors;
+		std::vector<CRef<lir::Function>> dtors;
 
 		for (const auto& global: lir_module.globals) {
-			mod.addGlobalToModule(global.first);
-			if (global.second.has_value()) {
-				auto& [ctor, dtor] = global.second.value();
-				mod.addFunctionToModule(ctx, ctor);
-				//@TODO: add legit dtors when implemented
-				// mod.addFunctionToModule(ctx, dtor);
-				ctors_literals.push_back(lir::getFunctionLiteralfromFunction(*ctor));
-				dtors_literals.push_back(lir::getFunctionLiteralfromFunction(*dtor));
+			const auto& lir_global = std::get<0>(global);
+			const auto& ctor_opt   = std::get<1>(global);
+			const auto& dtor_opt   = std::get<2>(global);
+			mod.addGlobalToModule(lir_global);
+			if (ctor_opt.has_value()) {
+				mod.addFunctionToModule(ctx, ctor_opt.value());
+				ctors.push_back(ctor_opt.value());
+			}
+			if (dtor_opt.has_value()) {
+				mod.addFunctionToModule(ctx, dtor_opt.value());
+				dtors.push_back(dtor_opt.value());
 			}
 		}
 
-		if (!ctors_literals.empty()) {
-			auto module_ctor = lir::fromFunctionLiterals(
+		if (!ctors.empty()) {
+			auto module_ctor = lir::fromLIRFunctions(
 				ctx,
-				ctors_literals,
+				ctors,
 				base::StrID(base::strConcat("_CTOR_MODULE_", lir_module.module_id.str()).c_str())
 			);
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 		}
 
-		if (!dtors_literals.empty()) {
-			std::vector<lir::FunctionLiteral> reversed_dtors(
-				dtors_literals.rbegin(), dtors_literals.rend()
-			);
-			auto module_dtor = lir::fromFunctionLiterals(
-				ctx,
-				reversed_dtors,
-				base::StrID(base::strConcat("_DTOR_MODULE_", lir_module.module_id.str()).c_str())
-			);
+		if (!dtors.empty()) {
+			std::vector<CRef<lir::Function>> reversed_dtors(dtors.rbegin(), dtors.rend());
+			auto                             module_dtor = lir::fromLIRFunctions(
+                ctx,
+                reversed_dtors,
+                base::StrID(base::strConcat("_DTOR_MODULE_", lir_module.module_id.str()).c_str())
+            );
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 

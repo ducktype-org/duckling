@@ -24,9 +24,10 @@ namespace compiler::driver {
 	struct BackendModuleData final {
 		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
-		std::vector<std::pair<
+		std::vector<std::tuple<
 			lir::LirGlobal,
-			base::Optional<std::pair<CRef<lir::Function>, CRef<lir::Function>>>>>
+			base::Optional<CRef<lir::Function>>,
+			base::Optional<CRef<lir::Function>>>>
 			globals;
 	};
 
