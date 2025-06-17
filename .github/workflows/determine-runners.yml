@@ -48,30 +48,52 @@ jobs:
 
           available_runners_json="["
           first=true
+          used_runner_ids=()
 
           for i in $(seq 0 $(($(echo "$self_hosted_labels" | jq length) - 1))); do
             label=$(echo "$self_hosted_labels" | jq -r ".[$i]")
             github_label=$(echo "$github_labels" | jq -r ".[$i]")
 
-            runner=$(echo "$runners" | \
-              jq -r --arg lbl "$label" '
-                .runners[]? | 
-                select(
-                  .status == "online" and 
-                  .busy == false and 
-                  (.labels[]?.name == $lbl)
-                ) | .name' | \
-              head -1)
+            # Find the first available runner with the label that hasn't been used yet
+            runner_info=$(echo "$runners" | jq -c --arg lbl "$label" '
+              .runners[]? |
+              select(
+                .status == "online" and
+                .busy == false and
+                (.labels[]?.name == $lbl)
+              )')
 
-            if [ "$first" = false ]; then
-              available_runners_json+=","
+            selected_runner_id=""
+            selected_runner_name=""
+            if [ -n "$runner_info" ]; then
+              while read -r runner; do
+                runner_id=$(echo "$runner" | jq -r '.id')
+                runner_name=$(echo "$runner" | jq -r '.name')
+                # Check if this runner_id is already used
+                skip=false
+                for used_id in "${used_runner_ids[@]}"; do
+                  if [ "$runner_id" = "$used_id" ]; then
+                    skip=true
+                    break
+                  fi
+                done
+                if [ "$skip" = false ]; then
+                  selected_runner_id="$runner_id"
+                  selected_runner_name="$runner_name"
+                  break
+                fi
+              done < <(echo "$runner_info")
             fi
-            first=false
 
-            if [ -n "$runner" ]; then
+            if [ -n "$selected_runner_id" ]; then
+              used_runner_ids+=("$selected_runner_id")
               available_runners_json+="{\"group\":\"SelfHostedRunners\",\"labels\":\"$label\"}"
             else
               available_runners_json+="{\"labels\":\"$github_label\"}"
+            fi
+
+            if [ $i -lt $(($(echo "$self_hosted_labels" | jq length) - 1)) ]; then
+              available_runners_json+=",";
             fi
           done
 
