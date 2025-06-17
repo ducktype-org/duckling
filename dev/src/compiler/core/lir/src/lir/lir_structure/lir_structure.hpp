@@ -68,11 +68,11 @@ namespace compiler::lir {
 
 	/**
 	 * @brief Reference to a function in LIR.
-	 * @note In the future this might simple store mangled name (string), and possibly an optional
-	 * SymID.
 	 */
 	struct FunctionLiteral {
-		helios::SymID helios_id;
+		base::StrID                                   mangled_name;
+		std::shared_ptr<std::vector<tsl::TypeLayout>> parameter_layouts;
+		std::shared_ptr<tsl::TypeLayout>              return_type_layout;
 	};
 
 	enum class LirGlobalType { Variable, Constant };

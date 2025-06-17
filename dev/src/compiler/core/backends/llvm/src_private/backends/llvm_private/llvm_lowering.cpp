@@ -15,15 +15,13 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/Transforms/Utils/ModuleUtils.h>
 
 LLVM_INCLUDE_END()
 
-#include "get_parameter_types.hpp"
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <helios/symbols/simple.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -162,19 +160,58 @@ namespace compiler::backend_llvm {
 	/**
 	 * Same as getOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
 	 */
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromSymID(
-		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
+		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
 		auto& context      = module->getContext();
-		auto  mangled_name = helios::mangler::getSimpleMangledName(ctx, sym_id);
+		auto  mangled_name = function_literal.mangled_name;
 
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(mangled_name.strView())) return func;
 
-		auto types = getParameterAndResultFromSymID(ctx, sym_id);
 		return module->getOrInsertFunction(
-			mangled_name.strView(), getFunType(context, types.parameters, types.result_type)
+			mangled_name.strView(),
+			getFunType(
+				context, *function_literal.parameter_layouts, *function_literal.return_type_layout
+			)
 		);
+	}
+
+	Ref<llvm::Constant> getOrInsertGlobalVariable(
+		Ref<llvm::Module> module, const lir::LirGlobal& lir_global
+	) {
+		auto mangled_name = lir_global.mangled_name.strView();
+
+		if (auto global = module->getGlobalVariable(mangled_name)) return global;
+
+		auto& context = module->getContext();
+
+		auto global_type = typeFromLayout(context, *lir_global.layout);
+
+		return module->getOrInsertGlobal(mangled_name, global_type);
+	}
+
+	Ref<llvm::GlobalVariable> addGlobalVariable(
+		Ref<llvm::Module> module, const lir::LirGlobal& lir_global
+	) {
+		getOrInsertGlobalVariable(module, lir_global);
+		Ref<llvm::GlobalVariable> global
+			= module->getNamedGlobal(lir_global.mangled_name.strView());
+
+		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
+
+		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
+		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
+		// Initialise the global variable to null, sice it will be initialised in the constructor
+		if (lir_global.inital_value.has_value()) {
+			global->setInitializer(llvm::ConstantInt::getSigned(
+				global->getValueType(), static_cast<i64>(lir_global.inital_value.value())
+			));
+		} else {
+			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
+		}
+
+		return global;
 	}
 
 	/**
@@ -306,6 +343,12 @@ namespace compiler::backend_llvm {
 					);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
+				variant_case(lir::LirGlobal, lir_global) {
+					auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
+					return builder.CreateLoad(
+						typeFromLayout(getLLVMContext(), *lir_global.layout), global_ptr.get()
+					);
+				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
 			}
 			CORE_UNREACHABLE();
@@ -321,26 +364,30 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-		lir::LocalRef getOutput(std::variant<lir::LocalRef, lir::LirGlobal> output) {
+		void storeOutput(
+			std::variant<lir::LocalRef, lir::LirGlobal> output,
+			Ref<llvm::Value>                            value,
+			llvm::IRBuilder<>&                          builder
+		) {
 			variant_match(output) {
-				variant_case(lir::LocalRef, local) { return local; }
-				variant_case(lir::LirGlobal, global) {
-					throw base::NotYetImplemented(
-						"output of type LirGlobal is not supported in llvm lowering yet"
-					);
+				variant_case(lir::LocalRef, lir_local) {
+					builder.CreateStore(value.get(), local_register_map[lir_local].get());
 				}
+				variant_case(lir::LirGlobal, global_lir) {
+					auto global = getOrInsertGlobalVariable(module, global_lir);
+					builder.CreateStore(value.get(), global.get());
+				}
+				variant_default { CORE_PANIC("unknown lir output type"); }
 			}
-			CORE_UNREACHABLE();
 		}
 
-#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                         \
-	{                                                                                \
-		const auto output = getOutput(lir_instruction.output.value());               \
-		const auto lhs    = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
-		const auto rhs    = lirValue2LLVM(lir_instruction.arguments.at(1), builder); \
-		const auto value  = builder.Create##op(lhs, rhs);                            \
-		builder.CreateStore(value, local_register_map[output].get());                \
-		break;                                                                       \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                        \
+	{                                                                               \
+		const auto lhs   = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
+		const auto rhs   = lirValue2LLVM(lir_instruction.arguments.at(1), builder); \
+		const auto value = builder.Create##op(lhs, rhs);                            \
+		storeOutput(lir_instruction.output.value(), value, builder);                \
+		break;                                                                      \
 	}
 
 		/**
@@ -377,9 +424,8 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Assign: {
-				const auto output = getOutput(lir_instruction.output.value());
-				const auto value  = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
-				builder.CreateStore(value, local_register_map[output].get());
+				const auto value = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
 			case IntegerAdd:
@@ -401,10 +447,10 @@ namespace compiler::backend_llvm {
 			case IntegerSLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
 			case IntegerNeg: {
-				const auto output   = getOutput(lir_instruction.output.value());
+				const auto output   = lir_instruction.output.value();
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNeg(argument);
-				builder.CreateStore(value, local_register_map[output].get());
+				storeOutput(output, value, builder);
 				break;
 			}
 			case BooleanAnd:
@@ -412,23 +458,17 @@ namespace compiler::backend_llvm {
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
 			case BooleanNot: {
-				const auto output   = getOutput(lir_instruction.output.value());
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNot(argument);
-				builder.CreateStore(value, local_register_map[output].get());
+				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
-				const auto output = getOutput(lir_instruction.output.value());
-
-				const auto callee_helios_id
-					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-
-				// I'm not sure if this is the efficient way to do it, but for now it is
-				// simple enough and works without some additional mechanism in the pipeline:
-				auto callee = getOrInsertFunctionPrototypeFromSymID(ctx, module, callee_helios_id);
+				auto callee = getOrInsertFunctionPrototypeFromLiteral(
+					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
+				);
 
 				const auto args = lirValueList2LLVM(
 					std::vector(
@@ -436,8 +476,20 @@ namespace compiler::backend_llvm {
 					),
 					builder
 				);
-				const auto value = builder.CreateCall(callee, args);
-				builder.CreateStore(value, local_register_map.at(output).get());
+
+				if (lir_instruction.output.has_value()) {
+					const auto output = lir_instruction.output.value();
+					const auto value  = builder.CreateCall(callee, args);
+					storeOutput(output, value, builder);
+				} else {
+					CORE_ASSERT(
+						callee.getFunctionType()->getReturnType()->isVoidTy(),
+						"call to non void function without output – this may be valid, feel free "
+						"to remove assertion if the compiler internals change."
+					);
+					builder.CreateCall(callee, args);
+				}
+
 				break;
 			}
 			default:
@@ -499,10 +551,39 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	void addFunctionToModuleImpl(
+	llvm::Function* addFunctionToModuleInternal(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	) {
 		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
-		lir2llvm.createFunction();
+		return lir2llvm.createFunction();
+	}
+
+	void addFunctionToModuleImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		addFunctionToModuleInternal(ctx, module, lir_function);
+	}
+
+	void addFunctionToModuleCtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		// 65535 is the default priority for global constructors in LLVM.
+		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the global
+		// variable associated with the constructor. However, the problem is that the order of
+		// functions with the same priority is not defined. Therefore, we probably want to create
+		// one global constructor that calls the constructor of each variable in the module.
+		llvm::appendToGlobalCtors(*module->module.refMut(), fun, 65'535);
+	}
+
+	void addFunctionToModuleDtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
+	}
+
+	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global) {
+		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 }
