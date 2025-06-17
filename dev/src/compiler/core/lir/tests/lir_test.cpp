@@ -305,11 +305,10 @@ private:
 		auto some_global_ctor = module.lirGlobalCtor("some_global");
 
 		withContextDo([&](query::Context& ctx) {
-			std::vector<lir::FunctionLiteral> function_literals
-				= { lir::getFunctionLiteralfromFunction(*g_ctor),
-				    lir::getFunctionLiteralfromFunction(*some_global_ctor) };
 			std::stringstream foo_str;
-			lir::fromFunctionLiterals(ctx, function_literals, base::StrID("_MODULE_CTOR_globals"))
+			lir::fromLIRFunctions(
+				ctx, { g_ctor, some_global_ctor }, base::StrID("_MODULE_CTOR_globals")
+			)
 				.debugPrint(ctx, foo_str);
 		});
 	}

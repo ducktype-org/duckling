@@ -45,7 +45,7 @@ int main(int argc, const char* argv[]) {
 
 	auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
 
-	std::vector<lir::FunctionLiteral> ctors;
+	std::vector<CRef<lir::Function>> ctors;
 
 	for (auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -56,11 +56,16 @@ int main(int argc, const char* argv[]) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
 						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+
+					mir_func->debugPrint(std::cerr);
+					std::cerr << "\n\n\n";
+
 					auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n\n\n";
 
-					ctors.push_back(lir::getFunctionLiteralfromFunction(*lir_func));
+					ctors.push_back(lir_func);
 
 					llvm_module.addFunctionToModule(ctx, lir_func);
 				}
@@ -78,17 +83,20 @@ int main(int argc, const char* argv[]) {
 		});
 	}
 
-	// Add module ctors and dtors to module CTOR and DITOR functions
+	// Add module ctors and dtors to module CTOR and DTOR functions
 	if (!ctors.empty()) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			//@TODO: fix this proper module global ctor mangling
-			auto module_ctor = lir::fromFunctionLiterals(
+			// @TODO: fix this: add proper module global ctor mangling
+			auto module_ctor = lir::fromLIRFunctions(
 				ctx,
 				ctors,
 				base::StrID(
 					base::strConcat("_MODULE_CTOR_", frontend::moduleName(root).str()).c_str()
 				)
 			);
+
+			module_ctor.debugPrint(ctx, std::cerr);
+
 			llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 			auto v = llvm_module.verify();
 
@@ -97,16 +105,18 @@ int main(int argc, const char* argv[]) {
 			else
 				std::cerr << "LLVM verification failed\n\n";
 
-			//@TODO: fix this proper module global dtor mangling
-			//@TODO: add legit dtors
-			std::vector<lir::FunctionLiteral> reversed_ctors(ctors.rbegin(), ctors.rend());
-			auto                              module_dtor = lir::fromFunctionLiterals(
-                ctx,
-                reversed_ctors,
-                base::StrID(
-                    base::strConcat("_MODULE_DTOR_", frontend::moduleName(root).str()).c_str()
-                )
-            );
+			// @TODO: fix this: add proper module global dtor mangling
+			// @TODO: add legit dtors
+			auto module_dtor = lir::fromLIRFunctions(
+				ctx,
+				{},
+				base::StrID(
+					base::strConcat("_MODULE_DTOR_", frontend::moduleName(root).str()).c_str()
+				)
+			);
+
+			module_dtor.debugPrint(ctx, std::cerr);
+
 			llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 			v = llvm_module.verify();
 

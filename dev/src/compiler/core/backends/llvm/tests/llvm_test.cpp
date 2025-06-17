@@ -8,6 +8,7 @@
 #include <tester/tester.hpp>
 
 #include <base/exceptions.hpp>
+#include <base/variant.hpp>
 
 #include <utility>
 
@@ -32,8 +33,8 @@ private:
 	auto getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		backend_llvm::Module              llvm_module(base::StrID("test_module"));
-		std::vector<lir::FunctionLiteral> ctors;
+		backend_llvm::Module             llvm_module(base::StrID("test_module"));
+		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
@@ -42,37 +43,42 @@ private:
 			for (auto& hout_glob: top_level->glob_data) {
 				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
-				std::visit(
-					[&](auto&& val) {
-						using T = std::decay_t<decltype(val)>;
-						if constexpr (std::is_same_v<T, helios::HOUTGlobalVariable>) {
-							CRef mir_func
-								= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-							auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
-							ctors.push_back(lir::getFunctionLiteralfromFunction(*lir_func));
-							llvm_module.addFunctionToModule(ctx, lir_func);
-						} else if constexpr (std::is_same_v<T, helios::HOUTGlobalConst>) {
-							/* TODO: create global constant ctors if necessary */
-							fail(base::strConcat(
-								"Creating ctors for constant variables is not implemented yet. "
-								"Global constant: ",
-								hout_glob.original_name.strView()
-							));
-						} else {
-							fail(base::strConcat(
-								"Unexpected global data type in module: ",
-								hout_glob.original_name.strView()
-							));
-						}
-					},
-					hout_glob.value
-				);
+				variant_match(hout_glob.value) {
+					variant_case(helios::HOUTGlobalVariable, var) {
+						CRef mir_func
+							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+
+						mir_func->debugPrint(std::cerr);
+						std::cerr << "\n\n\n";
+
+						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+
+						lir_func->debugPrint(ctx, std::cerr);
+						std::cerr << "\n\n\n";
+
+						ctors.push_back(lir_func);
+
+						llvm_module.addFunctionToModule(ctx, lir_func);
+					}
+					variant_case(helios::HOUTGlobalConst, cnst) {
+						fail(base::strConcat(
+							"Creating ctors for constant variables is not implemented yet. "
+							"Global constant: ",
+							hout_glob.original_name.strView()
+						));
+					}
+					variant_default {
+						fail(base::strConcat(
+							"Unexpected global data type of: ", hout_glob.original_name
+						));
+					}
+				}
 			}
 
 			if (!ctors.empty()) {
 				// Add module ctors
-				//@TODO: fix this proper module global ctor mangling
-				auto module_ctor = lir::fromFunctionLiterals(
+				// @TODO: fix this: add proper module global ctor mangling
+				auto module_ctor = lir::fromLIRFunctions(
 					ctx,
 					ctors,
 					base::StrID(
@@ -81,18 +87,16 @@ private:
 				);
 				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 
-				// Add module dtors (reverse order)
-				//@TODO: fix this proper module global dtor mangling
-				// Note: we reverse the order of ctors to ensure dtors are called in the reverse order
-				//@TODO: add a legit dtors
-				std::vector<lir::FunctionLiteral> reversed_ctors(ctors.rbegin(), ctors.rend());
-				auto                              module_dtor = lir::fromFunctionLiterals(
-                    ctx,
-                    reversed_ctors,
-                    base::StrID(
-                        base::strConcat("_MODULE_DTOR_", frontend::moduleName(module).str()).c_str()
-                    )
-                );
+				// Add module dtors (for now empty)
+				// @TODO: fix this: add proper module global dtor mangling
+				// @TODO: add a legit dtors
+				auto module_dtor = lir::fromLIRFunctions(
+					ctx,
+					{},
+					base::StrID(
+						base::strConcat("_MODULE_DTOR_", frontend::moduleName(module).str()).c_str()
+					)
+				);
 				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 			}
 
