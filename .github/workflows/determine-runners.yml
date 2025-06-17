@@ -68,4 +68,4 @@ jobs:
 
           echo "Available runners: ${available_runners[@]}"
           runners_json=$(printf '%s\n' "${available_runners[@]}" | jq -s '.')
-          echo "runners=$runners_json" >> $GITHUB_OUTPUT
+          echo -n "runners=$runners_json" >> $GITHUB_OUTPUT
