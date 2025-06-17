@@ -1,6 +1,4 @@
 #include <backends/dvm/backend.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <query_framework/context.hpp>
 #include <typesystem/lower/type_layout.hpp>
