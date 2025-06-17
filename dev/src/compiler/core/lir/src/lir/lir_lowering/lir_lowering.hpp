@@ -16,5 +16,16 @@ namespace compiler::lir {
 	 * @brief Lower a MIRFunction to a LIRFunction
 	 * Generates TSL types
 	 */
-	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, CRef<Function>);
+	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, CRef<Function>)
+
+	/**
+	 * @brief Creates a LIR function that call each function in the list (in the provided order).
+	 * This was useful to create one module ctor, that calls all ctors of globals
+	 * In the provided order. Same for dtors.
+	 */
+	Function fromLIRFunctions(
+		query::Context&                    ctx,
+		const std::vector<CRef<Function>>& functions,
+		const base::StrID&                 mangled_name
+	);
 }

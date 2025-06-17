@@ -1,8 +1,4 @@
-#include "get_parameter_types.hpp"
-
 #include <backends/dvm/backend.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <query_framework/context.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -228,23 +224,17 @@ namespace compiler::backend_vm {
 		 * code. Used to add function types for functions that are not in the current module.
 		 */
 		void insertCalledFunctionTypes(
-			query::Context&          query_ctx,
-			std::vector<TypeOfData>& types,
-			CRef<lir::Function>      lir_function
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			for (const auto& lir_block: lir_function->block_order) {
 				for (const auto& lir_instruction: lir_block->instructions) {
 					if (lir_instruction.operation == lir::Operation::Call) {
-						const auto callee_helios_id
-							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-						auto name = compiler::helios::mangler::getSimpleMangledName(
-							query_ctx, callee_helios_id
-						);
-						auto called_func_signature
-							= getParameterAndResultFromSymID(query_ctx, callee_helios_id);
-
+						auto func_literal
+							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 						types.emplace_back(getFunctionTypeFromLayouts(
-							name, called_func_signature.parameters, called_func_signature.result_type
+							func_literal.mangled_name,
+							*func_literal.parameter_layouts,
+							*func_literal.return_type_layout
 						));
 					}
 				}
@@ -252,13 +242,11 @@ namespace compiler::backend_vm {
 		}
 
 		void insertTypesUsedByFunction(
-			query::Context&          query_ctx,
-			std::vector<TypeOfData>& types,
-			CRef<lir::Function>      lir_function
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			insertFunctionSignatureType(types, lir_function);
 			insertFunctionLocalTypes(types, lir_function);
-			insertCalledFunctionTypes(query_ctx, types, lir_function);
+			insertCalledFunctionTypes(types, lir_function);
 		}
 
 		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -302,10 +290,22 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
+		lir::LocalRef getOutput(std::variant<lir::LocalRef, lir::LirGlobal> output) {
+			variant_match(output) {
+				variant_case(lir::LocalRef, local) { return local; }
+				variant_case(lir::LirGlobal, global) {
+					throw base::NotYetImplemented(
+						"output of type LirGlobal is not supported in llvm lowering yet"
+					);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 		vm::opargs::OpCodeArg lirOutputToOpArg(
 			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
 		) {
-			const lir::LocalRef output   = lir_instruction.output.value();
+			const lir::LocalRef output   = getOutput(lir_instruction.output.value());
 			auto&&              var_type = ctx.lir_local_types[output];
 			return outputToOpArg(var_type, ctx.lir_local_to_name[output]);
 		}
@@ -323,9 +323,7 @@ namespace compiler::backend_vm {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
-					return vm::opargs::FunctionName(
-						helios::mangler::getSimpleMangledName(ctx.ctx, function.helios_id)
-					);
+					return vm::opargs::FunctionName(function.mangled_name);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
@@ -581,7 +579,7 @@ namespace compiler::backend_vm {
 		CodeCollection compiled_types;
 
 		for (const auto& lir_function: functions)
-			insertTypesUsedByFunction(query_ctx, compiled_types.types, lir_function);
+			insertTypesUsedByFunction(compiled_types.types, lir_function);
 
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);

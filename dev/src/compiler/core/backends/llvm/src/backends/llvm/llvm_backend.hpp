@@ -55,6 +55,36 @@ namespace compiler::backend_llvm {
 
 		void addFunctionToModule(query::Context&, CRef<lir::Function> lir_function);
 
+		/**
+		 * @brief Adds a global variable declaration to the module.
+		 *
+		 * This function declares a global variable in the LLVM module and initializes it to 0 or
+		 * null. Note: This does not add a constructor for the global variable.
+		 *
+		 * @param lir_global The global variable to be added to the module.
+		 */
+		void addGlobalToModule(const lir::LirGlobal& lir_global);
+
+		/**
+		 * @brief Adds a function to the LLVM module's list of global constructors.
+		 *
+		 * This function registers a function as a global constructor in the LLVM module.
+		 *
+		 * @param ctx The query context.
+		 * @param lir_function The function to be added as a global constructor.
+		 */
+		void addFunctionToModuleCtors(query::Context& ctx, CRef<lir::Function> lir_function);
+
+		/**
+		 * @brief Adds a function to the LLVM module's list of global destructors.
+		 *
+		 * This function registers a function as a global destructor in the LLVM module.
+		 *
+		 * @param ctx The query context.
+		 * @param lir_function The function to be added as a global destructor.
+		 */
+		void addFunctionToModuleDtors(query::Context& ctx, CRef<lir::Function> lir_function);
+
 		void debugPrint() const;
 
 		/**

@@ -1,4 +1,8 @@
+var c: i64 = 20 + g;
+var g: i64 = hoo();
+
 fun foo() = {
+	c = g;
 	var a: i32 = 23;
 	while (9) {
 		var b: i32 = 7;
@@ -15,6 +19,8 @@ fun goo() = {
 	hoo() = 15;
 }
 
-fun hoo() -> i32 = {
+fun hoo() -> i64 = {
+	c = c + 1;
+	g = c + hoo();
 	return 33;
 }

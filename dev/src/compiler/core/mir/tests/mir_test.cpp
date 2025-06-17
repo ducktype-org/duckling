@@ -86,6 +86,15 @@ private:
 			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
+			auto globals = unit->glob_data;
+			ASSERT_EQUAL(2, globals.size());
+			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
+
+			// @TODO #906 change it to whatever is produced by the mangler
+			auto& c_ctor
+				= ctx.query<compiler::mir::LowerGlobalDataToMirCtor>({ globals.at(0) })->value();
+			ASSERT_TRUE(c_ctor.name.strView().starts_with("_GLOBAL_c"));
+
 			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
@@ -121,8 +130,14 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
 			// those assertions might change when we improve mir generaration:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
+			// Check that the first instruction assigns to a global
+			{
+				const auto& instr = foo_mir.blocks[BlockID(7)].instructions.at(0);
+				ASSERT_TRUE(std::holds_alternative<compiler::mir::MirGlobal>(instr.output.value()));
+			}
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 1);

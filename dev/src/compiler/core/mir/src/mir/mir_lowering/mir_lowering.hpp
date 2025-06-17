@@ -26,6 +26,21 @@ namespace compiler::mir {
 	 */
 	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>)
 
+	struct KeyOf_LowerGlobalDataToMirFunction {
+		helios::HOUTGlobalData global_data;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
+	};
+
+	using LowerGlobalDataToMirFunctionResult
+		= helios::errors::HResult<Function, helios::errors::Failed>;
+
+	/**
+	 * @brief Creates a ctor function for a global data.
+	 */
+	DECLARE_QUERY(LowerGlobalDataToMirCtor, KeyOf_LowerGlobalDataToMirFunction, CRef<LowerGlobalDataToMirFunctionResult>)
+
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
