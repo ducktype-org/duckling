@@ -36,11 +36,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
         run: |
-          echo "Checking for runners with labels: ${{ inputs.self-hosted-labels }}"
-          echo "Fallback GitHub labels: ${{ inputs.github-labels }}"
+          echo "Checking for runners with labels: [\"debug\", \"release\"]"
+          echo "Fallback GitHub labels: [\"ubuntu-24.04\", \"ubuntu-24.04\"]"
 
-          self_hosted_labels=$(echo '${{ inputs.self-hosted-labels }}' | jq -r '. | @sh')
-          github_labels=$(echo '${{ inputs.github-labels }}' | jq -r '. | @sh')
+          self_hosted_labels='["debug", "release"]'
+          github_labels='["ubuntu-24.04", "ubuntu-24.04"]'
 
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
