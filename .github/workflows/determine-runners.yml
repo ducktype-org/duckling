@@ -44,8 +44,6 @@ jobs:
 
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
-          echo "Runners fetched: ${runners}"
-
           available_runners_json="["
           first=true
           used_runner_ids=()
@@ -87,8 +85,10 @@ jobs:
 
             if [ -n "$selected_runner_id" ]; then
               used_runner_ids+=("$selected_runner_id")
+              echo "Using self-hosted runner: $selected_runner_name with ID: $selected_runner_id for label: $label"
               available_runners_json+="{\"group\":\"SelfHostedRunners\",\"labels\":\"$label\"}"
             else
+              echo "No available self-hosted runner found for label: $label, using GitHub label: $github_label"
               available_runners_json+="{\"labels\":\"$github_label\"}"
             fi
 
