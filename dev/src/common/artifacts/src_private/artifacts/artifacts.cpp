@@ -22,6 +22,8 @@ base::RawView artifacts::BlobArtifact::getDataView() const {
 
 artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	  PATH(std::move(root)) {
+	CORE_ASSERT(std::filesystem::exists(PATH), "ArtifactCollection path does not exist");
+	CORE_ASSERT(std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory");
 	loadData();
 }
 
@@ -184,7 +186,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNe
 ) {
 	match_optional(fileArtifactAtMaybe(artifact_name)) {
 		opt_some(artifact) return artifact;
-		opt_none return fileArtifactAt(artifact_name);
+		opt_none return fileArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
@@ -214,7 +216,7 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNe
 ) {
 	match_optional(blobArtifactAtMaybe(artifact_name)) {
 		opt_some(artifact) return artifact;
-		opt_none return blobArtifactAt(artifact_name);
+		opt_none return blobArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
