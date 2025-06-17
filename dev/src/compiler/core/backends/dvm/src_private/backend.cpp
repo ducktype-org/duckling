@@ -611,7 +611,7 @@ namespace compiler::backend_vm {
 			global_data.global_data.push_back(GlobalData{
 				{}, lir_global.mangled_name, typeName(global_type) });
 
-			// @TODO: handle ctors and dtors in DMV propably
+			// @TODO: handle ctors and dtors in DMV properly
 			if (ctor_opt.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, ctor_opt.value());
 				ctors.emplace_back(ctor_opt.value());
