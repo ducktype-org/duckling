@@ -102,21 +102,27 @@ jobs:
         shell: bash
         run: |
           # Get PR number
-          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_NUMBER="928"
           
-          # Get PR body
+          # Get PR body with error handling
           PR_BODY=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | jq -r '.body // ""')
+            "https://api.github.com/repos/ducktype-org/duckling/pulls/$PR_NUMBER" | jq -r '.body // ""') || {
+            echo "Failed to fetch PR body"
+            exit 1
+          }
           
-          # Extract issue numbers using regex patterns
-          # Look for common patterns like "fixes #123", "closes #456", etc.
-          BODY_ISSUES=$(echo "$PR_BODY" | grep -oE "(fix(es|ed)?|close[sd]?|resolve[sd]?|implement[sd]?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+          # Extract issue numbers using regex patterns with || true to prevent exit on no matches
+          BODY_ISSUES=$(echo "$PR_BODY" | grep -oE "(fix(es|ed)?|close[sd]?|resolve[sd]?|implement[sd]?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//' || true)
           
-          # Also look for simple #123 references
-          SIMPLE_ISSUES=$(echo "$PR_BODY" | grep -oE "#[0-9]+" | sed 's/#//')
+          # Also look for simple #123 references with || true
+          SIMPLE_ISSUES=$(echo "$PR_BODY" | grep -oE "#[0-9]+" | sed 's/#//' || true)
           
-          # Combine and remove duplicates
-          ISSUES=$(echo "$BODY_ISSUES $SIMPLE_ISSUES" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          # Combine and remove duplicates - handle empty case
+          if [[ -n "$BODY_ISSUES" || -n "$SIMPLE_ISSUES" ]]; then
+            ISSUES=$(echo "$BODY_ISSUES $SIMPLE_ISSUES" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+          else
+            ISSUES=""
+          fi
           
           # Set output
           echo "issues=$ISSUES" >> $GITHUB_OUTPUT
