@@ -2,7 +2,6 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -18,6 +17,7 @@
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -537,7 +537,7 @@ namespace compiler::helios {
 			if (pst_ref.getLogger()->good()) {
 				return { pst_ref.getRootElement() };
 			} else {
-				return errors::HError(
+				return query::detail::errors::QError(
 					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
 				);
 			}

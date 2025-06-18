@@ -6,7 +6,7 @@
 namespace compiler::helios {
 
 
-	errors::HResult<SymbolList, errors::Failed> lookupChain(
+	query::detail::errors::QResult<SymbolList, errors::Failed> lookupChain(
 		query::Context& ctx, const LookupChainKey& key
 	) {
 		CORE_ASSERT(!key.names.empty(), "lookupChain received zero names");

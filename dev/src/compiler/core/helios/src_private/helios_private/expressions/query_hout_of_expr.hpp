@@ -1,15 +1,16 @@
 #pragma once
 
 #include <helios/helios_errors.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <pst_parser/elements/elements_list.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 
-	using ExprConstructionResult = errors::HResult<base::Box<code::Expr>, errors::Failed>;
+	using ExprConstructionResult
+		= query::detail::errors::QResult<base::Box<code::Expr>, errors::Failed>;
 
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr.

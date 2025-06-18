@@ -3,10 +3,10 @@
 #include "interface.hpp"
 
 #include <helios/helios_errors.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 #include <query_framework/context_fd.hpp>
+#include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios {
@@ -22,7 +22,7 @@ namespace compiler::helios {
 	 * a list of names that are assumed to form expression of form `name1.name2.name3...`.
 	 * It is currently used for looking up symbols in usings/aliases.
 	 */
-	errors::HResult<SymbolList, errors::Failed> lookupChain(
+	query::detail::errors::QResult<SymbolList, errors::Failed> lookupChain(
 		query::Context& ctx, const LookupChainKey& key
 	);
 }

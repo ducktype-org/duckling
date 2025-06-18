@@ -3,9 +3,9 @@
 #include "../mir_structure/mir_structure.hpp"
 
 #include <helios/helios_errors.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/hout/hout.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::mir {
 
@@ -17,7 +17,8 @@ namespace compiler::mir {
 		u64 queryUnstablePerfectHash() const;
 	};
 
-	using LowerToMirFunctionResult = helios::errors::HResult<Function, helios::errors::Failed>;
+	using LowerToMirFunctionResult
+		= query::detail::errors::QResult<Function, helios::errors::Failed>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction
@@ -34,7 +35,7 @@ namespace compiler::mir {
 	};
 
 	using LowerGlobalDataToMirFunctionResult
-		= helios::errors::HResult<Function, helios::errors::Failed>;
+		= query::detail::errors::QResult<Function, helios::errors::Failed>;
 
 	/**
 	 * @brief Creates a ctor function for a global data.

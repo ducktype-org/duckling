@@ -1,15 +1,15 @@
 #pragma once
 
 #include <helios/helios_errors.hpp>
-#include <helios/helios_result.hpp>
 #include <pst_parser/elements/elements_list.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {
 
-	using TypeEval_Result = errors::HResult<tsh::SymbolType<>, errors::Failed>;
+	using TypeEval_Result = query::detail::errors::QResult<tsh::SymbolType<>, errors::Failed>;
 
 	/**
 	 * Given the PST expression, parses it and evaluates this expression to a type.

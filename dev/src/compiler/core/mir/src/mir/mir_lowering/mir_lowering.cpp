@@ -8,7 +8,6 @@
 
 #include "mir_lifetimes.hpp"
 
-#include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -18,6 +17,7 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
@@ -1245,7 +1245,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	helios::errors::HResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+	query::detail::errors::QResult<Function, helios::errors::Failed> finalizeFunctionEnd(
 		query::Context&, Function function
 	) {
 		CORE_ASSERT(
@@ -1267,7 +1267,7 @@ namespace compiler::mir {
 		} else {
 			// @todo there should be logging here of missing return value / control reaches the
 			// end of non-void function
-			return helios::errors::HError(helios::errors::Failed());
+			return query::detail::errors::QError(helios::errors::Failed());
 		}
 	}
 

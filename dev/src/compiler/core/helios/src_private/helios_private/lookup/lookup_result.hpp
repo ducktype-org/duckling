@@ -8,10 +8,10 @@
 #pragma once
 
 #include <helios/helios_errors.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 #include <query_framework/context_fd.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <base/variant.hpp>
 
@@ -59,7 +59,8 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
+		query::detail::errors::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle(
+		) const;
 
 		/**
 		 * Adds another LookupResult to self (leaves to leaves, children ot children).

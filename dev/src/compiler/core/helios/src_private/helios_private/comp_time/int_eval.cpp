@@ -13,12 +13,12 @@
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
-			Context&                             ctx;
-			errors::HResult<i64, errors::Failed> result;
+			Context&                                            ctx;
+			query::detail::errors::QResult<i64, errors::Failed> result;
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 
-			static errors::HResult<i64, errors::Failed> evaluateExpr(
+			static query::detail::errors::QResult<i64, errors::Failed> evaluateExpr(
 				Context& ctx, const code::Expr& expr
 			) {
 				EvaluateHoutExprVisitor visitor(ctx);
@@ -79,7 +79,7 @@ namespace compiler::helios {
 					result = lhs_value % rhs_value;
 					break;
 				case code::BuiltinBinary::IntegerPow:
-					result = std::pow(lhs_value, rhs_value);
+					result = static_cast<i64>(std::pow(lhs_value, rhs_value));
 					break;
 				case code::BuiltinBinary::BooleanAnd:
 					result = lhs_value and rhs_value;
@@ -88,7 +88,7 @@ namespace compiler::helios {
 					result = lhs_value or rhs_value;
 					break;
 				default:
-					result = errors::HError(errors::Failed());
+					result = query::detail::errors::QError(errors::Failed());
 					throw base::NotYetImplemented(
 						"Evaluation of different than '+-*/%**' binary operators is not "
 						"implemented yet"
@@ -106,7 +106,7 @@ namespace compiler::helios {
 					result = -result_value;
 					break;
 				default:
-					result = errors::HError(errors::Failed());
+					result = query::detail::errors::QError(errors::Failed());
 					break;
 				}
 			}
@@ -154,7 +154,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (eval.hasError()) return errors::HError(errors::Failed());
+			if (eval.hasError()) return query::detail::errors::QError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
 

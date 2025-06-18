@@ -1,7 +1,7 @@
 #pragma once
 
-#include <helios/helios_result.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <query_framework/query_result.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {
@@ -12,7 +12,7 @@ namespace compiler::helios {
 	 * @p from - expression to be coerced.
 	 * @p to - type to coerce to.
 	 */
-	errors::HResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
+	query::detail::errors::QResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
 		Box<code::Expr> from, tsh::SymbolType<> to
 	);
 }

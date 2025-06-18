@@ -523,9 +523,8 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
-			return errors::HError(errors::Failed());
+			return query::detail::errors::QError(errors::Failed());
 		}
-
 	}
 }
 

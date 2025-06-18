@@ -5,12 +5,12 @@
 #pragma once
 
 #include <helios/helios_errors.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
@@ -58,7 +58,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
 
-	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
+	using QueryDealias_Result = query::detail::errors::QResult<SymbolList, errors::Failed>;
 
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
@@ -68,7 +68,7 @@ namespace compiler::helios {
 	using PotentialParsingErrors
 		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 
-	using QueryConstValueOf_Result = errors::HResult<i64, errors::Failed>;
+	using QueryConstValueOf_Result = query::detail::errors::QResult<i64, errors::Failed>;
 
 	/**
 	 * Calculates a value of a constant.
