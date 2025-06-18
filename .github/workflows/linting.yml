@@ -97,37 +97,48 @@ jobs:
          python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose
         shell: bash
 
-      - name: Extract linked issues
+      - name: Extract linked issues via GraphQL
         id: get-issues
-        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get PR number
-          PR_NUMBER="928"
-          
-          # Get PR body with error handling
-          PR_BODY=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/ducktype-org/duckling/pulls/$PR_NUMBER" | jq -r '.body // ""') || {
-            echo "Failed to fetch PR body"
-            exit 1
-          }
-          
-          # Extract issue numbers using regex patterns with || true to prevent exit on no matches
-          BODY_ISSUES=$(echo "$PR_BODY" | grep -oE "(fix(es|ed)?|close[sd]?|resolve[sd]?|implement[sd]?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//' || true)
-          
-          # Also look for simple #123 references with || true
-          SIMPLE_ISSUES=$(echo "$PR_BODY" | grep -oE "#[0-9]+" | sed 's/#//' || true)
-          
-          # Combine and remove duplicates - handle empty case
-          if [[ -n "$BODY_ISSUES" || -n "$SIMPLE_ISSUES" ]]; then
-            ISSUES=$(echo "$BODY_ISSUES $SIMPLE_ISSUES" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')
-          else
-            ISSUES=""
-          fi
-          
-          # Set output
-          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
-          echo "Found issues: $ISSUES"
+            #!/usr/bin/env bash
+            set -euo pipefail
 
+            OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
+            REPO=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+
+            # GraphQL query do pobrania closingIssuesReferences
+            read -r -d '' QUERY << 'EOF'
+            {
+              repository(owner: "$OWNER", name: "$REPO") {
+                pullRequest(number: $PR_NUMBER) {
+                  closingIssuesReferences(first: 100) {
+                    nodes {
+                      number
+                    }
+                  }
+                }
+              }
+            }
+            EOF
+
+            # Wywołanie API
+            RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -X POST -d "{\"query\":$(jq -Rs . <<< \"$QUERY\")}" \
+              https://api.github.com/graphql)
+
+            # Parsowanie numerów issues
+            ISSUES=$(echo "$RESPONSE" \
+              | jq -r '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' \
+              | tr '\n' ' ' | sed 's/ $//')
+
+            # Zapisanie outputu
+            echo "issues=$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "Znalezione issues: $ISSUES"
+          
+      
       - name: Run issue checker
         if: steps.get-issues.outputs.issues != ''
         run: |
