@@ -16,6 +16,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -1268,7 +1269,7 @@ namespace compiler::mir {
 		} else {
 			// @todo there should be logging here of missing return value / control reaches the
 			// end of non-void function
-			return query::detail::errors::QError(helios::errors::Failed());
+			return query::QError(helios::errors::Failed());
 		}
 	}
 

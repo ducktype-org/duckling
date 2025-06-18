@@ -240,7 +240,8 @@ namespace query::detail::errors {
 		requires std::is_constructible_v<ResTp, T> constexpr QResult(const QResult<T, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
-			if (oth.hasValue()) storage = oth.value();
+			if (oth.hasValue()) storage.emplace(oth.value());
+			;
 			if (oth.hasError()) {
 				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
 					std::visit(
@@ -254,11 +255,7 @@ namespace query::detail::errors {
 
 		template<class... Args>
 		requires std::is_constructible_v<ResTp, Args...>
-		QResult(Args&&... args): storage(std::forward<Args>(args)...) {}
-
-		template<class U = ResTp>
-		requires std::is_constructible_v<ResTp, U>
-		constexpr QResult(U&& value): storage(std::forward<U>(value)) {}
+		QResult(Args&&... args): storage(std::in_place, std::forward<Args>(args)...) {}
 
 		/**
 		 * @brief Checks if QResult contains an error.
@@ -296,12 +293,12 @@ namespace query::detail::errors {
 		 * @brief Access the value as an optional.
 		 */
 		constexpr base::Optional<base::Ref<ResTp>> optValue() {
-			if (storage.has_value()) return base::Ref<ResTp>(storage.value());
+			if (storage.has_value()) return &storage.value();
 			return {};
 		}
 
 		constexpr base::Optional<base::CRef<ResTp>> optValue() const {
-			if (storage.has_value()) return base::CRef<ResTp>(storage.value());
+			if (storage.has_value()) return &storage.value();
 			return {};
 		}
 

@@ -6,6 +6,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
+#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
@@ -88,7 +89,7 @@ namespace compiler::helios {
 					result = lhs_value or rhs_value;
 					break;
 				default:
-					result = query::detail::errors::QError(errors::Failed());
+					result = query::QError(errors::Failed());
 					throw base::NotYetImplemented(
 						"Evaluation of different than '+-*/%**' binary operators is not "
 						"implemented yet"
@@ -106,7 +107,7 @@ namespace compiler::helios {
 					result = -result_value;
 					break;
 				default:
-					result = query::detail::errors::QError(errors::Failed());
+					result = query::QError(errors::Failed());
 					break;
 				}
 			}
@@ -154,7 +155,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (eval.hasError()) return query::detail::errors::QError(errors::Failed());
+			if (eval.hasError()) return query::QError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
 

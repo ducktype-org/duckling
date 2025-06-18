@@ -1,5 +1,7 @@
 #include "coercions.hpp"
 
+#include <query_framework/query_error.hpp>
+
 namespace compiler::helios {
 
 	query::detail::errors::QResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
@@ -21,7 +23,7 @@ namespace compiler::helios {
 			// without any conversions.
 			return from;
 		} else {
-			return query::detail::errors::QError{ InvalidCoercion{} };
+			return query::QError{ InvalidCoercion{} };
 		}
 	}
 }

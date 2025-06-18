@@ -3,6 +3,7 @@
 #include <helios/helios_errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/query_error.hpp>
 
 #include <base/exceptions.hpp>
 
@@ -23,8 +24,8 @@ namespace compiler::helios {
 
 	query::detail::errors::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
 	) const {
-		if (isEmpty()) return query::detail::errors::QError(errors::SymbolNotFound());
-		if (!isSingle()) return query::detail::errors::QError(errors::Ambiguity());
+		if (isEmpty()) return query::QError(errors::SymbolNotFound());
+		if (!isSingle()) return query::QError(errors::Ambiguity());
 
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 

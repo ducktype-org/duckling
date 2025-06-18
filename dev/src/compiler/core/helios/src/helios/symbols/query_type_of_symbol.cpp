@@ -8,6 +8,7 @@
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -125,7 +126,7 @@ namespace compiler::helios {
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
 					if_opt_some(visitor.symbol_type, type) { return type; }
-					return query::detail::errors::QError(errors::Failed());
+					return query::QError(errors::Failed());
 				}
 				variant_case(builtin::BuiltinFunctionData, builtin_data) {
 					return tsh::SymbolType<>(

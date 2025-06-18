@@ -1,11 +1,11 @@
 #include <query_framework/detail/query_graph/node_id.hpp>
 #include <query_framework/detail/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
 #include <query_framework/query_input_impl.hpp>
 #include <query_framework/query_int.hpp>
-#include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -635,7 +635,7 @@ private:
 
 		std::string                                           info = "Hello";
 		query::detail::errors::QResult<int, std::string_view> whoa2
-			= query::detail::errors::QError(std::string_view(info));
+			= query::QError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.hasValue());
 		ASSERT_TRUE(whoa2.hasError());
 		ASSERT_TRUE(!bool(whoa2));
@@ -649,8 +649,7 @@ private:
 
 		struct Err4 {};
 
-		query::detail::errors::QResult<int, Err2, Err4> sub_result
-			= query::detail::errors::QError(Err2());
+		query::detail::errors::QResult<int, Err2, Err4> sub_result = query::QError(Err2());
 		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
 		query::detail::errors::QResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType>
 			result(sub_result);

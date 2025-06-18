@@ -13,6 +13,7 @@
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
+#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -523,7 +524,7 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
-			return query::detail::errors::QError(errors::Failed());
+			return query::QError(errors::Failed());
 		}
 	}
 }

@@ -16,6 +16,7 @@
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -537,7 +538,7 @@ namespace compiler::helios {
 			if (pst_ref.getLogger()->good()) {
 				return { pst_ref.getRootElement() };
 			} else {
-				return query::detail::errors::QError(
+				return query::QError(
 					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
 				);
 			}

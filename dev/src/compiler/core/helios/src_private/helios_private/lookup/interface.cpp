@@ -4,6 +4,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/query_error.hpp>
 
 #include <base/variant.hpp>
 
@@ -61,7 +62,7 @@ namespace compiler::helios {
 				}
 				variant_default { CORE_PANIC("Invalid state"); }
 			}
-			return query::detail::errors::QError(errors::Failed());
+			return query::QError(errors::Failed());
 		}
 
 		const auto& symbols = get_as_single.value();
