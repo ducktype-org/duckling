@@ -89,19 +89,38 @@ jobs:
           echo "Workspace cleaned."
 
       - uses: actions/checkout@v4
-      
-      - name: Get linked issues
-        id: get-issues
-        uses: mondeja/pr-linked-issues-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run duck linter
         run: |
          git fetch origin main
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --issues "$space_separated"
+         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose
         shell: bash
+
+      - name: Extract linked issues
+        id: get-issues
+        shell: bash
+        run: |
+          # Get PR number
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          # Get PR body
+          PR_BODY=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER" | jq -r '.body // ""')
+          
+          # Extract issue numbers using regex patterns
+          # Look for common patterns like "fixes #123", "closes #456", etc.
+          BODY_ISSUES=$(echo "$PR_BODY" | grep -oE "(fix(es|ed)?|close[sd]?|resolve[sd]?|implement[sd]?)\s+#[0-9]+" | grep -oE "#[0-9]+" | sed 's/#//')
+          
+          # Also look for simple #123 references
+          SIMPLE_ISSUES=$(echo "$PR_BODY" | grep -oE "#[0-9]+" | sed 's/#//')
+          
+          # Combine and remove duplicates
+          ISSUES=$(echo "$BODY_ISSUES $SIMPLE_ISSUES" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          
+          # Set output
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+          echo "Found issues: $ISSUES"
 
       - name: Run issue checker
         if: steps.get-issues.outputs.issues != ''
@@ -112,5 +131,5 @@ jobs:
 
          git fetch origin main
          cd dev
-         python3 toolbox.py issue-checker "$space_separated"
+         python3 toolbox.py issue-checker "$space_separated" --branch origin/main --no-merge-base
         shell: bash

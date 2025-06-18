@@ -3,7 +3,7 @@ from pathlib import Path
 from .cpp_linter import get_files_for_linter
 from .helpers import log_info, log_warning, log_new_line
 
-def issue_checker_impl(issues, all: bool = False, branch: str = "origin/main", no_merge_base: bool = False):
+def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
     valid_issue_numbers = []
     for num in issues:
         num_str = str(num).strip()

@@ -849,13 +849,6 @@ def pr_validate(*args, **kwargs):
 @cli.command()
 @click.argument("issues", nargs=-1, type=str)
 @click.option(
-    "-a",
-    "--all",
-    is_flag=True,
-    default=False,
-    help="Check all files, not just the ones that are modified",
-)
-@click.option(
     "-r",
     "--branch",
     help="The branch relative to which the diff is created.",
@@ -870,9 +863,9 @@ def pr_validate(*args, **kwargs):
     "instead of the commit which is the LCA of `branch` and current branch. "
     "This feature allows to run the checker on a shallow clone.",
 )
-def issue_checker(issues, all, branch, no_merge_base):
+def issue_checker(issues, branch, no_merge_base):
     """Checks for occurrences of #issue_number in source files and prints file, line, and summary."""
-    found = issue_checker_impl(issues, all, branch, no_merge_base)
+    found = issue_checker_impl(issues, branch, no_merge_base)
     if found:
         exit_with_error("Issue checker found issues numbers related to this pull request in the code")
 
