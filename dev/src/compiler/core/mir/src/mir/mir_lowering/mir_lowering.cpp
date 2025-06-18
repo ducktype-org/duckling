@@ -1132,6 +1132,7 @@ namespace compiler::mir {
 					};
 				}
 				variant_case(LocalRef, local) { return local->type; }
+				variant_case(MirGlobal, global) { return global.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();
