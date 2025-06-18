@@ -244,7 +244,7 @@ namespace query::detail::errors {
 			if (oth.hasError()) {
 				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
 					std::visit(
-						[&](auto&& erTp) { storage = std::unexpected(ErrorType{ erTp }); },
+						[&](auto&& er_tp) { storage = std::unexpected(ErrorType{ er_tp }); },
 						oth.error()
 					);
 				else
