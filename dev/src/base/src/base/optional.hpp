@@ -184,31 +184,19 @@ namespace base {
 		requires std::is_constructible_v<T, U>
 		constexpr Optional(U&& value): private_optional(std::forward<U>(value)) {}
 
-		// Syntactic sugar: allow Optional<Ref<T>> to be constructed from T* or T&
+		// Syntactic sugar: allow Optional<Ref<T>> to be constructed from T&
 		template<class U = T>
 		constexpr Optional(
 			std::enable_if_t<std::is_same_v<U, Ref<typename U::Type>>, typename U::Type&> ref
 		):
 			  private_optional(Ref<typename U::Type>(ref)) {}
 
-		template<class U = T>
-		constexpr Optional(
-			std::enable_if_t<std::is_same_v<U, Ref<typename U::Type>>, typename U::Type*> ptr
-		):
-			  private_optional(Ref<typename U::Type>(*ptr)) {}
-
-		// Syntactic sugar: allow Optional<CRef<T>> to be constructed from const T& or const T*
+		// Syntactic sugar: allow Optional<CRef<T>> to be constructed from const T&
 		template<class U = T>
 		constexpr Optional(
 			std::enable_if_t<std::is_same_v<U, CRef<typename U::Type>>, const typename U::Type&> ref
 		):
 			  private_optional(CRef<typename U::Type>(ref)) {}
-
-		template<class U = T>
-		constexpr Optional(
-			std::enable_if_t<std::is_same_v<U, CRef<typename U::Type>>, const typename U::Type*> ptr
-		):
-			  private_optional(CRef<typename U::Type>(*ptr)) {}
 
 		template<class... Args>
 		constexpr T& emplace(Args&&... args) {
@@ -463,225 +451,6 @@ namespace base {
 
 	private:
 		std::optional<T> private_optional;
-	};
-
-	// @WARNING: This is almost an exact copy of the code above and there is pretty much nothing
-	// we can do to avoid doing it this way, mainly because std::optional<T> is not supported for
-	// T being an incomplete type.
-	template<class T>
-	class Optional<T&> final {
-	public:
-		Optional() = default;
-
-		Optional(T& value): private_optional(std::ref(value)) {}
-
-		Optional(Optional&&) noexcept            = default;
-		Optional(const Optional&)                = default;
-		Optional& operator=(Optional&&) noexcept = default;
-		Optional& operator=(const Optional&)     = default;
-
-		Optional& operator=(T&& other) {
-			private_optional = std::move(other);
-			return *this;
-		}
-
-		Optional& operator=(T& other) {
-			private_optional = std::ref(other);
-			return *this;
-		}
-
-		constexpr void reset() noexcept { private_optional.reset(); }
-
-		explicit constexpr operator bool() const { return has_value(); }
-
-		friend void swap(Optional& a, Optional& b) noexcept {
-			std::swap(a.private_optional, b.private_optional);
-		}
-
-		[[nodiscard]]
-		constexpr bool has_value() const {
-			return private_optional.has_value();
-		}
-
-		[[nodiscard]]
-		constexpr bool empty() const {
-			return !has_value();
-		}
-
-		// Accessors.
-		[[nodiscard]]
-		constexpr const T& value() const& {
-			throwOnNoValue();
-			return private_optional.value().get();
-		}
-
-		[[nodiscard]]
-		constexpr const T&& value() const&& {
-			throwOnNoValue();
-			return std::move(private_optional.value().get());
-		}
-
-		[[nodiscard]]
-		constexpr T& value() & {
-			throwOnNoValue();
-			return private_optional.value().get();
-		}
-
-		[[nodiscard]]
-		constexpr T&& value() && {
-			throwOnNoValue();
-			return std::move(private_optional.value().get());
-		}
-
-		[[nodiscard]]
-		constexpr const T& valueOr(const T& or_value) const& {
-			if (has_value()) return value();
-			return or_value;
-		}
-
-		[[nodiscard]]
-		constexpr const T&& valueOr(const T&& or_value) const&& {
-			if (has_value()) return std::move(value());
-			return std::move(or_value);
-		}
-
-		[[nodiscard]]
-		constexpr T& valueOr(T& or_value) & {
-			if (has_value()) return value();
-			return or_value;
-		}
-
-		[[nodiscard]]
-		constexpr T&& valueOr(T&& or_value) && {
-			if (has_value()) return std::move(value());
-			return std::move(or_value);
-		}
-
-		// clang-format off
-		// Turning clang-format, because it cannot format the following functions correctly.
-		[[nodiscard]]
-		constexpr const T& operator*() const& {
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr const T&& operator*() const&& {
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr T& operator*() & {
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& operator*() && {
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr const T*
-		operator->() const {
-			throwOnNoValue();
-			return &value();
-		}
-
-		[[nodiscard]]
-		constexpr T*
-		operator->() {
-			throwOnNoValue();
-			return &value();
-		}
-
-		// clang-format on
-
-		[[nodiscard]]
-		constexpr const T& expect(std::string_view message) const& {
-			if (!has_value()) CORE_PANIC(message);
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr const T&& expect(std::string_view message) const&& {
-			if (!has_value()) CORE_PANIC(message);
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr T& expect(std::string_view message) & {
-			if (!has_value()) CORE_PANIC(message);
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& expect(std::string_view message) && {
-			if (!has_value()) CORE_PANIC(message);
-			return std::move(value());
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr const T& expect(Args&&... args) const& {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return value();
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr const T&& expect(Args&&... args) const&& {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return std::move(value());
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr T& expect(Args&&... args) & {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return value();
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr T&& expect(Args&&... args) && {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return std::move(value());
-		}
-
-		template<typename Function>
-		constexpr auto map(const Function& function) const
-			-> Optional<std::invoke_result_t<Function, T>> {
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		template<typename Function>
-		constexpr auto map(const Function& function)
-			-> Optional<std::invoke_result_t<Function, T&>> {
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		template<typename Function>
-		constexpr auto flatMap(const Function& function) const
-			-> std::invoke_result_t<Function, T&> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function, T&>, Optional>);
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		template<typename Function>
-		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function, T&>, Optional>);
-			if (has_value()) return function(value());
-			return {};
-		}
-
-	private:
-		constexpr void throwOnNoValue() const {
-			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
-		}
-
-		Optional<std::reference_wrapper<T>> private_optional;
 	};
 
 	template<class U, class T>
