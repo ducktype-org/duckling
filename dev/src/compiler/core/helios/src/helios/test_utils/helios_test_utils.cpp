@@ -75,7 +75,7 @@ namespace compiler::helios::test_utils {
 			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				CORE_ASSERT(expr_tree->hasValue(), "Expr tree already set");
+				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
 				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
@@ -98,7 +98,7 @@ namespace compiler::helios::test_utils {
 			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				CORE_ASSERT(expr_tree->hasValue(), "Expr tree already set");
+				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
 				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
