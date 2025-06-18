@@ -102,39 +102,56 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           #!/usr/bin/env bash
           set -eo pipefail
 
-          OWNER=${{github.repository_owner}}
-          REPO=${{github.event.repository.name}}
-          PR_NUMBER=${{ github.event.pull_request.number }}
+          if [[ -z "$GITHUB_TOKEN" ]]; then
+            echo "[ERROR] GITHUB_TOKEN is not set!"
+            exit 1
+          fi
 
-          # Przygotowanie zapytania (zmienne będą rozwinięte)
-          read -r -d '' QUERY <<EOF
-          {
-            repository(owner: "$OWNER", name: "$REPO") {
-              pullRequest(number: $PR_NUMBER) {
+          QUERY='{
+            repository(owner: "'$OWNER'", name: "'$REPO'") {
+              pullRequest(number: '$PR_NUMBER') {
                 closingIssuesReferences(first: 100) {
                   nodes { number }
                 }
               }
             }
-          }
-          EOF
+          }'
 
-          # Wywołanie GitHub GraphQL API
           RESPONSE=$(curl -s -H "Authorization: bearer $GITHUB_TOKEN" \
-            -X POST -d "{\"query\":$(jq -Rs . <<< \"$QUERY\")}" \
+            -X POST -d "{\"query\":$(jq -Rs . <<< "$QUERY")}" \
             https://api.github.com/graphql)
 
-          # Bezpieczne parsowanie numerów issues (nawet jeśli none)
-          ISSUES=$(jq -r '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' <<<"$RESPONSE" || true \
-            | tr '\n' ' ' | sed 's/ $//')
+          echo "[DEBUG] RESPONSE: $RESPONSE"
 
-          # Zapisanie outputu
-          echo "issues=$ISSUES" >> "$GITHUB_OUTPUT"
-          echo "Znalezione issues: $ISSUES"
+          if [[ -z "$RESPONSE" ]]; then
+            echo "[ERROR] Empty response from GitHub API!"
+            exit 1
+          fi
+
+          if grep -q '"errors"' <<< "$RESPONSE"; then
+            echo "[ERROR] GraphQL error:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          set +e
+          ISSUES=$(jq -r '.data.repository.pullRequest.closingIssuesReferences.nodes[].number' <<<"$RESPONSE" 2>/dev/null | tr '\n' ' ' | sed 's/ $//')
+          set -e
+
+          if [[ -z "$ISSUES" ]]; then
+            echo "[INFO] No issues found for PR #$PR_NUMBER."
+          else
+            echo "issues=$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "[INFO] Znalezione issues: $ISSUES"
+          fi
+
       
       - name: Run issue checker
         if: steps.get-issues.outputs.issues != ''
