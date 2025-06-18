@@ -89,10 +89,28 @@ jobs:
           echo "Workspace cleaned."
 
       - uses: actions/checkout@v4
+      
+      - name: Get linked issues
+        id: get-issues
+        uses: mondeja/pr-linked-issues-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run duck linter
         run: |
          git fetch origin main
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose
+         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --issues "$space_separated"
+        shell: bash
+
+      - name: Run issue checker
+        if: steps.get-issues.outputs.issues != ''
+        run: |
+         # Convert comma-separated list to space-separated
+         issues="${{ steps.get-issues.outputs.issues }}"
+         space_separated=$(echo "$issues" | tr ',' ' ')
+
+         git fetch origin main
+         cd dev
+         python3 toolbox.py issue-checker "$space_separated"
         shell: bash
