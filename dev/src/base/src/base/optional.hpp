@@ -133,6 +133,13 @@
 	if (!optional.has_value()) POP_DIAGNOSTIC
 
 namespace base {
+
+	template<class T>
+	class Ref;
+
+	template<class T>
+	using CRef = Ref<const T>;
+
 	/**
 	 * base::Optional is analogous to std::optional, but better.
 	 * As its name naturally suggests,
@@ -146,10 +153,16 @@ namespace base {
 	 * base::Optional does not inherit from std::optional, because std::optional doesn't throw on
 	 * null-value access, but base::optional does.
 	 *
-	 * @tparam T type of stored value. It can be a reference.
+	 * @tparam T type of stored value. It can be a value or a Ref<T> for non-owning references.
+	 *
+	 * For non-owning references, use base::Optional<Ref<T>> instead of base::Optional<T&>.
+	 * Example:
+	 *   A a;
+	 *   base::Optional<Ref<A>> opt = &a;
+	 *   if (opt) { ... }
 	 */
 	template<class T>
-	class Optional final {
+	requires(!std::is_reference_v<T>) class Optional final {
 	public:
 		Optional()  = default;
 		~Optional() = default;
@@ -170,6 +183,32 @@ namespace base {
 		template<class U = T>
 		requires std::is_constructible_v<T, U>
 		constexpr Optional(U&& value): private_optional(std::forward<U>(value)) {}
+
+		// Syntactic sugar: allow Optional<Ref<T>> to be constructed from T* or T&
+		template<class U = T>
+		constexpr Optional(
+			std::enable_if_t<std::is_same_v<U, Ref<typename U::Type>>, typename U::Type&> ref
+		):
+			  private_optional(Ref<typename U::Type>(ref)) {}
+
+		template<class U = T>
+		constexpr Optional(
+			std::enable_if_t<std::is_same_v<U, Ref<typename U::Type>>, typename U::Type*> ptr
+		):
+			  private_optional(Ref<typename U::Type>(*ptr)) {}
+
+		// Syntactic sugar: allow Optional<CRef<T>> to be constructed from const T& or const T*
+		template<class U = T>
+		constexpr Optional(
+			std::enable_if_t<std::is_same_v<U, CRef<typename U::Type>>, const typename U::Type&> ref
+		):
+			  private_optional(CRef<typename U::Type>(ref)) {}
+
+		template<class U = T>
+		constexpr Optional(
+			std::enable_if_t<std::is_same_v<U, CRef<typename U::Type>>, const typename U::Type*> ptr
+		):
+			  private_optional(CRef<typename U::Type>(*ptr)) {}
 
 		template<class... Args>
 		constexpr T& emplace(Args&&... args) {

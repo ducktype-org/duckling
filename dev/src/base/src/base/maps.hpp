@@ -55,16 +55,16 @@ namespace base {
 		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
 
 		template<class K = KEY_T>
-		Optional<DATA_T&> atMaybe(K&& key) {
+		Optional<Ref<DATA_T>> atMaybe(K&& key) {
 			auto&& key_val = ContainerType::find(std::forward<K>(key));
-			if (key_val != ContainerType::end()) return key_val->second;
+			if (key_val != ContainerType::end()) return &key_val->second;
 			return {};
 		}
 
 		template<class K = KEY_T>
-		Optional<const DATA_T&> atMaybe(K&& key) const {
+		Optional<CRef<DATA_T>> atMaybe(K&& key) const {
 			auto&& key_val = ContainerType::find(std::forward<K>(key));
-			if (key_val != ContainerType::end()) return key_val->second;
+			if (key_val != ContainerType::end()) return &key_val->second;
 			return {};
 		}
 
@@ -148,13 +148,13 @@ namespace base {
 			throw LogicError("No value assigned to key in VectorMap");
 		}
 
-		Optional<DATA_T&> atMaybe(KEY_T key) {
-			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+		Optional<Ref<DATA_T>> atMaybe(KEY_T key) {
+			if (static_cast<usize>(key) < map.size()) return &*map.at(static_cast<usize>(key));
 			return {};
 		}
 
-		Optional<const DATA_T&> atMaybe(KEY_T key) const {
-			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+		Optional<CRef<DATA_T>> atMaybe(KEY_T key) const {
+			if (static_cast<usize>(key) < map.size()) return &*map.at(static_cast<usize>(key));
 			return {};
 		}
 

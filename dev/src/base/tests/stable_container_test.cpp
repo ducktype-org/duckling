@@ -80,7 +80,7 @@ private:
 
 		ASSERT_EQUAL("test", map["lol"]);
 		ASSERT_EQUAL(true, map.atMaybe("lol2").empty());
-		ASSERT_EQUAL("test", map.atMaybe("lol").value());
+		ASSERT_EQUAL("test", *map.atMaybe("lol").value());
 
 		map.clear();
 		ASSERT_EQUAL(0, map.size());
