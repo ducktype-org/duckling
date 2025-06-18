@@ -8,8 +8,7 @@
 
 namespace compiler::helios {
 
-	using QuerySymbolType_Result
-		= query::detail::errors::QResult<tsh::SymbolType<>, errors::Failed>;
+	using QuerySymbolType_Result = query::QResult<tsh::SymbolType<>, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.

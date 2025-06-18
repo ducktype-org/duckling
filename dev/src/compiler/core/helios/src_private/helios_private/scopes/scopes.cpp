@@ -16,7 +16,6 @@
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 

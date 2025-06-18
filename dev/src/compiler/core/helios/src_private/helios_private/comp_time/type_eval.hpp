@@ -9,7 +9,7 @@
 
 namespace compiler::helios {
 
-	using TypeEval_Result = query::detail::errors::QResult<tsh::SymbolType<>, errors::Failed>;
+	using TypeEval_Result = query::QResult<tsh::SymbolType<>, errors::Failed>;
 
 	/**
 	 * Given the PST expression, parses it and evaluates this expression to a type.

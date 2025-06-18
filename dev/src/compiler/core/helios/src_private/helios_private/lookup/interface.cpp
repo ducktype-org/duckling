@@ -4,7 +4,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
-#include <query_framework/query_error.hpp>
 
 #include <base/variant.hpp>
 
@@ -39,7 +38,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::detail::errors::QResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
+	query::QResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,

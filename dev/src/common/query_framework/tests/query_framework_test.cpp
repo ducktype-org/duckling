@@ -1,11 +1,11 @@
 #include <query_framework/detail/query_graph/node_id.hpp>
 #include <query_framework/detail/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
 #include <query_framework/query_input_impl.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -548,7 +548,7 @@ private:
 	}
 
 	void testQueryResultConcept() {
-		using namespace query::detail::errors::impl;
+		using namespace query::impl;
 
 		static_assert(std::is_same_v<
 					  std::variant<int, float, bool>,
@@ -600,25 +600,23 @@ private:
 	}
 
 	void testQueryResult() {
-		using namespace query::detail::errors;
+		using namespace query;
 
-		static_assert(std::is_same_v<query::detail::errors::QResult<int, int>::ErrorType, int>);
+		static_assert(std::is_same_v<query::QResult<int, int>::ErrorType, int>);
+		static_assert(std::is_same_v<query::QResult<int, std::variant<int>>::ErrorType, int>);
 		static_assert(std::is_same_v<
-					  query::detail::errors::QResult<int, std::variant<int>>::ErrorType,
-					  int>);
-		static_assert(std::is_same_v<
-					  query::detail::errors::QResult<int, int, std::variant<float>>::ErrorType,
+					  query::QResult<int, int, std::variant<float>>::ErrorType,
 					  std::variant<int, float>>);
 		static_assert(std::is_same_v<
-					  query::detail::errors::QResult<int, int, bool>::ErrorType,
+					  query::QResult<int, int, bool>::ErrorType,
 					  std::variant<int, bool>>);
 		static_assert(std::is_same_v<
-					  query::detail::errors::QResult<int, int, int, int, float>::ErrorType,
+					  query::QResult<int, int, int, int, float>::ErrorType,
 					  std::variant<int, float>>);
 		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
 		// impl::FlattenVariant_t<typename T>)
 
-		query::detail::errors::QResult<int, float> hr1 = 1;
+		query::QResult<int, float> hr1 = 1;
 		ASSERT_TRUE(hr1.hasValue());
 		ASSERT_TRUE(bool(hr1));
 		ASSERT_TRUE(!hr1.hasError());
@@ -629,13 +627,12 @@ private:
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
-		query::detail::errors::QResult<std::string, float> hr2 = "Value";
-		base::Optional<std::string> stolen_opt                 = std::move(hr2).optValueMove();
+		query::QResult<std::string, float> hr2        = "Value";
+		base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
 		ASSERT_EQUAL("Value", stolen_opt);
 
-		std::string                                           info = "Hello";
-		query::detail::errors::QResult<int, std::string_view> whoa2
-			= query::QError(std::string_view(info));
+		std::string                           info  = "Hello";
+		query::QResult<int, std::string_view> whoa2 = query::QError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.hasValue());
 		ASSERT_TRUE(whoa2.hasError());
 		ASSERT_TRUE(!bool(whoa2));
@@ -649,10 +646,9 @@ private:
 
 		struct Err4 {};
 
-		query::detail::errors::QResult<int, Err2, Err4> sub_result = query::QError(Err2());
+		query::QResult<int, Err2, Err4> sub_result = query::QError(Err2());
 		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
-		query::detail::errors::QResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType>
-			result(sub_result);
+		query::QResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
 		static_assert(std::is_same_v<
 					  decltype(result)::ErrorType,
 					  std::variant<Err1, Err3, Err2, Err4>>);

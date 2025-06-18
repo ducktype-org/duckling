@@ -58,7 +58,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
 
-	using QueryDealias_Result = query::detail::errors::QResult<SymbolList, errors::Failed>;
+	using QueryDealias_Result = query::QResult<SymbolList, errors::Failed>;
 
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
@@ -68,7 +68,7 @@ namespace compiler::helios {
 	using PotentialParsingErrors
 		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 
-	using QueryConstValueOf_Result = query::detail::errors::QResult<i64, errors::Failed>;
+	using QueryConstValueOf_Result = query::QResult<i64, errors::Failed>;
 
 	/**
 	 * Calculates a value of a constant.

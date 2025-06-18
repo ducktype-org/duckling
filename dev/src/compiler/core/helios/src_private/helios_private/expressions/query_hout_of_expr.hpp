@@ -9,8 +9,7 @@
 
 namespace compiler::helios {
 
-	using ExprConstructionResult
-		= query::detail::errors::QResult<base::Box<code::Expr>, errors::Failed>;
+	using ExprConstructionResult = query::QResult<Box<code::Expr>, errors::Failed>;
 
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr.

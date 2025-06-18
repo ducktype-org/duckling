@@ -1,10 +1,8 @@
 #include "coercions.hpp"
 
-#include <query_framework/query_error.hpp>
-
 namespace compiler::helios {
 
-	query::detail::errors::QResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
+	query::QResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
 		Box<code::Expr> from, tsh::SymbolType<> to
 	) {
 		// this implementation is a mock:

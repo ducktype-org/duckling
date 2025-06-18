@@ -8,7 +8,7 @@
 
 namespace compiler::helios {
 
-	using IntEval_Result = query::detail::errors::QResult<i64, errors::Failed>;
+	using IntEval_Result = query::QResult<i64, errors::Failed>;
 
 	/**
 	 * Query that comp-time evaluates an expresion.

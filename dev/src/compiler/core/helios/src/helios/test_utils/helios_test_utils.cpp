@@ -72,11 +72,11 @@ namespace compiler::helios::test_utils {
 
 	Box<code::Expr> getExprOfConst(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			base::Optional<query::detail::errors::QResult<base::Box<code::Expr>, errors::Failed>>
-				expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
+				CORE_ASSERT(expr_tree->hasValue(), "Expr tree already set");
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
 		public:
@@ -95,11 +95,11 @@ namespace compiler::helios::test_utils {
 
 	Box<code::Expr> getExprOfVariable(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			base::Optional<query::detail::errors::QResult<base::Box<code::Expr>, errors::Failed>>
-				expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
+				CORE_ASSERT(expr_tree->hasValue(), "Expr tree already set");
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
 		public:

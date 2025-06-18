@@ -16,7 +16,6 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -1247,7 +1246,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	query::detail::errors::QResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+	query::QResult<Function, helios::errors::Failed> finalizeFunctionEnd(
 		query::Context&, Function function
 	) {
 		CORE_ASSERT(

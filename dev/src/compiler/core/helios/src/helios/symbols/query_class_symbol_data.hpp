@@ -44,8 +44,7 @@ namespace compiler::helios {
 		std::vector<tsh::AbstractType> implements;
 	};
 
-	using QueryClassSymbolData_Result
-		= query::detail::errors::QResult<ClassSymbolData, errors::Failed>;
+	using QueryClassSymbolData_Result = query::QResult<ClassSymbolData, errors::Failed>;
 
 	/**
 	 * @brief Query all the information about a class definition.

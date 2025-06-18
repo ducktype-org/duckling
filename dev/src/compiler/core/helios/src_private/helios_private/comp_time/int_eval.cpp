@@ -6,7 +6,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
-#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
@@ -14,12 +13,12 @@
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
-			Context&                                            ctx;
-			query::detail::errors::QResult<i64, errors::Failed> result;
+			Context&                            ctx;
+			query::QResult<i64, errors::Failed> result;
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 
-			static query::detail::errors::QResult<i64, errors::Failed> evaluateExpr(
+			static query::QResult<i64, errors::Failed> evaluateExpr(
 				Context& ctx, const code::Expr& expr
 			) {
 				EvaluateHoutExprVisitor visitor(ctx);

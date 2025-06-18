@@ -11,7 +11,6 @@
 #include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {

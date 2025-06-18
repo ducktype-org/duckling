@@ -7,7 +7,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
-#include <query_framework/query_error.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -22,7 +21,7 @@ namespace compiler::helios {
 		struct CouldNotEvalShortPath {};
 
 		using ShortPathResult
-			= query::detail::errors::QResult<tsh::SymbolType<>, CouldNotEvalShortPath, errors::Failed>;
+			= query::QResult<tsh::SymbolType<>, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * A visitor to extract types from simple expression fast (i.e. short path it).

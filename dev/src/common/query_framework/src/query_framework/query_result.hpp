@@ -12,7 +12,7 @@
 #include <utility>
 #include <variant>
 
-namespace query::detail::errors {
+namespace query {
 	namespace impl {
 		namespace flatten {
 			// Thanks for showing how to unpack and concat variants:
@@ -241,7 +241,7 @@ namespace query::detail::errors {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
 			if (oth.hasValue()) storage.emplace(oth.value());
-			;
+
 			if (oth.hasError()) {
 				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
 					std::visit(
@@ -384,12 +384,12 @@ namespace query::detail::errors {
  * **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
  * before it, you need to put the call inside curly braces. Luckily, it will NOT COMPILE otherwise.
  */
-#define UNPACK_RESULT(var, new_value)                                                         \
-	auto&& RES_VAR_NAME = new_value;                                                          \
-	if (!RES_VAR_NAME.hasValue()) return query::detail::errors::QError(RES_VAR_NAME.error()); \
+#define UNPACK_RESULT(var, new_value)                                         \
+	auto&& RES_VAR_NAME = new_value;                                          \
+	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
 	var RES_VAR_NAME.value()
 
-#define UNPACK_RESULT_MOVE(var, new_value)                                                    \
-	auto&& RES_VAR_NAME = new_value;                                                          \
-	if (!RES_VAR_NAME.hasValue()) return query::detail::errors::QError(RES_VAR_NAME.error()); \
+#define UNPACK_RESULT_MOVE(var, new_value)                                    \
+	auto&& RES_VAR_NAME = new_value;                                          \
+	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
 	var std::move(RES_VAR_NAME).value()
