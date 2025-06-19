@@ -7,6 +7,6 @@ add_library(Driver
 	src/driver/backend_driver/dvm_driver.cpp
 )
 
-make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts)
+make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts "-lstdc++exp")
 
-duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
+duck_add_test(compiler driver tests/driver_test.cpp USES Base Driver Artifacts)

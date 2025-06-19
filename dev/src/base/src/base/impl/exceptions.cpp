@@ -1,8 +1,21 @@
 #include "../exceptions.hpp"
 
 #include <ostream>
+#include <version>
+
+#ifdef __cpp_lib_stacktrace
+	#include <stacktrace>
+#endif
 
 namespace base {
+
+	std::string getCurrentStackTrace() {
+		#ifdef __cpp_lib_stacktrace
+			return std::to_string(std::stacktrace::current());
+		#else
+			return "Stack trace is not supported in this compiler and/or system.";
+		#endif
+	}
 
 	Panic::Panic(std::string position, std::string reason):
 		  position(std::move(position)),
@@ -15,7 +28,9 @@ namespace base {
 		what_str.clear();
 		what_str += "Unexpected compiler error occurred:\n";
 		what_str += getPosition() + ":\n";
-		what_str += reason + ":\n";
+		what_str += reason + ":\n\n";
+		what_str +=  "Stacktrace:\n";
+		what_str += getCurrentStackTrace();
 	}
 
 	const std::string& Panic::getPosition() const { return position; }
