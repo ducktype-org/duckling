@@ -1,5 +1,5 @@
-var c: i32 = 20;
-var g: i32 = hoo();
+var c: i64 = 20 + g;
+var g: i64 = hoo();
 
 fun foo() = {
 	c = g;
@@ -19,6 +19,8 @@ fun goo() = {
 	hoo() = 15;
 }
 
-fun hoo() -> i32 = {
+fun hoo() -> i64 = {
+	c = c + 1;
+	g = c + hoo();
 	return 33;
 }

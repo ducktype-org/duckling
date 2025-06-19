@@ -5,6 +5,8 @@ add_library(QueryFramework
 	src/query_framework/detail/query_data/query_id.cpp
 	src/query_framework/utils/with_context_do.cpp
 	src/query_framework/context.cpp
+
+	src/query_framework/query_result.hpp
 )
 
 make_module(QueryFramework USES Base Diagnostic)

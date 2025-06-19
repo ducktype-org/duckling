@@ -7,10 +7,12 @@
 #include <base/optional.hpp>
 #include <base/ref.hpp>
 
+#include <expected>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
-namespace compiler::helios::errors {
+namespace query {
 	namespace impl {
 		namespace flatten {
 			// Thanks for showing how to unpack and concat variants:
@@ -171,8 +173,8 @@ namespace compiler::helios::errors {
 	 * @brief Our implementation of std::unexpected for HELIOS purposes.
 	 */
 	template<class T>
-	struct HError {
-		explicit constexpr HError(const T& t): value(t) {}
+	struct QError {
+		explicit constexpr QError(const T& t): value(t) {}
 
 		T value;
 	};
@@ -181,7 +183,7 @@ namespace compiler::helios::errors {
 	 * @brief Our implementation of std::expected for HELIOS purposes.
 	 */
 	template<class ResTp, class ErrTp1, class... ErrTps>
-	requires(!std::is_reference_v<ResTp>) class HResult {
+	requires(!std::is_reference_v<ResTp>) class QResult {
 	public:
 		using ErrorTypeStruct = SingleVariantExtractor<UniqueTypesVariant_t<ErrTp1, ErrTps...>>;
 		using ErrorIsVariant  = std::is_base_of<std::true_type, ErrorTypeStruct>;
@@ -190,9 +192,9 @@ namespace compiler::helios::errors {
 		 * of unique types, otherwise error_type is equal to the provided type. Error list is
 		 * variant-transparent.
 		 *
-		 * HResult<T, int>				-> error_type == int
-		 * HResult<T, int, float> 		-> error_type == std::variant<int, float>
-		 * HResult<T, int, float, std::variant<int, bool>>
+		 * QResult<T, int>				-> error_type == int
+		 * QResult<T, int, float> 		-> error_type == std::variant<int, float>
+		 * QResult<T, int, float, std::variant<int, bool>>
 		 * 		-> error_type == std::variant<float, int, bool>
 		 *
 		 * In the last example, notice unique types, and also a modified order (implementation
@@ -201,68 +203,78 @@ namespace compiler::helios::errors {
 		using ErrorType = ErrorTypeStruct::type;
 
 		/**
-		 * @brief Constructor from HError<T>, where T is not a variant
+		 * @brief Constructor from QError<T>, where T is not a variant
 		 */
 		template<class T>
 		requires(not ErrorIsVariant::value or impl::IsInVariant<T, ErrorType>::value)
-		constexpr HResult(const HError<T>& err): error_storage(err.value) {}
+		constexpr QResult(const QError<T>& err): storage(std::unexpected(err.value)) {}
 
 		/**
-		 * @brief Constructor from HError<T>, where T is a variant
+		 * @brief Constructor from QError<T>, where T is a variant
 		 */
 		template<class T>
-		constexpr HResult(const HError<T>& err) {
-			std::visit([&](auto&& err_value) { error_storage = err_value; }, err.value);
+		constexpr QResult(const QError<T>& err) {
+			std::visit([&](auto&& err_value) { storage = std::unexpected(err_value); }, err.value);
 		}
 
-		constexpr HResult(HResult&&) noexcept            = default;
-		constexpr HResult(const HResult&)                = default;
-		constexpr HResult& operator=(HResult&&) noexcept = default;
-		constexpr HResult& operator=(const HResult&)     = default;
+		constexpr QResult(QResult&&) noexcept            = default;
+		constexpr QResult(const QResult&)                = default;
+		constexpr QResult& operator=(QResult&&) noexcept = default;
+		constexpr QResult& operator=(const QResult&)     = default;
+
+		constexpr QResult& operator=(const ResTp& value) {
+			storage = value;
+			return *this;
+		}
+
+		constexpr QResult& operator=(ResTp&& value) {
+			storage = std::move(value);
+			return *this;
+		}
 
 		/**
-		 * @brief Copy constructor from HResult, where Ts... are a subset of this HResult error
+		 * @brief Copy constructor from QResult, where Ts... are a subset of this QResult error
 		 * types
 		 */
 		template<class T, class... Ts>
-		requires std::is_constructible_v<base::Optional<ResTp>, T>
-		constexpr HResult(const HResult<T, Ts...>& oth) {
+		requires std::is_constructible_v<ResTp, T> constexpr QResult(const QResult<T, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
-			if (oth.hasValue()) value_storage = oth.value();
+			if (oth.hasValue()) storage.emplace(oth.value());
+
 			if (oth.hasError()) {
-				if constexpr (HResult<T, Ts...>::ErrorIsVariant::value)
-					std::visit([&](auto&& erTp) { error_storage = ErrorType{ erTp }; }, oth.error());
+				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
+					std::visit(
+						[&](auto&& er_tp) { storage = std::unexpected(ErrorType{ er_tp }); },
+						oth.error()
+					);
 				else
-					error_storage = oth.error();
+					storage = std::unexpected(oth.error());
 			}
 		}
 
-		/**
-		 * @brief Constructor of the main value by forwarding arguments
-		 */
 		template<class... Args>
-		requires std::is_constructible_v<base::Optional<ResTp>, Args...>
-		constexpr HResult(Args&&... args): value_storage(std::forward<Args>(args)...) {}
+		requires std::is_constructible_v<ResTp, Args...>
+		QResult(Args&&... args): storage(std::in_place, std::forward<Args>(args)...) {}
 
 		/**
-		 * @brief Checks if HResult contains an error.
+		 * @brief Checks if QResult contains an error.
 		 */
 		[[nodiscard]]
 		constexpr bool hasError() const {
-			return error_storage.has_value();
+			return !storage.has_value();
 		}
 
 		/**
-		 * @brief Checks if HResult contains a value.
+		 * @brief Checks if QResult contains a value.
 		 */
 		[[nodiscard]]
 		constexpr bool hasValue() const {
-			return value_storage.has_value();
+			return storage.has_value();
 		}
 
 		/**
-		 * @brief Checks if HResult contains a value.
+		 * @brief Checks if QResult contains a value.
 		 */
 		explicit constexpr operator bool() const { return hasValue(); }
 
@@ -281,101 +293,80 @@ namespace compiler::helios::errors {
 		 * @brief Access the value as an optional.
 		 */
 		constexpr base::Optional<base::Ref<ResTp>> optValue() {
-			if_opt_some(value_storage, value) return &value;
+			if (storage.has_value()) return &storage.value();
 			return {};
 		}
 
 		constexpr base::Optional<base::CRef<ResTp>> optValue() const {
-			if_opt_some(value_storage, value) return &value;
+			if (storage.has_value()) return &storage.value();
 			return {};
 		}
 
-		constexpr base::Optional<ResTp> optValueMove() && { return std::move(value_storage); }
+		constexpr base::Optional<ResTp> optValueMove() && {
+			if (storage.has_value()) return std::move(storage.value());
+			return {};
+		}
 
 		/**
 		 * @brief Access the value, throw on no value with a message.
 		 */
 		constexpr const ResTp& expect(std::string_view message) const& {
-			_throwOnInvalidStateAccess();
-			return value_storage.expect(message);
+			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			return storage.value();
 		}
 
 		constexpr const ResTp&& expect(std::string_view message) const&& {
-			_throwOnInvalidStateAccess();
-			return std::move(value_storage.expect(message));
+			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			return std::move(storage.value());
 		}
 
 		constexpr ResTp& expect(std::string_view message) & {
-			_throwOnInvalidStateAccess();
-			return value_storage.expect(message);
+			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			return storage.value();
 		}
 
 		constexpr ResTp&& expect(std::string_view message) && {
-			_throwOnInvalidStateAccess();
-			return std::move(value_storage.expect(message));
+			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			return std::move(storage.value());
 		}
 
 		/**
 		 * @brief Access the error, throw on no error.
 		 */
-		constexpr const ErrorType& error() const& {
-			_throwOnInvalidStateAccess();
-			return error_storage.expect("Result's error is empty!");
-		}
+		constexpr const ErrorType& error() const& { return storage.error(); }
 
-		constexpr const ErrorType&& error() const&& {
-			_throwOnInvalidStateAccess();
-			return std::move(error_storage.expect("Result's error is empty!"));
-		}
+		constexpr const ErrorType&& error() const&& { return std::move(storage.error()); }
 
-		constexpr ErrorType& error() & {
-			_throwOnInvalidStateAccess();
-			return error_storage.expect("Result's error is empty!");
-		}
+		constexpr ErrorType& error() & { return storage.error(); }
 
-		constexpr ErrorType&& error() && {
-			_throwOnInvalidStateAccess();
-			return std::move(error_storage.expect("Result's error is empty!"));
-		}
+		constexpr ErrorType&& error() && { return storage.error(); }
 
 		/**
 		 * @brief Access the value, throw the error if no value.
 		 */
 		constexpr const ResTp& valueOrThrow() const& {
-			_throwOnInvalidStateAccess();
 			if (hasError()) throw error();
-			return value_storage.value();
+			return storage.value();
 		}
 
 		constexpr const ResTp&& valueOrThrow() const&& {
-			_throwOnInvalidStateAccess();
 			if (hasError()) throw error();
-			return std::move(value_storage.value());
+			return std::move(storage.value());
 		}
 
 		constexpr ResTp& valueOrThrow() & {
-			_throwOnInvalidStateAccess();
 			if (hasError()) throw error();
-			return value_storage.value();
+			return storage.value();
 		}
 
 		constexpr ResTp&& valueOrThrow() && {
-			_throwOnInvalidStateAccess();
 			if (hasError()) throw error();
-			return std::move(value_storage.value());
+			return std::move(storage.value());
 		}
 
 
 	private:
-		// @TODO: If C++ >= 23 -> change to std::expected
-		base::Optional<ErrorType> error_storage;
-		base::Optional<ResTp>     value_storage;
-
-		void _throwOnInvalidStateAccess() const {
-			CORE_ASSERT(
-				error_storage.has_value() ^ value_storage.has_value(), "HResult has an invalid state"
-			);
-		}
+		std::expected<ResTp, ErrorType> storage;
 	};
 }
 
@@ -393,12 +384,12 @@ namespace compiler::helios::errors {
  * **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
  * before it, you need to put the call inside curly braces. Luckily, it will NOT COMPILE otherwise.
  */
-#define UNPACK_RESULT(var, new_value)                                                            \
-	auto&& RES_VAR_NAME = new_value;                                                             \
-	if (!RES_VAR_NAME.hasValue()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
+#define UNPACK_RESULT(var, new_value)                                         \
+	auto&& RES_VAR_NAME = new_value;                                          \
+	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
 	var RES_VAR_NAME.value()
 
-#define UNPACK_RESULT_MOVE(var, new_value)                                                       \
-	auto&& RES_VAR_NAME = new_value;                                                             \
-	if (!RES_VAR_NAME.hasValue()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
+#define UNPACK_RESULT_MOVE(var, new_value)                                    \
+	auto&& RES_VAR_NAME = new_value;                                          \
+	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
 	var std::move(RES_VAR_NAME).value()
