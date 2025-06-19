@@ -108,16 +108,27 @@ void server(i32 port) {
 		try {
 			const auto  path    = base64::decode_into<std::string>(base64_path);
 			const auto  content = base64::decode_into<std::string>(base64_content);
-			// TODO: ask for a path concat function in the VFS
+			
 			if (vfs->createFile(root + path)) {
-				// New file
+				// new file
 				vfs->writeFile(root + path, content);
 			} else {
 				// Existing File
-				// This may look useless now, but when we get incremental compilation it will go into effect here
 				vfs->writeFile(root + path, content);
 			}
 			
+
+
+
+
+
+
+			
+			
+			
+			const auto& file    = fs::FilePath::createTempFile(content);
+			files.erase(path);
+			files.emplace(path, file);
 			return crow::response(200, "OK");
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
