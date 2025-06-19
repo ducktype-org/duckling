@@ -545,7 +545,7 @@ namespace compiler::helios {
 
 		static auto load(UKHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
-				return QResWithACD{ extractResult(value.value().data), value->acd };
+				return QResWithACD{ extractResult(value.value()->data), (value.value())->acd };
 			return {};
 		}
 

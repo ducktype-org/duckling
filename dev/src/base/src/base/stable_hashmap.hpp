@@ -44,8 +44,8 @@ namespace base {
 		 * @param key Data key
 		 * @return An optional with a reference to the data.
 		 */
-		Optional<DATA_T&> atMaybe(const KEY_T& key) {
-			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
+		Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) {
+			if_opt_some(data.atMaybe(key), ptr) { return (*ptr).refMut(); }
 			return {};
 		}
 
@@ -55,8 +55,8 @@ namespace base {
 		 * @param key Data key
 		 * @return An optional with a const reference to the data.
 		 */
-		Optional<const DATA_T&> atMaybe(const KEY_T& key) const {
-			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
+		Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const {
+			if_opt_some(data.atMaybe(key), ptr) { return (*ptr).ref(); }
 			return {};
 		}
 
@@ -68,7 +68,7 @@ namespace base {
 		 */
 		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const
 			requires std::is_copy_constructible_v<DATA_T> {
-			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
+			if_opt_some(data.atMaybe(key), ptr) { return *(*ptr); }
 			return {};
 		}
 

@@ -296,7 +296,7 @@ namespace vm {
 				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
 			);
 			const vm::InheritanceMetadata& inh_metadata
-				= *inh_meta_pointer->getInheritanceMetadata();
+				= *inh_meta_pointer->getInheritanceMetadata().value();
 
 			auto  method_name         = thread.executing_program->method_name_pool[instr->arg1];
 			auto  implementation_name = inh_metadata.vtable[method_name]->getName();

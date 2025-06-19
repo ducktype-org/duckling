@@ -195,7 +195,7 @@ namespace vm {
 
 	// pointer, staticTable, dynamicTable
 	base::Optional<TypeCRef> Type::getInnerType() const {
-		auto get_inner_type = [](const auto& t) { return t.inner_type; };
+		auto get_inner_type = [](auto t) { return t->inner_type; };
 
 		auto pointer_option = get<kind::Pointer>().map(get_inner_type);
 		if (pointer_option.has_value()) return (TypeCRef) pointer_option.value();
@@ -211,35 +211,35 @@ namespace vm {
 
 	// staticTable
 	base::Optional<u64> Type::getStaticTableSize() const {
-		return get<kind::StaticTable>().map([](const kind::StaticTable& table) {
-			return table.size;
+		return get<kind::StaticTable>().map([](CRef<kind::StaticTable> table) {
+			return table->size;
 		});
 	}
 
 	// struct
 	base::Optional<usize> Type::getFieldCount() const {
-		return get<kind::Data>().map([](auto& data) { return data.fields.size(); });
+		return get<kind::Data>().map([](auto data) { return data->fields.size(); });
 	}
 
 	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
-		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
-			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
-			return base::Optional<TypeCRef>(data.fields[field_id].type);
+		return get<kind::Data>().flatMap([field_id](CRef<kind::Data> data) {
+			if (field_id >= data->fields.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(data->fields[field_id].type);
 		});
 	}
 
 	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldID field_id) const {
-		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
-			if (field_id >= data.fields.size()) return base::Optional<Offset>();
-			return base::Optional<Offset>(Offset(data.fields[field_id].offset));
+		return get<kind::Data>().flatMap([field_id](CRef<kind::Data> data) {
+			if (field_id >= data->fields.size()) return base::Optional<Offset>();
+			return base::Optional<Offset>(Offset(data->fields[field_id].offset));
 		});
 	}
 
 	base::Optional<Offset> Type::getFieldOffsetByName(base::StrID field_name) const {
 		return get<kind::Data>().flatMap(
-			[field_name](const kind::Data& data) -> base::Optional<Offset> {
-				if_opt_some(data.field_name_map.atMaybe(field_name), field_index) {
-					return data.fields[field_index].offset;
+			[field_name](CRef<kind::Data> data) -> base::Optional<Offset> {
+				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
+					return data->fields[*field_index].offset;
 				}
 				return {};
 			}
@@ -247,10 +247,11 @@ namespace vm {
 	}
 
 	// inheritance
-	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
+	base::Optional<base::CRef<InheritanceMetadata>> Type::getInheritanceMetadata() const {
 		variant_match(kind) {
 			variant_case(kind::Data, data) {
-				if (data.inheritance_metadata.has_value()) return data.inheritance_metadata.value();
+				if (data.inheritance_metadata.has_value())
+					return &data.inheritance_metadata.value();
 			}
 		}
 		return {};
@@ -279,12 +280,12 @@ namespace vm {
 			if (t == other) return true;
 
 			if_opt_some(t->getInheritanceMetadata(), imd) {
-				variant_match(imd.kind) {
+				variant_match(imd->kind) {
 					variant_case(InheritanceMetadata::Class, clazz) {
 						if_opt_some(clazz.extends, super) stack.emplace_back(super);
 					}
 				}
-				for (auto i: imd.implements) stack.emplace_back(i);
+				for (auto i: imd->implements) stack.emplace_back(i);
 			}
 		}
 		return false;
@@ -319,50 +320,50 @@ namespace vm {
 
 	// variant
 	base::Optional<u64> Type::getVariantCount() const {
-		return get<kind::Variant>().map([](const kind::Variant& variant) {
-			return variant.alternatives.size();
+		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
+			return variant->alternatives.size();
 		});
 	}
 
 	base::Optional<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
-		return get<kind::Variant>().flatMap([variant_id](const kind::Variant& variant) {
-			if (variant_id >= variant.alternatives.size()) return base::Optional<TypeCRef>();
-			return base::Optional<TypeCRef>(variant.alternatives[variant_id]);
+		return get<kind::Variant>().flatMap([variant_id](CRef<kind::Variant> variant) {
+			if (variant_id >= variant->alternatives.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(variant->alternatives[variant_id]);
 		});
 	}
 
 	// function
 	base::Optional<u64> Type::getParameterCount() const {
-		return get<kind::Function>().map([](const kind::Function& function) {
-			return function.parameters.size();
+		return get<kind::Function>().map([](CRef<kind::Function> function) {
+			return function->parameters.size();
 		});
 	}
 
 	base::Optional<u64> Type::getParametersSize() const {
-		return get<kind::Function>().map([](const kind::Function& function) {
+		return get<kind::Function>().map([](CRef<kind::Function> function) {
 			usize size = 0;
-			for (const auto& param: function.parameters) size += param->getSize();
+			for (const auto& param: function->parameters) size += param->getSize();
 			return size;
 		});
 	}
 
 	base::Optional<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
-		return get<kind::Function>().flatMap([parameter_id](const kind::Function& function) {
-			if (parameter_id >= function.parameters.size()) return base::Optional<TypeCRef>();
-			return base::Optional<TypeCRef>(function.parameters[parameter_id]);
+		return get<kind::Function>().flatMap([parameter_id](CRef<kind::Function> function) {
+			if (parameter_id >= function->parameters.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(function->parameters[parameter_id]);
 		});
 	}
 
 	base::Optional<TypeCRef> Type::getResultType() const {
-		return get<kind::Function>().flatMap([](const kind::Function& function) {
-			return base::Optional<TypeCRef>(function.result);
+		return get<kind::Function>().flatMap([](CRef<kind::Function> function) {
+			return base::Optional<TypeCRef>(function->result);
 		});
 	}
 
-	base::Optional<const std::vector<TypeCRef>&> Type::getParameters() const {
+	base::Optional<CRef<std::vector<TypeCRef>>> Type::getParameters() const {
 		return get<kind::Function>().map(
-			[](const kind::Function& func) -> const std::vector<TypeCRef>& {
-				return func.parameters;
+			[](CRef<kind::Function> func) -> CRef<std::vector<TypeCRef>> {
+				return &func->parameters;
 			}
 		);
 	}

@@ -9,7 +9,7 @@
 	static inline base::HashMap<UKHash, query::CacheEntry<PResult>> cache;       \
 	static auto load(UKHash key_hash) -> LoadResult {                            \
 		if (const auto& value = cache.atMaybe(key_hash)) {                       \
-			return QResWithACD{ value->data, value->acd };                       \
+			return QResWithACD{ (*value)->data, (*value)->acd };                 \
 		}                                                                        \
 		return {};                                                               \
 	}                                                                            \
@@ -37,7 +37,7 @@
 	static inline base::HashMap<UKHash, query::CacheEntry<PResult>> cache;              \
 	static auto load(UKHash key_hash) -> LoadResult {                                   \
 		if (const auto& value = cache.atMaybe(key_hash)) {                              \
-			return QResWithACD{ value->data, value->acd };                              \
+			return QResWithACD{ (*value)->data, (*value)->acd };                        \
 		}                                                                               \
 		return {};                                                                      \
 	}                                                                                   \
@@ -62,7 +62,7 @@
 	static inline base::StableHashMap<UKHash, query::CacheEntry<PResult>> cache; \
 	static auto load(UKHash key_hash) -> LoadResult {                            \
 		if (auto value = cache.atMaybe(key_hash)) {                              \
-			return QResWithACD{ CRef<PResult>(&value->data), value->acd };       \
+			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd }; \
 		}                                                                        \
 		return {};                                                               \
 	}                                                                            \
