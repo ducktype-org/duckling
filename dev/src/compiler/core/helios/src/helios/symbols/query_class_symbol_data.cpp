@@ -76,7 +76,7 @@ namespace compiler::helios {
 					class_info.base = tp.value().getType();
 				} else {
 					// We just fail here, error should be reported by EvalExprToType
-					return errors::HError(errors::Failed());
+					return query::QError(errors::Failed());
 				}
 			}
 
@@ -89,7 +89,7 @@ namespace compiler::helios {
 						class_info.implements.push_back(tp.value().getType());
 					} else {
 						// We just fail here, error should be reported by EvalExprToType
-						return errors::HError(errors::Failed());
+						return query::QError(errors::Failed());
 					}
 				}
 			}
