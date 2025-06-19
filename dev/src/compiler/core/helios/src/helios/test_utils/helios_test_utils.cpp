@@ -72,10 +72,11 @@ namespace compiler::helios::test_utils {
 
 	Box<code::Expr> getExprOfConst(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
+				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
 		public:
@@ -89,15 +90,16 @@ namespace compiler::helios::test_utils {
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
-		return std::move(visitor.expr_tree).value();
+		return std::move(visitor.expr_tree.value()).value();
 	}
 
 	Box<code::Expr> getExprOfVariable(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
+				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
 		public:
@@ -111,7 +113,7 @@ namespace compiler::helios::test_utils {
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
-		return std::move(visitor.expr_tree).value();
+		return std::move(visitor.expr_tree.value()).value();
 	}
 
 	ScopeID getFunctionBodyScope(SymID sym) {
