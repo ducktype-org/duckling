@@ -19,6 +19,9 @@ POP_DIAGNOSTIC;
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 
+#include <filesystem/file.hpp>
+#include <filesystem/vfs.hpp>
+#include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/int_conv.hpp>
@@ -71,9 +74,11 @@ crow::response toResponse(const std::expected<void, E>& x) {
  * @param port The port number to run the server on.
  */
 void server(i32 port) {
-	crow::SimpleApp                           app;
-	lsp::ExportKeywords                       lsp;
-	std::unordered_map<std::string, fs::File> files;
+	crow::SimpleApp                               app;
+	lsp::ExportKeywords                           lsp;
+	std::unordered_map<std::string, fs::FilePath> files;
+	Ref<fs::VFS> vfs = fs::VFS::getInstance();
+	const auto& root = "vfs:";
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -99,11 +104,29 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
-	([&files](const std::string& base64_path, const std::string& base64_content) {
+	([vfs, root](const std::string& base64_path, const std::string& base64_content) {
 		try {
 			const auto  path    = base64::decode_into<std::string>(base64_path);
 			const auto  content = base64::decode_into<std::string>(base64_content);
-			const auto& file    = fs::FileManager::createRandomTempFile(content);
+			
+			if (vfs->createFile(root + path)) {
+				// new file
+				vfs->writeFile(root + path, content);
+			} else {
+				// Existing File
+				vfs->writeFile(root + path, content);
+			}
+			
+
+
+
+
+
+
+			
+			
+			
+			const auto& file    = fs::FilePath::createTempFile(content);
 			files.erase(path);
 			files.emplace(path, file);
 			return crow::response(200, "OK");
