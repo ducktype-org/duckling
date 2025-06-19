@@ -116,7 +116,7 @@ namespace compiler::frontend {
 		 * inside the base::Optional.
 		 */
 		[[nodiscard]]
-		base::Optional<const ModuleTree&> getParentModule() const;
+		base::Optional<base::CRef<ModuleTree>> getParentModule() const;
 
 		/**
 		 * Checks if a module contains `LANG_MAIN_SOURCE_FILE`.

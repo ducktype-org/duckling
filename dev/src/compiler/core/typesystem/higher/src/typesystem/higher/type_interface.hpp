@@ -160,10 +160,10 @@ namespace tsh {
 		 * @return The parameter types of this element.
 		 */
 		[[nodiscard]]
-		base::Optional<const std::vector<Parameter>&> getParameters() const {
+		base::Optional<base::CRef<std::vector<Parameter>>> getParameters() const {
 			return parameters.has_value()
-			         ? base::Optional<const std::vector<Parameter>&>(parameters.value())
-			         : base::Optional<const std::vector<Parameter>&>();
+			         ? base::Optional<base::CRef<std::vector<Parameter>>>(&parameters.value())
+			         : base::Optional<base::CRef<std::vector<Parameter>>>();
 		}
 
 		/**
