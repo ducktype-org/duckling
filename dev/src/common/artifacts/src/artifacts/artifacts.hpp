@@ -136,7 +136,8 @@ namespace artifacts {
 
 		const FileArtifact& fileArtifactAt(base::StrID artifact_name) const;
 
-		base::Optional<const FileArtifact&> fileArtifactAtMaybe(base::StrID artifact_name) const;
+		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
+		) const;
 
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////
 
@@ -146,7 +147,8 @@ namespace artifacts {
 
 		const BlobArtifact& blobArtifactAt(base::StrID artifact_name) const;
 
-		base::Optional<const BlobArtifact&> blobArtifactAtMaybe(base::StrID artifact_name) const;
+		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybe(base::StrID artifact_name
+		) const;
 
 		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 

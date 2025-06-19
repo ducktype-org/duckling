@@ -43,7 +43,7 @@ private:
 		ASSERT_EQUAL(true, fst->getParentTree().empty());
 		ASSERT_EQUAL(
 			true,
-			fst->getDirs()["another_directory"]->getParentTree().value().getRoot() == fst->getRoot()
+			fst->getDirs()["another_directory"]->getParentTree().value()->getRoot() == fst->getRoot()
 		);
 	}
 

@@ -1,4 +1,5 @@
 #include <base/optional.hpp>
+#include <base/ref.hpp>
 
 #include <cassert>
 
@@ -21,9 +22,9 @@ int main() {
 	// --------------------------------------------------
 
 	// base::Optional can also hold a reference!
-	std::string                  name = "Duckling";
-	base::Optional<std::string&> opt_name(name);
+	std::string                            name = "Duckling";
+	base::Optional<base::Ref<std::string>> opt_name(&name);
 
-	opt_name.value().push_back('!');
+	opt_name.value()->push_back('!');
 	assert("Duckling!" == name);
 }

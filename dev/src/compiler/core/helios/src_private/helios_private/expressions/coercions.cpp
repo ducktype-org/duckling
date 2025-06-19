@@ -2,7 +2,7 @@
 
 namespace compiler::helios {
 
-	errors::HResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
+	query::QResult<Box<code::Expr>, InvalidCoercion> coerceExpression(
 		Box<code::Expr> from, tsh::SymbolType<> to
 	) {
 		// this implementation is a mock:
@@ -21,7 +21,7 @@ namespace compiler::helios {
 			// without any conversions.
 			return from;
 		} else {
-			return errors::HError{ InvalidCoercion{} };
+			return query::QError{ InvalidCoercion{} };
 		}
 	}
 }
