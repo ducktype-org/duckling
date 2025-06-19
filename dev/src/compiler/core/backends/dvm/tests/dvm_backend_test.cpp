@@ -36,14 +36,10 @@ private:
 	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		std::vector<CRef<lir::Function>> funcs;
-		std::vector<std::tuple<
-			lir::LirGlobal,
-			base::Optional<CRef<lir::Function>>,
-			base::Optional<CRef<lir::Function>>>>
-								 globals;
-		base::StrID              module_name;
-		vm::code::CodeCollection code;
+		std::vector<CRef<lir::Function>>                    funcs;
+		std::vector<compiler::backend_vm::BackendDVMGlobal> globals;
+		base::StrID                                         module_name;
+		vm::code::CodeCollection                            code;
 
 		//@TODO: add ctors to DVM ctors when implemented
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -60,13 +56,13 @@ private:
 						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 						globals.emplace_back(
 							lir_glob,
-							// @TODO: add legit dtors when implemented
+							// @TODO: add legit dtors when implemented #929
 							lir_func,
 							std::nullopt
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						/* TODO: create global constant ctors if necessary */
+						// @TODO: create global constant ctors if necessary
 						fail(base::strConcat(
 							"Creating ctors for constant variables is not implemented yet. ",
 							"Global constant: ",

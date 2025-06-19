@@ -160,37 +160,48 @@ private:
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		// Test with LLVM backend
-		driver::Driver llvm_driver({ .backend_type           = driver::BackendType::LLVM,
-		                             .compile_to_assembly    = false,
-		                             .dump_llvm_ir           = false,
-		                             .dvm_code_only_memory   = false,
-		                             .add_builtin_library    = false,
-		                             .external_objects_files = {},
-		                             .external_libs          = {} });
+		driver::HoutToBinaryDriver llvm_driver({
+			.backend_type         = driver::BackendType::LLVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = true,
+		});
 
-		llvm_driver.compileHOUTUnit(top_level, base::StrID("globals_module"));
-		llvm_driver.link(base::StrID("globals_module_exe"));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto obj        = collection->fileArtifactNew(base::StrID("test_module.o"));
+			auto exe        = collection->fileArtifactNew(base::StrID("test_module_exe"));
 
-		assertTrue(std::filesystem::exists("globals_module_exe"), "LLVM Output file does not exist");
-		assertTrue(std::filesystem::exists("globals_module.o"), "LLVM Object file does not exist");
+			// This method can fail on module verification
+			llvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
+			driver::link(exe, { obj }, {});
 
-		std::filesystem::remove("globals_module_exe");
-		std::filesystem::remove("globals_module.o");
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
+		});
 
 		// Test with DVM backend
-		driver::Driver dvm_driver({ .backend_type           = driver::BackendType::DVM,
-		                            .compile_to_assembly    = false,
-		                            .dump_llvm_ir           = false,
-		                            .dvm_code_only_memory   = false,
-		                            .add_builtin_library    = false,
-		                            .external_objects_files = {},
-		                            .external_libs          = {} });
+		driver::HoutToBinaryDriver dvm_driver({
+			.backend_type         = driver::BackendType::DVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
+		});
 
-		dvm_driver.compileHOUTUnit(top_level, base::StrID("globals_module"));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
 
-		auto run_result = dvm_driver.run();
-		ASSERT_TRUE(run_result.has_value());
-		ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
+			auto run_result = dvm_driver.run();
+			ASSERT_TRUE(run_result.has_value());
+			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
+		});
 	}
 };
 

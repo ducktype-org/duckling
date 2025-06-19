@@ -49,7 +49,7 @@ namespace compiler::driver {
 			auto                             module_dtor = lir::fromLIRFunctions(
                 ctx,
                 reversed_dtors,
-				// @TODO: Add suport to mangling dtors of globals to helios mangler #906
+                // @TODO: Add suport to mangling dtors of globals to helios mangler #906
                 base::StrID(base::strConcat("_DTOR_MODULE_", lir_module.module_id.str()).c_str())
             );
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));

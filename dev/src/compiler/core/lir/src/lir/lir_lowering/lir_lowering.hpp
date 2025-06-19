@@ -28,6 +28,4 @@ namespace compiler::lir {
 		const std::vector<CRef<Function>>& functions,
 		const base::StrID&                 mangled_name
 	);
-
-	FunctionLiteral getFunctionLiteralfromFunction(const Function& function);
 }
