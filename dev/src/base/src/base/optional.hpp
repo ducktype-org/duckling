@@ -184,20 +184,6 @@ namespace base {
 		requires std::is_constructible_v<T, U>
 		constexpr Optional(U&& value): private_optional(std::forward<U>(value)) {}
 
-		// Syntactic sugar: allow Optional<Ref<T>> to be constructed from T&
-		template<class U = T>
-		constexpr Optional(
-			std::enable_if_t<std::is_same_v<U, Ref<typename U::Type>>, typename U::Type&> ref
-		):
-			  private_optional(Ref<typename U::Type>(ref)) {}
-
-		// Syntactic sugar: allow Optional<CRef<T>> to be constructed from const T&
-		template<class U = T>
-		constexpr Optional(
-			std::enable_if_t<std::is_same_v<U, CRef<typename U::Type>>, const typename U::Type&> ref
-		):
-			  private_optional(CRef<typename U::Type>(ref)) {}
-
 		template<class... Args>
 		constexpr T& emplace(Args&&... args) {
 			return private_optional.emplace(std::forward<Args>(args)...);
