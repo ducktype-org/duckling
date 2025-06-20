@@ -46,6 +46,7 @@ namespace tsh {
 	/**
 	 * Value category class describes properties of a value other than its type.
 	 */
+	 // here we should rethink if we need two enum fields and what they actually mean
 	class ValueCategory {
 		using enum ValueSemanticsOptions;
 

@@ -7,6 +7,9 @@ namespace compiler::helios {
 	) {
 		// this implementation is a mock:
 
+		// here we should if if from is moveable and generate a move expression if so.
+		// in mir lowering we will have to handle move expressions in special way.
+
 		auto expected = from->expression_type.getSymbolType().getType();
 		bool is_expected_numeric
 			= expected.getKind() == tsh::Kind::Integral or expected.getKind() == tsh::Kind::Float;

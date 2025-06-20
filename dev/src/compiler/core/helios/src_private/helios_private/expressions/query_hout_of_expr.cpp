@@ -435,6 +435,12 @@ namespace compiler::helios::code {
 				auto inner = fromPST(ctx, stmt->getExpr());
 				if (inner.hasError()) return;  // failed
 
+				if (stmt->getOperator().value == base::StrID("move")) {
+					node = std::move(inner.value());
+					// here we should modify value-category somehow.
+					return; 
+				}
+
 				// @todo here we should:
 				// * lookup for user defined operators
 				// * type check
