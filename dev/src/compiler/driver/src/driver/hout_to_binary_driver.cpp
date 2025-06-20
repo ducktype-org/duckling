@@ -34,7 +34,8 @@ namespace compiler::driver {
 						.lir_global = lir_global,
 						// @TODO: add legit dtors when implemented #929
 						.global_ctor = lir_function,
-						.global_dtor = std::nullopt });
+						.global_dtor = std::nullopt,
+					});
 				}
 				// @TODO: add ctors and dtors for Global Consts when implemented
 				variant_case(helios::HOUTGlobalConst, global_const) {
@@ -62,9 +63,11 @@ namespace compiler::driver {
 			functions.push_back(lir_function);
 		}
 
-		BackendModuleData module_data{ .module_id = module_id,
-			                           .functions = functions,
-			                           .globals   = globals };
+		BackendModuleData module_data{
+			.module_id = module_id,
+			.functions = functions,
+			.globals   = globals,
+		};
 
 		backend_driver->compileModule(ctx, module_data, std::move(output_artifact));
 	}
