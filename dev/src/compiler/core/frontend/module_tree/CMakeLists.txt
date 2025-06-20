@@ -1,6 +1,7 @@
 add_library(ModuleTree
 	src/frontend/module_tree/module_tree.cpp
 	src/frontend/module_tree/queries.cpp
+	src/frontend/module_tree/source_file.cpp
 )
 
 make_module(ModuleTree USES Filesystem PstParser QueryFramework)

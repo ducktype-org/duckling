@@ -122,12 +122,8 @@ namespace fs {
 	 * ```
 	 */
 	class FilePath {
-		using WeakContent = std::weak_ptr<base::OwningView>;
-		using FileHash    = std::hash<std::filesystem::path>;
-		using ContentMap  = base::HashMap<std::filesystem::path, WeakContent, FileHash>;
+		using FileHash = std::hash<std::filesystem::path>;
 
-		// This might be hidden in .cpp:
-		static ContentMap     to_content;
 		std::filesystem::path path;
 
 		friend struct std::hash<FilePath>;
@@ -185,6 +181,8 @@ namespace fs {
 			return are_equal;
 		}
 
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
 		/**
 		 * Creates a new directory inside this object's path. It is required that this object is a
 		 * temporary or virtual directory.
@@ -301,9 +299,6 @@ namespace fs {
 		std::string extension() const;
 
 		bool operator<(const FilePath& oth) const { return path < oth.path; }
-
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**

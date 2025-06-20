@@ -9,6 +9,7 @@
 
 #include "file_id.hpp"
 #include "module_id.hpp"
+#include "source_file.hpp"
 
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
@@ -20,32 +21,6 @@
 #include <string>
 
 namespace compiler::frontend {
-
-
-	/**
-	 * @brief Structure holding SourceFile within Module Tree
-	 */
-	struct SourceFile final {
-		fs::FilePath               path;
-		base::StrID                lang_file_name;
-		FileID                     id;
-		base::Optional<pst::PST<>> parse_tree;
-
-		/**
-		 * @brief Module the file belongs to
-		 * @note: in the future there might be module-less files
-		 */
-		ModuleID linked_module;
-
-		SourceFile(fs::FilePath, ModuleID linked_module);
-
-		/**
-		 * @brief Lazily parses the source file and returns PST
-		 * @return CRef<pst::PST>
-		 */
-		CRef<pst::PST<>> getPST();
-	};
-
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.

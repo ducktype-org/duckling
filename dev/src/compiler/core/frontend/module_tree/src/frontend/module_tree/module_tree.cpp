@@ -47,22 +47,6 @@ inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
  */
 inline static base::HashMap<fs::FilePath, ModuleID> module_paths{};
 
-SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
-	  path(std::move(path)),
-	  id(FileID::next()),
-	  linked_module(module_id) {
-	lang_file_name = base::StrID(this->path.stem().c_str());
-}
-
-CRef<pst::PST<>> SourceFile::getPST() {
-	if (parse_tree) {
-		return &parse_tree.value();
-	} else {
-		parse_tree.emplace(pst::PST(path));
-		return &parse_tree.value();
-	}
-}
-
 ModuleTree::ModuleTree(): id(ModuleID::next()) {}
 
 std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {

@@ -51,8 +51,6 @@ namespace fs {
 		}
 	}
 
-	FilePath::ContentMap FilePath::to_content;
-
 	FilePath FilePath::getDefaultTempPath() {
 		static FilePath temp_directory_path
 			= createFilePathObj(std::filesystem::temp_directory_path(), FileType::Temporary);
@@ -144,22 +142,10 @@ namespace fs {
 	}
 
 	FileContent FilePath::getContent() const {
-		if (to_content.contains(path)) {
-			auto weak_content = to_content[path];
-			if (weak_content.expired())
-				to_content.erase(path);
-			else
-				return FileContent(weak_content.lock());
-		}
-
-		FileContent file_content(std::make_shared<base::OwningView>(
+		return FileContent(std::make_shared<base::OwningView>(
 			type != FileType::Virtual ? getSimpleFileContent(path.c_str())
 									  : getSimpleVirtualFileContent(path.c_str())
 		));
-
-		to_content.put(path, file_content.content);
-
-		return file_content;
 	}
 
 	std::expected<FileContent, std::string> FilePath::getContentSafe() const {
