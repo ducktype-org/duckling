@@ -3,11 +3,14 @@
 Tests:
   compile-simple:
     local_build_folder: build_@{Name}
-    Compile: "@{compile_duck} && rm -rf @{local_build_folder} && mkdir build_@{Name}"
-    Clean: "rm -rf @{local_build_folder}"
-    Run: "@{duck_path} compile_package -a build_@{Name} -m "
+    clean_cmd: rm -rf @{local_build_folder}
+    Compile: "@{compile_duck} && @{clean_cmd} && mkdir @{local_build_folder}"
+    Clean: "@{clean_cmd}"
+    Run: "@{duck_path} compile_package -a @{local_build_folder} -m "
     run_args: "@{CaseName} && ./@{local_build_folder}/package_llvm.exe"
     Cases:
       "sample_duck":
+        # "sample_duck" is the name of the test case, which is used in
+        # run_args variable. "sample_duck" is also the folder which has our duck file.
         RunArgs: "@{run_args}"
         ExitCode: 3

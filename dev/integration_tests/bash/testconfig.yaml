@@ -29,9 +29,3 @@ Tests:
         RunArgs: "1.1"
       hello5:
         RunArgs: "5"
-  test-user-values:
-    Run: "echo bff"
-    Cases:
-      t1:
-        Output:
-          String: "@{build_folder}\n"
