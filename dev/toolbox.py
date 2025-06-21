@@ -871,8 +871,7 @@ def pr_validate(*args, **kwargs):
 )
 def issue_checker(issues, branch, no_merge_base):
     """Checks for occurrences of #issue_number in source files and prints file, line, and summary."""
-    found = issue_checker_impl(issues, branch, no_merge_base)
-    if found:
+    if not issue_checker_impl(issues, branch, no_merge_base):
         exit_with_error("Issue checker found issues numbers related to this pull request in the code")
 
 
