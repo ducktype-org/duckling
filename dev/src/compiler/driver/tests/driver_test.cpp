@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(builtinCompiles);
+		TESTER_ADD_TEST(globalsTest);
 	}
 
 private:
@@ -149,6 +150,57 @@ private:
 
 			std::filesystem::remove(exe.FILE);
 			std::filesystem::remove(obj.FILE);
+		});
+	}
+
+	void globalsTest() {
+		using namespace compiler;
+		auto module
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/globals")));
+		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
+
+		// Test with LLVM backend
+		driver::HoutToBinaryDriver llvm_driver({
+			.backend_type         = driver::BackendType::LLVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = true,
+		});
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto obj        = collection->fileArtifactNew(base::StrID("test_module.o"));
+			auto exe        = collection->fileArtifactNew(base::StrID("test_module_exe"));
+
+			// This method can fail on module verification
+			llvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
+			driver::link(exe, { obj }, {});
+
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
+		});
+
+		// Test with DVM backend
+		driver::HoutToBinaryDriver dvm_driver({
+			.backend_type         = driver::BackendType::DVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
+		});
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+
+			auto run_result = dvm_driver.run();
+			ASSERT_TRUE(run_result.has_value());
+			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 		});
 	}
 };

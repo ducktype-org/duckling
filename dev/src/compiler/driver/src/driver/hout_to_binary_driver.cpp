@@ -9,6 +9,7 @@
 
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 namespace compiler::driver {
 
@@ -18,6 +19,41 @@ namespace compiler::driver {
 		base::StrID                  module_id,
 		artifacts::FileArtifact      output_artifact
 	) {
+		std::vector<BackendModuleGlobal> globals;
+		globals.reserve(hout_unit->glob_data.size());
+
+		for (const auto& hout_global: hout_unit->glob_data) {
+			auto lir_global = lir::LirGlobal::fromHOUT(ctx, hout_global);
+
+			variant_match(hout_global.value) {
+				variant_case(helios::HOUTGlobalVariable, var) {
+					CRef mir_function
+						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_global })->value();
+					auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+					globals.emplace_back(BackendModuleGlobal{
+						.lir_global = lir_global,
+						// @TODO: add legit dtors when implemented #929
+						.global_ctor = lir_function,
+						.global_dtor = std::nullopt,
+					});
+				}
+				// @TODO: add ctors and dtors for Global Consts when implemented
+				variant_case(helios::HOUTGlobalConst, global_const) {
+					CORE_PANIC(base::strConcat(
+						"Creating ctors for constant variables is not implemented yet. "
+						"Global constant: ",
+						hout_global.original_name.strView()
+					));
+				}
+				variant_default {
+					CORE_PANIC(base::strConcat(
+						"Unexpected global data type in module: ",
+						hout_global.original_name.strView()
+					));
+				}
+			}
+		}
+
 		std::vector<CRef<lir::Function>> functions;
 		functions.reserve(hout_unit->functions.size());
 
@@ -27,7 +63,11 @@ namespace compiler::driver {
 			functions.push_back(lir_function);
 		}
 
-		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
+		BackendModuleData module_data{
+			.module_id = module_id,
+			.functions = functions,
+			.globals   = globals,
+		};
 
 		backend_driver->compileModule(ctx, module_data, std::move(output_artifact));
 	}
