@@ -7,7 +7,7 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     # Normalize issues to ensure consistent format
     if isinstance(issues, str):
         issues = issues.split()
-        
+
     valid_issue_numbers = []
     for num in issues:
         num_str = str(num).strip()
@@ -19,7 +19,7 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
         valid_issue_numbers.append(num_str)
     if not valid_issue_numbers:
         log_warning("No valid issue numbers provided.")
-        return False
+        return True
 
     # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
     patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
