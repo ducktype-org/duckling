@@ -4,6 +4,10 @@ from .cpp_linter import get_files_for_linter
 from .helpers import log_info, log_warning, log_new_line
 
 def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+    # Normalize issues to ensure consistent format
+    if isinstance(issues, str):
+        issues = issues.split()
+        
     valid_issue_numbers = []
     for num in issues:
         num_str = str(num).strip()
@@ -24,8 +28,6 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     summary = {num: 0 for num in valid_issue_numbers}
 
     for file in files:
-        if not (file.endswith(".cpp") or file.endswith(".hpp")):
-            continue
         with open(file, "r") as f:
             for i, line in enumerate(f, 1):
                 for idx, pat in enumerate(patterns):
@@ -37,4 +39,4 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     log_info("Summary:")
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
-    return found_any
+    return not found_any

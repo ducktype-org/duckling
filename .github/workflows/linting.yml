@@ -101,7 +101,7 @@ jobs:
         id: get-issues
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -128,8 +128,6 @@ jobs:
             -X POST -d "{\"query\":$(jq -Rs . <<< "$QUERY")}" \
             https://api.github.com/graphql)
 
-          echo "[DEBUG] RESPONSE: $RESPONSE"
-
           if [[ -z "$RESPONSE" ]]; then
             echo "[ERROR] Empty response from GitHub API!"
             exit 1
@@ -149,7 +147,7 @@ jobs:
             echo "[INFO] No issues found for PR #$PR_NUMBER."
           else
             echo "issues=$ISSUES" >> "$GITHUB_OUTPUT"
-            echo "[INFO] Znalezione issues: $ISSUES"
+            echo "[INFO] Found issues: $ISSUES"
           fi
 
       

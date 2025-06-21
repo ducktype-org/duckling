@@ -11,9 +11,11 @@ from .helpers import (
 
 from .duck_linter import duck_linter_impl
 from .cpp_linter import simulate_cpp_linter
+from .issue_checker import issue_checker_impl
 
 
-def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
+def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str, issues: str):
+    
     # Step 1 - build
     bash_command(f"cmake --build {build} -- all build_all_tests build_all_playgrounds")
 
@@ -30,6 +32,11 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
         clang_format_path=clang_format_path,
         build=build,
     )
+
+    # Step 5 - issue checker
+    if not issue_checker_impl(issues):
+        exit_with_error("Issue checker has failed")
+    
     if clang_tidy_failed or clang_format_failed:
         exit_with_error(
             f"CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}"
