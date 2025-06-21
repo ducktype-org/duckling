@@ -1,0 +1,13 @@
+# Compilation tests
+
+Tests:
+  compile-simple:
+    local_build_folder: build_@{Name}
+    Compile: "@{compile_duck} && rm -rf @{local_build_folder} && mkdir build_@{Name}"
+    Clean: "rm -rf @{local_build_folder}"
+    Run: "@{duck_path} compile_package -a build_@{Name} -m "
+    run_args: "@{CaseName} && ./@{local_build_folder}/package_llvm.exe"
+    Cases:
+      "sample_duck":
+        RunArgs: "@{run_args}"
+        ExitCode: 3

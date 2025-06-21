@@ -1,0 +1,12 @@
+# CLI tests
+
+Tests:
+  cli-options:
+    Cases:
+      help-message:
+        # Tests help flag works
+        RunArgs: "-h"
+      something-wrong:
+        # Tests whether duck fails upon passing an invalid flag
+        RunArgs: "-,"
+        ExitCode: 1

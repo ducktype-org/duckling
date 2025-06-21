@@ -11,7 +11,7 @@ file has to link to other directories with `testconfig.yaml`.
 Other directories can be listed as follows:
 
 ```yaml
-Subdirs:
+SubDirs:
     - C++
     - bash
 ```
@@ -110,7 +110,7 @@ Config file variables (linked to a node in the test tree, not inherited):
 - `Name` - Explicit name of a test set
 - `Description` - Description of a test set
 - `Tests` - A dict with test set
-- `Subtests` - A dict with sub tests of a config file - sub nodes in the test tree. These have to be direct subdirectories of a parent directory of the config file.
+- `SubDirs` - A dict with sub tests of a config file - sub nodes in the test tree. These have to be direct subdirectories of a parent directory of the config file.
 
 General variables (not tied to any context):
 

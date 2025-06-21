@@ -1,0 +1,10 @@
+compile_duck: "cmake --build @{build_dir} -- duck"
+duck_args: ""
+duck_path: "@{build_dir}/bin/duck"
+
+Run: "@{duck_path} @{duck_args}"
+Compile: "@{compile_duck}"
+
+SubDirs:
+  - cli
+  - compilation

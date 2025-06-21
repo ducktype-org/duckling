@@ -3,7 +3,7 @@ import re
 from typing import Any, Optional
 import yaml
 
-from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
+from .utils import ExpressionFillError, VariableNotFound, assert_good_var_name, check_resembles_builtin
 
 from ..helpers import truncate_str, exit_with_error
 from .keys import *
@@ -49,7 +49,7 @@ def _read_config_file(dir_with_config: Path) -> dict:
     return config
 
 
-def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
+def load_config(dir_with_config: str, parent: Optional[dict] = None, user_values: Optional[dict] = None) -> dict:
     """
     Loads a DIT config from a `dir_with_config` recursively.
     Does error checking and fills the config structure.
@@ -59,6 +59,10 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
         exit_with_error(f"Directory {dir_with_config.absolute()} does not exist")
 
     config = _read_config_file(dir_with_config)
+
+    if user_values:
+        # Insert user values into the config
+        config = config | user_values
 
     for var in config:
         check_resembles_builtin(var, GLOBAL_CONFIG_KEYS)
@@ -79,12 +83,15 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
 
     if TESTS in config:
         for test_name in config[TESTS]:
+            assert_good_var_name(test_name)
             test = config[TESTS][test_name]
             test[NAME] = test_name
             test[PARENT] = config
 
             for case in test[CASES]:
+                assert_good_var_name(case)
                 test[CASES][case][PARENT] = config[TESTS][test_name]
+                test[CASES][case][CASE_NAME] = str(case)
 
     return config
 
@@ -114,7 +121,8 @@ def config_eval_variables(config: dict, expr: str) -> str:
 
     def repl_var(matchobj):
         variable_name = matchobj.group(1)
-        if value := config_find_value(config, variable_name):
+        value = config_find_value(config, variable_name)
+        if value is not None:
             return value
 
         raise VariableNotFound(variable_name, expr)
@@ -128,12 +136,12 @@ def config_eval_variables(config: dict, expr: str) -> str:
     raise ExpressionFillError(truncate_str(original_expr, 100))
 
 
-def config_find_and_eval(config: dict, key: str) -> Optional[str]:
+def config_find_and_eval(config: dict, key: str, default = None) -> Optional[str]:
     """
     Finds a value of a `key` inside `config` and tries to evaluate
     its expression.
     """
-    value = config_find_value(config, key)
+    value = config_find_value(config, key, default)
     if value:
         assert type(value) is str, "Cannot evaluate non-str."
         return config_eval_variables(config, value)

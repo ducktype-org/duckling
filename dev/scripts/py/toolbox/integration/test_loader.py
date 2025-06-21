@@ -1,9 +1,11 @@
+from typing import Optional
 from .classes import Case, Test, TestNode
 from ..helpers import exit_with_error
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
-from .io_data import make_data_from_dict
+from .io_data import IOData, make_data_from_dict
 from .config import (
     GENERAL_VARIABLES,
+    config_eval_variables,
     config_find_and_eval,
     config_find_value,
     config_get_name_path,
@@ -21,8 +23,22 @@ TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT}
 """
 Builtin keys allowed inside a Case.
 """
-CASE_ALLOWED_KEYS = {NAME, INPUT, OUTPUT, ERR, RUN_ARGS, TIME_OUT, EXIT_CODE, PARENT}
+CASE_ALLOWED_KEYS = {CASE_NAME, INPUT, OUTPUT, ERR, RUN_ARGS, TIME_OUT, EXIT_CODE, PARENT}
 
+def _get_case_io_data_list(case_dict: dict) -> list[IOData]:
+    """
+    Parses `Input`, `Output`, `Err` information from case dict and returns
+    the list of corresponding IOData objects in the aforementioned order.
+    """
+    io_data: list[IOData] = [None, None, None]
+    config_dir = case_dict[PARENT][PARENT][CONFIG_FILE].parent
+    for i, io in enumerate([INPUT, OUTPUT, ERR]):
+        if io in case_dict:
+            io_dict = case_dict[io]
+            for k, v in io_dict.items():
+                io_dict[k] = config_eval_variables(case_dict, str(v))
+            io_data[i] = make_data_from_dict(io_dict, config_dir)
+    return io_data
 
 def _make_case(test_dict: dict, case_name: str) -> Case:
     """
@@ -34,15 +50,11 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
     for var in case_dict:
         check_resembles_builtin(var, CASE_ALLOWED_KEYS)
 
-    io_data = [None, None, None]
-    config_dir = test_dict[PARENT][CONFIG_FILE].parent
-    for i, io in enumerate([INPUT, OUTPUT, ERR]):
-        if io in case_dict:
-            io_data[i] = make_data_from_dict(case_dict[io], config_dir)
+    io_data = _get_case_io_data_list(case_dict)
 
     return Case(
-        name=case_dict.get(NAME, case_name),
-        run_args=case_dict.get(RUN_ARGS, ""),
+        name=case_dict[CASE_NAME],
+        run_args=config_find_and_eval(case_dict, RUN_ARGS, default=""),
         input=io_data[0],
         expected_output=io_data[1],
         expected_err=io_data[2],
@@ -93,9 +105,9 @@ def _make_test_node(config: dict) -> TestNode:
     )
 
 
-def load_tests(config_dir: str) -> TestNode:
+def load_tests(config_dir: str, user_values: Optional[dict] = None) -> TestNode:
     """
     Loads tests from `config_dir` directory.
     """
-    config = load_config(config_dir)
+    config = load_config(config_dir, user_values=user_values)
     return _make_test_node(config)

@@ -54,7 +54,7 @@ def run_test(
                 )
             else:
                 print_failure(f"Case `{test.name}/{case.name}` has failed.")
-            write_log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
+            write_log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n", log_file=log_file)
             success = False
             if fail_fast:
                 break
@@ -75,7 +75,7 @@ def log_test_out_differs(test, case, message, got, expected, log_file):
     )
 
 
-def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -> bool:
+def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -> str:
     """
     Runs a test case from `Case` object.
     """
@@ -227,6 +227,7 @@ def integration_tests_impl(
     fail_fast: bool,
     verbose: bool,
     log_file: str,
+    build_dir: str,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -245,7 +246,10 @@ def integration_tests_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    test_set = load_tests("integration_tests")
+    user_values = {
+        "build_dir": str(Path(build_dir).absolute())
+    }
+    test_set = load_tests("integration_tests", user_values=user_values)
 
     failed_tests, ran_tests = run_tests(
         test_set, filter, [], clean, dry, fail_fast, verbose, log_file
