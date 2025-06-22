@@ -8,7 +8,7 @@ Tests:
     Run: "@{duck_path} compile_package -a build -m "
     run_args: "@{CaseName} && ./build/package_llvm.exe"
     Cases:
-      "sample_duck":
+      sample_duck:
         # "sample_duck" is the name of the test case, which is used in
         # run_args variable. "sample_duck" is also the folder which has our duck file.
         RunArgs: "@{run_args}"
