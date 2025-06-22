@@ -12,6 +12,14 @@
 #include <expected>
 
 namespace compiler::driver {
+
+	struct BackendModuleGlobal final {
+		lir::LirGlobal lir_global;
+		base::Optional<CRef<lir::Function>>
+			global_ctor;  // Optional, if the global has a constructor.
+		base::Optional<CRef<lir::Function>> global_dtor;  // Optional, if the global has a destructor.
+	};
+
 	/**
 	 * @brief The last intermediate representation of the module before the backends.
 	 * It will be fed to the backends to generate the final output.
@@ -19,6 +27,8 @@ namespace compiler::driver {
 	struct BackendModuleData final {
 		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
+		std::vector<BackendModuleGlobal>
+			globals;  ///< Global variables and their constructors/destructors.
 	};
 
 	struct RunOutput final {
