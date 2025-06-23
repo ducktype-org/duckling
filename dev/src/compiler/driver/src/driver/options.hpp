@@ -3,6 +3,7 @@
 #include <base/ints.hpp>
 #include <variant>
 #include <string>
+#include <vector>
 
 namespace driver {    
 
@@ -38,8 +39,36 @@ namespace driver {
             bool lexer_cerr = false;
             bool logger_cerr = false;
         };
-    };
 
+        struct ArtifactsOptions {
+            struct IncrementalCompilation {
+                bool enabled;
+                bool show_stats;
+            };
+            std::string artifacts_path;
+            IncrementalCompilation incremental_compilation;
+            bool rm_artifacts_before_compilation = false;
+            bool rm_artifacts_after_compilation = false;
+        };
+
+        struct PackageInfo {
+            std::string package_name;
+            std::string package_path;
+        };
+
+        struct DependencyInfo {
+            struct CompilationStrategy {
+                struct InlineCompilation { };
+                struct Precompiled {
+                    // this might be inlined or not:
+                    std::string precompilation_path;
+                };
+                std::variant<InlineCompilation, Precompiled> strategy;
+            };
+            PackageInfo package_info;
+            CompilationStrategy compilation_strategy;
+        };
+    };
 
     /**
      * Structure holding information about mode of operation of the compiler
@@ -50,19 +79,34 @@ namespace driver {
      * via the Driver.
      */
     struct CompilerModeOfOperationAndOptions {
+        /**
+         * Bare mode, where compiler doesn't do any initialization etc,
+         * but you can still (try) to use its internal functions.
+         */
         struct BareMode {
 
         };
         struct PackageCompilation {
-            
+            options_types::PackageInfo main_package_info;
+            options_types::ArtifactsOptions compilation_artifacts;
+            std::vector<options_types::DependencyInfo> dependencies;
+            options_types::CompilationOptions compilation_options;
+            options_types::DebugOptions debug_options;
         };
         struct ScriptCompilation {
-
+            std::string script_path;
+            options_types::ArtifactsOptions compilation_artifacts;
+            std::vector<options_types::DependencyInfo> dependencies;
+            options_types::CompilationOptions compilation_options;
+            options_types::DebugOptions debug_options;
+        };
+        /**
+         * Mode used for REPL loop and in-memory runnning of scripts.
+         */
+        struct REPL {
+            // ...
         };
 
-        std::variant<BareMode, PackageCompilation, ScriptCompilation> mode;
+        std::variant<BareMode, PackageCompilation, ScriptCompilation, REPL> mode;
     };
-
-
-
 };
