@@ -99,7 +99,7 @@ jobs:
       
       - name: Run issue checker
         env:
-          WORKLOW_SCHED_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+          WORKLOW_SCHED_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
          git fetch origin main

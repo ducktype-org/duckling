@@ -45,67 +45,38 @@ def get_issues_from_github():
         log_warning(f"No associated Pull Request found for branch: {branch_name}")
         return []
 
+    # Prepare GraphQL query string with variables substituted
     query = f"""{{
-        repository(owner: "{owner}", name: "{repo}") {{
-            pullRequest(number: {pr_number}) {{
-                closingIssuesReferences(first: 100) {{
-                    nodes {{ number }}
-                    }}
-                }}
-            }}
-        }}"""
-        
-    # If WORKLOW_SCHED_TOKEN is set, use curl instead of gh
-    workflow_token = os.environ.get("WORKLOW_SCHED_TOKEN")
-    if workflow_token:
-        # Use curl to query GitHub GraphQL API (for workflows)
+      repository(owner: "{owner}", name: "{repo}") {{
+        pullRequest(number: {pr_number}) {{
+          closingIssuesReferences(first: 100) {{
+            nodes {{ number }}
+          }}
+        }}
+      }}
+    }}"""
 
-        # Prepare the JSON payload
-        json_query = json.dumps({"query": query})
-        curl_cmd = [
-            "curl", "-s",
-            "-H", f"Authorization: bearer {workflow_token}",
-            "-X", "POST",
-            "-d", json_query,
-            "https://api.github.com/graphql"
-        ]
-        try:
-            curl_output = subprocess.check_output(curl_cmd, text=True)
-            log_info("The answer from curl: " + curl_output)
-            data = json.loads(curl_output)
-            nodes = (
-                data.get("data", {})
-                    .get("repository", {})
-                    .get("pullRequest", {})
-                    .get("closingIssuesReferences", {})
-                    .get("nodes", [])
-            )
-            return [str(node["number"]) for node in nodes if "number" in node]
-        except Exception as e:
-            log_warning(f"Error while fetching issue numbers via curl: {e}")
-            return []
-    else:
-        gh_cmd = [
-            'gh', 'api', 'graphql',
-            '-f', f'query={query}'
-        ]
-        try:
-            gh_output = subprocess.check_output(
-                gh_cmd,
-                text=True
-            )
-            data = json.loads(gh_output)
-            nodes = (
-                data.get("data", {})
-                    .get("repository", {})
-                    .get("pullRequest", {})
-                    .get("closingIssuesReferences", {})
-                    .get("nodes", [])
-            )
-            return [str(node["number"]) for node in nodes if "number" in node]
-        except Exception as e:
-            log_warning(f"Error while fetching issue numbers via gh api: {e}")
-            return []
+    gh_cmd = [
+        'gh', 'api', 'graphql',
+        '-f', f'query={query}'
+    ]
+    try:
+        gh_output = subprocess.check_output(
+            gh_cmd,
+            text=True
+        )
+        data = json.loads(gh_output)
+        nodes = (
+            data.get("data", {})
+                .get("repository", {})
+                .get("pullRequest", {})
+                .get("closingIssuesReferences", {})
+                .get("nodes", [])
+        )
+        return [str(node["number"]) for node in nodes if "number" in node]
+    except Exception as e:
+        log_warning(f"Error while fetching issue numbers via gh api: {e}")
+        return []
 
 def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False, gh_token: str = ""):
     if(not issues):
