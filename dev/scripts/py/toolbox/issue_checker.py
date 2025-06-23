@@ -71,6 +71,7 @@ def get_issues_from_github():
         ]
         try:
             curl_output = subprocess.check_output(curl_cmd, text=True)
+            log_info("The answer from curl: " + curl_output)
             data = json.loads(curl_output)
             nodes = (
                 data.get("data", {})
