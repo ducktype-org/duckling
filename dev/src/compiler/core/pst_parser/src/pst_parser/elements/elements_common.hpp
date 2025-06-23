@@ -1,9 +1,21 @@
 #pragma once
 
-#include "../lang_parser_state.hpp"
-#include "elements_list.hpp"
+#include "../access.hpp"
+#include "../pst_state_forward.hpp"
+#include "elements_list.hpp"  // IWYU pragma: export
+
+#include <lang_definitions/key_spec_op.hpp>
+#include <lexer/token_common.hpp>
+#include <token_parser_core/common_elements.hpp>
+
+#include <base/ints.hpp>
 
 namespace pst {
+	using lang_def::Keyword;
+	using lang_def::NamedOperator;
+	using lang_def::Special;
+	using lexer::Operator;
+
 	class PstVisitor;
 
 	namespace expr {
@@ -22,55 +34,27 @@ namespace pst::detail {
 	public:
 		Conditions() = delete;
 
-		static bool isComma(const LangParserState& state, i64 fwd) {
-			return state[fwd].is(lang_def::Special::Comma);
-		}
-
-		static bool isSemicolon(const LangParserState& state, i64 fwd) {
-			return state[fwd].is(lang_def::Special::Semicolon);
-		}
-
-		static bool isSentinel(const LangParserState& state, i64 fwd) {
-			return state[fwd].is(lexer::Token::Type::Sentinel);
-		}
-
-		static bool isCurlyGroup(const LangParserState& state, i64 fwd) {
-			return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
-		}
-
-		static bool isAssignOrSemicolon(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::NamedOperator::Assign)
-			    || st[fwd].is(lang_def::Special::Semicolon);
-		}
-
-		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lexer::Token::Type::Sentinel)
-			    || st[fwd].is(lang_def::NamedOperator::Assign)
-			    || st[fwd].is(lang_def::Special::Comma);
-		}
-
-		static bool isAssign(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::NamedOperator::Assign);
-		}
+		static bool isComma(const LangParserState& state, i64 fwd);
+		static bool isSemicolon(const LangParserState& state, i64 fwd);
+		static bool isSentinel(const LangParserState& state, i64 fwd);
+		static bool isCurlyGroup(const LangParserState& state, i64 fwd);
+		static bool isAssignOrSemicolon(const LangParserState& st, i64 fwd);
+		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd);
+		static bool isAssign(const LangParserState& st, i64 fwd);
 
 		/**
 		 * @brief This is to differentiate blocks from template specification
 		 */
-		static bool isBlockGroup(const LangParserState& st, i64 fwd) {
-			return st[fwd].isBracketGroup(lexer::Token::Curly)
-			    && not st[fwd - 1].is(lang_def::NamedOperator::Colon);
-		}
-
-		static bool isImplementsOrBlockGroup(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::Keyword::Implements)
-			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
-			        && not st[fwd - 1].is(lang_def::NamedOperator::Colon));
-		}
+		static bool isBlockGroup(const LangParserState& st, i64 fwd);
+		static bool isImplementsOrBlockGroup(const LangParserState& st, i64 fwd);
 
 		template<lang_def::Keyword key>
 		static bool is(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(key);
+			return isKeyword(st, fwd, key);
 		}
+
+	private:
+		static bool isKeyword(const LangParserState& st, i64 fwd, lang_def::Keyword key);
 	};
 
 	/**

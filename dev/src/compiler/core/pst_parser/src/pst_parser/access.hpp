@@ -3,6 +3,7 @@
 #include "pst_id.hpp"
 
 #include <query_framework/context_fd.hpp>
+#include <token_parser_core/debug_print.hpp>
 
 #include <base/box.hpp>
 #include <base/optional.hpp>
@@ -197,6 +198,15 @@ namespace pst {
 		 */
 		MCRef<Element> internal() const { return box.ref(); }
 	};
+
+	/**
+	 * @brief Special null aware dprint that simplifies pst dprint functions. Shouldn't be used
+	 * outside of them.
+	 */
+	template<typename T>
+	void nullAwareDprint(const AccessInternal<T>& acc, std::ostream& out) {
+		tpc::nullAwareDprint(acc.internal(), out);
+	}
 }
 
 #define VISITOR_ACCESS_METHOD_INTERFACE(type) void visit##type(pst::Access<type>)

@@ -1,13 +1,12 @@
 #pragma once
 
-#include "../../lang_parser_state.hpp"
+#include "../lang_state_unmethods.hpp"
 #include "meta.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/token_stream.hpp>
 
 #include <base/string_id.hpp>
@@ -19,6 +18,7 @@ namespace pst {
 	class ExprHolder: public NotStmt {
 	protected:
 		AccessInternal<ExprElement> expr;
+		friend void detail::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
@@ -54,8 +54,6 @@ namespace pst {
 		static MBox<ExprElement> parseForType(LangParserState& state);
 	};
 
-	using ExprParseFun = MBox<ExprElement>(LangParserState&);
-
 	/**
 	 * @brief Template for defining expression parsing entry points.
 	 * Its intended usage is to derive holder after this template:
@@ -72,10 +70,10 @@ namespace pst {
 		using ExprHolder::ExprHolder;
 
 		static MBox<Self> parse(LangParserState& state) {
-			auto position = state.getPosition();
+			auto position = detail::getPosition(state);
 			auto out      = makeBox<Self>(position);
 
-			state.parse(out).with(&out->expr, parseFun);
+			detail::parseExprIntoHolder(state, out.refMut(), parseFun);
 			return out;
 		}
 
