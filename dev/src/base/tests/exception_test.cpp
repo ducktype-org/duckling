@@ -113,13 +113,16 @@ public:
 			const char* what_str = panic.what();
 			std::cerr << "Panic what: " << what_str << "\n";
 #ifdef __cpp_lib_stacktrace
-			// Sprawdź czy są fragmenty stacktrace (np. "0#", "1#", "2#")
+			// Check for stacktrace fragments (e.g. "0#", "1#", "2#").
+			// These are typical markers in the string output of std::stacktrace,
+			// so their presence indicates that a stacktrace was actually generated.
 			bool found0 = std::strstr(what_str, "0#") != nullptr;
 			bool found1 = std::strstr(what_str, "1#") != nullptr;
 			bool found2 = std::strstr(what_str, "2#") != nullptr;
 			assertTrue(found0 || found1 || found2, "Stacktrace not found in Panic what()");
 #else
-			// Sprawdź czy string nie jest pusty i zawiera komunikat o braku wsparcia
+			// Check that the string is not empty and contains the fallback message.
+			// If stacktrace is not supported, we expect a specific message to be present.
 			assertTrue(std::strlen(what_str) > 0, "Panic what() is empty");
 			assertTrue(
 				std::strstr(what_str, "Stack trace is not supported") != nullptr,
