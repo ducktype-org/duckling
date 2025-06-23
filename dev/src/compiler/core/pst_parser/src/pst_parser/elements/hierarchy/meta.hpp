@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../../lang_parser_state.hpp"
+#include "../../lang_parser_element.hpp"
+#include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 
 #include <diagnostic/source_position.hpp>
@@ -149,8 +150,8 @@ namespace pst {
 	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
-		base::StrID                   name;
-		std::vector<CRef<tpc::Token>> specifiers;
+		base::StrID                     name;
+		std::vector<CRef<lexer::Token>> specifiers;
 	};
 
 	/**
