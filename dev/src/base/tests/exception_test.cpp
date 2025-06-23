@@ -110,19 +110,19 @@ public:
 		try {
 			throwPanic1();
 		} catch (base::Panic& panic) {
-			const char* whatStr = panic.what();
-			std::cerr << "Panic what: " << whatStr << "\n";
+			const char* what_str = panic.what();
+			std::cerr << "Panic what: " << what_str << "\n";
 #ifdef __cpp_lib_stacktrace
 			// Sprawdź czy są fragmenty stacktrace (np. "0#", "1#", "2#")
-			bool found0 = std::strstr(whatStr, "0#") != nullptr;
-			bool found1 = std::strstr(whatStr, "1#") != nullptr;
-			bool found2 = std::strstr(whatStr, "2#") != nullptr;
+			bool found0 = std::strstr(what_str, "0#") != nullptr;
+			bool found1 = std::strstr(what_str, "1#") != nullptr;
+			bool found2 = std::strstr(what_str, "2#") != nullptr;
 			assertTrue(found0 || found1 || found2, "Stacktrace not found in Panic what()");
 #else
 			// Sprawdź czy string nie jest pusty i zawiera komunikat o braku wsparcia
-			assertTrue(std::strlen(whatStr) > 0, "Panic what() is empty");
+			assertTrue(std::strlen(what_str) > 0, "Panic what() is empty");
 			assertTrue(
-				std::strstr(whatStr, "Stack trace is not supported") != nullptr,
+				std::strstr(what_str, "Stack trace is not supported") != nullptr,
 				"Missing fallback stacktrace message"
 			);
 #endif
