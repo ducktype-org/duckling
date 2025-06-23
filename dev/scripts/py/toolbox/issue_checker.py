@@ -16,6 +16,7 @@ def get_issues_from_github():
 
     # Get OWNER and REPO from git remote
     remote_url = subprocess.check_output(['git', 'remote', 'get-url', 'origin'], text=True).strip()
+    log_warning(f"Using git remote URL: {remote_url}")
     m = re.match(r".*[:/](.+)/(.+)\.git", remote_url)
     if not m:
         log_warning("Could not parse OWNER/REPO from git remote.")
