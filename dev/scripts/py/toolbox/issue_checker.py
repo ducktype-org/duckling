@@ -25,6 +25,7 @@ def get_issues_from_github():
 
     # Get current branch
     branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
+    log_warning(f"Current branch: {branch_name}")
 
     # Get PR number associated with this branch
     try:
@@ -32,6 +33,7 @@ def get_issues_from_github():
             ['gh', 'pr', 'view', branch_name, '--json', 'number', '-q', '.number'],
             text=True
         ).strip()
+        log_warning(f"Associated Pull Request number: {pr_number}")
     except subprocess.CalledProcessError:
         log_warning(f"No associated Pull Request found for branch: {branch_name}")
         return []
