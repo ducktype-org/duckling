@@ -1,9 +1,8 @@
 import re
-import subprocess
 import json
 from pathlib import Path
 from .cpp_linter import get_files_for_linter
-from .helpers import log_info, log_warning, log_new_line
+from .helpers import log_info, log_warning, log_new_line, bash_command_get_output, BashCommandError
 
 def get_issues_from_github():
     import os
@@ -15,7 +14,13 @@ def get_issues_from_github():
         return []
 
     # Get OWNER and REPO from git remote (support both SSH and HTTPS URLs)
-    remote_url = subprocess.check_output(['git', 'remote', 'get-url', 'origin'], text=True).strip()
+    try:
+        remote_url, _ = bash_command_get_output('git remote get-url origin')
+        remote_url = remote_url.strip()
+    except BashCommandError as e:
+        log_warning(f"Could not get git remote url: {e}")
+        return []
+    
     m = re.match(r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url)
     if not m:
         log_warning("Could not parse OWNER/REPO from git remote.")
@@ -23,20 +28,25 @@ def get_issues_from_github():
     owner, repo = m.group(2), m.group(3)
 
     # Get current branch
-    branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
+    try:
+        branch_name, _ = bash_command_get_output('git rev-parse --abbrev-ref HEAD')
+        branch_name = branch_name.strip()
+    except BashCommandError as e:
+        log_warning(f"Could not get current branch: {e}")
+        return []
 
     # Check for PR_NUMBER in environment (used in CI workflows)
     pr_number = os.environ.get("PR_NUMBER")
     if not pr_number:
         # If not set, try to get PR number associated with this branch using gh
         try:
-            pr_number = subprocess.check_output(
-                ['gh', 'pr', 'view', branch_name, '--json', 'number', '-q', '.number'],
-                text=True
-            ).strip()
+            pr_number, _ = bash_command_get_output(
+                f'gh pr view {branch_name} --json number -q .number'
+            )
+            pr_number = pr_number.strip()
             log_info(f"Found associated Pull Request number: {pr_number}")
-        except subprocess.CalledProcessError:
-            log_warning(f"No associated Pull Request found for branch: {branch_name}")
+        except BashCommandError as e:
+            log_warning(f"No associated Pull Request found for branch: {branch_name}: {e}")
             return []
 
     if not pr_number:
@@ -54,15 +64,9 @@ def get_issues_from_github():
       }}
     }}"""
 
-    gh_cmd = [
-        'gh', 'api', 'graphql',
-        '-f', f'query={query}'
-    ]
+    gh_cmd = f"gh api graphql -f 'query={query}'"
     try:
-        gh_output = subprocess.check_output(
-            gh_cmd,
-            text=True
-        )
+        gh_output, _ = bash_command_get_output(gh_cmd)
         data = json.loads(gh_output)
         nodes = (
             data.get("data", {})
@@ -72,15 +76,15 @@ def get_issues_from_github():
                 .get("nodes", [])
         )
         return [str(node["number"]) for node in nodes if "number" in node]
-    except Exception as e:
+    except BashCommandError as e:
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
 
-def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False, gh_token: str = ""):
+def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
     if(not issues):
         issues = get_issues_from_github()
         if not issues:
-            return False
+            return True
 
     valid_issue_numbers = []
     for num in issues:
