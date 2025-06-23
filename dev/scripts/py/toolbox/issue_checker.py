@@ -27,9 +27,7 @@ def get_issues_from_github():
 
     # Check for PR_NUMBER in environment (used in CI workflows)
     pr_number = os.environ.get("PR_NUMBER")
-    if pr_number:
-        log_info(f"Using PR_NUMBER from environment: {pr_number}")
-    else:
+    if not pr_number:
         # If not set, try to get PR number associated with this branch using gh
         try:
             pr_number = subprocess.check_output(

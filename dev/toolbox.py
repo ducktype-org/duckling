@@ -869,8 +869,7 @@ def issue_checker(issues, branch, no_merge_base):
     If no issue numbers are provided, the script will attempt to fetch them from GitHub using the 'gh' CLI.
     You must be authenticated with 'gh' for this to work.
     """
-    found = issue_checker_impl(issues, branch, no_merge_base)
-    if found:
+    if not issue_checker_impl(issues, branch, no_merge_base):
         exit_with_error("Issue checker found issues numbers related to this pull request in the code")
 
 
