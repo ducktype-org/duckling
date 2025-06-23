@@ -15,18 +15,15 @@ namespace pst {
 	public:
 		ExprClassify() = delete;
 
-		CONDITION(isComparison) {
-			return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
-			).valueOr(false);
-		}
-
-		CONDITION(isAssignment) {
-			return state[fwd].asBinaryOperator().map([](auto op) { return op.isAssignment(); }
-			).valueOr(false);
-		}
-
-		CONDITION(exprStmtEnd) { return state[fwd].is(Special::Semicolon); }
+		CONDITION(isComparison);
+		CONDITION(isAssignment);
+		CONDITION(exprStmtEnd);
 	};
+
+	// Needed to not include full state definition
+	namespace detail {
+		bool isSentinel(LangParserState& state, i64 fwd);
+	}
 
 	namespace expr {
 		/**
@@ -36,8 +33,7 @@ namespace pst {
 		template<std::derived_from<ExprElement> T, StateCondition until>
 		MBox<ExprElement> parseUntil(LangParserState& state) {
 			i64 length = 0;
-			while (!state[length].is(lexer::Token::Type::Sentinel) && !until(state, length))
-				length++;
+			while (!detail::isSentinel(state, length) && !until(state, length)) length++;
 			return T::parse(state, length);
 		}
 	}

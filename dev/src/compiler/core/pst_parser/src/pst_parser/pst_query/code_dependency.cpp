@@ -51,7 +51,7 @@ namespace pst {
 	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID id) {
 		using namespace std::views;
 
-		static auto get_token_pos = [](CRef<tpc::Token> tok) { return tok->getPosition(); };
+		static auto get_token_pos = [](CRef<lexer::Token> tok) { return tok->getPosition(); };
 
 		auto x = viewDependentTokens(id) | transform(get_token_pos);
 
