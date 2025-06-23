@@ -1,4 +1,4 @@
-#include "automatic.hpp"
+#include "debug_print.hpp"
 
 namespace tpc {
 	void identifierDprint(base::StrID value, std::ostream& out) {

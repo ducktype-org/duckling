@@ -6,6 +6,7 @@
 #include <tester/tester.hpp>
 
 #include <base/optional.hpp>
+#include <base/ref.hpp>
 
 #include <expected>
 
@@ -34,14 +35,27 @@ public:
 		TESTER_ADD_TEST(testExpect);
 	}
 
-	template<class T, class U>
+	template<typename X>
+	struct is_ref: std::false_type {};
+
+	template<typename Y>
+	struct is_ref<Ref<Y>>: std::true_type {};
+
+	template<typename T, typename U>
 	void spaceshipPaste(T& a, T& b, base::Optional<U>& o1, base::Optional<U>& o2) {
-		if (a < b) ASSERT_EQUAL(true, o1 < o2);
-		if (a == b) ASSERT_EQUAL(true, o1 == o2);
-		if (a <= b) ASSERT_EQUAL(true, o1 <= o2);
-		if (a > b) ASSERT_EQUAL(true, o1 > o2);
-		if (a != b) ASSERT_EQUAL(true, o1 != o2);
-		if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
+		auto get_val = [](auto& opt) -> decltype(auto) {
+			if constexpr (is_ref<U>::value)
+				return *opt.value();
+			else
+				return opt.value();
+		};
+
+		if (a < b) ASSERT_EQUAL(true, get_val(o1) < get_val(o2));
+		if (a == b) ASSERT_EQUAL(true, get_val(o1) == get_val(o2));
+		if (a <= b) ASSERT_EQUAL(true, get_val(o1) <= get_val(o2));
+		if (a > b) ASSERT_EQUAL(true, get_val(o1) > get_val(o2));
+		if (a != b) ASSERT_EQUAL(true, get_val(o1) != get_val(o2));
+		if (a >= b) ASSERT_EQUAL(true, get_val(o1) >= get_val(o2));
 	}
 
 	void basicTest() {
@@ -128,13 +142,13 @@ public:
 	}
 
 	void testReference() {
-		std::vector<int>            vec = { 1, 2, 3 };
-		Optional<std::vector<int>&> opt_vec(vec);
-		opt_vec.value()[0]++;
+		std::vector<int>                      vec = { 1, 2, 3 };
+		Optional<base::Ref<std::vector<int>>> opt_vec(&vec);
+		(*opt_vec.value())[0]++;
 		vec[1] = 30;
 		for (usize i = 0; i < vec.size(); i++) {
 			assertTrue(
-				vec[i] == opt_vec.value()[i],
+				vec[i] == (*opt_vec.value())[i],
 				base::strConcat("Values at index ", i, " are not equal, but it's a reference.")
 			);
 		}
@@ -154,12 +168,12 @@ public:
 		b = str2;
 		ASSERT_EQUAL(str2, *b);
 
-		base::Optional<std::string&> c;
-		c = str1;
-		ASSERT_EQUAL(str1, *c);
-		c = str2;
-		ASSERT_EQUAL(str2, *c);
-		c.value()[0] = 'd';
+		base::Optional<base::Ref<std::string>> c;
+		c = &str1;
+		ASSERT_EQUAL(str1, *c.value());
+		c = &str2;
+		ASSERT_EQUAL(str2, *c.value());
+		(*c.value())[0] = 'd';
 		ASSERT_EQUAL(str2[0], 'd');
 	}
 
@@ -170,13 +184,13 @@ public:
 		ASSERT_EQUAL("2", *a);
 		ASSERT_EQUAL("1", *b);
 
-		std::string                  str1 = "123";
-		std::string                  str2 = "321";
-		base::Optional<std::string&> c    = str1;
-		base::Optional<std::string&> d    = str2;
+		std::string                            str1 = "123";
+		std::string                            str2 = "321";
+		base::Optional<base::Ref<std::string>> c    = &str1;
+		base::Optional<base::Ref<std::string>> d    = &str2;
 		std::swap(c, d);
-		ASSERT_EQUAL(str2, *c);
-		ASSERT_EQUAL(str1, *d);
+		ASSERT_EQUAL(str2, *c.value());
+		ASSERT_EQUAL(str1, *d.value());
 	}
 
 	void testFromDocs() {
@@ -198,10 +212,10 @@ public:
 		// --------------------------------------------------
 
 		// base::Optional can also hold a reference!
-		std::string                  name = "Duckling";
-		base::Optional<std::string&> opt_name(name);
+		std::string                            name = "Duckling";
+		base::Optional<base::Ref<std::string>> opt_name(&name);
 
-		opt_name.value().push_back('!');
+		opt_name.value()->push_back('!');
 		ASSERT_EQUAL("Duckling!", name);
 	}
 
@@ -210,8 +224,8 @@ public:
 		int b = 2;
 		// Reference
 		for (int i = 0; i < 3; i++) {
-			base::Optional<int&> o1 = a;
-			base::Optional<int&> o2 = b;
+			base::Optional<base::Ref<int>> o1 = &a;
+			base::Optional<base::Ref<int>> o2 = &b;
 			spaceshipPaste(a, b, o1, o2);
 			a++;
 		}
@@ -245,10 +259,10 @@ public:
 		opt->push_back('c');
 		ASSERT_EQUAL("c", opt.value());
 
-		std::string                  str;
-		base::Optional<std::string&> opt_ref(str);
-		opt_ref->push_back('r');
-		ASSERT_EQUAL("r", opt_ref.value());
+		std::string                            str;
+		base::Optional<base::Ref<std::string>> opt_ref(&str);
+		opt_ref.value()->push_back('r');
+		ASSERT_EQUAL("r", *opt_ref.value());
 	}
 
 	void ifOptSomeTest() {
@@ -327,7 +341,7 @@ public:
 
 	void testExpect() {
 		try {
-			(void) Optional<float&>().expect<int>(21);
+			(void) Optional<base::Ref<float>>().expect<int>(21);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 21); }
 

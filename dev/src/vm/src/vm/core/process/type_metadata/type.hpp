@@ -96,8 +96,8 @@ namespace vm {
 		}
 
 		template<class T>
-		base::Optional<const T&> get() const {
-			if (std::holds_alternative<T>(kind)) return std::get<T>(kind);
+		base::Optional<base::CRef<T>> get() const {
+			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
 			return {};
 		}
 
@@ -144,7 +144,7 @@ namespace vm {
 
 		// inheritance
 		[[nodiscard]]
-		base::Optional<const InheritanceMetadata&> getInheritanceMetadata() const;
+		base::Optional<base::CRef<InheritanceMetadata>> getInheritanceMetadata() const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getSuperClass() const;
 		[[nodiscard]]
@@ -162,7 +162,7 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
 		[[nodiscard]]
-		base::Optional<const std::vector<TypeCRef>&> getParameters() const;
+		base::Optional<base::CRef<std::vector<TypeCRef>>> getParameters() const;
 		[[nodiscard]]
 		base::Optional<u64> getParametersSize() const;
 		[[nodiscard]]

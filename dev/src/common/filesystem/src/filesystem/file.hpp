@@ -8,6 +8,7 @@
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
+#include <base/ref.hpp>
 
 #include <expected>
 #include <filesystem>

@@ -5,6 +5,7 @@
 #include "services.hpp"
 
 #include <base/optional.hpp>
+#include <base/ref.hpp>
 
 #include <tuple>
 
@@ -29,8 +30,8 @@ namespace vm {
 		ServiceManagerDef(): services(base::Optional<ServiceTypes>()...) {}
 
 		template<class T>
-		T& get() {
-			return std::get<base::Optional<T&>>(services).value();
+		base::Ref<T> get() {
+			return std::get<base::Optional<base::Ref<T>>>(services).value();
 		}
 
 		/**

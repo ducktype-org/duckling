@@ -19,7 +19,14 @@ namespace compiler::driver {
 		const BackendModuleData& data,
 		artifacts::FileArtifact  output_artifact
 	) {
-		backend_vm::Module       module{ query_ctx, data.module_id, data.functions };
+		std::vector<backend_vm::BackendDVMGlobal> dvm_globals;
+		for (const auto& global: data.globals) {
+			backend_vm::BackendDVMGlobal dvm_global{ .lir_global  = global.lir_global,
+				                                     .global_ctor = global.global_ctor,
+				                                     .global_dtor = global.global_dtor };
+			dvm_globals.emplace_back(std::move(dvm_global));
+		}
+		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, dvm_globals };
 		vm::code::CodeCollection code_collection = module.build();
 
 		if (not options->dvm_code_only_memory) {
