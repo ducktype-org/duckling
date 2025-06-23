@@ -46,6 +46,7 @@ add_library(PstParser
 	src/pst_parser/pst.cpp
 	src/pst_parser/pst_query/code_dependency.cpp
 	src/pst_parser/elements/elements_common.cpp
+	src/pst_parser/elements/lang_state_unmethods.cpp
 	${StatementElementsImplementationFiles}
 	${DeclarationsElementsImplementationFiles}
 	${ExpressionElementsImplementationFiles}

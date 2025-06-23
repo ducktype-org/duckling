@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../lang_state_unmethods.hpp"
 #include "meta.hpp"
 
 #include <diagnostic/source_position.hpp>
@@ -11,14 +12,6 @@
 #include <base/string_id.hpp>
 
 namespace pst {
-	using ExprParseFun = MBox<ExprElement>(LangParserState&);
-
-	// These are needed to not include parser state definition
-	namespace detail {
-		dia::SourcePosition getPosition(LangParserState& state);
-		void parseExprIntoHolder(LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun);
-	}
-
 	/**
 	 * @brief Class that keeps an expression with information whether it's a top-level expression.
 	 */

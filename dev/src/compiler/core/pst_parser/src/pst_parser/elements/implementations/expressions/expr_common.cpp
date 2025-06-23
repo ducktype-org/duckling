@@ -3,8 +3,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-
-
 	bool ExprClassify::isComparison(const LangParserState& state, i64 fwd) {
 		return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
 		).valueOr(false);
@@ -17,11 +15,5 @@ namespace pst {
 
 	bool ExprClassify::exprStmtEnd(const LangParserState& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon);
-	}
-
-	namespace detail {
-		bool isSentinel(LangParserState& state, i64 fwd) {
-			return state[fwd].is(lexer::Token::Type::Sentinel);
-		}
 	}
 }

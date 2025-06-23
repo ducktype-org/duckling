@@ -3,16 +3,13 @@
 #include "lang_parser_state.hpp"
 
 namespace pst::detail {
-	void StateDeleter::operator()(LangParserState* ptr) { delete ptr; }
+	void deleteState(LangParserState* ptr) { delete ptr; }
 
-	std::unique_ptr<LangParserState, StateDeleter> makeState(
-		tpc::TokenStream&& token_stream, Ref<dia::Logger> logger
-	) {
-		auto* state_ptr = new LangParserState(std::move(token_stream), logger);
-		return { state_ptr, StateDeleter() };
+	Box<LangParserState> makeState(tpc::TokenStream&& token_stream, Ref<dia::Logger> logger) {
+		return base::makeBox<LangParserState>(std::move(token_stream), logger);
 	}
 
-	std::vector<ImportType> extractState(std::unique_ptr<LangParserState, StateDeleter> state_ptr) {
+	std::vector<ImportType> extractState(Box<LangParserState> state_ptr) {
 		return std::move(*state_ptr).extractState();
 	}
 }

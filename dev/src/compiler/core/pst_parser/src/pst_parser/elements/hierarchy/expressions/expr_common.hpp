@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../lang_state_unmethods.hpp"
 #include "../meta.hpp"                         // IWYU pragma: export
 #include "../not_statements/expr_element.hpp"  // IWYU pragma: export
 
@@ -19,11 +20,6 @@ namespace pst {
 		CONDITION(isAssignment);
 		CONDITION(exprStmtEnd);
 	};
-
-	// Needed to not include full state definition
-	namespace detail {
-		bool isSentinel(LangParserState& state, i64 fwd);
-	}
 
 	namespace expr {
 		/**
