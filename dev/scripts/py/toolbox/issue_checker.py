@@ -66,7 +66,7 @@ def get_issues_from_github():
     if github_token:
         # This is required for workflows to authenticate the request
         gh_cmd.insert(3, '-H')
-        gh_cmd.insert(4, f'Authorization: bearer {github_token}')
+        gh_cmd.insert(4, f'Authorization: Bearer {github_token}')
 
     try:
         gh_output = subprocess.check_output(
