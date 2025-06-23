@@ -3,6 +3,7 @@
 #include <base/str_utils.hpp>
 
 #include <cstring>
+#include <version>
 
 bool compareCstr(const char* const c1, const char* const c2) {
 	return std::string_view(c1) == std::string_view(c2);
@@ -23,6 +24,7 @@ public:
 		TESTER_ADD_TEST(testPanic3);
 		TESTER_ADD_TEST(testNotYetImplemented);
 		TESTER_ADD_TEST(testLogicError);
+		TESTER_ADD_TEST(testPanicStacktrace);
 	}
 
 	void throwPanic1() { throw base::Panic("throwPanic", "panic test"); }
@@ -102,6 +104,31 @@ public:
 			return;
 		}
 		fail("LogicError what not caught");
+	}
+
+	void testPanicStacktrace() {
+		try {
+			throwPanic1();
+		} catch (base::Panic& panic) {
+			const char* whatStr = panic.what();
+			std::cerr << "Panic what: " << whatStr << "\n";
+#ifdef __cpp_lib_stacktrace
+			// Sprawdź czy są fragmenty stacktrace (np. "0#", "1#", "2#")
+			bool found0 = std::strstr(whatStr, "0#") != nullptr;
+			bool found1 = std::strstr(whatStr, "1#") != nullptr;
+			bool found2 = std::strstr(whatStr, "2#") != nullptr;
+			assertTrue(found0 || found1 || found2, "Stacktrace not found in Panic what()");
+#else
+			// Sprawdź czy string nie jest pusty i zawiera komunikat o braku wsparcia
+			assertTrue(std::strlen(whatStr) > 0, "Panic what() is empty");
+			assertTrue(
+				std::strstr(whatStr, "Stack trace is not supported") != nullptr,
+				"Missing fallback stacktrace message"
+			);
+#endif
+			return;
+		}
+		fail("Panic what not caught");
 	}
 
 	~ExceptionTest() override = default;

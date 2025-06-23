@@ -20,7 +20,6 @@ namespace base {
 	Panic::Panic(std::string position, std::string reason):
 		  position(std::move(position)),
 		  reason(std::move(reason)) {
-		this->reason += '\0';
 		makeWhatStr();
 	}
 
@@ -42,16 +41,13 @@ namespace base {
 		out << what_str;
 	}
 
-	LogicError::LogicError(std::string message): message(std::move(message)) {
-		this->message += '\0';
-	}
+	LogicError::LogicError(std::string message): message(std::move(message)) {}
 
 	const char* LogicError::what() const noexcept { return message.data(); }
 
 	NotYetImplemented::NotYetImplemented(const std::string& message):
 		  message("The feature is not implemented yet: ") {
 		this->message += message;
-		this->message += '\0';
 	}
 
 	const char* NotYetImplemented::what() const noexcept { return message.data(); }
