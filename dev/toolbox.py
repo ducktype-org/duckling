@@ -864,7 +864,11 @@ def pr_validate(*args, **kwargs):
     "This feature allows to run the checker on a shallow clone.",
 )
 def issue_checker(issues, branch, no_merge_base):
-    """Checks for occurrences of #issue_number in source files and prints file, line, and summary."""
+    """Checks for occurrences of #issue_number in source files and prints file, line, and summary.
+
+    If no issue numbers are provided, the script will attempt to fetch them from GitHub using the 'gh' CLI.
+    You must be authenticated with 'gh' for this to work.
+    """
     found = issue_checker_impl(issues, branch, no_merge_base)
     if found:
         exit_with_error("Issue checker found issues numbers related to this pull request in the code")

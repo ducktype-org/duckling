@@ -1,9 +1,83 @@
 import re
+import subprocess
+import json
 from pathlib import Path
 from .cpp_linter import get_files_for_linter
 from .helpers import log_info, log_warning, log_new_line
 
-def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+def get_issues_from_github():
+    import os
+    import shutil
+
+    # Check if 'gh' is available
+    if shutil.which('gh') is None:
+        log_warning("'gh' CLI not found. Cannot run issue-checker without 'gh' or issue numbers.")
+        return []
+
+    # Get OWNER and REPO from git remote
+    remote_url = subprocess.check_output(['git', 'remote', 'get-url', 'origin'], text=True).strip()
+    m = re.match(r".*[:/](.+)/(.+)\.git", remote_url)
+    if not m:
+        log_warning("Could not parse OWNER/REPO from git remote.")
+        return []
+    owner, repo = m.group(1), m.group(2)
+
+    # Get current branch
+    branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
+
+    # Get PR number associated with this branch
+    try:
+        pr_number = subprocess.check_output(
+            ['gh', 'pr', 'view', branch_name, '--json', 'number', '-q', '.number'],
+            text=True
+        ).strip()
+    except subprocess.CalledProcessError:
+        log_warning(f"No associated Pull Request found for branch: {branch_name}")
+        return []
+
+    if not pr_number:
+        log_warning(f"No associated Pull Request found for branch: {branch_name}")
+        return []
+
+    # Prepare GraphQL query string with variables substituted
+    query = f"""{{
+      repository(owner: "{owner}", name: "{repo}") {{
+        pullRequest(number: {pr_number}) {{
+          closingIssuesReferences(first: 100) {{
+            nodes {{ number }}
+          }}
+        }}
+      }}
+    }}"""
+
+    gh_cmd = [
+        'gh', 'api', 'graphql',
+        '-f', f'query={query}'
+    ]
+    try:
+        gh_output = subprocess.check_output(
+            gh_cmd,
+            text=True
+        )
+        data = json.loads(gh_output)
+        nodes = (
+            data.get("data", {})
+                .get("repository", {})
+                .get("pullRequest", {})
+                .get("closingIssuesReferences", {})
+                .get("nodes", [])
+        )
+        return [str(node["number"]) for node in nodes if "number" in node]
+    except Exception as e:
+        log_warning(f"Error while fetching issue numbers via gh api: {e}")
+        return []
+
+def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False, gh_token: str = ""):
+    if(not issues):
+        issues = get_issues_from_github()
+        if not issues:
+            return False
+
     valid_issue_numbers = []
     for num in issues:
         num_str = str(num).strip()

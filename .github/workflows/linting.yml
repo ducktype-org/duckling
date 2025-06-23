@@ -101,7 +101,7 @@ jobs:
         id: get-issues
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+          GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
