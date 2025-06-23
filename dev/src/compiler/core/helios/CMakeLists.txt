@@ -23,7 +23,6 @@ add_library(HELIOS
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
-	src/helios/helios_result.hpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher)

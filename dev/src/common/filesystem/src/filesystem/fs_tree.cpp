@@ -23,10 +23,10 @@ FsTree::FsTree(fs::FilePath root, regex reject_file_regex, regex reject_director
 	  m_reject_directory_regex(std::move(reject_directory_regex)),
 	  m_root(std::move(root)) {}
 
-auto FsTree::getParentTree() const -> base::Optional<const FsTree&> {
+auto FsTree::getParentTree() const -> base::Optional<base::CRef<FsTree>> {
 	if (m_parent.has_value()) {
 		CORE_ASSERT(not m_parent.value().expired(), "Parent of FsTree is expired");
-		return *m_parent.value().lock();
+		return &*m_parent.value().lock();
 	}
 	return {};
 }

@@ -13,18 +13,18 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      self-hosted-label: 'ubuntu-24.04'
-      github-label: 'ubuntu-24.04'
+      self-hosted-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
+      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
     secrets: inherit
 
   cpp-linter:
     if: github.event.pull_request.draft == false
 
     needs: determine-runners
-    runs-on: ${{ fromJson(needs.determine-runners.outputs.runner1) }}
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
     steps:
       - name: Clean workspace (self-hosted only)
-        if: contains(needs.determine-runners.outputs.runner1, 'SelfHostedRunners')
+        if: contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners')
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
           rm -rf ${{ github.workspace }}
@@ -78,10 +78,10 @@ jobs:
     if: github.event.pull_request.draft == false
 
     needs: determine-runners
-    runs-on: ${{ fromJson(needs.determine-runners.outputs.runner2) }}
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[1] }}
     steps:
       - name: Clean workspace (self-hosted only)
-        if: contains(needs.determine-runners.outputs.runner2, 'SelfHostedRunners')
+        if: contains(fromJson(needs.determine-runners.outputs.runners)[1].group, 'SelfHostedRunners')
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
           rm -rf ${{ github.workspace }}
