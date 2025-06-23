@@ -89,7 +89,7 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
         valid_issue_numbers.append(num_str)
     if not valid_issue_numbers:
         log_warning("No valid issue numbers provided.")
-        return False
+        return True
 
     # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
     patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
@@ -98,8 +98,6 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     summary = {num: 0 for num in valid_issue_numbers}
 
     for file in files:
-        if not (file.endswith(".cpp") or file.endswith(".hpp")):
-            continue
         with open(file, "r") as f:
             for i, line in enumerate(f, 1):
                 for idx, pat in enumerate(patterns):
@@ -111,4 +109,4 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     log_info("Summary:")
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
-    return found_any
+    return not found_any
