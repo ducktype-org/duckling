@@ -14,14 +14,14 @@ def get_issues_from_github():
         log_warning("'gh' CLI not found. Cannot run issue-checker without 'gh' or issue numbers.")
         return []
 
-    # Get OWNER and REPO from git remote
+    # Get OWNER and REPO from git remote (support both SSH and HTTPS URLs)
     remote_url = subprocess.check_output(['git', 'remote', 'get-url', 'origin'], text=True).strip()
     log_warning(f"Using git remote URL: {remote_url}")
-    m = re.match(r".*[:/](.+)/(.+)\.git", remote_url)
+    m = re.match(r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url)
     if not m:
         log_warning("Could not parse OWNER/REPO from git remote.")
         return []
-    owner, repo = m.group(1), m.group(2)
+    owner, repo = m.group(2), m.group(3)
 
     # Get current branch
     branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()

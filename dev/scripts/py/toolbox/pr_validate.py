@@ -34,7 +34,7 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
     )
 
     # Step 5 - issue checker
-    if not issue_checker_impl():
+    if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
     
     if clang_tidy_failed or clang_format_failed:
