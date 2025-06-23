@@ -62,7 +62,7 @@ def get_issues_from_github():
     ]
 
     # If GITHUB_TOKEN is set, add Authorization header (required in CI workflows)
-    github_token = os.environ.get("GITHUB_TOKEN")
+    github_token = os.environ.get("WORKLOW_SCHED_TOKEN")
     if github_token:
         # This is required for workflows to authenticate the request
         gh_cmd.insert(3, '-H')
