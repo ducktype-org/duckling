@@ -10,11 +10,11 @@
 namespace base {
 
 	std::string getCurrentStackTrace() {
-		#ifdef __cpp_lib_stacktrace
-			return std::to_string(std::stacktrace::current());
-		#else
-			return "Stack trace is not supported in this compiler and/or system.";
-		#endif
+#ifdef __cpp_lib_stacktrace
+		return std::to_string(std::stacktrace::current());
+#else
+		return "Stack trace is not supported in this compiler and/or system.";
+#endif
 	}
 
 	Panic::Panic(std::string position, std::string reason):
@@ -29,7 +29,7 @@ namespace base {
 		what_str += "Unexpected compiler error occurred:\n";
 		what_str += getPosition() + ":\n";
 		what_str += reason + ":\n\n";
-		what_str +=  "Stacktrace:\n";
+		what_str += "Stacktrace:\n";
 		what_str += getCurrentStackTrace();
 	}
 

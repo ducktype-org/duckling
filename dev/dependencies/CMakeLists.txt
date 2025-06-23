@@ -73,6 +73,13 @@ endif()
 
 set(GRAPHVIZ_LIBRARIES_FOUND ${GRAPHVIZ_LIBRARIES_FOUND} PARENT_SCOPE)
 
+# stdc++exp library (experimental C++ library)
+add_library(system_stdcxxexp INTERFACE)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(system_stdcxxexp INTERFACE "-lstdc++exp")
+endif()
+
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
 FetchContent_GetProperties(base64)
