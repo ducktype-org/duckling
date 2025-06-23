@@ -838,12 +838,6 @@ def todo_counter(*args, **kwargs):
     help="Path to build folder with compile_commands.json",
     default="build",
 )
-@click.option(
-    "-i",
-    "--issues",
-    prompt="linked issues",
-    help="numbers of issues linked to the PR, separated by space",
-)
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
     Actions include: building everything, running tests, linter, duck-linter, issue-checker.
