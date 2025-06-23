@@ -85,7 +85,7 @@ namespace tsh {
 		// Since this resolution step really only considers methods, we discard fields.
 		if (method.isField()) return non_matches;
 
-		std::vector<Parameter> parameters = method.getParameters().value();
+		std::vector<Parameter> parameters = *method.getParameters().value();
 		std::vector<bool>      param_was_provided(parameters.size());
 		bool                   coercion_present = false;
 

@@ -158,7 +158,7 @@ namespace vm::loader::compiler {
 
 			auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
 				if_opt_some(offsets.atMaybe(local.var_name), offset) {
-					if (offset != curr_stack_size) {
+					if (*offset != curr_stack_size) {
 						// ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
 						CORE_PANIC(
 							"DuplicatedLocalNameError - used a variable again at a different offset"
@@ -184,20 +184,20 @@ namespace vm::loader::compiler {
 				// @todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 				auto it = std::ranges::find_if(ctx.type_map, [&](const auto& type) {
 					if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-						return inh_meta.virtual_methods.contains(method_name);
+						return (*inh_meta).virtual_methods.contains(method_name);
 					}
 					return false;
 				});
 				if (it != ctx.type_map.end()) {
 					auto inh_meta = it->getInheritanceMetadata().value();
-					return inh_meta.virtual_methods[method_name]->getParameterCount();
+					return inh_meta->virtual_methods[method_name]->getParameterCount();
 				}
 				CORE_UNREACHABLE();
 			};
 
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
-			push(base::StrID("ret_val"), func_type.result->getName());
-			for (auto [idx, param_type]: std::views::enumerate(func_type.parameters))
+			push(base::StrID("ret_val"), func_type->result->getName());
+			for (auto [idx, param_type]: std::views::enumerate(func_type->parameters))
 				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type->getName());
 
 			// instruction index, stack state, stack size
@@ -291,7 +291,7 @@ namespace vm::loader::compiler {
 		for (const auto& type: *types) {
 			if_opt_some(type.getInheritanceMetadata(), metadata) {
 				//@todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
-				for (auto& [name, impl]: metadata.vtable) {
+				for (auto& [name, impl]: metadata->vtable) {
 					if (!method_name_to_id.contains(name)) {
 						method_id_to_name.put(current_ix, name);
 						method_name_to_id.put(name, current_ix);

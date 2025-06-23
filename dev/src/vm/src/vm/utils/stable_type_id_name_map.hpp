@@ -54,11 +54,11 @@ namespace vm {
 
 		[[nodiscard]]
 		constexpr base::Optional<CRef<T>> atMaybe(base::StrID name) const {
-			return name_to_id.atMaybe(name).map([&](TID id) { return at(id); });
+			return name_to_id.atMaybe(name).map([&](CRef<TID> id) { return at(*id); });
 		}
 
 		constexpr base::Optional<Ref<T>> atMaybe(base::StrID name) {
-			return name_to_id.atMaybe(name).map([&](TID id) { return at(id); });
+			return name_to_id.atMaybe(name).map([&](Ref<TID> id) { return at(*id); });
 		}
 
 		[[nodiscard]]
@@ -80,12 +80,12 @@ namespace vm {
 		}
 
 		constexpr base::Optional<base::StrID> nameOf(TID id) const {
-			return id_to_name.atMaybe(id).map([](auto&& ref) { return base::StrID(ref); });
+			return id_to_name.atMaybe(id).map([](auto ref) { return base::StrID(std::move(*ref)); });
 		}
 
 		[[nodiscard]] constexpr base::Optional<TID> idOf(base::StrID name) const {
 			// Mapping to copy
-			return name_to_id.atMaybe(name).map([](TID t) { return t; });
+			return name_to_id.atMaybe(name).map([](CRef<TID> t) { return *t; });
 		}
 
 		[[nodiscard]]
