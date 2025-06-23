@@ -24,7 +24,6 @@ def get_issues_from_github():
 
     # Get current branch
     branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
-    log_info(f"Current branch: {branch_name}")
 
     # Check for PR_NUMBER in environment (used in CI workflows)
     pr_number = os.environ.get("PR_NUMBER")
@@ -61,6 +60,14 @@ def get_issues_from_github():
         'gh', 'api', 'graphql',
         '-f', f'query={query}'
     ]
+
+    # If GITHUB_TOKEN is set, add Authorization header (required in CI workflows)
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token:
+        # This is required for workflows to authenticate the request
+        gh_cmd.insert(3, '-H')
+        gh_cmd.insert(4, f'Authorization: bearer {github_token}')
+
     try:
         gh_output = subprocess.check_output(
             gh_cmd,
