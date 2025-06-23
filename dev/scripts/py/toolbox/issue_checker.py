@@ -16,7 +16,6 @@ def get_issues_from_github():
 
     # Get OWNER and REPO from git remote (support both SSH and HTTPS URLs)
     remote_url = subprocess.check_output(['git', 'remote', 'get-url', 'origin'], text=True).strip()
-    log_warning(f"Using git remote URL: {remote_url}")
     m = re.match(r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url)
     if not m:
         log_warning("Could not parse OWNER/REPO from git remote.")
@@ -25,18 +24,23 @@ def get_issues_from_github():
 
     # Get current branch
     branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
-    log_warning(f"Current branch: {branch_name}")
+    log_info(f"Current branch: {branch_name}")
 
-    # Get PR number associated with this branch
-    try:
-        pr_number = subprocess.check_output(
-            ['gh', 'pr', 'view', branch_name, '--json', 'number', '-q', '.number'],
-            text=True
-        ).strip()
-        log_warning(f"Associated Pull Request number: {pr_number}")
-    except subprocess.CalledProcessError:
-        log_warning(f"No associated Pull Request found for branch: {branch_name}")
-        return []
+    # Check for PR_NUMBER in environment (used in CI workflows)
+    pr_number = os.environ.get("PR_NUMBER")
+    if pr_number:
+        log_info(f"Using PR_NUMBER from environment: {pr_number}")
+    else:
+        # If not set, try to get PR number associated with this branch using gh
+        try:
+            pr_number = subprocess.check_output(
+                ['gh', 'pr', 'view', branch_name, '--json', 'number', '-q', '.number'],
+                text=True
+            ).strip()
+            log_info(f"Found associated Pull Request number: {pr_number}")
+        except subprocess.CalledProcessError:
+            log_warning(f"No associated Pull Request found for branch: {branch_name}")
+            return []
 
     if not pr_number:
         log_warning(f"No associated Pull Request found for branch: {branch_name}")

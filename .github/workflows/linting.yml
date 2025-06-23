@@ -100,6 +100,7 @@ jobs:
       - name: Run issue checker
         env:
           GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
          git fetch origin main
          cd dev
