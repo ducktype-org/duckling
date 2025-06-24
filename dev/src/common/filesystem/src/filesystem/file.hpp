@@ -308,9 +308,10 @@ namespace fs {
 		);
 
 		/**
-		 * @brief Creates a virtual folder in the virtual filesystem's root directory or at the given
-		 * path. If the path is not virtual, it is converted using toVirtualPath. If the folder already
-		 * exists and override is false, throws an error. If override is true, recreates the folder.
+		 * @brief Creates a virtual folder in the virtual filesystem's root directory or at the
+		 * given path. If the path is not virtual, it is converted using toVirtualPath. If the
+		 * folder already exists and override is false, throws an error. If override is true,
+		 * recreates the folder.
 		 * @param path The path to the folder (virtual or will be converted).
 		 * @param override If true, recreates the folder if it exists.
 		 * @return The created File object.

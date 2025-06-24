@@ -116,7 +116,7 @@ namespace fs {
 		if (!ofs) throw base::LogicError("Failed to create physical file: " + abs_path.string());
 		ofs << content;
 		ofs.close();
-		return File(abs_path);
+		return abs_path;
 	}
 
 	File FileManager::createPhysicalFolder(const std::filesystem::path& path, bool override) {
@@ -127,7 +127,7 @@ namespace fs {
 			std::filesystem::remove_all(abs_path);
 		}
 		std::filesystem::create_directories(abs_path);
-		return File(abs_path);
+		return abs_path;
 	}
 
 	File FileManager::createVirtualFile(
@@ -142,7 +142,7 @@ namespace fs {
 			vfs->createFile(vpath);
 		}
 		vfs->writeFile(vpath, content);
-		return File(vpath);
+		return vpath;
 	}
 
 	File FileManager::createVirtualFolder(const std::filesystem::path& path, bool override) {
@@ -155,7 +155,7 @@ namespace fs {
 			vfs->deleteDirectory(vpath, true);
 		}
 		vfs->createDirectory(vpath);
-		return File(vpath);
+		return vpath;
 	}
 
 	File FileManager::createTempFile(
@@ -171,7 +171,7 @@ namespace fs {
 		if (!ofs) throw base::LogicError("Failed to create temp file: " + tpath.string());
 		ofs << content;
 		ofs.close();
-		return File(tpath);
+		return tpath;
 	}
 
 	File FileManager::createTempFolder(const std::filesystem::path& path, bool override) {
@@ -183,14 +183,14 @@ namespace fs {
 			std::filesystem::remove_all(tpath);
 		}
 		std::filesystem::create_directories(tpath);
-		return File(tpath);
+		return tpath;
 	}
 
 	File FileManager::createTempDirectory() {
 		auto tmp_dir   = std::filesystem::temp_directory_path();
 		auto rand_path = randomName(tmp_dir);
 		std::filesystem::create_directory(rand_path);
-		return File(rand_path);
+		return rand_path;
 	}
 
 	File FileManager::createVirtualDirectory() {
@@ -281,7 +281,7 @@ namespace fs {
 		}
 		CORE_PANIC(
 			"Cannot convert path from virtual path, because it does not start with the VFS root "
-		    "path"
+			"path"
 		);
 	}
 
@@ -350,8 +350,7 @@ namespace fs {
 
 	base::OwningView getSimpleFileContent(const std::filesystem::path& path) {
 		std::ifstream file(path, std::ios::in | std::ios::binary);
-		if (file.fail())
-			throw base::LogicError(std::string("file does not exist: ") + path.string());
+		if (file.fail()) CORE_PANIC("Failed to open file: " + path.string() + ", error: ");
 
 		file.unsetf(std::ios::skipws);
 

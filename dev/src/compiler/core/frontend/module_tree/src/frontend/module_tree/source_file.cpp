@@ -1,8 +1,8 @@
 #include "source_file.hpp"
 
-#include <base/exceptions.hpp>
+#include <filesystem/file.hpp>
 
-#include <filesystem>
+#include <base/exceptions.hpp>
 
 namespace compiler::frontend {
 
@@ -16,9 +16,9 @@ namespace compiler::frontend {
 		// Add or replace file content in cache
 		auto abs_path = this->path.absolutePath();
 		if (to_content.contains(abs_path))
-			to_content[abs_path] = path.getContent();
+			to_content[abs_path] = this->path.getContent();
 		else
-			to_content.put(abs_path, path.getContent());
+			to_content.put(abs_path, this->path.getContent());
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {

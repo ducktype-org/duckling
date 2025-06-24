@@ -156,7 +156,7 @@ private:
 	void globalsTest() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/globals")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/globals")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		// Test with LLVM backend
