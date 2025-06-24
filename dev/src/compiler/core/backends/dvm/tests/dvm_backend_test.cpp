@@ -39,7 +39,7 @@ private:
 		base::StrID                      module_name;
 		vm::code::CodeCollection         code;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (auto& fun: top_level->functions) {

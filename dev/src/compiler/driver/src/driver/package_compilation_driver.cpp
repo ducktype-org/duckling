@@ -104,7 +104,7 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	PackageCompilationDriver::PackageCompilationDriver(
-		BackendType backend, fs::FilePath package_location, std::filesystem::path artifact_location
+		BackendType backend, fs::File package_location, std::filesystem::path artifact_location
 	):
 		  backend{ backend },
 		  package_location(std::move(package_location)),

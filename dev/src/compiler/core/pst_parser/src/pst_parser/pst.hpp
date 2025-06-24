@@ -58,7 +58,7 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenSource(fs::FilePath::createTempFile(content))) {
+			  : file(tokenizer::makeTokenSource(fs::FileManager::createRandomTempFile(content))) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -86,7 +86,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::FilePath& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
+		PST(const fs::File& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
 			if (!file->tokenize()) return;
 			parse();
 		}

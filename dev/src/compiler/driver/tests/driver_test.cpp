@@ -31,14 +31,14 @@ private:
 	 */
 	Box<artifacts::ArtifactCollection> createMockCollection() {
 		return base::makeBox<artifacts::ArtifactCollection>(
-			fs::FilePath::createTempDirectory().absolutePath()
+			fs::FileManager::createTempDirectory().absolutePath()
 		);
 	}
 
 	void executableGenerated() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -69,7 +69,7 @@ private:
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -100,7 +100,7 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -125,7 +125,7 @@ private:
 	void builtinCompiles() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({

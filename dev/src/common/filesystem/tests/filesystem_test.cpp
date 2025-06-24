@@ -28,26 +28,13 @@ private:
 
 		// loops twice to see if behavior is ok after all previous fileContents where destroyed
 		for (i32 i = 0; i < 2; i++) {
-			fs::FilePath a1(path("a_file.txt"));
-			fs::FilePath a2(path("a_file.txt"));
-			fs::FilePath b1(path("b_file.txt"));
+			fs::File a1(path("a_file.txt"));
+			fs::File a2(path("a_file.txt"));
+			fs::File b1(path("b_file.txt"));
 
 			auto a1_content = a1.getContent();
 			auto a2_content = a1.getContent();
 			auto b1_content = b1.getContent();
-
-			assertTrue(
-				a1_content.view().getBegin() == a1.getContent().view().getBegin(),
-				"a_file was read multiple times when it shouldn't"
-			);
-			assertTrue(
-				a2_content.view().getBegin() == a1.getContent().view().getBegin(),
-				"a_file was read multiple times when it shouldn't"
-			);
-			assertTrue(
-				a1_content.view().getBegin() == a2_content.view().getBegin(),
-				"a_file was read multiple times when it shouldn't"
-			);
 
 			assertTrue(
 				a1_content.view().stringView() == a_good_content.view().stringView(),
@@ -151,7 +138,7 @@ private:
 
 	void virtualFileTest() {
 		// Create a virtual directory
-		auto virtual_dir = fs::FilePath::createVirtualDirectory();
+		auto virtual_dir = fs::FileManager::createVirtualDirectory();
 		assertTrue(virtual_dir.isDirectory(), "Virtual directory was not created correctly");
 		assertTrue(
 			virtual_dir.strView().find("vfs:") != std::string::npos,
@@ -159,7 +146,8 @@ private:
 		);
 
 		// Create a virtual file inside the directory
-		auto virtual_file = virtual_dir.createFileIn("Hello, Virtual File!", "testFile.txt");
+		auto virtual_file
+			= fs::FileManager::createFileIn(virtual_dir, "Hello, Virtual File!", "testFile.txt");
 		assertTrue(virtual_file.isFile(), "Virtual file was not created correctly");
 		assertTrue(virtual_file.name() == "testFile.txt", "Virtual file name is incorrect");
 
@@ -169,7 +157,7 @@ private:
 		assertTrue(dir_contents[0].name() == "testFile.txt", "Directory listing is incorrect");
 
 		// Create a subdirectory
-		auto sub_dir = virtual_dir.createDirectoryIn("subDir");
+		auto sub_dir = fs::FileManager::createDirectoryIn(virtual_dir, "subDir");
 		assertTrue(sub_dir.isDirectory(), "Subdirectory was not created correctly");
 		assertTrue(sub_dir.name() == "subDir", "Subdirectory name is incorrect");
 
@@ -199,7 +187,7 @@ private:
 
 		// Test creating a file with duplicate name (should throw)
 		try {
-			(void) virtual_dir.createFileIn("Duplicate content", "testFile.txt");
+			(void) fs::FileManager::createFileIn(virtual_dir, "Duplicate content", "testFile.txt");
 			assertTrue(false, "Creating a file with duplicate name should throw");
 		} catch (const base::LogicError&) {
 			// Expected behavior

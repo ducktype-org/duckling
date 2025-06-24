@@ -11,7 +11,6 @@
 #include <base/ref.hpp>
 
 #include <expected>
-#include <memory>
 
 namespace compiler::frontend {
 
@@ -19,7 +18,7 @@ namespace compiler::frontend {
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
 	struct SourceFile final {
-		fs::FilePath               path;
+		fs::File                   path;
 		base::StrID                lang_file_name;
 		FileID                     id;
 		base::Optional<pst::PST<>> parse_tree;
@@ -30,23 +29,21 @@ namespace compiler::frontend {
 		 */
 		ModuleID linked_module;
 
-		SourceFile(fs::FilePath, ModuleID linked_module);
+		SourceFile(fs::File, ModuleID linked_module);
 
 		/**
 		 * @brief Lazily parses the source file and returns PST
 		 * @return CRef<pst::PST>
 		 */
 		CRef<pst::PST<>> getPST();
-		
+
 		// --- Content cache and hash logic ---
-		using ContentMap = base::HashMap<
-			std::filesystem::path,
-			std::shared_ptr<base::OwningView>,
-			std::hash<std::filesystem::path>>;
+		using ContentMap
+			= base::HashMap<std::filesystem::path, fs::FileContent, std::hash<std::filesystem::path>>;
 
 		static ContentMap to_content;
 
-		static std::shared_ptr<base::OwningView> getCachedContent(const fs::FilePath& path);
+		static fs::FileContent getCachedContent(const fs::File& path);
 
 		u64 queryUnstablePerfectHash();
 	};

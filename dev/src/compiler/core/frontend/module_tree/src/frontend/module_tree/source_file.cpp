@@ -8,25 +8,17 @@ namespace compiler::frontend {
 
 	SourceFile::ContentMap SourceFile::to_content;
 
-	SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
+	SourceFile::SourceFile(fs::File path, ModuleID module_id):
 		  path(std::move(path)),
 		  id(FileID::next()),
 		  linked_module(module_id) {
-		std::cout << "Creating SourceFile for: " << this->path.strView() << "\n";
 		lang_file_name = base::StrID(this->path.stem().c_str());
 		// Add or replace file content in cache
 		auto abs_path = this->path.absolutePath();
-		auto content_ptr
-			= std::make_shared<base::OwningView>(fs::getSimpleFileContent(this->path.strView()));
-		std::cout << "Caliing map!" << this->path.strView() << "\n";
-		if (to_content.contains(abs_path)) {
-			std::cout << "Replacing content for: " << this->path.strView() << "\n";
-			to_content[abs_path] = content_ptr;
-		} else {
-			std::cout << "Adding content for: " << this->path.strView() << "\n";
-			to_content.put(abs_path, content_ptr);
-		}
-		std::cout << "SourceFile created for: " << this->path.strView() << "\n";
+		if (to_content.contains(abs_path))
+			to_content[abs_path] = path.getContent();
+		else
+			to_content.put(abs_path, path.getContent());
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
@@ -38,7 +30,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	std::shared_ptr<base::OwningView> SourceFile::getCachedContent(const fs::FilePath& path) {
+	fs::FileContent SourceFile::getCachedContent(const fs::File& path) {
 		auto it = to_content.find(path.absolutePath());
 		if (it != to_content.end()) return it->second;
 		return {};

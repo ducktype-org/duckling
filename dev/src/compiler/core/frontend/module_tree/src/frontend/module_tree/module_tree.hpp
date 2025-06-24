@@ -59,7 +59,7 @@ namespace compiler::frontend {
 	public:
 		/**
 		 * The main factory to construct `ModuleTree`s.
-		 * @param root (std::string/fs::FilePath/std::filesystem::path...) - anything,
+		 * @param root (std::string/fs::File/std::filesystem::path...) - anything,
 		 * that can be used to construct fs::FsTree.
 		 * @param reject_file_regex A regex to check against whether
 		 * a file should be omitted.
@@ -128,7 +128,7 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, std::vector<fs::FilePath>>& getOtherFiles() const;
+		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
@@ -170,7 +170,7 @@ namespace compiler::frontend {
 		 * @param module_root A pointer to ModuleTree, where the file should be inserted.
 		 */
 		static void handleNewFile(
-			const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
+			const std::shared_ptr<ModuleTree>& module_root, const fs::File& filepath
 		);
 
 		/**
@@ -192,7 +192,7 @@ namespace compiler::frontend {
 		/**
 		 * A link to the main source file.
 		 *
-		 * Has to be a container (like base::Optional), because fs::FilePath does
+		 * Has to be a container (like base::Optional), because fs::File does
 		 * not have a default constructor.
 		 */
 		base::Optional<SourceFile> m_main_source_file;
@@ -208,7 +208,7 @@ namespace compiler::frontend {
 		/**
 		 * All other files inside this module. Indexed by their extension.
 		 */
-		base::HashMap<base::StrID, std::vector<fs::FilePath>> m_other_files;
+		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 	};
 }
 

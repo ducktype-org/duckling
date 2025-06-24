@@ -37,7 +37,7 @@ private:
 	template<fs::Encoding encoding = fs::Encoding::UTF8>
 	void assumeBadDecode(base::RawView view) {
 		std::string content{ view.stringView() };
-		auto        path = fs::FileManager::createRandomVirtualFile(content);
+		auto        path = fs::File::createRandomTempFile(content);
 		auto        file = tokenizer::makeTokenSource(path);
 		file->decode<encoding>();
 		assertTrue(file->getLogger()->bad(), "Encoding error not found");

@@ -20,7 +20,7 @@ private:
 	};
 
 	void simpleTest() {
-		fs::FilePath          fs_root_path = fs::FilePath::createTempDirectory();
+		fs::File              fs_root_path = fs::FileManager::createTempDirectory();
 		std::filesystem::path root         = fs_root_path.absolutePath();
 
 		const auto b0 = base::StrID("b0");

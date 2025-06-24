@@ -48,7 +48,7 @@ public:
 
 private:
 	void simplePositionTest() {
-		fs::FilePath file(path("fun.duck"));
+		fs::File file(path("fun.duck"));
 		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
@@ -63,8 +63,8 @@ private:
 	void positionCompTest() {
 		using namespace std::views;
 		auto content = repeat(' ') | take(20) | std::ranges::to<std::string>();
-		auto file1   = fs::FilePath::createVirtualFile(content);
-		auto file2   = fs::FilePath::createVirtualFile(content);
+		auto file1   = fs::FileManager::createRandomVirtualFile(content);
+		auto file2   = fs::FileManager::createRandomVirtualFile(content);
 
 		auto td1 = lexer::tokenizeFile(file1);
 		auto td2 = lexer::tokenizeFile(file2);

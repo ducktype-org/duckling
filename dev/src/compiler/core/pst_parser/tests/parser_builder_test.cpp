@@ -74,7 +74,7 @@ public:
 private:
 	template<typename Element>
 	pst::PST<Element> manualSteps(const std::string& filename) {
-		auto file = tokenizer::makeTokenSource(fs::FilePath(filename));
+		auto file = tokenizer::makeTokenSource(fs::File(filename));
 		file->tokenize();
 		return { std::move(file) };
 	}
@@ -87,7 +87,7 @@ private:
 
 	template<typename Element>
 	pst::PST<Element> fromFilename(const std::string& filename) {
-		return { fs::FilePath(filename) };
+		return { fs::File(filename) };
 	}
 
 	template<typename Element>
