@@ -4,6 +4,7 @@ duck_add_playground(clap clap_playground.cpp USES Clap Printer)
 duck_add_playground(count_tokens_cpp count_tokens_cpp_playground.cpp USES Filesystem TreeSitter Clap Printer)
 duck_add_playground(count_tokens_duckling count_tokens_duckling_playground.cpp USES Filesystem TokenSource Clap Printer)
 duck_add_playground(fs_parser fs_parser_playground.cpp USES Base ModuleTree Clap)
+duck_add_playground(stack_trace stack_trace_playground.cpp USES Base)
 
 target_link_libraries(clap_example_cat Base Clap)
 
