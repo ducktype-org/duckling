@@ -13,7 +13,7 @@ int main(int argc, const char* argv[]) {
 
 	clap::ParsingResult options;
 	try {
-		options = clap.parse(argc, argv);
+		options = clap.parse(static_cast<usize>(argc), argv);
 	} catch (clap::exceptions::HelpException& e) {
 		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 		return 1;

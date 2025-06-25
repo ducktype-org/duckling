@@ -190,6 +190,18 @@ namespace fs {
 		[[nodiscard]]
 		bool isSymlink() const noexcept;
 
+		/**
+		 * @brief Writes content to the file.
+		 *
+		 * This method works for both physical and virtual files.
+		 * For virtual files, append mode is not supported and will throw an error.
+		 *
+		 * @param new_content The content to write to the file.
+		 * @param append If true, appends to the file; if false, overwrites the file.
+		 * @throws CORE_PANIC if the file operation fails or if append is used with virtual files.
+		 */
+		void writeToFile(std::string_view new_content, bool append = false) const;
+
 		[[nodiscard]]
 		std::string stem() const;
 		[[nodiscard]]
@@ -413,7 +425,7 @@ namespace fs {
 	};
 
 	/**
-	 * @brief Reads the content of a virtual file.
+	 * @brief Reads the content of a virtual file. (use it in tests only)
 	 *
 	 * This function retrieves the content of a virtual file specified by its path.
 	 * If the file does not exist, it throws a base::LogicError.
@@ -425,7 +437,7 @@ namespace fs {
 	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path);
 
 	/**
-	 * @brief Reads the content of a non-virtual file.
+	 * @brief Reads the content of a non-virtual file. (use it in tests only)
 	 *
 	 * This function retrieves the content of a non-virtual file specified by its path.
 	 * If the file does not exist, it throws a base::LogicError.

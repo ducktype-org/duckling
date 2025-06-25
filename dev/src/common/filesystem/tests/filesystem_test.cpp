@@ -12,6 +12,7 @@ public:
 		TESTER_ADD_TEST(filePathTest);
 		TESTER_ADD_TEST(vfsTest);
 		TESTER_ADD_TEST(virtualFileTest);
+		TESTER_ADD_TEST(fileOperationsTest);
 	}
 
 private:
@@ -181,7 +182,7 @@ private:
 		try {
 			(void) virtual_file.getModifyTime();
 			assertTrue(false, "getModifyTime should throw for virtual files");
-		} catch (const base::LogicError&) {
+		} catch (const base::Panic&) {
 			// Expected behavior
 		}
 
@@ -189,9 +190,165 @@ private:
 		try {
 			(void) fs::FileManager::createFileIn(virtual_dir, "Duplicate content", "testFile.txt");
 			assertTrue(false, "Creating a file with duplicate name should throw");
-		} catch (const base::LogicError&) {
+		} catch (const base::Panic&) {
 			// Expected behavior
 		}
+	}
+
+	void fileOperationsTest() {
+		// Test writeToFile functionality
+		auto temp_file = fs::FileManager::createRandomTempFile("Initial content");
+		assertTrue(temp_file.isFile(), "Temp file was not created correctly");
+		assertTrue(temp_file.getType() == fs::FileType::Temporary, "File should be temporary");
+
+		// Test reading content
+		auto content = temp_file.getContent();
+		assertTrue(content.view().stringView() == "Initial content", "Initial content incorrect");
+
+		// Test overwriting file content
+		temp_file.writeToFile("New content", false);
+		auto new_content = temp_file.getContent();
+		assertTrue(new_content.view().stringView() == "New content", "Content was not overwritten");
+
+		// Test appending to file content
+		temp_file.writeToFile(" appended", true);
+		auto appended_content = temp_file.getContent();
+		assertTrue(
+			appended_content.view().stringView() == "New content appended",
+			"Content was not appended"
+		);
+
+		// Test virtual file writing
+		auto virtual_file = fs::FileManager::createRandomVirtualFile("Virtual initial");
+		assertTrue(virtual_file.isFile(), "Virtual file was not created correctly");
+		assertTrue(virtual_file.getType() == fs::FileType::Virtual, "File should be virtual");
+
+		auto virtual_content = virtual_file.getContent();
+		assertTrue(
+			virtual_content.view().stringView() == "Virtual initial",
+			"Virtual initial content incorrect"
+		);
+
+		// Test overwriting virtual file (append should fail)
+		virtual_file.writeToFile("Virtual new content");
+		auto virtual_new_content = virtual_file.getContent();
+		assertTrue(
+			virtual_new_content.view().stringView() == "Virtual new content",
+			"Virtual content was not overwritten"
+		);
+
+		// Test that append fails for virtual files
+		try {
+			virtual_file.writeToFile(" should fail", true);
+			assertTrue(false, "Append should fail for virtual files");
+		} catch (const base::Panic&) {
+			// Expected behavior
+		}
+
+		// Test file deletion
+		assertTrue(fs::FileManager::fileExists(temp_file), "Temp file should exist before deletion");
+		assertTrue(fs::FileManager::deleteFile(temp_file), "Failed to delete temp file");
+		assertTrue(
+			!fs::FileManager::fileExists(temp_file), "Temp file should not exist after deletion"
+		);
+
+		assertTrue(
+			fs::FileManager::fileExists(virtual_file), "Virtual file should exist before deletion"
+		);
+		assertTrue(fs::FileManager::deleteFile(virtual_file), "Failed to delete virtual file");
+		assertTrue(
+			!fs::FileManager::fileExists(virtual_file),
+			"Virtual file should not exist after deletion"
+		);
+
+		// Test directory deletion
+		auto temp_dir    = fs::FileManager::createTempDirectory();
+		auto file_in_dir = fs::FileManager::createFileIn(temp_dir, "content", "test.txt");
+		auto sub_dir     = fs::FileManager::createDirectoryIn(temp_dir, "subdir");
+
+		assertTrue(fs::FileManager::folderExists(temp_dir), "Temp directory should exist");
+
+		// Test deletion without force (should throw exception for non-empty directory)
+		try {
+			fs::FileManager::deleteFolder(temp_dir, false);
+			assertTrue(
+				false, "Should throw exception when deleting non-empty directory without force"
+			);
+		} catch (const std::filesystem::filesystem_error&) {
+			// Expected behavior - directory should still exist
+			assertTrue(
+				fs::FileManager::folderExists(temp_dir),
+				"Directory should still exist after failed deletion"
+			);
+		}
+
+		// Test deletion with force
+		assertTrue(
+			fs::FileManager::deleteFolder(temp_dir, true), "Failed to delete directory with force"
+		);
+		assertTrue(
+			!fs::FileManager::folderExists(temp_dir),
+			"Directory should not exist after deletion with force"
+		);
+
+		// Test file utilities
+		auto test_file = fs::FileManager::createRandomTempFile();
+		assertTrue(test_file.stem() != "", "File stem should not be empty");
+		assertTrue(test_file.extension() == "", "File should have no extension");
+		assertTrue(test_file.uri().starts_with("file://"), "URI should start with file://");
+		assertTrue(test_file.absolutePath() != "", "Absolute path should not be empty");
+
+		// Test getContentSafe
+		auto safe_content = test_file.getContentSafe();
+		assertTrue(safe_content.has_value(), "getContentSafe should succeed for existing file");
+
+		// Delete file and test getContentSafe again
+		fs::FileManager::deleteFile(test_file);
+		auto safe_content_after_delete = test_file.getContentSafe();
+		assertTrue(
+			!safe_content_after_delete.has_value(),
+			"getContentSafe should fail for non-existing file"
+		);
+
+		// Test path conversions
+		auto virtual_dir = fs::FileManager::createVirtualDirectory();
+		assertTrue(
+			fs::VFS::isVirtualPath(virtual_dir.absolutePath()), "Should recognize virtual path"
+		);
+
+		// Test physical file creation with override
+		auto current_dir   = std::filesystem::current_path();
+		auto physical_path = current_dir / "test_physical.txt";
+
+		auto physical_file1 = fs::FileManager::createPhysicalFile(physical_path, "content1", false);
+		assertTrue(physical_file1.getType() == fs::FileType::Physical, "File should be physical");
+
+		// Test override functionality
+		auto physical_file2 = fs::FileManager::createPhysicalFile(physical_path, "content2", true);
+		auto overridden_content = physical_file2.getContent();
+		assertTrue(
+			overridden_content.view().stringView() == "content2", "Content should be overridden"
+		);
+
+		// Test trying to create without override (should fail)
+		try {
+			fs::FileManager::createPhysicalFile(physical_path, "content3", false);
+			assertTrue(false, "Should fail to create existing file without override");
+		} catch (const base::Panic&) {
+			// Expected behavior
+		}
+
+		// Test symlink detection (should be false for all our test files)
+		assertTrue(!test_file.isSymlink(), "Test files should not be symlinks");
+		assertTrue(
+			!fs::FileManager::isSymlink(physical_path), "Physical file should not be symlink"
+		);
+
+		// Cleanup physical file
+		std::filesystem::remove(physical_path);
+
+		// Cleanup
+		fs::FileManager::deleteFolder(virtual_dir, true);
 	}
 };
 

@@ -19,6 +19,57 @@
 namespace {
 	Ref<fs::VFS> vfs = fs::VFS::getInstance();
 
+	bool isInTempDirectory(const std::filesystem::path& path) {
+		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
+		auto abs_path = std::filesystem::canonical(path);
+
+		auto mismatch = std::mismatch(temp_dir.begin(), temp_dir.end(), abs_path.begin());
+		return mismatch.first == temp_dir.end();
+	}
+
+	bool hasTemporaryPrefix(const std::filesystem::path& path) {
+		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
+		auto abs_path = std::filesystem::absolute(path);
+
+		auto temp_str = temp_dir.string();
+		auto path_str = abs_path.string();
+
+		// Ensure temp_str ends with a separator for correct prefix matching
+		if (!temp_str.empty() && temp_str.back() != std::filesystem::path::preferred_separator)
+			temp_str += std::filesystem::path::preferred_separator;
+
+		return path_str.starts_with(temp_str);
+	}
+
+// Validation macros
+#define REQUIRE_DIRECTORY(directory) \
+	if (!(directory).isDirectory()) CORE_PANIC("Parent is not a directory")
+
+#define REQUIRE_VIRTUAL(file) \
+	if ((file).getType() != fs::FileType::Virtual) CORE_PANIC("File is not virtual")
+
+#define REQUIRE_NOT_PHYSICAL(file) \
+	if ((file).getType() == fs::FileType::Physical) CORE_PANIC("File is physical")
+
+#define REQUIRE_PHYSICAL(file) \
+	if ((file).getType() != fs::FileType::Physical) CORE_PANIC("File is not physical")
+
+#define REQUIRE_TEMPORARY(file) \
+	if ((file).getType() != fs::FileType::Temporary) CORE_PANIC("File is not temporary")
+
+#define REQUIRE_FILE(file) \
+	if (!(file).isFile()) CORE_PANIC("Path is not a file")
+
+#define REQUIRE_PHYSICAL_PATH(path)                               \
+	if (fs::VFS::isVirtualPath(path) || hasTemporaryPrefix(path)) \
+	CORE_PANIC("Path is not a physical file: " + path.string())
+
+#define REQUIRE_VIRTUAL_PATH(path) \
+	if (!fs::VFS::isVirtualPath(path)) CORE_PANIC("Path is not a virtual path: " + path.string())
+
+#define REQUIRE_TEMP_PATH(path) \
+	if (!hasTemporaryPrefix(path)) CORE_PANIC("Path is not a temporary path: " + path.string())
+
 	std::filesystem::path randomName(
 		const std::filesystem::path& prefix_path, const size_t name_len = 16
 	) {
@@ -34,24 +85,16 @@ namespace {
 			for (int i = 0; i < name_len; i++) name.push_back(name_chars[dist(rng)]);
 			if (!exists(prefix_path / name)) return prefix_path / name;
 		}
-		throw base::LogicError("Couldn't create a new name in: " + absolute(prefix_path).string());
-	}
-
-	bool isInTempDirectory(const std::filesystem::path& path) {
-		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
-		auto abs_path = std::filesystem::canonical(path);
-
-		auto mismatch = std::mismatch(temp_dir.begin(), temp_dir.end(), abs_path.begin());
-		return mismatch.first == temp_dir.end();
+		CORE_PANIC("Couldn't create a new name in: " + absolute(prefix_path).string());
 	}
 
 	std::filesystem::path genPathInDirectory(
 		const fs::File& directory, std::string_view custom_name = ""
 	) {
-		if (!directory.isDirectory()) throw base::LogicError("Parent is not a directory");
+		REQUIRE_DIRECTORY(directory);
+		REQUIRE_NOT_PHYSICAL(directory);
+
 		auto type = directory.getType();
-		if (!(type == fs::FileType::Temporary || type == fs::FileType::Virtual))
-			throw base::LogicError("Parent is not temporary or virtual");
 
 		std::filesystem::path file_name;
 		if (custom_name.empty())
@@ -61,7 +104,7 @@ namespace {
 
 			if ((type == fs::FileType::Virtual && vfs->exists(file_name))
 			    || (type != fs::FileType::Virtual && exists(file_name)))
-				throw base::LogicError(base::strConcat(
+				CORE_PANIC(base::strConcat(
 					"Cannot create a file/dir with name \"",
 					custom_name,
 					"\", because there already is a file/dir with this name in "
@@ -107,23 +150,25 @@ namespace fs {
 	File FileManager::createPhysicalFile(
 		const std::filesystem::path& path, std::string_view content, bool override
 	) {
+		REQUIRE_PHYSICAL_PATH(path);
+
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 		if (std::filesystem::exists(abs_path)) {
-			if (!override)
-				throw base::LogicError("Physical file already exists: " + abs_path.string());
+			if (!override) CORE_PANIC("Physical file already exists: " + abs_path.string());
 		}
 		std::ofstream ofs(abs_path, override ? std::ios::trunc : std::ios::out);
-		if (!ofs) throw base::LogicError("Failed to create physical file: " + abs_path.string());
+		if (!ofs) CORE_PANIC("Failed to create physical file: " + abs_path.string());
 		ofs << content;
 		ofs.close();
 		return abs_path;
 	}
 
 	File FileManager::createPhysicalFolder(const std::filesystem::path& path, bool override) {
+		REQUIRE_PHYSICAL_PATH(path);
+
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 		if (std::filesystem::exists(abs_path)) {
-			if (!override)
-				throw base::LogicError("Physical folder already exists: " + abs_path.string());
+			if (!override) CORE_PANIC("Physical folder already exists: " + abs_path.string());
 			std::filesystem::remove_all(abs_path);
 		}
 		std::filesystem::create_directories(abs_path);
@@ -133,57 +178,55 @@ namespace fs {
 	File FileManager::createVirtualFile(
 		const std::filesystem::path& path, std::string_view content, bool override
 	) {
-		std::filesystem::path vpath = VFS::isVirtualPath(path) ? path : toVirtualPath(path);
-		if (vfs->exists(vpath)) {
-			if (!override) throw base::LogicError("Virtual file already exists: " + vpath.string());
-			if (!vfs->isFile(vpath))
-				throw base::LogicError("Path exists but is not a file: " + vpath.string());
+		REQUIRE_VIRTUAL_PATH(path);
+
+		if (vfs->exists(path)) {
+			if (!override) CORE_PANIC("Virtual file already exists: " + path.string());
+			if (!vfs->isFile(path)) CORE_PANIC("Path exists but is not a file: " + path.string());
 		} else {
-			vfs->createFile(vpath);
+			vfs->createFile(path);
 		}
-		vfs->writeFile(vpath, content);
-		return vpath;
+		vfs->writeFile(path, content);
+		return path;
 	}
 
 	File FileManager::createVirtualFolder(const std::filesystem::path& path, bool override) {
-		std::filesystem::path vpath = VFS::isVirtualPath(path) ? path : toVirtualPath(path);
-		if (vfs->exists(vpath)) {
-			if (!override)
-				throw base::LogicError("Virtual folder already exists: " + vpath.string());
-			if (!vfs->isDirectory(vpath))
-				throw base::LogicError("Path exists but is not a directory: " + vpath.string());
-			vfs->deleteDirectory(vpath, true);
+		REQUIRE_VIRTUAL_PATH(path);
+
+		if (vfs->exists(path)) {
+			if (!override) CORE_PANIC("Virtual folder already exists: " + path.string());
+			if (!vfs->isDirectory(path))
+				CORE_PANIC("Path exists but is not a directory: " + path.string());
+			vfs->deleteDirectory(path, true);
 		}
-		vfs->createDirectory(vpath);
-		return vpath;
+		vfs->createDirectory(path);
+		return path;
 	}
 
 	File FileManager::createTempFile(
 		const std::filesystem::path& path, std::string_view content, bool override
 	) {
-		auto                  tmp_dir = std::filesystem::temp_directory_path();
-		std::filesystem::path tpath   = path;
-		if (tpath.empty() || tpath.string().find(tmp_dir.string()) != 0) tpath = tmp_dir / path;
-		if (std::filesystem::exists(tpath)) {
-			if (!override) throw base::LogicError("Temp file already exists: " + tpath.string());
+		REQUIRE_TEMP_PATH(path);
+
+		if (std::filesystem::exists(path)) {
+			if (!override) CORE_PANIC("Temp file already exists: " + path.string());
 		}
-		std::ofstream ofs(tpath, override ? std::ios::trunc : std::ios::out);
-		if (!ofs) throw base::LogicError("Failed to create temp file: " + tpath.string());
+		std::ofstream ofs(path, override ? std::ios::trunc : std::ios::out);
+		if (!ofs) CORE_PANIC("Failed to create temp file: " + path.string());
 		ofs << content;
 		ofs.close();
-		return tpath;
+		return path;
 	}
 
 	File FileManager::createTempFolder(const std::filesystem::path& path, bool override) {
-		auto                  tmp_dir = std::filesystem::temp_directory_path();
-		std::filesystem::path tpath   = path;
-		if (tpath.empty() || tpath.string().find(tmp_dir.string()) != 0) tpath = tmp_dir / path;
-		if (std::filesystem::exists(tpath)) {
-			if (!override) throw base::LogicError("Temp folder already exists: " + tpath.string());
-			std::filesystem::remove_all(tpath);
+		REQUIRE_TEMP_PATH(path);
+
+		if (std::filesystem::exists(path)) {
+			if (!override) CORE_PANIC("Temp folder already exists: " + path.string());
+			std::filesystem::remove_all(path);
 		}
-		std::filesystem::create_directories(tpath);
-		return tpath;
+		std::filesystem::create_directories(path);
+		return path;
 	}
 
 	File FileManager::createTempDirectory() {
@@ -197,7 +240,7 @@ namespace fs {
 		auto root      = vfs->getRootPath();
 		auto rand_path = randomName(root);
 		vfs->createDirectory(rand_path);
-		return File(rand_path);
+		return rand_path;
 	}
 
 	File FileManager::createRandomVirtualFile(std::string_view content) {
@@ -250,21 +293,14 @@ namespace fs {
 	}
 
 	std::filesystem::path FileManager::toVirtualPath(const std::filesystem::path& path) {
+		REQUIRE_PHYSICAL_PATH(path);
 		auto root = vfs->getRootPath();
-		if (path.string().starts_with(root.string())) {
-			throw base::LogicError(
-				"Cannot convert path to virtual path, because it is already a virtual path"
-			);
-		}
 		return root / canonical(path);
 	}
 
 	std::filesystem::path FileManager::fromVirtualPath(const std::filesystem::path& path) {
-		if (!VFS::isVirtualPath(path)) {
-			throw base::LogicError(
-				"Cannot convert path from virtual path, because it is not a virtual path"
-			);
-		}
+		REQUIRE_VIRTUAL_PATH(path);
+
 		auto root     = vfs->getRootPath();
 		auto path_str = path.string();
 		auto root_str = root.string();
@@ -281,7 +317,7 @@ namespace fs {
 		}
 		CORE_PANIC(
 			"Cannot convert path from virtual path, because it does not start with the VFS root "
-			"path"
+			"path - this should never happen, pls contact the developers"
 		);
 	}
 
@@ -323,8 +359,7 @@ namespace fs {
 	}
 
 	std::chrono::file_clock::time_point File::getModifyTime() const {
-		if (type == FileType::Virtual)
-			throw base::LogicError("Cannot get modify time of virtual file");
+		if (type == FileType::Virtual) CORE_PANIC("Cannot get modify time of virtual file");
 		return last_write_time(path);
 	}
 
@@ -335,7 +370,7 @@ namespace fs {
 	std::string File::extension() const { return path.extension(); }
 
 	std::vector<File> File::listFilePaths() const {
-		if (category == FileCategory::File) throw base::LogicError("Path is not a directory");
+		REQUIRE_DIRECTORY(*this);
 
 		std::vector<File> file_paths;
 		if (type == FileType::Virtual)
@@ -347,6 +382,23 @@ namespace fs {
 	}
 
 	bool File::isSymlink() const noexcept { return is_symlink; }
+
+	void File::writeToFile(std::string_view new_content, bool append) const {
+		REQUIRE_FILE(*this);
+
+		if (type == FileType::Virtual) {
+			if (append) CORE_PANIC("Append mode is not supported for virtual files");
+			if (!vfs->exists(path)) CORE_PANIC("Virtual file does not exist: " + path.string());
+			vfs->writeFile(path, new_content);
+		} else {
+			// Physical or Temporary file
+			std::ios::openmode mode = append ? (std::ios::out | std::ios::app) : std::ios::out;
+			std::ofstream      ofs(path, mode);
+			if (!ofs) CORE_PANIC("Failed to open file for writing: " + path.string());
+			ofs << new_content;
+			if (ofs.fail()) CORE_PANIC("Failed to write to file: " + path.string());
+		}
+	}
 
 	base::OwningView getSimpleFileContent(const std::filesystem::path& path) {
 		std::ifstream file(path, std::ios::in | std::ios::binary);
@@ -368,9 +420,10 @@ namespace fs {
 	}
 
 	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path) {
+		REQUIRE_VIRTUAL_PATH(path);
 		auto content = vfs->readFile(path);
 		if (content.empty())
-			throw base::LogicError(std::string("virtual file does not exist: ") + path.string());
+			CORE_PANIC(std::string("virtual file does not exist: ") + path.string());
 
 		auto r_array = new byte[content.size()];
 		std::ranges::copy(content, reinterpret_cast<char*>(r_array));
@@ -399,47 +452,41 @@ namespace fs {
 	File FileManager::createFileIn(
 		const File& directory, std::string_view new_file_content, std::string_view custom_name
 	) {
-		if (directory.category != FileCategory::Directory)
-			throw base::LogicError("Parent is not a directory");
+		REQUIRE_DIRECTORY(directory);
 		std::filesystem::path file_path = genPathInDirectory(directory, custom_name);
 
 		if (directory.type == FileType::Virtual) {
 			if (vfs->exists(file_path))
-				throw base::LogicError(
-					"File already exists in virtual directory: " + file_path.string()
-				);
+				CORE_PANIC("File already exists in virtual directory: " + file_path.string());
 			vfs->createFile(file_path);
 			vfs->writeFile(file_path, new_file_content);
 		} else if (directory.type == FileType::Temporary || directory.type == FileType::Physical) {
 			if (std::filesystem::exists(file_path))
-				throw base::LogicError("File already exists in directory: " + file_path.string());
+				CORE_PANIC("File already exists in directory: " + file_path.string());
 			std::ofstream ofs(file_path);
-			if (!ofs) throw base::LogicError("Failed to create file: " + file_path.string());
+			if (!ofs) CORE_PANIC("Failed to create file: " + file_path.string());
 			ofs << new_file_content;
 			ofs.close();
 		} else {
-			throw base::LogicError("Unsupported directory type for file creation");
+			CORE_PANIC("Unsupported directory type for file creation");
 		}
 		return file_path;
 	}
 
 	File FileManager::createDirectoryIn(const File& directory, std::string_view custom_name) {
-		if (directory.category != FileCategory::Directory)
-			throw base::LogicError("Parent is not a directory");
+		REQUIRE_DIRECTORY(directory);
 		std::filesystem::path dir_path = genPathInDirectory(directory, custom_name);
 
 		if (directory.type == FileType::Virtual) {
 			if (vfs->exists(dir_path))
-				throw base::LogicError(
-					"Directory already exists in virtual directory: " + dir_path.string()
-				);
+				CORE_PANIC("Directory already exists in virtual directory: " + dir_path.string());
 			vfs->createDirectory(dir_path);
 		} else if (directory.type == FileType::Temporary || directory.type == FileType::Physical) {
 			if (std::filesystem::exists(dir_path))
-				throw base::LogicError("Directory already exists: " + dir_path.string());
+				CORE_PANIC("Directory already exists: " + dir_path.string());
 			std::filesystem::create_directory(dir_path);
 		} else {
-			throw base::LogicError("Unsupported directory type for directory creation");
+			CORE_PANIC("Unsupported directory type for directory creation");
 		}
 		return dir_path;
 	}
