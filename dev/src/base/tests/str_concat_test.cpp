@@ -1,13 +1,26 @@
 #include <tester/tester.hpp>
 
 #include <base/str_utils.hpp>
+#include <base/stringifyable_enum.hpp>
+
+// Create a test enum for testing enum stringification
+MAKE_STRINGIFYABLE_ENUM(test, u32, TestOperation,
+	Uninitialized,
+	Assign,
+	Add,
+	Subtract,
+	Multiply
+)
 
 class ConcatTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ConcatTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testStrConcat); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testStrConcat);
+		TESTER_ADD_TEST(testEnumStringification);
+	}
 
 	void testStrConcat() {
 		std::string res;
@@ -36,6 +49,61 @@ public:
 			},
 			"strConcat of nullptr did not throw correctly"
 		);
+	}
+
+	void testEnumStringification() {
+		// Test basic enum to string conversion via strConcat
+		auto result = base::strConcat("Operation: ", test::TestOperation::Add);
+		assertTrue(result == "Operation: Add", "Enum stringification failed");
+
+		// Test multiple enums in single strConcat call
+		result = base::strConcat(
+			"From ",
+			test::TestOperation::Uninitialized,
+			" to ",
+			test::TestOperation::Multiply,
+			" via ",
+			test::TestOperation::Assign
+		);
+		assertTrue(
+			result == "From Uninitialized to Multiply via Assign",
+			"Multiple enum stringification failed"
+		);
+
+		// Test enum mixed with other types
+		result = base::strConcat(
+			"Step ", 1, ": ", test::TestOperation::Add, ", Step ", 2, ": ", test::TestOperation::Subtract
+		);
+		assertTrue(
+			result == "Step 1: Add, Step 2: Subtract",
+			"Mixed enum and other types stringification failed"
+		);
+
+		// Test all enum values
+		result = base::strConcat(
+			test::TestOperation::Uninitialized,
+			",",
+			test::TestOperation::Assign,
+			",",
+			test::TestOperation::Add,
+			",",
+			test::TestOperation::Subtract,
+			",",
+			test::TestOperation::Multiply
+		);
+		assertTrue(
+			result == "Uninitialized,Assign,Add,Subtract,Multiply",
+			"All enum values stringification failed"
+		);
+
+		// Test const enum reference
+		const auto op = test::TestOperation::Add;
+		result        = base::strConcat("Const enum: ", op);
+		assertTrue(result == "Const enum: Add", "Const enum reference stringification failed");
+
+		// Test enum rvalue
+		result = base::strConcat("Temporary: ", test::TestOperation::Subtract);
+		assertTrue(result == "Temporary: Subtract", "Enum rvalue stringification failed");
 	}
 
 	~ConcatTest() override = default;
