@@ -31,6 +31,7 @@ from scripts.py.toolbox.internet_file import (
     callback_unTAR,
 )
 from scripts.py.toolbox.pr_validate import pr_validate_impl
+from scripts.py.toolbox.issue_checker import issue_checker_impl
 
 from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
 from scripts.py.toolbox.duck_linter import duck_linter_impl
@@ -839,10 +840,37 @@ def todo_counter(*args, **kwargs):
 )
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
-    Actions include: building everything, running tests, linter, duck-linter.
+    Actions include: building everything, running tests, linter, duck-linter, issue-checker.
     In the future we might add integration tests.
     """
     pr_validate_impl(*args, **kwargs)
+
+
+@cli.command()
+@click.argument("issues", nargs=-1, type=str)
+@click.option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
+@click.option(
+    "--no-merge-base",
+    is_flag=True,
+    default=False,
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the checker on a shallow clone.",
+)
+def issue_checker(issues, branch, no_merge_base):
+    """Checks for occurrences of #issue_number in source files and prints file, line, and summary.
+
+    If no issue numbers are provided, the script will attempt to fetch them from GitHub using the 'gh' CLI.
+    You must be authenticated with 'gh' for this to work.
+    """
+    if not issue_checker_impl(issues, branch, no_merge_base):
+        exit_with_error("Issue checker found issues numbers related to this pull request in the code")
 
 
 if __name__ == "__main__":
