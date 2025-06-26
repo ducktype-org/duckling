@@ -52,26 +52,8 @@ public:
 	}
 
 	void testEnumStringification() {
-		// Test basic enum to string conversion via strConcat
-		auto result = base::strConcat("Operation: ", test::TestOperation::Add);
-		assertTrue(result == "Operation: Add", "Enum stringification failed");
-
-		// Test multiple enums in single strConcat call
-		result = base::strConcat(
-			"From ",
-			test::TestOperation::Uninitialized,
-			" to ",
-			test::TestOperation::Multiply,
-			" via ",
-			test::TestOperation::Assign
-		);
-		assertTrue(
-			result == "From Uninitialized to Multiply via Assign",
-			"Multiple enum stringification failed"
-		);
-
 		// Test enum mixed with other types
-		result = base::strConcat(
+		auto result = base::strConcat(
 			"Step ", 1, ": ", test::TestOperation::Add, ", Step ", 2, ": ", test::TestOperation::Subtract
 		);
 		assertTrue(
@@ -79,7 +61,7 @@ public:
 			"Mixed enum and other types stringification failed"
 		);
 
-		// Test all enum values
+		// Test all enum values at once
 		result = base::strConcat(
 			test::TestOperation::Uninitialized,
 			",",
@@ -100,10 +82,6 @@ public:
 		const auto op = test::TestOperation::Add;
 		result        = base::strConcat("Const enum: ", op);
 		assertTrue(result == "Const enum: Add", "Const enum reference stringification failed");
-
-		// Test enum rvalue
-		result = base::strConcat("Temporary: ", test::TestOperation::Subtract);
-		assertTrue(result == "Temporary: Subtract", "Enum rvalue stringification failed");
 	}
 
 	~ConcatTest() override = default;
