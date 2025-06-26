@@ -20,11 +20,11 @@ namespace base {
 }
 
 namespace base::detail {
-    inline void strConcat(std::string& out, Bits bits) {
-        out.append(std::to_string(usize(bits)) + "b");
-    }
+	inline void strConcat(std::string& out, Bits bits) {
+		out.append(std::to_string(usize(bits)) + "b");
+	}
 
-    inline void strConcat(std::string& out, Bytes bytes) {
-        out.append(std::to_string(usize(bytes)) + "B");
-    }
+	inline void strConcat(std::string& out, Bytes bytes) {
+		out.append(std::to_string(usize(bytes)) + "B");
+	}
 }

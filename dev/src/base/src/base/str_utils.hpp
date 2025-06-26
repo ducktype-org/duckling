@@ -99,16 +99,16 @@ namespace base {
 
 	/**
 	 * @brief Converts a single value to std::string using strConcat infrastructure.
-	 * 
+	 *
 	 * This function provides a user-extensible alternative to std::to_string that:
 	 * - Can't break the std namespace
 	 * - Supports all types that strConcat supports
 	 * - Allows for custom user-defined string conversions
 	 * - Is faster than std::to_string for concatenation scenarios
-	 * 
+	 *
 	 * @param value The value to convert to string
 	 * @return String representation of the value
-	 * 
+	 *
 	 * @example
 	 * ```cpp
 	 * auto str1 = base::toString(42);           // "42"
