@@ -1,8 +1,4 @@
-#include "get_parameter_types.hpp"
-
 #include <backends/dvm/backend.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <query_framework/context.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -228,23 +224,17 @@ namespace compiler::backend_vm {
 		 * code. Used to add function types for functions that are not in the current module.
 		 */
 		void insertCalledFunctionTypes(
-			query::Context&          query_ctx,
-			std::vector<TypeOfData>& types,
-			CRef<lir::Function>      lir_function
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			for (const auto& lir_block: lir_function->block_order) {
 				for (const auto& lir_instruction: lir_block->instructions) {
 					if (lir_instruction.operation == lir::Operation::Call) {
-						const auto callee_helios_id
-							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-						auto name = compiler::helios::mangler::getSimpleMangledName(
-							query_ctx, callee_helios_id
-						);
-						auto called_func_signature
-							= getParameterAndResultFromSymID(query_ctx, callee_helios_id);
-
+						auto func_literal
+							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 						types.emplace_back(getFunctionTypeFromLayouts(
-							name, called_func_signature.parameters, called_func_signature.result_type
+							func_literal.mangled_name,
+							*func_literal.parameter_layouts,
+							*func_literal.return_type_layout
 						));
 					}
 				}
@@ -252,13 +242,11 @@ namespace compiler::backend_vm {
 		}
 
 		void insertTypesUsedByFunction(
-			query::Context&          query_ctx,
-			std::vector<TypeOfData>& types,
-			CRef<lir::Function>      lir_function
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			insertFunctionSignatureType(types, lir_function);
 			insertFunctionLocalTypes(types, lir_function);
-			insertCalledFunctionTypes(query_ctx, types, lir_function);
+			insertCalledFunctionTypes(types, lir_function);
 		}
 
 		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -272,7 +260,9 @@ namespace compiler::backend_vm {
 			pushInstruction(ctx.bytecode_func, instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
 
-		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, base::StrID name) {
+		vm::opargs::OpCodeArg outputToOpArg(
+			vm::code::TypeOfData type, base::StrID name, bool is_global = false
+		) {
 			variant_match(type) {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
@@ -284,13 +274,23 @@ namespace compiler::backend_vm {
 							", size: ",
 							primitive.size
 						));
-					if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
-					if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
-					if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
-					if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
+					if (is_global) {
+						if (primitive.size == 8) return vm::opargs::GlobalI64{ name };
+						if (primitive.size == 4) return vm::opargs::GlobalI32{ name };
+						if (primitive.size == 2) return vm::opargs::GlobalI16{ name };
+						if (primitive.size == 1) return vm::opargs::GlobalI8{ name };
+					} else {
+						if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
+						if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
+						if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
+						if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
+					}
 				}
 				variant_case(vm::code::PointerType, pointer) {
-					return vm::opargs::StackLocalPtr(name);
+					if (is_global)
+						return vm::opargs::GlobalPtr(name);
+					else
+						return vm::opargs::StackLocalPtr(name);
 				}
 
 				INVALID_CASE(vm::code::StaticTableType, "output target");
@@ -305,9 +305,17 @@ namespace compiler::backend_vm {
 		vm::opargs::OpCodeArg lirOutputToOpArg(
 			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
 		) {
-			const lir::LocalRef output   = lir_instruction.output.value();
-			auto&&              var_type = ctx.lir_local_types[output];
-			return outputToOpArg(var_type, ctx.lir_local_to_name[output]);
+			variant_match(lir_instruction.output.value()) {
+				variant_case(lir::LocalRef, local) {
+					auto&& var_type = ctx.lir_local_types[local];
+					return outputToOpArg(var_type, ctx.lir_local_to_name[local]);
+				}
+				variant_case(lir::LirGlobal, global) {
+					auto vm_type = getTypeFromLayout(*global.layout);
+					return outputToOpArg(vm_type, global.mangled_name, true);
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
@@ -316,16 +324,19 @@ namespace compiler::backend_vm {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) return vm::opargs::Immediate{ value };
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
-				variant_case(
-					lir::LocalRef, local_ref
-				) return vm::opargs::StackLocalI64{ ctx.lir_local_to_name[local_ref] };
+				variant_case(lir::LocalRef, local_ref) {
+					auto&& var_type = ctx.lir_local_types[local_ref];
+					return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
+				}
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
-					return vm::opargs::FunctionName(
-						helios::mangler::getSimpleMangledName(ctx.ctx, function.helios_id)
-					);
+					return vm::opargs::FunctionName(function.mangled_name);
+				}
+				variant_case(lir::LirGlobal, global) {
+					auto vm_type = getTypeFromLayout(*global.layout);
+					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
@@ -574,21 +585,46 @@ namespace compiler::backend_vm {
 	Module::Module(
 		query::Context&                         query_ctx,
 		base::StrID                             module_id,
-		const std::vector<CRef<lir::Function>>& functions
+		const std::vector<CRef<lir::Function>>& functions,
+		const std::vector<BackendDVMGlobal>&    globals
 	):
 		  module_id(module_id),
 		  valid_program(ValidProgram::withBuiltins()) {
-		CodeCollection compiled_types;
+		CodeCollection                   compiled_types;
+		CodeCollection                   global_data;
+		std::vector<CRef<lir::Function>> ctors;
+		std::vector<CRef<lir::Function>> dtors;
 
 		for (const auto& lir_function: functions)
-			insertTypesUsedByFunction(query_ctx, compiled_types.types, lir_function);
+			insertTypesUsedByFunction(compiled_types.types, lir_function);
+
+		for (const auto& global: globals) {
+			auto global_type = getTypeFromLayout(*global.lir_global.layout);
+			compiled_types.types.push_back(global_type);
+			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			global_data.global_data.push_back(GlobalData{
+				{}, global.lir_global.mangled_name, typeName(global_type) });
+
+			// @TODO: handle ctors and dtors in DMV properly
+			if (global.global_ctor.has_value()) {
+				insertTypesUsedByFunction(compiled_types.types, global.global_ctor.value());
+				ctors.emplace_back(global.global_ctor.value());
+			}
+			if (global.global_dtor.has_value()) {
+				insertTypesUsedByFunction(compiled_types.types, global.global_dtor.value());
+				dtors.emplace_back(global.global_dtor.value());
+			}
+		}
 
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);
 
+		// Insert and validate global data:
+		valid_program.insertCode(global_data);
+
 		CodeCollection compiled_functions;
 
-		for (const auto& lir_function: functions) {
+		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
 
 			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types());
@@ -605,8 +641,13 @@ namespace compiler::backend_vm {
 			}
 
 			compiled_functions.functions.emplace_back(std::move(ctx.bytecode_func));
-		}
+		};
 
+		for (const auto& ctor: ctors) process_function(ctor);
+
+		//@TODO: add dtors when implemented
+
+		for (const auto& lir_function: functions) process_function(lir_function);
 		// Insert and validate functions:
 		valid_program.insertCode(compiled_functions);
 	}

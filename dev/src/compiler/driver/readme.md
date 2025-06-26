@@ -1,4 +1,4 @@
 \page driver-module Driver
 
-Driver module is resposible for compiling the one LLVM or BC module from the HOUTUnit.
-Maybe in the future it will be extended to also compile layers previous to the HOUTUnit.
+Driver module is resposible for encapsulating high-level compiler operations and initializations into simple drivers or functions, that call the core compiler components underneath.
+Driver module for example automates process of initializing query framework state, transforming HUs into binary outputs, compilation of a package and all high-level operations of incremental compilation.

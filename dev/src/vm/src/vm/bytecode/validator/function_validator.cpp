@@ -100,14 +100,14 @@ namespace {
 	};
 
 	template<Extension E>
-	bool acceptsExtension(const Instruction& instr) {
+	bool acceptsExtension(CRef<Instruction> instr) {
 		return holdsOneOf<
 			Cat<typename ExtensionMetadata<E>::RequiredAfter,
-		        typename ExtensionMetadata<E>::OptionalAfter>>(instr);
+		        typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
 	}
 
-	bool requiresSomeExtension(const Instruction& instr) {
-		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(instr);
+	bool requiresSomeExtension(CRef<Instruction> instr) {
+		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
 	}
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
@@ -276,13 +276,13 @@ class FunctionValidator {
 		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
-            if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-                return inh_meta.virtual_methods.contains(instr.arg1.method_name);
-            }
+            if_opt_some(
+                type.getInheritanceMetadata(), inh_meta
+            ) return inh_meta->virtual_methods.contains(instr.arg1.method_name);
             return false;
         });
 		auto        inh_meta = it->getInheritanceMetadata().value();
-		impl_name            = inh_meta.virtual_methods[instr.arg1.method_name]->getName();
+		impl_name            = inh_meta->virtual_methods[instr.arg1.method_name]->getName();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
 		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
@@ -512,9 +512,9 @@ class FunctionValidator {
 	 * @note Presence of extensions is checked by different function: `validateExtension`.
 	 */
 	void validateArgTypesNonTrivially(
-		const Instruction&                                  instruction,
-		[[maybe_unused]] base::Optional<const Instruction&> next_instruction,
-		const LocalStack&                                   current_stack
+		const Instruction&                                       instruction,
+		[[maybe_unused]] base::Optional<base::CRef<Instruction>> next_instruction,
+		const LocalStack&                                        current_stack
 	) const {
 		variant_match(instruction) {
 			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
@@ -625,7 +625,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
 				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
@@ -652,7 +652,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
 				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_label) {}
@@ -675,11 +675,11 @@ class FunctionValidator {
 				std::function<void(TypeCRef)> check_for_superclasses = [&](TypeCRef inh_type) {
 					if (valid) return;
 					if_opt_some(inh_type->getInheritanceMetadata(), imd) {
-						if (imd.virtual_methods.contains(instr.arg1.method_name)) {
+						if (imd->virtual_methods.contains(instr.arg1.method_name)) {
 							valid = true;
 							return;
 						}
-						for (const auto& iface: imd.implements) check_for_superclasses(iface);
+						for (const auto& iface: imd->implements) check_for_superclasses(iface);
 
 						if_opt_some(inh_type->getSuperClass(), super) {
 							check_for_superclasses(super);
@@ -728,7 +728,7 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction);
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, destination.inner, instr);
 			}
 			variant_case(Op_structLoad_lany_lptr, instr) {
@@ -738,7 +738,7 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*destination), instr);
 			}
 			variant_case(Op_structStore_lptr_lany, instr) {
@@ -748,7 +748,7 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*source), instr);
 			}
 			variant_case(Op_staticTableLea_lptr_lptr, instr) {
@@ -806,7 +806,7 @@ class FunctionValidator {
 	 * extension.
 	 */
 	void validateExtension(
-		base::Optional<const Instruction&> predecessor, const Instruction& instruction
+		base::Optional<base::CRef<Instruction>> predecessor, const Instruction& instruction
 	) const {
 		// This check assumes that the last instruction in a function is non-extendable,
 		// this is checked in `validate`.
@@ -908,7 +908,7 @@ class FunctionValidator {
 
 		while (index != function.body.size()) {
 			validateExtension(
-				index > 0 ? instructions[index - 1] : base::Optional<const Instruction&>(),
+				index > 0 ? &instructions[index - 1] : base::Optional<base::CRef<Instruction>>(),
 				instructions[index]
 			);
 
@@ -916,8 +916,8 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(
 				instructions[index],
-				index + 1 < instructions.size() ? instructions[index + 1]
-												: base::Optional<const Instruction&>(),
+				index + 1 < instructions.size() ? &instructions[index + 1]
+												: base::Optional<base::CRef<Instruction>>(),
 				local_stack
 			);
 
@@ -935,7 +935,7 @@ class FunctionValidator {
 				variant_case(Op_label, instr) {
 					match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
 						opt_some(label_state) {
-							if (label_state != local_stack.getStackState())
+							if (*label_state != local_stack.getStackState())
 								throw StackStructureMismatchError(
 									instr, jumps_to_label.at(instr.arg0.label_name)
 								);

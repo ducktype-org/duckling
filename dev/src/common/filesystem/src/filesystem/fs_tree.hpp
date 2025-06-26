@@ -6,6 +6,8 @@
 #pragma once
 #include "file.hpp"
 
+#include <base/ref.hpp>
+
 #include <regex>
 
 namespace fs {
@@ -68,7 +70,7 @@ namespace fs {
 		 * inside the base::Optional.
 		 */
 		[[nodiscard]]
-		base::Optional<const FsTree&> getParentTree() const;
+		base::Optional<base::CRef<FsTree>> getParentTree() const;
 
 		/**
 		 * Accesses the directory, that was used as a FsTree root.

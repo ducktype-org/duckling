@@ -1,6 +1,6 @@
 #pragma once
 
-#include "driver.hpp"
+#include "backend_driver.hpp"
 
 #include <query_framework/context_fd.hpp>
 
@@ -8,14 +8,16 @@
 
 namespace compiler::driver {
 	class LLVMDriver final: public BackendDriver {
-		std::vector<base::StrID> object_file_paths;
+		std::vector<std::filesystem::path> object_file_paths;
 
 	public:
-		LLVMDriver(CRef<Options> options): BackendDriver(options) {}
+		LLVMDriver(CRef<BackendOptions> options): BackendDriver(options) {}
 
-		void compileModule(query::Context& ctx, const BackendModuleData& lir_module) final;
-
-		void link(base::StrID output_file) final;
+		void compileModule(
+			query::Context&          ctx,
+			const BackendModuleData& lir_module,
+			artifacts::FileArtifact  output_artifact
+		) final;
 
 		std::expected<RunOutput, std::string> run() final;
 	};

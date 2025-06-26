@@ -22,6 +22,8 @@ base::RawView artifacts::BlobArtifact::getDataView() const {
 
 artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	  PATH(std::move(root)) {
+	CORE_ASSERT(std::filesystem::exists(PATH), "ArtifactCollection path does not exist");
+	CORE_ASSERT(std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory");
 	loadData();
 }
 
@@ -156,7 +158,7 @@ base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection
 	base::StrID collection_name
 ) {
 	return sub_collections.atMaybe(collection_name).map([](const auto& ref) {
-		return ref.refMut();
+		return ref->refMut();
 	});
 }
 
@@ -183,8 +185,8 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNe
 	base::StrID artifact_name
 ) {
 	match_optional(fileArtifactAtMaybe(artifact_name)) {
-		opt_some(artifact) return artifact;
-		opt_none return fileArtifactAt(artifact_name);
+		opt_some(artifact) return *artifact;
+		opt_none return fileArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
@@ -194,7 +196,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAt(bas
 	return file_artifacts.at(artifact_name);
 }
 
-base::Optional<const artifacts::FileArtifact&> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(
 	base::StrID artifact_name
 ) const {
 	return file_artifacts.atMaybe(artifact_name);
@@ -213,8 +215,8 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNe
 	base::StrID artifact_name
 ) {
 	match_optional(blobArtifactAtMaybe(artifact_name)) {
-		opt_some(artifact) return artifact;
-		opt_none return blobArtifactAt(artifact_name);
+		opt_some(artifact) return *artifact;
+		opt_none return blobArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
@@ -224,7 +226,7 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAt(bas
 	return blob_artifacts.at(artifact_name);
 }
 
-base::Optional<const artifacts::BlobArtifact&> artifacts::ArtifactCollection::blobArtifactAtMaybe(
+base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybe(
 	base::StrID artifact_name
 ) const {
 	return blob_artifacts.atMaybe(artifact_name);

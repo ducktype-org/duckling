@@ -101,7 +101,7 @@ namespace vm {
 		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
 		std::lock_guard lock(*parent_pointer.block->mutex_ref);
 		if_opt_some(parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested) {
-			if (nested->data.element_type == type) return nested;
+			if ((*nested)->data.element_type == type) return *nested;
 		}
 		return nullptr;
 	}
@@ -111,7 +111,7 @@ namespace vm {
 		std::lock_guard lock(mutex);
 		auto&           children = parent_pointer.block->children_blocks;
 		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
-			freeBlock(nested);
+			freeBlock(*nested);
 			children.erase(parent_pointer.offset);
 		}
 

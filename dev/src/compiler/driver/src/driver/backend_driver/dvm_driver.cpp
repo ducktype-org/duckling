@@ -14,25 +14,30 @@
 #include <fstream>
 
 namespace compiler::driver {
-	void DVMDriver::compileModule(query::Context& query_ctx, const BackendModuleData& data) {
-		backend_vm::Module       module{ query_ctx, data.module_id, data.functions };
+	void DVMDriver::compileModule(
+		query::Context&          query_ctx,
+		const BackendModuleData& data,
+		artifacts::FileArtifact  output_artifact
+	) {
+		std::vector<backend_vm::BackendDVMGlobal> dvm_globals;
+		for (const auto& global: data.globals) {
+			backend_vm::BackendDVMGlobal dvm_global{ .lir_global  = global.lir_global,
+				                                     .global_ctor = global.global_ctor,
+				                                     .global_dtor = global.global_dtor };
+			dvm_globals.emplace_back(std::move(dvm_global));
+		}
+		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, dvm_globals };
 		vm::code::CodeCollection code_collection = module.build();
 
 		if (not options->dvm_code_only_memory) {
-			std::ofstream dvm_file(
-				base::strConcat(data.module_id.strView(), ".dbc").c_str(), std::ios::binary
-			);
+			std::ofstream dvm_file(output_artifact.FILE, std::ios::binary);
 			if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 			vm::code::serialize(code_collection, dvm_file);
 			dvm_file.close();
-			std::cout << "DVM file written to: " << data.module_id.strView() << ".dbc\n";
+			std::cout << "DVM file written to: " << output_artifact.FILE.string() << "\n";
 		}
 
 		this->code_collection.emplace_back(std::move(code_collection));
-	}
-
-	void DVMDriver::link(base::StrID) {
-		// DVM doesn't require linking.
 	}
 
 	std::expected<RunOutput, std::string> DVMDriver::run() {

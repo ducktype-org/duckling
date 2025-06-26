@@ -1,6 +1,6 @@
 #pragma once
 
-#include "preamble.hpp"
+#include "expr_common.hpp"
 #include "prefix_operator.hpp"
 
 namespace pst::expr {

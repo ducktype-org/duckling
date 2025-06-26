@@ -2,8 +2,6 @@
 
 #include <base/variant.hpp>
 
-#include <variant>
-
 class T {
 	i32 data;
 
