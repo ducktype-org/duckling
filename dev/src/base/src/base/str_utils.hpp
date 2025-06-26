@@ -25,6 +25,9 @@
 #include <string>
 #include <vector>
 
+class Bits;
+class Bytes;
+
 namespace base {
 	class StrID;
 
@@ -65,6 +68,9 @@ namespace base {
 			strConcat(out, pair.second);
 			out += ">";
 		}
+
+		inline void strConcat(std::string& out, Bits bits);
+		inline void strConcat(std::string& out, Bytes bytes);
 	}
 
 	/**
@@ -89,6 +95,30 @@ namespace base {
 		std::string out;
 		(detail::strConcat(out, std::forward<T>(elements)), ...);
 		return out;
+	}
+
+	/**
+	 * @brief Converts a single value to std::string using strConcat infrastructure.
+	 * 
+	 * This function provides a user-extensible alternative to std::to_string that:
+	 * - Can't break the std namespace
+	 * - Supports all types that strConcat supports
+	 * - Allows for custom user-defined string conversions
+	 * - Is faster than std::to_string for concatenation scenarios
+	 * 
+	 * @param value The value to convert to string
+	 * @return String representation of the value
+	 * 
+	 * @example
+	 * ```cpp
+	 * auto str1 = base::toString(42);           // "42"
+	 * auto str2 = base::toString(MyEnum::Value); // "Value" (if stringifiable)
+	 * auto str3 = base::toString(Bytes(1024));   // Custom conversion
+	 * ```
+	 */
+	template<typename T>
+	std::string toString(T&& value) {
+		return strConcat("", std::forward<T>(value));
 	}
 
 	/**
