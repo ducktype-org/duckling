@@ -41,34 +41,32 @@ namespace {
 		return path_str.starts_with(temp_str);
 	}
 
-// Validation macros
-#define REQUIRE_DIRECTORY(directory) \
-	if (!(directory).isDirectory()) CORE_PANIC("Parent is not a directory")
+	// Validation functions
+	void requireDirectory(const fs::File& directory) {
+		if (!directory.isDirectory()) CORE_PANIC("Parent is not a directory");
+	}
 
-#define REQUIRE_VIRTUAL(file) \
-	if ((file).getType() != fs::FileType::Virtual) CORE_PANIC("File is not virtual")
+	void requireNotPhysical(const fs::File& file) {
+		if (file.getType() == fs::FileType::Physical) CORE_PANIC("File is physical");
+	}
 
-#define REQUIRE_NOT_PHYSICAL(file) \
-	if ((file).getType() == fs::FileType::Physical) CORE_PANIC("File is physical")
+	void requireFile(const fs::File& file) {
+		if (!file.isFile()) CORE_PANIC("Path is not a file");
+	}
 
-#define REQUIRE_PHYSICAL(file) \
-	if ((file).getType() != fs::FileType::Physical) CORE_PANIC("File is not physical")
+	void requirePhysicalPath(const std::filesystem::path& path) {
+		if (fs::VFS::isVirtualPath(path) || hasTemporaryPrefix(path))
+			CORE_PANIC("Path is not a physical file: " + path.string());
+	}
 
-#define REQUIRE_TEMPORARY(file) \
-	if ((file).getType() != fs::FileType::Temporary) CORE_PANIC("File is not temporary")
+	void requireVirtualPath(const std::filesystem::path& path) {
+		if (!fs::VFS::isVirtualPath(path))
+			CORE_PANIC("Path is not a virtual path: " + path.string());
+	}
 
-#define REQUIRE_FILE(file) \
-	if (!(file).isFile()) CORE_PANIC("Path is not a file")
-
-#define REQUIRE_PHYSICAL_PATH(path)                               \
-	if (fs::VFS::isVirtualPath(path) || hasTemporaryPrefix(path)) \
-	CORE_PANIC("Path is not a physical file: " + path.string())
-
-#define REQUIRE_VIRTUAL_PATH(path) \
-	if (!fs::VFS::isVirtualPath(path)) CORE_PANIC("Path is not a virtual path: " + path.string())
-
-#define REQUIRE_TEMP_PATH(path) \
-	if (!hasTemporaryPrefix(path)) CORE_PANIC("Path is not a temporary path: " + path.string())
+	void requireTempPath(const std::filesystem::path& path) {
+		if (!hasTemporaryPrefix(path)) CORE_PANIC("Path is not a temporary path: " + path.string());
+	}
 
 	std::filesystem::path randomName(
 		const std::filesystem::path& prefix_path, const size_t name_len = 16
@@ -91,8 +89,8 @@ namespace {
 	std::filesystem::path genPathInDirectory(
 		const fs::File& directory, std::string_view custom_name = ""
 	) {
-		REQUIRE_DIRECTORY(directory);
-		REQUIRE_NOT_PHYSICAL(directory);
+		requireDirectory(directory);
+		requireNotPhysical(directory);
 
 		auto type = directory.getType();
 
@@ -150,7 +148,7 @@ namespace fs {
 	File FileManager::createPhysicalFile(
 		const std::filesystem::path& path, std::string_view content, bool override
 	) {
-		REQUIRE_PHYSICAL_PATH(path);
+		requirePhysicalPath(path);
 
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 		if (std::filesystem::exists(abs_path)) {
@@ -164,7 +162,7 @@ namespace fs {
 	}
 
 	File FileManager::createPhysicalFolder(const std::filesystem::path& path, bool override) {
-		REQUIRE_PHYSICAL_PATH(path);
+		requirePhysicalPath(path);
 
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 		if (std::filesystem::exists(abs_path)) {
@@ -178,7 +176,7 @@ namespace fs {
 	File FileManager::createVirtualFile(
 		const std::filesystem::path& path, std::string_view content, bool override
 	) {
-		REQUIRE_VIRTUAL_PATH(path);
+		requireVirtualPath(path);
 
 		if (vfs->exists(path)) {
 			if (!override) CORE_PANIC("Virtual file already exists: " + path.string());
@@ -191,7 +189,7 @@ namespace fs {
 	}
 
 	File FileManager::createVirtualFolder(const std::filesystem::path& path, bool override) {
-		REQUIRE_VIRTUAL_PATH(path);
+		requireVirtualPath(path);
 
 		if (vfs->exists(path)) {
 			if (!override) CORE_PANIC("Virtual folder already exists: " + path.string());
@@ -206,7 +204,7 @@ namespace fs {
 	File FileManager::createTempFile(
 		const std::filesystem::path& path, std::string_view content, bool override
 	) {
-		REQUIRE_TEMP_PATH(path);
+		requireTempPath(path);
 
 		if (std::filesystem::exists(path)) {
 			if (!override) CORE_PANIC("Temp file already exists: " + path.string());
@@ -219,7 +217,7 @@ namespace fs {
 	}
 
 	File FileManager::createTempFolder(const std::filesystem::path& path, bool override) {
-		REQUIRE_TEMP_PATH(path);
+		requireTempPath(path);
 
 		if (std::filesystem::exists(path)) {
 			if (!override) CORE_PANIC("Temp folder already exists: " + path.string());
@@ -293,13 +291,13 @@ namespace fs {
 	}
 
 	std::filesystem::path FileManager::toVirtualPath(const std::filesystem::path& path) {
-		REQUIRE_PHYSICAL_PATH(path);
+		requirePhysicalPath(path);
 		auto root = vfs->getRootPath();
 		return root / canonical(path);
 	}
 
 	std::filesystem::path FileManager::fromVirtualPath(const std::filesystem::path& path) {
-		REQUIRE_VIRTUAL_PATH(path);
+		requireVirtualPath(path);
 
 		auto root     = vfs->getRootPath();
 		auto path_str = path.string();
@@ -344,7 +342,7 @@ namespace fs {
 
 	File File::parentPath() const { return path.parent_path(); }
 
-	std::string File::absolutePath() const { return path; }
+	std::string File::absolutePath() const { return path.native(); }
 
 	std::string File::uri() const { return "file://" + absolutePath(); }
 
@@ -370,7 +368,7 @@ namespace fs {
 	std::string File::extension() const { return path.extension(); }
 
 	std::vector<File> File::listFilePaths() const {
-		REQUIRE_DIRECTORY(*this);
+		requireDirectory(*this);
 
 		std::vector<File> file_paths;
 		if (type == FileType::Virtual)
@@ -384,7 +382,7 @@ namespace fs {
 	bool File::isSymlink() const noexcept { return is_symlink; }
 
 	void File::writeToFile(std::string_view new_content, bool append) const {
-		REQUIRE_FILE(*this);
+		requireFile(*this);
 
 		if (type == FileType::Virtual) {
 			if (append) CORE_PANIC("Append mode is not supported for virtual files");
@@ -420,7 +418,7 @@ namespace fs {
 	}
 
 	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path) {
-		REQUIRE_VIRTUAL_PATH(path);
+		requireVirtualPath(path);
 		auto content = vfs->readFile(path);
 		if (content.empty())
 			CORE_PANIC(std::string("virtual file does not exist: ") + path.string());
@@ -452,7 +450,7 @@ namespace fs {
 	File FileManager::createFileIn(
 		const File& directory, std::string_view new_file_content, std::string_view custom_name
 	) {
-		REQUIRE_DIRECTORY(directory);
+		requireDirectory(directory);
 		std::filesystem::path file_path = genPathInDirectory(directory, custom_name);
 
 		if (directory.type == FileType::Virtual) {
@@ -474,7 +472,7 @@ namespace fs {
 	}
 
 	File FileManager::createDirectoryIn(const File& directory, std::string_view custom_name) {
-		REQUIRE_DIRECTORY(directory);
+		requireDirectory(directory);
 		std::filesystem::path dir_path = genPathInDirectory(directory, custom_name);
 
 		if (directory.type == FileType::Virtual) {

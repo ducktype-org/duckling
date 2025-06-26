@@ -15,10 +15,7 @@ namespace compiler::frontend {
 		lang_file_name = base::StrID(this->path.stem().c_str());
 		// Add or replace file content in cache
 		auto abs_path = this->path.absolutePath();
-		if (to_content.contains(abs_path))
-			to_content[abs_path] = this->path.getContent();
-		else
-			to_content.put(abs_path, this->path.getContent());
+		if (!to_content.contains(abs_path)) to_content.put(abs_path, this->path.getContent());
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
@@ -30,10 +27,12 @@ namespace compiler::frontend {
 		}
 	}
 
-	fs::FileContent SourceFile::getCachedContent(const fs::File& path) {
-		auto it = to_content.find(path.absolutePath());
+	fs::FileContent SourceFile::getCachedContent() const {
+		auto abs_path = this->path.absolutePath();
+		auto it       = to_content.find(abs_path);
 		if (it != to_content.end()) return it->second;
-		return {};
+		// This should not happen since content is cached in constructor
+		CORE_PANIC("SourceFile content not found in cache for: " + abs_path);
 	}
 
 	u64 SourceFile::queryUnstablePerfectHash() {

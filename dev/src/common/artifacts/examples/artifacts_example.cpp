@@ -37,7 +37,7 @@ int main() {
 
 		// Create a file artifact
 		auto          file0 = collection.fileArtifactNew(f0);
-		std::ofstream file(file0.FILE);
+		std::ofstream file(file0.FILE.getPath());
 		file << "Hello!\n";
 		file.close();
 
@@ -57,7 +57,7 @@ int main() {
 		assert(collection.blobArtifactAt(b1).getData<SimpleStruct>() == simple_struct);
 
 		auto          file0 = collection.fileArtifactAt(f0);
-		std::ifstream file(file0.FILE);
+		std::ifstream file(file0.FILE.getPath());
 		std::string   data;
 		file >> data;
 		file.close();

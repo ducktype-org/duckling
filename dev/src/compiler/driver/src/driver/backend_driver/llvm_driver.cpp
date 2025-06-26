@@ -75,8 +75,8 @@ namespace compiler::driver {
 		// @TODO there should be one instance for all duck compiler options
 		// and it should be passed to the backend drivers
 
-		mod.compile(output_artifact.FILE, backend_llvm::CompilationOutputType::Object);
-		object_file_paths.push_back(output_artifact.FILE);
+		mod.compile(output_artifact.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+		object_file_paths.push_back(output_artifact.FILE.getPath());
 	}
 
 }

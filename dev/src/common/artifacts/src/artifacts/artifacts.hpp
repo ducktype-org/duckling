@@ -46,13 +46,8 @@ namespace artifacts {
 
 		/**
 		 * @brief File that stores this `FileArtifact`'s data.
-		 * @note Currently we are not providing any functionality regarding read/writing, so
-		 * feel free to simply read and write to and from this file.
-		 * @note fs::File when lazily reads the content for pointed file the first time, it will
-		 * not reload it's content. Also, we heavily modify filesystem structure, which our
-		 * `fs::File` is not suited for.
 		 */
-		const std::filesystem::path FILE;
+		const fs::File FILE;
 	};
 
 	/**

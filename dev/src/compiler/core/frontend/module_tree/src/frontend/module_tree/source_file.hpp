@@ -43,7 +43,13 @@ namespace compiler::frontend {
 
 		static ContentMap to_content;
 
-		static fs::FileContent getCachedContent(const fs::File& path);
+		/**
+		 * @brief Returns cached content for this SourceFile
+		 * @note Content is cached during SourceFile construction
+		 * @return Cached FileContent for this SourceFile
+		 */
+
+		[[nodiscard]] fs::FileContent getCachedContent() const;
 
 		u64 queryUnstablePerfectHash();
 	};

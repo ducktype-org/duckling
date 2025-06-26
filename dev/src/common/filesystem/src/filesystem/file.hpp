@@ -137,6 +137,8 @@ namespace fs {
 		[[nodiscard]]
 		std::string_view strView() const;
 
+		[[nodiscard]] std::filesystem::path getPath() const { return path; }
+
 		[[nodiscard]]
 		File parentPath() const;
 

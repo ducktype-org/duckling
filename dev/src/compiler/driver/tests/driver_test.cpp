@@ -59,11 +59,11 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
 
-			std::filesystem::remove(exe.FILE);
-			std::filesystem::remove(obj.FILE);
+			std::filesystem::remove(exe.FILE.getPath());
+			std::filesystem::remove(obj.FILE.getPath());
 		});
 	}
 
@@ -145,11 +145,11 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
 
-			std::filesystem::remove(exe.FILE);
-			std::filesystem::remove(obj.FILE);
+			std::filesystem::remove(exe.FILE.getPath());
+			std::filesystem::remove(obj.FILE.getPath());
 		});
 	}
 
@@ -177,11 +177,11 @@ private:
 			llvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
+			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
 
-			std::filesystem::remove(exe.FILE);
-			std::filesystem::remove(obj.FILE);
+			std::filesystem::remove(exe.FILE.getPath());
+			std::filesystem::remove(obj.FILE.getPath());
 		});
 
 		// Test with DVM backend

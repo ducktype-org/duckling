@@ -147,7 +147,7 @@ namespace compiler::driver {
 			base::StrID(base::strConcat("builtin_", backendTypeToStr(backend), ".o").c_str())
 		);
 		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-		mod.compile(builtin_obj_file.FILE, backend_llvm::CompilationOutputType::Object);
+		mod.compile(builtin_obj_file.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
 		return builtin_obj_file;
 	}
 }
