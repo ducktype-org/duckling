@@ -28,9 +28,19 @@
 namespace base {
 	class StrID;
 
+	// This is forward declaration to prevent circular header dependency
+	template<typename EnumType>
+	StrID enumToStr(EnumType v);
+
 	namespace detail {
+
 		template<typename T>
-		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>>)
+		concept HasEnumToStr = std::is_enum_v<T> && requires(T t) {
+			{ base::enumToStr(t) } -> std::convertible_to<base::StrID>;
+		};
+
+		template<typename T>
+		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>> && !HasEnumToStr<std::remove_cvref_t<T>>)
 		void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}
@@ -64,6 +74,12 @@ namespace base {
 			out += ", ";
 			strConcat(out, pair.second);
 			out += ">";
+		}
+
+		template<typename T>
+		requires HasEnumToStr<std::remove_cvref_t<T>> void strConcat(std::string& out, T&& v) {
+			// Używamy istniejącego przeciążenia dla StrID
+			strConcat(out, base::enumToStr(std::forward<T>(v)));
 		}
 	}
 
