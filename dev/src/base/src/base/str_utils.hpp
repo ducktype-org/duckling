@@ -81,7 +81,7 @@ namespace base {
 
 		template<typename T>
 		requires HasEnumToStr<std::remove_cvref_t<T>> void strConcat(std::string& out, T&& v) {
-			// Używamy istniejącego przeciążenia dla StrID
+			// Use existing overload for StrID
 			strConcat(out, base::enumToStr(std::forward<T>(v)));
 		}
 
