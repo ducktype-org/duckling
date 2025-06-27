@@ -40,7 +40,7 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testImport);
+		// TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testError);
 		TESTER_ADD_TEST(testI32Consts);

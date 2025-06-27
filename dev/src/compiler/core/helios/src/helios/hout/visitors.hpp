@@ -27,6 +27,8 @@ namespace compiler::helios::code {
 		TupleTypeConstructorExpr,
 		VariantTypeConstructorExpr,
 		LinkedIdentifierExpr,
-		CallExpr
+		CallExpr,
+		AccessExpr,
+		SequenceExpr
 	);
 }

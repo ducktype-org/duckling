@@ -31,6 +31,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
 	EXPR_VISITOR(CallExpr)
+	EXPR_VISITOR(AccessExpr)
+	EXPR_VISITOR(SequenceExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
 		  Expr(
@@ -347,4 +349,27 @@ namespace compiler::helios::code {
 		}
 		out << ")";
 	}
+
+	AccessExpr::AccessExpr(query::Context& ctx, Box<Expr> base, base::StrID field):
+		  Expr(base->expression_type),
+		  base(std::move(base)),
+		  field(field) {}
+
+	void AccessExpr::debugPrint(std::ostream& out) const {
+		base->debugPrint(out);
+		out << "." << field.str();
+	}
+
+	SequenceExpr::SequenceExpr(query::Context& ctx, std::vector<Box<Expr>> expressions):
+		  Expr(expressions.back()->expression_type),
+		  expressions(std::move(expressions)) {}
+
+	void SequenceExpr::debugPrint(std::ostream& out) const {
+		for (bool add_comma = false; auto&& expr: expressions) {
+			if (add_comma) out << ", ";
+			expr->debugPrint(out);
+			add_comma = true;
+		}
+	}
+
 }

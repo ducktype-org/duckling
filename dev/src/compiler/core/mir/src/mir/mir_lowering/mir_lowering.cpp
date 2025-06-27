@@ -1039,6 +1039,14 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("linked identifier expr");
 		}
 
+		void visitAccessExpr(const hc::AccessExpr& expr) override {
+			throw base::NotYetImplemented("access expr lowering");
+		}
+
+		void visitSequenceExpr(const hc::SequenceExpr& expr) override {
+			throw base::NotYetImplemented("sequence expr lowering");
+		}
+
 		void visitCallExpr(const hc::CallExpr& expr) override {
 			auto       call = continuation->addHole();
 			const auto call_result

@@ -250,7 +250,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
-	 * For now it is a mockup.
+	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
 		base::Box<Expr> base;

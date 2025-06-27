@@ -1,6 +1,10 @@
 
 #include "chain_expr.hpp"
 
+#include "helios/hout/visitors.hpp"
+#include "pst_parser/elements/hierarchy/expressions/identifier_literal.hpp"
+#include "pst_parser/elements/hierarchy/not_statements/expr_element.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -10,6 +14,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -19,9 +24,32 @@
 #include "base/exceptions.hpp"
 #include <base/optional.hpp>
 
+#include <algorithm>
 #include <tuple>
 
 namespace compiler::helios::code {
+	struct HoutExprSymbolVisitor final: public HoutExprVisitorEmpty {
+		explicit HoutExprSymbolVisitor(query::Context& ctx): ctx(ctx) {}
+
+		query::Context& ctx;
+
+		base::Optional<SymID> symbol;
+
+		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
+
+		void visitParenthesisExpr(const ParenthesisExpr& val) override {
+			HoutExprSymbolVisitor visitor(ctx);
+			val.inner->acceptVisitor(visitor);
+			symbol = visitor.symbol;
+		}
+	};
+
+	base::Optional<SymID> getExpressionSymID(query::Context& ctx, CRef<code::Expr> expr) {
+		HoutExprSymbolVisitor visitor(ctx);
+		expr->acceptVisitor(visitor);
+		return visitor.symbol;
+	}
+
 	/**
 	 * @brief State for the building of the chain expression in HOUT.
 	 * It mainly stores two distinct states:
@@ -83,6 +111,9 @@ namespace compiler::helios::code {
 	 * In consequence when other handlers are called it is guaranteed that
 	 * before the "call element" there is no "access element" and after the "access element"
 	 * there is no "call element".
+	 *
+	 * @note It can also return a identifier expression with a namespace, since "(NS).a" is a thing
+	 * in our compiler.
 	 */
 	class ChainExprConstruction {
 		/**
@@ -132,6 +163,12 @@ namespace compiler::helios::code {
 		auto processPSTExpr(query::Context& ctx, pst::Access<pst::expr::IdentifierLiteral> ident)
 			-> query::QResult<ProcessPSTExprOutput, errors::Failed>;
 
+		/**
+		 * @brief Given first element in a chain is an expression compute the expression to HOUT
+		 * and based on the result return either a namespace or this expression as the chain state.
+		 */
+		auto processPSTExpr(query::Context& ctx, pst::Access<pst::ExprElement> ident)
+			-> query::QResult<ProcessPSTExprOutput, errors::Failed>;
 
 		/**
 		 * @brief Given first identifier in a chain and a call expression, perform function lookup
@@ -204,11 +241,8 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ProcessPSTExprOutput, errors::Failed>;
 
-		auto processNamespaceOrValue(
-			query::Context&                                   ctx,
-			const query::QResult<SymbolList, errors::Failed>& lookup_result,
-			const tpc::Identifier&                            name
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed>;
+		auto processNamespaceOrValue(query::Context& ctx, const SymID& sym)
+			-> query::QResult<ProcessPSTExprOutput, errors::Failed>;
 
 		// =============================== MAIN PROCESSING LOOP ===============================
 
@@ -227,13 +261,15 @@ namespace compiler::helios::code {
 		base::Optional<errors::Failed> step(query::Context& ctx);
 
 		/**
-		 * @brief Same as above, but it performs a step on the first element of the chain, where chain state is empty.
+		 * @brief Same as above, but it performs a step on the first element of the chain, where
+		 * chain state is empty.
 		 */
 		template<typename T>
 		base::Optional<errors::Failed> firstStep(query::Context& ctx);
 
 		/**
-		 * @brief Same as above, but it performs a step on the first element of the chain, where chain state is empty.
+		 * @brief Same as above, but it performs a step on the first element of the chain, where
+		 * chain state is empty.
 		 */
 		template<typename T1, typename T2>
 		base::Optional<errors::Failed> firstStep(query::Context& ctx);
@@ -248,31 +284,19 @@ namespace compiler::helios::code {
 		query::QResult<base::Box<Expr>, errors::Failed> run(query::Context& ctx);
 	};
 
-	auto ChainExprConstruction::processNamespaceOrValue(
-		query::Context&                                   ctx,
-		const query::QResult<SymbolList, errors::Failed>& lookup_result,
-		const tpc::Identifier&                            name
-	) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
-		if (!lookup_result) {
-			ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-				name.position, base::strConcat("Value '", name.value, "' not found")
-			));
-			return query::QError(errors::Failed());
-		}
-
-		const auto& sym = lookup_result.value().back();
-		switch (kind(sym)) {
-		case SymbolKind::Namespace: {
-			// Namespace found, return ChainContext with namespace
-			return { ProcessPSTExprOutput{ ChainState::ofNamespace(sym),
+	auto ChainExprConstruction::processNamespaceOrValue(query::Context& ctx, const SymID& symbol)
+		-> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		switch (kind(symbol)) {
+		case SymbolKind::Namespace:
+		case SymbolKind::Import: {
+			return { ProcessPSTExprOutput{ ChainState::ofNamespace(symbol),
 				                           base::Optional<base::Box<Expr>>{} } };
 		}
 		case SymbolKind::Variable:
 		case SymbolKind::Parameter:
 		case SymbolKind::Const:
 		case SymbolKind::Class: {
-			// Variable or constant found, return ChainContext with expr
-			auto expr = makeBox<IdentifierExpr>(ctx, sym);
+			auto expr = makeBox<IdentifierExpr>(ctx, symbol);
 			return { ProcessPSTExprOutput{ ChainState::ofExpr(std::move(expr)),
 				                           base::Optional<base::Box<Expr>>{} } };
 		}
@@ -302,7 +326,7 @@ namespace compiler::helios::code {
 		tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
 
 		if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-			ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+			ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 				name.position, "Invalid number of arguments"
 			));
 			return query::QError(errors::Failed());
@@ -314,11 +338,9 @@ namespace compiler::helios::code {
 				std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
 			);
 			if (coerced.hasError()) {
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						name.position, "Invalid argument type"
-					)
-				);
+				ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+					name.position, "Invalid argument type"
+				));
 				return query::QError(errors::Failed());
 			}
 			coerced_arguments.emplace_back(std::move(coerced.value()));
@@ -338,7 +360,27 @@ namespace compiler::helios::code {
 		const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 			ident->getName().position, ctx, ident->getName().value
 		);
-		return processNamespaceOrValue(ctx, lookup_result, ident->getName());
+		if (!lookup_result) {
+			ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+				ident->getName().position,
+				base::strConcat("Value '", ident->getName().value, "' not found")
+			));
+			return query::QError(errors::Failed());
+		}
+		const auto& sym = lookup_result.value().back();
+		return processNamespaceOrValue(ctx, sym);
+	}
+
+	auto ChainExprConstruction::processPSTExpr(
+		query::Context& ctx, pst::Access<pst::ExprElement> ident
+	) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto expr = ctx.query<QueryHoutOfExpr>({ ident });
+		if (expr.hasError()) return query::QError(errors::Failed());
+		auto hout_expr = std::move(expr).value();
+		auto symbol    = getExpressionSymID(ctx, hout_expr.ref());
+		if (symbol.has_value()) return processNamespaceOrValue(ctx, symbol.value());
+		return ProcessPSTExprOutput{ ChainState::ofExpr(std::move(hout_expr)),
+			                         base::Optional<base::Box<Expr>>{} };
 	}
 
 	auto ChainExprConstruction::processPSTExpr(
@@ -362,7 +404,7 @@ namespace compiler::helios::code {
 	auto ChainExprConstruction::processPSTExpr(
 		query::Context& ctx, SymID, pst::Access<pst::expr::Call> call_expr
 	) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
-		ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+		ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
 			call_expr->getSourcePosition(), base::strConcat("Namespace is not callable")
 		));
 		return query::QError(errors::Failed());
@@ -401,7 +443,15 @@ namespace compiler::helios::code {
 		          .lookupExpectUnique(
 					  expr_access->getSourcePosition(), ctx, expr_access->getName().value
 				  );
-		return processNamespaceOrValue(ctx, lookup_result, expr_access->getName());
+		if (!lookup_result) {
+			ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+				expr_access->getName().position,
+				base::strConcat("Value '", expr_access->getName().value, "' not found")
+			));
+			return query::QError(errors::Failed());
+		}
+		const auto& sym = lookup_result.value().back();
+		return processNamespaceOrValue(ctx, sym);
 	}
 
 	auto ChainExprConstruction::processPSTExpr(
@@ -424,8 +474,9 @@ namespace compiler::helios::code {
 
 	ChainExprConstruction::ChainExprConstruction(pst::Access<pst::expr::ChainExpr> expr) {
 		this->chain_elements.emplace_back(expr->getAtom());
-		auto chain           = expr->getChain();
-		this->chain_elements = { chain.begin(), chain.end() };
+		auto chain = expr->getChain();
+		std::ranges::copy(chain, std::back_inserter(this->chain_elements));
+
 		this->chain_elements_unlocked.reserve(this->chain_elements.size());
 	}
 
@@ -451,17 +502,17 @@ namespace compiler::helios::code {
 	}
 
 	template<typename T>
-	bool ChainExprConstruction::isNextElement(query::Context& ctx) {
-		auto elem = nextElem(ctx);
-		if (elem.empty()) return false;
-		return elem.value().template dynamicCast<T>().has_value();
-	}
-
-	template<typename T>
 	bool ChainExprConstruction::isCurrentElement(query::Context& ctx) {
 		auto elem = currentElem(ctx);
 		if (elem.empty()) return false;
-		return elem.value().template dynamicCast<T>().has_value();
+		return elem.value().dynamicCast<T>().has_value();
+	}
+
+	template<typename T>
+	bool ChainExprConstruction::isNextElement(query::Context& ctx) {
+		auto elem = nextElem(ctx);
+		if (elem.empty()) return false;
+		return elem.value().dynamicCast<T>().has_value();
 	}
 
 	template<typename T>
@@ -526,7 +577,7 @@ namespace compiler::helios::code {
 	template<typename T1, typename T2>
 	base::Optional<errors::Failed> ChainExprConstruction::firstStep(query::Context& ctx) {
 		auto current_element_value = currentElem(ctx).value().dynamicCast<T1>().value();
-		auto next_element_value    = currentElem(ctx).value().dynamicCast<T2>().value();
+		auto next_element_value    = nextElem(ctx).value().dynamicCast<T2>().value();
 		auto res                   = processPSTExpr(ctx, current_element_value, next_element_value);
 		if (res.hasError()) return res.error();
 		auto [next_context, built_expr_opt] = std::move(res.value());
@@ -539,20 +590,14 @@ namespace compiler::helios::code {
 	query::QResult<base::Box<Expr>, errors::Failed> ChainExprConstruction::run(query::Context& ctx) {
 		base::Optional<errors::Failed> error{};
 		index = 0;
-
-		if (not isCurrentElement<pst::expr::IdentifierLiteral>(ctx)) {
-			ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-				currentElem(ctx).value()->getSourcePosition(),
-				"Expected identifier literal in as first element in chain expression"
-			));
-			return query::QError(errors::Failed());
-		}
-		if (isNextElement<pst::expr::Call>(ctx)) {
+		if (isCurrentElement<pst::expr::IdentifierLiteral>(ctx)
+		    && isNextElement<pst::expr::Call>(ctx)) {
 			error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>(ctx);
+			index += 2;
+		} else {
+			error = firstStep<pst::ExprElement>(ctx);
 			index++;
-		} else
-			error = firstStep<pst::expr::IdentifierLiteral>(ctx);
-
+		}
 
 		while (not error.has_value() && index < chain_elements.size()) {
 			if (isCurrentElement<pst::expr::Access>(ctx) && isNextElement<pst::expr::Call>(ctx)) {
@@ -574,6 +619,10 @@ namespace compiler::helios::code {
 			index++;
 		}
 		if (current_context.isExpr()) result_sequence.push_back(current_context.getExpr());
+		if (current_context.isNamespace()) {
+			auto namespace_expr = makeBox<IdentifierExpr>(ctx, current_context.getNamespace());
+			result_sequence.emplace_back(std::move(namespace_expr));
+		}
 
 		if (error.has_value()) return query::QError(error.value());
 		if (result_sequence.empty()) {
@@ -593,7 +642,15 @@ namespace compiler::helios::code {
 	ExprConstructionResult fromChainExpr(
 		query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr
 	) {
+		// expr->debugPrint(std::cerr);
+		// std::cerr << '\n';
 		ChainExprConstruction construction(expr);
+		// if (res.hasError()) {
+		// 	std::cerr << "Chain expression construction failed\n";
+		// } else {
+		// 	res.value()->debugPrint(std::cerr);
+		// 	std::cerr << '\n';
+		// }
 		return construction.run(ctx);
 	}
 }

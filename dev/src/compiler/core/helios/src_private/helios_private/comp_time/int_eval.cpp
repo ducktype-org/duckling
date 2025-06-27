@@ -150,6 +150,18 @@ namespace compiler::helios {
 			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {
 				result = ctx.query<QueryConstValueOf>(expr.symbols.back());
 			}
+
+			void visitAccessExpr(const code::AccessExpr&) final {
+				throw base::NotYetImplemented(
+					"Evaluation of access expressions is not implemented yet"
+				);
+			}
+
+			void visitSequenceExpr(const code::SequenceExpr&) final {
+				throw base::NotYetImplemented(
+					"Evaluation of sequence expressions is not implemented yet"
+				);
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
