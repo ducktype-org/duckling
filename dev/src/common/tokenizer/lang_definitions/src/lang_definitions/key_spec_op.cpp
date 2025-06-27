@@ -154,7 +154,7 @@ namespace lang_def {
 		{ Special::Comma, "," },
 		{ Special::AtSign, "@" },
 		{ Special::HashSign, "#" },
-		{ Special::DolarSign, "$" },
+		{ Special::DollarSign, "$" },
 	});
 
 	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({

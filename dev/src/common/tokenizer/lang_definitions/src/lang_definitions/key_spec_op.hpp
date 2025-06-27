@@ -178,7 +178,7 @@ namespace lang_def {
 		Semicolon,
 		AtSign,
 		Comma,
-		DolarSign,
+		DollarSign,
 		HashSign,
 		//...
 	};
