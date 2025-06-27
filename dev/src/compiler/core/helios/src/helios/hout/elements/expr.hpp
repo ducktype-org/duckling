@@ -248,9 +248,13 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
-	struct AccessExpr final : public Expr {
+	/**
+	 * @brief Represents a field access to an expression, like "some_struct.field".
+	 * For now it is a mockup.
+	 */
+	struct AccessExpr final: public Expr {
 		base::Box<Expr> base;
-		base::StrID field;
+		base::StrID     field;
 
 		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
 		void debugPrint(std::ostream& out) const final;
@@ -270,6 +274,15 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
+	/**
+	 * @brief Represent a sequence of expressions, like "a, b, c;".
+	 * The results of all the expressions are discarded, except for the last one.
+	 * The last one is also the result of the whole sequence.
+	 *
+	 * Acts like a comma operator in C/C++:
+	 * > the comma operator is a binary operator that evaluates its first operand and discards the
+	 * result, and then evaluates the second operand and returns this value
+	 */
 	struct SequenceExpr final: public Expr {
 		std::vector<base::Box<Expr>> expressions;
 

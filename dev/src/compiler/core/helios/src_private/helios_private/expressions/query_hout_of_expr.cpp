@@ -1,5 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
+#include "helios_private/expressions/chain_expr.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -173,116 +175,12 @@ namespace compiler::helios::code {
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> stmt) override {
-				// @TODO: Add a compiler log or some kind of information if lookup fails.
-				// @TODO / @NOTE This methods will be reworked.
-				// @TODO: add compiler errors, typecheck and coercions in function calls
-
-				auto atom_expr = fromPST(ctx, stmt->getAtom());
-				if (!atom_expr) {
-					// Report an error?
+				auto result = fromChainExpr(ctx, stmt);
+				if (result.hasError()) {
+					// Error has occurred.
 					return;
 				}
-
-				// this is very temporary:
-				SymbolList looked_up_symbol
-					= { { querySymIDOfHOUTExpr(ctx, atom_expr.value().ref()).value() } };
-
-				// @note If optional is not empty it means there has been a call.
-				base::Optional<std::vector<Box<Expr>>> call_arguments;
-
-				for (auto el: stmt->getChain()) {
-					// This is a mock. It asserts call expression is the last in the chain.
-					if (call_arguments.has_value())
-						throw base::NotYetImplemented("Call expr not last on the chain");
-					if (auto pst_access_opt = el.unlock(ctx).dynamicCast<pst::expr::Access>()) {
-						auto pst_access = pst_access_opt.value();
-						CORE_ASSERT(
-							pst_access->getType() == ".", "Not handling .? access operator yet"
-						);
-
-						std::cerr << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
-								  << pst_access->getName().value.strView() << "\n";
-
-						auto new_symbols = HInterface::ofSymbol(looked_up_symbol.back())
-						                       .lookupExpectUnique(
-												   pst_access->getName().position,
-												   ctx,
-												   pst_access->getName().value
-											   );
-
-						if (!new_symbols) return;  // failed
-
-						looked_up_symbol.appendList(new_symbols.value());
-					} else if (auto pst_call_opt = el.unlock(ctx).dynamicCast<pst::expr::Call>()) {
-						auto pst_call = pst_call_opt.value();
-						if (pst_call->getType() != lexer::Token::Round) {
-							throw base::NotYetImplemented(base::strConcat(
-								"HOUT call with invalid bracket type: ", char(pst_call->getType())
-							));
-						}
-
-						call_arguments.emplace();
-						for (auto&& arg: *pst_call->getArgs().unlock(ctx)) {
-							auto arg_expr = fromPST(ctx, arg.unlock(ctx)->getExpr());
-							if (!arg_expr) {
-								// Error
-								return;
-							}
-							call_arguments->emplace_back(std::move(arg_expr.value()));
-						}
-					} else {
-						throw base::NotYetImplemented(
-							"ChainExpr visitor handles only calls and accesses."
-						);
-					}
-				}
-
-				if (call_arguments) {
-					auto call_symbol      = looked_up_symbol.back();
-					auto call_type_result = ctx.query<QueryTypeOfSymbol>({ call_symbol });
-					if (call_type_result->hasError()) return;  // fail
-					tsh::SymbolType<tsh::FunctionAbstractType> call_type
-						= call_type_result->value();
-
-					auto arguments = std::move(call_arguments.value());
-					if (call_type.getType().getParameterTypes().size() != arguments.size()) {
-						ctx.log(makeBox<
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							stmt->getSourcePosition(), "Invalid number of arguments"
-						));
-						return;  // failed
-					}
-
-					std::vector<base::Box<Expr>> coerced_arguments;
-					coerced_arguments.reserve(arguments.size());
-					for (usize i = 0; i < arguments.size(); i++) {
-						auto coerced = coerceExpression(
-							std::move(arguments[i]), call_type.getType().getParameterTypes()[i]
-						);
-						if (coerced.hasError()) {
-							// this has suboptimal error position,
-							// for now it is left like this, since
-							// this function will be reworked anyway:
-							ctx.log(makeBox<dia::PlaceholderMessage<
-										dia::Error,
-										dia::Message::Domain::TypeCheck>>(
-								stmt->getSourcePosition(), "Invalid argument type"
-							));
-							return;  // failed
-						}
-						coerced_arguments.emplace_back(std::move(coerced.value()));
-					}
-
-
-					CORE_ASSERT(
-						coerced_arguments.size() == call_type.getType().getParameterTypes().size(),
-						"Invalid number of arguments after type check"
-					);
-
-					node = makeBox<CallExpr>(ctx, call_symbol, std::move(coerced_arguments));
-				} else {
-					node = makeBox<LinkedIdentifierExpr>(ctx, std::move(looked_up_symbol));
-				}
+				node = std::move(result.value());
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
