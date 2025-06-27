@@ -120,6 +120,16 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
+		template<class U>
+		Box<U> dynamicCastMove() && {
+			U* casted_ptr = dynamic_cast<U*>(ptr);
+			if (casted_ptr == nullptr) {
+				CORE_PANIC("Dynamic cast failed, pointer was not of type T!");
+			}
+			ptr = nullptr;
+			return Box<U>(casted_ptr);
+		}
+
 		~Box() {
 			::base::extend::BoxPtrDeleter<T>::del(ptr
 			);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:

@@ -84,7 +84,7 @@ namespace driver {
          * but you can still (try) to use its internal functions.
          */
         struct BareMode {
-
+            // anything here?
         };
         struct PackageCompilation {
             options_types::PackageInfo main_package_info;
