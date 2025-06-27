@@ -56,9 +56,12 @@ namespace compiler::helios::code {
 
         ChainContext(SymID namespace_id)
             : expr(base::MBox<Expr>{}), namespace_id(namespace_id) {}
-
+    
+    private:
         ChainContext() 
             : expr(base::MBox<Expr>{}), namespace_id(base::Optional<SymID>{}) {}
+
+        friend struct ChainExprConstruction;
 	};
 
     using HandlerOutput = std::tuple<ChainContext, base::Optional<base::Box<Expr>>>;
@@ -168,43 +171,29 @@ namespace compiler::helios::code {
             if (isNextElementCall(ctx)) {
                 step(ctx, chain_elements[i].unlock(ctx), chain_elements[i + 1].unlock(ctx));
             }
+            else {
+                step(ctx, chain_elements[i].unlock(ctx));
+            }
 
 			for (size_t i{ 0 }; i < chain_elements.size(); ++i) {
-				if (isNextCall(ctx)) {
+				if (isCurrentElementAccess(ctx) && isNextElementCall(ctx)) {
 					step(ctx, chain_elements[i].unlock(ctx), chain_elements[i + 1].unlock(ctx));
 					i++;  // skip next element, because it is handled
-				} else {
+				} else if (isCurrentElementAccess(ctx))
 					step(ctx, chain_elements[i].unlock(ctx));
-				}
+				} else if (isCurrentElementCall(ctx)) {
+                    step(ctx, chain_elements[i].unlock(ctx));
+                }
+                else {
+                    ctx.log(
+                        dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
+                            chain_elements[i].unlock(ctx)->getSourcePosition(),
+                            "Expected access or call expression in chain expression"
+                        )
+                    );
+                    return query::QError(errors::Failed());
+                }
 			}
-		}
-
-		base::Optional<errors::Failed> step(query::Context& ctx, pst::Access<pst::ExprElement> current_element) {}
-
-		base::Optional<errors::Failed> step(
-			query::Context&               ctx,
-			pst::Access<pst::ExprElement> current_element,
-			pst::Access<pst::ExprElement> next_element
-		) {
-			variant_match(current_context.current) {
-				variant_case(ChainContext::Empty) {
-					if (auto call = next_element.dynamicCast<pst::expr::Call>()) {
-						if (auto ident
-						    = current_element.dynamicCast<pst::expr::IdentifierLiteral>()) {
-							...
-						} else {
-							CORE_PANIC(
-								"Invalid chain element: expected identifier literal or access, got "
-							    "{}",
-								current_element->getKind()
-							);
-						}
-					} else {
-						CORE_PANIC("Invalid chain element: expected call expression, got {}");
-					}
-				}
-			}
-		}
 	};
 
 	ExprConstructionResult fromChainExpr(
