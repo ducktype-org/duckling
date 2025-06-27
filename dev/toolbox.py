@@ -784,7 +784,7 @@ def duck_linter(*args, **kwargs):
     "-b",
     "--build_dir",
     prompt="Build directory",
-    help="The name of the directory.",
+    help="The name of the project build directory which is passed to the framework.",
     default="build",
 )
 def itest(*args, **kwargs):
