@@ -248,6 +248,15 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
+	struct AccessExpr final : public Expr {
+		base::Box<Expr> base;
+		base::StrID field;
+
+		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
 	/**
 	 * @brief Represents a call in an expression.
 	 */
@@ -256,6 +265,15 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> arguments;
 
 		CallExpr(query::Context& ctx, SymID callee, std::vector<base::Box<Expr>> arguments);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	struct SequenceExpr final: public Expr {
+		std::vector<base::Box<Expr>> expressions;
+
+		SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
