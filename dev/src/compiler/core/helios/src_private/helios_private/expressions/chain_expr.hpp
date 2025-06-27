@@ -31,40 +31,34 @@ namespace compiler::helios::code {
 	}
 
 	struct ChainContext {
-		base::MBox<Expr> expr{};
-        base::Optional<SymID> namespace_id{};
+		base::MBox<Expr>      expr{};
+		base::Optional<SymID> namespace_id{};
 
 		[[nodiscard]] bool isNamespace() const { return namespace_id.has_value(); }
 
-		[[nodiscard]] bool isExpr() const {
-            return expr.toOpt().has_value();
-		}
+		[[nodiscard]] bool isExpr() const { return expr.toOpt().has_value(); }
 
 		[[nodiscard]] bool isEmpty() const { return not isNamespace() and not isExpr(); }
 
-
 		[[nodiscard]] auto getExpr() -> base::Box<Expr> {
-            return std::move(expr).toOptBox().value();
+			return std::move(expr).toOptBox().value();
 		}
 
-        [[nodiscard]] auto getNamespace() -> SymID {
-            return namespace_id.value();
-        }
+		[[nodiscard]] auto getNamespace() -> SymID { return namespace_id.value(); }
 
-        ChainContext(base::Box<Expr> expr) 
-            : expr(std::move(expr)), namespace_id(base::Optional<SymID>{}) {}
+		ChainContext(base::Box<Expr> expr):
+			  expr(std::move(expr)),
+			  namespace_id(base::Optional<SymID>{}) {}
 
-        ChainContext(SymID namespace_id)
-            : expr(base::MBox<Expr>{}), namespace_id(namespace_id) {}
-    
-    private:
-        ChainContext() 
-            : expr(base::MBox<Expr>{}), namespace_id(base::Optional<SymID>{}) {}
+		ChainContext(SymID namespace_id): expr(base::MBox<Expr>{}), namespace_id(namespace_id) {}
 
-        friend struct ChainExprConstruction;
+	private:
+		ChainContext(): expr(base::MBox<Expr>{}), namespace_id(base::Optional<SymID>{}) {}
+
+		friend struct ChainExprConstruction;
 	};
 
-    using HandlerOutput = std::tuple<ChainContext, base::Optional<base::Box<Expr>>>;
+	using HandlerOutput = std::tuple<ChainContext, base::Optional<base::Box<Expr>>>;
 
 	auto handlePSTExpr(
 		query::Context&   ctx,
@@ -126,7 +120,9 @@ namespace compiler::helios::code {
 		ChainContext                                     current_context{};
 		std::vector<base::Box<Expr>>                     result_sequence{};
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
-		size_t                                           i{ 0 };
+		std::vector<pst::Access<pst::ExprElement>>       chain_elements_unlocked{};
+
+		size_t index{ 0 };
 
 		ChainExprConstruction(
 			pst::AccessLocked<pst::expr::ChainExpr>          atom,
@@ -138,62 +134,82 @@ namespace compiler::helios::code {
 				std::make_move_iterator(chain_elements.begin()),
 				std::make_move_iterator(chain_elements.end())
 			);
+			this->chain_elements_unlocked.reserve(this->chain_elements.size());
 		}
 
-		bool isNextElementCall(query::Context& ctx) const {
-			if (i + 1 >= chain_elements.size()) return false;
-			return chain_elements[i + 1].unlock(ctx).dynamicCast<pst::expr::Call>().has_value();
+		base::Optional<pst::Access<pst::ExprElement>> getCurrentElement(query::Context& ctx) {
+			if (index >= chain_elements.size())
+				return base::Optional<pst::Access<pst::ExprElement>>{};
+
+			for (size_t j{ chain_elements_unlocked.size() }; j <= index; ++j)
+				chain_elements_unlocked.push_back(chain_elements[j].unlock(ctx));
+			return chain_elements_unlocked[index];
 		}
 
-        bool isCurrentElementAccess(query::Context& ctx) const {
-            return chain_elements[i].unlock(ctx).dynamicCast<pst::expr::Access>().has_value();
-        }
+		base::Optional<pst::Access<pst::ExprElement>> getNextElement(query::Context& ctx) {
+			auto next_index = index + 1;
+			if (next_index >= chain_elements.size())
+				return base::Optional<pst::Access<pst::ExprElement>>{};
 
-        bool isCurrentElementCall(query::Context& ctx) const {
-            return chain_elements[i].unlock(ctx).dynamicCast<pst::expr::Call>().has_value();
-        }
+			for (size_t j{ chain_elements_unlocked.size() }; j <= next_index; ++j)
+				chain_elements_unlocked.push_back(chain_elements[j].unlock(ctx));
+			return chain_elements_unlocked[next_index];
+		}
 
-        bool isCurrentElementIdentifier(query::Context& ctx) const {
-            return chain_elements[i].unlock(ctx).dynamicCast<pst::expr::IdentifierLiteral>().has_value();
-        }
+		template<typename T>
+		bool isNextElement(query::Context& ctx) {
+			auto elem = getNextElement(ctx);
+			if (elem.empty()) return false;
+			return elem.value().template dynamicCast<T>().has_value();
+		}
+
+		template<typename T>
+		bool isCurrentElement(query::Context& ctx) {
+			auto elem = getCurrentElement(ctx);
+			if (elem.empty()) return false;
+			return elem.value().template dynamicCast<T>().has_value();
+		}
 
 		query::QResult<base::Box<Expr>, errors::Failed> run(query::Context& ctx) {
-            if (not isCurrentElementIdentifier(ctx)) {
-                ctx.log(
-                    dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-                        chain_elements[i].unlock(ctx)->getSourcePosition(),
-                        "Expected identifier literal in as first element in chain expression"
-                    )
-                );
-                return query::QError(errors::Failed());
-            }
+			if (not isCurrentElementIdentifier(ctx)) {
+				ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
+					chain_elements[index].unlock(ctx)->getSourcePosition(),
+					"Expected identifier literal in as first element in chain expression"
+				));
+				return query::QError(errors::Failed());
+			}
 
-            if (isNextElementCall(ctx)) {
-                step(ctx, chain_elements[i].unlock(ctx), chain_elements[i + 1].unlock(ctx));
-            }
-            else {
-                step(ctx, chain_elements[i].unlock(ctx));
-            }
+			if (isNextElementCall(ctx))
+				step(ctx, chain_elements[index].unlock(ctx), chain_elements[index + 1].unlock(ctx));
+			else
+				step(ctx, chain_elements[index].unlock(ctx));
 
-			for (size_t i{ 0 }; i < chain_elements.size(); ++i) {
+			for (size_t i{ 0 }; i < chain_elements.size(); ++i)
 				if (isCurrentElementAccess(ctx) && isNextElementCall(ctx)) {
 					step(ctx, chain_elements[i].unlock(ctx), chain_elements[i + 1].unlock(ctx));
 					i++;  // skip next element, because it is handled
 				} else if (isCurrentElementAccess(ctx))
 					step(ctx, chain_elements[i].unlock(ctx));
-				} else if (isCurrentElementCall(ctx)) {
-                    step(ctx, chain_elements[i].unlock(ctx));
-                }
-                else {
-                    ctx.log(
-                        dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-                            chain_elements[i].unlock(ctx)->getSourcePosition(),
-                            "Expected access or call expression in chain expression"
-                        )
-                    );
-                    return query::QError(errors::Failed());
-                }
+				else if (isCurrentElementCall(ctx)) {
+					step(ctx, chain_elements[i].unlock(ctx));
+				} else {
+					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
+						chain_elements[i].unlock(ctx)->getSourcePosition(),
+						"Expected access or call expression in chain expression"
+					));
+					return query::QError(errors::Failed());
+				}
+		}
+
+		template<typename T>
+		base::Optional<errors::Failed> step(query::Context& ctx, pst::Access<T> current_element) {
+			query::QResult<HandlerOutput, errors::Failed> result{ errors::Failed() };
+			if (current_context.isExpr()) {
+				auto expr = current_context.getExpr();
+				auto res  = handlePSTExpr(ctx, std::move(expr), current_element.value());
+			} else if (current_context.isNamespace()) {
 			}
+		}
 	};
 
 	ExprConstructionResult fromChainExpr(
