@@ -49,8 +49,8 @@ public:
 		Bits  bits  = bytes2bits(bytes);
 		assertTrue(usize(bits) == 3 * 8, "Conversion failed");
 
-		assertTrue(std::to_string(bytes) == "3B", "Byte stringification failed");
-		assertTrue(std::to_string(bits) == "24b", "Bit stringification failed");
+		assertTrue(base::toString(bytes) == "3B", "Byte stringification failed");
+		assertTrue(base::toString(bits) == "24b", "Bit stringification failed");
 	}
 
 	~BitsAndBytesTest() override = default;

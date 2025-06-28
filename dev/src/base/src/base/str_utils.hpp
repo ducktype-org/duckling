@@ -25,12 +25,25 @@
 #include <string>
 #include <vector>
 
+class Bits;
+class Bytes;
+
 namespace base {
 	class StrID;
 
+	// This is forward declaration to prevent circular header dependency
+	template<typename EnumType>
+	StrID enumToStr(EnumType v);
+
 	namespace detail {
+
 		template<typename T>
-		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>>)
+		concept HasEnumToStr = std::is_enum_v<T> && requires(T t) {
+			{ base::enumToStr(t) } -> std::convertible_to<base::StrID>;
+		};
+
+		template<typename T>
+		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>> && !HasEnumToStr<std::remove_cvref_t<T>>)
 		void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}
@@ -65,6 +78,15 @@ namespace base {
 			strConcat(out, pair.second);
 			out += ">";
 		}
+
+		template<typename T>
+		requires HasEnumToStr<std::remove_cvref_t<T>> void strConcat(std::string& out, T&& v) {
+			// Use existing overload for StrID
+			strConcat(out, base::enumToStr(std::forward<T>(v)));
+		}
+
+		inline void strConcat(std::string& out, Bits bits);
+		inline void strConcat(std::string& out, Bytes bytes);
 	}
 
 	/**
@@ -89,6 +111,30 @@ namespace base {
 		std::string out;
 		(detail::strConcat(out, std::forward<T>(elements)), ...);
 		return out;
+	}
+
+	/**
+	 * @brief Converts a single value to std::string using strConcat infrastructure.
+	 *
+	 * This function provides a user-extensible alternative to std::to_string that:
+	 * - Can't break the std namespace
+	 * - Supports all types that strConcat supports
+	 * - Allows for custom user-defined string conversions
+	 * - Is faster than std::to_string for concatenation scenarios
+	 *
+	 * @param value The value to convert to string
+	 * @return String representation of the value
+	 *
+	 * @example
+	 * ```cpp
+	 * auto str1 = base::toString(42);           // "42"
+	 * auto str2 = base::toString(MyEnum::Value); // "Value" (if stringifiable)
+	 * auto str3 = base::toString(Bytes(1024));   // Custom conversion
+	 * ```
+	 */
+	template<typename T>
+	std::string toString(T&& value) {
+		return strConcat("", std::forward<T>(value));
 	}
 
 	/**
