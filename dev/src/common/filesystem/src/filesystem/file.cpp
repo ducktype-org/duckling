@@ -1,6 +1,5 @@
 /**
- * @file file.hpp
- * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
+ * @author Piotr Trzaskowski
  */
 
 #include "file.hpp"
@@ -292,8 +291,10 @@ namespace fs {
 
 	std::filesystem::path FileManager::toVirtualPath(const std::filesystem::path& path) {
 		requirePhysicalPath(path);
-		auto root = vfs->getRootPath();
-		return root / canonical(path);
+		auto root           = vfs->getRootPath();
+		auto canonical_path = canonical(path);
+		// Manually concatenate strings since operator/ ignores left side for absolute paths
+		return root.string() + canonical_path.string();
 	}
 
 	std::filesystem::path FileManager::fromVirtualPath(const std::filesystem::path& path) {
@@ -303,20 +304,21 @@ namespace fs {
 		auto path_str = path.string();
 		auto root_str = root.string();
 
-		// Ensure root_str ends with a separator for correct prefix matching
-		if (!root_str.empty() && root_str.back() != std::filesystem::path::preferred_separator)
-			root_str += std::filesystem::path::preferred_separator;
+		// For exact root match
+		if (path_str == root_str) return std::filesystem::path{};
 
+		// Check if path starts with root and has separator after it
 		if (path_str.starts_with(root_str)) {
-			return std::filesystem::canonical(path_str.substr(root_str.size()));
-		} else if (path_str == root_str.substr(0, root_str.size() - 1)) {
-			// If path is exactly the root
-			return std::filesystem::path{};
+			auto remaining = path_str.substr(root_str.size());
+			// If remaining path doesn't start with separator, it means root didn't end with one
+			// and we need to ensure we have the proper physical path
+			if (!remaining.empty() && remaining[0] != std::filesystem::path::preferred_separator)
+				CORE_PANIC("Invalid virtual path format: " + path.string());
+			// Return the remaining path (which should start with '/' for absolute paths)
+			return remaining;
 		}
-		CORE_PANIC(
-			"Cannot convert path from virtual path, because it does not start with the VFS root "
-			"path - this should never happen, pls contact the developers"
-		);
+
+		CORE_UNREACHABLE();
 	}
 
 	// --- File methods (non-static, formerly FilePath) ---

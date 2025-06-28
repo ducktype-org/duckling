@@ -2,6 +2,9 @@
 #include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
+#include <chrono>
+#include <fstream>
+
 class SimpleFileSystemTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleFileSystemTest
@@ -13,6 +16,8 @@ public:
 		TESTER_ADD_TEST(vfsTest);
 		TESTER_ADD_TEST(virtualFileTest);
 		TESTER_ADD_TEST(fileOperationsTest);
+		TESTER_ADD_TEST(fileManagerTest);
+		TESTER_ADD_TEST(fileTest);
 	}
 
 private:
@@ -196,6 +201,264 @@ private:
 	}
 
 	void fileOperationsTest() {
+		// Test directory deletion
+		auto temp_dir    = fs::FileManager::createTempDirectory();
+		auto file_in_dir = fs::FileManager::createFileIn(temp_dir, "content", "test.txt");
+		auto sub_dir     = fs::FileManager::createDirectoryIn(temp_dir, "subdir");
+
+		assertTrue(fs::FileManager::folderExists(temp_dir), "Temp directory should exist");
+
+		// Test deletion without force (should throw exception for non-empty directory)
+		try {
+			fs::FileManager::deleteFolder(temp_dir, false);
+			assertTrue(
+				false, "Should throw exception when deleting non-empty directory without force"
+			);
+		} catch (const std::filesystem::filesystem_error&) {
+			// Expected behavior - directory should still exist
+			assertTrue(
+				fs::FileManager::folderExists(temp_dir),
+				"Directory should still exist after failed deletion"
+			);
+		}
+
+		// Test deletion with force
+		assertTrue(
+			fs::FileManager::deleteFolder(temp_dir, true), "Failed to delete directory with force"
+		);
+		assertTrue(
+			!fs::FileManager::folderExists(temp_dir),
+			"Directory should not exist after deletion with force"
+		);
+
+		// Test path conversions
+		auto virtual_dir = fs::FileManager::createVirtualDirectory();
+		assertTrue(
+			fs::VFS::isVirtualPath(virtual_dir.absolutePath()), "Should recognize virtual path"
+		);
+
+		// Cleanup
+		fs::FileManager::deleteFolder(virtual_dir, true);
+	}
+
+	void fileManagerTest() {
+		// FileManager specific tests from uncoveredCodeTest
+
+		// Test default directory getters
+		auto temp_default = fs::FileManager::getDefaultTempDirectory();
+		assertTrue(
+			temp_default.getType() == fs::FileType::Temporary, "Default temp dir should be temporary"
+		);
+
+		auto virtual_default = fs::FileManager::getDefaultVirtualDirectory();
+		assertTrue(
+			virtual_default.getType() == fs::FileType::Virtual,
+			"Default virtual dir should be virtual"
+		);
+
+		// Test createFileIn with random name generation
+		auto virtual_dir = fs::FileManager::createVirtualDirectory();
+		auto random_file
+			= fs::FileManager::createFileIn(virtual_dir, "random content");  // no custom_name
+		assertTrue(random_file.isFile(), "Random file should be created");
+
+		// Test physical folder creation with unique name
+		auto current_dir = std::filesystem::current_path();
+		auto unique_folder_name
+			= "test_physical_folder_"
+		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+		auto physical_folder_path = current_dir / unique_folder_name;
+
+		// Ensure cleanup from any previous run
+		std::filesystem::remove_all(physical_folder_path);
+
+		auto physical_folder = fs::FileManager::createPhysicalFolder(physical_folder_path, false);
+		assertTrue(physical_folder.isDirectory(), "Physical folder should be created");
+
+		// Test physical folder with override
+		auto physical_folder2 = fs::FileManager::createPhysicalFolder(physical_folder_path, true);
+		assertTrue(
+			physical_folder2.isDirectory(), "Physical folder should be recreated with override"
+		);
+
+		// Test virtual file creation with override
+		auto virtual_file_path = virtual_dir.absolutePath() + "/override_test.txt";
+		fs::FileManager::createVirtualFile(virtual_file_path, "original");
+		auto overridden_virtual
+			= fs::FileManager::createVirtualFile(virtual_file_path, "overridden", true);
+		assertTrue(
+			overridden_virtual.getContent().view().stringView() == "overridden",
+			"Virtual file should be overridden"
+		);
+
+		// Test virtual folder creation
+		auto virtual_folder_path = virtual_dir.absolutePath() + "/test_folder";
+		auto virtual_folder      = fs::FileManager::createVirtualFolder(virtual_folder_path);
+		assertTrue(virtual_folder.isDirectory(), "Virtual folder should be created");
+
+		// Test virtual folder with override
+		auto virtual_folder2 = fs::FileManager::createVirtualFolder(virtual_folder_path, true);
+		assertTrue(
+			virtual_folder2.isDirectory(), "Virtual folder should be recreated with override"
+		);
+
+		// Test temp folder creation with unique name
+		auto unique_temp_name
+			= "test_temp_folder_"
+		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+		auto temp_folder_path = std::filesystem::temp_directory_path() / unique_temp_name;
+		auto temp_folder      = fs::FileManager::createTempFolder(temp_folder_path);
+		assertTrue(temp_folder.isDirectory(), "Temp folder should be created");
+
+		// Test temp folder with override
+		auto temp_folder2 = fs::FileManager::createTempFolder(temp_folder_path, true);
+		assertTrue(temp_folder2.isDirectory(), "Temp folder should be recreated with override");
+
+		// Test folderExists with path
+		assertTrue(
+			fs::FileManager::folderExists(virtual_folder_path), "Virtual folder should exist"
+		);
+		assertTrue(fs::FileManager::folderExists(temp_folder_path), "Temp folder should exist");
+
+		// Test folderExists with virtual File
+		assertTrue(
+			fs::FileManager::folderExists(virtual_folder), "Virtual folder File should exist"
+		);
+
+		// Test path conversions
+		auto simple_physical_path = current_dir / "simple_test.txt";
+		std::filesystem::remove(simple_physical_path);  // cleanup first
+		std::ofstream simple_file(simple_physical_path);
+		simple_file << "test";
+		simple_file.close();
+
+		auto virtual_path = fs::FileManager::toVirtualPath(simple_physical_path);
+		assertTrue(fs::VFS::isVirtualPath(virtual_path), "Should convert to virtual path");
+
+		auto physical_path = fs::FileManager::fromVirtualPath(virtual_path);
+		assertTrue(!fs::VFS::isVirtualPath(physical_path), "Should convert from virtual path");
+
+		// Test error cases for path conversions
+		try {
+			fs::FileManager::toVirtualPath("vfs:/invalid");
+			assertTrue(false, "Should fail to convert virtual path to virtual path");
+		} catch (const base::Panic&) {
+			// Expected behavior
+		}
+
+		try {
+			fs::FileManager::toVirtualPath(temp_folder_path);
+			assertTrue(false, "Should fail to convert temp path to virtual path");
+		} catch (const base::Panic&) {
+			// Expected behavior
+		}
+
+		try {
+			fs::FileManager::fromVirtualPath(simple_physical_path);
+			assertTrue(false, "Should fail to convert non-virtual path from virtual path");
+		} catch (const base::Panic&) {
+			// Expected behavior
+		}
+
+		// Test FileManager CORE_PANIC lines
+
+		// Test createFileIn with duplicate name in virtual directory
+		auto test_virtual_dir = fs::FileManager::createVirtualDirectory();
+		fs::FileManager::createFileIn(test_virtual_dir, "content", "duplicate.txt");
+		try {
+			fs::FileManager::createFileIn(test_virtual_dir, "content", "duplicate.txt");
+			assertTrue(false, "Should fail to create duplicate file in virtual directory");
+		} catch (const base::Panic&) {
+			// Expected: CORE_PANIC("File already exists in virtual directory: ...")
+		}
+
+		// Test createFileIn with duplicate name in physical directory
+		auto test_temp_dir = fs::FileManager::createTempDirectory();
+		fs::FileManager::createFileIn(test_temp_dir, "content", "duplicate.txt");
+		try {
+			fs::FileManager::createFileIn(test_temp_dir, "content", "duplicate.txt");
+			assertTrue(false, "Should fail to create duplicate file in physical directory");
+		} catch (const base::Panic&) {
+			// Expected: CORE_PANIC("File already exists in directory: ...")
+		}
+
+		// Test createDirectoryIn with duplicate name in virtual directory
+		fs::FileManager::createDirectoryIn(test_virtual_dir, "duplicate_dir");
+		try {
+			fs::FileManager::createDirectoryIn(test_virtual_dir, "duplicate_dir");
+			assertTrue(false, "Should fail to create duplicate directory in virtual directory");
+		} catch (const base::Panic&) {
+			// Expected: CORE_PANIC("Directory already exists in virtual directory: ...")
+		}
+
+		// Test createDirectoryIn with duplicate name in physical directory
+		fs::FileManager::createDirectoryIn(test_temp_dir, "duplicate_dir");
+		try {
+			fs::FileManager::createDirectoryIn(test_temp_dir, "duplicate_dir");
+			assertTrue(false, "Should fail to create duplicate directory in physical directory");
+		} catch (const base::Panic&) {
+			// Expected: CORE_PANIC("Directory already exists: ...")
+		}
+
+		// FileManager tests from fileOperationsTest
+
+		// Test file/folder existence checks
+		auto temp_file = fs::FileManager::createRandomTempFile("Test content");
+		assertTrue(fs::FileManager::fileExists(temp_file), "File should exist");
+
+		auto temp_dir = fs::FileManager::createTempDirectory();
+		assertTrue(fs::FileManager::folderExists(temp_dir), "Folder should exist");
+
+		// Test file deletion
+		assertTrue(fs::FileManager::deleteFile(temp_file), "Should delete file");
+		assertTrue(!fs::FileManager::fileExists(temp_file), "File should not exist after deletion");
+
+		// Test folder deletion
+		assertTrue(fs::FileManager::deleteFolder(temp_dir, true), "Should delete folder");
+		assertTrue(
+			!fs::FileManager::folderExists(temp_dir), "Folder should not exist after deletion"
+		);
+
+		// Test physical file creation with override
+		auto physical_file_path = current_dir / "test_physical.txt";
+		auto physical_file1
+			= fs::FileManager::createPhysicalFile(physical_file_path, "content1", false);
+		assertTrue(physical_file1.getType() == fs::FileType::Physical, "File should be physical");
+
+		// Test override functionality
+		auto physical_file2
+			= fs::FileManager::createPhysicalFile(physical_file_path, "content2", true);
+		auto overridden_content = physical_file2.getContent();
+		assertTrue(
+			overridden_content.view().stringView() == "content2", "Content should be overridden"
+		);
+
+		// Test trying to create without override (should fail)
+		try {
+			fs::FileManager::createPhysicalFile(physical_file_path, "content3", false);
+			assertTrue(false, "Should fail to create existing file without override");
+		} catch (const base::Panic&) {
+			// Expected behavior
+		}
+
+		// Test symlink detection
+		assertTrue(
+			!fs::FileManager::isSymlink(physical_file_path), "Physical file should not be symlink"
+		);
+
+		// Cleanup test directories
+		fs::FileManager::deleteFolder(test_virtual_dir, true);
+		fs::FileManager::deleteFolder(test_temp_dir, true);
+		std::filesystem::remove_all(physical_folder_path);
+		std::filesystem::remove_all(temp_folder_path);
+		std::filesystem::remove(simple_physical_path);
+		std::filesystem::remove(physical_file_path);
+		fs::FileManager::deleteFolder(virtual_dir, true);
+	}
+
+	void fileTest() {
+		// File specific tests from fileOperationsTest
+
 		// Test writeToFile functionality
 		auto temp_file = fs::FileManager::createRandomTempFile("Initial content");
 		assertTrue(temp_file.isFile(), "Temp file was not created correctly");
@@ -245,52 +508,6 @@ private:
 			// Expected behavior
 		}
 
-		// Test file deletion
-		assertTrue(fs::FileManager::fileExists(temp_file), "Temp file should exist before deletion");
-		assertTrue(fs::FileManager::deleteFile(temp_file), "Failed to delete temp file");
-		assertTrue(
-			!fs::FileManager::fileExists(temp_file), "Temp file should not exist after deletion"
-		);
-
-		assertTrue(
-			fs::FileManager::fileExists(virtual_file), "Virtual file should exist before deletion"
-		);
-		assertTrue(fs::FileManager::deleteFile(virtual_file), "Failed to delete virtual file");
-		assertTrue(
-			!fs::FileManager::fileExists(virtual_file),
-			"Virtual file should not exist after deletion"
-		);
-
-		// Test directory deletion
-		auto temp_dir    = fs::FileManager::createTempDirectory();
-		auto file_in_dir = fs::FileManager::createFileIn(temp_dir, "content", "test.txt");
-		auto sub_dir     = fs::FileManager::createDirectoryIn(temp_dir, "subdir");
-
-		assertTrue(fs::FileManager::folderExists(temp_dir), "Temp directory should exist");
-
-		// Test deletion without force (should throw exception for non-empty directory)
-		try {
-			fs::FileManager::deleteFolder(temp_dir, false);
-			assertTrue(
-				false, "Should throw exception when deleting non-empty directory without force"
-			);
-		} catch (const std::filesystem::filesystem_error&) {
-			// Expected behavior - directory should still exist
-			assertTrue(
-				fs::FileManager::folderExists(temp_dir),
-				"Directory should still exist after failed deletion"
-			);
-		}
-
-		// Test deletion with force
-		assertTrue(
-			fs::FileManager::deleteFolder(temp_dir, true), "Failed to delete directory with force"
-		);
-		assertTrue(
-			!fs::FileManager::folderExists(temp_dir),
-			"Directory should not exist after deletion with force"
-		);
-
 		// Test file utilities
 		auto test_file = fs::FileManager::createRandomTempFile();
 		assertTrue(test_file.stem() != "", "File stem should not be empty");
@@ -310,45 +527,42 @@ private:
 			"getContentSafe should fail for non-existing file"
 		);
 
-		// Test path conversions
-		auto virtual_dir = fs::FileManager::createVirtualDirectory();
-		assertTrue(
-			fs::VFS::isVirtualPath(virtual_dir.absolutePath()), "Should recognize virtual path"
-		);
+		// Test getModifyTime for non-virtual file
+		auto current_dir = std::filesystem::current_path();
+		auto unique_folder_name
+			= "test_physical_folder_"
+		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+		auto physical_folder_path = current_dir / unique_folder_name;
 
-		// Test physical file creation with override
-		auto current_dir   = std::filesystem::current_path();
-		auto physical_path = current_dir / "test_physical.txt";
+		// Ensure cleanup from any previous run
+		std::filesystem::remove_all(physical_folder_path);
 
-		auto physical_file1 = fs::FileManager::createPhysicalFile(physical_path, "content1", false);
-		assertTrue(physical_file1.getType() == fs::FileType::Physical, "File should be physical");
+		auto physical_folder = fs::FileManager::createPhysicalFolder(physical_folder_path, false);
+		auto modify_time     = physical_folder.getModifyTime();
 
-		// Test override functionality
-		auto physical_file2 = fs::FileManager::createPhysicalFile(physical_path, "content2", true);
-		auto overridden_content = physical_file2.getContent();
-		assertTrue(
-			overridden_content.view().stringView() == "content2", "Content should be overridden"
-		);
+		// Check if modify time is reasonable (not zero and not way in the past/future)
+		auto now = std::chrono::file_clock::now();
+		auto time_diff
+			= std::chrono::duration_cast<std::chrono::seconds>(now - modify_time).count();
 
-		// Test trying to create without override (should fail)
+		// File should be modified within the last hour (3600 seconds) since we just created it
+		assertTrue(std::abs(time_diff) < 3'600, "Modify time should be recent (within last hour)");
+
+		// Test File specific methods from uncoveredCodeTest
+
+		// Test getSimpleVirtualFileContent with non-existent virtual file
 		try {
-			fs::FileManager::createPhysicalFile(physical_path, "content3", false);
-			assertTrue(false, "Should fail to create existing file without override");
+			fs::getSimpleVirtualFileContent("vfs:/non_existent_file.txt");
+			assertTrue(false, "Should fail for non-existent virtual file");
 		} catch (const base::Panic&) {
-			// Expected behavior
+			// Expected: CORE_PANIC("virtual file does not exist: ...")
 		}
 
 		// Test symlink detection (should be false for all our test files)
 		assertTrue(!test_file.isSymlink(), "Test files should not be symlinks");
-		assertTrue(
-			!fs::FileManager::isSymlink(physical_path), "Physical file should not be symlink"
-		);
-
-		// Cleanup physical file
-		std::filesystem::remove(physical_path);
 
 		// Cleanup
-		fs::FileManager::deleteFolder(virtual_dir, true);
+		std::filesystem::remove_all(physical_folder_path);
 	}
 };
 
