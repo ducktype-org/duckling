@@ -1,6 +1,6 @@
 #include "llvm_driver.hpp"
 
-#include "llvm_ir_lib.hpp"
+#include "llvm_ir_lib.hpp"  // IWYU pragma: export
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -78,5 +78,4 @@ namespace compiler::driver {
 		mod.compile(output_artifact.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
 		object_file_paths.push_back(output_artifact.FILE.getPath());
 	}
-
 }
