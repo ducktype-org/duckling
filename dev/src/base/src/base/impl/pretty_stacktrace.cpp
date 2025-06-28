@@ -1,11 +1,10 @@
 #include "../pretty_stacktrace.hpp"
 
 #include <filesystem>
-#include <iostream>
 
 namespace base {
 	namespace {
-		std::string col(std::string color_number, std::string text) {
+		std::string col(const std::string& color_number, const std::string& text) {
 			std::string out;
 			out += "\033[" + color_number + "m";
 			out += text;
