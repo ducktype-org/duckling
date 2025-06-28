@@ -1,5 +1,6 @@
+#include "../src_private/filesystem/vfs.hpp"
+
 #include <filesystem/file.hpp>
-#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
 #include <chrono>

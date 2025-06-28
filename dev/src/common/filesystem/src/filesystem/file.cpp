@@ -4,7 +4,7 @@
 
 #include "file.hpp"
 
-#include "vfs.hpp"
+#include "../../src_private/filesystem/vfs.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
