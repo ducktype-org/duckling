@@ -25,6 +25,7 @@
 #include "access.hpp"
 #include "lang_parser_element.hpp"
 
+#include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
 
 namespace pst {
@@ -59,7 +60,7 @@ namespace pst {
 		void one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
 				state.log(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
-				if (!ignorable) state.tokens().next();
+				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
@@ -72,7 +73,7 @@ namespace pst {
 		void one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
 				state.log(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
-				if (!ignorable) state.tokens().next();
+				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
@@ -85,7 +86,7 @@ namespace pst {
 		void one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
 				state.log(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
-				if (!ignorable) state.tokens().next();
+				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
@@ -99,7 +100,7 @@ namespace pst {
 			if (!state.ctokens().peek().isKeyword()) {
 				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
-				if (!ignorable) state.tokens().next();
+				if (!ignorable) skipNotSemicolon();
 				return;
 			}
 			el->addToken(state[0]);
@@ -114,7 +115,7 @@ namespace pst {
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
-				if (!ignorable) state.tokens().next();
+				if (!ignorable) skipNotSemicolon();
 				return;
 			}
 			el->addToken(state[0]);
@@ -140,7 +141,7 @@ namespace pst {
 			if (!state.ctokens().peek().isString()) {
 				state.log(makeBox<tpc::NoStringError>(state.getPosition()));
 				result->value = base::StrID("<error>");
-				if (!ignorable) state.tokens().next();
+				if (!ignorable) skipNotSemicolon();
 				return;
 			}
 			el->addToken(state[0]);
@@ -216,10 +217,12 @@ namespace pst {
 
 		/**
 		 * @brief Automatic version of the ParserState function
+		 *
+		 * @note this allows to eat a semicolon as it has to be specified
 		 */
 		template<typename T>
 		bool tryEat(T type) {
-			if (state[0].is(type)) {
+			if (state.notEmpty() && state[0].is(type)) {
 				el->addToken(state.tokens().next());
 				return true;
 			}
@@ -227,10 +230,21 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Eats any token
+		 * @brief Eats any token other then a semicolon
 		 */
 		void eatOne() {
-			if (state.notEmpty()) el->addToken(state.tokens().next());
+			if (state.notEmpty() && !state[0].is(Special::Semicolon))  {
+				el->addToken(state.tokens().next());
+			}
+		}
+
+		/** 
+		 * @brief Skips any token other then a semicolon
+		 */
+		void skipNotSemicolon() {
+			if (state.notEmpty() && !state[0].is(Special::Semicolon)) {
+				state.tokens().skip();
+			}	
 		}
 
 		/**
@@ -247,7 +261,7 @@ namespace pst {
 		void goUpAndSkip() {
 			state.goUp();
 			el->addToken(state[0].getSentinelEnd());
-			state.tokens().skip();
+			skipNotSemicolon();
 		}
 
 		/**
