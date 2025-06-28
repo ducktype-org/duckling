@@ -288,6 +288,7 @@ namespace fs {
 		 * @brief Creates a physical file in the physical filesystem's root directory or at the
 		 * given absolute path. If the file already exists and override is false, throws an error.
 		 * If override is true, overwrites the file.
+		 * The path must be phisical.
 		 * @param path The absolute or relative path to the file.
 		 * @param content The content to write to the file.
 		 * @param override If true, overwrites the file if it exists.
@@ -301,6 +302,7 @@ namespace fs {
 		 * @brief Creates a physical folder in the physical filesystem's root directory or at the
 		 * given absolute path. If the folder already exists and override is false, throws an error.
 		 * If override is true, recreates the folder.
+		 * The path must be phisical.
 		 * @param path The absolute or relative path to the folder.
 		 * @param override If true, recreates the folder if it exists.
 		 * @return The created File object.
@@ -309,9 +311,7 @@ namespace fs {
 
 		/**
 		 * @brief Creates a virtual file in the virtual filesystem's root directory or at the given
-		 * path. If the path is not virtual, it is converted using toVirtualPath. If the file
-		 * already exists and override is false, throws an error. If override is true, overwrites
-		 * the file.
+		 * path. The must be virtual.
 		 * @param path The path to the file (virtual or will be converted).
 		 * @param content The content to write to the file.
 		 * @param override If true, overwrites the file if it exists.
@@ -323,9 +323,7 @@ namespace fs {
 
 		/**
 		 * @brief Creates a virtual folder in the virtual filesystem's root directory or at the
-		 * given path. If the path is not virtual, it is converted using toVirtualPath. If the
-		 * folder already exists and override is false, throws an error. If override is true,
-		 * recreates the folder.
+		 * given path. The path must be virtual.
 		 * @param path The path to the folder (virtual or will be converted).
 		 * @param override If true, recreates the folder if it exists.
 		 * @return The created File object.
@@ -334,9 +332,7 @@ namespace fs {
 
 		/**
 		 * @brief Creates a temporary file in the system's temporary directory or at the given path.
-		 * If the path does not start with the temp directory, it is prefixed with the temp
-		 * directory. If the file already exists and override is false, throws an error. If override
-		 * is true, overwrites the file.
+		 * The path must contain a temporary location.
 		 * @param path The path to the file (will be placed in temp directory if not already).
 		 * @param content The content to write to the file.
 		 * @param override If true, overwrites the file if it exists.
@@ -348,9 +344,7 @@ namespace fs {
 
 		/**
 		 * @brief Creates a temporary folder in the system's temporary directory or at the given
-		 * path. If the path does not start with the temp directory, it is prefixed with the temp
-		 * directory. If the folder already exists and override is false, throws an error. If
-		 * override is true, recreates the folder.
+		 * path. The path must contain a temporary location.
 		 * @param path The path to the folder (will be placed in temp directory if not already).
 		 * @param override If true, recreates the folder if it exists.
 		 * @return The created File object.
@@ -402,6 +396,7 @@ namespace fs {
 
 		/**
 		 * @brief Converts a path to a virtual path by prefixing with the VFS root path.
+		 * The path must be phisical.
 		 * @param path The path to convert.
 		 * @return The virtual path.
 		 */
@@ -409,7 +404,7 @@ namespace fs {
 
 		/**
 		 * @brief Converts a virtual path to a relative path by removing the VFS root prefix.
-		 * If the path is not virtual, returns the original path.
+		 * It require that the path is virtual.
 		 * @param path The virtual path.
 		 * @return The path without the VFS root prefix.
 		 */
