@@ -19,6 +19,7 @@ class ConcatTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testStrConcat);
+		TESTER_ADD_TEST(testToString);
 		TESTER_ADD_TEST(testEnumStringification);
 	}
 
@@ -49,6 +50,13 @@ public:
 			},
 			"strConcat of nullptr did not throw correctly"
 		);
+	}
+
+	void testToString() {
+		// Test basic types
+		ASSERT_EQUAL(base::toString(42), "42");
+		// Test empty string
+		ASSERT_EQUAL(base::toString(""), "");
 	}
 
 	void testEnumStringification() {
