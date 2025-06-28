@@ -25,8 +25,8 @@
 #include "access.hpp"
 #include "lang_parser_element.hpp"
 
-#include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
+#include <token_parser_core/parser_state.hpp>
 
 namespace pst {
 	using lang_def::Keyword;
@@ -233,18 +233,15 @@ namespace pst {
 		 * @brief Eats any token other then a semicolon
 		 */
 		void eatOne() {
-			if (state.notEmpty() && !state[0].is(Special::Semicolon))  {
+			if (state.notEmpty() && !state[0].is(Special::Semicolon))
 				el->addToken(state.tokens().next());
-			}
 		}
 
-		/** 
+		/**
 		 * @brief Skips any token other then a semicolon
 		 */
 		void skipNotSemicolon() {
-			if (state.notEmpty() && !state[0].is(Special::Semicolon)) {
-				state.tokens().skip();
-			}	
+			if (state.notEmpty() && !state[0].is(Special::Semicolon)) state.tokens().skip();
 		}
 
 		/**
