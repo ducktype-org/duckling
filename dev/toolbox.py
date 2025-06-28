@@ -100,7 +100,7 @@ def setup_build_impl(
     )
 
     log_info("Setting up a build folder...")
-    if docs:
+    if docs or coverage:
         with_venv(cmd)
     else:
         bash_command(cmd)
