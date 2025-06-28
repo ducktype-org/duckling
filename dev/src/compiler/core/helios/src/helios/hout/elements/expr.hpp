@@ -232,23 +232,6 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
-	 * @NOTE Currently it is just a mockup. Should be refactored to AccessExpr
-	 * -----
-	 * @TODO: We should implement shortening of the SymbolList, ex. leave only
-	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList
-	 # and represent it as a Access/Call tree.
-	 */
-	struct LinkedIdentifierExpr: public Expr {
-		SymbolList symbols;
-
-		LinkedIdentifierExpr(query::Context& ctx, SymbolList symbols);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-	};
-
-	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
 	 * For now it is a mockup, doesn't work.
 	 */
