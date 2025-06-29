@@ -1,6 +1,10 @@
-#include "../pretty_stacktrace.hpp"
+#include <version>
 
-#include <filesystem>
+#ifdef __cpp_lib_stacktrace
+
+	#include "../pretty_stacktrace.hpp"
+
+	#include <filesystem>
 
 namespace base {
 	namespace {
@@ -32,3 +36,5 @@ namespace base {
 		return out;
 	}
 }
+
+#endif
