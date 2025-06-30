@@ -4,6 +4,8 @@
 #include <version>
 
 #ifdef __cpp_lib_stacktrace
+	#include "../pretty_stacktrace.hpp"
+
 	#include <stacktrace>
 #endif
 
@@ -11,7 +13,7 @@ namespace base {
 
 	std::string getCurrentStackTrace() {
 #ifdef __cpp_lib_stacktrace
-		return std::to_string(std::stacktrace::current());
+		return prettyStacktraceString(std::stacktrace::current());
 #else
 		return "Stack trace is not supported in this compiler and/or system.";
 #endif
