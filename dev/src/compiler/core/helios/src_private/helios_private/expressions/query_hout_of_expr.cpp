@@ -173,8 +173,8 @@ namespace compiler::helios::code {
 				}
 			}
 
-			void visitChainExpr(pst::Access<pst::expr::ChainExpr> stmt) override {
-				auto result = fromChainExpr(ctx, stmt);
+			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
+				auto result = fromChainExpr(ctx, chain_expr);
 				if (result.hasError()) {
 					// Error has occurred.
 					return;
