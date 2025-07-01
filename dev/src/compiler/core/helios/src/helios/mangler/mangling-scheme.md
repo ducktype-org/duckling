@@ -125,6 +125,7 @@ either in the scheme or it's implementation, they should be reflected here.
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
                   | <special-symbol-encoding>               // special symbols that are created by the compiler
+                  | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
 
 // more special methods could be added in the future
