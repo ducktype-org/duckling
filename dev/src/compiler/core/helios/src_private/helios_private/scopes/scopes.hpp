@@ -18,12 +18,12 @@
  */
 #pragma once
 
+#include <diagnostic/logger.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/generic_query_key.hpp>
-#include <pst_parser/lang_parser_state.hpp>
 #include <query_framework/query_int.hpp>
 
 #include <base/bit256.hpp>
