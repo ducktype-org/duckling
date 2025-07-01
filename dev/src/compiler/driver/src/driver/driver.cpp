@@ -17,6 +17,15 @@ namespace driver {
             dia::Logger::setImmediatelyDump(debug_options.logger_cerr);
 		    lexer::Lexer::setTokenMessages(debug_options.lexer_cerr);
         }
+
+        void handleArtifactsOptions(
+            const options_types::ArtifactsOptions& artifacts_options
+        ) {
+            global_state::setters::setRootCollection(
+                makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path)
+            );
+
+        }
     }
 
     Box<CompilerHandleABC> initializeTheCompiler(
@@ -32,11 +41,8 @@ namespace driver {
                 return makeBox<BareHandle>();
             }
             variant_case(CompilerModeOfOperationAndOptions::PackageCompilationMode, options) {
-                global_state::setters::setRootCollection(
-                    makeBox<artifacts::ArtifactCollection>(options.compilation_artifacts.artifacts_path)
-                );
-
                 handleDebugOptions(options.debug_options);
+                handleArtifactsOptions(options.compilation_artifacts);
 
                 return makeBox<PackageCompilationHandle>();
             }

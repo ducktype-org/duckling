@@ -6,7 +6,9 @@
 #include <vector>
 
 namespace driver {    
-
+    // @note: some code in this file is left as comments
+    // as it is unused for now, but sets a vision for the code structure
+    // in the future.
 
     /**
      * Definition of options that are used by the compiler to control its behavior.
@@ -16,10 +18,10 @@ namespace driver {
          * Options used for actual compilation of the source code.
          */
         struct CompilationOptions {
-            struct OptimizationOptions {
-                // @future: made it more specific
-                u64 level;
-            };
+            // struct OptimizationOptions {
+            //     // @future: made it more specific
+            //     u64 level;
+            // };
 
             struct BackendOptions {
                 struct VMBackend {};
@@ -27,11 +29,10 @@ namespace driver {
                 std::variant<VMBackend, LLVMBackend> backend_options;
             };
 
-            CompilationOptions(OptimizationOptions opt, BackendOptions backend)
-                : optimization(opt), backend(backend) {}
+            CompilationOptions(BackendOptions backend)
+                : backend(backend) {}
 
-
-            OptimizationOptions optimization;
+            // OptimizationOptions optimization;
             BackendOptions backend;
         };
 
@@ -41,14 +42,15 @@ namespace driver {
         };
 
         struct ArtifactsOptions {
-            struct IncrementalCompilation {
-                bool enabled;
-                bool show_stats;
-            };
             std::string artifacts_path;
-            IncrementalCompilation incremental_compilation;
-            bool rm_artifacts_before_compilation = false;
-            bool rm_artifacts_after_compilation = false;
+
+            // struct IncrementalCompilation {
+            //     bool enabled;
+            //     bool show_stats;
+            // };
+            // IncrementalCompilation incremental_compilation;
+            // bool rm_artifacts_before_compilation = false;
+            // bool rm_artifacts_after_compilation = false;
         };
 
         struct PackageInfo {
@@ -56,18 +58,18 @@ namespace driver {
             std::string package_path;
         };
 
-        struct DependencyInfo {
-            struct CompilationStrategy {
-                struct InlineCompilation { };
-                struct Precompiled {
-                    // this might be inlined or not:
-                    std::string precompilation_path;
-                };
-                std::variant<InlineCompilation, Precompiled> strategy;
-            };
-            PackageInfo package_info;
-            CompilationStrategy compilation_strategy;
-        };
+        // struct DependencyInfo {
+        //     struct CompilationStrategy {
+        //         struct InlineCompilation { };
+        //         struct Precompiled {
+        //             // this might be inlined or not:
+        //             std::string precompilation_path;
+        //         };
+        //         std::variant<InlineCompilation, Precompiled> strategy;
+        //     };
+        //     PackageInfo package_info;
+        //     CompilationStrategy compilation_strategy;
+        // };
     };
 
     /**
@@ -96,7 +98,7 @@ namespace driver {
         struct PackageCompilationMode {
             options_types::PackageInfo main_package_info;
             options_types::ArtifactsOptions compilation_artifacts;
-            std::vector<options_types::DependencyInfo> dependencies;
+            // std::vector<options_types::DependencyInfo> dependencies;
             options_types::CompilationOptions compilation_options;
             options_types::DebugOptions debug_options;
         };
