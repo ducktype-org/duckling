@@ -1,3 +1,2 @@
-Subdirs:
-    - C++
-    - bash
+SubDirs:
+    - compiler

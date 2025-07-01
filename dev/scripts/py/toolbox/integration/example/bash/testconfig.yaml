@@ -1,6 +1,7 @@
 Tests:
   test-shell-cat:
-    Run: "cat"
+    Run: "cat @{run_args}"
+    run_args: ""
     Cases:
       hello-world:
         Input:
@@ -8,24 +9,26 @@ Tests:
         Output:
           String: "Hello, world!"
       error-no-file:
-        RunArgs: inexistent-file
+        run_args: inexistent-file
         ExitCode: 1
   test-shell-echo:
-    Run: "echo"
+    Run: "echo @{run_args}"
+    run_args: ""
     Cases:
       hello-world:
-        RunArgs: '"Hello, world!"'
+        run_args: '"Hello, world!"'
         Output:
           String: "Hello, world!\n"
   test-timeout:
-    Run: "sleep"
+    Run: "sleep @{run_args}"
+    run_args: ""
     TimeOut: 1
     ExitCode: 124  # 124 means "timed out"
     Cases:
       hello0.5:
-        RunArgs: "0.5"
+        run_args: "0.5"
         ExitCode: 0
       hello1:
-        RunArgs: "1.1"
+        run_args: "1.1"
       hello5:
-        RunArgs: "5"
+        run_args: "5"
