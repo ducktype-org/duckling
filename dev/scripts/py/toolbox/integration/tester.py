@@ -17,7 +17,7 @@ from ..helpers import (
     log_warning,
 )
 
-DEFAULT_LOG_FILE_PATH = Path("/tmp/toolbox-tester.log")
+DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
 def run_test(
@@ -32,8 +32,15 @@ def run_test(
     Runs a test from `Test` object.
     """
     success = True
-    if test.compile:
-        dit_exec_command(test.compile, cwd=test.cwd, dry=dry, verbose=verbose)
+    if test.pre_test:
+        log_info_if_needed("Executing pre-test...", dry, verbose)
+        dit_exec_command(
+            test.pre_test,
+            cwd=test.cwd,
+            capture_output=not verbose,
+            dry=dry,
+            verbose=verbose,
+        )
     for i, case in enumerate(test.cases):
         if not case.name.startswith(filter):
             continue
@@ -54,10 +61,22 @@ def run_test(
                 )
             else:
                 print_failure(f"Case `{test.name}/{case.name}` has failed.")
-            write_log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n", log_file=log_file)
+            write_log(
+                f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
+                log_file=log_file,
+            )
             success = False
             if fail_fast:
                 break
+    if test.post_test:
+        log_info_if_needed("Executing post-test...", dry, verbose)
+        dit_exec_command(
+            test.post_test,
+            cwd=test.cwd,
+            capture_output=not verbose,
+            dry=dry,
+            verbose=verbose,
+        )
     return success
 
 
@@ -78,7 +97,19 @@ def log_test_out_differs(test, case, message, got, expected, log_file):
 def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -> str:
     """
     Runs a test case from `Case` object.
+    Returns an empty string on success, and an error message on error.
     """
+    # Pre-case command
+    if case.pre_case:
+        log_info_if_needed("Executing pre-case command...", dry, verbose)
+        dit_exec_command(
+            case.pre_case,
+            cwd=test.cwd,
+            capture_output=not verbose,
+            dry=dry,
+            verbose=verbose,
+        )
+
     # Get input.
     test_input = bytes()
     if case.input:
@@ -90,7 +121,7 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s {test.run} {case.run_args}",
+        f"timeout {case.timeout}s {case.run}",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
@@ -132,13 +163,13 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
             )
             return f"Stderrs do not match."
 
-    # Post run.
-    if test.post_run:
-        log_info_if_needed("Executing post run command...", dry, verbose)
+    # Post-case command
+    if case.post_case:
+        log_info_if_needed("Executing post-case command...", dry, verbose)
         dit_exec_command(
-            test.post_run,
+            case.post_case,
             test.cwd,
-            capture_output=False,
+            capture_output=not verbose,
             input=test_output,
             verbose=verbose,
             dry=dry,
@@ -246,9 +277,7 @@ def integration_tests_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    user_values = {
-        "build_dir": str(Path(build_dir).absolute())
-    }
+    user_values = {"build_dir": str(Path(build_dir).absolute())}
     test_set = load_tests("integration_tests", user_values=user_values)
 
     failed_tests, ran_tests = run_tests(

@@ -15,7 +15,10 @@ GENERAL_VARIABLES = {
     COMPILE,
     RUN,
     CLEAN,
-    POST_RUN,
+    PRE_TEST,
+    POST_TEST,
+    PRE_CASE,
+    POST_CASE,
     TIME_OUT,
     EXIT_CODE,
 }
@@ -150,7 +153,7 @@ def config_find_and_eval(config: dict, key: str, default = None) -> Optional[str
 
 def config_get_name_path(config: dict) -> str:
     """
-    Builds a string representing a test tree up to `config`'s node.
+    Builds a string representing of the test tree up to `config`'s node.
     An example would be "/tests/a/b/c".
     """
     return (

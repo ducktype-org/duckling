@@ -23,7 +23,19 @@ TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT}
 """
 Builtin keys allowed inside a Case.
 """
-CASE_ALLOWED_KEYS = {CASE_NAME, INPUT, OUTPUT, ERR, RUN_ARGS, TIME_OUT, EXIT_CODE, PARENT}
+CASE_ALLOWED_KEYS = {
+    CASE_NAME,
+    RUN,
+    PRE_CASE,
+    POST_CASE,
+    INPUT,
+    OUTPUT,
+    ERR,
+    TIME_OUT,
+    EXIT_CODE,
+    PARENT,
+}
+
 
 def _get_case_io_data_list(case_dict: dict) -> list[IOData]:
     """
@@ -40,6 +52,7 @@ def _get_case_io_data_list(case_dict: dict) -> list[IOData]:
             io_data[i] = make_data_from_dict(io_dict, config_dir)
     return io_data
 
+
 def _make_case(test_dict: dict, case_name: str) -> Case:
     """
     Creates a `Case` object from a test_dict.
@@ -52,15 +65,23 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
 
     io_data = _get_case_io_data_list(case_dict)
 
-    return Case(
-        name=case_dict[CASE_NAME],
-        run_args=config_find_and_eval(case_dict, RUN_ARGS, default=""),
-        input=io_data[0],
-        expected_output=io_data[1],
-        expected_err=io_data[2],
-        expected_exitcode=config_find_value(case_dict, EXIT_CODE, default=0),
-        timeout=config_find_value(case_dict, TIME_OUT, default=1),
-    )
+    try:
+        return Case(
+            name=case_dict[CASE_NAME],
+            run=config_find_and_eval(case_dict, RUN),
+            pre_case=config_find_and_eval(case_dict, PRE_CASE, default=""),
+            post_case=config_find_and_eval(case_dict, POST_CASE, default=""),
+            input=io_data[0],
+            expected_output=io_data[1],
+            expected_err=io_data[2],
+            expected_exitcode=config_find_value(case_dict, EXIT_CODE, default=0),
+            timeout=config_find_value(case_dict, TIME_OUT, default=1),
+        )
+    except (VariableNotFound, ExpressionFillError) as e:
+        case_path = config_get_name_path(case_dict)
+        exit_with_error(
+            f"In case {case_path}\n\t{e.__class__.__name__}: {''.join(e.args)}"
+        )
 
 
 def _make_test(config: dict, test_name) -> Test:
@@ -80,9 +101,8 @@ def _make_test(config: dict, test_name) -> Test:
         return Test(
             name=test_dict.get(NAME, test_name),
             description=test_dict.get(DESCRIPTION),
-            compile=config_find_and_eval(test_dict, COMPILE),
-            run=config_find_and_eval(test_dict, RUN),
-            post_run=config_find_and_eval(test_dict, POST_RUN),
+            pre_test=config_find_and_eval(test_dict, PRE_TEST, default=""),
+            post_test=config_find_and_eval(test_dict, POST_TEST, default=""),
             cwd=config[CONFIG_FILE].parent,
             cases=[_make_case(test_dict, case) for case in test_dict[CASES]],
             clean=config_find_and_eval(test_dict, CLEAN),
@@ -90,7 +110,7 @@ def _make_test(config: dict, test_name) -> Test:
         )
     except (VariableNotFound, ExpressionFillError) as e:
         exit_with_error(
-            f"In test case {test_path}\n\t{e.__class__.__name__}: {''.join(e.args)}"
+            f"In test {test_path}\n\t{e.__class__.__name__}: {''.join(e.args)}"
         )
 
 
