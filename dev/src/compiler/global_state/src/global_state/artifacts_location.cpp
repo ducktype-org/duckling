@@ -4,10 +4,10 @@
 namespace global_state {
 
     namespace  {
-        MBox<artifacts::ArtifactCollection> root_collection;
+        constinit MBox<artifacts::ArtifactCollection> root_collection;
     }
     
-    Ref<artifacts::ArtifactCollection> rootCollection() {
+    Ref<artifacts::ArtifactCollection> gerRootCollection() {
         return root_collection.refMut().toOpt().value();
     }
 

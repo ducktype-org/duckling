@@ -8,7 +8,7 @@ namespace global_state {
      * Returns the root collection of artifacts for the given compilation process.
      * It is currently assumes that there no more then one main collection.
      */
-    Ref<artifacts::ArtifactCollection> rootCollection();
+    Ref<artifacts::ArtifactCollection> getRootCollection();
 
     namespace setters {
         /**
