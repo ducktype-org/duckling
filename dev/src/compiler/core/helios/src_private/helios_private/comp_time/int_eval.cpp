@@ -153,10 +153,8 @@ namespace compiler::helios {
 				);
 			}
 
-			void visitSequenceExpr(const code::SequenceExpr&) final {
-				throw base::NotYetImplemented(
-					"Evaluation of sequence expressions is not implemented yet"
-				);
+			void visitSequenceExpr(const code::SequenceExpr& seq) final {
+				result = evaluateExpr(ctx, *seq.expressions.back());
 			}
 		};
 

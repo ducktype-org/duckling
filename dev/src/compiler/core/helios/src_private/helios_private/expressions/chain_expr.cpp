@@ -1,3 +1,7 @@
+/**
+ * @file chain_expr.cpp
+ * @author Wojciech Rzepliński
+ */
 #include "chain_expr.hpp"
 
 #include <helios/hout/elements/expr.hpp>
@@ -17,6 +21,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "base/ints.hpp"
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
@@ -48,48 +53,54 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief State for the building of the chain expression in HOUT.
+	 * State for the building of the chain expression in HOUT.
 	 * It mainly stores two distinct states:
-	 * - namespace state, for example after processing "foo().Namespace"
+	 * - namespace-like state, for example after processing "foo().Namespace"
 	 * - expression state, for example after processing "foo().bar[20]"
 	 *
 	 * Its stored the state of chain expression creation that does not include
 	 * all previously cut-off expressions.
 	 */
 	struct ChainState {
-		[[nodiscard]] bool isNamespace() const { return namespace_id.has_value(); }
+		[[nodiscard]] bool isNamespaceLike() const { return namespace_like_symbol.has_value(); }
 
 		[[nodiscard]] bool isExpr() const { return expr.toOpt().has_value(); }
 
-		[[nodiscard]] bool isEmpty() const { return not isNamespace() and not isExpr(); }
+		[[nodiscard]] bool isEmpty() const { return not isNamespaceLike() and not isExpr(); }
 
 		[[nodiscard]] auto getExpr() -> base::Box<Expr> {
 			return std::move(expr).toOptBox().value();
 		}
 
-		[[nodiscard]] auto getNamespace() -> SymID { return namespace_id.value(); }
+		[[nodiscard]] auto getNamespaceLikeSymbol() -> SymID {
+			return namespace_like_symbol.value();
+		}
 
 		static ChainState ofExpr(base::Box<Expr> expr) { return { std::move(expr) }; }
 
-		static ChainState ofNamespace(SymID namespace_id) { return { namespace_id }; }
+		static ChainState ofNamespaceLike(SymID namespace_like_symbol) {
+			return { namespace_like_symbol };
+		}
 
 	private:
-		ChainState(): expr(base::MBox<Expr>{}), namespace_id(base::Optional<SymID>{}) {}
+		ChainState(): expr(base::MBox<Expr>{}), namespace_like_symbol(base::Optional<SymID>{}) {}
 
 		ChainState(base::Box<Expr> expr):
 			  expr(std::move(expr)),
-			  namespace_id(base::Optional<SymID>{}) {}
+			  namespace_like_symbol(base::Optional<SymID>{}) {}
 
-		ChainState(SymID namespace_id): expr(base::MBox<Expr>{}), namespace_id(namespace_id) {}
+		ChainState(SymID namespace_like_symbol):
+			  expr(base::MBox<Expr>{}),
+			  namespace_like_symbol(namespace_like_symbol) {}
 
 		base::MBox<Expr>      expr{};
-		base::Optional<SymID> namespace_id{};
+		base::Optional<SymID> namespace_like_symbol{};
 
 		friend class ChainExprConstruction;
 	};
 
 	/**
-	 * @brief Constructs an expression from a PST chain expression, for example from
+	 * Constructs an expression from a PST chain expression, for example from
 	 * "a.b.c().d[20].W". It processes the chain from left to right, building the expression step by
 	 * step. The state of the building process is stored in value of class @p ChainState.
 	 *
@@ -120,39 +131,49 @@ namespace compiler::helios::code {
 		query::Context& query_ctx;
 
 		/**
-		 * @brief Resulting sequence of expressions.
+		 * Resulting sequence of expressions.
 		 * If at the end there will be a single expression, it will be the result of the chain.
 		 */
 		std::vector<base::Box<Expr>> result_sequence{};
 		/**
-		 * @brief All chain elements that would be processed.
+		 * All chain elements that would be processed.
 		 */
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
 
 		/**
-		 * @brief The temporaty buffor for the currently built value from left to current place of
+		 * The temporaty buffor for the currently built value from left to current place of
 		 the chain. So for example after processing "a.b.c" it will contain hout expr:
 		 "access(access(a, field=b), field=c))"".
 		 */
 		ChainState current_state{};
 		/**
-		 * @brief this->index in the chain currently being processed.
+		 * this->index in the chain currently being processed.
 		 */
-		size_t index{ 0 };
+		usize index{ 0 };
 
+		/**
+		 * Returns the current element given by the "index" object member value.
+		 */
 		base::Optional<pst::Access<pst::ExprElement>> currentElem() {
 			if (this->index >= chain_elements.size()) return {};
 
-			return chain_elements[this->index].unlock(query_ctx);
+			return chain_elements.at(this->index).unlock(query_ctx);
 		}
 
+		/**
+		 * Returns the next element given by the "index" object member value.
+		 */
 		base::Optional<pst::Access<pst::ExprElement>> nextElem() {
 			auto next_index = this->index + 1;
 			if (next_index >= chain_elements.size()) return {};
 
-			return chain_elements[this->index].unlock(query_ctx)];
+			return chain_elements.at(next_index).unlock(query_ctx);
 		}
 
+		/**
+		 * Checks if the next element is of type @p T.
+		 * @tparam T The type to check against.
+		 */
 		template<typename T>
 		bool isNextElement() {
 			auto elem = nextElem();
@@ -160,6 +181,10 @@ namespace compiler::helios::code {
 			return elem.value().dynamicCast<T>().has_value();
 		}
 
+		/**
+		 * Checks if the current element is of type @p T.
+		 * @tparam T The type to check against.
+		 */
 		template<typename T>
 		bool isCurrentElement() {
 			auto elem = currentElem();
@@ -169,14 +194,36 @@ namespace compiler::helios::code {
 
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
-		using ProcessPSTExprOutput = ChainState;
+		/**
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain
+		 * Case when we have a global identifier followed by a call expression,
+		 * like "foo()".
+		 */
+		auto processPSTExpr(
+			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState, errors::Failed> {
+			if (call_expr->getType() != lexer::Token::Round) {
+				throw base::NotYetImplemented(base::strConcat(
+					"HOUT call with invalid bracket type: ", char(call_expr->getType())
+				));
+			}
+			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			auto lookup_result
+				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+
+			if (lookup_result->isEmpty()) return query::QError(errors::Failed());
+			return processFunctionCall(lookup_result, ident->getName(), call_expr);
+		}
 
 		/**
-		 * @brief Given first identifier in a chain perform lookup in the current scope.
-		 * Returns a chain state with namespace or identifier expression based on the lookup result.
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain.
+		 * Case when as a first element we have an identifier not followed by a call expression,
+		 * like "foo.bar.c".
 		 */
-		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident)
+			-> query::QResult<ChainState, errors::Failed> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
@@ -195,16 +242,18 @@ namespace compiler::helios::code {
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.value().back();
 			// @TODO: handle dealias expressions #981:
-			return processNamespaceOrValue( sym);
+			return processNamespaceOrValue(sym);
 		}
 
 		/**
-		 * @brief Given first element in a chain is an expression compute the expression to HOUT
-		 * and based on the result return either a namespace or this expression as the chain state.
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain.
+		 * Case when as a first element in the chain
+		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
-		auto processPSTExpr(pst::Access<pst::ExprElement> ident)
-			-> query::QResult<ProcessPSTExprOutput, errors::Failed> {
-			auto expr = query_ctx.query<QueryHoutOfExpr>({ ident });
+		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
+			-> query::QResult<ChainState, errors::Failed> {
+			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::QError(errors::Failed());
 			auto hout_expr = std::move(expr).value();
 			auto symbol    = getExpressionSymID(query_ctx, hout_expr.ref());
@@ -213,40 +262,22 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Given first identifier in a chain and a call expression, perform function lookup
-		 * in the current scope with overloading in the future and return a call expression.
+		 * Call in situations were we don't have "access expr" then "call expr" in a row,
+		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(
-			pst::Access<pst::expr::IdentifierLiteral> ident,
-			pst::Access<pst::expr::Call>              call_expr
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
-			if (call_expr->getType() != lexer::Token::Round) {
-				throw base::NotYetImplemented(base::strConcat(
-					"HOUT call with invalid bracket type: ", char(call_expr->getType())
-				));
-			}
-			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			auto lookup_result
-				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-
-			if (lookup_result->isEmpty()) return query::QError(errors::Failed());
-			return processFunctionCall(lookup_result, ident->getName(), call_expr);
-		}
-
-		/**
-		 * @brief Call in situations were we don't have "access expr" then "call expr", for example
-		 * a[i]() or b()()
-		 */
-		auto processPSTExpr(base::Box<Expr>, pst::Access<pst::expr::Call>)
-			-> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
+			-> query::QResult<ChainState, errors::Failed> {
+			(void) current_expr;
+			(void) call_expr;
 			throw base::NotYetImplemented("Helios chain expr: call without access before it");
 		}
 
 		/**
-		 * @brief Call on namespace, for example Namespace()
+		 * Call on the namespace, for example Namespace()
 		 */
-		auto processPSTExpr( SymID namespace_id, pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
+			-> query::QResult<ChainState, errors::Failed> {
+			(void) namespace_like_symbol;
 			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
 				call_expr->getSourcePosition(), base::strConcat("Namespace is not callable")
 			));
@@ -254,13 +285,12 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Access on the expression, for example access on field "c"  in "x().c" or "x.y.c"
+		 * Case when we have an access expression, for example "x().c" or "x.y.c",
+		 * not followed by a call expression.
 		 * Should check if accessed field is a namespace or not.
 		 */
-		auto processPSTExpr(
-			base::Box<Expr>                current_expr,
-			pst::Access<pst::expr::Access> expr_access
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
+			-> query::QResult<ChainState, errors::Failed> {
 			// @TODO for now it is a mock as we don't have lookup in type instance and proper helios
 			// access expr #520.
 			auto current_expr_type = current_expr->expression_type.getType();
@@ -278,19 +308,20 @@ namespace compiler::helios::code {
 				auto sym = looked_up_symbols.value().back();
 				if (kind(sym) == SymbolKind::Namespace) {
 					result_sequence.push_back(std::move(current_expr));
-					return ChainState::ofNamespace(sym);
+					return ChainState::ofNamespaceLike(sym);
 				}
 				return query::QError(errors::Failed());
 			}
 		}
 
 		/**
-		 * @brief Search for value given by identifier literal in the namespace.
+		 * Search for value that is not called in the namespace.
+		 * like "(...).NS.value"
 		 */
-		auto processPSTExpr( SymID namespace_id, pst::Access<pst::expr::Access> expr_access
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
+			-> query::QResult<ChainState, errors::Failed> {
 			const auto& lookup_result
-				= HInterface::ofSymbol(namespace_id)
+				= HInterface::ofSymbol(namespace_like_symbol)
 			          .lookupExpectUnique(
 						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
 					  );
@@ -305,16 +336,17 @@ namespace compiler::helios::code {
 			}
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.value().back();
-			return processNamespaceOrValue( sym);
+			return processNamespaceOrValue(sym);
 		}
 
 		/**
-		 * @brief Given access expr and subsequent call expression, perform lookup in type given by
-		 * previous expression, like "my_expr[20].foo()". This may result in a method. Method
+		 * Case when we have an access expression followed by a call expression,
+		 * and current state is an expression, for example "my_expr[20].foo()".
+		   This may result in a method. Method
 		 * parameter overload is possible.
 		 */
-		auto processPSTExpr( base::Box<Expr>, pst::Access<pst::expr::Access>, pst::Access<pst::expr::Call>)
-			-> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		auto processPSTExpr(base::Box<Expr>, pst::Access<pst::expr::Access>, pst::Access<pst::expr::Call>)
+			-> query::QResult<ChainState, errors::Failed> {
 			throw base::NotYetImplemented(
 				"Helios chain expr: call on access expr not implemented yet"
 			);
@@ -322,26 +354,31 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Given access expr and subsequent call expression, perform lookup in the namespace
-		 * given by previous expression and return a call expression. Function overload is possible.
+		 * Case when we have an access expression followed by a call expression,
+		 * and current state is a namespace, for example "my_ns.foo()".
+		 * This may result in function overload.
 		 */
 		auto processPSTExpr(
-			SymID                          namespace_id,
+			SymID                          namespace_like_symbol,
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
-			auto lookup_result
-				= HInterface::ofSymbol(namespace_id).lookup(query_ctx, expr_access->getName().value);
-			return processFunctionCall( lookup_result, expr_access->getName(), call_expr);
+		) -> query::QResult<ChainState, errors::Failed> {
+			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+			                         .lookup(query_ctx, expr_access->getName().value);
+			return processFunctionCall(lookup_result, expr_access->getName(), call_expr);
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
+		/**
+		 * Helper function of @p processPSTExpr that processes a function call given the 
+		 * lookup result of the function name.
+		 */
 		auto processFunctionCall(
 			CRef<LookupResult>           lookup_result,
 			const tpc::Identifier&       name,
 			pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		) -> query::QResult<ChainState, errors::Failed> {
 			if (lookup_result->isEmpty()) return query::QError(errors::Failed());
 			// @TODO: make it better #981:
 			auto callee = lookup_result->getAsSingle().value().back();
@@ -387,12 +424,16 @@ namespace compiler::helios::code {
 			return ChainState::ofExpr(std::move(node));
 		}
 
-		auto processNamespaceOrValue( const SymID& symbol)
-			-> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+		/**
+		 * Helper function of @p processPSTExpr that processes a value given the 
+		 * lookup result of the name.
+		 */
+		auto processNamespaceOrValue(const SymID& symbol)
+			-> query::QResult<ChainState, errors::Failed> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
-				return ChainState::ofNamespace(symbol);
+				return ChainState::ofNamespaceLike(symbol);
 			}
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:
@@ -409,20 +450,20 @@ namespace compiler::helios::code {
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
-		 * @brief Perform a procesing step on the current element of the chain.
+		 * Perform a procesing step on the current element of the chain.
 		 * @warning It assumes that the current element exist.
 		 */
 		template<typename T>
 		base::Optional<errors::Failed> step() {
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
-			auto res = [&]() -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
+			auto res = [&]() -> query::QResult<ChainState, errors::Failed> {
 				if (this->current_state.isExpr()) {
 					auto expr = this->current_state.getExpr();
-					return processPSTExpr( std::move(expr), current_element_value);
-				} else if (this->current_state.isNamespace()) {
-					auto namespace_id = this->current_state.getNamespace();
-					return processPSTExpr( namespace_id, current_element_value);
+					return processPSTExpr(std::move(expr), current_element_value);
+				} else if (this->current_state.isNamespaceLike()) {
+					auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
+					return processPSTExpr(namespace_like_symbol, current_element_value);
 				}
 				return query::QError(errors::Failed());
 			}();
@@ -432,26 +473,26 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Perform a procesing step on current element of the chain and next one.
+		 * Perform a procesing step on current element of the chain and next one.
 		 * @warning It assumes that the current element and next one exist.
 		 */
 		template<typename T1, typename T2>
 		base::Optional<errors::Failed> step() {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-			auto res = [&]() -> query::QResult<ProcessPSTExprOutput, errors::Failed> {
-				if (this->current_state.isExpr()) {
-					auto expr = this->current_state.getExpr();
-					return processPSTExpr(
-						 std::move(expr), current_element_value, next_element_value
-					);
-				} else if (this->current_state.isNamespace()) {
-					auto namespace_id = this->current_state.getNamespace();
-					return processPSTExpr(
-						 namespace_id, current_element_value, next_element_value
-					);
-				}
-				return query::QError(errors::Failed());
+			auto res                   = [&]() -> query::QResult<ChainState, errors::Failed> {
+                if (this->current_state.isExpr()) {
+                    auto expr = this->current_state.getExpr();
+                    return processPSTExpr(
+                        std::move(expr), current_element_value, next_element_value
+                    );
+                } else if (this->current_state.isNamespaceLike()) {
+                    auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
+                    return processPSTExpr(
+                        namespace_like_symbol, current_element_value, next_element_value
+                    );
+                }
+                return query::QError(errors::Failed());
 			}();
 			if (res.hasError()) return res.error();
 			this->current_state = std::move(res.value());
@@ -459,28 +500,28 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Same as above, but it performs a step on the first element of the chain, where
+		 * Same as above, but it performs a step on the first element of the chain, where
 		 * chain state is empty.
 		 */
 		template<typename T>
 		base::Optional<errors::Failed> firstStep() {
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
-			auto res = processPSTExpr( current_element_value);
+			auto res = processPSTExpr(current_element_value);
 			if (res.hasError()) return res.error();
 			this->current_state = std::move(res.value());
 			return {};
 		}
 
 		/**
-		 * @brief Same as above, but it performs a step on the first element of the chain, where
+		 * Same as above, but it performs a step on the first element of the chain, where
 		 * chain state is empty.
 		 */
 		template<typename T1, typename T2>
 		base::Optional<errors::Failed> firstStep() {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-			auto res = processPSTExpr( current_element_value, next_element_value);
+			auto res                   = processPSTExpr(current_element_value, next_element_value);
 			if (res.hasError()) return res.error();
 			this->current_state = std::move(res.value());
 			return {};
@@ -492,12 +533,10 @@ namespace compiler::helios::code {
 			this->chain_elements.emplace_back(expr->getAtom());
 			auto chain = expr->getChain();
 			std::ranges::copy(chain, std::back_inserter(this->chain_elements));
-
-			this->chain_elements_unlocked.reserve(this->chain_elements.size());
 		}
 
 		/**
-		 * @brief Main function of the ChainExprConstruction with the loop.
+		 * Main function of the ChainExprConstruction with the loop.
 		 * Performs the construction of the chain expression from the chain elements.
 		 */
 		query::QResult<base::Box<Expr>, errors::Failed> run() {
@@ -536,9 +575,10 @@ namespace compiler::helios::code {
 			if (error.has_value()) return query::QError(error.value());
 			if (this->current_state.isExpr())
 				result_sequence.push_back(this->current_state.getExpr());
-			if (this->current_state.isNamespace()) {
-				auto namespace_expr
-					= makeBox<IdentifierExpr>(query_ctx, this->current_state.getNamespace());
+			if (this->current_state.isNamespaceLike()) {
+				auto namespace_expr = makeBox<IdentifierExpr>(
+					query_ctx, this->current_state.getNamespaceLikeSymbol()
+				);
 				result_sequence.emplace_back(std::move(namespace_expr));
 			}
 
