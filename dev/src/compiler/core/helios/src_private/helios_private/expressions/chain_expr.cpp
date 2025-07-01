@@ -21,9 +21,9 @@
 #include <token_parser_core/common_elements.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include "base/ints.hpp"
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
+#include <base/ints.hpp>
 #include <base/optional.hpp>
 
 #include <algorithm>
@@ -371,7 +371,7 @@ namespace compiler::helios::code {
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
 		/**
-		 * Helper function of @p processPSTExpr that processes a function call given the 
+		 * Helper function of @p processPSTExpr that processes a function call given the
 		 * lookup result of the function name.
 		 */
 		auto processFunctionCall(
@@ -425,7 +425,7 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Helper function of @p processPSTExpr that processes a value given the 
+		 * Helper function of @p processPSTExpr that processes a value given the
 		 * lookup result of the name.
 		 */
 		auto processNamespaceOrValue(const SymID& symbol)
