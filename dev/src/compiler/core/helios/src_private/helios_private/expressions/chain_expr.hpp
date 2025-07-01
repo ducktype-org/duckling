@@ -8,6 +8,6 @@
 
 namespace compiler::helios::code {
 	query::QResult<Box<code::Expr>, errors::Failed> fromChainExpr(
-		query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr
+		query::Context& ctx, pst::AccessLocked<pst::expr::ChainExpr> expr
 	);
 }
