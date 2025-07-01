@@ -11,6 +11,8 @@
 namespace config {
 
 	/**
+	* This PR: remove it
+	*
 	 * @brief Generate Clap instance with all standard compiler parameters.
 	 * See source code for list of parameters.
 	 * @return clap::Clap
@@ -18,6 +20,8 @@ namespace config {
 	clap::Clap standardOptions();
 
 	/**
+	* This PR: remove it
+	*
 	 * @brief Parses arguments with @p clap and performs
 	 * configuration of the program based on standard options.
 	 * @note it assumes that @p clap has parameters

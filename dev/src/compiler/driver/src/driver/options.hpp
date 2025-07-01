@@ -79,34 +79,33 @@ namespace driver {
      * via the Driver.
      */
     struct CompilerModeOfOperationAndOptions {
+
         /**
          * Bare mode, where compiler doesn't do any initialization etc,
-         * but you can still (try) to use its internal functions.
+         * but you can still (try to) use its internal functions.
          */
         struct BareMode {
             // anything here?
         };
-        struct PackageCompilation {
+
+        /**
+         * Package compilation mode, compiler is used to compile a package
+         * and its dependencies it can be later asked to compile specific scripts
+         * or modules, etc. 
+         */
+        struct PackageCompilationMode {
             options_types::PackageInfo main_package_info;
             options_types::ArtifactsOptions compilation_artifacts;
             std::vector<options_types::DependencyInfo> dependencies;
             options_types::CompilationOptions compilation_options;
             options_types::DebugOptions debug_options;
         };
-        struct ScriptCompilation {
-            std::string script_path;
-            options_types::ArtifactsOptions compilation_artifacts;
-            std::vector<options_types::DependencyInfo> dependencies;
-            options_types::CompilationOptions compilation_options;
-            options_types::DebugOptions debug_options;
-        };
+ 
         /**
-         * Mode used for REPL loop and in-memory runnning of scripts.
+         * @note: in the future this might hold more modes,
+         * like repl mode, script compilation mode, lsp deamon, etc.
+         * don't refrain from refactoring this file (and module) if needed.
          */
-        struct REPL {
-            // ...
-        };
-
-        std::variant<BareMode, PackageCompilation, ScriptCompilation, REPL> mode;
+        std::variant<BareMode, PackageCompilationMode> mode;
     };
 };

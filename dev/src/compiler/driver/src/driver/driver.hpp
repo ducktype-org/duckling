@@ -2,14 +2,13 @@
 
 #include "options.hpp"
 #include <base/box.hpp>
+#include "handles/handle_abc.hpp"
 
 namespace driver {
     
-    struct CompilerHandle {
-        virtual ~CompilerHandle() = default;
-    };
+    
 
-    Box<CompilerHandle> initializeTheCompiler(
+    Box<CompilerHandleABC> initializeTheCompiler(
         CompilerModeOfOperationAndOptions options
     );
 }
