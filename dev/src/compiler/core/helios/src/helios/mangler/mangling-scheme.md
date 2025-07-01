@@ -15,7 +15,6 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <encoding> ::= <path>                                       // variables and constants
              | <path> <function-type>                       // functions
-             | <special-symbol-encoding>
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
@@ -125,6 +124,7 @@ either in the scheme or it's implementation, they should be reflected here.
                   | <special-member-name>
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
+                  | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
 
 // more special methods could be added in the future
@@ -195,6 +195,7 @@ either in the scheme or it's implementation, they should be reflected here.
                          | "cl"	                            // ()
                          | "ix"	                            // []
                          | "cv" <type>	                    // (cast)
+                         | "nm" <identifier> <type> <type>  // (named operator)
 
 <opt-metadata> ::= "" | <metadata>
 // there are no restrictions on <vendor-metadata>, any characters are allowed
