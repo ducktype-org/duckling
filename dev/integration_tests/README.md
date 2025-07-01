@@ -158,3 +158,8 @@ Some advice I can give related to working with build artifacts includes:
 - Use a build system!
 - If using a build system is an overkill then when producing a single binary file, make its suffix `.bin`, or something that is ignored by git
 - Otherwise, when producing multiple artifacts for a single binary, make a build command that writes everything to a */build/* directory.
+
+## Troubleshooting and debugging
+
+If your tests happen no to work as intended, flags `-v/--verbose` and `-d/--dry` are highly recommended. Dry run only displays the commands
+that would be ran, instead of really executing them, while verbose runs the commands, but also prints their output where possible.

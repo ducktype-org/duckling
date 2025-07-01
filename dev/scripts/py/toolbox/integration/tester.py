@@ -80,16 +80,18 @@ def run_test(
     return success
 
 
-def log_test_out_differs(test, case, message, got, expected, log_file):
+def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
     """
     Used to dump program's incorrect output.
     """
+    to_dump = (
+        f"{test.name}/{case.name}: {message}\n"
+        f"[GOT]:\n{got.decode('UTF-8')}\n"
+        f"[EXPECTED]:\n{expected.decode('UTF-8')}\n"
+    )
+    log_info_if_needed(to_dump, False, verbose=verbose)
     write_log(
-        (
-            f"{test.name}/{case.name}: {message}\n"
-            f"[GOT]:\n{got.decode('UTF-8')}\n"
-            f"[EXPECTED]:\n{expected.decode('UTF-8')}\n"
-        ),
+        to_dump,
         log_file,
     )
 
@@ -143,6 +145,7 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
                 test_output,
                 test_expected_output,
                 log_file,
+                verbose
             )
             return f"Stdouts do not match."
 
