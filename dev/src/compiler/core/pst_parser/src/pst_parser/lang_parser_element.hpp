@@ -4,9 +4,9 @@
 #include "element_kind.hpp"
 #include "pst_id.hpp"
 
+#include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
-#include <token_parser_core/parser_state.hpp>
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
@@ -32,7 +32,7 @@ namespace pst {
 	public:
 		using Child = AccessLocked<LangElement>;
 
-		using SubToken = base::CRef<tpc::Token>;
+		using SubToken = base::CRef<lexer::Token>;
 
 		using SubElement = std::variant<SubToken, Child>;
 
@@ -185,9 +185,9 @@ namespace pst {
 		 */
 		ElementKind element_kind = ElementKind::KindNotSet;
 
-		void addToken(const tpc::Token& token);
-		void addToken(const Box<tpc::Token>& token);
-		void addToken(CRef<tpc::Token> token);
+		void addToken(const lexer::Token& token);
+		void addToken(const Box<lexer::Token>& token);
+		void addToken(CRef<lexer::Token> token);
 
 		template<std::derived_from<LangElement> El>
 		void addChild(MCRef<El> el) {

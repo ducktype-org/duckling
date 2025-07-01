@@ -7,6 +7,11 @@ from ..helpers import (
     log_info,
 )
 
+def assert_good_var_name(name: str):
+    if any(c.isupper() for c in name):
+        exit_with_error(
+            f"Invalid variable name `{name}`. Variables should be in snake_case or kebab-case."
+        )
 
 def check_resembles_builtin(name: str, builtin_set: set[str]):
     """
@@ -21,11 +26,7 @@ def check_resembles_builtin(name: str, builtin_set: set[str]):
             exit_with_error(
                 f"Incorrect spelling of '{name}' in config file. Consider: '{key}'"
             )
-    if any(c.isupper() for c in name):
-        exit_with_error(
-            f"Unknown builtin `{name}`. Variables should be in snake_case or kebab-case."
-        )
-
+    assert_good_var_name(name)
 
 class VariableNotFound(Exception):
     def __init__(self, variable_name, expr):

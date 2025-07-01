@@ -5,6 +5,7 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/token_stream.hpp>
 #include <token_source/source.hpp>
 
