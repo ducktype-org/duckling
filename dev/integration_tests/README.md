@@ -112,7 +112,6 @@ Config file variables (linked to a node in the test tree, not inherited):
 
 General variables (not tied to any context):
 
-- `Compile` - Command executed before running a test. Executed once per test.
 - `Run` - Required - Command executed in order to run a test case.
 - `Clean` - Command executed explicitly by the user to clean all the test artifacts.
 - `PreTest` - Command executed **before** running a test.
