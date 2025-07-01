@@ -781,6 +781,13 @@ def duck_linter(*args, **kwargs):
     default=str(DEFAULT_LOG_FILE_PATH),
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
+@click.option(
+    "-b",
+    "--build_dir",
+    prompt="Build directory",
+    help="The name of the project build directory which is passed to the framework.",
+    default="build",
+)
 def itest(*args, **kwargs):
     """Runs integration tests"""
     integration_tests_impl(*args, **kwargs)
