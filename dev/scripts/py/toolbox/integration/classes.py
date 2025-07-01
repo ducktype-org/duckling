@@ -13,7 +13,9 @@ class Case:
     """
 
     name: str
-    run_args: str
+    run: str
+    pre_case: str
+    post_case: str
     input: Optional[IOData]
     expected_exitcode: int
     expected_output: Optional[IOData]
@@ -34,9 +36,8 @@ class Test:
     cases: list[Case]
     cwd: Path
 
-    compile: str
-    run: str
-    post_run: str
+    pre_test: str
+    post_test: str
     fail_fast: bool
     clean: str
 

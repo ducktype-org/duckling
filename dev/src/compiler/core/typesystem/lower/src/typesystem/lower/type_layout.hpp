@@ -89,7 +89,7 @@ namespace tsl {
 					   : reference_kind == tsh::ReferenceKind::Ref  ? "ref "
 																	: "box "
 				 )
-			     + source_type.toString() + " : " + std::to_string(getSize());
+			     + source_type.toString() + " : " + base::toString(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;
@@ -126,7 +126,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "{} : " + std::to_string(getSize());
+			return getIndent(indent) + "{} : " + base::toString(getSize());
 		}
 	};
 
@@ -152,7 +152,7 @@ namespace tsl {
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "i" + std::to_string(usize(getSize())) + " : "
-			     + std::to_string(getSize());
+			     + base::toString(getSize());
 		}
 	};
 
@@ -167,7 +167,7 @@ namespace tsl {
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "f" + std::to_string(usize(getSize())) + " : "
-			     + std::to_string(getSize());
+			     + base::toString(getSize());
 		}
 	};
 
@@ -192,7 +192,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "string : " + std::to_string(getSize());
+			return getIndent(indent) + "string : " + base::toString(getSize());
 		}
 
 		/**
@@ -431,7 +431,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "Functional : " + std::to_string(getSize());
+			return getIndent(indent) + "Functional : " + base::toString(getSize());
 		}
 	};
 
@@ -483,7 +483,7 @@ namespace tsl {
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Pointer to " + getSourceType().toString() + " : "
-			     + std::to_string(getSize());
+			     + base::toString(getSize());
 		}
 	};
 
