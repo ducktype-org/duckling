@@ -24,11 +24,13 @@ namespace config {
 	}
 
 	clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args) {
-		auto res = clap.parse(args);
+		
+		// this is already done in the new driver:
+		// auto res = clap.parse(args);
 
-		dia::Logger::setImmediatelyDump(res.isFlag("logger-cerr"));
-		lexer::Lexer::setTokenMessages(res.isFlag("lexer-cerr"));
+		// dia::Logger::setImmediatelyDump(res.isFlag("logger-cerr"));
+		// lexer::Lexer::setTokenMessages(res.isFlag("lexer-cerr"));
 
-		return res;
+		// return res;
 	}
 }
