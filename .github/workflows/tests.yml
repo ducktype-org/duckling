@@ -46,6 +46,7 @@ jobs:
       # According to: https://github.com/orgs/community/discussions/38088
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
+      todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
     timeout-minutes: 20  # (Per matrix run)
     runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
@@ -84,7 +85,7 @@ jobs:
           rm -rf ${{ github.workspace }}
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
-      
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -95,7 +96,7 @@ jobs:
       - name: Install fastcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo pip install fastcov --break-system-packages --no-input
-      
+
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev
@@ -237,11 +238,17 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+      - name: Test TODO Count
+        id: todo-counter
+        working-directory: ${{ env.WORKSPACE }}/dev
+        run: |
+          echo todo-count=$(python3 todo-counter -c -p TODO) > $GITHUB_OUTPUT
+
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
         run: exit 1
 
-  coverage:
+  code-statistics:
     needs: [build]
 
     runs-on: ubuntu-24.04
@@ -257,8 +264,20 @@ jobs:
           value: ${{ needs.build.outputs.coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
+      - name: Save main TODO count
+        uses: action-pack/set-variable@v1
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        with:
+          name: 'MAIN_TODO_COUNT'
+          value: ${{ needs.build.outputs.todo-count }}
+          token: ${{ secrets.QUACKER_PAT }}
+
       - name: Read main coverage percentage
         id: read-main-coverage
+        run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
+
+      - name: Read main TODO count
+        id: read-main-todo-count
         run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
 
       - name: Check coverage status
