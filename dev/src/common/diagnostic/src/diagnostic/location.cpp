@@ -12,7 +12,7 @@ namespace dia {
 		const SourcePosition&              pos,
 		const printer::PrinterContentsSeq& reason
 	) const {
-		// e.g. VSCode's terminal.
+		// e.g. VSCode's terminal. aa
 		printPrefixInfo(out);
 		out << ":";
 		pos.printPosition(out);
