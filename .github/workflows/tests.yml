@@ -278,7 +278,15 @@ jobs:
 
       - name: Read main TODO count
         id: read-main-todo-count
-        run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
+        run: echo value=${{ vars.MAIN_TODO_COUNT }} > $GITHUB_OUTPUT
+
+      - name: Calculate TODO difference
+        id: calc-todo-diff
+        run: "echo value=$((${{ needs.build.outputs.todo-count }} - ${{ steps.read-main-todo-count.outputs.value }})) > $GITHUB_OUTPUT"
+
+      - name: Calculate TODO negated
+        id: calc-todo-diff-neg
+        run: "echo value=$((-${{ steps.calc-todo-diff.outputs.value }})) > $GITHUB_OUTPUT"
 
       - name: Check coverage status
         id: check-coverage-status
@@ -291,12 +299,16 @@ jobs:
           token: ${{ secrets.QUACKER_PAT }}
           authors: quacker-bot
 
-      - name: Post coverage status as github comment
+      - name: Post code statistics as github comment
         uses: actions/github-script@v7
         if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
-          FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
-          SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
+          COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
+          COV_SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
+          TODO_FAIL_MSG: '🙈🙈🙈 - You have added ${{ steps.calc-todo-diff.outputs.value }} TODOs do the repo! 🥴🥴🥴'
+          TODO_SINGLE_GOOD_MSG: '👍👍👍 - You have solved ${{ steps.calc-todo-diff-neg.outputs.value }} TODO!'
+          TODO_MULTIPLE_AMAZED_MSG: '🤯🤯🤯 - You have solved **${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🥳🥳🥳'
+
         with:
           github-token: ${{ secrets.QUACKER_PAT }}
           script: |
@@ -307,7 +319,12 @@ jobs:
               body: '🎉 Tests and coverage ran successfully! 🎉\n \
                      ⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \n \
                      ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
-                     ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
+                     ${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }}
+                     ${{ steps.calc-todo-diff.outputs.value != 0 && '\n\n' || '' }}
+                     ${{ steps.calc-todo-diff.outputs.value < 0 && env.TODO_FAIL_MSG || '' }}
+                     ${{ steps.calc-todo-diff.outputs.value == 1 && env.TODO_SINGLE_GOOD_MSG || '' }}
+                     ${{ steps.calc-todo-diff.outputs.value > 1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }}
+                     '
             })
 
       - name: Fail if insufficient coverage
