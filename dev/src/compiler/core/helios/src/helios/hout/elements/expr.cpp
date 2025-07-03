@@ -306,21 +306,14 @@ namespace compiler::helios::code {
 		}
 	}
 
-	CallExpr::CallExpr(query::Context& ctx, SymID callee, std::vector<Box<Expr>> arguments):
-		  Expr(
-
-			  tsh::ExpressionType(
-				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
-	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
-	                                    .getType()),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  )
-		  ),
-		  callee(callee),
+	CallExpr::CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
+		  Expr(callee->expression_type),
+		  callee(std::move(callee)),
 		  arguments(std::move(arguments)) {}
 
 	void CallExpr::debugPrint(std::ostream& out) const {
-		out << name(callee).strView() << "(";
+		callee->debugPrint(out);
+		out << "(";
 		bool add_comma = false;
 		for (auto&& arg: arguments) {
 			if (add_comma) out << ", ";

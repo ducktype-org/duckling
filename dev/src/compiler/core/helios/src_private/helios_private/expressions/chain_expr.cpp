@@ -8,6 +8,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -26,31 +27,7 @@
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 
-#include <algorithm>
-
 namespace compiler::helios::code {
-	struct HoutExprSymbolVisitor final: public HoutExprVisitorEmpty {
-		explicit HoutExprSymbolVisitor(query::Context& ctx): ctx(ctx) {}
-
-		query::Context& ctx;
-
-		base::Optional<SymID> symbol;
-
-		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
-
-		void visitParenthesisExpr(const ParenthesisExpr& val) override {
-			val.inner->acceptVisitor(*this);
-		}
-	};
-
-	/**
-	 * Wrapper around the HoutExprSymbolVisitor to get the symbol ID from an expression.
-	 */
-	base::Optional<SymID> getExpressionSymID(query::Context& ctx, CRef<code::Expr> expr) {
-		HoutExprSymbolVisitor visitor(ctx);
-		expr->acceptVisitor(visitor);
-		return visitor.symbol;
-	}
 
 	/**
 	 * State for the building of the chain expression in HOUT.
@@ -262,7 +239,7 @@ namespace compiler::helios::code {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::QError(errors::Failed());
 			auto hout_expr = std::move(expr).value();
-			auto symbol    = getExpressionSymID(query_ctx, hout_expr.ref());
+			auto symbol    = getIdentifierExprSymID(hout_expr.ref());
 			if (symbol.has_value()) return processNamespaceOrValue(symbol.value());
 			return ChainState::ofExpr(std::move(hout_expr));
 		}
@@ -273,9 +250,11 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
-			(void) current_expr;
 			(void) call_expr;
-			throw base::NotYetImplemented("Helios chain expr: call without access before it");
+			auto node = makeBox<CallExpr>(
+				query_ctx, std::move(current_expr), std::vector<base::Box<Expr>>()
+			);
+			return ChainState::ofExpr(std::move(node));
 		}
 
 		/**
@@ -433,7 +412,10 @@ namespace compiler::helios::code {
 				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
 
-			auto node = makeBox<CallExpr>(query_ctx, callee, std::move(coerced_arguments));
+			auto identifier_expr = makeBox<IdentifierExpr>(
+				query_ctx, callee
+			);
+			auto node = makeBox<CallExpr>(query_ctx, std::move(identifier_expr), std::move(coerced_arguments));
 			return ChainState::ofExpr(std::move(node));
 		}
 

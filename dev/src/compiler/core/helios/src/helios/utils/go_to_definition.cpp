@@ -46,7 +46,7 @@ namespace compiler::helios {
 			// @TODO ZPP 3.3 -- make this functionality work on more then just sym ids.
 		}
 
-		void visitCallExpr(const CallExpr& call) override { symbol = call.callee; }
+		void visitCallExpr(const CallExpr& call) override { call.callee->acceptVisitor(*this); }
 
 		void visitSequenceExpr(const SequenceExpr& seq) override {
 			if (seq.expressions.empty()) return;
