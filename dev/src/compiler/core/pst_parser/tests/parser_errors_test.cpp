@@ -160,6 +160,13 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Using, true> simple_using{ "using std.math" };
 
+	Example<pst::StmtSpecifier, true>  public_specifier{ "public expand \"return 0;\";" };
+	Example<pst::StmtSpecifier, true>  private_specifier{ "private fun foo() = {}" };
+	Example<pst::StmtSpecifier, true>  protected_specifier{ "protected class x{}" };
+	Example<pst::StmtSpecifier, true>  public_block{ "public {class x{}}" };
+	Example<pst::StmtSpecifier, false> bad_specifier{ "def class x{}" };
+	Example<pst::StmtSpecifier, false> empty_specifier{ "public" };
+
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };
 	Example<pst::For, false> empty_type_for{ "for(a: in a + c) {}" };
