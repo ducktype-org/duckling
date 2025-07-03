@@ -182,30 +182,41 @@ namespace base {
 
 		Optional(std::nullopt_t) noexcept {}
 
-		Optional(const T& value): private_optional(value) {}
+		// clang-format off
 
-		Optional(Optional&&) noexcept            = default;
-		Optional(const Optional&)                = default;
-		Optional& operator=(Optional&&) noexcept = default;
-		Optional& operator=(const Optional&)     = default;
+		Optional(const T& value)
+		noexcept(std::is_nothrow_constructible_v<std::optional<T>, const T&>):
+			private_optional(value) {}
+
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
+		Optional& operator=(Optional&&)      = default;
+		Optional& operator=(const Optional&) = default;
 
 		template<class... Args>
-		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args):
+		requires std::is_constructible_v<T, Args...>
+		constexpr explicit Optional(Args&&... args)
+		noexcept(std::is_nothrow_constructible_v<T, Args...>):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+
+		// clang-format on
 
 		template<class U = T>
 		requires std::is_constructible_v<T, U>
-		constexpr Optional(U&& value): private_optional(std::forward<U>(value)) {}
+		constexpr Optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U&&>):
+			  private_optional(std::forward<U>(value)) {}
 
 		template<class... Args>
-		constexpr T& emplace(Args&&... args) {
+		constexpr T& emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args&&...>) {
 			return private_optional.emplace(std::forward<Args>(args)...);
 		}
 
-		explicit constexpr operator bool() const { return has_value(); }
+		explicit constexpr operator bool() const noexcept { return has_value(); }
 
 		template<class U = T>
-		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value) {
+		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value) noexcept(
+			std::is_nothrow_constructible_v<T, U&&> && std::is_nothrow_assignable_v<T, U&&>
+		) {
 			private_optional = std::forward<U>(value);
 			return *this;
 		}
@@ -221,7 +232,7 @@ namespace base {
 		 * @return True if holds, false otherwise
 		 */
 		[[nodiscard]]
-		constexpr bool has_value() const {
+		constexpr bool has_value() const noexcept {
 			return private_optional.has_value();
 		}
 
@@ -230,7 +241,7 @@ namespace base {
 		 * @return True if empty, false otherwise
 		 */
 		[[nodiscard]]
-		constexpr bool empty() const {
+		constexpr bool empty() const noexcept {
 			return !has_value();
 		}
 
@@ -248,13 +259,13 @@ namespace base {
 		}
 
 		/**
-		 * Get value with or a given backup.
+		 * Get stored value or a given backup.
 		 * @param or_value value to be returned if empty
 		 * @return Stored value if exists, otherwise or_value.
 		 */
 		template<class Self>
 		[[nodiscard]]
-		constexpr qualifiedT<Self> valueOr(this Self&& self, qualifiedT<Self> or_value) {
+		constexpr qualifiedT<Self> valueOr(this Self&& self, qualifiedT<Self> or_value) noexcept {
 			if (self.has_value()) return std::forward<Self>(self).value();
 			return std::forward_like<Self>(or_value);
 		}
@@ -288,7 +299,7 @@ namespace base {
 		 * @param args arguments passed to a constructor of the error type.
 		 */
 		template<class Err, class... Args, class Self>
-		[[nodiscard]]
+		requires(std::constructible_from<Err, Args && ...>) [[nodiscard]]
 		constexpr qualifiedT<Self> expect(this Self&& self, Args&&... args) {
 			if (!self.has_value()) throw Err(std::forward<Args>(args)...);
 			return std::forward<Self>(self).value();
