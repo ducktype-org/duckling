@@ -118,6 +118,20 @@ public:
 		);
 	}
 
+	struct MemberFunction {
+		int value;
+
+		// Making the type non-copyable
+		MemberFunction(int v): value{ v } {}
+
+		MemberFunction(const MemberFunction&)            = delete;
+		MemberFunction& operator=(const MemberFunction&) = delete;
+
+		Optional<int> memberFunctionL() & { return value; }
+
+		Optional<int> memberFunctionR() && { return 2 * value; }
+	};
+
 	void mapTest() {
 		Optional<int> opt(4);
 
@@ -131,19 +145,11 @@ public:
 		auto          result3 = empty.map([](int val) { return val * 2; });
 		assertTrue(result3.empty(), "Result3 is not empty!");
 
-		struct TestStruct {
-			int value;
-
-			int memberFunctionL() & { return value; }
-
-			int memberFunctionR() && { return 2 * value; }
-		};
-
-		Optional<TestStruct> opt2{ 10 };
-		auto result4 = opt2.map(&TestStruct::memberFunctionL);
+		Optional<MemberFunction> opt2{ 10 };
+		auto                     result4 = opt2.map(&MemberFunction::memberFunctionL);
 		ASSERT_EQUAL(result4.value(), 10);
 
-		auto result5 = std::move(opt2).map(&TestStruct::memberFunctionR);
+		auto result5 = std::move(opt2).map(&MemberFunction::memberFunctionR);
 		ASSERT_EQUAL(result5.value(), 20);
 	}
 
@@ -156,19 +162,11 @@ public:
 		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
 		assertTrue(result2.empty(), "Result2 is not empty!");
 
-		struct TestStruct {
-			int value;
-
-			Optional<int> memberFunctionL() & { return value; }
-
-			Optional<int> memberFunctionR() && { return 2 * value; }
-		};
-
-		Optional<TestStruct> opt2{ 10 };
-		auto result3 = opt2.flatMap(&TestStruct::memberFunctionL);
+		Optional<MemberFunction> opt2{ 10 };
+		auto                     result3 = opt2.flatMap(&MemberFunction::memberFunctionL);
 		ASSERT_EQUAL(result3.value(), 10);
 
-		auto result4 = std::move(opt2).flatMap(&TestStruct::memberFunctionR);
+		auto result4 = std::move(opt2).flatMap(&MemberFunction::memberFunctionR);
 		ASSERT_EQUAL(result4.value(), 20);
 	}
 
@@ -385,9 +383,10 @@ public:
 
 	template<typename OptionalT, typename ExpectedValueT>
 	void assertValueT() {
-#define ASSERT_EQUAL_TYPES(type1, type2) ASSERT_TRUE((std::same_as<type1, type2>))
+#define ASSERT_EQUAL_TYPES(type1, type2) ASSERT_TRUE((std::same_as<type1, type2>) )
 #define optional                         std::declval<OptionalT>()
 #define expected_value                   std::declval<ExpectedValueT>()
+
 		ASSERT_EQUAL_TYPES(decltype(optional.value()), ExpectedValueT);
 		ASSERT_EQUAL_TYPES(decltype(optional.valueOr(expected_value)), ExpectedValueT);
 		ASSERT_EQUAL_TYPES(decltype(*optional), ExpectedValueT);
