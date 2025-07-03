@@ -130,6 +130,21 @@ public:
 		Optional<int> empty;
 		auto          result3 = empty.map([](int val) { return val * 2; });
 		assertTrue(result3.empty(), "Result3 is not empty!");
+
+		struct TestStruct {
+			int value;
+
+			int memberFunctionL() & { return value; }
+
+			int memberFunctionR() && { return 2 * value; }
+		};
+
+		Optional<TestStruct> opt2{ 10 };
+		auto result4 = opt2.map(&TestStruct::memberFunctionL);
+		ASSERT_EQUAL(result4.value(), 10);
+
+		auto result5 = std::move(opt2).map(&TestStruct::memberFunctionR);
+		ASSERT_EQUAL(result5.value(), 20);
 	}
 
 	void flatMapTest() {
@@ -140,6 +155,21 @@ public:
 		Optional<int> empty;
 		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
 		assertTrue(result2.empty(), "Result2 is not empty!");
+
+		struct TestStruct {
+			int value;
+
+			Optional<int> memberFunctionL() & { return value; }
+
+			Optional<int> memberFunctionR() && { return 2 * value; }
+		};
+
+		Optional<TestStruct> opt2{ 10 };
+		auto result3 = opt2.flatMap(&TestStruct::memberFunctionL);
+		ASSERT_EQUAL(result3.value(), 10);
+
+		auto result4 = std::move(opt2).flatMap(&TestStruct::memberFunctionR);
+		ASSERT_EQUAL(result4.value(), 20);
 	}
 
 	void testReference() {
