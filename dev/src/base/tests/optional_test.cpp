@@ -353,10 +353,25 @@ public:
 		} catch (int er) { ASSERT_EQUAL(er, 42); }
 	}
 
+	template<typename OptionalT, typename ExpectedValueT>
+	void assertValueT() {
+#define ASSERT_EQUAL_TYPES(type1, type2) ASSERT_TRUE((std::same_as<type1, type2>))
+#define optional                         std::declval<OptionalT>()
+#define expected_value                   std::declval<ExpectedValueT>()
+		ASSERT_EQUAL_TYPES(decltype(optional.value()), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.valueOr(expected_value)), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(*optional), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.expect("")), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.template expect<int>(5)), ExpectedValueT);
+
+#undef expected_value
+#undef optional
+#undef ASSERT_EQUAL_TYPES
+	}
+
 	void testPreservingXValue() {
-		ASSERT_TRUE((std::same_as<decltype(Optional<int>{5}.value()), int&&>));
-		const Optional<int> const_opt{5};
-		ASSERT_TRUE((std::same_as<decltype(std::move(const_opt).value()), const int&&>));
+		assertValueT<Optional<int>&&, int&&>();
+		assertValueT<const Optional<int>&&, const int&&>();
 	}
 };
 
