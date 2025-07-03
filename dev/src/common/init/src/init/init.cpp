@@ -55,7 +55,7 @@ namespace init {
 		 */
 		void initStateAtexitHandler() {
 			getInitState()->was_deinit = getInitState()->was_init = true;
-			std::cerr << "WARNING: InitObject used correctly but dtor not called due to std::exit.";
+			std::cerr << "WARNING: InitObject used but dtor not called due to std::exit call.";
 		}
 
 		/**
