@@ -65,6 +65,8 @@ namespace pst {
 				return detail::parseStmt<Expand>(state);
 
 			default:
+				if (StmtSpecifier::SPECIFIERS.contains(as_keyword))
+					return detail::parseStmt<StmtSpecifier>(state);
 				break;
 			}
 
