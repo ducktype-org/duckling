@@ -33,7 +33,7 @@ public:
 		TESTER_ADD_TEST(ifOptSomeTest);
 		TESTER_ADD_TEST(testMatchErr);
 		TESTER_ADD_TEST(testExpect);
-		TESTER_ADD_TEST(testPreservingXValue);
+		TESTER_ADD_TEST(testPreservingValueCategories);
 	}
 
 	template<typename X>
@@ -410,9 +410,14 @@ public:
 #undef ASSERT_EQUAL_TYPES
 	}
 
-	void testPreservingXValue() {
+	void testPreservingValueCategories() {
+		// Value is an x-value
 		assertValueT<Optional<int>&&, int&&>();
 		assertValueT<const Optional<int>&&, const int&&>();
+
+		// Value is an l-value
+		assertValueT<Optional<int>&, int&>();
+		assertValueT<const Optional<int>&, const int&>();
 	}
 };
 
