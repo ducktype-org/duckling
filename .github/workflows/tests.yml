@@ -310,6 +310,7 @@ jobs:
           TODO_FAIL_MSG: '🙈🙈🙈 - You have added ${{ steps.calc-todo-diff.outputs.value }} TODOs do the repo! 🥴🥴🥴'
           TODO_SINGLE_GOOD_MSG: '👍👍👍 - You have solved ${{ steps.calc-todo-diff-neg.outputs.value }} TODO!'
           TODO_MULTIPLE_AMAZED_MSG: '🤯🤯🤯 - You have solved **${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🥳🥳🥳'
+          EMPTY_STR: ''
 
         with:
           github-token: ${{ secrets.QUACKER_PAT }}
@@ -322,8 +323,8 @@ jobs:
                      ⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \n \
                      ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
                      ${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
-                     ${{ steps.calc-todo-diff.outputs.value != 0 && '\n\n' || '' }}\
-                     ${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }}\
+                     ${{ steps.calc-todo-diff.outputs.value != 0 && '\n\n' || env.EMPTY_STR }}\
+                     ${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || env.EMPTY_STR }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || env.EMPTY_STR }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || env.EMPTY_STR }}\
                      '
             })
 
