@@ -412,10 +412,10 @@ namespace compiler::helios::code {
 				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
 
-			auto identifier_expr = makeBox<IdentifierExpr>(
-				query_ctx, callee
-			);
-			auto node = makeBox<CallExpr>(query_ctx, std::move(identifier_expr), std::move(coerced_arguments));
+			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
+			auto node            = makeBox<CallExpr>(
+                query_ctx, std::move(identifier_expr), std::move(coerced_arguments)
+            );
 			return ChainState::ofExpr(std::move(node));
 		}
 

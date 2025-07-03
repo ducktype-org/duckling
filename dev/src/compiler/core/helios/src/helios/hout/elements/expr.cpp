@@ -306,8 +306,11 @@ namespace compiler::helios::code {
 		}
 	}
 
-	CallExpr::CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
-		  Expr(callee->expression_type),
+	CallExpr::CallExpr(query::Context&, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
+		  Expr(tsh::ExpressionType(
+			  getCallResultType(callee->expression_type.getType()),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
 		  callee(std::move(callee)),
 		  arguments(std::move(arguments)) {}
 
