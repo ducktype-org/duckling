@@ -5,7 +5,7 @@ original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
 # Gather files
-files=$(./scripts/list_files.sh)
+files=$(./scripts/list_cpp_files.sh)
 
 # Find binary
 clang_format=clang-format-19
