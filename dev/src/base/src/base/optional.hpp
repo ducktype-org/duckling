@@ -165,6 +165,10 @@ namespace base {
 	template<class T>
 	requires(!std::is_reference_v<T>) class Optional final {
 	protected:
+		/**
+		 * Const and reference qualified type of value in line with qualifications of the
+		 * surrounding optional.
+		 */
 		template<class Self>
 		using qualifiedT = decltype(std::declval<Self>().private_optional.value());
 
@@ -232,7 +236,8 @@ namespace base {
 
 		// Accessors.
 		/**
-		 * Get value from base::Optional. Throw on no value.
+		 * Get value from base::Optional.
+		 * @throws Throws on no value.
 		 * @return Value that it holds.
 		 */
 		template<class Self>
@@ -243,9 +248,9 @@ namespace base {
 		}
 
 		/**
-		 * Returns value or or_value depending if base::Optional is empty or not.
+		 * Get value with or a given backup.
 		 * @param or_value value to be returned if empty
-		 * @return
+		 * @return Stored value if exists, otherwise or_value.
 		 */
 		template<class Self>
 		[[nodiscard]]
@@ -255,7 +260,8 @@ namespace base {
 		}
 
 		/**
-		 * Like *ptr - returns an object stored underneath. Throws on no value.
+		 * Like *ptr - returns an object stored underneath.
+		 * @throws Throws on no value.
 		 * @return stored object
 		 */
 		template<class Self>
@@ -276,6 +282,11 @@ namespace base {
 			return std::forward<Self>(self).value();
 		}
 
+		/**
+		 * Get value or throw a given error.
+		 * @tparam Err error type to be thrown
+		 * @param args arguments passed to a constructor of the error type.
+		 */
 		template<class Err, class... Args, class Self>
 		[[nodiscard]]
 		constexpr qualifiedT<Self> expect(this Self&& self, Args&&... args) {
