@@ -33,6 +33,7 @@ public:
 		TESTER_ADD_TEST(ifOptSomeTest);
 		TESTER_ADD_TEST(testMatchErr);
 		TESTER_ADD_TEST(testExpect);
+		TESTER_ADD_TEST(testPreservingXValue);
 	}
 
 	template<typename X>
@@ -350,6 +351,12 @@ public:
 			(void) empty.expect<int>(42);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 42); }
+	}
+
+	void testPreservingXValue() {
+		ASSERT_TRUE((std::same_as<decltype(Optional<int>{5}.value()), int&&>));
+		const Optional<int> const_opt{5};
+		ASSERT_TRUE((std::same_as<decltype(std::move(const_opt).value()), const int&&>));
 	}
 };
 
