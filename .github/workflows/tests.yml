@@ -278,7 +278,9 @@ jobs:
 
       - name: Read main TODO count
         id: read-main-todo-count
-        run: echo value=${{ vars.MAIN_TODO_COUNT }} > $GITHUB_OUTPUT
+        # run: echo value=${{ vars.MAIN_TODO_COUNT }} > $GITHUB_OUTPUT
+        # @TODO: Remove this hardcoded value!!!
+        run: echo value=360 > $GITHUB_OUTPUT
 
       - name: Calculate TODO difference
         id: calc-todo-diff
