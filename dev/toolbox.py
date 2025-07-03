@@ -190,9 +190,10 @@ def setup_build(*args, **kwargs):
 def setup_venv_impl():
     if not pathlib.Path(".venv").exists():
         log_info("Creating venv...")
-        bash_command("python3 -m venv .venv")
+        bash_command(sys.executable + " -m venv .venv")
         log_info("Downloading venv dependencies...")
-        with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
+        venv_python = os.path.join(".venv", "bin", "python")
+        with_venv(venv_python + " -m pip install -r docs/doc-config/requirements.txt")
         log_info("Done creating venv.")
     else:
         log_info("Venv already exits. Skip.")
