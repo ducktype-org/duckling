@@ -1,4 +1,4 @@
-fun foo() = {
+public fun foo() = {
 	let a: T = 5;
 	defer a.close();
 
