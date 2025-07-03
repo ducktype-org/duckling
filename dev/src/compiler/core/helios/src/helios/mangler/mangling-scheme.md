@@ -195,7 +195,9 @@ either in the scheme or it's implementation, they should be reflected here.
                          | "cl"	                            // ()
                          | "ix"	                            // []
                          | "cv" <type>	                    // (cast)
-                         | "nm" <identifier> <type> <type>  // (named operator)
+                         | "nm" <identifier> <type> <type>  // (named binary operator)
+                         | "Nm" <identifier> <type>         // (named unary prefix operator)
+                         | "nM" <identifier> <type>         // (named unary postfix operator)
 
 <opt-metadata> ::= "" | <metadata>
 // there are no restrictions on <vendor-metadata>, any characters are allowed
