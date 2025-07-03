@@ -37,6 +37,7 @@
 
 #include <functional>
 #include <optional>
+#include <utility>
 
 /* Some cool macros.
  *
@@ -165,7 +166,7 @@ namespace base {
 	requires(!std::is_reference_v<T>) class Optional final {
 	protected:
 		template<class Self>
-		using qualifiedT = decltype(std::declval<Self>().value());
+		using qualifiedT = decltype(std::declval<Self>().private_optional.value());
 
 	public:
 		Optional()  = default;
@@ -230,10 +231,11 @@ namespace base {
 		 * Get value from base::Optional. Throw on no value.
 		 * @return Value that it holds.
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr auto&& value(this auto&& self) {
+		constexpr qualifiedT<Self> value(this Self&& self) {
 			self.throwOnNoValue();
-			return std::forward<decltype(self)>(self).private_optional.value();
+			return std::forward<Self>(self).private_optional.value();
 		}
 
 		/**
@@ -243,7 +245,7 @@ namespace base {
 		 */
 		template<class Self>
 		[[nodiscard]]
-		constexpr auto&& valueOr(this Self&& self, qualifiedT<Self> or_value) {
+		constexpr qualifiedT<Self> valueOr(this Self&& self, qualifiedT<Self> or_value) {
 			if (self.has_value()) return std::forward<Self>(self).value();
 			return std::forward_like<Self>(or_value);
 		}
@@ -252,9 +254,10 @@ namespace base {
 		 * Like *ptr - returns an object stored underneath. Throws on no value.
 		 * @return stored object
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr auto&& operator*(this auto&& self) {
-			return std::forward<decltype(self)>(self).value();
+		constexpr qualifiedT<Self> operator*(this Self&& self) {
+			return std::forward<Self>(self).value();
 		}
 
 		/**
@@ -262,29 +265,32 @@ namespace base {
 		 * @param message message to be passed to the panic
 		 * @return
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr auto&& expect(this auto&& self, std::string_view message) {
+		constexpr qualifiedT<Self> expect(this Self&& self, std::string_view message) {
 			if (!self.has_value()) CORE_PANIC(message);
-			return std::forward<decltype(self)>(self).value();
+			return std::forward<Self>(self).value();
 		}
 
-		template<class Err, class... Args>
+		template<class Err, class... Args, class Self>
 		[[nodiscard]]
-		constexpr auto&& expect(this auto&& self, Args&&... args) {
+		constexpr qualifiedT<Self> expect(this Self&& self, Args&&... args) {
 			if (!self.has_value()) throw Err(std::forward<Args>(args)...);
-			return std::forward<decltype(self)>(self).value();
+			return std::forward<Self>(self).value();
 		}
 
 		/**
 		 * An operator that allows a direct data access.
 		 * @return Object T to perform an operation on.
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr auto operator->(this auto&& self) {
+		constexpr auto operator->(this Self&& self) {
 			self.throwOnNoValue();
-			return self.private_optional.operator->();
+			return std::forward<Self>(self).private_optional.operator->();
 		}
 
+		// clang-format off
 		/**
 		 * Applies the passed function on the value and wraps in base::Optional if the object
 		 * contains a value, otherwise does nothing.
@@ -298,12 +304,12 @@ namespace base {
 		requires std::invocable<Function&&, qualifiedT<Self>>
 		constexpr auto map(this Self&& self, Function&& function)
 			-> Optional<std::invoke_result_t<Function, qualifiedT<Self>>> {
-			if (self.has_value())
-				return std::invoke(
-					std::forward<Function>(function), std::forward<Self>(self).value()
-				);
-			else
+			if (self.has_value()) {
+				return std::invoke(std::forward<Function>(function),
+								   std::forward<Self>(self).value());
+			} else {
 				return {};
+			}
 		}
 
 		/**
@@ -318,14 +324,17 @@ namespace base {
 		requires std::invocable<Function&&, qualifiedT<Self>>
 		constexpr auto flatMap(this Self&& self, Function&& function)
 			-> std::invoke_result_t<Function, qualifiedT<Self>> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function&&, qualifiedT<Self>>, Optional>);
-			if (self.has_value())
-				return std::invoke(
-					std::forward<Function>(function), std::forward<Self>(self).value()
-				);
-			else
+			using result_type = std::invoke_result_t<Function&&, qualifiedT<Self>>;
+			static_assert(IsOfSameClass<result_type, Optional>);
+			if (self.has_value()) {
+				return std::invoke(std::forward<Function>(function),
+								   std::forward<Self>(self).value());
+			} else {
 				return {};
+			}
 		}
+
+		// clang-format on
 
 	protected:
 		constexpr void throwOnNoValue() const {
