@@ -72,6 +72,7 @@ def setup_build_impl(
     gcov_version,
     ccache,
     coverage,
+    linker,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -96,6 +97,7 @@ def setup_build_impl(
             f"-D GCOV_VERSION={gcov_version}",
             f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
             f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
+            f"-D CMAKE_LINKER_TYPE={linker}",
         ]
     )
 
@@ -181,6 +183,12 @@ def setup_build_impl(
     prompt="GCOV version",
     help="GCOV version that will be passed to find_program in CMAKE",
     default="gcov-14",
+)
+@click.option(
+    "--linker",
+    prompt="linker",
+    help="Specify the linker type to use",
+    default="LLD",
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
