@@ -242,7 +242,7 @@ jobs:
         id: todo-counter
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          echo todo-count=$(python3 todo-counter -c -p TODO) > $GITHUB_OUTPUT
+          echo todo-count=$(python3 toolbox.py todo-counter -c -p TODO) > $GITHUB_OUTPUT
 
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
