@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This file lists repo's C++ source files. It's used in format_repo.sh, but also in toolbox's linters.
+# This file lists repo's C++ source files. It's used in format_repo_cpp.sh, but also in toolbox's linters.
 # Important to note: It lists files relative to `dev/` directory.
 
 # Go to dev/ directory
