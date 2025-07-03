@@ -54,7 +54,11 @@ namespace init {
 		 * Ensured that the function is only registered on InitObject construction.
 		 */
 		void initStateAtexitHandler() {
-			getInitState()->was_deinit = getInitState()->was_init = true;
+			getInitState()->was_deinit = true;
+			if (getInitState()->was_init != true) {
+				// this should only be called if InitObject was used.
+				std::terminate();
+			}
 			std::cerr << "WARNING: InitObject used but dtor not called due to std::exit call.";
 		}
 
