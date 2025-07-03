@@ -24,6 +24,7 @@ namespace pst {
 	class ExprElement;
 	// Statements
 	class Import;
+	class StmtSpecifier;
 	class Using;
 	class ExprStmt;
 	class Alias;
