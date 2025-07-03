@@ -227,27 +227,9 @@ namespace base {
 		 * @return Value that it holds.
 		 */
 		[[nodiscard]]
-		constexpr const T& value() const& {
-			throwOnNoValue();
-			return private_optional.value();
-		}
-
-		[[nodiscard]]
-		constexpr const T&& value() const&& {
-			throwOnNoValue();
-			return std::move(private_optional.value());
-		}
-
-		[[nodiscard]]
-		constexpr T& value() & {
-			throwOnNoValue();
-			return private_optional.value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& value() && {
-			throwOnNoValue();
-			return std::move(private_optional.value());
+		constexpr auto&& value(this auto&& self) {
+			self.throwOnNoValue();
+			return std::forward<decltype(self)>(self).private_optional.value();
 		}
 
 		/**
@@ -256,57 +238,21 @@ namespace base {
 		 * @return
 		 */
 		[[nodiscard]]
-		constexpr const T& valueOr(const T& or_value) const& {
-			if (has_value()) return value();
-			return or_value;
+		constexpr auto&& valueOr(
+			this auto&& self, decltype(std::forward<decltype(self)>(self).value()) or_value
+		) {  // TODO: make the type of or_value prettier.
+			if (self.has_value()) return std::forward<decltype(self)>(self).value();
+			return std::forward_like<decltype(self)>(or_value);
 		}
-
-		[[nodiscard]]
-		constexpr const T&& valueOr(const T&& or_value) const&& {
-			if (has_value()) return std::move(value());
-			return std::move(or_value);
-		}
-
-		[[nodiscard]]
-		constexpr T& valueOr(T& or_value) & {
-			if (has_value()) return value();
-			return or_value;
-		}
-
-		[[nodiscard]]
-		constexpr T&& valueOr(T&& or_value) && {
-			if (has_value()) return std::move(value());
-			return std::move(or_value);
-		}
-
-		// clang-format off
-		// Turning clang-format, because it cannot format the following functions correctly.
 
 		/**
 		 * Like *ptr - returns an object stored underneath. Throws on no value.
 		 * @return stored object
 		 */
 		[[nodiscard]]
-		constexpr const T& operator*() const& {
-			return value();
+		constexpr auto&& operator*(this auto&& self) {
+			return std::forward<decltype(self)>(self).value();
 		}
-
-		[[nodiscard]]
-		constexpr const T&& operator*() const&& {
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr T& operator*() & {
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& operator*() && {
-			return std::move(value());
-		}
-
-		// clang-format on
 
 		/**
 		 * Get value or CORE_PANIC with message.
@@ -314,55 +260,16 @@ namespace base {
 		 * @return
 		 */
 		[[nodiscard]]
-		constexpr const T& expect(std::string_view message) const& {
-			if (!has_value()) CORE_PANIC(message);
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr const T&& expect(std::string_view message) const&& {
-			if (!has_value()) CORE_PANIC(message);
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr T& expect(std::string_view message) & {
-			if (!has_value()) CORE_PANIC(message);
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& expect(std::string_view message) && {
-			if (!has_value()) CORE_PANIC(message);
-			return std::move(value());
+		constexpr auto&& expect(this auto&& self, std::string_view message) {
+			if (!self.has_value()) CORE_PANIC(message);
+			return std::forward<decltype(self)>(self).value();
 		}
 
 		template<class Err, class... Args>
 		[[nodiscard]]
-		constexpr const T& expect(Args&&... args) const& {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return value();
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr const T&& expect(Args&&... args) const&& {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return std::move(value());
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr T& expect(Args&&... args) & {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return value();
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr T&& expect(Args&&... args) && {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return std::move(value());
+		constexpr auto&& expect(this auto&& self, Args&&... args) {
+			if (!self.has_value()) throw Err(std::forward<Args>(args)...);
+			return std::forward<decltype(self)>(self).value();
 		}
 
 		/**
@@ -370,15 +277,9 @@ namespace base {
 		 * @return Object T to perform an operation on.
 		 */
 		[[nodiscard]]
-		constexpr const T* operator->() const {
-			throwOnNoValue();
-			return private_optional.operator->();
-		}
-
-		[[nodiscard]]
-		constexpr T* operator->() {
-			throwOnNoValue();
-			return private_optional.operator->();
+		constexpr auto operator->(this auto&& self) {
+			self.throwOnNoValue();
+			return self.private_optional.operator->();
 		}
 
 		/**
@@ -391,18 +292,10 @@ namespace base {
 		 * @return On value: Optional(function(value)), otherwise does
 		 * nothing.
 		 */
-		template<typename Function>
-		constexpr auto map(const Function& function) const
+		template<class Function>
+		constexpr auto map(this auto&& self, const Function& function)
 			-> Optional<std::invoke_result_t<Function, T>> {
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		// A non-const version.
-		template<typename Function>
-		constexpr auto map(const Function& function)
-			-> Optional<std::invoke_result_t<Function, T>> {
-			if (has_value()) return function(value());
+			if (self.has_value()) return function(self.value());
 			return {};
 		}
 
@@ -414,19 +307,11 @@ namespace base {
 		 * type has to match the optional's type (auto works too), and should return Optional<U>;
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
-		template<typename Function>
-		constexpr auto flatMap(const Function& function) const
+		template<class Function>
+		constexpr auto flatMap(this auto&& self, const Function& function)
 			-> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		// A non-const version.
-		template<typename Function>
-		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
-			if (has_value()) return function(value());
+			if (self.has_value()) return function(self.value());
 			return {};
 		}
 
