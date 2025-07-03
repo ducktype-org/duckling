@@ -107,53 +107,17 @@ void server(i32 port) {
 		try {
 			const auto  path    = base64::decode_into<std::string>(base64_path);
 			const auto  content = base64::decode_into<std::string>(base64_content);
-			
+			// TODO: ask for a path concat function in the VFS
 			if (vfs->createFile(root + path)) {
-				// new file
+				// New file
 				vfs->writeFile(root + path, content);
 			} else {
 				// Existing File
+				// This may look useless now, but when we get incremental compilation it will go into effect here
 				vfs->writeFile(root + path, content);
 			}
 			
-
-
-
-
-
-
-			
-			
-			
-			const auto& file    = fs::FilePath::createTempFile(content);
-			files.erase(path);
-			files.emplace(path, file);
 			return crow::response(200, "OK");
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
-	});
-
-	/**
-	 * @brief Route to generate LSP tree for a file under the given path in the virtual file system.
-	 * * URL: /get_lsptree/[base64 relative path]
-	 * @param base64_path The base64 encoded relative path of the file.
-	 * @return crow::response The HTTP response containing the LSP tree.
-	 */
-	CROW_ROUTE(app, "/get_lsptree/<string>")
-	([&files](const std::string& base64_path) {
-		try {
-			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto&       file   = files.at(path);
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
-			std::stringstream ss;
-
-			// @TODO: replace it with some other LSP generation
-			// pst.getLSP(ss);
-
-			return crow::response(200, ss.str());
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
 			return crow::response(400, error_msg);
@@ -168,12 +132,12 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response containing the diagnostics.
 	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
-	([&files](const std::string& base64_path) {
+	([vfs, root](const std::string& base64_path) {
 		try {
-			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto&       file   = files.at(path);
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
+			const auto path = base64::decode_into<std::string>(base64_path);
+			fs::FilePath file(root + path);
+			auto tokens = lexer::tokenizeFile(file);
+			pst::PST<> pst(std::move(tokens));
 			std::stringstream ss;
 			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
 			return crow::response(200, ss.str());
@@ -191,11 +155,11 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */
 	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
-	([&files](const std::string& base64_path) {
+	([vfs, root](const std::string& base64_path) {
 		try {
 			const auto  path   = base64::decode_into<std::string>(base64_path);
-			const auto& file   = files.at(path);
-			auto        tokens = lexer::tokenizeFile(file);
+			fs::FilePath file(root + path);
+        	auto tokens = lexer::tokenizeFile(file);
 			pst::PST<>  pst(std::move(tokens));
 
 			if (pst.getLogger()->bad()) {
@@ -219,12 +183,18 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response containing the definition range in JSON format.
 	 */
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
-	([&files](const std::string& base64_path, const uint& offset) {
+	([vfs, root](const std::string& base64_path, const uint& offset) {
 		try {
 			const auto  path   = base64::decode_into<std::string>(base64_path);
-			const auto& file   = files.at(path);
-			auto        tokens = lexer::tokenizeFile(file);
+			fs::FilePath file(root + path);
+        	auto tokens = lexer::tokenizeFile(file);
 			pst::PST<>  pst(std::move(tokens));
+
+			if (pst.getLogger()->bad()) {
+				std::stringstream ss;
+				pst.getLogger()->dumpLog(true, ss);
+				return crow::response(200, ss.str());
+			};
 
 			if (pst.getLogger()->bad()) {
 				std::stringstream ss;
