@@ -240,7 +240,7 @@ jobs:
 
       - name: Test TODO Count
         id: todo-counter
-        working-directory: ${{ env.WORKSPACE }}/dev
+        working-directory: ${{ env.WORKSPACE }}
         run: |
           echo todo-count=$(python3 todo-counter -c -p TODO) > $GITHUB_OUTPUT
 
