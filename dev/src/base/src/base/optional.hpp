@@ -163,6 +163,10 @@ namespace base {
 	 */
 	template<class T>
 	requires(!std::is_reference_v<T>) class Optional final {
+	protected:
+		template<class Self>
+		using qual_value_type = decltype(std::declval<Self>().value());
+
 	public:
 		Optional()  = default;
 		~Optional() = default;
@@ -237,12 +241,11 @@ namespace base {
 		 * @param or_value value to be returned if empty
 		 * @return
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr auto&& valueOr(
-			this auto&& self, decltype(std::forward<decltype(self)>(self).value()) or_value
-		) {  // TODO: make the type of or_value prettier.
-			if (self.has_value()) return std::forward<decltype(self)>(self).value();
-			return std::forward_like<decltype(self)>(or_value);
+		constexpr auto&& valueOr(this Self&& self, qual_value_type<Self> or_value) {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return std::forward_like<Self>(or_value);
 		}
 
 		/**
