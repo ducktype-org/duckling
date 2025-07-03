@@ -168,6 +168,10 @@ namespace base {
 		template<class Self>
 		using qualifiedT = decltype(std::declval<Self>().private_optional.value());
 
+		constexpr void throwOnNoValue() const {
+			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
+		}
+
 	public:
 		Optional()  = default;
 		~Optional() = default;
@@ -335,11 +339,6 @@ namespace base {
 		}
 
 		// clang-format on
-
-	protected:
-		constexpr void throwOnNoValue() const {
-			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
-		}
 
 	private:
 		std::optional<T> private_optional;
