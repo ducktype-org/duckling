@@ -165,7 +165,7 @@ namespace base {
 	requires(!std::is_reference_v<T>) class Optional final {
 	protected:
 		template<class Self>
-		using qual_value_type = decltype(std::declval<Self>().value());
+		using qualifiedT = decltype(std::declval<Self>().value());
 
 	public:
 		Optional()  = default;
@@ -243,7 +243,7 @@ namespace base {
 		 */
 		template<class Self>
 		[[nodiscard]]
-		constexpr auto&& valueOr(this Self&& self, qual_value_type<Self> or_value) {
+		constexpr auto&& valueOr(this Self&& self, qualifiedT<Self> or_value) {
 			if (self.has_value()) return std::forward<Self>(self).value();
 			return std::forward_like<Self>(or_value);
 		}
@@ -292,14 +292,18 @@ namespace base {
 		 * @param function Function to apply on the value. Function must take one argument which
 		 * type has to match the optional's type (auto works too). Function can return any type of
 		 * data.
-		 * @return On value: Optional(function(value)), otherwise does
-		 * nothing.
+		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
-		template<class Function>
-		constexpr auto map(this auto&& self, const Function& function)
-			-> Optional<std::invoke_result_t<Function, T>> {
-			if (self.has_value()) return function(self.value());
-			return {};
+		template<class Function, class Self>
+		requires std::invocable<Function&&, qualifiedT<Self>>
+		constexpr auto map(this Self&& self, Function&& function)
+			-> Optional<std::invoke_result_t<Function, qualifiedT<Self>>> {
+			if (self.has_value())
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
+			else
+				return {};
 		}
 
 		/**
@@ -310,12 +314,17 @@ namespace base {
 		 * type has to match the optional's type (auto works too), and should return Optional<U>;
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
-		template<class Function>
-		constexpr auto flatMap(this auto&& self, const Function& function)
-			-> std::invoke_result_t<Function, T> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
-			if (self.has_value()) return function(self.value());
-			return {};
+		template<class Function, class Self>
+		requires std::invocable<Function&&, qualifiedT<Self>>
+		constexpr auto flatMap(this Self&& self, Function&& function)
+			-> std::invoke_result_t<Function, qualifiedT<Self>> {
+			static_assert(IsOfSameClass<std::invoke_result_t<Function&&, qualifiedT<Self>>, Optional>);
+			if (self.has_value())
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
+			else
+				return {};
 		}
 
 	protected:
