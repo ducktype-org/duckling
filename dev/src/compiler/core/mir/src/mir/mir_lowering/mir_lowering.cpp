@@ -1035,8 +1035,12 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
-		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
-			throw base::NotYetImplemented("linked identifier expr");
+		void visitAccessExpr(const hc::AccessExpr&) override {
+			throw base::NotYetImplemented("access expr lowering");
+		}
+
+		void visitSequenceExpr(const hc::SequenceExpr&) override {
+			throw base::NotYetImplemented("sequence expr lowering");
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
