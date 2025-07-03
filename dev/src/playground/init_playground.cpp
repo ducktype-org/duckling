@@ -1,7 +1,8 @@
-#include <base/exceptions.hpp>
 #include <init/init.hpp>
 
-int main() { 
-    init::InitObject _;
-    std::exit(0);
+#include <base/exceptions.hpp>
+
+int main() {
+	init::InitObject _;
+	// std::exit(0);
 }

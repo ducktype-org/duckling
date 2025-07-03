@@ -3,8 +3,8 @@
 #include <base/exceptions.hpp>
 #include <base/ref.hpp>
 
-#include <iostream>
 #include <cstdlib>
+#include <iostream>
 
 namespace init {
 	namespace {
