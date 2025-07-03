@@ -284,7 +284,7 @@ jobs:
 
       - name: Calculate TODO difference
         id: calc-todo-diff
-        run: "echo value=$((${{ steps.read-main-todo-count.outputs.value }} - ${{ needs.build.outputs.todo-count }})) > $GITHUB_OUTPUT"
+        run: "echo value=$((${{ needs.build.outputs.todo-count }} - ${{ steps.read-main-todo-count.outputs.value }})) > $GITHUB_OUTPUT"
 
       - name: Calculate TODO negated
         id: calc-todo-diff-neg
@@ -323,9 +323,7 @@ jobs:
                      ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
                      ${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
                      ${{ steps.calc-todo-diff.outputs.value != 0 && '\n\n' || '' }}\
-                     ${{ steps.calc-todo-diff.outputs.value < 0 && env.TODO_FAIL_MSG || '' }}\
-                     ${{ steps.calc-todo-diff.outputs.value == 1 && env.TODO_SINGLE_GOOD_MSG || '' }}\
-                     ${{ steps.calc-todo-diff.outputs.value > 1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }}\
+                     ${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }}\
                      '
             })
 
