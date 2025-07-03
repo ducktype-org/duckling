@@ -58,10 +58,10 @@ namespace compiler::helios::code {
 	 * - namespace-like state, for example after processing "foo().Namespace"
 	 * - expression state, for example after processing "foo().bar[20]"
 	 *
-	 * Its stored the state of chain expression creation that does not include
+	 * Its stores the state of chain expression creation that does not include
 	 * all previously cut-off expressions.
 	 */
-	struct ChainState {
+	struct ChainState final {
 		[[nodiscard]] bool isNamespaceLike() const { return namespace_like_symbol.has_value(); }
 
 		[[nodiscard]] bool isExpr() const { return expr.toOpt().has_value(); }
@@ -123,9 +123,16 @@ namespace compiler::helios::code {
 	 * before the "call element" there is no "access element" and after the "access element"
 	 * there is no "call element".
 	 *
+	 * @p processPSTExpr - can append to result_sequence and return a new processing state
+	 * @p step - based on the current state calls proper overload of @p processPSTExpr and
+	 * saves the returned state in the @p current_state object member
+	 * @p firstStep - same as before, but only for the first element in the chain (when state is
+	 * empty)
+	 * @p run - main function that loops over pst elements and calls @p step or @p firstStep
+	 *
 	 * @note It can also return a identifier expression with a namespace, since "(NS.NS2).a" is a
 	 * thing in our compiler (namespace is a valid type that can be for example passed to a
-	 * template)..
+	 * template).
 	 */
 	class ChainExprConstruction {
 		query::Context& query_ctx;
@@ -212,7 +219,6 @@ namespace compiler::helios::code {
 			auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
 
-			if (lookup_result->isEmpty()) return query::QError(errors::Failed());
 			return processFunctionCall(lookup_result, ident->getName(), call_expr);
 		}
 
@@ -379,7 +385,14 @@ namespace compiler::helios::code {
 			const tpc::Identifier&       name,
 			pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState, errors::Failed> {
-			if (lookup_result->isEmpty()) return query::QError(errors::Failed());
+			if (lookup_result->isEmpty()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+						name.position, base::strConcat("Function '", name.value, "' not found")
+					)
+				);
+				return query::QError(errors::Failed());
+			}
 			// @TODO: make it better #981:
 			auto callee = lookup_result->getAsSingle().value().back();
 
@@ -405,7 +418,7 @@ namespace compiler::helios::code {
 			}
 
 			std::vector<base::Box<Expr>> coerced_arguments;
-			for (size_t i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
 				auto coerced = coerceExpression(
 					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
 				);
@@ -465,7 +478,7 @@ namespace compiler::helios::code {
 					auto namespace_like_symbol = this->current_state.getNamespaceLikeSymbol();
 					return processPSTExpr(namespace_like_symbol, current_element_value);
 				}
-				return query::QError(errors::Failed());
+				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
 			if (res.hasError()) return res.error();
 			this->current_state = std::move(res.value());
@@ -492,7 +505,7 @@ namespace compiler::helios::code {
                         namespace_like_symbol, current_element_value, next_element_value
                     );
                 }
-                return query::QError(errors::Failed());
+                CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
 			if (res.hasError()) return res.error();
 			this->current_state = std::move(res.value());
@@ -505,6 +518,9 @@ namespace compiler::helios::code {
 		 */
 		template<typename T>
 		base::Optional<errors::Failed> firstStep() {
+			CORE_ASSERT(
+				this->current_state.isEmpty(), "Chain state should be empty when firstStep is called"
+			);
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
 			auto res = processPSTExpr(current_element_value);
@@ -519,6 +535,9 @@ namespace compiler::helios::code {
 		 */
 		template<typename T1, typename T2>
 		base::Optional<errors::Failed> firstStep() {
+			CORE_ASSERT(
+				this->current_state.isEmpty(), "Chain state should be empty when firstStep is called"
+			);
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
 			auto res                   = processPSTExpr(current_element_value, next_element_value);
@@ -554,12 +573,16 @@ namespace compiler::helios::code {
 			while (not error.has_value() && this->index < chain_elements.size()) {
 				if (isCurrentElement<pst::expr::Access>() && isNextElement<pst::expr::Call>()) {
 					error = step<pst::expr::Access, pst::expr::Call>();
-					this->index++;  // skip next element, because it is handled
-				} else if (isCurrentElement<pst::expr::Access>())
+					this->index += 2;  // skip next element, because it is handled
+				} else if (isCurrentElement<pst::expr::Access>()) {
 					error = step<pst::expr::Access>();
+					this->index++;
+				}
 
-				else if (isCurrentElement<pst::expr::Call>())
+				else if (isCurrentElement<pst::expr::Call>()) {
 					error = step<pst::expr::Call>();
+					this->index++;
+				}
 
 				else {
 					query_ctx.log(
@@ -570,7 +593,6 @@ namespace compiler::helios::code {
 					);
 					return query::QError(errors::Failed());
 				}
-				this->index++;
 			}
 			if (error.has_value()) return query::QError(error.value());
 			if (this->current_state.isExpr())
