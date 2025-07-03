@@ -448,7 +448,17 @@ def download_llvm(*args, **kwargs):
     download_llvm_impl(*args, **kwargs)
 
 
-def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_tool, targets, source_dir_path, use_old_build):
+def install_llvm_impl(
+    version,
+    ram_gb,
+    c_compiler,
+    cxx_compiler,
+    linker,
+    build_tool,
+    targets,
+    source_dir_path,
+    use_old_build,
+):
     log_info("==========================")
     log_info("Building LLVM from source. This will take significant time!")
     log_info(
@@ -569,14 +579,14 @@ def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_t
     prompt="C++ compiler path",
     help="A path to the C++ compiler to compile with",
     default="default",
-    type=str
+    type=str,
 )
 @click.option(
     "--c-compiler",
     prompt="C compiler path",
     help="A path to the C compiler to compile with",
     default="default",
-    type=str
+    type=str,
 )
 @click.option(
     "-l",
@@ -617,7 +627,7 @@ def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_t
     prompt="Use old build directory",
     help="Whether or not to use the old build directory",
     default=False,
-    type=bool
+    type=bool,
 )
 def install_llvm(*args, **kwargs):
     """Compiles LLVM from source with specified options.
@@ -877,7 +887,9 @@ def issue_checker(issues, branch, no_merge_base):
     You must be authenticated with 'gh' for this to work.
     """
     if not issue_checker_impl(issues, branch, no_merge_base):
-        exit_with_error("Issue checker found issues numbers related to this pull request in the code")
+        exit_with_error(
+            "Issue checker found issues numbers related to this pull request in the code"
+        )
 
 
 if __name__ == "__main__":
