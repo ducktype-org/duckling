@@ -4,5 +4,8 @@
 
 int main() {
 	init::InitObject _;
-	// std::exit(0);
+	return 0;
+	/**
+	 * Linter fails on exit(0) because it's not thread-safe.
+	 */
 }
