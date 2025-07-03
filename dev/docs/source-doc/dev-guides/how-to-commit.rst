@@ -31,7 +31,7 @@ To do that you can use our bash script. From the `dev` directory run:
 
 .. code-block:: bash
 
-    ./scripts/formatting/format_repo.sh
+    ./scripts/formatting/format_repo_cpp.sh
 
 
 Create pull request

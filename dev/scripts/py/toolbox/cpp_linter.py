@@ -27,7 +27,7 @@ def get_unstaged_new_files() -> bool:
 
 
 def get_repo_cpp_files():
-    ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
+    ls_out = bash_command_get_output("./scripts/list_cpp_files.sh | xargs wc -l")[0]
     file_lengths = [line.split() for line in ls_out.splitlines()][:-1]
 
     files = {}
@@ -219,7 +219,7 @@ def simulate_cpp_linter(
         log_new_line()
         to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
         if to_format.lower() in ["y", ""]:
-            bash_command(f"./scripts/formatting/format_repo.sh {clang_format_path}")
+            bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
             clang_format_failed = False
 
     return clang_tidy_failed, clang_format_failed
