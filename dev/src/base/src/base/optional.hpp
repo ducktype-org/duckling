@@ -316,7 +316,6 @@ namespace base {
 			return std::forward<Self>(self).private_optional.operator->();
 		}
 
-		// clang-format off
 		/**
 		 * Applies the passed function on the value and wraps in base::Optional if the object
 		 * contains a value, otherwise does nothing.
@@ -328,11 +327,12 @@ namespace base {
 		 */
 		template<class Function, class Self>
 		requires std::invocable<Function&&, qualifiedT<Self>>
-		constexpr auto map(this Self&& self, Function&& function)
+		constexpr auto map(this Self&& self, Function&& function) noexcept
 			-> Optional<std::invoke_result_t<Function, qualifiedT<Self>>> {
 			if (self.has_value()) {
-				return std::invoke(std::forward<Function>(function),
-								   std::forward<Self>(self).value());
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
 			} else {
 				return {};
 			}
@@ -348,19 +348,18 @@ namespace base {
 		 */
 		template<class Function, class Self>
 		requires std::invocable<Function&&, qualifiedT<Self>>
-		constexpr auto flatMap(this Self&& self, Function&& function)
+		constexpr auto flatMap(this Self&& self, Function&& function) noexcept
 			-> std::invoke_result_t<Function, qualifiedT<Self>> {
 			using result_type = std::invoke_result_t<Function&&, qualifiedT<Self>>;
 			static_assert(IsOfSameClass<result_type, Optional>);
 			if (self.has_value()) {
-				return std::invoke(std::forward<Function>(function),
-								   std::forward<Self>(self).value());
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
 			} else {
 				return {};
 			}
 		}
-
-		// clang-format on
 
 	private:
 		std::optional<T> private_optional;
