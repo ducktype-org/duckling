@@ -1,9 +1,9 @@
 #pragma once
 
-#include "context.hpp"                         // IWYU pragma: export
-#include "detail/context_access.hpp"           // IWYU pragma: export
-#include "detail/query_data/query_id.hpp"      // IWYU pragma: export
-#include "detail/query_graph/node_making.hpp"  // IWYU pragma: export
+#include "context.hpp"                           // IWYU pragma: export
+#include "internal/context_access.hpp"           // IWYU pragma: export
+#include "internal/query_data/query_id.hpp"      // IWYU pragma: export
+#include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
 
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                            \
 	auto query_type::internal_query(query_type::QKey key, ::query::internal::NodeID from) \

@@ -283,7 +283,7 @@ namespace compiler::helios::mangler {
 			return "$" + metadata.value();
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {

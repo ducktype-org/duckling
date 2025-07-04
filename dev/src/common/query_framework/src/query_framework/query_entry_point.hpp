@@ -6,9 +6,9 @@
 #pragma once
 
 #include "context.hpp"
-#include "detail/query_data/query_id.hpp"
-#include "detail/query_graph/node_making.hpp"
 #include "empty_key.hpp"
+#include "internal/query_data/query_id.hpp"
+#include "internal/query_graph/node_making.hpp"
 
 #include <base/exceptions.hpp>
 

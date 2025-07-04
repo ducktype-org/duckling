@@ -5,10 +5,10 @@
 #pragma once
 
 #include "context.hpp"
-#include "detail/acd.hpp"
-#include "detail/context_access.hpp"
-#include "detail/query_graph/node_making.hpp"
-#include "detail/utils/logs.hpp"
+#include "internal/acd.hpp"
+#include "internal/context_access.hpp"
+#include "internal/query_graph/node_making.hpp"
+#include "internal/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_hash.hpp"
 #include "query_int.hpp"

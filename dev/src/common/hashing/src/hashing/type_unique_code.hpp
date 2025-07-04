@@ -34,7 +34,7 @@ namespace hashing {
 			return TypeCode<I, true>{ id };
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * Returns a unique hash code of a given length for the type

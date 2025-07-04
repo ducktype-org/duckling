@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include <query_framework/detail/query_data/query_id.hpp>  // IWYU pragma: export
+#include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 
 #include <base/bit256.hpp>
 

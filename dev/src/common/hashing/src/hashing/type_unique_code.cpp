@@ -14,4 +14,4 @@ namespace hashing::internal {
 	}
 
 
-}  // namespace hashing::detail
+}  // namespace hashing::internal

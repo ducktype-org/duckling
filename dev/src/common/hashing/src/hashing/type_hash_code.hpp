@@ -67,7 +67,7 @@ namespace hashing {
 			return static_cast<TypeCode<I, false>>(uniqueString<T, I, HashAlgorithm>());
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * Returns a hash code of a given length for the type

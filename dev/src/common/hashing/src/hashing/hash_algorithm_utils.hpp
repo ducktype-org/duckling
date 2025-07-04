@@ -49,7 +49,7 @@ namespace hashing {
 		   && requires { typename T::result_type; }
 		   && invocable_with_byte_span<T> && has_finalize<T>;
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * Checks if the type is a hash algorithm
@@ -187,7 +187,7 @@ namespace hashing {
 				 /* don't change to std::tuple_size_v */ std::tuple_size<T>::value>{});
 		};
 
-	}  // namespace detail
+	}  // namespace internal
 
 
 }  // namespace hashing

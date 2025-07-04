@@ -78,7 +78,7 @@ namespace hashing {
 				addToHash(h, TYPE_HASH_CODE<T>);
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * @brief Callable type that obtains a hash for an object it is called with

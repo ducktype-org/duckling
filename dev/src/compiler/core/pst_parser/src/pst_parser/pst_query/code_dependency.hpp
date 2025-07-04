@@ -3,7 +3,7 @@
 #include <diagnostic/source_position.hpp>
 #include <lexer/token.hpp>
 #include <query_framework/context.hpp>
-#include <query_framework/detail/query_graph/query_graph.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 
 namespace pst {
 	/**

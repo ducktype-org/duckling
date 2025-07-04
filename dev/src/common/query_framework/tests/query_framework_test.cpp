@@ -1,5 +1,5 @@
-#include <query_framework/detail/query_graph/node_id.hpp>
-#include <query_framework/detail/query_graph/query_graph.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>

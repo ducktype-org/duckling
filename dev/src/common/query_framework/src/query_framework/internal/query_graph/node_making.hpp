@@ -7,7 +7,7 @@
 #include "../../query_hash.hpp"
 #include "node_id.hpp"
 
-#include <query_framework/detail/query_data/query_id.hpp>
+#include <query_framework/internal/query_data/query_id.hpp>
 
 #include <base/bit256.hpp>
 

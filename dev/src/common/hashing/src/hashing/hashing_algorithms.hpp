@@ -50,7 +50,7 @@ namespace hashing {
 			static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
 		};
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * FNV-1a hash algorithm, fast and simple with reasonably good distribution,
