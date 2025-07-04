@@ -10,7 +10,7 @@ namespace pst {
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
 
 	// These are needed to not include parser state definition
-	namespace detail {
+	namespace internal {
 		dia::SourcePosition getPosition(LangParserState& state);
 		void parseExprIntoHolder(LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun);
 		bool isSentinel(LangParserState& state, i64 fwd);

@@ -9,7 +9,7 @@ namespace pst {
 	 *
 	 * @note It's probably going to be deprecated
 	 */
-	class InitList final: public List<UniversalExprHolder, detail::NameGetters::classInitList> {
+	class InitList final: public List<UniversalExprHolder, internal::NameGetters::classInitList> {
 	public:
 		explicit InitList(const dia::SourcePosition& pos): List(pos) {}
 

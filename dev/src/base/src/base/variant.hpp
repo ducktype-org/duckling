@@ -46,7 +46,7 @@
 #include <type_traits>
 #include <variant>
 
-namespace base::detail {
+namespace base::internal {
 	template<typename... T>
 	struct VisitOverloaded final: T... {
 		using T::operator()...;
@@ -104,15 +104,15 @@ namespace base::detail {
 
 #define variant_case(type, name)                                                                   \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                               \
-	case (::base::detail::alternative_index<decltype(internal_value), type>()):                    \
+	case (::base::internal::alternative_index<decltype(internal_value), type>()):                  \
 		if (bool variant_case_stop = true)                                                         \
 			for ([[maybe_unused]] auto&& name = std::get<type>(internal_value); variant_case_stop; \
 			     variant_case_stop            = false)                                             \
 		POP_DIAGNOSTIC
 
-#define variant_case_novalue(type)                                              \
-	break;                                                                      \
-	case (::base::detail::alternative_index<decltype(internal_value), type>()): \
+#define variant_case_novalue(type)                                                \
+	break;                                                                        \
+	case (::base::internal::alternative_index<decltype(internal_value), type>()): \
 		if (true)
 
 #define variant_default \
@@ -124,7 +124,7 @@ namespace base::detail {
  * @brief Use instead of `std::visit` with multiple choices.
  */
 #define VARIANT_VISIT(value, code) \
-	{ std::visit(::base::detail::VisitOverloaded{ code }, (value)); }
+	{ std::visit(::base::internal::VisitOverloaded{ code }, (value)); }
 
 #define VISIT_CASE(type, name, code) [&](type name) { code; },
 
