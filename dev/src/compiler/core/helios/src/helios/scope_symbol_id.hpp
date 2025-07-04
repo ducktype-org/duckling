@@ -10,7 +10,7 @@
 
 namespace compiler::helios {
 	// Forward:
-	// @TODO: put in detail namespace
+	// @TODO: put in internal namespace
 	struct SymbolData;
 	struct ScopeData;
 

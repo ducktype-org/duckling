@@ -31,7 +31,7 @@
 #include <type_traits>
 
 namespace base {
-	namespace detail {
+	namespace internal {
 		template<class, class>
 		struct IsOfSameClassImpl: public std::false_type {};
 
@@ -80,7 +80,7 @@ namespace base {
 	 * @n static_assert(IsOfSameClass<A<int>, B<int>>);  // fails
 	 */
 	template<class TypeA, class TypeB>
-	concept IsOfSameClass = detail::IsOfSameClassImpl<TypeA, TypeB>::value;
+	concept IsOfSameClass = internal::IsOfSameClassImpl<TypeA, TypeB>::value;
 
 	/**
 	 * @brief Checks if A implies B.

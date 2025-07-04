@@ -38,7 +38,7 @@ namespace compiler::helios::mangler {
 		return result;
 	}
 
-	namespace detail {
+	namespace internal {
 
 		enum class ManglingKind {
 			NoMangling,        //< No mangling is performed, e.g. for built-in symbols
@@ -283,7 +283,7 @@ namespace compiler::helios::mangler {
 			return "$" + metadata.value();
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -293,20 +293,20 @@ namespace compiler::helios::mangler {
 
 			using namespace std::literals::string_view_literals;
 
-			auto mangling_kind = detail::manglingKind(key.symbol);
+			auto mangling_kind = internal::manglingKind(key.symbol);
 
 			switch (mangling_kind) {
-			case detail::ManglingKind::NoMangling:
+			case internal::ManglingKind::NoMangling:
 				return compiler::helios::name(key.symbol);
-			case detail::ManglingKind::StandardMangling: {
+			case internal::ManglingKind::StandardMangling: {
 				// note: global identifiers starting with underscore and a capital letter are
 				// reserved in C Q seems to be free and stands for both query and quack
 				constexpr auto language_prefix = "_Q"sv;
 
 				const auto mangling_scheme_version
-					= detail::compactNumber(key.mangling_scheme_version);
-				std::string encoding = detail::symbolEncoding(ctx, key.symbol);
-				std::string metadata = detail::optMetadata(key.additional_metadata);
+					= internal::compactNumber(key.mangling_scheme_version);
+				std::string encoding = internal::symbolEncoding(ctx, key.symbol);
+				std::string metadata = internal::optMetadata(key.additional_metadata);
 
 				std::string mangled_name
 					= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
