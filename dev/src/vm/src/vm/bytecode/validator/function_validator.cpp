@@ -607,6 +607,70 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
+			variant_case_novalue(Op_umov_l8_imm) {}
+			variant_case_novalue(Op_umov_l8_l8) {}
+			variant_case_novalue(Op_cumov_l8_l8) {}
+			variant_case_novalue(Op_umov_l16_imm) {}
+			variant_case_novalue(Op_umov_l16_l16) {}
+			variant_case_novalue(Op_cumov_l16_l16) {}
+			variant_case_novalue(Op_umov_l32_imm) {}
+			variant_case_novalue(Op_umov_l32_l32) {}
+			variant_case_novalue(Op_cumov_l32_l32) {}
+			variant_case_novalue(Op_umov_l64_imm) {}
+			variant_case_novalue(Op_umov_l64_l64) {}
+			variant_case_novalue(Op_cumov_l64_l64) {}
+			variant_case_novalue(Op_umov_l64_r0) {}
+			variant_case_novalue(Op_umov_r0_l64) {}
+			variant_case_novalue(Op_umov_g64_g64) {}
+			variant_case_novalue(Op_umov_g64_l64) {}
+			variant_case_novalue(Op_umov_g64_imm) {}
+			variant_case_novalue(Op_umov_g32_g32) {}
+			variant_case_novalue(Op_umov_g32_l32) {}
+			variant_case_novalue(Op_umov_g32_imm) {}
+			variant_case_novalue(Op_umov_g16_g16) {}
+			variant_case_novalue(Op_umov_g16_l16) {}
+			variant_case_novalue(Op_umov_g16_imm) {}
+			variant_case_novalue(Op_umov_g8_g8) {}
+			variant_case_novalue(Op_umov_g8_l8) {}
+			variant_case_novalue(Op_umov_g8_imm) {}
+			variant_case_novalue(Op_umov_l64_g64) {}
+			variant_case_novalue(Op_umov_l32_g32) {}
+			variant_case_novalue(Op_umov_l16_g16) {}
+			variant_case_novalue(Op_umov_l8_g8) {}
+			variant_case_novalue(Op_uadd_l64_l64) {}
+			variant_case_novalue(Op_uadd_l64_imm) {}
+			variant_case_novalue(Op_uadd_l32_l32) {}
+			variant_case_novalue(Op_uadd_l32_imm) {}
+			variant_case_novalue(Op_usub_l64_l64) {}
+			variant_case_novalue(Op_usub_l64_imm) {}
+			variant_case_novalue(Op_usub_l32_l32) {}
+			variant_case_novalue(Op_usub_l32_imm) {}
+			variant_case_novalue(Op_umul_l64_l64) {}
+			variant_case_novalue(Op_umul_l64_imm) {}
+			variant_case_novalue(Op_umul_l32_l32) {}
+			variant_case_novalue(Op_umul_l32_imm) {}
+			variant_case_novalue(Op_umod_l64_l64) {}
+			variant_case_novalue(Op_umod_l64_imm) {}
+			variant_case_novalue(Op_umod_l32_l32) {}
+			variant_case_novalue(Op_umod_l32_imm) {}
+			variant_case_novalue(Op_udiv_l64_l64) {}
+			variant_case_novalue(Op_udiv_l64_imm) {}
+			variant_case_novalue(Op_udiv_l32_l32) {}
+			variant_case_novalue(Op_udiv_l32_imm) {}
+			variant_case_novalue(Op_ucmpEq_l64_l64) {}
+			variant_case_novalue(Op_ucmpEq_l64_imm) {}
+			variant_case_novalue(Op_ucmpG_l64_l64) {}
+			variant_case_novalue(Op_ucmpG_l64_imm) {}
+			variant_case_novalue(Op_ucmpEq_l32_l32) {}
+			variant_case_novalue(Op_ucmpEq_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l32_l32) {}
+			variant_case_novalue(Op_ucmpG_l32_imm) {}
+			variant_case_novalue(Op_ucmpEq_l8_l8) {}
+			variant_case_novalue(Op_ucmpEq_l8_imm) {}
+			variant_case_novalue(Op_ucmpG_l8_l8) {}
+			variant_case_novalue(Op_ucmpG_l8_imm) {}
+
+
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type
 					= std::get<VariantType>(*current_stack.at(instr.arg0.var_name));

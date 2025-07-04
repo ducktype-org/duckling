@@ -125,6 +125,60 @@ namespace vm {
 	DEFINE_MOVE_OPS(16, i16)
 	DEFINE_MOVE_OPS(8, std::int8_t)
 
+#define DEFINE_UMOVE_OPS(BITS_SIZE, TYPE)                                                 \
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }  \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = static_cast<TYPE>(instr->arg1); }             \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				= derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); }            \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = derefStack<TYPE>(local_stack, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cumov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {   \
+		{                                                                                 \
+			if (frame->flags.flag)                                                        \
+				derefStack<TYPE>(local_stack, instr->arg0)                                \
+					= derefStack<TYPE>(local_stack, instr->arg1);                         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}
+
+	DEFINE_UMOVE_OPS(64, u64)
+	DEFINE_UMOVE_OPS(32, u32)
+	DEFINE_UMOVE_OPS(16, u16)
+	DEFINE_UMOVE_OPS(8, std::uint8_t)
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_l64_r0)(FUNCTION_ARGS) {
+		{ derefStack<u64>(local_stack, instr->arg0) = static_cast<u64>(frame->regs.p64_reg_0); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(umov_r0_l64)(FUNCTION_ARGS) {
+		{ frame->regs.p64_reg_0 = static_cast<i64>(derefStack<i64>(local_stack, instr->arg0)); }
+		FUNCTION_CONT(1);
+	}
+
+	// DELIMITER
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
 		{ derefStack<i64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
 		FUNCTION_CONT(1);
@@ -145,17 +199,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{ derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; }                   \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                   \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {  \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+		{ derefStack<TYPE>(local_stack, instr->arg0) OP static_cast<TYPE>(instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
 	}
 
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
@@ -168,6 +222,18 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
 	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
 	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
+
+	DEFINE_ARITHMETIC_OP(uadd, 64, u64, +=)
+	DEFINE_ARITHMETIC_OP(uadd, 32, u32, +=)
+	DEFINE_ARITHMETIC_OP(usub, 64, u64, -=)
+	DEFINE_ARITHMETIC_OP(usub, 32, u32, -=)
+	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
+	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
+	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
+	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
+	DEFINE_ARITHMETIC_OP(udiv, 64, u64, /=)
+	DEFINE_ARITHMETIC_OP(udiv, 32, u32, /=)
+
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                         \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {        \
@@ -191,6 +257,13 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
+
+	DEFINE_COMPARISON_OP(ucmpEq, 64, u64, ==)
+	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
+	DEFINE_COMPARISON_OP(ucmpEq, 32, u32, ==)
+	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
+	DEFINE_COMPARISON_OP(ucmpEq, 8, std::uint8_t, ==)
+	DEFINE_COMPARISON_OP(ucmpG, 8, std::uint8_t, >)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
