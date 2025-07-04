@@ -7,7 +7,7 @@ namespace pst {
 	/**
 	 * @brief Function declaration parameter list.
 	 */
-	class ParamList final: public List<FunParam, detail::NameGetters::parameterList> {
+	class ParamList final: public List<FunParam, internal::NameGetters::parameterList> {
 	public:
 		explicit ParamList(const dia::SourcePosition& pos): List(pos) {
 			this->element_kind = ElementKind::ParamList;

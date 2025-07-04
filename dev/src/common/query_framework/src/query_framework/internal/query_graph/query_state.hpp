@@ -6,7 +6,7 @@
 #include <base/maps.hpp>
 #include <base/ref.hpp>
 
-namespace query::detail {
+namespace query::internal {
 	class QueryState {
 		/**
 		 * @brief Color of a node in the graph that is used for cycle detection.
@@ -79,11 +79,11 @@ namespace query::detail {
 		 * @note @p called_by is used only for cycle recovery, addDependency has to be always called
 		 * explicitly.
 		 */
-		void setEntry(detail::NodeID node, detail::NodeID called_by);
+		void setEntry(internal::NodeID node, internal::NodeID called_by);
 
 		/**
 		 * @brief Marks exit of a query calculation.
 		 */
-		void setExit(detail::NodeID node);
+		void setExit(internal::NodeID node);
 	};
 }
