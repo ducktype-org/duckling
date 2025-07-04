@@ -7,7 +7,7 @@
 #include <ostream>
 #include <vector>
 
-namespace query::detail {
+namespace query::internal {
 
 	class QueryState;
 
@@ -37,19 +37,20 @@ namespace query::detail {
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
 		 */
-		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
+		DependencyStatus addDependency(internal::NodeID from, internal::NodeID to);
 
 		/**
 		 * Returns all dependencies of a @p node_id.
 		 */
 		[[nodiscard]]
-		std::vector<NodeID> getNodeDeps(detail::NodeID node_id) const;
+		std::vector<NodeID> getNodeDeps(internal::NodeID node_id) const;
 
 		/**
 		 * Returns all dependencies of a @p node_id of type @p dependency_id.
 		 */
 		[[nodiscard]]
-		std::vector<NodeID> getNodeDepsFiltered(detail::NodeID node_id, QueryID dependency_id) const;
+		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
+			const;
 
 		void debugPrint(std::ostream& out) const;
 		void debugPrintForDrawing(std::ostream& out) const;
@@ -59,7 +60,7 @@ namespace query::detail {
 		 */
 		template<class Query>
 		auto getNodeDeps(typename Query::QKey key) const {
-			detail::NodeID node_id = makeNodeID(Query::getID(), key);
+			internal::NodeID node_id = makeNodeID(Query::getID(), key);
 			return this->getNodeDeps(node_id);
 		}
 
@@ -67,8 +68,8 @@ namespace query::detail {
 		 * @brief Returns all dependencies arising from @p dependency_id of a given query call.
 		 */
 		template<class Query>
-		auto getNodeDepsFiltered(typename Query::QKey key, detail::QueryID dependency_id) const {
-			detail::NodeID node_id = makeNodeID(Query::getID(), key);
+		auto getNodeDepsFiltered(typename Query::QKey key, internal::QueryID dependency_id) const {
+			internal::NodeID node_id = makeNodeID(Query::getID(), key);
 			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
 

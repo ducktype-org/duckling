@@ -4,13 +4,13 @@
  */
 #pragma once
 
-#include <query_framework/detail/query_data/query_id.hpp>  // IWYU pragma: export
+#include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 
 #include <base/bit256.hpp>
 
 #include <functional>
 
-namespace query::detail {
+namespace query::internal {
 
 	/**
 	 * @brief Type representing hash value for all key-types.
@@ -39,8 +39,8 @@ namespace query::detail {
 }
 
 template<>
-struct std::hash<query::detail::NodeID> final {
-	std::size_t operator()(const query::detail::NodeID& key) const {
+struct std::hash<query::internal::NodeID> final {
+	std::size_t operator()(const query::internal::NodeID& key) const {
 		auto l = key.q_id;
 		auto r = key.hash.val;
 

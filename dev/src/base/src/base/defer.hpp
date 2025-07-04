@@ -16,7 +16,7 @@
 
 #include <utility>
 
-namespace detail {
+namespace internal {
 	template<typename ActionT>
 	class DeferHelper final {
 		ActionT action;
@@ -45,7 +45,7 @@ namespace detail {
  */
 #define defer(code)                                                         \
 	PUSH_DIAGNOSTIC _Pragma("GCC diagnostic ignored \"-Wc++26-extensions\"" \
-	)::detail::DeferHelper _{ [&]() noexcept -> void { code; } };           \
+	)::internal::DeferHelper _{ [&]() noexcept -> void { code; } };         \
 	POP_DIAGNOSTIC
 #if __cplusplus >= 202'600L
 	#warning "Remove the pragmas above when upgrading to C++26"

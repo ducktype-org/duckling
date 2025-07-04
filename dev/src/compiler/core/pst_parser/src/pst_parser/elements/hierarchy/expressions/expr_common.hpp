@@ -29,7 +29,7 @@ namespace pst {
 		template<std::derived_from<ExprElement> T, StateCondition until>
 		MBox<ExprElement> parseUntil(LangParserState& state) {
 			i64 length = 0;
-			while (!detail::isSentinel(state, length) && !until(state, length)) length++;
+			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
 			return T::parse(state, length);
 		}
 	}

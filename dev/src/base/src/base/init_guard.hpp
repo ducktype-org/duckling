@@ -8,7 +8,7 @@
 
 #include "exceptions.hpp"
 
-namespace base::detail {
+namespace base::internal {
 	enum class InitState : unsigned char {
 		NotInitialized,
 		Initializing,
@@ -25,18 +25,18 @@ namespace base::detail {
  * @important This macro should always be used at the beginning of the function,
  * and SIMPLE_INIT_GUARD_END should be used at the end.
  */
-#define SIMPLE_INIT_GUARD_BEGIN                                                 \
-	static ::base::detail::InitState _detail_init_state                         \
-		= ::base::detail::InitState::NotInitialized;                            \
-                                                                                \
-	if (_detail_init_state == ::base::detail::InitState::NotInitialized) {      \
-		_detail_init_state = ::base::detail::InitState::Initializing;           \
-	} else if (_detail_init_state == ::base::detail::InitState::Initializing) { \
-		CORE_PANIC("Cycle detected in initialization function!");               \
-	} else {                                                                    \
-		return;                                                                 \
-	}                                                                           \
-	::base::detail::logInitFunction(__PRETTY_FUNCTION__);
+#define SIMPLE_INIT_GUARD_BEGIN                                                   \
+	static ::base::internal::InitState _detail_init_state                         \
+		= ::base::internal::InitState::NotInitialized;                            \
+                                                                                  \
+	if (_detail_init_state == ::base::internal::InitState::NotInitialized) {      \
+		_detail_init_state = ::base::internal::InitState::Initializing;           \
+	} else if (_detail_init_state == ::base::internal::InitState::Initializing) { \
+		CORE_PANIC("Cycle detected in initialization function!");                 \
+	} else {                                                                      \
+		return;                                                                   \
+	}                                                                             \
+	::base::internal::logInitFunction(__PRETTY_FUNCTION__);
 
 
-#define SIMPLE_INIT_GUARD_END _detail_init_state = ::base::detail::InitState::Initialized;
+#define SIMPLE_INIT_GUARD_END _detail_init_state = ::base::internal::InitState::Initialized;
