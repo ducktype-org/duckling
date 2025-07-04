@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Template initialization list.
 	 */
 	class TemplateList final:
-		  public List<UniversalExprHolderLowerLevel, detail::NameGetters::templateList> {
+		  public List<UniversalExprHolderLowerLevel, internal::NameGetters::templateList> {
 	public:
 		explicit TemplateList(const dia::SourcePosition& pos): List(pos) {}
 

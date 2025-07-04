@@ -15,7 +15,7 @@
 #include <set>
 #include <vector>
 
-namespace query::detail {
+namespace query::internal {
 
 	QueryGraph::DependencyStatus QueryGraph::addDependency(NodeID from, NodeID to) {
 		CORE_ASSERT(
@@ -27,7 +27,7 @@ namespace query::detail {
 		return DependencyStatus::OK;
 	}
 
-	std::vector<NodeID> QueryGraph::getNodeDeps(detail::NodeID node_id) const {
+	std::vector<NodeID> QueryGraph::getNodeDeps(internal::NodeID node_id) const {
 		CORE_ASSERT(
 			node_deps.contains(node_id), "Node not found in dep graph, call the given query first."
 		);
@@ -56,7 +56,7 @@ namespace query::detail {
 	}
 
 	std::vector<NodeID> QueryGraph::getNodeDepsFiltered(
-		detail::NodeID node_id, QueryID dependency_id
+		internal::NodeID node_id, QueryID dependency_id
 	) const {
 		return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
 				   return id.q_id == dependency_id;

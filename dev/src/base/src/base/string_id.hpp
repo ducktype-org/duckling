@@ -67,12 +67,12 @@
 
 namespace base {
 
-	namespace detail {
+	namespace internal {
 		STRONG_TYPEDEF_ID(StrInnerID);
 	}
 
 	class StrID final {
-		using InnerID = detail::StrInnerID;
+		using InnerID = internal::StrInnerID;
 		InnerID id;
 
 		using ToDataType = VectorMap<InnerID, RawView>;
@@ -179,7 +179,7 @@ namespace base {
 		return out;
 	}
 
-	namespace detail {
+	namespace internal {
 		inline void strConcat(std::string& out, StrID str_id) { out.append(str_id.strView()); }
 	}
 }

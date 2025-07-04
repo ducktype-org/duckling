@@ -9,8 +9,8 @@ namespace pst {
 			ParamList,
 			false,
 			lexer::Token::BracketType::Round,
-			detail::Conditions::isComma,
-			detail::Conditions::isSentinel,
-			detail::NameGetters::parameterList>(state);
+			internal::Conditions::isComma,
+			internal::Conditions::isSentinel,
+			internal::NameGetters::parameterList>(state);
 	}
 }
