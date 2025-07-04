@@ -3,6 +3,7 @@
 #include <base/exceptions.hpp>
 #include <base/ref.hpp>
 
+#include <cstdlib>
 #include <iostream>
 
 namespace init {
@@ -45,6 +46,20 @@ namespace init {
 		Ref<InitState> getInitState() {
 			static InitState deinit_static;
 			return &deinit_static;
+		}
+
+		/**
+		 * Helper function to suppress undue termination on std::exit
+		 * since automatic storage duration objects' dtors are not called.
+		 * Ensured that the function is only registered on InitObject construction.
+		 */
+		void initStateAtexitHandler() {
+			getInitState()->was_deinit = true;
+			if (getInitState()->was_init != true) {
+				// this should only be called if InitObject was used.
+				std::terminate();
+			}
+			std::cerr << "WARNING: InitObject used but dtor not called due to std::exit call.";
 		}
 
 		/**
@@ -93,6 +108,8 @@ namespace init {
 		auto state = getInitState();
 		CORE_ASSERT(not state->was_init, "InitObject can only be created once");
 		state->was_init = true;
+
+		CORE_ASSERT(not std::atexit(initStateAtexitHandler), "Cannot register atexit handler");
 
 		for (auto& function: state->init_function_list) function();
 	}
