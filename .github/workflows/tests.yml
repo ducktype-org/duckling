@@ -323,8 +323,8 @@ jobs:
                      ⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \n \
                      ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
                      ${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \n \
-                    #  ${{ steps.calc-todo-diff.outputs.value != 0 && '' || env.EMPTY_STR }} \
-                     ${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || env.EMPTY_STR }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || env.EMPTY_STR }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || env.EMPTY_STR }} \
+                     ${{ steps.calc-todo-diff.outputs.value != 0 && '\n' || env.EMPTY_STR }} \n \
+                     ${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || env.EMPTY_STR }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || env.EMPTY_STR }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || env.EMPTY_STR }} \n \
                      '
             })
 
