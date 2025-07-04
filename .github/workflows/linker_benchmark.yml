@@ -61,6 +61,7 @@ jobs:
 
             END=$(date +%s)
             echo " Installation of ${{ matrix.linker }} took $((END - START)) seconds"
+          fi
       
       # Remove ccache folder for better benchmark
       - name: Remove ccache
