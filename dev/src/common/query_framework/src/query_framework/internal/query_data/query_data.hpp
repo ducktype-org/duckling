@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-namespace query::detail {
+namespace query::internal {
 
 	/**
 	 * General type of the query.

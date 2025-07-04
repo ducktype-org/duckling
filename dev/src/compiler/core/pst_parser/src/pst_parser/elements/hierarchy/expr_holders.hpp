@@ -18,7 +18,7 @@ namespace pst {
 	class ExprHolder: public NotStmt {
 	protected:
 		AccessInternal<ExprElement> expr;
-		friend void detail::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
+		friend void internal::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
@@ -70,10 +70,10 @@ namespace pst {
 		using ExprHolder::ExprHolder;
 
 		static MBox<Self> parse(LangParserState& state) {
-			auto position = detail::getPosition(state);
+			auto position = internal::getPosition(state);
 			auto out      = makeBox<Self>(position);
 
-			detail::parseExprIntoHolder(state, out.refMut(), parseFun);
+			internal::parseExprIntoHolder(state, out.refMut(), parseFun);
 			return out;
 		}
 

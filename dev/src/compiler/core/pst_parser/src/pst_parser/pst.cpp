@@ -2,7 +2,7 @@
 
 #include "lang_parser_state.hpp"
 
-namespace pst::detail {
+namespace pst::internal {
 	void deleteState(LangParserState* ptr) { delete ptr; }
 
 	Box<LangParserState> makeState(tpc::TokenStream&& token_stream, Ref<dia::Logger> logger) {

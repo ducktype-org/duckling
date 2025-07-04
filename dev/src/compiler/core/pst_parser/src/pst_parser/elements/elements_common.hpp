@@ -23,7 +23,7 @@ namespace pst {
 	}
 }
 
-namespace pst::detail {
+namespace pst::internal {
 
 	/**
 	 * @brief State conditions used for parsing lists.
@@ -153,8 +153,8 @@ namespace pst::detail {
 		auto operator<=>(const ForwardBorrowIterator& other) const { return it <=> other.it; }
 	};
 
-#define DECLARE_CONST_ELEMENT_ITERATOR(container, TypeOfElement)                              \
-	using const_iterator = detail::ForwardBorrowIterator<TypeOfElement, decltype(container)>; \
-	const_iterator begin() const { return container.cbegin(); }                               \
+#define DECLARE_CONST_ELEMENT_ITERATOR(container, TypeOfElement)                                \
+	using const_iterator = internal::ForwardBorrowIterator<TypeOfElement, decltype(container)>; \
+	const_iterator begin() const { return container.cbegin(); }                                 \
 	const_iterator end() const { return container.cend(); }
 };
