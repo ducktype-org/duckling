@@ -96,8 +96,6 @@ DEF_OPCODE(mov_l32_g32, vm::opargs::StackLocalI32, vm::opargs::GlobalI32)
 DEF_OPCODE(mov_l16_g16, vm::opargs::StackLocalI16, vm::opargs::GlobalI16)
 DEF_OPCODE(mov_l8_g8, vm::opargs::StackLocalI8, vm::opargs::GlobalI8)
 
-// UMOV
-
 DEF_OPCODE(umov_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 DEF_OPCODE(umov_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
 DEF_OPCODE(cumov_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
@@ -136,7 +134,6 @@ DEF_OPCODE(umov_l32_g32, vm::opargs::StackLocalI32, vm::opargs::GlobalI32)
 DEF_OPCODE(umov_l16_g16, vm::opargs::StackLocalI16, vm::opargs::GlobalI16)
 DEF_OPCODE(umov_l8_g8, vm::opargs::StackLocalI8, vm::opargs::GlobalI8)
 
-// END OF UMOV
 
 DEF_OPCODE(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
 
