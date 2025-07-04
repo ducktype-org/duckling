@@ -182,24 +182,19 @@ namespace base {
 
 		Optional(std::nullopt_t) noexcept {}
 
-		// clang-format off
-
-		Optional(const T& value)
-		noexcept(std::is_nothrow_constructible_v<std::optional<T>, const T&>):
-			private_optional(value) {}
-
 		Optional(Optional&&)                 = default;
 		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
 		Optional& operator=(const Optional&) = default;
 
-		template<class... Args>
-		requires std::is_constructible_v<T, Args...>
-		constexpr explicit Optional(Args&&... args)
-		noexcept(std::is_nothrow_constructible_v<T, Args...>):
-			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+		Optional(const T& value
+		) noexcept(std::is_nothrow_constructible_v<std::optional<T>, const T&>):
+			  private_optional(value) {}
 
-		// clang-format on
+		template<class... Args>
+		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args
+		) noexcept(std::is_nothrow_constructible_v<T, Args...>):
+			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		template<class U = T>
 		requires std::is_constructible_v<T, U>
@@ -207,16 +202,16 @@ namespace base {
 			  private_optional(std::forward<U>(value)) {}
 
 		template<class... Args>
-		constexpr T& emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args&&...>) {
+		constexpr T& emplace(Args&&... args
+		) noexcept(std::is_nothrow_constructible_v<T, Args&&...>) {
 			return private_optional.emplace(std::forward<Args>(args)...);
 		}
 
 		explicit constexpr operator bool() const noexcept { return has_value(); }
 
 		template<class U = T>
-		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value) noexcept(
-			std::is_nothrow_constructible_v<T, U&&> && std::is_nothrow_assignable_v<T, U&&>
-		) {
+		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value
+		) noexcept(std::is_nothrow_constructible_v<T, U&&> && std::is_nothrow_assignable_v<T, U&&>) {
 			private_optional = std::forward<U>(value);
 			return *this;
 		}
