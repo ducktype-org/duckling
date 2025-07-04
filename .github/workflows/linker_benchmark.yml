@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        linker: [LLD, MOLD]
+        linker: [DEFAULT, LLD, MOLD]
         build-type: [Debug, Release]
 
     steps:
@@ -46,18 +46,21 @@ jobs:
 
       - name: Install linker
         run: |
-          echo "Installing ${{ matrix.linker }}..."
-          START=$(date +%s)
+          if [ "${{ matrix.linker }}" = "DEFAULT" ]; then
+            echo "Skipping linker installation (default)"
+          else
+            echo "Installing ${{ matrix.linker }}..."
+            START=$(date +%s)
 
-          sudo apt update
-          if [ "${{ matrix.linker }}" = "MOLD" ]; then
-            sudo apt install -y mold
-          elif [ "${{ matrix.linker }}" = "LLD" ]; then
-            sudo apt install -y lld
-          fi
+            sudo apt update
+            if [ "${{ matrix.linker }}" = "MOLD" ]; then
+              sudo apt install -y mold
+            elif [ "${{ matrix.linker }}" = "LLD" ]; then
+              sudo apt install -y lld
+            fi
 
-          END=$(date +%s)
-          echo " Installation of ${{ matrix.linker }} took $((END - START)) seconds"
+            END=$(date +%s)
+            echo " Installation of ${{ matrix.linker }} took $((END - START)) seconds"
       
       # Remove ccache folder for better benchmark
       - name: Remove ccache
@@ -75,6 +78,7 @@ jobs:
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D CMAKE_LINKER_TYPE=${{ matrix.linker }}
+        # DEFAULT is treated as "no linker override"
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
