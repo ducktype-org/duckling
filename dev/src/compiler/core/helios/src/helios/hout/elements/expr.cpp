@@ -29,8 +29,9 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
-	EXPR_VISITOR(LinkedIdentifierExpr)
 	EXPR_VISITOR(CallExpr)
+	EXPR_VISITOR(AccessExpr)
+	EXPR_VISITOR(SequenceExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
 		  Expr(
@@ -273,25 +274,6 @@ namespace compiler::helios::code {
 		  ),
 		  subtypes(std::move(subtypes)) {}
 
-	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {
-		for (bool add_dot = false; auto&& symbol: symbols) {
-			if (add_dot) out << ".";
-			out << name(symbol).str();
-			add_dot = true;
-		}
-	}
-
-	LinkedIdentifierExpr::LinkedIdentifierExpr(query::Context& ctx, SymbolList symbols):
-		  Expr(
-
-			  tsh::ExpressionType(
-				  ctx.query<QueryTypeOfSymbol>(symbols.back())
-					  ->expect("Not handling errors here yet"),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
-		  symbols(std::move(symbols)) {}
-
 	UnaryOperatorExpr::UnaryOperatorExpr(BuiltinUnary operation, Box<Expr> expr):
 		  Expr(expr->expression_type),
 		  operation(operation),
@@ -347,4 +329,27 @@ namespace compiler::helios::code {
 		}
 		out << ")";
 	}
+
+	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, base::StrID field):
+		  Expr(base->expression_type),
+		  base(std::move(base)),
+		  field(field) {}
+
+	void AccessExpr::debugPrint(std::ostream& out) const {
+		base->debugPrint(out);
+		out << "." << field.str();
+	}
+
+	SequenceExpr::SequenceExpr(query::Context&, std::vector<Box<Expr>> expressions):
+		  Expr(expressions.back()->expression_type),
+		  expressions(std::move(expressions)) {}
+
+	void SequenceExpr::debugPrint(std::ostream& out) const {
+		for (bool add_comma = false; auto&& expr: expressions) {
+			if (add_comma) out << ", ";
+			expr->debugPrint(out);
+			add_comma = true;
+		}
+	}
+
 }

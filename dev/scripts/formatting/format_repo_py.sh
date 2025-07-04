@@ -5,7 +5,7 @@ original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
 # Gather files into array
-readarray -t files < <(./scripts/list_py_files.sh)
+readarray -t files < <(./scripts/list_files.sh "*.py")
 
 # Find binary
 black=black
