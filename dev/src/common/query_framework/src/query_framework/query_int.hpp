@@ -18,7 +18,7 @@
 
 // clang-format on
 
-namespace query::detail {
+namespace query::internal {
 
 	struct EntryPointHelper;
 
@@ -40,18 +40,18 @@ namespace query::detail {
 /**
  * @brief Internal macro used do delcare queries.
  */
-#define DECLARE_QUERY_AUX(query_type, key, value, query_data_mp)                                  \
-	struct query_type final: ::query::detail::QueryInterface<query_type, key, value> {            \
-	private:                                                                                      \
-		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
-		static ::query::detail::QueryID id;                                                       \
-		static constexpr ::query::detail::QueryData query_data = query_data_mp;                   \
-		friend struct ::query::Context;                                                           \
-		friend struct ::query::detail::EntryPointHelper;                                          \
-                                                                                                  \
-	public:                                                                                       \
-		static auto        getID() { return id; }                                                 \
-		static const auto& getData() { return query_data; }                                       \
+#define DECLARE_QUERY_AUX(query_type, key, value, query_data_mp)                         \
+	struct query_type final: ::query::internal::QueryInterface<query_type, key, value> { \
+	private:                                                                             \
+		static auto internal_query(QKey, ::query::internal::NodeID) -> QResult;          \
+		static ::query::internal::QueryID             id;                                \
+		static constexpr ::query::internal::QueryData query_data = query_data_mp;        \
+		friend struct ::query::Context;                                                  \
+		friend struct ::query::internal::EntryPointHelper;                               \
+                                                                                         \
+	public:                                                                              \
+		static auto        getID() { return id; }                                        \
+		static const auto& getData() { return query_data; }                              \
 	};
 
 /**
@@ -60,10 +60,10 @@ namespace query::detail {
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
-#define DECLARE_QUERY(query_type, key, value)                                       \
-	DECLARE_QUERY_AUX(                                                              \
-		query_type,                                                                 \
-		key,                                                                        \
-		value,                                                                      \
-		::query::detail::QueryData(::query::detail::QueryType::Normal, #query_type) \
+#define DECLARE_QUERY(query_type, key, value)                                           \
+	DECLARE_QUERY_AUX(                                                                  \
+		query_type,                                                                     \
+		key,                                                                            \
+		value,                                                                          \
+		::query::internal::QueryData(::query::internal::QueryType::Normal, #query_type) \
 	)

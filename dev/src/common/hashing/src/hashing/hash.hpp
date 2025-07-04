@@ -13,7 +13,7 @@
 namespace hashing {
 
 
-	namespace detail {
+	namespace internal {
 
 		/**
 		 * Checks if a given type is a type code or a void type
@@ -58,7 +58,7 @@ namespace hashing {
 			static_cast<TypeCode<typename TypeC::value_type>>(
 				std::declval<StrToIntegral<typename TypeC::value_type, HashAlgorithm>>()
 			);
-			detail::getIDFromUniqueString<T, typename TypeC::value_type, HashAlgorithm>();
+			internal::getIDFromUniqueString<T, typename TypeC::value_type, HashAlgorithm>();
 			addToHash(h, TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
 		};
 
@@ -70,9 +70,9 @@ namespace hashing {
 		constexpr void addTypeCode(HashAlgorithm& h) noexcept {
 			if (TypeC::IS_UNIQUE)
 				addToHash(h, TYPE_UNIQUE_CODE<T, typename TypeC::value_type>);
-			else if constexpr (detail::can_get_type_hash_code<T, TypeC, HashAlgorithm>)
+			else if constexpr (internal::can_get_type_hash_code<T, TypeC, HashAlgorithm>)
 				addToHash(h, TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
-			else if constexpr (detail::can_get_type_hash_code<T, TypeC, DefaultHashAlgorithm>)
+			else if constexpr (internal::can_get_type_hash_code<T, TypeC, DefaultHashAlgorithm>)
 				addToHash(h, TYPE_HASH_CODE<T, typename TypeC::value_type, DefaultHashAlgorithm>);
 			else
 				addToHash(h, TYPE_HASH_CODE<T>);
@@ -89,9 +89,9 @@ namespace hashing {
 	 * or void if the type code should not be appended
 	 */
 	template<
-		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode<>>
-	class Hash final: public detail::enable_TypeHC_value_type<TypeC> {
+		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm,
+		internal::TypeCode_or_void TypeC         = TypeCode<>>
+	class Hash final: public internal::enable_TypeHC_value_type<TypeC> {
 	public:
 		static constexpr bool APPEND_TYPE_CODE = not std::is_void_v<TypeC>;
 		using result_type                      = typename HashAlgorithm::result_type;
@@ -101,7 +101,7 @@ namespace hashing {
 			HashAlgorithm h{};
 
 			addToHash(h, t);
-			if constexpr (APPEND_TYPE_CODE) detail::addTypeCode<TypeC, HashAlgorithm, T>(h);
+			if constexpr (APPEND_TYPE_CODE) internal::addTypeCode<TypeC, HashAlgorithm, T>(h);
 
 			return h.finalize();
 		}
@@ -117,9 +117,9 @@ namespace hashing {
 	 * or void if the type code should not be appended
 	 */
 	template<
-		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode<>>
-	class StatefulHash final: public detail::enable_TypeHC_value_type<TypeC> {
+		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm,
+		internal::TypeCode_or_void TypeC         = TypeCode<>>
+	class StatefulHash final: public internal::enable_TypeHC_value_type<TypeC> {
 		HashAlgorithm h{};
 
 	public:
@@ -129,7 +129,7 @@ namespace hashing {
 		template<typename T>
 		constexpr StatefulHash& operator()(const T& t) noexcept {
 			addToHash(h, t);
-			if constexpr (APPEND_TYPE_CODE) detail::addTypeCode<TypeC, HashAlgorithm, T>(h);
+			if constexpr (APPEND_TYPE_CODE) internal::addTypeCode<TypeC, HashAlgorithm, T>(h);
 
 			return *this;
 		}
@@ -155,8 +155,8 @@ namespace hashing {
 	 * @return hash value
 	 */
 	template<
-		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode<>>
+		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm,
+		internal::TypeCode_or_void TypeC         = TypeCode<>>
 	auto justHash(const auto& t) {
 		return Hash<HashAlgorithm, TypeC>{}(t);
 	}
@@ -171,8 +171,8 @@ namespace hashing {
 	 * @return hash value
 	 */
 	template<
-		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode<>>
+		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm,
+		internal::TypeCode_or_void TypeC         = TypeCode<>>
 	auto justHash(const auto&... ts) {
 		return StatefulHash<HashAlgorithm, TypeC>{}(ts...).finalize();
 	}

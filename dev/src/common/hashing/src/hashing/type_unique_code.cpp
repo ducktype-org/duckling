@@ -2,7 +2,7 @@
 
 #include <base/ints.hpp>
 
-namespace hashing::detail {
+namespace hashing::internal {
 
 
 	/**

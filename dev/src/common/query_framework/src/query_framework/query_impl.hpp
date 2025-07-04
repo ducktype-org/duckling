@@ -24,7 +24,7 @@
 #include <type_traits>  // IWYU pragma: export
 #include <utility>
 
-namespace query::detail {
+namespace query::internal {
 
 	/**
 	 * @brief Internal function implementing the call to a query.
@@ -121,7 +121,7 @@ namespace query::detail {
  */
 #define IMPLEMENT_QUERY(query_type, PResult) \
 	ImplementationOf_##query_type final:     \
-		  public query::detail::QueryImplementation<query_type, PResult>
+		  public query::internal::QueryImplementation<query_type, PResult>
 
 /**
  * @brief This is an internal query, and shouldn't be used directly. It used by
@@ -131,12 +131,12 @@ namespace query::detail {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                           \
-	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)            \
+	auto type::QueryType::internal_query(type::QKey key, ::query::internal::NodeID from)          \
 		-> type::QResult {                                                                        \
-		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                   \
+		return ::query::internal::standardQueryEntry<type>(std::move(key), from);                 \
 	}                                                                                             \
 	decltype(type::QueryType::id) type::QueryType::id                                             \
-		= ::query::detail::registerQuery(type::QueryType::getData());                             \
+		= ::query::internal::registerQuery(type::QueryType::getData());                           \
 	static_assert(                                                                                \
 		not std::is_reference_v<type::QResult>,                                                   \
 		"Query result type should not be a reference (use CRef instead)"                          \

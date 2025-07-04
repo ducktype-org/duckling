@@ -11,13 +11,13 @@
 
 #include <base/bit256.hpp>
 
-namespace query::detail {
+namespace query::internal {
 
 	/**
 	 * @brief Helper function for construing NodeID.
 	 */
 	template<typename KeyType>
-	detail::NodeID makeNodeID(QueryID id, const KeyType& key) {
+	internal::NodeID makeNodeID(QueryID id, const KeyType& key) {
 		return { .q_id = id, .hash = { .val = unstableHashKey(key) } };
 	}
 }

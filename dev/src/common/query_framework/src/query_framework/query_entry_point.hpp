@@ -14,7 +14,7 @@
 
 namespace query {
 
-	namespace detail {
+	namespace internal {
 		/**
 		 * Helper class implementing query entry point
 		 * @note This exist only, so it can be easily friend-ed by queries.
@@ -23,7 +23,7 @@ namespace query {
 			template<typename QueryType>
 			auto static callQuery(typename QueryType::QKey key) -> decltype(auto) {
 				return QueryType::internal_query(
-					key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey())
+					key, internal::makeNodeID(internal::outsideWorldQueryID(), EmptyKey())
 				);
 			}
 		};
@@ -38,6 +38,6 @@ namespace query {
 		CORE_ASSERT(
 			Context::getState().queryStackSize() == 0, "query::entryPoint called from within query!"
 		);
-		return detail::EntryPointHelper::callQuery<QueryType>(key);
+		return internal::EntryPointHelper::callQuery<QueryType>(key);
 	}
 }

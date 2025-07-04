@@ -5,7 +5,7 @@
 namespace query {
 	dia::Logger Context::logger{};
 
-	detail::QueryState Context::main_query_state{};
+	internal::QueryState Context::main_query_state{};
 
 	void Context::log(Box<dia::Message> message) {
 		assertActive();
