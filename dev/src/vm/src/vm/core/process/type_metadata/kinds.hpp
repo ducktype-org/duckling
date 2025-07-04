@@ -5,5 +5,5 @@
 #include "kinds/opaque.hpp"
 #include "kinds/pointer.hpp"
 #include "kinds/primitive.hpp"
-#include "kinds/static_table.hpp"
+#include "kinds/fixed_size_table.hpp"
 #include "kinds/variant.hpp"

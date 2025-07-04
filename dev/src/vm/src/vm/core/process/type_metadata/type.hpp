@@ -26,7 +26,7 @@ namespace vm {
 			None,
 			Primitive,
 			Pointer,
-			StaticTable,
+			FixedSizeTable,
 			DynamicTable,
 			Data,
 			Variant,
@@ -48,7 +48,7 @@ namespace vm {
 			std::monostate,
 			kind::Primitive,
 			kind::Pointer,
-			kind::StaticTable,
+			kind::FixedSizeTable,
 			kind::DynamicTable,
 			kind::Data,
 			kind::Variant,
@@ -65,7 +65,7 @@ namespace vm {
 		// Type definition:
 		void definePrimitive(TypeSize size);
 		void definePointer(TypeCRef inner);
-		void defineStaticTable(TypeRef inner, u64 table_size);
+		void defineFixedSizeTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
 		void defineData(
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
@@ -125,8 +125,8 @@ namespace vm {
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
-		// staticTable
-		base::Optional<u64> getStaticTableSize() const;
+		// fixedSizeTable
+		base::Optional<u64> getFixedSizeTableSize() const;
 
 		// data
 		[[nodiscard]]

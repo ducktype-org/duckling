@@ -49,7 +49,7 @@ public:
 		TESTER_ADD_TEST(globalWrongTypeSize);
 		TESTER_ADD_TEST(usingPointerAsPrimitive);
 		TESTER_ADD_TEST(variantWrongType);
-		TESTER_ADD_TEST(staticTableWrongType);
+		TESTER_ADD_TEST(fixedSizeTableWrongType);
 		TESTER_ADD_TEST(inplaceCasts);
 	}
 
@@ -284,11 +284,11 @@ private:
 		);
 	}
 
-	void staticTableWrongType() {
+	void fixedSizeTableWrongType() {
 		loadInvalidDbc(
-			"wrong/types/static_table_wrong_type.dbc",
+			"wrong/types/fixed_size_table_wrong_type.dbc",
 			{
-				vm::code::StaticTableTypeMismatchError::ERR_MSG,
+				vm::code::fixedSizeTableTypeMismatchError::ERR_MSG,
 			}
 		);
 	}
