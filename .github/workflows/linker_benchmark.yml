@@ -2,7 +2,6 @@ name: Linker Benchmark
 
 on:
   pull_request:
-    branches: [benchmark-linkers]
 env:
   # @note: boolean variables evaluate to true/false string, but github expressions treat
   # all non-empty strings as true, so one must use `evn.abc == 'true'` to actually use
