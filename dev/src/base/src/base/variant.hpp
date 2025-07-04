@@ -55,20 +55,24 @@ namespace base::detail {
 	template<class... Ts>
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
-	template<typename VariantT, typename T, std::size_t index>
-	constexpr auto alternative_index_aux() {
-		static_assert(std::variant_size_v<VariantT> > index, "Type not found in variant");
-		if constexpr (index == std::variant_size_v<VariantT>)
-			return index;
-		else if constexpr (std::is_same_v<std::variant_alternative_t<index, VariantT>, T>)
-			return index;
-		else
-			return alternative_index_aux<VariantT, T, index + 1>();
-	}
+	template <typename VariantT, typename T>
+	constexpr auto alternative_index_aux();
+
+	template <typename T, typename... Types>
+	constexpr auto alternative_index_aux<std::variant<Types...>, T>() {
+		std::size_t result = 0;
+
+		// instead of recursive template initialization
+		// using fold expression which increases result
+		// until encountering T for the first time 
+		((std::is_same_v<T, Types> ? false : (result++, true)) && ...);
+		
+		return result;
+	};
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T, 0>();
+		return alternative_index_aux<T, std::remove_const_t<std::remove_reference_t<VariantT>>>::;
 	}
 }
 
