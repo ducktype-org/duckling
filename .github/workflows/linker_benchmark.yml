@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        linker: [lld, mold]
+        linker: [LLD, MOLD]
         build-type: [Debug, Release]
 
     steps:
@@ -50,9 +50,9 @@ jobs:
           START=$(date +%s)
 
           sudo apt update
-          if [ "${{ matrix.linker }}" = "mold" ]; then
+          if [ "${{ matrix.linker }}" = "MOLD" ]; then
             sudo apt install -y mold
-          elif [ "${{ matrix.linker }}" = "lld" ]; then
+          elif [ "${{ matrix.linker }}" = "LLD" ]; then
             sudo apt install -y lld
           fi
 
