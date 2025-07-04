@@ -27,7 +27,7 @@
 
 #ifndef HANDLE_OPCODE
 #define DEFAULT_HANDLE_OPCODE
-#include "vm/bytecode/opcode_args.hpp"
+#include <vm/bytecode/opcode_args.hpp>
 #define HANDLE_OPCODE(opcode)
 #endif
 
