@@ -24,6 +24,7 @@ from scripts.py.toolbox.helpers import (
     check_if_compilers_are_compatible,
     log_warning,
     supports_cmake_linker_type,
+    should_add_linker_flags,
 )
 from scripts.py.toolbox.internet_file import (
     InternetFile,
@@ -98,10 +99,11 @@ def setup_build_impl(
         f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
         f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
     ]
-    if supports_cmake_linker_type:
-        cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
-    else:
-        cmd_parts.append(f'-D CMAKE_CXX_FLAGS="-fuse-ld={linker.lower()}"')
+    if should_add_linker_flags(linker):
+        if supports_cmake_linker_type():
+            cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
+        else:
+            cmd_parts.append(f'-D CMAKE_CXX_FLAGS="-fuse-ld={linker.lower()}"')
     
     cmd = " ".join(cmd_parts)
 
@@ -190,9 +192,9 @@ def setup_build_impl(
 )
 @click.option(
     "--linker",
-    prompt="linker",
+    prompt="Linker",
     help="Specify the linker type to use",
-    default="lld",
+    default="default",
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""

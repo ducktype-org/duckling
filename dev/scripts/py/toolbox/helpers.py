@@ -5,6 +5,9 @@ import re
 
 import click
 
+from packaging import version
+import shutil
+
 
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
@@ -292,3 +295,13 @@ def supports_cmake_linker_type():
     if not cmake_version_str:
         exit_with_error("CMake is not installed or its version could not be determined.")
     return version.parse(cmake_version_str) >= version.parse("3.29.0")
+
+def should_add_linker_flags(linker):
+    if linker == "default":
+        return False
+    if shutil.which(linker) is not None:
+        return True
+    exit_with_error(
+        f"The specified linker '{linker}' was not found. "
+        "Try installing it or switching to another."
+    )
