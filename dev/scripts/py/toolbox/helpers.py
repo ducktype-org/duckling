@@ -5,7 +5,6 @@ import re
 
 import click
 
-from packaging import version
 import shutil
 
 
@@ -290,11 +289,19 @@ def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
             f"Compiler versions are not compatible: {cxx_version=}, {cc_version=}"
         )
 
+def parse_version_tuple(version_str):
+    # Strip suffixes like '-rc1', '-dev' if present
+    clean = version_str.split("-")[0]
+    return tuple(int(part) for part in clean.split(".") if part.isdigit())
+
 def supports_cmake_linker_type():
     cmake_version_str = get_program_version("cmake")
     if not cmake_version_str:
         exit_with_error("CMake is not installed or its version could not be determined.")
-    return version.parse(cmake_version_str) >= version.parse("3.29.0")
+    
+    current = parse_version_tuple(cmake_version_str)
+    required = (3, 29, 0)
+    return current >= required
 
 def should_add_linker_flags(linker):
     if linker == "default":
