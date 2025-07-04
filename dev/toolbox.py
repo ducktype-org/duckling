@@ -23,6 +23,7 @@ from scripts.py.toolbox.helpers import (
     default_compiler_from_ctx,
     check_if_compilers_are_compatible,
     log_warning,
+    supports_cmake_linker_type,
 )
 from scripts.py.toolbox.internet_file import (
     InternetFile,
@@ -85,21 +86,24 @@ def setup_build_impl(
             shutil.rmtree(bld / pathlib.Path("CMakeFiles"))
         except FileNotFoundError:
             pass
-    cmd = " ".join(
-        [
-            f"cmake",
-            f'-G "{build_system}"',
-            f"-B {build_dir}",
-            f"-D CMAKE_BUILD_TYPE={type}",
-            f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
-            f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
-            f"-D CMAKE_C_COMPILER={cc_compiler}",
-            f"-D GCOV_VERSION={gcov_version}",
-            f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
-            f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
-            f"-D CMAKE_LINKER_TYPE={linker}",
-        ]
-    )
+    cmd_parts = [
+        f"cmake",
+        f'-G "{build_system}"',
+        f"-B {build_dir}",
+        f"-D CMAKE_BUILD_TYPE={type}",
+        f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
+        f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
+        f"-D CMAKE_C_COMPILER={cc_compiler}",
+        f"-D GCOV_VERSION={gcov_version}",
+        f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
+        f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
+    ]
+    if supports_cmake_linker_type:
+        cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
+    else:
+        cmd_parts.append(f'-D CMAKE_CXX_FLAGS="-fuse-ld={linker.lower()}"')
+    
+    cmd = " ".join(cmd_parts)
 
     log_info("Setting up a build folder...")
     if docs or coverage:
@@ -188,7 +192,7 @@ def setup_build_impl(
     "--linker",
     prompt="linker",
     help="Specify the linker type to use",
-    default="LLD",
+    default="lld",
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""

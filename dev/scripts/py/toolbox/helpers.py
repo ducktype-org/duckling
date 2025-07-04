@@ -286,3 +286,9 @@ def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
         exit_with_error(
             f"Compiler versions are not compatible: {cxx_version=}, {cc_version=}"
         )
+
+def supports_cmake_linker_type():
+    cmake_version_str = get_program_version("cmake")
+    if not cmake_version_str:
+        exit_with_error("CMake is not installed or its version could not be determined.")
+    return version.parse(cmake_version_str) >= version.parse("3.29.0")
