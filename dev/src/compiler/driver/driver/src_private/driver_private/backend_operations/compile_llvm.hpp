@@ -2,6 +2,7 @@
 
 #include <query_framework/context_fd.hpp>
 #include <artifacts/artifacts.hpp>
+#include "../backend_module_data.hpp"
 
 namespace compiler::driver {
 

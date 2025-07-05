@@ -1,4 +1,4 @@
-#include "dvm_driver.hpp"
+#include "compile_dvm.hpp"
 
 #include <backends/dvm/backend.hpp>
 

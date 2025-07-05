@@ -1,6 +1,4 @@
-#include "llvm_driver.hpp"
-
-#include "llvm_ir_lib.hpp"
+#include "compile_llvm.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
