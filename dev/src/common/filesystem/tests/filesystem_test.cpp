@@ -1,6 +1,5 @@
-#include "../src_private/filesystem/vfs.hpp"
-
 #include <filesystem/file.hpp>
+#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
 #include <chrono>
@@ -23,15 +22,15 @@ public:
 
 private:
 	void getSimpleContentTest() {
-		auto a_content = fs::getSimpleFileContent(path("a_file.txt"));
+		auto a_content = fs::File(path("a_file.txt")).getContent();
 
 		assertTrue(a_content.view().size() == 12, "Wrong a_content file size");
 		assertTrue(a_content.view().stringView() == "abrakadabra\n", "Wrong a_content file content");
 	}
 
 	void filePathTest() {
-		auto a_good_content = fs::getSimpleFileContent(path("a_file.txt"));
-		auto b_good_content = fs::getSimpleFileContent(path("b_file.txt"));
+		auto a_good_content = fs::File(path("a_file.txt")).getContent();
+		auto b_good_content = fs::File(path("b_file.txt")).getContent();
 
 		// loops twice to see if behavior is ok after all previous fileContents where destroyed
 		for (i32 i = 0; i < 2; i++) {
@@ -102,6 +101,17 @@ private:
 		auto virtual_file_content = vfs->readFile("vfs:/virtualDir/virtualFile.txt");
 		assertTrue(virtual_file_content == "Hello, Virtual VFS!", "Virtual file content incorrect");
 
+		// Test append functionality
+		assertTrue(
+			vfs->writeFile("vfs:/virtualDir/virtualFile.txt", " Appended!", true),
+			"Failed to append to virtual file"
+		);
+		auto appended_content = vfs->readFile("vfs:/virtualDir/virtualFile.txt");
+		assertTrue(
+			appended_content == "Hello, Virtual VFS! Appended!",
+			"Virtual file append content incorrect"
+		);
+
 		assertTrue(
 			vfs->isFile("vfs:/virtualDir/virtualFile.txt"),
 			"Virtual path is not recognized as a file"
@@ -145,7 +155,7 @@ private:
 
 	void virtualFileTest() {
 		// Create a virtual directory
-		auto virtual_dir = fs::FileManager::createVirtualDirectory();
+		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
 		assertTrue(virtual_dir.isDirectory(), "Virtual directory was not created correctly");
 		assertTrue(
 			virtual_dir.strView().find("vfs:") != std::string::npos,
@@ -180,17 +190,8 @@ private:
 
 		// Test parent path
 		assertTrue(
-			sub_dir.parentPath().absolutePath() == virtual_dir.absolutePath(),
-			"Parent path is incorrect"
+			sub_dir.parentPath().nativePath() == virtual_dir.nativePath(), "Parent path is incorrect"
 		);
-
-		// Test file modification time (should throw for virtual files)
-		try {
-			(void) virtual_file.getModifyTime();
-			assertTrue(false, "getModifyTime should throw for virtual files");
-		} catch (const base::Panic&) {
-			// Expected behavior
-		}
 
 		// Test creating a file with duplicate name (should throw)
 		try {
@@ -203,7 +204,7 @@ private:
 
 	void fileOperationsTest() {
 		// Test directory deletion
-		auto temp_dir    = fs::FileManager::createTempDirectory();
+		auto temp_dir    = fs::FileManager::createRandomTempDirectory();
 		auto file_in_dir = fs::FileManager::createFileIn(temp_dir, "content", "test.txt");
 		auto sub_dir     = fs::FileManager::createDirectoryIn(temp_dir, "subdir");
 
@@ -233,9 +234,9 @@ private:
 		);
 
 		// Test path conversions
-		auto virtual_dir = fs::FileManager::createVirtualDirectory();
+		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
 		assertTrue(
-			fs::VFS::isVirtualPath(virtual_dir.absolutePath()), "Should recognize virtual path"
+			fs::VFS::isVirtualPath(virtual_dir.nativePath()), "Should recognize virtual path"
 		);
 
 		// Cleanup
@@ -258,7 +259,7 @@ private:
 		);
 
 		// Test createFileIn with random name generation
-		auto virtual_dir = fs::FileManager::createVirtualDirectory();
+		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
 		auto random_file
 			= fs::FileManager::createFileIn(virtual_dir, "random content");  // no custom_name
 		assertTrue(random_file.isFile(), "Random file should be created");
@@ -283,7 +284,7 @@ private:
 		);
 
 		// Test virtual file creation with override
-		auto virtual_file_path = virtual_dir.absolutePath() + "/override_test.txt";
+		auto virtual_file_path = virtual_dir.nativePath() + "/override_test.txt";
 		fs::FileManager::createVirtualFile(virtual_file_path, "original");
 		auto overridden_virtual
 			= fs::FileManager::createVirtualFile(virtual_file_path, "overridden", true);
@@ -293,7 +294,7 @@ private:
 		);
 
 		// Test virtual folder creation
-		auto virtual_folder_path = virtual_dir.absolutePath() + "/test_folder";
+		auto virtual_folder_path = virtual_dir.nativePath() + "/test_folder";
 		auto virtual_folder      = fs::FileManager::createVirtualFolder(virtual_folder_path);
 		assertTrue(virtual_folder.isDirectory(), "Virtual folder should be created");
 
@@ -364,7 +365,7 @@ private:
 		// Test FileManager CORE_PANIC lines
 
 		// Test createFileIn with duplicate name in virtual directory
-		auto test_virtual_dir = fs::FileManager::createVirtualDirectory();
+		auto test_virtual_dir = fs::FileManager::createRandomVirtualDirectory();
 		fs::FileManager::createFileIn(test_virtual_dir, "content", "duplicate.txt");
 		try {
 			fs::FileManager::createFileIn(test_virtual_dir, "content", "duplicate.txt");
@@ -374,7 +375,7 @@ private:
 		}
 
 		// Test createFileIn with duplicate name in physical directory
-		auto test_temp_dir = fs::FileManager::createTempDirectory();
+		auto test_temp_dir = fs::FileManager::createRandomTempDirectory();
 		fs::FileManager::createFileIn(test_temp_dir, "content", "duplicate.txt");
 		try {
 			fs::FileManager::createFileIn(test_temp_dir, "content", "duplicate.txt");
@@ -407,7 +408,7 @@ private:
 		auto temp_file = fs::FileManager::createRandomTempFile("Test content");
 		assertTrue(fs::FileManager::fileExists(temp_file), "File should exist");
 
-		auto temp_dir = fs::FileManager::createTempDirectory();
+		auto temp_dir = fs::FileManager::createRandomTempDirectory();
 		assertTrue(fs::FileManager::folderExists(temp_dir), "Folder should exist");
 
 		// Test file deletion
@@ -501,20 +502,21 @@ private:
 			"Virtual content was not overwritten"
 		);
 
-		// Test that append fails for virtual files
-		try {
-			virtual_file.writeToFile(" should fail", true);
-			assertTrue(false, "Append should fail for virtual files");
-		} catch (const base::Panic&) {
-			// Expected behavior
-		}
+		// Test append for virtual files
+		virtual_file.writeToFile(" should not fail", true);
+		auto virtual_new_content_appended = virtual_file.getContent();
+		assertTrue(
+			virtual_new_content_appended.view().stringView()
+				== "Virtual new content should not fail",
+			"Virtual content was not appended"
+		);
 
 		// Test file utilities
 		auto test_file = fs::FileManager::createRandomTempFile();
 		assertTrue(test_file.stem() != "", "File stem should not be empty");
 		assertTrue(test_file.extension() == "", "File should have no extension");
 		assertTrue(test_file.uri().starts_with("file://"), "URI should start with file://");
-		assertTrue(test_file.absolutePath() != "", "Absolute path should not be empty");
+		assertTrue(test_file.nativePath() != "", "Absolute path should not be empty");
 
 		// Test getContentSafe
 		auto safe_content = test_file.getContentSafe();
@@ -537,27 +539,6 @@ private:
 
 		// Ensure cleanup from any previous run
 		std::filesystem::remove_all(physical_folder_path);
-
-		auto physical_folder = fs::FileManager::createPhysicalFolder(physical_folder_path, false);
-		auto modify_time     = physical_folder.getModifyTime();
-
-		// Check if modify time is reasonable (not zero and not way in the past/future)
-		auto now = std::chrono::file_clock::now();
-		auto time_diff
-			= std::chrono::duration_cast<std::chrono::seconds>(now - modify_time).count();
-
-		// File should be modified within the last hour (3600 seconds) since we just created it
-		assertTrue(std::abs(time_diff) < 3'600, "Modify time should be recent (within last hour)");
-
-		// Test File specific methods from uncoveredCodeTest
-
-		// Test getSimpleVirtualFileContent with non-existent virtual file
-		try {
-			fs::getSimpleVirtualFileContent("vfs:/non_existent_file.txt");
-			assertTrue(false, "Should fail for non-existent virtual file");
-		} catch (const base::Panic&) {
-			// Expected: CORE_PANIC("virtual file does not exist: ...")
-		}
 
 		// Test symlink detection (should be false for all our test files)
 		assertTrue(!test_file.isSymlink(), "Test files should not be symlinks");

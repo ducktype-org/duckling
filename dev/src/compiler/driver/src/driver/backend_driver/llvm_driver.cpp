@@ -1,6 +1,6 @@
 #include "llvm_driver.hpp"
 
-#include "llvm_ir_lib.hpp"  // IWYU pragma: export
+#include "llvm_ir_lib.hpp"  // IWYU pragma: keep
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>

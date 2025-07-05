@@ -37,7 +37,7 @@ The Virtual Filesystem (VFS) is particularly useful for scenarios where you need
 #include <filesystem/file.hpp>
 
 // Create a virtual root directory
-auto virtual_root = fs::FileManager::createVirtualDirectory();
+auto virtual_root = fs::FileManager::createRandomVirtualDirectory();
 
 // Add a file at a specific path within the virtual filesystem
 auto config_file = fs::FileManager::createFileIn(
@@ -119,13 +119,13 @@ This separation ensures that:
 
 ## Important Note on Queries
 
-**@TODO remove query** - `File` objects point to files and should not be used directly in query operations, as file contents can change dynamically (e.g., during Language Server operations). This limitation will be addressed in future versions to provide better query stability.
+**@TODO remove query #937** - `File` objects point to files and should not be used directly in query operations, as file contents can change dynamically (e.g., during Language Server operations). This limitation will be addressed in future versions to provide better query stability.
 
 ## Example: Complete Virtual Filesystem Workflow
 
 ```cpp
 // Create virtual filesystem
-auto vfs_root = fs::FileManager::createVirtualDirectory();
+auto vfs_root = fs::FileManager::createRandomVirtualDirectory();
 
 // Create nested directory structure
 auto src_dir = fs::FileManager::createDirectoryIn(vfs_root, "src");

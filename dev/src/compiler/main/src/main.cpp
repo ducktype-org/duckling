@@ -390,7 +390,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		compiler::driver::PackageCompilationDriver driver{
 			backend_type,
 			path_to_compile,
-			artifact_location.absolutePath(),
+			artifact_location.nativePath(),
 		};
 		driver.compilerEntirePackageIntoBinary();
 

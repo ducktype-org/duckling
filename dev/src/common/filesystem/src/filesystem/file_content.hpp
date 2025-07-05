@@ -6,6 +6,11 @@
 #include <utility>
 
 namespace fs {
+	/**
+	 * @brief Stores file content.
+	 *
+	 * This class encapsulates the content of a file and is assumed to be immutable.
+	 */
 	class FileContent {
 		std::shared_ptr<base::OwningView> content;
 		friend class File;
@@ -14,8 +19,6 @@ namespace fs {
 			  content(std::move(content)) {}
 
 	public:
-		FileContent(): content(nullptr) {}
-
 		FileContent(const FileContent&) = default;
 		FileContent(FileContent&&)      = default;
 
@@ -28,9 +31,7 @@ namespace fs {
 
 		usize size() { return view().size(); }
 
-		byte operator[](usize i) { return view()[i]; }
-
-		base::RawView view() { return content->view(); }
+		byte operator[](usize i) const { return content->view()[i]; }
 
 		[[nodiscard]]
 		const base::RawView view() const {

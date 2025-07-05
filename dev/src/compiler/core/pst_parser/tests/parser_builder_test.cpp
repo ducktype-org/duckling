@@ -81,7 +81,7 @@ private:
 
 	template<typename Element>
 	pst::PST<Element> fromContents(const std::string& filename) {
-		std::string contents{ fs::getSimpleFileContent(filename).view().stringView() };
+		std::string contents{ fs::File(filename).getContent().view().stringView() };
 		return pst::PST<Element>::fromContents(contents);
 	}
 

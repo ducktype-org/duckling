@@ -54,7 +54,7 @@ private:
 		std::stringstream result_stream;
 		print(td->getTokenData().tokens, result_stream);
 
-		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
+		auto corr_json = fs::File(path("fun_position.json")).getContent();
 		auto corr      = corr_json.view().stringView();
 
 		assertTrue(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");

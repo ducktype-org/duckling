@@ -51,7 +51,7 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 					"Not unique directory name: ",
 					child_name,
 					" at: ",
-					path.absolutePath(),
+					path.nativePath(),
 					" root: ",
 					root->getRoot().name()
 				));
@@ -66,7 +66,7 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 					"Not unique file name: ",
 					file_name,
 					", at: ",
-					path.absolutePath(),
+					path.nativePath(),
 					", root: ",
 					root->getRoot().name()
 				));

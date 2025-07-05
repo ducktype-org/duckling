@@ -1,8 +1,3 @@
-/**
- * @file file.hpp
- * @author Piotr Trzaskowski (piotr.trzaskowski@outlook.com)
- */
-
 #pragma once
 
 #include "file_content.hpp"
@@ -71,10 +66,10 @@ namespace fs {
 	 *   - Support for reading and writing virtual file content.
 	 *
 	 * ### Usage:
-	 * - Use `FileManager::createTempFile` and `FileManager::createTempDirectory` for temporary
-	 * files and directories.
-	 * - Use `FileManager::createVirtualFile` and `FileManager::createVirtualDirectory` for virtual
-	 * files and directories.
+	 * - Use `FileManager::createTempFile` and `FileManager::createRandomTempDirectory` for
+	 * temporary files and directories.
+	 * - Use `FileManager::createVirtualFile` and `FileManager::createRandomVirtualDirectory` for
+	 * virtual files and directories.
 	 * - Use `getContent` or `getContentSafe` to retrieve file content.
 	 * - Use `listFilePaths` to list the contents of a directory.
 	 *
@@ -87,7 +82,7 @@ namespace fs {
 	 * auto content = tempFile.getContent();
 	 *
 	 * // Create a virtual directory
-	 * auto virtualDir = FileManager::createVirtualDirectory();
+	 * auto virtualDir = FileManager::createRandomVirtualDirectory();
 	 *
 	 * // Add a file to the virtual directory
 	 * auto virtualFile = FileManager::createFileIn(virtualDir, "Virtual content");
@@ -100,8 +95,8 @@ namespace fs {
 
 		bool is_symlink;
 
-		FileType     type     = FileType::Physical;
-		FileCategory category = FileCategory::File;
+		FileType     type;
+		FileCategory category;
 
 		friend class FileManager;
 		friend struct std::hash<File>;
@@ -126,6 +121,7 @@ namespace fs {
 			return are_equal;
 		}
 
+		// @TODO: remove query #937
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
@@ -143,7 +139,7 @@ namespace fs {
 		File parentPath() const;
 
 		[[nodiscard]]
-		std::string absolutePath() const;
+		std::string nativePath() const;
 
 		[[nodiscard]]
 		std::string uri() const;
@@ -155,16 +151,6 @@ namespace fs {
 		FileType getType() const noexcept {
 			return type;
 		}
-
-		/**
-		 * @brief Gets the last modification time of the file.
-		 *
-		 * Note: This function does not work for virtual files.
-		 *
-		 * @return The last modification time as a std::chrono::file_clock::time_point.
-		 */
-		[[nodiscard]]
-		std::chrono::file_clock::time_point getModifyTime() const;
 
 		[[nodiscard]]
 		bool isFile() const noexcept;
@@ -196,7 +182,6 @@ namespace fs {
 		 * @brief Writes content to the file.
 		 *
 		 * This method works for both physical and virtual files.
-		 * For virtual files, append mode is not supported and will throw an error.
 		 *
 		 * @param new_content The content to write to the file.
 		 * @param append If true, appends to the file; if false, overwrites the file.
@@ -245,19 +230,18 @@ namespace fs {
 		 * name.
 		 * @return A File with the new temporary directory.
 		 */
-		static File createTempDirectory();
+		static File createRandomTempDirectory();
 
 		/**
 		 * Creates a virtual directory inside the root folder of virtual file system. The directory
 		 * has a random name.
 		 * @return A File with the new virtual directory.
 		 */
-		static File createVirtualDirectory();
+		static File createRandomVirtualDirectory();
 
 		/**
 		 * Creates a random-named virtual file in the virtual filesystem's root directory.
 		 * @param content The content to write to the file.
-		 * @param override If true, overwrites the file if it exists (should not happen for random).
 		 * @return The created File object.
 		 */
 		static File createRandomVirtualFile(std::string_view content = "");
@@ -265,7 +249,6 @@ namespace fs {
 		/**
 		 * Creates a random-named temporary file in the system's temporary directory.
 		 * @param content The content to write to the file.
-		 * @param override If true, overwrites the file if it exists (should not happen for random).
 		 * @return The created File object.
 		 */
 		static File createRandomTempFile(std::string_view content = "");
@@ -291,11 +274,11 @@ namespace fs {
 		 * The path must be phisical.
 		 * @param path The absolute or relative path to the file.
 		 * @param content The content to write to the file.
-		 * @param override If true, overwrites the file if it exists.
+		 * @param override_ If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createPhysicalFile(
-			const std::filesystem::path& path, std::string_view content = "", bool override = false
+			const std::filesystem::path& path, std::string_view content = "", bool override_ = false
 		);
 
 		/**
@@ -304,52 +287,52 @@ namespace fs {
 		 * If override is true, recreates the folder.
 		 * The path must be phisical.
 		 * @param path The absolute or relative path to the folder.
-		 * @param override If true, recreates the folder if it exists.
+		 * @param override_ If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createPhysicalFolder(const std::filesystem::path& path, bool override = false);
+		static File createPhysicalFolder(const std::filesystem::path& path, bool override_ = false);
 
 		/**
 		 * @brief Creates a virtual file in the virtual filesystem's root directory or at the given
-		 * path. The must be virtual.
-		 * @param path The path to the file (virtual or will be converted).
+		 * path. The path must be virtual.
+		 * @param path The path to the file
 		 * @param content The content to write to the file.
-		 * @param override If true, overwrites the file if it exists.
+		 * @param override_ If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createVirtualFile(
-			const std::filesystem::path& path, std::string_view content = "", bool override = false
+			const std::filesystem::path& path, std::string_view content = "", bool override_ = false
 		);
 
 		/**
 		 * @brief Creates a virtual folder in the virtual filesystem's root directory or at the
-		 * given path. The path must be virtual.
-		 * @param path The path to the folder (virtual or will be converted).
-		 * @param override If true, recreates the folder if it exists.
+		 * given path. The path must be virtual (must start with the VFS root path: "VFS:/").
+		 * @param path The path to the folder
+		 * @param override_ If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createVirtualFolder(const std::filesystem::path& path, bool override = false);
+		static File createVirtualFolder(const std::filesystem::path& path, bool override_ = false);
 
 		/**
 		 * @brief Creates a temporary file in the system's temporary directory or at the given path.
 		 * The path must contain a temporary location.
 		 * @param path The path to the file (will be placed in temp directory if not already).
 		 * @param content The content to write to the file.
-		 * @param override If true, overwrites the file if it exists.
+		 * @param override_ If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createTempFile(
-			const std::filesystem::path& path, std::string_view content = "", bool override = false
+			const std::filesystem::path& path, std::string_view content = "", bool override_ = false
 		);
 
 		/**
 		 * @brief Creates a temporary folder in the system's temporary directory or at the given
-		 * path. The path must contain a temporary location.
+		 * path. The path must be inside system temp folder
 		 * @param path The path to the folder (will be placed in temp directory if not already).
-		 * @param override If true, recreates the folder if it exists.
+		 * @param override_ If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createTempFolder(const std::filesystem::path& path, bool override = false);
+		static File createTempFolder(const std::filesystem::path& path, bool override_ = false);
 
 		/**
 		 * @brief Checks if a file exists at the given path (physical, virtual, or temp).
@@ -420,30 +403,6 @@ namespace fs {
 		 */
 		static bool isSymlink(const std::filesystem::path& path) noexcept;
 	};
-
-	/**
-	 * @brief Reads the content of a virtual file. (use it in tests only)
-	 *
-	 * This function retrieves the content of a virtual file specified by its path.
-	 * If the file does not exist, it throws a base::LogicError.
-	 *
-	 * @param path The path of the virtual file to read.
-	 * @return A base::OwningView containing the content of the virtual file.
-	 * @throws base::LogicError if the virtual file does not exist.
-	 */
-	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path);
-
-	/**
-	 * @brief Reads the content of a non-virtual file. (use it in tests only)
-	 *
-	 * This function retrieves the content of a non-virtual file specified by its path.
-	 * If the file does not exist, it throws a base::LogicError.
-	 *
-	 * @param path The path to the non-virtual file to read.
-	 * @return A base::OwningView containing the content of the non-virtual file.
-	 * @throws base::LogicError if the file does not exist.
-	 */
-	base::OwningView getSimpleFileContent(const std::filesystem::path& path);
 }
 
 template<>

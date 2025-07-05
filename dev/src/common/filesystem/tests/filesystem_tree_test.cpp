@@ -49,7 +49,7 @@ private:
 
 	void testVirtualFiles() {
 		// Create a virtual root directory
-		auto root = fs::FileManager::createVirtualDirectory();
+		auto root = fs::FileManager::createRandomVirtualDirectory();
 
 		// Create subdirectories and files
 		auto sub_dir1 = fs::FileManager::createDirectoryIn(root, "subDir1");

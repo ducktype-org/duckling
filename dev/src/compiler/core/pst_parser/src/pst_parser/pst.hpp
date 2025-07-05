@@ -75,8 +75,8 @@ namespace pst {
 		 * @brief Construct a new Pst from text content
 		 */
 		template<typename... Args>
-		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenSource(fs::FileManager::createRandomTempFile(content))) {
+		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>:
+			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}

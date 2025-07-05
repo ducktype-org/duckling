@@ -34,7 +34,7 @@ namespace compiler::driver {
 			if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 			vm::code::serialize(code_collection, dvm_file);
 			dvm_file.close();
-			std::cout << "DVM file written to: " << output_artifact.FILE.absolutePath() << "\n";
+			std::cout << "DVM file written to: " << output_artifact.FILE.nativePath() << "\n";
 		}
 
 		this->code_collection.emplace_back(std::move(code_collection));

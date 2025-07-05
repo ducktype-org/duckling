@@ -31,7 +31,7 @@ private:
 		SourceFile source_file(temp_file, test_module_id);
 
 		// Test basic properties
-		ASSERT_EQUAL(temp_file.absolutePath(), source_file.path.absolutePath());
+		ASSERT_EQUAL(temp_file.nativePath(), source_file.path.nativePath());
 		ASSERT_EQUAL(test_module_id, source_file.linked_module);
 		assertTrue(source_file.id.isGood(), "FileID should be valid");
 		assertTrue(!source_file.parse_tree.has_value(), "Parse tree should be initially empty");

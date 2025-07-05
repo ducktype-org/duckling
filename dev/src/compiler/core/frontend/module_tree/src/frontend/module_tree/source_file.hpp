@@ -15,7 +15,8 @@
 namespace compiler::frontend {
 
 	/**
-	 * @brief Structure holding SourceFile within Module Tree
+	 * @brief Structure representing Duckling  source file.
+	 * It is currently assumed that source files exist only within Module Trees.
 	 */
 	struct SourceFile final {
 		fs::File                   path;
@@ -37,20 +38,18 @@ namespace compiler::frontend {
 		 */
 		CRef<pst::PST<>> getPST();
 
-		// --- Content cache and hash logic ---
-		using ContentMap
-			= base::HashMap<std::filesystem::path, fs::FileContent, std::hash<std::filesystem::path>>;
-
-		static ContentMap to_content;
-
 		/**
 		 * @brief Returns cached content for this SourceFile
 		 * @note Content is cached during SourceFile construction
 		 * @return Cached FileContent for this SourceFile
 		 */
-
 		[[nodiscard]] fs::FileContent getCachedContent() const;
 
+		/**
+		 * @brief Returns an unstable perfect hash for this SourceFile.
+		 * @details
+		 *   The hash is currently computed based on the file's path.
+		 */
 		u64 queryUnstablePerfectHash();
 	};
 }
