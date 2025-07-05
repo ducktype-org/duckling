@@ -1,5 +1,3 @@
 #pragma once
 
-namespace global_state {
-
-}
+namespace global_state {}

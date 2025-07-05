@@ -123,9 +123,8 @@ namespace base {
 		template<class U>
 		Box<U> dynamicCastMove() && {
 			U* casted_ptr = dynamic_cast<U*>(ptr);
-			if (casted_ptr == nullptr) {
+			if (casted_ptr == nullptr)
 				CORE_PANIC("Dynamic cast failed, pointer was not of type T!");
-			}
 			ptr = nullptr;
 			return Box<U>(casted_ptr);
 		}

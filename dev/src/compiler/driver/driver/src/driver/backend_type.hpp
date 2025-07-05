@@ -2,6 +2,6 @@
 
 #include <base/string_id.hpp>
 
-namespace driver {
+namespace compiler::driver {
 	enum class BackendType : bool { LLVM, DVM };
 }

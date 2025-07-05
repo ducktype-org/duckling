@@ -4,21 +4,21 @@
 
 #pragma once
 
-#include <query_framework/query_int.hpp>
-#include <frontend/module_tree/module_id.hpp>
-#include <artifacts/artifacts.hpp>
 #include "backend_type.hpp"
 
-namespace driver {
+#include <artifacts/artifacts.hpp>
+#include <frontend/module_tree/module_id.hpp>
+#include <query_framework/query_int.hpp>
 
-    /**
-     * Temporary interface for compiling the entire main package.
-     */
-    void compilerEntireMainPackageIntoBinary();
+namespace compiler::driver {
 
+	/**
+	 * Temporary interface for compiling the entire main package.
+	 */
+	void compilerEntireMainPackageIntoBinary();
 
-    struct KeyOf_CompileModule final {
-		compiler::frontend::ModuleID module_id;
+	struct KeyOf_CompileModule final {
+		frontend::ModuleID module_id;
 		BackendType        backend_type;
 
 		[[nodiscard]]

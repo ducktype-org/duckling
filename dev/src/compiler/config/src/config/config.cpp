@@ -24,7 +24,6 @@ namespace config {
 	}
 
 	clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args) {
-		
 		// this is already done in the new driver:
 		// auto res = clap.parse(args);
 

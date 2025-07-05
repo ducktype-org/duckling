@@ -1,113 +1,114 @@
 #pragma once
 
 #include <base/ints.hpp>
-#include <variant>
+
 #include <string>
+#include <variant>
 #include <vector>
 
-namespace driver {    
-    // @note: some code in this file is left as comments
-    // as it is unused for now, but sets a vision for the code structure
-    // in the future.
+namespace compiler::driver {
+	// @note: some code in this file is left as comments
+	// as it is unused for now, but sets a vision for the code structure
+	// in the future.
 
-    /**
-     * Definition of options that are used by the compiler to control its behavior.
-     */
-    namespace options_types {
-        /**
-         * Options used for actual compilation of the source code.
-         */
-        struct CompilationOptions {
-            // struct OptimizationOptions {
-            //     // @future: made it more specific
-            //     u64 level;
-            // };
+	/**
+	 * Definition of options that are used by the compiler to control its behavior.
+	 */
+	namespace options_types {
+		/**
+		 * Options used for actual compilation of the source code.
+		 */
+		struct CompilationOptions {
+			// struct OptimizationOptions {
+			//     // @future: made it more specific
+			//     u64 level;
+			// };
 
-            struct BackendOptions {
-                struct VMBackend {};
-                struct LLVMBackend {};
-                std::variant<VMBackend, LLVMBackend> backend_options;
-            };
+			struct BackendOptions {
+				struct VMBackend {};
 
-            CompilationOptions(BackendOptions backend)
-                : backend(backend) {}
+				struct LLVMBackend {};
 
-            // OptimizationOptions optimization;
-            BackendOptions backend;
-        };
+				std::variant<VMBackend, LLVMBackend> backend_options;
+			};
 
-        struct DebugOptions {
-            bool lexer_cerr = false;
-            bool logger_cerr = false;
-        };
+			CompilationOptions(BackendOptions backend): backend(backend) {}
 
-        struct ArtifactsOptions {
-            std::string artifacts_path;
+			// OptimizationOptions optimization;
+			BackendOptions backend;
+		};
 
-            // struct IncrementalCompilation {
-            //     bool enabled;
-            //     bool show_stats;
-            // };
-            // IncrementalCompilation incremental_compilation;
-            // bool rm_artifacts_before_compilation = false;
-            // bool rm_artifacts_after_compilation = false;
-        };
+		struct DebugOptions {
+			bool lexer_cerr  = false;
+			bool logger_cerr = false;
+		};
 
-        struct PackageInfo {
-            std::string package_name;
-            std::string package_path;
-        };
+		struct ArtifactsOptions {
+			std::string artifacts_path;
 
-        // struct DependencyInfo {
-        //     struct CompilationStrategy {
-        //         struct InlineCompilation { };
-        //         struct Precompiled {
-        //             // this might be inlined or not:
-        //             std::string precompilation_path;
-        //         };
-        //         std::variant<InlineCompilation, Precompiled> strategy;
-        //     };
-        //     PackageInfo package_info;
-        //     CompilationStrategy compilation_strategy;
-        // };
-    };
+			// struct IncrementalCompilation {
+			//     bool enabled;
+			//     bool show_stats;
+			// };
+			// IncrementalCompilation incremental_compilation;
+			// bool rm_artifacts_before_compilation = false;
+			// bool rm_artifacts_after_compilation = false;
+		};
 
-    /**
-     * Structure holding information about mode of operation of the compiler
-     * and all "generic" compiler options associated with that mode,
-     * (i.e. options that are not associated with any specific task).
-     * Note that is doesn't encapsulate cli options such as --help or --version.
-     * It is used to configure the compiler's behavior once the compiler is actually used
-     * via the Driver.
-     */
-    struct CompilerModeOfOperationAndOptions {
+		struct PackageInfo {
+			std::string package_name;
+			std::string package_path;
+		};
 
-        /**
-         * Bare mode, where compiler doesn't do any initialization etc,
-         * but you can still (try to) use its internal functions.
-         */
-        struct BareMode {
-            // anything here?
-        };
+		// struct DependencyInfo {
+		//     struct CompilationStrategy {
+		//         struct InlineCompilation { };
+		//         struct Precompiled {
+		//             // this might be inlined or not:
+		//             std::string precompilation_path;
+		//         };
+		//         std::variant<InlineCompilation, Precompiled> strategy;
+		//     };
+		//     PackageInfo package_info;
+		//     CompilationStrategy compilation_strategy;
+		// };
+	};
 
-        /**
-         * Package compilation mode, compiler is used to compile a package
-         * and its dependencies it can be later asked to compile specific scripts
-         * or modules, etc. 
-         */
-        struct PackageCompilationMode {
-            options_types::PackageInfo main_package_info;
-            options_types::ArtifactsOptions compilation_artifacts;
-            // std::vector<options_types::DependencyInfo> dependencies;
-            options_types::CompilationOptions compilation_options;
-            options_types::DebugOptions debug_options;
-        };
- 
-        /**
-         * @note: in the future this might hold more modes,
-         * like repl mode, script compilation mode, lsp deamon, etc.
-         * don't refrain from refactoring this file (and module) if needed.
-         */
-        std::variant<BareMode, PackageCompilationMode> mode;
-    };
+	/**
+	 * Structure holding information about mode of operation of the compiler
+	 * and all "generic" compiler options associated with that mode,
+	 * (i.e. options that are not associated with any specific task).
+	 * Note that is doesn't encapsulate cli options such as --help or --version.
+	 * It is used to configure the compiler's behavior once the compiler is actually used
+	 * via the Driver.
+	 */
+	struct CompilerModeOfOperationAndOptions {
+		/**
+		 * Bare mode, where compiler doesn't do any initialization etc,
+		 * but you can still (try to) use its internal functions.
+		 */
+		struct BareMode {
+			// anything here?
+		};
+
+		/**
+		 * Package compilation mode, compiler is used to compile a package
+		 * and its dependencies it can be later asked to compile specific scripts
+		 * or modules, etc.
+		 */
+		struct PackageCompilationMode {
+			options_types::PackageInfo      main_package_info;
+			options_types::ArtifactsOptions compilation_artifacts;
+			// std::vector<options_types::DependencyInfo> dependencies;
+			options_types::CompilationOptions compilation_options;
+			options_types::DebugOptions       debug_options;
+		};
+
+		/**
+		 * @note: in the future this might hold more modes,
+		 * like repl mode, script compilation mode, lsp deamon, etc.
+		 * don't refrain from refactoring this file (and module) if needed.
+		 */
+		std::variant<BareMode, PackageCompilationMode> mode;
+	};
 };
