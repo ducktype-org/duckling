@@ -1,8 +1,6 @@
-#include "driver.hpp"
+#include "initialize.hpp"
 
 #include <base/variant.hpp>
-#include "handles/bare_handle.hpp"
-#include "handles/package_compilation_handle.hpp"
 #include <global_state/artifacts_location.hpp>
 
 #include <diagnostic/logger.hpp>
@@ -28,7 +26,7 @@ namespace driver {
         }
     }
 
-    Box<CompilerHandleABC> initializeTheCompiler(
+    void initializeTheCompiler(
         CompilerModeOfOperationAndOptions options
     ) {
         // @TODO: maybe validate that init was done here
@@ -38,13 +36,11 @@ namespace driver {
         
         variant_match(options.mode) {
             variant_case(CompilerModeOfOperationAndOptions::BareMode, _) {
-                return makeBox<BareHandle>();
             }
             variant_case(CompilerModeOfOperationAndOptions::PackageCompilationMode, options) {
                 handleDebugOptions(options.debug_options);
                 handleArtifactsOptions(options.compilation_artifacts);
 
-                return makeBox<PackageCompilationHandle>();
             }
 
             variant_default {

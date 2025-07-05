@@ -28,16 +28,6 @@ namespace compiler::driver {
 			  backend_driver(createBackendDriver(&options)) {}
 
 		/**
-		 * @brief Compiles the HOUTUnit to the backend module.
-		 */
-		void compileHOUTUnit(
-			query::Context&              ctx,
-			base::CRef<helios::HOUTUnit> hout_unit,
-			base::StrID                  module_id,
-			artifacts::FileArtifact      output_artifact
-		);
-
-		/**
 		 * @brief Execute modules compiled with `compileModule` method.
 		 * Only relevant for DVM backend.
 		 * Returns the exit code of the executed program or an error message.

@@ -1,7 +1,6 @@
 #include "package_compilation_driver.hpp"
 
 #include "backend_driver/llvm_ir_lib.hpp"
-#include "link.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <driver/hout_to_binary_driver.hpp>
