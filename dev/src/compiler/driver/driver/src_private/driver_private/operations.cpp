@@ -1,6 +1,6 @@
 #include "operations.hpp"
 
-#include "backend_stuff/llvm_ir_lib.hpp"
+#include "backend_operations/llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -82,7 +82,7 @@ namespace compiler::driver {
 		artifacts::FileArtifact  output_artifact,
 		BackendType              backend_type
 	) {
-		
+
 	}
 
 	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {

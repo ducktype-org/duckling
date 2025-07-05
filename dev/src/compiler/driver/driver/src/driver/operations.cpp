@@ -4,6 +4,10 @@
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <helios/queries.hpp>
+#include <driver_private/operations.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <linker/link.hpp>
 
 #include <utility>
 
@@ -19,10 +23,6 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
-			// here we create now backend driver per each query call,
-			// which might be suboptimal
-			auto binary_diver = HoutToBinaryDriver{ getBackendOptions(key.backend_type) };
-
 			// Note: in the future it should use stable hashing for incremental
 			// compilation. For now its ok.
 			auto output_name = key.queryUnstablePerfectHash().toStringHex();
@@ -31,7 +31,13 @@ namespace compiler::driver {
 			auto module_name
 				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
-			binary_diver.compileHOUTUnit(ctx, &hout, module_name, output);
+			compileHOUTUnit(
+				ctx,
+				&hout,
+				module_name,
+				output,
+				key.backend_type
+			);
 
 			return output;
 		}
@@ -42,7 +48,10 @@ namespace compiler::driver {
 
 
 
-	void compilerEntirePackageIntoBinary(BackendType backend) {
+	void compilerEntirePackageIntoBinary(
+		const fs::FilePath& package_location,
+		BackendType backend
+	) {
 		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
@@ -50,7 +59,7 @@ namespace compiler::driver {
 		// this is std::function, so it can be recursive
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			objects.emplace_back(query::entryPoint<CompileModule>({ module_id, this->backend }));
+			objects.emplace_back(query::entryPoint<CompileModule>({ module_id, backend }));
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};
@@ -62,7 +71,7 @@ namespace compiler::driver {
 				base::StrID(base::strConcat("package_", backendTypeToStr(backend), ".exe").c_str())
 			);
 
-			objects.push_back(emitBuiltinObjectFile());
+			objects.push_back(emitBuiltinLLVMObjectFile());
 			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
 		}
 	}

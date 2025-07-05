@@ -33,44 +33,11 @@ namespace compiler::driver {
 		}
 	}
 
-	std::string backendTypeToStr(BackendType type) {
-		switch (type) {
-		case BackendType::LLVM:
-			return "llvm";
-		case BackendType::DVM:
-			return "dvm";
-		default:
-			CORE_UNREACHABLE();
-		}
-	}
+	
 
 
 
-	void PackageCompilationDriver::compilerEntirePackageIntoBinary() {
-		using namespace compiler;
-		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
-
-		std::vector<artifacts::FileArtifact> objects;
-
-		// this is std::function, so it can be recursive
-		std::function<void(frontend::ModuleID)> handle_module
-			= [&](frontend::ModuleID module_id) -> void {
-			objects.emplace_back(query::entryPoint<CompileModule>({ module_id, this->backend }));
-			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
-			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
-		};
-		handle_module(root);
-
-		if (backend == BackendType::LLVM) {
-			// Link all outputs into a single binary.
-			auto output_file = root_artifact_collection.fileArtifactAtOrNew(
-				base::StrID(base::strConcat("package_", backendTypeToStr(backend), ".exe").c_str())
-			);
-
-			objects.push_back(emitBuiltinObjectFile());
-			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
-		}
-	}
+	
 
 
 }
