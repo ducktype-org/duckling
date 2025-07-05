@@ -14,7 +14,7 @@
 #include <fstream>
 
 namespace compiler::driver {
-	void DVMDriver::compileModule(
+	void compileBackendModuleToDVM(
 		query::Context&          query_ctx,
 		const BackendModuleData& data,
 		artifacts::FileArtifact  output_artifact

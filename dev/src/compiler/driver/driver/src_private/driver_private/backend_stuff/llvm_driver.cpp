@@ -9,7 +9,7 @@
 
 namespace compiler::driver {
 
-	void LLVMDriver::compileModule(
+	void compileBackendModuleToLLVM(
 		query::Context&          ctx,
 		const BackendModuleData& lir_module,
 		artifacts::FileArtifact  output_artifact

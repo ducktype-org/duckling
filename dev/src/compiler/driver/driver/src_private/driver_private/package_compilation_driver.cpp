@@ -11,14 +11,6 @@
 
 namespace compiler::driver {
 
-	// this is a quick hack, it will change with future driver refactor:
-	// MRef<artifacts::ArtifactCollection> root_collection;
-
-	// void setRootArtifactCollection(Ref<artifacts::ArtifactCollection> collection) {
-	// 	CORE_ASSERT(root_collection == nullptr, "Root collection already set");
-	// 	root_collection = collection;
-	// }
-
 	BackendOptions getBackendOptions(BackendType type) {
 		if (type == BackendType::LLVM) {
 			return BackendOptions{
@@ -52,14 +44,7 @@ namespace compiler::driver {
 		}
 	}
 
-	PackageCompilationDriver::PackageCompilationDriver(
-		BackendType backend, fs::FilePath package_location, std::filesystem::path artifact_location
-	):
-		  backend{ backend },
-		  package_location(std::move(package_location)),
-		  root_artifact_collection(std::move(artifact_location)) {
-		// setRootArtifactCollection(&root_artifact_collection);
-	}
+
 
 	void PackageCompilationDriver::compilerEntirePackageIntoBinary() {
 		using namespace compiler;

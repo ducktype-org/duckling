@@ -2,6 +2,7 @@
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <global_state/artifacts_location.hpp>
 
 #include <utility>
@@ -16,7 +17,6 @@ namespace compiler::driver {
 		QUERY_AUTO_CACHE_COPY
 
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
-			using namespace compiler;
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
 			// here we create now backend driver per each query call,
@@ -27,7 +27,7 @@ namespace compiler::driver {
 			// compilation. For now its ok.
 			auto output_name = key.queryUnstablePerfectHash().toStringHex();
 
-			auto output = getCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
+			auto output = getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
 			auto module_name
 				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
@@ -39,4 +39,32 @@ namespace compiler::driver {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
+
+
+
+	void compilerEntirePackageIntoBinary(BackendType backend) {
+		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
+
+		std::vector<artifacts::FileArtifact> objects;
+
+		// this is std::function, so it can be recursive
+		std::function<void(frontend::ModuleID)> handle_module
+			= [&](frontend::ModuleID module_id) -> void {
+			objects.emplace_back(query::entryPoint<CompileModule>({ module_id, this->backend }));
+			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
+			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
+		};
+		handle_module(root);
+
+		if (backend == BackendType::LLVM) {
+			// Link all outputs into a single binary.
+			auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+				base::StrID(base::strConcat("package_", backendTypeToStr(backend), ".exe").c_str())
+			);
+
+			objects.push_back(emitBuiltinObjectFile());
+			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
+		}
+	}
+
 }

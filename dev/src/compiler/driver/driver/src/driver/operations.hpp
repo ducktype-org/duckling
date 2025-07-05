@@ -15,7 +15,7 @@ namespace compiler::driver {
 	/**
 	 * Temporary interface for compiling the entire main package.
 	 */
-	void compilerEntireMainPackageIntoBinary();
+	void compilerEntireMainPackageIntoBinary(BackendType backend);
 
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
