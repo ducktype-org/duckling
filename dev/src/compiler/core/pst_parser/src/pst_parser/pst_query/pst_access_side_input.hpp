@@ -4,7 +4,7 @@
 
 #include <query_framework/query_input.hpp>
 
-namespace pst::detail {
+namespace pst::internal {
 	struct PSTAccessKey {
 		PstID pst_id;
 

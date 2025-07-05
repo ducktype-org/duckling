@@ -5,7 +5,7 @@
 #include "hierarchy/not_statements/expr_element.hpp"  // IWYU pragma: keep
 #include "implementations/preamble.hpp"
 
-namespace pst::detail {
+namespace pst::internal {
 	dia::SourcePosition getPosition(LangParserState& state) { return state.getPosition(); }
 
 	void parseExprIntoHolder(LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun) {

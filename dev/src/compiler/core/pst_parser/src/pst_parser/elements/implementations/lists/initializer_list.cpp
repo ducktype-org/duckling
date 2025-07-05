@@ -9,8 +9,8 @@ namespace pst {
 			InitList,
 			false,
 			lexer::Token::BracketType::None,
-			detail::Conditions::isComma,
-			detail::Conditions::isAssign,
-			detail::NameGetters::classInitList>(state);
+			internal::Conditions::isComma,
+			internal::Conditions::isAssign,
+			internal::NameGetters::classInitList>(state);
 	}
 }

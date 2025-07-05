@@ -9,8 +9,8 @@ namespace pst {
 			AtrArgList,
 			false,
 			lexer::Token::BracketType::Round,
-			detail::Conditions::isComma,
-			detail::Conditions::isSentinel,
-			detail::NameGetters::attributeArgList>(state);
+			internal::Conditions::isComma,
+			internal::Conditions::isSentinel,
+			internal::NameGetters::attributeArgList>(state);
 	}
 }

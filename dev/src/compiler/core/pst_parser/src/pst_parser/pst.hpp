@@ -7,7 +7,7 @@
 
 #include <token_source/source.hpp>
 
-namespace pst::detail {
+namespace pst::internal {
 	void deleteState(pst::LangParserState* ptr);
 }
 
@@ -15,13 +15,13 @@ namespace base::extend {
 	// Custom deleter to not include full state definition
 	template<>
 	struct BoxPtrDeleter<pst::LangParserState> {
-		static void del(pst::LangParserState* ptr) { pst::detail::deleteState(ptr); }
+		static void del(pst::LangParserState* ptr) { pst::internal::deleteState(ptr); }
 	};
 }
 
 namespace pst {
 	// Used to not include full state definition
-	namespace detail {
+	namespace internal {
 		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 	}
@@ -57,7 +57,7 @@ namespace pst {
 		template<typename... Args>
 		void parse(Args&&... args) requires ParseAble<Args...> {
 			const lexer::TokenData& token_data = file->getTokenData();
-			auto                    state_box  = detail::makeState(
+			auto                    state_box  = internal::makeState(
                 tpc::TokenStream(
                     token_data.tokens,
                     token_data.bof_sentinel,
@@ -68,7 +68,7 @@ namespace pst {
                 file->getLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
-			imports = detail::extractState(std::move(state_box));
+			imports = internal::extractState(std::move(state_box));
 		}
 
 		/**

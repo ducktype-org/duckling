@@ -42,6 +42,7 @@ namespace pst {
 		Fun,
 		Namespace,
 		CodeDecl,
+		StmtSpecifier,
 		Action,
 		ExprStmt,
 		Class,

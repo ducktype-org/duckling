@@ -9,8 +9,8 @@ namespace pst {
 			ImplementsList,
 			true,
 			lexer::Token::BracketType::None,
-			detail::Conditions::isComma,
-			detail::Conditions::isBlockGroup,
-			detail::NameGetters::inheritanceList>(state);
+			internal::Conditions::isComma,
+			internal::Conditions::isBlockGroup,
+			internal::NameGetters::inheritanceList>(state);
 	}
 }
