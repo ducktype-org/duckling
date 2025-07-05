@@ -175,6 +175,8 @@ namespace compiler::helios::code {
 
 		IntegerNegation,
 		BooleanNot,
+		Ref,
+		Box,
 	};
 
 	/**

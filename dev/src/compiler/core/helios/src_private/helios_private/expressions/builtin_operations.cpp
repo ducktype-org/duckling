@@ -63,16 +63,18 @@ namespace compiler::helios::code {
 
 		auto expr_type = expr->expression_type;
 
-		if (expr_type.getType().getKind() != tsh::Kind::Integral
-		    and expr_type.getType().getKind() != tsh::Kind::Bool) {
-			// No builtins for this case for types other than ints and bools for now.
-			return {};
-		}
+		// if (expr_type.getType().getKind() != tsh::Kind::Integral
+		//     and expr_type.getType().getKind() != tsh::Kind::Bool) {
+		// 	// No builtins for this case for types other than ints and bools for now.
+		// 	return {};
+		// }
 
 		// @TODO: change to base::map when possible
 		const static std::map<base::StrID, BuiltinUnary> operators = {
 			{ base::StrID("-"), BuiltinUnary::IntegerNegation },
 			{ keywordToStr(lang_def::Keyword::Not), BuiltinUnary::BooleanNot },
+			{ keywordToStr(lang_def::Keyword::Ref), BuiltinUnary::Ref },
+			{ keywordToStr(lang_def::Keyword::Box), BuiltinUnary::Box },
 		};
 
 		if (operators.contains(op)) return operators.at(op);
