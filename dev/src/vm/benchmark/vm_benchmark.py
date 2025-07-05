@@ -225,7 +225,7 @@ def run(
     You can also narrow the programs to benchmark with --program option (multiple allowed):
 
         python3 vm_benchmark.py run fast --program collatz.dbc --program fib.dbc
-     
+
     """
     create_dir_if_not_exists(results_dir)
 
@@ -238,7 +238,7 @@ def run(
                 "You may want to compile the binary first with command:\n"
                 "    python3 vm_benchmark.py compile <path_to_cmake_directory>"
             )
-            return 
+            return
 
     benchmark_suite_files = get_benchmark_suite_files(
         programs_dir, inputs_dir, benchmark_suite, program
@@ -484,9 +484,7 @@ def save_benchmark_results(raport_path, results):
     log_success("Results saved to: " + raport_path)
 
 
-def vm_benchmark_one(
-    vm_bin_path, benchmark_files, results_dir, inputs_suite, reps
-):
+def vm_benchmark_one(vm_bin_path, benchmark_files, results_dir, inputs_suite, reps):
     binary_name = os.path.basename(vm_bin_path)
     raport_path = os.path.join(
         results_dir, f"{binary_name}_{inputs_suite}" + CSV_EXTENSION
@@ -528,7 +526,9 @@ def get_all_files_in_dir(dir_name, extension=None):
     return sorted(files)
 
 
-def get_benchmark_suite_files(programs_dir, inputs_dir, input_suite_name, programs_only):
+def get_benchmark_suite_files(
+    programs_dir, inputs_dir, input_suite_name, programs_only
+):
     """
     Find's all input files in the inputs_dir and matches them with
     programs in the programs_dir. The name of the input file should

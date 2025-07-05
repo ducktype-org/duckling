@@ -5,6 +5,7 @@ add_library(HELIOS
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
+	src_private/helios_private/expressions/chain_expr.cpp
 	src_private/helios_private/expressions/query_hout_of_expr.cpp
 	src_private/helios_private/expressions/builtin_operations.cpp
 	src_private/helios_private/expressions/coercions.cpp

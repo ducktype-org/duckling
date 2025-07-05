@@ -5,7 +5,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	namespace detail {
+	namespace internal {
 		template<std::derived_from<ClassStmt> T, class... Ts>
 		MBox<T> parseStmt(LangParserState& state, Ts... args) {
 			MBox<T> out = T::parse(state, std::forward<Ts...>(args)...);
@@ -48,21 +48,21 @@ namespace pst {
 
 		switch (as_keyword) {
 		case Keyword::Fun:
-			return detail::parseStmt<Method>(state, ctx);
+			return internal::parseStmt<Method>(state, ctx);
 		case Keyword::Const:
-			return detail::parseStmt<Field>(state, ctx);
+			return internal::parseStmt<Field>(state, ctx);
 		case Keyword::Alias:
 		case Keyword::Using:
-			return detail::parseStmt<NonClassStmt>(state, ctx);
+			return internal::parseStmt<NonClassStmt>(state, ctx);
 		default:
 			break;
 		}
 
-		if (state[skip].isStr(ctx.name)) return detail::parseStmt<ClassSpecial>(state, ctx);
+		if (state[skip].isStr(ctx.name)) return internal::parseStmt<ClassSpecial>(state, ctx);
 		if (state[skip].isBracketGroup(Token::Curly))
-			return detail::parseStmt<AccessBlock>(state, ctx);
+			return internal::parseStmt<AccessBlock>(state, ctx);
 
-		return detail::parseStmt<Field>(state, ctx);
+		return internal::parseStmt<Field>(state, ctx);
 	}
 
 	MBox<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {

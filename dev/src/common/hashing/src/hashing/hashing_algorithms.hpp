@@ -21,7 +21,7 @@
 namespace hashing {
 
 
-	namespace detail {
+	namespace internal {
 
 		/**
 		 * Primary template of FNV-1a constants for different integer sizes.
@@ -50,21 +50,21 @@ namespace hashing {
 			static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
 		};
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * FNV-1a hash algorithm, fast and simple with reasonably good distribution,
 	 * though not meant for cryptographic purposes
 	 */
 	template<std::unsigned_integral I>
-	class Fnv1a final: protected detail::Fnv1a_Constants<I> {
-		using detail::Fnv1a_Constants<I>::OFFSET_BASIS;
-		using detail::Fnv1a_Constants<I>::FNV_PRIME;
+	class Fnv1a final: protected internal::Fnv1a_Constants<I> {
+		using internal::Fnv1a_Constants<I>::OFFSET_BASIS;
+		using internal::Fnv1a_Constants<I>::FNV_PRIME;
 
 		I state = OFFSET_BASIS;
 
 	public:
-		constexpr Fnv1a<I>& operator()(detail::span_of_bytes auto span) noexcept {
+		constexpr Fnv1a<I>& operator()(internal::span_of_bytes auto span) noexcept {
 			for (auto&& c: span) {
 				state ^= static_cast<unsigned char>(c);
 				state *= FNV_PRIME;
@@ -94,7 +94,9 @@ namespace hashing {
 
 	public:
 		// Spans of bytes
-		constexpr void operator()(detail::span_of_bytes auto span, Type type = Type::Other) noexcept {
+		constexpr void operator()(
+			internal::span_of_bytes auto span, Type type = Type::Other
+		) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));
@@ -185,7 +187,7 @@ namespace hashing {
 		      } {}
 
 		// Update state with input data
-		constexpr void operator()(detail::span_of_bytes auto data) noexcept {
+		constexpr void operator()(internal::span_of_bytes auto data) noexcept {
 			total_bits += data.size() * 8;  // Update total bits processed
 
 			const std::byte* ptr       = data.data();
