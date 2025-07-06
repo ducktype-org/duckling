@@ -1,0 +1,25 @@
+function main {
+		# ret_val -> main ret_val
+		# arg0 -> argc
+		# arg1 -> *argv
+
+		init_lany_type      x, i64;
+		input_l64           x;
+
+		# if x == 0
+		cmpEq_l64_imm       x, 0;
+		jmpIf_label         OUT;
+		output_l64          x;
+		deinit; # x
+		jmp_label           EXIT;
+
+		label               OUT;
+		add_l64_imm         x, 10; # x += 10
+		output_l64          x;
+		deinit; # x
+
+		label               EXIT;
+		deinit; # *argv
+		deinit; # argc
+		ret;
+}

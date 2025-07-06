@@ -1,0 +1,16 @@
+type fun: globaler_reader {} void
+
+function globaler_reader {
+	init_lany_type  x, i64;
+	mov_l64_g64     x, counter;
+	output_l64      x;
+
+	init_lany_type ptr, ptr_i64;
+	mov_lptr_gptr ptr, global_ptr;
+	load_lany_lptr x, ptr;
+	output_l64      x;
+
+	deinit; # ptr
+	deinit; # x
+	ret;
+}

@@ -1,8 +1,0 @@
-add_subdirectory(api)
-add_subdirectory(bytecode)
-add_subdirectory(core)
-add_subdirectory(events)
-add_subdirectory(loader)
-add_subdirectory(services)
-add_subdirectory(services_data)
-set(vm_sources ${vm_sources} PARENT_SCOPE)

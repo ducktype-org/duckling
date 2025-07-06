@@ -219,7 +219,7 @@ def simulate_cpp_linter(
         log_new_line()
         to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
         if to_format.lower() in ["y", ""]:
-            bash_command(f"./scripts/formatting/format_repo.sh {clang_format_path}")
+            bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
             clang_format_failed = False
 
     return clang_tidy_failed, clang_format_failed

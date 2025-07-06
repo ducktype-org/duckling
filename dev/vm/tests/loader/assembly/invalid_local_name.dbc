@@ -1,3 +1,0 @@
-function main {
-    mov_l64_imm 10, 10;
-}

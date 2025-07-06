@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 project(Duckling)
-
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
@@ -20,6 +18,7 @@ endif()
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -36,6 +35,9 @@ include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureCompileOptions.cmake
 # Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving. std=c++20 is needed for some reason.
 set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE> -std=c++23")
 
+# Dependencies
+add_subdirectory(dependencies)
+
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigurePlaygrounds.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureGlobalCleanTargets.cmake)
@@ -48,16 +50,13 @@ add_custom_test_pack(compiler)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # TODO: This should be more isolated
 
-# Dependencies
-add_subdirectory(dependencies)
 insertLLVM()
 
-# Source:
-add_subdirectory(base)
-add_subdirectory(common)
-add_subdirectory(compiler)
-add_subdirectory(vm)
-add_subdirectory(playground)
+add_subdirectory(src/base)
+add_subdirectory(src/common)
+add_subdirectory(src/compiler)
+add_subdirectory(src/vm)
+add_subdirectory(src/playground)
 
 # Scripts:
 add_subdirectory(scripts/cmake)

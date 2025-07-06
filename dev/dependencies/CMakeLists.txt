@@ -23,16 +23,19 @@ set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b
 FetchContent_Declare(
 	nlohmann_json
 	URL "https://github.com/nlohmann/json/releases/download/${NLOHMANN_JSON_TAG}/json.tar.xz"
+	SYSTEM
 )
 
 FetchContent_Declare(
 	asio
 	URL "https://github.com/chriskohlhoff/asio/archive/${ASIO_COMMIT}.zip"
+	SYSTEM
 )
 
 FetchContent_Declare(
 	crow
 	URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+	SYSTEM
 )
 
 FetchContent_Declare(
@@ -70,7 +73,6 @@ FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
 
 FetchContent_MakeAvailable(crow)
-setAsSystemLibrary(Crow)
 
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
@@ -82,20 +84,60 @@ FetchContent_MakeAvailable(yaml-cpp)
 
 FetchContent_MakeAvailable(rang)
 
-find_library(gvc gvc)
+find_library(GVC_LIBRARY gvc)
+find_library(CGRAPH_LIBRARY cgraph)
+find_library(CDT_LIBRARY cdt)
+
+set(GRAPHVIZ_LIBRARIES_FOUND FALSE)
+
+if(GVC_LIBRARY AND CGRAPH_LIBRARY AND CDT_LIBRARY)
+    set(GRAPHVIZ_LIBRARIES_FOUND TRUE)
+
+    add_library(System::gvc UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(System::gvc PROPERTIES
+        IMPORTED_LOCATION "${GVC_LIBRARY}"
+    )
+
+    add_library(System::cgraph UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(System::cgraph PROPERTIES
+        IMPORTED_LOCATION "${CGRAPH_LIBRARY}"
+    )
+
+    add_library(System::cdt UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(System::cdt PROPERTIES
+        IMPORTED_LOCATION "${CDT_LIBRARY}"
+    )
+endif()
+
+set(GRAPHVIZ_LIBRARIES_FOUND ${GRAPHVIZ_LIBRARIES_FOUND} PARENT_SCOPE)
+
+# stdc++exp library (experimental C++ library)
+# NOTE: We do not use experimental C++ features directly, but GCC implements <stacktrace>
+# in this library, so we need to link it if we want stacktrace support.
+add_library(system_stdcxxexp INTERFACE)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(system_stdcxxexp INTERFACE "-lstdc++exp")
+endif()
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
-# Do not call MakeAvailable, because
-# we want to avoid using their CMakeLists.txt
 FetchContent_GetProperties(base64)
 if(NOT base64_POPULATED)
-	FetchContent_Populate(base64)
+	FetchContent_Populate(
+		base64
+		URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
+		SYSTEM
+		QUIET
+	)
 endif()
 
 add_library(base64 INTERFACE)
-target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include")
-setAsSystemLibrary(base64)
+
+target_include_directories(base64
+  SYSTEM INTERFACE
+  "${base64_SOURCE_DIR}/include"
+)
 
 BuildTreeSitter(
 	TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip"
@@ -105,12 +147,12 @@ BuildTreeSitter(
 # This macro inserts LLVM as a library to the project. It should be used in the top-level
 # CMakeList.txt file.
 # First it tries to find a downloaded version of LLVM located somewhere in `scripts/downloads`,
-# and upon failing tries to use a system version of LLVM which is at least 18.1.x.
+# and upon failing tries to use a system version of LLVM which is at least 19.1.x.
 macro(insertLLVM)
-	find_package(LLVM 18.1.0 CONFIG PATHS scripts/downloads NO_DEFAULT_PATH)
+	find_package(LLVM 19.1.0 CONFIG PATHS scripts/downloads NO_DEFAULT_PATH)
 	if (NOT ${LLVM_FOUND} EQUAL 1)
 		message(STATUS "Custom LLVM not found, looking for local")
-		find_package(LLVM 18.1.0 REQUIRED CONFIG)
+		find_package(LLVM 19.1.0 REQUIRED CONFIG)
 	else()
 		message(STATUS "Using custom LLVM")
 	endif ()

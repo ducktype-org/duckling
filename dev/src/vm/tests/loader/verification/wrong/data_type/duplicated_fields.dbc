@@ -1,0 +1,4 @@
+type data: Point {
+    x: i64,
+    x: i64,
+}

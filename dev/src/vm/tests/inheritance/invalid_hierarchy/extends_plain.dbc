@@ -1,0 +1,13 @@
+type data: Point {
+	x: i64,
+	y: i64,
+}
+
+type class: SufficientlyThickPoint {
+	extends: Point;
+	fields: {
+		x: i64,
+		y: i64,
+		thickness: i64,
+	};
+}

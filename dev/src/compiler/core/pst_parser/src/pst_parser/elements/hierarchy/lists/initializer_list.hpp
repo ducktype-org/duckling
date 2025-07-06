@@ -1,0 +1,20 @@
+#pragma once
+
+#include "../expr_holders.hpp"
+#include "preamble.hpp"
+
+namespace pst {
+	/**
+	 * @brief c++-like class constructor initialization list.
+	 *
+	 * @note It's probably going to be deprecated
+	 */
+	class InitList final: public List<UniversalExprHolder, internal::NameGetters::classInitList> {
+	public:
+		explicit InitList(const dia::SourcePosition& pos): List(pos) {}
+
+		static MBox<InitList> parse(LangParserState& state);
+
+		~InitList() final = default;
+	};
+}

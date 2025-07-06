@@ -1,4 +1,0 @@
-function main {
-    init_lany_type x, i64;
-    deinit;
-}

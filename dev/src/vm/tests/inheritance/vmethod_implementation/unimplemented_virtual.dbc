@@ -1,0 +1,15 @@
+type pointer: pointer_A A
+type fun: method_foo {pointer_A} void
+type fun: method_bar {pointer_A} void
+type fun: method_foo_impl {pointer_A} void
+
+type class: A {
+    virtual_methods: {
+        foo: method_foo, 
+        bar: method_bar,
+    };
+    implementations: {
+        foo: method_foo_impl, 
+        # bar() is unimplemented in an instantiable class.
+    };
+}

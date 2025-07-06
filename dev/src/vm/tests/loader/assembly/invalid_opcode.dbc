@@ -1,0 +1,5 @@
+function main {
+	label LB;
+	mov_l64_imm ret_val, 10;
+	mov_l46_imm ret_val, 10;
+}

@@ -1,0 +1,43 @@
+/**
+ * @file query_entry_point.hpp
+ * @brief Implementation of "Query Entry Point" used to call queries from outside of
+ * query-framework.
+ */
+#pragma once
+
+#include "context.hpp"
+#include "empty_key.hpp"
+#include "internal/query_data/query_id.hpp"
+#include "internal/query_graph/node_making.hpp"
+
+#include <base/exceptions.hpp>
+
+namespace query {
+
+	namespace internal {
+		/**
+		 * Helper class implementing query entry point
+		 * @note This exist only, so it can be easily friend-ed by queries.
+		 */
+		struct EntryPointHelper {
+			template<typename QueryType>
+			auto static callQuery(typename QueryType::QKey key) -> decltype(auto) {
+				return QueryType::internal_query(
+					key, internal::makeNodeID(internal::outsideWorldQueryID(), EmptyKey())
+				);
+			}
+		};
+	}
+
+	/**
+	 * @brief This function is used to invoke queries from "outside world".
+	 * It should never be used to invoke query from within query.
+	 */
+	template<typename QueryType>
+	auto entryPoint(typename QueryType::QKey key) -> decltype(auto) {
+		CORE_ASSERT(
+			Context::getState().queryStackSize() == 0, "query::entryPoint called from within query!"
+		);
+		return internal::EntryPointHelper::callQuery<QueryType>(key);
+	}
+}

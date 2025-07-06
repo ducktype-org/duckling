@@ -1,0 +1,11 @@
+type class: A {
+	extends: B;
+}
+
+type class: B {
+	extends: C;
+}
+
+type class: C {
+	extends: A;
+}
