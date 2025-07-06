@@ -76,7 +76,7 @@
             {
               "alt_content": [
                 {
-                  "content": "    t: ",
+                  "content": "t: ",
                   "type": "code"
                 },
                 {
@@ -109,6 +109,14 @@
                 {
                   "content": ") -> ",
                   "type": "code"
+                },
+                {
+                  "content": {
+                    "content": "T",
+                    "type": "code"
+                  },
+                  "refers_to": "type_T_1020",
+                  "type": "entity"
                 },
                 {
                   "content": " = {",
