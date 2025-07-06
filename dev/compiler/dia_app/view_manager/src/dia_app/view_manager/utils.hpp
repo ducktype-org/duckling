@@ -226,6 +226,9 @@ namespace dia_app {
         std::map<std::string, dia_file::Ptr> aux_params;
         const ParamData &param_data;
 
+        // Macro evaluation stack for detecting infinite recursion.
+        std::set<std::string> macro_stack;
+
         std::map<std::string, json> &entities;
         std::vector<ParamData> &secondary_infos;
         std::map<InfoHandle, InfoParamsHandle> &info_handles;

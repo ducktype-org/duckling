@@ -76,6 +76,11 @@ namespace dia_app {
 
 			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
 				assert(handle.template_data.macros.count(macro));
+				// If this macro is already being evaluated, an infinite
+				// recursion will occur.
+				assert(!handle.macro_stack.contains(macro));
+				handle.macro_stack.insert(macro);
+
 				return handle.template_data.macros.at(macro)->toDisplay(handle);
 			}
 		};
