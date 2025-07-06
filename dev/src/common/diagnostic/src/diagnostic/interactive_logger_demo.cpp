@@ -896,6 +896,7 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	j = error_demo();
 	// j = graph_demo();
 
+
 	// Create a view manager instance for static message.
 	auto view_manager = dia_app::view_manager::ViewManager::createFromJson(j);
 	::view::ViewResponse *vm_data = new ::view::ViewResponse;

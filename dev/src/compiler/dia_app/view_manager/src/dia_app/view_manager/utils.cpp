@@ -6,7 +6,7 @@
 
 namespace dia_app {
 	std::string MESSAGE_TEMPLATE_PATH
-		= "../compiler/dia_app/view_manager/src/dia_app/view_manager/templates/";
+		= "../src/compiler/dia_app/view_manager/src/dia_app/view_manager/templates/";
 
 	ExploreEdgeParams::ExploreEdgeParams(const json &edge)  {
 		ASSUME_OBJ(edge);

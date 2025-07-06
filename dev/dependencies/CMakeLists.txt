@@ -40,9 +40,10 @@ FetchContent_Declare(
 
 FetchContent_Declare(
 	base64
-	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
 
+
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS OFF)
 # Fixes issues with absl dependencies: https://github.com/protocolbuffers/protobuf/issues/12185
 set(ABSL_ENABLE_INSTALL ON)
 FetchContent_Declare(
@@ -50,6 +51,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/grpc/grpc
   GIT_TAG        ${gRPC_TAG}
 )
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
 
 FetchContent_Declare(
   yaml-cpp
@@ -77,8 +79,10 @@ FetchContent_MakeAvailable(crow)
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
 
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # TODO: This should be more isolated
 FetchContent_MakeAvailable(gRPC)
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
 
 FetchContent_MakeAvailable(yaml-cpp)
 
