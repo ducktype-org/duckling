@@ -1,0 +1,24 @@
+metadata:
+  type: "note"
+  family: "features"
+  name: "graph_node"
+  code: "9905"
+  active_from: "0.0.1"
+  active_until: "now"
+
+header_message:
+  - "graph node "
+  - param: "name"
+
+explore_edges:
+  edge:
+    content:
+      - "edge to "
+      - param: "edge_name"
+    params:
+      edge_name:
+        description: "Name of this edge."
+
+params:
+  name:
+    description: "Name of the node."
