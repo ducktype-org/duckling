@@ -1,0 +1,15 @@
+add_library(Filesystem
+	src/filesystem/file.cpp
+	src/filesystem/vfs.cpp
+	src/filesystem/fs_tree.cpp
+	src/filesystem/fs_tree.hpp
+	src/filesystem/encoding.hpp
+)
+
+make_module(Filesystem USES Base)
+
+duck_add_test(common filesystem tests/filesystem_test.cpp USES Filesystem)
+duck_add_test(common filesystem_tree tests/filesystem_tree_test.cpp USES Filesystem)
+
+add_example(filesystem_temp_path_example examples/temp_path_creation.cpp
+	USES Filesystem)

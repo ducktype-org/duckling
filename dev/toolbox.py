@@ -31,6 +31,7 @@ from scripts.py.toolbox.internet_file import (
     callback_unTAR,
 )
 from scripts.py.toolbox.pr_validate import pr_validate_impl
+from scripts.py.toolbox.issue_checker import issue_checker_impl
 
 from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
 from scripts.py.toolbox.duck_linter import duck_linter_impl
@@ -99,7 +100,7 @@ def setup_build_impl(
     )
 
     log_info("Setting up a build folder...")
-    if docs:
+    if docs or coverage:
         with_venv(cmd)
     else:
         bash_command(cmd)
@@ -189,9 +190,10 @@ def setup_build(*args, **kwargs):
 def setup_venv_impl():
     if not pathlib.Path(".venv").exists():
         log_info("Creating venv...")
-        bash_command("python3 -m venv .venv")
+        bash_command(sys.executable + " -m venv .venv")
         log_info("Downloading venv dependencies...")
-        with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
+        venv_python = os.path.join(".venv", "bin", "python")
+        with_venv(venv_python + " -m pip install -r docs/doc-config/requirements.txt")
         log_info("Done creating venv.")
     else:
         log_info("Venv already exits. Skip.")
@@ -447,7 +449,17 @@ def download_llvm(*args, **kwargs):
     download_llvm_impl(*args, **kwargs)
 
 
-def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_tool, targets, source_dir_path, use_old_build):
+def install_llvm_impl(
+    version,
+    ram_gb,
+    c_compiler,
+    cxx_compiler,
+    linker,
+    build_tool,
+    targets,
+    source_dir_path,
+    use_old_build,
+):
     log_info("==========================")
     log_info("Building LLVM from source. This will take significant time!")
     log_info(
@@ -568,14 +580,14 @@ def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_t
     prompt="C++ compiler path",
     help="A path to the C++ compiler to compile with",
     default="default",
-    type=str
+    type=str,
 )
 @click.option(
     "--c-compiler",
     prompt="C compiler path",
     help="A path to the C compiler to compile with",
     default="default",
-    type=str
+    type=str,
 )
 @click.option(
     "-l",
@@ -616,7 +628,7 @@ def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_t
     prompt="Use old build directory",
     help="Whether or not to use the old build directory",
     default=False,
-    type=bool
+    type=bool,
 )
 def install_llvm(*args, **kwargs):
     """Compiles LLVM from source with specified options.
@@ -780,6 +792,13 @@ def duck_linter(*args, **kwargs):
     default=str(DEFAULT_LOG_FILE_PATH),
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
+@click.option(
+    "-b",
+    "--build_dir",
+    prompt="Build directory",
+    help="The name of the project build directory which is passed to the framework.",
+    default="build",
+)
 def itest(*args, **kwargs):
     """Runs integration tests"""
     integration_tests_impl(*args, **kwargs)
@@ -839,10 +858,39 @@ def todo_counter(*args, **kwargs):
 )
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
-    Actions include: building everything, running tests, linter, duck-linter.
+    Actions include: building everything, running tests, linter, duck-linter, issue-checker.
     In the future we might add integration tests.
     """
     pr_validate_impl(*args, **kwargs)
+
+
+@cli.command()
+@click.argument("issues", nargs=-1, type=str)
+@click.option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
+@click.option(
+    "--no-merge-base",
+    is_flag=True,
+    default=False,
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the checker on a shallow clone.",
+)
+def issue_checker(issues, branch, no_merge_base):
+    """Checks for occurrences of #issue_number in source files and prints file, line, and summary.
+
+    If no issue numbers are provided, the script will attempt to fetch them from GitHub using the 'gh' CLI.
+    You must be authenticated with 'gh' for this to work.
+    """
+    if not issue_checker_impl(issues, branch, no_merge_base):
+        exit_with_error(
+            "Issue checker found issues numbers related to this pull request in the code"
+        )
 
 
 if __name__ == "__main__":

@@ -10,11 +10,27 @@ env:
   TIDY_VERSION: 19
 
 jobs:
+  determine-runners:
+    uses: ./.github/workflows/determine-runners.yml
+    with:
+      self-hosted-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
+      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
+    secrets: inherit
+
   cpp-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    needs: determine-runners
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
     steps:
+      - name: Clean workspace (self-hosted only)
+        if: contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
       - uses: actions/checkout@v4
 
       - name: Install gvc, LLVM and nlohmann_json
@@ -61,8 +77,17 @@ jobs:
   duck-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    needs: determine-runners
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[1] }}
     steps:
+      - name: Clean workspace (self-hosted only)
+        if: contains(fromJson(needs.determine-runners.outputs.runners)[1].group, 'SelfHostedRunners')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
       - uses: actions/checkout@v4
 
       - name: Run duck linter
@@ -70,4 +95,14 @@ jobs:
          git fetch origin main
          cd dev
          python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose
+        shell: bash
+      
+      - name: Run issue checker
+        env:
+          GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+         git fetch origin main
+         cd dev
+         python3 toolbox.py issue-checker --branch origin/main --no-merge-base
         shell: bash

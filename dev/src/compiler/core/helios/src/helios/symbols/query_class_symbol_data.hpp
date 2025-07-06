@@ -1,0 +1,56 @@
+#pragma once
+
+#include <helios/helios_errors.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+
+#include <base/string_id.hpp>
+
+namespace compiler::helios {
+
+	/**
+	 * @brief Struct returned by the `QueryClassSymbolData` query.
+	 */
+	struct ClassSymbolData {
+		/**
+		 * @brief Name of the class in the source code.
+		 */
+		base::StrID name;
+		/**
+		 * @brief Class's declared methods.
+		 */
+		std::vector<SymID> methods;
+		/**
+		 * @brief Class's declared constructors.
+		 */
+		std::vector<SymID> constructors;
+		/**
+		 * @brief Class's declared destructor.
+		 */
+		base::Optional<SymID> destructor;
+		/**
+		 * @brief Class's declared member variables.
+		 */
+		std::vector<SymID> members;
+		/**
+		 * @brief Class's base class.
+		 */
+		base::Optional<tsh::AbstractType> base;
+		/**
+		 * @brief Class's implemented interfaces.
+		 */
+		std::vector<tsh::AbstractType> implements;
+	};
+
+	using QueryClassSymbolData_Result = query::QResult<ClassSymbolData, errors::Failed>;
+
+	/**
+	 * @brief Query all the information about a class definition.
+	 * Panics if the given `SymID` is not a class.
+	 * More information on `ClassSymbolData` in its definition.
+	 */
+	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
+
+}

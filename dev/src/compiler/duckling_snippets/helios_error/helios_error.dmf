@@ -1,0 +1,10 @@
+fun foo() = {
+    let a: i32 = 0;
+    let b: i64 = 0;
+
+    alias x = b;
+
+    return a + a + x;
+}
+
+

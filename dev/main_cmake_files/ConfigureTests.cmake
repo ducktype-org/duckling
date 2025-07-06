@@ -7,6 +7,8 @@ endfunction()
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 
+	find_program(FASTCOV fastcov REQUIRED)
+
 	find_program(LCOV lcov REQUIRED)
 
 	if(NOT GCOV_VERSION)
@@ -21,56 +23,26 @@ if(ENABLE_COVERAGE)
 
 	add_custom_target(build_all_coverage_targets)
 
-	# This target is used to generate coverage report.
-	# We do it in two steps since by default lcov
-	# does not generate coverage data for files not linked by the tests.
-	# https://stackoverflow.com/a/78554322
-	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
-	# Usage of this target:
-	# 1. compile and run the tests
-	# 2. run this target
-	add_custom_target(coverage
+    add_custom_target(coverage
 
-		# Initial coverage created for all files in the project.
-		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
-		--gcov-tool "${GCOV_PATH}"
-		--initial
-		--capture
-		--base-directory "${CMAKE_SOURCE_DIR}"
-		--no-external
-		--output-file coverage_base.info
-
-		# Creating coverage data for the tests.
-		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
-		--gcov-tool "${GCOV_PATH}"
-		--capture
-		--base-directory "${CMAKE_SOURCE_DIR}"
-		--no-external
-		--output-file coverage_test.info
-
-		# Merging the two coverage data files.
-		COMMAND ${LCOV} --add-tracefile coverage_base.info
-		--add-tracefile coverage_test.info
-		--output-file coverage_unfiltered.info
-		--gcov-tool "${GCOV_PATH}"
-
-		# Removing unwanted files from the coverage report.
-		COMMAND ${LCOV} 
-		--ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
-		--remove coverage_unfiltered.info
-		"docs/**"
-		"integration_tests/**"
-		"scripts/**"
-		"**/tests/**"
-		"**/playground/**"
-		"${CMAKE_BINARY_DIR}/**" # Especially we should exclude the dependencies.
-		--output-file coverage.info
-		--gcov-tool "${GCOV_PATH}"
-
-		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-		VERBATIM
-	)
+        COMMAND ${FASTCOV}
+            --gcov ${GCOV_VERSION}
+            --include "${CMAKE_SOURCE_DIR}" # Process only files in this folder
+            --exclude "docs" # Exclude paths containing this name from coverage
+            "integration_tests"
+            "scripts" 
+            "/tests/" 
+            "/playground/"
+            "${CMAKE_BINARY_DIR}" # Exclude paths containing this name from coverage
+            --process-gcno # Process files not touched by tests (generated during compilation)
+            --lcov # Generate output in lcov format
+            -o coverage.info
+		
+        COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
+        
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        VERBATIM
+    )
 	add_dependencies(coverage build_all_coverage_targets)
 endif()
 

@@ -20,52 +20,86 @@ set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b
 FetchContent_Declare(
 	nlohmann_json
 	URL "https://github.com/nlohmann/json/releases/download/${NLOHMANN_JSON_TAG}/json.tar.xz"
+	SYSTEM
 )
 
 FetchContent_Declare(
 	asio
 	URL "https://github.com/chriskohlhoff/asio/archive/${ASIO_COMMIT}.zip"
+	SYSTEM
 )
 
 FetchContent_Declare(
 	crow
 	URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+	SYSTEM
 )
 
 FetchContent_Declare(
 	base64
-	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
-
-# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
-function(setAsSystemLibrary libname)
-	get_target_property(TEMP ${libname} INTERFACE_INCLUDE_DIRECTORIES)
-	set_target_properties(${libname} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
-endfunction()
 
 FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
 
 FetchContent_MakeAvailable(crow)
-setAsSystemLibrary(Crow)
 
 FetchContent_MakeAvailable(nlohmann_json)
-setAsSystemLibrary(nlohmann_json)
 
-find_library(gvc gvc)
+find_library(GVC_LIBRARY gvc)
+find_library(CGRAPH_LIBRARY cgraph)
+find_library(CDT_LIBRARY cdt)
+
+set(GRAPHVIZ_LIBRARIES_FOUND FALSE)
+
+if(GVC_LIBRARY AND CGRAPH_LIBRARY AND CDT_LIBRARY)
+    set(GRAPHVIZ_LIBRARIES_FOUND TRUE)
+
+    add_library(System::gvc UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(System::gvc PROPERTIES
+        IMPORTED_LOCATION "${GVC_LIBRARY}"
+    )
+
+    add_library(System::cgraph UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(System::cgraph PROPERTIES
+        IMPORTED_LOCATION "${CGRAPH_LIBRARY}"
+    )
+
+    add_library(System::cdt UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(System::cdt PROPERTIES
+        IMPORTED_LOCATION "${CDT_LIBRARY}"
+    )
+endif()
+
+set(GRAPHVIZ_LIBRARIES_FOUND ${GRAPHVIZ_LIBRARIES_FOUND} PARENT_SCOPE)
+
+# stdc++exp library (experimental C++ library)
+# NOTE: We do not use experimental C++ features directly, but GCC implements <stacktrace>
+# in this library, so we need to link it if we want stacktrace support.
+add_library(system_stdcxxexp INTERFACE)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(system_stdcxxexp INTERFACE "-lstdc++exp")
+endif()
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
-# Do not call MakeAvailable, because
-# we want to avoid using their CMakeLists.txt
 FetchContent_GetProperties(base64)
 if(NOT base64_POPULATED)
-	FetchContent_Populate(base64)
+	FetchContent_Populate(
+		base64
+		URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
+		SYSTEM
+		QUIET
+	)
 endif()
 
 add_library(base64 INTERFACE)
-target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include")
-setAsSystemLibrary(base64)
+
+target_include_directories(base64
+  SYSTEM INTERFACE
+  "${base64_SOURCE_DIR}/include"
+)
 
 BuildTreeSitter(
 	TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip"
