@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include "component_pieces.hpp"
 #include "highlight.hpp"
 #include "styles.hpp"
@@ -11,7 +12,12 @@ namespace term_ui {
         CodeLine(uint line_no, std::vector<CodePiece> pieces) : line_no(line_no), pieces(pieces) {}
 
         CodeLine(const view::CodeLine &line) :
-            line_no(line.line_number()), pieces(CodePieces(line.content()).getPieces()) {}
+            pieces(CodePieces(line.content()).getPieces())
+        {
+            if (line.has_line_number()) {
+                line_no = line.line_number();
+            }
+        }
 
         CodePiece &operator[](const uint i) {
             return pieces[i];
