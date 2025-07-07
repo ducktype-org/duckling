@@ -27,7 +27,6 @@
 
 #ifndef HANDLE_OPCODE
 #define DEFAULT_HANDLE_OPCODE
-#include <vm/bytecode/opcode_args.hpp>
 #define HANDLE_OPCODE(opcode)
 #endif
 
@@ -96,44 +95,6 @@ DEF_OPCODE(mov_l32_g32, vm::opargs::StackLocalI32, vm::opargs::GlobalI32)
 DEF_OPCODE(mov_l16_g16, vm::opargs::StackLocalI16, vm::opargs::GlobalI16)
 DEF_OPCODE(mov_l8_g8, vm::opargs::StackLocalI8, vm::opargs::GlobalI8)
 
-DEF_OPCODE(umov_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
-DEF_OPCODE(umov_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
-DEF_OPCODE(cumov_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
-
-DEF_OPCODE(umov_l16_imm, vm::opargs::StackLocalI16, vm::opargs::Immediate)
-DEF_OPCODE(umov_l16_l16, vm::opargs::StackLocalI16, vm::opargs::StackLocalI16)
-DEF_OPCODE(cumov_l16_l16, vm::opargs::StackLocalI16, vm::opargs::StackLocalI16)
-
-DEF_OPCODE(umov_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
-DEF_OPCODE(umov_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(cumov_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-
-DEF_OPCODE(umov_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
-DEF_OPCODE(umov_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(cumov_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-
-
-DEF_OPCODE(umov_l64_r0, vm::opargs::StackLocalI64)
-DEF_OPCODE(umov_r0_l64, vm::opargs::StackLocalI64)
-
-
-DEF_OPCODE(umov_g64_g64, vm::opargs::GlobalI64, vm::opargs::GlobalI64)
-DEF_OPCODE(umov_g64_l64, vm::opargs::GlobalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(umov_g64_imm, vm::opargs::GlobalI64, vm::opargs::Immediate)
-DEF_OPCODE(umov_g32_g32, vm::opargs::GlobalI32, vm::opargs::GlobalI32)
-DEF_OPCODE(umov_g32_l32, vm::opargs::GlobalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(umov_g32_imm, vm::opargs::GlobalI32, vm::opargs::Immediate)
-DEF_OPCODE(umov_g16_g16, vm::opargs::GlobalI16, vm::opargs::GlobalI16)
-DEF_OPCODE(umov_g16_l16, vm::opargs::GlobalI16, vm::opargs::StackLocalI16)
-DEF_OPCODE(umov_g16_imm, vm::opargs::GlobalI16, vm::opargs::Immediate)
-DEF_OPCODE(umov_g8_g8, vm::opargs::GlobalI8, vm::opargs::GlobalI8)
-DEF_OPCODE(umov_g8_l8, vm::opargs::GlobalI8, vm::opargs::StackLocalI8)
-DEF_OPCODE(umov_g8_imm, vm::opargs::GlobalI8, vm::opargs::Immediate)
-DEF_OPCODE(umov_l64_g64, vm::opargs::StackLocalI64, vm::opargs::GlobalI64)
-DEF_OPCODE(umov_l32_g32, vm::opargs::StackLocalI32, vm::opargs::GlobalI32)
-DEF_OPCODE(umov_l16_g16, vm::opargs::StackLocalI16, vm::opargs::GlobalI16)
-DEF_OPCODE(umov_l8_g8, vm::opargs::StackLocalI8, vm::opargs::GlobalI8)
-
 
 DEF_OPCODE(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
 
@@ -180,18 +141,6 @@ DEF_OPCODE(div_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(neg_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(neg_l32, vm::opargs::StackLocalI32)
 
-DEF_OPCODE(uadd_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(uadd_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
-
-DEF_OPCODE(uadd_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(uadd_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
-
-DEF_OPCODE(usub_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(usub_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
-
-DEF_OPCODE(usub_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(usub_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
-
 DEF_OPCODE(umul_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(umul_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
@@ -227,18 +176,12 @@ DEF_OPCODE(cmpEq_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
 DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 
-DEF_OPCODE(ucmpEq_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(ucmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 DEF_OPCODE(ucmpG_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(ucmpG_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
-DEF_OPCODE(ucmpEq_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(ucmpEq_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(ucmpG_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
 DEF_OPCODE(ucmpG_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
-DEF_OPCODE(ucmpEq_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
-DEF_OPCODE(ucmpEq_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 DEF_OPCODE(ucmpG_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
 DEF_OPCODE(ucmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 
