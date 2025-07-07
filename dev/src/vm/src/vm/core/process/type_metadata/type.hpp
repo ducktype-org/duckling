@@ -120,8 +120,8 @@ namespace vm {
 		// Forward here version with option
 
 		/**
-		 * Get inner type of pointer, static or dynamic table
-		 * @return some(inner type) for pointer, static or dynamic table. none otherwise
+		 * Get inner type of pointer, fixed size or dynamic table
+		 * @return some(inner type) for pointer, fixed size or dynamic table. none otherwise
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
