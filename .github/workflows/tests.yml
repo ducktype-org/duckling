@@ -20,6 +20,7 @@ env:
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
+  LINKER_TYPE: MOLD
 
 jobs:
   determine-runners:
@@ -103,6 +104,9 @@ jobs:
       - name: Install LLVM
         run: sudo apt -y install llvm-19 llvm-19-dev
 
+      - name: Install mold
+        run: sudo apt -y install mold
+
       - name: Install GCC 14 and gcov-14
         run: |
           sudo apt update
@@ -173,6 +177,7 @@ jobs:
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
+              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
 
       - name: Build tests
