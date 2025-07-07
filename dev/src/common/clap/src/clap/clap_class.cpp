@@ -264,6 +264,12 @@ namespace clap {
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
 	ParsingResult Clap::parse(usize argc, const char* const* argv) {
+
+		// TODOP: This should be done recursively and parse subcommands.
+		// if (!args.empty && subcommands.contains(args[0])) {
+		// 		return subcommends[args[0]] -> parse(...)
+		// }
+
 		CORE_ASSERT(
 			argc > 0,
 			"clap assumes argc is at least 1, as it is the name of the program from the parameters."

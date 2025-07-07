@@ -36,7 +36,7 @@ namespace clap {
 			data.push_back(raw_input[position++]);
 		}
 
-		return { data, data, position };
+		return { .value=data, .raw_source=data, .position=position };
 	}
 
 	ValueParsingResult IntParser::parse(usize start, std::string_view raw_input) const {
@@ -53,7 +53,7 @@ namespace clap {
 				getTypeName().c_str(), start, end_index, raw_input
 			);
 		}
-		return { value, std::string(raw_input.substr(start, end_index - start)), end_index };
+		return { .value=value, .raw_source=std::string(raw_input.substr(start, end_index - start)), .position=end_index };
 	}
 
 	ValueParsingResult RangeParser::parse(usize start, std::string_view raw_input) const {
@@ -79,7 +79,7 @@ namespace clap {
 			i64  value_left  = std::any_cast<i64>(parser->parse(0, left_value_source).value);
 			i64  value_right = std::any_cast<i64>(parser->parse(0, right_value_source).value);
 
-			return { Range{ value_left, value_right }, std::string(my_chunk), position };
+			return { .value=Range{ .begin=value_left, .end=value_right }, .raw_source=std::string(my_chunk), .position=position };
 		} catch (clap::exceptions::ValueParsingException& e) {
 			throw exceptions::ValueParsingException(
 				getTypeName().c_str(), start, position, raw_input, "Error parsing range's values"
@@ -108,6 +108,6 @@ namespace clap {
 
 		fs::FilePath file(path);
 
-		return { file, result.raw_source, result.position };
+		return { .value=file, .raw_source=result.raw_source, .position=result.position };
 	}
 }

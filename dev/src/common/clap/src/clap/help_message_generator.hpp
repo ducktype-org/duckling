@@ -29,3 +29,6 @@ namespace clap {
 	};
 
 }  // clap
+
+
+// TODOP: this should be done recursively for all subcommands.

@@ -6,6 +6,11 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
+#include "clap/clap_class.hpp"
+#include "clap/param_builder.hpp"
+#include "clap/parsing_result.hpp"
+#include "clap/value_parser.hpp"
+
 #include <clap/clap.hpp>
 #include <config/config.hpp>
 #include <driver/hout_to_binary_driver.hpp>
@@ -71,11 +76,13 @@ struct CommandList final {
 	 * @brief Adds new command to the list.
 	 */
 	void add(std::string name, std::string desc, CommandRunner runner) {
-		commands.emplace_back(Command{
-			.name        = std::move(name),
-			.description = std::move(desc),
-			.runner      = std::move(runner),
-		});
+		commands.emplace_back(
+			Command{
+				.name        = std::move(name),
+				.description = std::move(desc),
+				.runner      = std::move(runner),
+			}
+		);
 	}
 
 	/**
@@ -144,13 +151,17 @@ clap::Clap getClapForMain() {
 	auto clap = config::standardOptions();
 
 	// custom options of main:
-	clap.add(clap::ParamBuilder::ofFlag()
-	             .addLongName(LET_IT_THROW_NAME)
-	             .addShortDesc("Disables exception handling in main (debug option).")
-	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                          "It should be used for debugging only in order to preserve "
-	                          "stack-trace. It can prevent stack-unwinding from happening.")
-	             .build());
+	clap.add(
+		clap::ParamBuilder::ofFlag()
+			.addLongName(LET_IT_THROW_NAME)
+			.addShortDesc("Disables exception handling in main (debug option).")
+			.addLongDesc(
+				"If set, unhandled exceptions will not be caught by main procedure. "
+				"It should be used for debugging only in order to preserve "
+				"stack-trace. It can prevent stack-unwinding from happening."
+			)
+			.build()
+	);
 
 	return clap;
 }
@@ -171,236 +182,6 @@ clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) 
 	);
 
 	return res;
-}
-
-/**
- * @brief Generated command list filled with duck-main commands.
- *
- * @param command_args
- * @param clap
- * @return CommandList
- */
-CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
-	CommandList commands;
-	commands.add("lex", "Runs lexer on single file and prints result to cout.", [&]() {
-		// modify clap as needed:
-		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-		             .addShortName('f')
-		             .addLongName("file")
-		             .addShortDesc("File to lex")
-		             .required()
-		             .build());
-
-		auto options = configureDuckMainWith(clap, command_args);
-
-		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
-
-		auto token_file = tokenizer::makeTokenSource(file_to_lex);
-
-		bool tokenize_ok = token_file->tokenize();
-
-		if (not tokenize_ok) {
-			std::cout << "Tokenization errors: ";
-			token_file->getLogger()->dumpLog(true, std::cout);
-			std::cout << "\n";
-			return 1;
-		} else {
-			auto& tokens = token_file->getTokenData();
-			for (auto& token: tokens.tokens) {
-				// @TODO: more detailed printing:
-				printer::StreamPrinter::printNL(
-					{
-						"Token: ",
-						std::string(token.getStrValue()),
-					},
-					std::cout
-				);
-			}
-			return 0;
-		}
-	});
-	commands.add("parse", "Runs parser on single file and prints result in json to cout.", [&]() {
-		// modify clap as needed:
-		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-		             .addShortName('f')
-		             .addLongName("file")
-		             .addShortDesc("File to parse")
-		             .required()
-		             .build());
-
-		auto options = configureDuckMainWith(clap, command_args);
-
-		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
-
-		auto pst = pst::PST(file_to_parse);
-
-		int exit_code = 0;
-
-		if (pst.getLogger()->messageCount() != 0) {
-			std::cout << "Errors and messages: \n";
-			pst.getLogger()->dumpLog(true, std::cout);
-			std::cout << "\n\n";
-			exit_code = 1;
-		}
-
-		std::cout << "Parsed tree:\n";
-		pst.dprint(std::cout);
-		std::cout << "\n";
-
-		return exit_code;
-	});
-	commands.add("get_hout", "Debug prints hout-unit of a module.", [&]() {
-		// modify clap as needed:
-		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-		             .addShortName('m')
-		             .addLongName("module")
-		             .addShortDesc("Path to the module")
-		             .required()
-		             .build());
-
-		auto options = configureDuckMainWith(clap, command_args);
-
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
-
-		int exit_code = 0;
-
-		// @TODO: error handling
-		using namespace compiler;
-		auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-		std::cout << top_level->debugPrint();
-
-		return exit_code;
-	});
-	commands.add("compile_module", "compile given module into a binary.", [&]() {
-		// modify clap as needed:
-		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-		             .addShortName('m')
-		             .addLongName("module")
-		             .addShortDesc("Path to the module")
-		             .required()
-		             .build());
-		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("dump-llvm-ir")
-		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
-		             .build());
-		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("dvm-backend")
-		             .addShortDesc("Compile to DVM bytecode.")
-		             .build());
-		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("compile-to-assembly")
-		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
-		             .build());
-
-		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("add-builtin-library")
-		             .addShortDesc("Links builtin library into the final executable.")
-		             .build());
-		clap.add(
-			clap::ParamBuilder::ofFlag()
-				.addLongName("dvm-run")
-				.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
-				.conditional(
-					[](const clap::ParsingResult& result) {
-						return not(result.isFlag("dvm-run") && not result.isFlag("dvm-backend"));
-					},
-					"Cannot run the code on the DVM without the --dvm-backend option."
-				)
-				.build()
-		);
-
-		auto options = configureDuckMainWith(clap, command_args);
-
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
-
-		// @TODO: error handling
-		using namespace compiler;
-		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-		auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
-
-		auto backend_type
-			= options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM;
-
-		driver::HoutToBinaryDriver driver{
-			driver::BackendOptions{
-				.backend_type         = backend_type,
-				.compile_to_assembly  = options.isFlag("compile-to-assembly"),
-				.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
-				.dvm_code_only_memory = options.isFlag("dvm-run"),
-				.add_builtin_library  = options.isFlag("add-builtin-library"),
-			},
-		};
-
-		// mock collection for purpose of compilation of single module:
-		artifacts::ArtifactCollection base_artifact_collection{
-			"./duck_build/",
-		};
-		auto output_name = backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
-		auto output_artifact
-			= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
-
-		int exit_code = 0;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
-			if (options.isFlag("dvm-run")) {
-				auto run_result = driver.run();
-				if (run_result.has_value()) {
-					exit_code = run_result.value().exit_code;
-				} else {
-					std::cerr << "Error: " << run_result.error() << "\n";
-					exit_code = 1;
-				}
-			}
-		});
-
-		return exit_code;
-	});
-	commands.add("compile_package", "compile given package into a binary.", [&]() {
-		// modify clap as needed:
-		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-		             .addShortName('m')
-		             .addLongName("module")
-		             .addShortDesc("Path to the top-level source module of the package")
-		             .required()
-		             .build());
-
-		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-		             .addShortName('a')
-		             .addLongName("artifact-location")
-		             .addShortDesc("Path to the top-level folder with build artifacts")
-		             .required()
-		             .build());
-
-		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("dvm-backend")
-		             .addShortDesc("Compile to DVM bytecode instead of exe.")
-		             .build());
-
-		auto options = configureDuckMainWith(clap, command_args);
-
-		auto path_to_compile   = options.getValue<fs::FilePath>("module").value();
-		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
-		                                                       : compiler::driver::BackendType::LLVM;
-		auto artifact_location = options.getValue<fs::FilePath>("artifact-location").value();
-
-		defer(printContextErrors());
-
-		compiler::driver::PackageCompilationDriver driver{
-			backend_type,
-			path_to_compile,
-			artifact_location.absolutePath(),
-		};
-		driver.compilerEntirePackageIntoBinary();
-
-		return 0;
-	});
-	commands.add("throw", "Throws exception (testing command).", [&]() -> int {
-		configureDuckMainWith(clap, command_args);
-		throw base::LogicError("Command `throw` thrown successfully!");
-	});
-	return commands;
 }
 
 /**
@@ -442,11 +223,13 @@ int mainProcedure(int argc, const char* const* argv) {
 		} else {
 			command_mode = false;
 
-			clap.add(clap::ParamBuilder::ofFlag()
-			             .addLongName("version")
-			             .addShortName('v')
-			             .addShortDesc("Print version and don't perform any tasks.")
-			             .build());
+			clap.add(
+				clap::ParamBuilder::ofFlag()
+					.addLongName("version")
+					.addShortName('v')
+					.addShortDesc("Print version and don't perform any tasks.")
+					.build()
+			);
 
 			auto options = configureDuckMainWith(clap, full_args);
 
@@ -468,27 +251,282 @@ int mainProcedure(int argc, const char* const* argv) {
 	}
 }
 
+/**
+ * @brief Generate Clap instance with all standard "main" parameters.
+ * @return clap::Clap
+ */
+clap::Clap getClapForMain() {
+	// TODOP: Figure out the default options.
+	return clap::Clap("duck", "The Duckling compiler")
+	    .addGlobalOption(
+			clap::ParamBuilder::ofFlag()
+				.addLongName("let-it--throw")
+				.addShortDesc("Disables exception handling in main (debug option)")
+				.build()
+		)
+	    // Add other global options from config::StandardOptions()
+	    .addSubcommand(
+			clap::Command("lex", "Runs lexer on a single file and prints the result to cout.")
+				.add(
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('f')
+						.addLongName("file")
+						.addShortDesc("File to lex")
+						.required()
+						.build()
+				)
+				.setRunner([](const clap::ParsingResult& options) -> int {
+					//   auto options = configureDuckMainWith(clap, command_args); // This is
+		            //   not needed since we it from the top.
+					auto file_to_lex = options.getValue<fs::FilePath>("file").value();
+
+					auto token_file = tokenizer::makeTokenSource(file_to_lex);
+
+					bool tokenize_ok = token_file->tokenize();
+
+					if (not tokenize_ok) {
+						std::cout << "Tokenization errors: ";
+						token_file->getLogger()->dumpLog(true, std::cout);
+						std::cout << "\n";
+						return 1;
+					} else {
+						auto& tokens = token_file->getTokenData();
+						for (auto& token: tokens.tokens) {
+							// @TODO: more detailed printing:
+							printer::StreamPrinter::printNL(
+								{
+									"Token: ",
+									std::string(token.getStrValue()),
+								},
+								std::cout
+							);
+						}
+						return 0;
+					}
+				})
+		)
+	    .addSubcommand(
+			clap::Command("parse", "Runs parser on a single file and prints result in json to cout.")
+				.add(
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('f')
+						.addLongName("file")
+						.addShortDesc("File to parse")
+						.required()
+						.build()
+				)
+				.setRunner([](const clap::ParsingResult& options) -> int {
+					//   auto options = configureDuckMainWith(clap, command_args);
+		            //   not needed since we it from the top.
+
+					auto file_to_parse = options.getValue<fs::FilePath>("file").value();
+
+					auto pst = pst::PST(file_to_parse);
+
+					int exit_code = 0;
+
+					if (pst.getLogger()->messageCount() != 0) {
+						std::cout << "Errors and messages: \n";
+						pst.getLogger()->dumpLog(true, std::cout);
+						std::cout << "\n\n";
+						exit_code = 1;
+					}
+
+					std::cout << "Parsed tree:\n";
+					pst.dprint(std::cout);
+					std::cout << "\n";
+
+					return exit_code;
+				})
+		)
+	    .addSubcommand(
+			clap::Command("get_hout", "Debug prints hout-unit of a module.")
+				.add(
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('m')
+						.addLongName("module")
+						.addShortDesc("Path to the module")
+						.required()
+						.build()
+				)
+				.setRunner([](const clap::ParsingResult& options) -> int {
+					//   auto options = configureDuckMainWith(clap, command_args);
+		            //   not needed since we it from the top.
+
+					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+					int exit_code = 0;
+
+					// @TODO: error handling
+					using namespace compiler;
+					auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+					auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+					std::cout << top_level->debugPrint();
+
+					return exit_code;
+				})
+		)
+	    .addSubcommand(
+			clap::Command("compile_module", "Compile given module into a binary.")
+				.add(
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('m')
+						.addLongName("module")
+						.addShortDesc("Path to the module")
+						.required()
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofFlag()
+						.addLongName("dump-llvm-ir")
+						.addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofFlag()
+						.addLongName("dvm-backend")
+						.addShortDesc("Compile to DVM bytecode.")
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofFlag()
+						.addLongName("compile-to-assembly")
+						.addShortDesc("Also compiles to assembly file (alongside main compilation).")
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofFlag()
+						.addLongName("add-builtin-library")
+						.addShortDesc("Links builtin library into the final executable.")
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofFlag()
+						.addLongName("dvm-run")
+						.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
+						.conditional(
+							[](const clap::ParsingResult& result) {
+								return not(
+									result.isFlag("dvm-run") && not result.isFlag("dvm-backend")
+								);
+							},
+							"Cannot run the code on the DVM without the --dvm-backend "
+							"option."
+						)
+						.build()
+				)
+				.setRunner([](const clap::ParsingResult& options) -> int {
+					// auto options = configureDuckMainWith(clap, command_args);
+		            //   not needed since we it from the top.
+
+					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+					// @TODO: error handling
+					using namespace compiler;
+					auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+					auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
+
+					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
+		                                                              : driver::BackendType::LLVM;
+
+					driver::HoutToBinaryDriver driver{
+						driver::BackendOptions{
+							.backend_type         = backend_type,
+							.compile_to_assembly  = options.isFlag("compile-to-assembly"),
+							.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
+							.dvm_code_only_memory = options.isFlag("dvm-run"),
+							.add_builtin_library  = options.isFlag("add-builtin-library"),
+						},
+					};
+
+					// mock collection for purpose of compilation of single module:
+					artifacts::ArtifactCollection base_artifact_collection{
+						"./duck_build/",
+					};
+					auto output_name
+						= backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
+					auto output_artifact
+						= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
+
+					int exit_code = 0;
+					query::utils::withContextDo([&](query::Context& ctx) {
+						driver.compileHOUTUnit(
+							ctx, &top_level, base::StrID("main_module"), output_artifact
+						);
+						if (options.isFlag("dvm-run")) {
+							auto run_result = driver.run();
+							if (run_result.has_value()) {
+								exit_code = run_result.value().exit_code;
+							} else {
+								std::cerr << "Error: " << run_result.error() << "\n";
+								exit_code = 1;
+							}
+						}
+					});
+
+					return exit_code;
+				})
+		)
+	    .addSubcommand(
+			clap::Command("compile_package", "Compile given package into a binary.")
+				.add(
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('m')
+						.addLongName("module")
+						.addShortDesc("Path to the top-level source module of the package")
+						.required()
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('a')
+						.addLongName("artifact-location")
+						.addShortDesc("Path to the top-level folder with build artifacts")
+						.required()
+						.build()
+				)
+				.add(
+					clap::ParamBuilder::ofFlag()
+						.addLongName("dvm-backend")
+						.addShortDesc("Compile to DVM bytecode instead of exe.")
+						.build()
+				)
+				.setRunner([](const clap::ParsingResult& options) -> int {
+					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+					auto backend_type    = options.isFlag("dvm-backend")
+		                                     ? compiler::driver::BackendType::DVM
+		                                     : compiler::driver::BackendType::LLVM;
+					auto artifact_location
+						= options.getValue<fs::FilePath>("artifact-location").value();
+
+					defer(printContextErrors());
+
+					compiler::driver::PackageCompilationDriver driver{
+						backend_type,
+						path_to_compile,
+						artifact_location.absolutePath(),
+					};
+					driver.compilerEntirePackageIntoBinary();
+
+					return 0;
+				})
+		)
+	    .addSubcommand(
+			clap::Command("throw", "Throws exception (testing command).")
+				.setRunner([](const clap::ParsingResult& options) -> int {
+					//   configureDuckMainWith(clap, command_args);
+					throw base::LogicError("Command `throw` thrown successfully!");
+				})
+		);
+}
+
 int main(int argc, const char* argv[]) {
-	// We have to see if --let-it-throw was passed
-	// before anything else happens.
-	// Thats why we do it here, bypassing typical clap usage.
-	// --let-it-throw is still included in clap options.
-	// for showing help.
-
-	throwing_main = false;
-	for (int i = 1; i < argc; i++) {
-		if (std::string_view(argv[i]) == LET_IT_THROW_OPTION) {
-			throwing_main = true;
-			break;
-		}
-	}
-
-	if (throwing_main) return mainProcedure(argc, argv);
-
-	// else we just catch exceptions and print them:
+	init::InitObject _;
+	auto clap = getClapForMain();
 
 	try {
-		return mainProcedure(argc, argv);
+		return clap.execute(argc, argv);
 	} catch (const base::Exception& e) {
 		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
