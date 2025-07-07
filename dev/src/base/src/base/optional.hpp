@@ -37,6 +37,7 @@
 
 #include <functional>
 #include <optional>
+#include <utility>
 
 /* Some cool macros.
  *
@@ -163,36 +164,54 @@ namespace base {
 	 */
 	template<class T>
 	requires(!std::is_reference_v<T>) class Optional final {
+	protected:
+		/**
+		 * Const and reference qualified type of value in line with qualifications of the
+		 * surrounding optional.
+		 */
+		template<class Self>
+		using QualifiedT = decltype(std::declval<Self>().private_optional.value());
+
+		constexpr void throwOnNoValue() const {
+			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
+		}
+
 	public:
 		Optional()  = default;
 		~Optional() = default;
 
 		Optional(std::nullopt_t) noexcept {}
 
-		Optional(const T& value): private_optional(value) {}
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
+		Optional& operator=(Optional&&)      = default;
+		Optional& operator=(const Optional&) = default;
 
-		Optional(Optional&&) noexcept            = default;
-		Optional(const Optional&)                = default;
-		Optional& operator=(Optional&&) noexcept = default;
-		Optional& operator=(const Optional&)     = default;
+		Optional(const T& value
+		) noexcept(std::is_nothrow_constructible_v<std::optional<T>, const T&>):
+			  private_optional(value) {}
 
 		template<class... Args>
-		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args):
+		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args
+		) noexcept(std::is_nothrow_constructible_v<T, Args...>):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		template<class U = T>
 		requires std::is_constructible_v<T, U>
-		constexpr Optional(U&& value): private_optional(std::forward<U>(value)) {}
+		constexpr Optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U&&>):
+			  private_optional(std::forward<U>(value)) {}
 
 		template<class... Args>
-		constexpr T& emplace(Args&&... args) {
+		constexpr T& emplace(Args&&... args
+		) noexcept(std::is_nothrow_constructible_v<T, Args&&...>) {
 			return private_optional.emplace(std::forward<Args>(args)...);
 		}
 
-		explicit constexpr operator bool() const { return has_value(); }
+		explicit constexpr operator bool() const noexcept { return has_value(); }
 
 		template<class U = T>
-		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value) {
+		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value
+		) noexcept(std::is_nothrow_constructible_v<T, U&&> && std::is_nothrow_assignable_v<T, U&&>) {
 			private_optional = std::forward<U>(value);
 			return *this;
 		}
@@ -208,7 +227,7 @@ namespace base {
 		 * @return True if holds, false otherwise
 		 */
 		[[nodiscard]]
-		constexpr bool has_value() const {
+		constexpr bool has_value() const noexcept {
 			return private_optional.has_value();
 		}
 
@@ -217,168 +236,79 @@ namespace base {
 		 * @return True if empty, false otherwise
 		 */
 		[[nodiscard]]
-		constexpr bool empty() const {
+		constexpr bool empty() const noexcept {
 			return !has_value();
 		}
 
 		// Accessors.
 		/**
-		 * Get value from base::Optional. Throw on no value.
+		 * Get value from base::Optional.
+		 * @throws Throws on no value.
 		 * @return Value that it holds.
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr const T& value() const& {
-			throwOnNoValue();
-			return private_optional.value();
-		}
-
-		[[nodiscard]]
-		constexpr const T&& value() const&& {
-			throwOnNoValue();
-			return std::move(private_optional.value());
-		}
-
-		[[nodiscard]]
-		constexpr T& value() & {
-			throwOnNoValue();
-			return private_optional.value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& value() && {
-			throwOnNoValue();
-			return std::move(private_optional.value());
+		constexpr QualifiedT<Self> value(this Self&& self) {
+			self.throwOnNoValue();
+			return std::forward<Self>(self).private_optional.value();
 		}
 
 		/**
-		 * Returns value or or_value depending if base::Optional is empty or not.
+		 * Get stored value or a given backup.
 		 * @param or_value value to be returned if empty
-		 * @return
+		 * @return Stored value if exists, otherwise or_value.
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr const T& valueOr(const T& or_value) const& {
-			if (has_value()) return value();
-			return or_value;
+		constexpr QualifiedT<Self> valueOr(this Self&& self, QualifiedT<Self> or_value) noexcept {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return std::forward_like<Self>(or_value);
 		}
-
-		[[nodiscard]]
-		constexpr const T&& valueOr(const T&& or_value) const&& {
-			if (has_value()) return std::move(value());
-			return std::move(or_value);
-		}
-
-		[[nodiscard]]
-		constexpr T& valueOr(T& or_value) & {
-			if (has_value()) return value();
-			return or_value;
-		}
-
-		[[nodiscard]]
-		constexpr T&& valueOr(T&& or_value) && {
-			if (has_value()) return std::move(value());
-			return std::move(or_value);
-		}
-
-		// clang-format off
-		// Turning clang-format, because it cannot format the following functions correctly.
 
 		/**
-		 * Like *ptr - returns an object stored underneath. Throws on no value.
+		 * Like *ptr - returns an object stored underneath.
+		 * @throws Throws on no value.
 		 * @return stored object
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr const T& operator*() const& {
-			return value();
+		constexpr QualifiedT<Self> operator*(this Self&& self) {
+			return std::forward<Self>(self).value();
 		}
-
-		[[nodiscard]]
-		constexpr const T&& operator*() const&& {
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr T& operator*() & {
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& operator*() && {
-			return std::move(value());
-		}
-
-		// clang-format on
 
 		/**
 		 * Get value or CORE_PANIC with message.
 		 * @param message message to be passed to the panic
 		 * @return
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr const T& expect(std::string_view message) const& {
-			if (!has_value()) CORE_PANIC(message);
-			return value();
+		constexpr QualifiedT<Self> expect(this Self&& self, std::string_view message) {
+			if (!self.has_value()) CORE_PANIC(message);
+			return std::forward<Self>(self).value();
 		}
 
-		[[nodiscard]]
-		constexpr const T&& expect(std::string_view message) const&& {
-			if (!has_value()) CORE_PANIC(message);
-			return std::move(value());
-		}
-
-		[[nodiscard]]
-		constexpr T& expect(std::string_view message) & {
-			if (!has_value()) CORE_PANIC(message);
-			return value();
-		}
-
-		[[nodiscard]]
-		constexpr T&& expect(std::string_view message) && {
-			if (!has_value()) CORE_PANIC(message);
-			return std::move(value());
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr const T& expect(Args&&... args) const& {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return value();
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr const T&& expect(Args&&... args) const&& {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return std::move(value());
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr T& expect(Args&&... args) & {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return value();
-		}
-
-		template<class Err, class... Args>
-		[[nodiscard]]
-		constexpr T&& expect(Args&&... args) && {
-			if (!has_value()) throw Err(std::forward<Args>(args)...);
-			return std::move(value());
+		/**
+		 * Get value or throw a given error.
+		 * @tparam Err error type to be thrown
+		 * @param args arguments passed to a constructor of the error type.
+		 */
+		template<class Err, class... Args, class Self>
+		requires(std::constructible_from<Err, Args && ...>) [[nodiscard]]
+		constexpr QualifiedT<Self> expect(this Self&& self, Args&&... args) {
+			if (!self.has_value()) throw Err(std::forward<Args>(args)...);
+			return std::forward<Self>(self).value();
 		}
 
 		/**
 		 * An operator that allows a direct data access.
 		 * @return Object T to perform an operation on.
 		 */
+		template<class Self>
 		[[nodiscard]]
-		constexpr const T* operator->() const {
-			throwOnNoValue();
-			return private_optional.operator->();
-		}
-
-		[[nodiscard]]
-		constexpr T* operator->() {
-			throwOnNoValue();
-			return private_optional.operator->();
+		constexpr auto operator->(this Self&& self) {
+			self.throwOnNoValue();
+			return std::forward<Self>(self).private_optional.operator->();
 		}
 
 		/**
@@ -388,22 +318,19 @@ namespace base {
 		 * @param function Function to apply on the value. Function must take one argument which
 		 * type has to match the optional's type (auto works too). Function can return any type of
 		 * data.
-		 * @return On value: Optional(function(value)), otherwise does
-		 * nothing.
+		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
-		template<typename Function>
-		constexpr auto map(const Function& function) const
-			-> Optional<std::invoke_result_t<Function, T>> {
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		// A non-const version.
-		template<typename Function>
-		constexpr auto map(const Function& function)
-			-> Optional<std::invoke_result_t<Function, T>> {
-			if (has_value()) return function(value());
-			return {};
+		template<class Function, class Self>
+		requires std::invocable<Function&&, QualifiedT<Self>>
+		constexpr auto map(this Self&& self, Function&& function) noexcept
+			-> Optional<std::invoke_result_t<Function, QualifiedT<Self>>> {
+			if (self.has_value()) {
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
+			} else {
+				return {};
+			}
 		}
 
 		/**
@@ -414,25 +341,19 @@ namespace base {
 		 * type has to match the optional's type (auto works too), and should return Optional<U>;
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
-		template<typename Function>
-		constexpr auto flatMap(const Function& function) const
-			-> std::invoke_result_t<Function, T> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
-			if (has_value()) return function(value());
-			return {};
-		}
-
-		// A non-const version.
-		template<typename Function>
-		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
-			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
-			if (has_value()) return function(value());
-			return {};
-		}
-
-	protected:
-		constexpr void throwOnNoValue() const {
-			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
+		template<class Function, class Self>
+		requires std::invocable<Function&&, QualifiedT<Self>>
+		constexpr auto flatMap(this Self&& self, Function&& function) noexcept
+			-> std::invoke_result_t<Function, QualifiedT<Self>> {
+			using result_type = std::invoke_result_t<Function&&, QualifiedT<Self>>;
+			static_assert(IsOfSameClass<result_type, Optional>);
+			if (self.has_value()) {
+				return std::invoke(
+					std::forward<Function>(function), std::forward<Self>(self).value()
+				);
+			} else {
+				return {};
+			}
 		}
 
 	private:
