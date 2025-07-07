@@ -31,15 +31,15 @@ namespace compiler::driver {
 
 				struct LLVMBackend {};
 
-				/**
-				 * If empty, then VMBackend is not available.
-				 */
-				base::Optional<VMBackend> vm_backend;
+				// /**
+				//  * If empty, then VMBackend is not available.
+				//  */
+				// base::Optional<VMBackend> vm_backend;
 
-				/**
-				 * If empty, then LLVMBackend is not available.
-				 */
-				base::Optional<LLVMBackend> llvm_backend;
+				// /**
+				//  * If empty, then LLVMBackend is not available.
+				//  */
+				// base::Optional<LLVMBackend> llvm_backend;
 			};
 
 			CompilationOptions(BackendOptions backend): backend(backend) {}
@@ -49,11 +49,12 @@ namespace compiler::driver {
 		};
 
 		struct DebugOptions {
-			bool lexer_cerr  = false;
-			bool logger_cerr = false;
+			bool lexer_cerr;
+			bool logger_cerr;
 		};
 
 		struct ArtifactsOptions {
+			// PR: change it to FS:
 			std::string artifacts_path;
 
 			// struct IncrementalCompilation {
@@ -94,20 +95,22 @@ namespace compiler::driver {
 	 */
 	struct CompilerModeOfOperationAndOptions {
 		/**
-		 * Bare mode, where compiler doesn't do any initialization etc,
+		 * Bare mode, where compiler doesn't do any initializations apart from debug options,
 		 * but you can still (try to) use its internal functions by hand.
 		 */
-		struct BareMode { };
+		struct BareMode {
+			options_types::DebugOptions debug_options;
+		};
 
 		/**
 		 * Package compilation mode, compiler is used to compile a package
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode {
-			options_types::PackageInfo      main_package_info;
+			// options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
-			options_types::CompilationOptions compilation_options;
+			// options_types::CompilationOptions compilation_options;
 			options_types::DebugOptions       debug_options;
 		};
 
@@ -117,5 +120,11 @@ namespace compiler::driver {
 		 * don't refrain from refactoring this file (and module) if needed.
 		 */
 		std::variant<BareMode, PackageCompilationMode> mode;
+
+		CompilerModeOfOperationAndOptions(BareMode bare_mode)
+			: mode(bare_mode) {}
+
+		CompilerModeOfOperationAndOptions(PackageCompilationMode package_mode)
+			: mode(package_mode) {}
 	};
 };

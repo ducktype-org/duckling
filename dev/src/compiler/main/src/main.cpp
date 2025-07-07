@@ -155,6 +155,15 @@ clap::Clap getClapForMain() {
 	return clap;
 }
 
+compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
+	const clap::ParsingResult& parsing_result
+) {
+	return compiler::driver::options_types::DebugOptions {
+ 		.lexer_cerr = parsing_result.isFlag("lexer-cerr"),
+		.logger_cerr = parsing_result.isFlag("logger-cerr"),
+	}
+}
+
 
 /**
  * @brief Generated command list filled with duck-main commands.
@@ -175,6 +184,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .build());
 
 		auto options = clap.parse(command_args);
+
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+				.debug_options = getDebugOptionsFromClap(options),
+			}
+		);
 
 		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
@@ -213,6 +228,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = clap.parse(command_args);
 
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+				.debug_options = getDebugOptionsFromClap(options),
+			}
+		);
+
 		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
 
 		auto pst = pst::PST(file_to_parse);
@@ -242,6 +263,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .build());
 
 		auto options = clap.parse(command_args);
+
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+				.debug_options = getDebugOptionsFromClap(options),
+			}
+		);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 
@@ -363,19 +390,25 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = clap.parse(command_args);
 
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.compilation_artifacts = {
+					.artifacts_path = options.getValue<fs::FilePath>("artifact-location").value().absolutePath(),
+				},
+				.debug_options = getDebugOptionsFromClap(options),
+			}
+		);
+
 		auto path_to_compile   = options.getValue<fs::FilePath>("module").value();
 		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
 		                                                       : compiler::driver::BackendType::LLVM;
-		auto artifact_location = options.getValue<fs::FilePath>("artifact-location").value();
 
 		defer(printContextErrors());
 
-		compiler::driver::PackageCompilationDriver driver{
-			backend_type,
+		compiler::driver::compilerEntireMainPackageIntoBinary(
 			path_to_compile,
-			artifact_location.absolutePath(),
-		};
-		driver.compilerEntirePackageIntoBinary();
+			backend_type
+		);
 
 		return 0;
 	});
