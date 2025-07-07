@@ -55,14 +55,14 @@ namespace base::internal {
 	template<class... Ts>
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
-	template <typename Variant, typename T>
+	template<typename Variant, typename T>
 	struct alternative_index_aux;
 
-	template <typename T, typename... Types>
+	template<typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
 		static constexpr auto findIndex() {
-			long long result = -1;
-			bool missing_type = !( (result++, std::is_same_v<T, Types>) || ... );
+			long long result       = -1;
+			bool      missing_type = !((result++, std::is_same_v<T, Types>) || ...);
 
 			return result + missing_type;
 		}
