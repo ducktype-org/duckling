@@ -43,10 +43,10 @@ namespace vm::code {
 	/**
 	 * @brief Represents a fixed-size array of elements of the same type.
 	 */
-	struct StaticTableType final: ElementBase {
-		StaticTableType() = default;
+	struct FixedSizeTableType final: ElementBase {
+		FixedSizeTableType() = default;
 
-		StaticTableType(base::StrID name, base::StrID inner, usize table_size):
+		FixedSizeTableType(base::StrID name, base::StrID inner, usize table_size):
 			  name(name),
 			  inner(inner),
 			  table_size(table_size) {}
@@ -55,7 +55,7 @@ namespace vm::code {
 		base::StrID inner;
 		usize       table_size{};
 
-		bool operator==(const StaticTableType& other) const {
+		bool operator==(const FixedSizeTableType& other) const {
 			return name == other.name && inner == other.inner && table_size == other.table_size;
 		}
 	};
@@ -242,7 +242,7 @@ namespace vm::code {
 	using TypeOfData = std::variant<
 		PrimitiveType,
 		PointerType,
-		StaticTableType,
+		FixedSizeTableType,
 		DynamicTableType,
 		DataType,
 		VariantType,
