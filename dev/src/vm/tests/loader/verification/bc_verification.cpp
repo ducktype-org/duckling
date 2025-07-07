@@ -288,7 +288,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/fixed_size_table_wrong_type.dbc",
 			{
-				vm::code::fixedSizeTableTypeMismatchError::ERR_MSG,
+				vm::code::FixedSizeTableTypeMismatchError::ERR_MSG,
 			}
 		);
 	}
