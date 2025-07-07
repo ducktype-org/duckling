@@ -60,26 +60,26 @@ namespace base::internal {
 
 	template <typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
-		static constexpr auto find_index() {
-			std::size_t result = -1;
+		static constexpr auto findIndex() {
+			int64_t result = -1;
 			bool missing_type = !( (result++, std::is_same_v<T, Types>) || ... );
 
 			return result + missing_type;
 		}
 
-		static constexpr auto check_index() {
-			constexpr auto search = find_index();
+		static constexpr auto checkIndex() {
+			constexpr auto search = findIndex();
 			static_assert(search != sizeof...(Types), "Type not found in variant");
-			
+
 			return search;
 		}
 
-		static constexpr std::size_t value = check_index();
+		static constexpr std::size_t Value = checkIndex();
 	};
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T>::value;
+		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T>::Value;
 	}
 }
 
