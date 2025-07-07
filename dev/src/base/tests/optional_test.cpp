@@ -33,6 +33,7 @@ public:
 		TESTER_ADD_TEST(ifOptSomeTest);
 		TESTER_ADD_TEST(testMatchErr);
 		TESTER_ADD_TEST(testExpect);
+		TESTER_ADD_TEST(testPreservingValueCategories);
 	}
 
 	template<typename X>
@@ -67,6 +68,18 @@ public:
 		opt2 = base::Optional(2);
 		ASSERT_TRUE(opt2.has_value());
 		ASSERT_EQUAL(opt2.value(), 2);
+
+		opt2 = opt;
+		ASSERT_TRUE(opt.has_value());
+		ASSERT_TRUE(opt2.has_value());
+		ASSERT_EQUAL(opt.value(), 4);
+		ASSERT_EQUAL(opt2.value(), 4);
+
+		opt2.value() = 3;
+		ASSERT_TRUE(opt.has_value());
+		ASSERT_TRUE(opt2.has_value());
+		ASSERT_EQUAL(opt.value(), 4);
+		ASSERT_EQUAL(opt2.value(), 3);
 	}
 
 	void macroTest() {
@@ -117,6 +130,20 @@ public:
 		);
 	}
 
+	struct MemberFunction {
+		int value;
+
+		// Making the type non-copyable
+		MemberFunction(int v): value{ v } {}
+
+		MemberFunction(const MemberFunction&)            = delete;
+		MemberFunction& operator=(const MemberFunction&) = delete;
+
+		Optional<int> memberFunctionL() & { return value; }
+
+		Optional<int> memberFunctionR() && { return 2 * value; }
+	};
+
 	void mapTest() {
 		Optional<int> opt(4);
 
@@ -129,6 +156,13 @@ public:
 		Optional<int> empty;
 		auto          result3 = empty.map([](int val) { return val * 2; });
 		assertTrue(result3.empty(), "Result3 is not empty!");
+
+		Optional<MemberFunction> opt2{ 10 };
+		auto                     result4 = opt2.map(&MemberFunction::memberFunctionL);
+		ASSERT_EQUAL(result4.value(), 10);
+
+		auto result5 = std::move(opt2).map(&MemberFunction::memberFunctionR);
+		ASSERT_EQUAL(result5.value(), 20);
 	}
 
 	void flatMapTest() {
@@ -139,6 +173,13 @@ public:
 		Optional<int> empty;
 		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
 		assertTrue(result2.empty(), "Result2 is not empty!");
+
+		Optional<MemberFunction> opt2{ 10 };
+		auto                     result3 = opt2.flatMap(&MemberFunction::memberFunctionL);
+		ASSERT_EQUAL(result3.value(), 10);
+
+		auto result4 = std::move(opt2).flatMap(&MemberFunction::memberFunctionR);
+		ASSERT_EQUAL(result4.value(), 20);
 	}
 
 	void testReference() {
@@ -350,6 +391,33 @@ public:
 			(void) empty.expect<int>(42);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 42); }
+	}
+
+	template<typename OptionalT, typename ExpectedValueT>
+	void assertValueT() {
+#define ASSERT_EQUAL_TYPES(type1, type2) ASSERT_TRUE((std::same_as<type1, type2>) )
+#define optional                         std::declval<OptionalT>()
+#define expected_value                   std::declval<ExpectedValueT>()
+
+		ASSERT_EQUAL_TYPES(decltype(optional.value()), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.valueOr(expected_value)), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(*optional), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.expect("")), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.template expect<int>(5)), ExpectedValueT);
+
+#undef expected_value
+#undef optional
+#undef ASSERT_EQUAL_TYPES
+	}
+
+	void testPreservingValueCategories() {
+		// Value is an x-value
+		assertValueT<Optional<int>&&, int&&>();
+		assertValueT<const Optional<int>&&, const int&&>();
+
+		// Value is an l-value
+		assertValueT<Optional<int>&, int&>();
+		assertValueT<const Optional<int>&, const int&>();
 	}
 };
 
