@@ -327,11 +327,6 @@ In practice, that means that usually all non-pure queries are correctly cached.
 
 ## Requirements of Key types {#qkey-requirements}
 
-### Copyable
-
-Every key type will be copied around by the framework.
-The programmer has to ensure that the copy operation will compile and that it will not break the state of the key or of the compiler.
-
 ### Perfect Hashing
 
 Every key type needs to implement `queryUnstablePerfectHash` (@ref query_hash.hpp) that is collision-less.
@@ -360,7 +355,7 @@ hash-map-based caching for fast prototyping.
 In order to use it, two requirements must be met:
 
 - Query key type must implement perfect hash (already a requirement of the Query Framework)
-- Query key type must implement `operator==` (same as for `base::HashMap`).
+- The hash of a key must implement `operator==`, as well as `std::hash` (same as for `base::HashMap`).
 
 There are currently two automatic-caching mechanisms:
 

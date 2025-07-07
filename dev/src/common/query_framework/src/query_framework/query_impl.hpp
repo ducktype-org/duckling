@@ -35,7 +35,7 @@ namespace query::internal {
 	 * @return QueryImplType::QResult
 	 */
 	template<typename QueryImplType>
-	auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
+	auto standardQueryEntry(const typename QueryImplType::QKey& key, NodeID from) ->
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
@@ -131,9 +131,9 @@ namespace query::internal {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                           \
-	auto type::QueryType::internal_query(type::QKey key, ::query::internal::NodeID from)          \
+	auto type::QueryType::internal_query(const type::QKey& key, ::query::internal::NodeID from)   \
 		-> type::QResult {                                                                        \
-		return ::query::internal::standardQueryEntry<type>(std::move(key), from);                 \
+		return ::query::internal::standardQueryEntry<type>(key, from);                            \
 	}                                                                                             \
 	decltype(type::QueryType::id) type::QueryType::id                                             \
 		= ::query::internal::registerQuery(type::QueryType::getData());                           \
