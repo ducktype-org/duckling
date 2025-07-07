@@ -159,8 +159,8 @@ namespace vm::code {
 				out << type.inner.strView();
 			}
 
-			void operator()(const StaticTableType& type) const {
-				out << "type static_table: ";
+			void operator()(const FixedSizeTableType& type) const {
+				out << "type fixed_size_table: ";
 				out << type.name.strView() << " ";
 				out << type.inner.strView() << " ";
 				out << type.table_size;
