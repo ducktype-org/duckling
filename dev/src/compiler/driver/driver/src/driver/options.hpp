@@ -1,15 +1,18 @@
 #pragma once
 
 #include <base/ints.hpp>
+#include <base/optional.hpp>
 
 #include <string>
 #include <variant>
-#include <vector>
 
 namespace compiler::driver {
-	// @note: some code in this file is left as comments
+	// @note: a lot of code in this file is left as hypothetical comments
 	// as it is unused for now, but sets a vision for the code structure
 	// in the future.
+	// I'm not 100% sure if this place is the best place for this code,
+	// as in the end those options should be accessible (via global_state module of other things)
+	// in the core-compiler, and we don't want to have a dependency on the driver module there.
 
 	/**
 	 * Definition of options that are used by the compiler to control its behavior.
@@ -20,7 +23,6 @@ namespace compiler::driver {
 		 */
 		struct CompilationOptions {
 			// struct OptimizationOptions {
-			//     // @future: made it more specific
 			//     u64 level;
 			// };
 
@@ -29,7 +31,15 @@ namespace compiler::driver {
 
 				struct LLVMBackend {};
 
-				std::variant<VMBackend, LLVMBackend> backend_options;
+				/**
+				 * If empty, then VMBackend is not available.
+				 */
+				base::Optional<VMBackend> vm_backend;
+
+				/**
+				 * If empty, then LLVMBackend is not available.
+				 */
+				base::Optional<LLVMBackend> llvm_backend;
 			};
 
 			CompilationOptions(BackendOptions backend): backend(backend) {}
@@ -85,16 +95,13 @@ namespace compiler::driver {
 	struct CompilerModeOfOperationAndOptions {
 		/**
 		 * Bare mode, where compiler doesn't do any initialization etc,
-		 * but you can still (try to) use its internal functions.
+		 * but you can still (try to) use its internal functions by hand.
 		 */
-		struct BareMode {
-			// anything here?
-		};
+		struct BareMode { };
 
 		/**
 		 * Package compilation mode, compiler is used to compile a package
-		 * and its dependencies it can be later asked to compile specific scripts
-		 * or modules, etc.
+		 * and its dependencies.
 		 */
 		struct PackageCompilationMode {
 			options_types::PackageInfo      main_package_info;

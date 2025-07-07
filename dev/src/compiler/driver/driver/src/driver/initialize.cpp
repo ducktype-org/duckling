@@ -24,7 +24,7 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
-		// @TODO: maybe validate that init was done here
+		// @TODO PR: maybe validate that init was done here
 
 		CORE_ASSERT(!is_initialized, "Compiler is already initialized!");
 		is_initialized = true;

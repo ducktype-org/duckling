@@ -1,5 +1,7 @@
 /**
  * Implementation of high-level operations of the compiler.
+ * It is possible to use core compiler directly, but all standard high-level operations
+ * should be done through this interface.
  */
 
 #pragma once
