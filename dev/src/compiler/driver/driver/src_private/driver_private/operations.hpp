@@ -14,12 +14,14 @@ namespace compiler::driver {
 	/**
 	 * @brief Compiles the HOUTUnit to the backend module.
 	 * Only used internally by the driver.
+	 * @param module_data MModule to compile.
+	 * @param output_artifact Artifact to write the compiled module to.
 	 */
 	void compileHOUTUnit(
 		query::Context&                        ctx,
 		base::CRef<compiler::helios::HOUTUnit> hout_unit,
 		base::StrID                            module_id,
-		artifacts::FileArtifact                output_artifact,
+		const artifacts::FileArtifact&                output_artifact,
 		BackendType                            backend_type
 	);
 
@@ -28,12 +30,13 @@ namespace compiler::driver {
 	/**
 	* @brief Compile given the LIR functions and module data to the backend module.
 	* Outputs the module value.
-	* @param module_data
+	* @param module_data MModule to compile.
+	* @param output_artifact Artifact to write the compiled module to.
 	*/
 	void compileBackendModule(
 		query::Context&          ctx,
 		const BackendModuleData& module_data,
-		artifacts::FileArtifact  output_artifact,
+		const artifacts::FileArtifact&  output_artifact,
 		BackendType              backend_type
 	);
 

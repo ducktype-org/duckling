@@ -10,7 +10,7 @@ namespace compiler::driver {
 	void compileBackendModuleToLLVM(
 		query::Context&          ctx,
 		const BackendModuleData& lir_module,
-		artifacts::FileArtifact  output_artifact
+		const artifacts::FileArtifact&  output_artifact
 	) {
 		backend_llvm::Module mod(lir_module.module_id);
 
@@ -31,7 +31,7 @@ namespace compiler::driver {
 			}
 		}
 
-		if (!ctors.empty()) {
+		if (not ctors.empty()) {
 			auto module_ctor = lir::fromLIRFunctions(
 				ctx,
 				ctors,
@@ -41,7 +41,7 @@ namespace compiler::driver {
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 		}
 
-		if (!dtors.empty()) {
+		if (not dtors.empty()) {
 			// Dtors should be called in reverse order
 			std::vector<CRef<lir::Function>> reversed_dtors(dtors.rbegin(), dtors.rend());
 			auto                             module_dtor = lir::fromLIRFunctions(
@@ -58,23 +58,22 @@ namespace compiler::driver {
 
 		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
-		if (options->dump_llvm_ir) {
-			base::StrID llvm_ir_path
-				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
-			mod.debugDumpToFile(llvm_ir_path);
-		}
+		// TODO PR:
+		// if (options->dump_llvm_ir) {
+		// 	base::StrID llvm_ir_path
+		// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
+		// 	mod.debugDumpToFile(llvm_ir_path);
+		// }
 
-		if (options->compile_to_assembly) {
-			base::StrID assembly_path
-				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
-			mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
-		}
+		// if (options->compile_to_assembly) {
+		// 	base::StrID assembly_path
+		// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
+		// 	mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
+		// }
 
 		// @TODO there should be one instance for all duck compiler options
 		// and it should be passed to the backend drivers
 
 		mod.compile(output_artifact.FILE, backend_llvm::CompilationOutputType::Object);
-		object_file_paths.push_back(output_artifact.FILE);
 	}
-
 }

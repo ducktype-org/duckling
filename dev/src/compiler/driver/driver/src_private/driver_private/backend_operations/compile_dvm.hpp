@@ -12,17 +12,18 @@
 
 namespace compiler::driver {
 
-	class DVMDriver final {
-		std::vector<vm::code::CodeCollection> code_collection{};
+	// TODO: this PR
+	// class DVMDriver final {
+	// 	std::vector<vm::code::CodeCollection> code_collection{};
 
-	public:
-		//HMMM:
-		auto run() -> std::expected<RunOutput, std::string> final;
-	};
+	// public:
+	// 	//HMMM:
+	// 	auto run() -> std::expected<RunOutput, std::string> final;
+	// };
 
 	void compileBackendModuleToDVM(
 		query::Context&          ctx,
 		const BackendModuleData& lir_module,
-		artifacts::FileArtifact  output_artifact
+		const artifacts::FileArtifact&  output_artifact
 	);
 }

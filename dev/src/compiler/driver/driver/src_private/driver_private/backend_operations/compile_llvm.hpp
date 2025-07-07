@@ -9,6 +9,6 @@ namespace compiler::driver {
 	void compileBackendModuleToLLVM(
 		query::Context&          ctx,
 		const BackendModuleData& lir_module,
-		artifacts::FileArtifact  output_artifact
+		const artifacts::FileArtifact&  output_artifact
 	);
 }
