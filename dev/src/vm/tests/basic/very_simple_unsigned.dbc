@@ -2,6 +2,7 @@ function main {
     # testing on i64 because u64 variables are not supported yet
     init_lany_type tmp, i64;
     init_lany_type tmp2, i64;
+    init_lany_type tmp3, i32;
 
     mov_l64_imm tmp2, 1;
     mov_l64_imm tmp, 2130;
@@ -13,9 +14,19 @@ function main {
     add_l64_l64 tmp, tmp2;
     cmpEq_l64_imm tmp, 2137;
     jmpIfNot_label Loop;
+    umod_l64_imm tmp, 999999;
+
+    mov_l32_imm tmp3, 0;
+    sub_l32_imm tmp3, 1;
+    umul_l32_imm tmp3, 2;
+    udiv_l32_imm tmp3, 2;
+    ucmpG_l32_imm tmp3, 0;
+    jmpIfNot_label Finish;
 
     output_l64 tmp;
 
+    label Finish;
+    deinit; # tmp3
     deinit; # tmp2
     deinit; # tmp
     deinit; # *argv
