@@ -81,7 +81,7 @@ namespace my_map {
 }
 
 template<typename T>
-concept check_hashRangeAsBytes = requires(T t) { detail::hashRangeAsBytes(Fnv1a_32{}, t); };
+concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(Fnv1a_32{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}
@@ -195,77 +195,77 @@ private:
 			"getBase<X>(type_with_bases{}) should return const X&"
 		);
 
-		assertTrue(detail::can_stdhash<int>, "int should be hashable with std::hash");
+		assertTrue(internal::can_stdhash<int>, "int should be hashable with std::hash");
 		assertTrue(
-			detail::can_stdhash<std::string>, "std::string should be hashable with std::hash"
+			internal::can_stdhash<std::string>, "std::string should be hashable with std::hash"
 		);
-		assertFalse(detail::can_stdhash<Z>, "Z should not be hashable with std::hash");
+		assertFalse(internal::can_stdhash<Z>, "Z should not be hashable with std::hash");
 
 		assertTrue(
-			detail::tuple_of_refs<std::tuple<int&, float&>>,
+			internal::tuple_of_refs<std::tuple<int&, float&>>,
 			"std::tuple<int&, float&> should be a tuple of references"
 		);
 		assertTrue(
-			detail::tuple_of_refs<std::tuple<const int&, std::string&>>,
+			internal::tuple_of_refs<std::tuple<const int&, std::string&>>,
 			"std::tuple<const int&, std::string&> should be a tuple of references"
 		);
 		assertFalse(
-			detail::tuple_of_refs<std::vector<int>>,
+			internal::tuple_of_refs<std::vector<int>>,
 			"std::vector<int> should not be a tuple of references"
 		);
 		assertFalse(
-			detail::tuple_of_refs<std::tuple<int, float>>,
+			internal::tuple_of_refs<std::tuple<int, float>>,
 			"std::tuple<int, float> should not be a tuple of references"
 		);
 		assertFalse(
-			detail::tuple_of_refs<std::tuple<int, float&>>,
+			internal::tuple_of_refs<std::tuple<int, float&>>,
 			"std::tuple<int, float&> should not be a tuple of references"
 		);
 		assertFalse(
-			detail::tuple_of_refs<std::array<int, 3>>,
+			internal::tuple_of_refs<std::array<int, 3>>,
 			"std::array<int, 3> should not be a tuple of references"
 		);
 
-		assertTrue(detail::can_hashDecompose<X>, "X should be hashDecomposable");
-		assertTrue(detail::can_hashDecompose<Y>, "Y should be hashDecomposable");
-		assertTrue(detail::can_hashDecompose<Z>, "Z should be hashDecomposable");
-		assertFalse(detail::can_hashDecompose<int>, "int should not be hashDecomposable");
-		assertFalse(detail::can_hashDecompose<S>, "S should not be hashDecomposable");
+		assertTrue(internal::can_hashDecompose<X>, "X should be hashDecomposable");
+		assertTrue(internal::can_hashDecompose<Y>, "Y should be hashDecomposable");
+		assertTrue(internal::can_hashDecompose<Z>, "Z should be hashDecomposable");
+		assertFalse(internal::can_hashDecompose<int>, "int should not be hashDecomposable");
+		assertFalse(internal::can_hashDecompose<S>, "S should not be hashDecomposable");
 
 		static_assert(
-			detail::invocable_with_byte_span<Fnv1a_32>,
+			internal::invocable_with_byte_span<Fnv1a_32>,
 			"Fnv1a_32 should be invocable with a span of bytes"
 		);
 
 		Fnv1a_64 h1;
-		detail::hashAsBytes(h1, 42.0f);
-		detail::hashAsBytes(h1, std::array{ 1, 2, 3 });
+		internal::hashAsBytes(h1, 42.0f);
+		internal::hashAsBytes(h1, std::array{ 1, 2, 3 });
 
 		std::string s = "hello_long_string";
 		assertTrue(
-			detail::can_hash_range_as_bytes<Fnv1a_32, std::array<int, 3>>,
+			internal::can_hash_range_as_bytes<Fnv1a_32, std::array<int, 3>>,
 			"Fnv1a_32 should be able to hash as chars std::array<int, 3>"
 		);
 		assertTrue(
-			detail::can_hash_range_as_bytes<Fnv1a_64, std::string>,
+			internal::can_hash_range_as_bytes<Fnv1a_64, std::string>,
 			"Fnv1a_64 should be able to hash as chars std::string"
 		);
 		assertTrue(
-			detail::can_hash_range_as_bytes<Fnv1a_32, std::vector<int>>,
+			internal::can_hash_range_as_bytes<Fnv1a_32, std::vector<int>>,
 			"Fnv1a_32 should be able to hash as chars std::vector<int>"
 		);
 		assertFalse(
-			detail::can_hash_range_as_bytes<Fnv1a_64, std::map<int, int>>,
+			internal::can_hash_range_as_bytes<Fnv1a_64, std::map<int, int>>,
 			"Fnv1a_64 should not be able to hash as chars std::map<int, int>"
 		);
 		assertFalse(
-			detail::can_hash_range_as_bytes<Fnv1a_32, std::array<std::string, 3>>,
+			internal::can_hash_range_as_bytes<Fnv1a_32, std::array<std::string, 3>>,
 			"Fnv1a_32 should not be able to hash as chars std::array<std::string, 3>"
 		);
 
-		detail::hashRangeAsBytes(h1, std::array{ 1, 2, 3 });
-		detail::hashRangeAsBytes(h1, s);
-		detail::hashRangeAsBytes(h1, std::vector{ 1, 2, 3 });
+		internal::hashRangeAsBytes(h1, std::array{ 1, 2, 3 });
+		internal::hashRangeAsBytes(h1, s);
+		internal::hashRangeAsBytes(h1, std::vector{ 1, 2, 3 });
 		assertFalse(
 			check_hashRangeAsBytes<std::map<int, int>>,
 			"std::map<int, int> should not be hashable as chars"
@@ -322,7 +322,7 @@ private:
 		constexpr std::string_view sv2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
 		constexpr auto             str_size = [&] {
             DebugHash d;
-            detail::hashRangeAsBytes(d, sv2);
+            internal::hashRangeAsBytes(d, sv2);
             return d.finalize().size();
 		}();
 		assertTrue(str_size == 187, "string should have 660 characters");
@@ -370,7 +370,7 @@ private:
 	void hashTest() {
 		Fnv1a_32 h2;
 		addToHash(h2, S{});                       // S has addToHash overload
-		assertTrue(detail::can_hashDecompose<Z>, "Z should be hashDecomposable");
+		assertTrue(internal::can_hashDecompose<Z>, "Z should be hashDecomposable");
 		addToHash(h2, Z{});                       // Z has hashDecompose overload
 		addToHash(h2, std::span{ "wertyuiop" });  // can hash directly
 		addToHash(h2, 123.0f);                    // hashing floating point
@@ -380,7 +380,7 @@ private:
 		auto range = std::vector{ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }
 		           | std::views::take(10);
 		assertTrue(
-			detail::can_hash_range_as_bytes<decltype(h2), decltype(range)>,
+			internal::can_hash_range_as_bytes<decltype(h2), decltype(range)>,
 			"h2 should be able to hash range as chars"
 		);
 		addToHash(h2, range);  // hashing range as chars
@@ -395,12 +395,12 @@ private:
 		m[3] = 4;
 		m[5] = 6;
 		assertTrue(
-			detail::can_hash_range_with_unspecified_order<decltype(h2), decltype(m)>,
+			internal::can_hash_range_with_unspecified_order<decltype(h2), decltype(m)>,
 			"h2 should be able to hash range with unspecified order"
 		);
 		// addToHash(h2, m); // hashing range with unspecified order // @future
 		std::variant<int, float, std::string> v = 42;
-		assertTrue(detail::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
+		assertTrue(internal::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
 		// addToHash(h2, v); // hashing std::variant // @future
 
 		addToHash(h2, std::tuple{ 1, 2, 3 }, 123, 12.f, X{}, S{});

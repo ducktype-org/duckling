@@ -1,5 +1,5 @@
-#include <query_framework/detail/query_graph/node_id.hpp>
-#include <query_framework/detail/query_graph/query_graph.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
@@ -524,11 +524,11 @@ private:
 		// Serialize the graph
 		auto serialized_data = graph.serialize();
 
-		auto deserialized_graph = query::detail::QueryGraph::deserialize(serialized_data);
+		auto deserialized_graph = query::internal::QueryGraph::deserialize(serialized_data);
 
 		auto serialized_data2 = deserialized_graph.serialize();
 
-		auto deserialized_graph2 = query::detail::QueryGraph::deserialize(serialized_data2);
+		auto deserialized_graph2 = query::internal::QueryGraph::deserialize(serialized_data2);
 
 		ASSERT_EQUAL(serialized_data.size(), serialized_data2.size());
 
@@ -540,7 +540,7 @@ private:
 		const auto& graph2 = query::Context::getState().getGraph();
 
 		auto serialized_data3    = graph2.serialize();
-		auto deserialized_graph3 = query::detail::QueryGraph::deserialize(serialized_data3);
+		auto deserialized_graph3 = query::internal::QueryGraph::deserialize(serialized_data3);
 
 		ASSERT_TRUE(serialized_data3.size() != serialized_data2.size());
 		ASSERT_TRUE(graph2.compare(deserialized_graph3));

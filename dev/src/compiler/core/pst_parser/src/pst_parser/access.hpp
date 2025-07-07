@@ -60,7 +60,7 @@ namespace pst {
 		EXPOSE_REF_INTERFACE(ref)
 	};
 
-	namespace detail {
+	namespace internal {
 		/**
 		 * @brief Notification to context About the access to an element.
 		 * @note For now we keep PstID as the key, but in the future it will likely be changed to
@@ -128,7 +128,7 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			if (ref.toOpt().has_value()) detail::notifyContext(ctx, this->ref->getID());
+			if (ref.toOpt().has_value()) internal::notifyContext(ctx, this->ref->getID());
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
@@ -137,8 +137,8 @@ namespace pst {
 		 * throws if the element was null.
 		 */
 		Access<Element> unlock(query::Context& ctx) const {
-			if (!ref.toOpt()) detail::notifyBadAccess(ctx);
-			detail::notifyContext(ctx, this->ref->getID());
+			if (!ref.toOpt()) internal::notifyBadAccess(ctx);
+			internal::notifyContext(ctx, this->ref->getID());
 			return { ref.toOpt().value() };
 		}
 

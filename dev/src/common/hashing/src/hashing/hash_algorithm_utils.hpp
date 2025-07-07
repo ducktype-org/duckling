@@ -15,7 +15,7 @@
 namespace hashing {
 
 
-	namespace detail {
+	namespace internal {
 
 		/**
 		 * checks if the type is a span of const or non-const bytes
@@ -49,13 +49,13 @@ namespace hashing {
 		   && requires { typename T::result_type; }
 		   && invocable_with_byte_span<T> && has_finalize<T>;
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * Checks if the type is a hash algorithm
 	 */
 	template<typename T>
-	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
+	concept hash_algorithm = internal::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
 	/**
 	 * Returns a reference to one of the Bases of Derived
@@ -70,7 +70,7 @@ namespace hashing {
 		return static_cast<const Base&>(derived);
 	}
 
-	namespace detail {
+	namespace internal {
 
 		/**
 		 * Checks if the type can be hashed with std::hash
@@ -187,7 +187,7 @@ namespace hashing {
 				 /* don't change to std::tuple_size_v */ std::tuple_size<T>::value>{});
 		};
 
-	}  // namespace detail
+	}  // namespace internal
 
 
 }  // namespace hashing
