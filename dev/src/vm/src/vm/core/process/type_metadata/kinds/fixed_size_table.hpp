@@ -3,7 +3,7 @@
 #include "../definitions.hpp"
 
 namespace vm::kind {
-	struct FixedSizeTable final {
+	struct FixedSizeTable {
 		TypeRef inner_type;
 		u64     size;
 	};
