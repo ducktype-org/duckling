@@ -3,17 +3,15 @@ function main {
     init_lany_type tmp, i64;
     init_lany_type tmp2, i64;
 
-    umov_l64_imm tmp2, 1;
-    umov_l64_imm tmp, 2130;
-    uadd_l64_imm tmp, 9;
-    usub_l64_imm tmp, 2;
+    mov_l64_imm tmp2, 1;
+    mov_l64_imm tmp, 2130;
     umul_l64_imm tmp, 2;
     udiv_l64_imm tmp, 2;
-    umov_l64_imm tmp, 2130;
+    mov_l64_imm tmp, 2130;
 
     label Loop;
-    uadd_l64_l64 tmp, tmp2;
-    ucmpEq_l64_imm tmp, 2137;
+    add_l64_l64 tmp, tmp2;
+    cmpEq_l64_imm tmp, 2137;
     jmpIfNot_label Loop;
 
     output_l64 tmp;
