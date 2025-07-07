@@ -323,8 +323,8 @@ namespace vm::loader::parser {
 					state.err->failAndLog(state.getPosition(), "expected number");
 				} else {
 					auto tp         = FixedSizeTableType{ name,
-                                               type_name.getValue(),
-                                               static_cast<usize>(strIDToNum(size.getValue())) };
+                                                  type_name.getValue(),
+                                                  static_cast<usize>(strIDToNum(size.getValue())) };
 					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
 				}
