@@ -7,9 +7,9 @@
  */
 
 #include <clap/clap.hpp>
-#include <config/config.hpp>
-#include <driver/hout_to_binary_driver.hpp>
-#include <driver/package_compilation_driver.hpp>
+#include "cli_options.hpp"
+#include <driver/initialize.hpp>
+#include <driver/operations.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -141,7 +141,7 @@ void printHelp(
  */
 clap::Clap getClapForMain() {
 	// standard options:
-	auto clap = config::standardOptions();
+	auto clap = standardOptions();
 
 	// custom options of main:
 	clap.add(clap::ParamBuilder::ofFlag()
@@ -155,23 +155,6 @@ clap::Clap getClapForMain() {
 	return clap;
 }
 
-/**
- * @brief Parses arguments with @p clap and performs
- * configuration of the program that is independent from any command.
- * @note it assumes that @p clap has parameters
- * added by getClapForMain.
- */
-clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) {
-	// standard options:
-	auto res = config::configureWith(clap, args);
-
-	CORE_ASSERT(
-		throwing_main == res.isFlag("let-it-throw"),
-		"Internal error: let-it-throw flag was not parsed correctly."
-	);
-
-	return res;
-}
 
 /**
  * @brief Generated command list filled with duck-main commands.
@@ -191,7 +174,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		auto options = configureDuckMainWith(clap, command_args);
+		auto options = clap.parse(command_args);
 
 		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
@@ -228,7 +211,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		auto options = configureDuckMainWith(clap, command_args);
+		auto options = clap.parse(command_args);
 
 		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
 
@@ -258,7 +241,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		auto options = configureDuckMainWith(clap, command_args);
+		auto options = clap.parse(command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 
@@ -310,7 +293,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 				.build()
 		);
 
-		auto options = configureDuckMainWith(clap, command_args);
+		auto options = clap.parse(command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 
@@ -378,7 +361,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Compile to DVM bytecode instead of exe.")
 		             .build());
 
-		auto options = configureDuckMainWith(clap, command_args);
+		auto options = clap.parse(command_args);
 
 		auto path_to_compile   = options.getValue<fs::FilePath>("module").value();
 		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
@@ -397,7 +380,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		return 0;
 	});
 	commands.add("throw", "Throws exception (testing command).", [&]() -> int {
-		configureDuckMainWith(clap, command_args);
+		clap.parse(command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
 	});
 	return commands;
@@ -448,7 +431,7 @@ int mainProcedure(int argc, const char* const* argv) {
 			             .addShortDesc("Print version and don't perform any tasks.")
 			             .build());
 
-			auto options = configureDuckMainWith(clap, full_args);
+			auto options = clap.parse(full_args);
 
 			if (options.isFlag("version")) {
 				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
