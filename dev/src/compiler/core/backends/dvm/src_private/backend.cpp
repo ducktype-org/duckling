@@ -293,7 +293,7 @@ namespace compiler::backend_vm {
 						return vm::opargs::StackLocalPtr(name);
 				}
 
-				INVALID_CASE(vm::code::StaticTableType, "output target");
+				INVALID_CASE(vm::code::FixedSizeTableType, "output target");
 				INVALID_CASE(vm::code::DynamicTableType, "output target");
 				INVALID_CASE(vm::code::DataType, "output target");
 				INVALID_CASE(vm::code::VariantType, "output target");
