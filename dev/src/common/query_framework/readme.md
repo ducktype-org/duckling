@@ -355,7 +355,7 @@ hash-map-based caching for fast prototyping.
 In order to use it, two requirements must be met:
 
 - Query key type must implement perfect hash (already a requirement of the Query Framework)
-- Query key type must implement `operator==` (same as for `base::HashMap`).
+- The hash of a key must implement `operator==`, as well as `std::hash` (same as for `base::HashMap`).
 
 There are currently two automatic-caching mechanisms:
 
