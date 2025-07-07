@@ -55,22 +55,6 @@ namespace base::internal {
 	template<class... Ts>
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
-<<<<<<< HEAD
-	template <typename T, typename Variant>
-	struct alternative_index_aux;
-
-	template <typename T, typename... Types>
-	struct alternative_index_aux<T, std::variant<Types...>> {
-
-		static consteval std::size_t find_index() {
-			std::size_t result = 0;
-
-			// instead of recursive template initialization
-			// using fold expression which increases result
-			// until encountering T for the first time 
-			((std::is_same_v<T, Types> ? false : (result++, true)) && ...);
-			
-=======
 	template <typename Variant, typename T>
 	struct alternative_index_aux final;
 
@@ -81,7 +65,6 @@ namespace base::internal {
 			bool found_variant = (result++, std::is_same_v<T, Types>) || ...;
 			static_assert(found_variant, "Type not found in variant");		// optional check if type was found
 
->>>>>>> eb1c24fd (shorter version)
 			return result;
 		}
 
@@ -90,11 +73,7 @@ namespace base::internal {
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-<<<<<<< HEAD
-		return alternative_index_aux<T, std::remove_const_t<std::remove_reference_t<VariantT>>>::value;
-=======
 		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T>::value;
->>>>>>> eb1c24fd (shorter version)
 	}
 }
 
