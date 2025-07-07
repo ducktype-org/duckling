@@ -327,11 +327,6 @@ In practice, that means that usually all non-pure queries are correctly cached.
 
 ## Requirements of Key types {#qkey-requirements}
 
-### Copyable
-
-Every key type will be copied around by the framework.
-The programmer has to ensure that the copy operation will compile and that it will not break the state of the key or of the compiler.
-
 ### Perfect Hashing
 
 Every key type needs to implement `queryUnstablePerfectHash` (@ref query_hash.hpp) that is collision-less.
