@@ -43,7 +43,7 @@ namespace query::internal {
 #define DECLARE_QUERY_AUX(query_type, key, value, query_data_mp)                         \
 	struct query_type final: ::query::internal::QueryInterface<query_type, key, value> { \
 	private:                                                                             \
-		static auto internal_query(QKey, ::query::internal::NodeID) -> QResult;          \
+		static auto internal_query(const QKey&, ::query::internal::NodeID) -> QResult;   \
 		static ::query::internal::QueryID             id;                                \
 		static constexpr ::query::internal::QueryData query_data = query_data_mp;        \
 		friend struct ::query::Context;                                                  \
