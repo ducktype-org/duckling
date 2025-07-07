@@ -13,7 +13,7 @@ function main {
 
 	init_lany_type 		z, i64;
 
-	staticTableLoad_lany_lptr       z, x;  # z = *x
+	fixedSizeTableLoad_lany_lptr       z, x;  # z = *x
 
 	deinit; # z
 	deinit; # x

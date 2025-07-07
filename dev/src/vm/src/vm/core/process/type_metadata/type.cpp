@@ -39,12 +39,12 @@ namespace vm {
 		kind      = kind::Pointer{ inner };
 	}
 
-	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
+	void Type::defineFixedSizeTable(TypeRef inner, u64 table_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ .inner_type = inner, .size = table_size };
+		kind_type = Kind::FixedSizeTable;
+		kind      = kind::FixedSizeTable{ .inner_type = inner, .size = table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -112,9 +112,9 @@ namespace vm {
 		defer(state = State::Finalized);
 
 		variant_match(kind) {
-			variant_case(kind::StaticTable, static_table) {
-				static_table.inner_type->finalize();
-				this->size = static_table.inner_type->getSize() * static_table.size;
+			variant_case(kind::FixedSizeTable, fixed_size_table) {
+				fixed_size_table.inner_type->finalize();
+				this->size = fixed_size_table.inner_type->getSize() * fixed_size_table.size;
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
@@ -157,12 +157,12 @@ namespace vm {
 				else
 					return {};
 			}
-			variant_case(kind::StaticTable, static_table) {
+			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				if (pos >= getSize())
 					return {};
 				else {
-					auto inner_size = static_table.inner_type->getSize();
-					return static_table.inner_type->getLowestTypeAtPos(pos % inner_size);
+					auto inner_size = fixed_size_table.inner_type->getSize();
+					return fixed_size_table.inner_type->getLowestTypeAtPos(pos % inner_size);
 				}
 			}
 			variant_case_novalue(kind::DynamicTable) {
@@ -193,15 +193,15 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	// pointer, staticTable, dynamicTable
+	// pointer, fixedSizeTable, dynamicTable
 	base::Optional<TypeCRef> Type::getInnerType() const {
 		auto get_inner_type = [](auto t) { return t->inner_type; };
 
 		auto pointer_option = get<kind::Pointer>().map(get_inner_type);
 		if (pointer_option.has_value()) return (TypeCRef) pointer_option.value();
 
-		auto static_table_option = get<kind::StaticTable>().map(get_inner_type);
-		if (static_table_option.has_value()) return (TypeCRef) static_table_option.value();
+		auto fixed_size_table_option = get<kind::FixedSizeTable>().map(get_inner_type);
+		if (fixed_size_table_option.has_value()) return (TypeCRef) fixed_size_table_option.value();
 
 		auto dynamic_table_option = get<kind::DynamicTable>().map(get_inner_type);
 		if (dynamic_table_option.has_value()) return (TypeCRef) dynamic_table_option.value();
@@ -209,9 +209,9 @@ namespace vm {
 		return {};
 	}
 
-	// staticTable
-	base::Optional<u64> Type::getStaticTableSize() const {
-		return get<kind::StaticTable>().map([](CRef<kind::StaticTable> table) {
+	// fixedSizeTable
+	base::Optional<u64> Type::getFixedSizeTableSize() const {
+		return get<kind::FixedSizeTable>().map([](CRef<kind::FixedSizeTable> table) {
 			return table->size;
 		});
 	}
