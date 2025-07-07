@@ -56,19 +56,25 @@ namespace base::internal {
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
 	template <typename Variant, typename T>
-	struct alternative_index_aux final;
+	struct alternative_index_aux;
 
 	template <typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
-		constexpr auto find_index() {
+		static constexpr auto find_index() {
 			std::size_t result = -1;
-			bool found_variant = (result++, std::is_same_v<T, Types>) || ...;
-			static_assert(found_variant, "Type not found in variant");		// optional check if type was found
+			bool missing_type = !( (result++, std::is_same_v<T, Types>) || ... );
 
-			return result;
+			return result + missing_type;
 		}
 
-		static constexpr std::size_t value = find_index();
+		static constexpr auto check_index() {
+			constexpr auto search = find_index();
+			static_assert(search != sizeof...(Types), "Type not found in variant");
+			
+			return search;
+		}
+
+		static constexpr std::size_t value = check_index();
 	};
 
 	template<typename VariantT, typename T>
