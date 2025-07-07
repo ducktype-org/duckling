@@ -12,7 +12,7 @@ public:
 private:
 	auto parseOpts(const std::vector<const char*>& data) {
 		auto clap = config::standardOptions();
-		return config::configureWith(clap, { data.size(), data.data() });
+		return config::configureWith(clap, {.argc =  data.size(), .argv = data.data() });
 	}
 
 	void testConfig() {
