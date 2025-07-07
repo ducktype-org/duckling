@@ -20,7 +20,7 @@ env:
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
-#  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners.
+#  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners. See #1021
 
 jobs:
   determine-runners:
@@ -178,7 +178,7 @@ jobs:
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
 #              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
-#              Temporarily disabled due to disk space issues on GH runners.
+#              Temporarily disabled due to disk space issues on GH runners. See #1021
               ${{ steps.cmake-flags.outputs.flags }}
 
       - name: Build tests
