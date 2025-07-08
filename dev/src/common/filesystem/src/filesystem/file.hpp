@@ -274,11 +274,13 @@ namespace fs {
 		 * The path must be phisical.
 		 * @param path The absolute or relative path to the file.
 		 * @param content The content to write to the file.
-		 * @param override_ If true, overwrites the file if it exists.
+		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createPhysicalFile(
-			const std::filesystem::path& path, std::string_view content = "", bool override_ = false
+			const std::filesystem::path& path,
+			std::string_view             content         = "",
+			bool                         allow_overwrite = false
 		);
 
 		/**
@@ -287,52 +289,60 @@ namespace fs {
 		 * If override is true, recreates the folder.
 		 * The path must be phisical.
 		 * @param path The absolute or relative path to the folder.
-		 * @param override_ If true, recreates the folder if it exists.
+		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createPhysicalFolder(const std::filesystem::path& path, bool override_ = false);
+		static File createPhysicalFolder(
+			const std::filesystem::path& path, bool allow_overwrite = false
+		);
 
 		/**
 		 * @brief Creates a virtual file in the virtual filesystem's root directory or at the given
 		 * path. The path must be virtual.
 		 * @param path The path to the file
 		 * @param content The content to write to the file.
-		 * @param override_ If true, overwrites the file if it exists.
+		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createVirtualFile(
-			const std::filesystem::path& path, std::string_view content = "", bool override_ = false
+			const std::filesystem::path& path,
+			std::string_view             content         = "",
+			bool                         allow_overwrite = false
 		);
 
 		/**
 		 * @brief Creates a virtual folder in the virtual filesystem's root directory or at the
 		 * given path. The path must be virtual (must start with the VFS root path: "VFS:/").
 		 * @param path The path to the folder
-		 * @param override_ If true, recreates the folder if it exists.
+		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createVirtualFolder(const std::filesystem::path& path, bool override_ = false);
+		static File createVirtualFolder(
+			const std::filesystem::path& path, bool allow_overwrite = false
+		);
 
 		/**
 		 * @brief Creates a temporary file in the system's temporary directory or at the given path.
 		 * The path must contain a temporary location.
 		 * @param path The path to the file (will be placed in temp directory if not already).
 		 * @param content The content to write to the file.
-		 * @param override_ If true, overwrites the file if it exists.
+		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createTempFile(
-			const std::filesystem::path& path, std::string_view content = "", bool override_ = false
+			const std::filesystem::path& path,
+			std::string_view             content         = "",
+			bool                         allow_overwrite = false
 		);
 
 		/**
 		 * @brief Creates a temporary folder in the system's temporary directory or at the given
 		 * path. The path must be inside system temp folder
 		 * @param path The path to the folder (will be placed in temp directory if not already).
-		 * @param override_ If true, recreates the folder if it exists.
+		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createTempFolder(const std::filesystem::path& path, bool override_ = false);
+		static File createTempFolder(const std::filesystem::path& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Checks if a file exists at the given path (physical, virtual, or temp).

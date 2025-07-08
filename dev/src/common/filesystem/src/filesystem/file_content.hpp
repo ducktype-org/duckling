@@ -8,10 +8,10 @@
 namespace fs {
 	/**
 	 * @brief Stores file content.
-	 *
+	 * @TODO: replace with a SharedView #1034
 	 * This class encapsulates the content of a file and is assumed to be immutable.
 	 */
-	class FileContent {
+	class FileContent final {
 		std::shared_ptr<base::OwningView> content;
 		friend class File;
 

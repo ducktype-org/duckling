@@ -133,6 +133,7 @@ namespace fs {
 			this->type       = FileType::Virtual;
 			this->category = vfs->isDirectory(path) ? FileCategory::Directory : FileCategory::File;
 		} else {
+			// @TODO: remove is_symlink from File, and move to FilePath #1035
 			this->is_symlink = std::filesystem::is_symlink(path);
 			this->path       = canonical(path);
 			this->type = isInTempDirectory(this->path) ? FileType::Temporary : FileType::Physical;
@@ -158,27 +159,28 @@ namespace fs {
 	}
 
 	File FileManager::createPhysicalFile(
-		const std::filesystem::path& path, std::string_view content, bool override_
+		const std::filesystem::path& path, std::string_view content, bool allow_overwrite
 	) {
 		requirePhysicalPath(path);
 
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 		if (std::filesystem::exists(abs_path)) {
-			if (!override_) CORE_PANIC("Physical file already exists: " + abs_path.string());
+			if (!allow_overwrite) CORE_PANIC("Physical file already exists: " + abs_path.string());
 		}
-		std::ofstream ofs(abs_path, override_ ? std::ios::trunc : std::ios::out);
+		std::ofstream ofs(abs_path, allow_overwrite ? std::ios::trunc : std::ios::out);
 		if (!ofs) CORE_PANIC("Failed to create physical file: " + abs_path.string());
 		ofs << content;
 		ofs.close();
 		return abs_path;
 	}
 
-	File FileManager::createPhysicalFolder(const std::filesystem::path& path, bool override_) {
+	File FileManager::createPhysicalFolder(const std::filesystem::path& path, bool allow_overwrite) {
 		requirePhysicalPath(path);
 
 		std::filesystem::path abs_path = std::filesystem::absolute(path);
 		if (std::filesystem::exists(abs_path)) {
-			if (!override_) CORE_PANIC("Physical folder already exists: " + abs_path.string());
+			if (!allow_overwrite)
+				CORE_PANIC("Physical folder already exists: " + abs_path.string());
 			std::filesystem::remove_all(abs_path);
 		}
 		std::filesystem::create_directories(abs_path);
@@ -186,12 +188,12 @@ namespace fs {
 	}
 
 	File FileManager::createVirtualFile(
-		const std::filesystem::path& path, std::string_view content, bool override_
+		const std::filesystem::path& path, std::string_view content, bool allow_overwrite
 	) {
 		requireVirtualPath(path);
 
 		if (vfs->exists(path)) {
-			if (!override_) CORE_PANIC("Virtual file already exists: " + path.string());
+			if (!allow_overwrite) CORE_PANIC("Virtual file already exists: " + path.string());
 			if (!vfs->isFile(path)) CORE_PANIC("Path exists but is not a file: " + path.string());
 		} else {
 			vfs->createFile(path);
@@ -200,11 +202,11 @@ namespace fs {
 		return path;
 	}
 
-	File FileManager::createVirtualFolder(const std::filesystem::path& path, bool override_) {
+	File FileManager::createVirtualFolder(const std::filesystem::path& path, bool allow_overwrite) {
 		requireVirtualPath(path);
 
 		if (vfs->exists(path)) {
-			if (!override_) CORE_PANIC("Virtual folder already exists: " + path.string());
+			if (!allow_overwrite) CORE_PANIC("Virtual folder already exists: " + path.string());
 			if (!vfs->isDirectory(path))
 				CORE_PANIC("Path exists but is not a directory: " + path.string());
 			vfs->deleteDirectory(path, true);
@@ -214,25 +216,25 @@ namespace fs {
 	}
 
 	File FileManager::createTempFile(
-		const std::filesystem::path& path, std::string_view content, bool override_
+		const std::filesystem::path& path, std::string_view content, bool allow_overwrite
 	) {
 		requireTempPath(path);
 
 		if (std::filesystem::exists(path)) {
-			if (!override_) CORE_PANIC("Temp file already exists: " + path.string());
+			if (!allow_overwrite) CORE_PANIC("Temp file already exists: " + path.string());
 		}
-		std::ofstream ofs(path, override_ ? std::ios::trunc : std::ios::out);
+		std::ofstream ofs(path, allow_overwrite ? std::ios::trunc : std::ios::out);
 		if (!ofs) CORE_PANIC("Failed to create temp file: " + path.string());
 		ofs << content;
 		ofs.close();
 		return path;
 	}
 
-	File FileManager::createTempFolder(const std::filesystem::path& path, bool override_) {
+	File FileManager::createTempFolder(const std::filesystem::path& path, bool allow_overwrite) {
 		requireTempPath(path);
 
 		if (std::filesystem::exists(path)) {
-			if (!override_) CORE_PANIC("Temp folder already exists: " + path.string());
+			if (!allow_overwrite) CORE_PANIC("Temp folder already exists: " + path.string());
 			std::filesystem::remove_all(path);
 		}
 		std::filesystem::create_directories(path);
@@ -411,6 +413,7 @@ namespace fs {
 		return file_paths;
 	}
 
+	// @TODO: remove this from File, and move to FilePath when introduced #1035
 	bool File::isSymlink() const noexcept { return is_symlink; }
 
 	void File::writeToFile(std::string_view new_content, bool append) const {

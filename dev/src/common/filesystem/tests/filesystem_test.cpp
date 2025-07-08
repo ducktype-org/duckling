@@ -284,7 +284,7 @@ private:
 		);
 
 		// Test virtual file creation with override
-		auto virtual_file_path = virtual_dir.nativePath() + "/override_test.txt";
+		auto virtual_file_path = virtual_dir.nativePath() + "/allow_overwritetest.txt";
 		fs::FileManager::createVirtualFile(virtual_file_path, "original");
 		auto overridden_virtual
 			= fs::FileManager::createVirtualFile(virtual_file_path, "overridden", true);
