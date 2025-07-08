@@ -9,6 +9,7 @@
 #include <base/ref.hpp>
 
 #include <expected>
+#include <sstream>
 
 using base::Optional;
 
@@ -35,6 +36,7 @@ public:
 		TESTER_ADD_TEST(testExpect);
 		TESTER_ADD_TEST(testPreservingValueCategories);
 		TESTER_ADD_TEST(testAddresses);
+		TESTER_ADD_TEST(testNoCopyNoMove);
 	}
 
 	template<typename X>
@@ -451,6 +453,130 @@ public:
 		assertEqual(other_integer, optional.valueOr(other_integer), "valueOr");
 	}
 
+	/**
+	 * @struct CtrAssignCounter
+	 * @brief Represents the number of times the constructors and assignments where invoked.
+	 */
+	struct CtrAssignCounter {
+		u32 value_constructed = 0;
+		u32 move_constructed  = 0;
+		u32 copy_constructed  = 0;
+		u32 move_assigned     = 0;
+		u32 copy_assigned     = 0;
+
+		void reset() { *this = CtrAssignCounter{}; }
+	};
+
+	/**
+	 * @struct CountCtrStruct
+	 * @brief Holds a u32 value and counts how many times each constructor was invoked.
+	 */
+	struct CountCtrStruct {
+		static CtrAssignCounter& counter() {
+			static CtrAssignCounter counter{};
+			return counter;
+		}
+
+		auto operator<=>(const CountCtrStruct&) const = default;
+		~CountCtrStruct() noexcept                    = default;
+
+		u32 value;
+
+		CountCtrStruct(u32 value) noexcept: value{ value } { ++counter().value_constructed; }
+
+		CountCtrStruct(CountCtrStruct&& other) noexcept: value{ other.value } {
+			++counter().move_constructed;
+		}
+
+		CountCtrStruct(const CountCtrStruct& other) noexcept: value{ other.value } {
+			++counter().copy_constructed;
+		}
+
+		CountCtrStruct& operator=(const CountCtrStruct& other) & noexcept {
+			value = other.value;
+			++counter().copy_assigned;
+			return *this;
+		}
+
+		CountCtrStruct& operator=(CountCtrStruct&& other) & noexcept {
+			value = other.value;
+			++counter().move_assigned;
+			return *this;
+		}
+	};
+
+	/**
+	 * @brief Checks one-by-one if each constructor and assignment was invoked exactly the
+	 * number of times it was expected to be, printing an informing message on error.
+	 * After that it resets the counts.
+	 */
+	void checkCountsAndReset(CtrAssignCounter counter, std::string description) {
+		auto details = [](u32 expected, u32 got) -> std::string {
+			return (std::stringstream{} << "expected: " << expected << ", but got: " << got).str();
+		};
+
+		auto check_counter = [&](u32 CtrAssignCounter::* value, const std::string& name) {
+			assertEqual(
+				counter.*value,
+				CountCtrStruct::counter().*value,
+				"Unexpected " + name + " (" + description + ") "
+					+ details(counter.*value, CountCtrStruct::counter().*value)
+			);
+		};
+		check_counter(&CtrAssignCounter::value_constructed, "value constructor");
+		check_counter(&CtrAssignCounter::copy_constructed, "copy constructor");
+		check_counter(&CtrAssignCounter::move_constructed, "move constructor");
+		check_counter(&CtrAssignCounter::copy_assigned, "copy assignment");
+		check_counter(&CtrAssignCounter::move_assigned, "move assignment");
+
+		CountCtrStruct::counter().reset();
+	}
+
+	void testNoCopyNoMove() {
+		CountCtrStruct or_value{ 4 };
+		CountCtrStruct::counter().reset();
+
+		base::Optional<CountCtrStruct> optional{};
+		checkCountsAndReset(CtrAssignCounter{}, "constructing empty");
+
+		assertEqual(or_value, optional.valueOr(or_value), "valueOr failed (empty l-value)");
+		checkCountsAndReset(CtrAssignCounter{}, "valueOr on empty l-value");
+
+		assertEqual(
+			CountCtrStruct{ 5 },
+			std::move(optional).valueOr(CountCtrStruct{ 5 }),
+			"valueOr failed (empty x-value)"
+		);
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 2,
+			},
+			"valueOr on empty x-value"
+		);
+
+		base::Optional<CountCtrStruct> optional2{ 3 };
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 1,
+			},
+			"constructing from value"
+		);
+
+		assertEqual(
+			optional2.value(), optional2.valueOr(or_value), "valueOr failed (non-empty l-value)"
+		);
+		checkCountsAndReset(CtrAssignCounter{}, "valueOr on non-empty l-value");
+
+		assertEqual(
+			CountCtrStruct{ 3 },
+			std::move(optional2).valueOr(CountCtrStruct{ 5 }),
+			"valueOr failed (non-empty x-value)"
+		);
+		checkCountsAndReset(
+			CtrAssignCounter{ .value_constructed = 2, .move_assigned = 0 },
+			"value or on non-empty r-value"
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");
