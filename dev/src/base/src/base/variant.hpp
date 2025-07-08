@@ -62,7 +62,7 @@ namespace base::internal {
 	struct alternative_index_aux<std::variant<Types...>, T> {
 		static constexpr auto findIndex() {
 			i64 result       = -1;
-			bool      missing_type = !((result++, std::is_same_v<T, Types>) || ...);
+			bool      missing_type = not ((result++, std::is_same_v<T, Types>) or  ...);
 
 			return result + missing_type;
 		}
