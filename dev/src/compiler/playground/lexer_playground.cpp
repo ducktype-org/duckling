@@ -22,8 +22,8 @@ int main(int argc, char** argv) {
 
 	lexer::Lexer::setTokenMessages(true);
 
-	FilePath path(argv[1]);
-	auto     source = tokenizer::makeTokenSource(path);
+	File path(argv[1]);
+	auto source = tokenizer::makeTokenSource(path);
 	source->tokenize();
 	if (source->getLogger()->bad()) source->getLogger()->dumpLog(true);
 }
