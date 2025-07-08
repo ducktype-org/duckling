@@ -13,7 +13,11 @@ function main {
     udiv_l64_l64 tmp, tmp2;
     mov_l64_imm tmp2, 1;
     umod_l64_l64 tmp, tmp2;
+    umod_l64_imm tmp, 9999999;
     cmpEq_l64_imm tmp, 0;
+    jmpIfNot_label Finish;
+    add_l64_imm tmp, 1;
+    ucmpG_l64_imm tmp, 0;
     jmpIfNot_label Finish;
     mov_l64_imm tmp, 2130;
 
@@ -34,6 +38,10 @@ function main {
     mov_l32_imm tmp3, 5;
     umul_l32_l32 tmp3, tmp4;
     udiv_l32_l32 tmp3, tmp4;
+    mov_l32_imm tmp4, 1231231;
+    umod_l32_l32 tmp3, tmp4;
+    umod_l32_imm tmp3, 1231231;
+    mov_l32_imm tmp4, 1;
     ucmpG_l32_l32 tmp3, tmp4;
     jmpIfNot_label Finish;
 
