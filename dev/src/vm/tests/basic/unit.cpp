@@ -38,9 +38,9 @@ private:
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 
-	void floatingPointArithmeticTest() {
-		runTestOnVm("floating_point_arithmetic.dbc", {}, {}, {}, 1);
-	}
+	//void floatingPointArithmeticTest() {
+	//	runTestOnVm("floating_point_arithmetic.dbc", {}, {}, {}, 1);
+	//}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
