@@ -21,7 +21,7 @@ namespace query {
 		 */
 		struct EntryPointHelper {
 			template<typename QueryType>
-			auto static callQuery(typename QueryType::QKey key) -> decltype(auto) {
+			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
 				return QueryType::internal_query(
 					key, internal::makeNodeID(internal::outsideWorldQueryID(), EmptyKey())
 				);
@@ -34,7 +34,7 @@ namespace query {
 	 * It should never be used to invoke query from within query.
 	 */
 	template<typename QueryType>
-	auto entryPoint(typename QueryType::QKey key) -> decltype(auto) {
+	auto entryPoint(const typename QueryType::QKey& key) -> decltype(auto) {
 		CORE_ASSERT(
 			Context::getState().queryStackSize() == 0, "query::entryPoint called from within query!"
 		);
