@@ -262,7 +262,7 @@ namespace base {
 		[[nodiscard]]
 		constexpr QualifiedT<Self> valueOr(this Self&& self, QualifiedT<Self> or_value) noexcept {
 			if (self.has_value()) return std::forward<Self>(self).value();
-			return std::forward_like<Self>(or_value);
+			return static_cast<QualifiedT<Self>>(or_value);
 		}
 
 		/**
