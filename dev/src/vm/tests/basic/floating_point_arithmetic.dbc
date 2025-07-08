@@ -1,0 +1,22 @@
+function main {
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
+
+	init_lany_type 		a, i64;
+	init_lany_type 		b, i64;
+	init_lany_type 		c, i64;
+
+	mov_l64_imm   a, 10;
+	mov_l64_imm   b, 2;
+	mov_l64_imm   c, 1;
+
+	
+
+	deinit; # c
+	deinit; # b
+	deinit; # a
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}
