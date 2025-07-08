@@ -69,7 +69,7 @@ namespace base::internal {
 
 		static constexpr auto checkIndex() {
 			constexpr auto search = findIndex();
-			static_assert(search != sizeof...(Types), "Type not found in variant");
+			static_assert(0 <= search and search < sizeof...(Types), "Type not found in variant");
 
 			return search;
 		}
