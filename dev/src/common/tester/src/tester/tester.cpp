@@ -13,11 +13,12 @@ namespace tester {
 		bool was_capital = true;
 
 		for (usize i = 0; i < str.size(); i++) {
-			char c = str[i];
-			bool is_capital = std::isupper(c);
+			char c               = str[i];
+			bool is_capital      = std::isupper(c);
 			bool is_next_capital = i + 1 == str.size() or std::isupper(str[i + 1]);
-			bool is_next_space = i + 1 == str.size() or str[i + 1] == ' ';
-			if (i > 0 and result.back() != ' ' and not is_next_space and is_capital and not (was_capital and is_next_capital)) {
+			bool is_next_space   = i + 1 == str.size() or str[i + 1] == ' ';
+			if (i > 0 and result.back() != ' ' and not is_next_space and is_capital
+			    and not(was_capital and is_next_capital)) {
 				result.push_back(' ');
 			}
 			was_capital = is_capital;
