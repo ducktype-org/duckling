@@ -41,6 +41,7 @@
  */
 #pragma once
 
+#include "ints.hpp"
 #include "macros/diagnostics.hpp"
 
 #include <type_traits>
@@ -61,8 +62,8 @@ namespace base::internal {
 	template<typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
 		static constexpr auto findIndex() {
-			i64 result       = -1;
-			bool      missing_type = not ((result++, std::is_same_v<T, Types>) or  ...);
+			i64  result       = -1;
+			bool missing_type = not((result++, std::is_same_v<T, Types>) or ...);
 
 			return result + missing_type;
 		}
