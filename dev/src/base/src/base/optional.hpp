@@ -164,7 +164,8 @@ namespace base {
 	 */
 	template<class T>
 	requires(!std::is_reference_v<T>) class Optional final {
-	protected:
+		std::optional<T> private_optional;
+
 		/**
 		 * Const and reference qualified type of value in line with qualifications of the
 		 * surrounding optional.
@@ -355,9 +356,6 @@ namespace base {
 				return {};
 			}
 		}
-
-	private:
-		std::optional<T> private_optional;
 	};
 
 	template<class U, class T>
