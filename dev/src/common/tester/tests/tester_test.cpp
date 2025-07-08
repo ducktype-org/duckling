@@ -110,6 +110,16 @@ private:
 			"ABC Hello World",
 			"Incorrect addSpacesBeforeCapital (5)"
 		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("ABC hello world"),
+			"ABC hello world",
+			"Incorrect addSpacesBeforeCapital (6)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("hello world ABC"),
+			"hello world ABC",
+			"Incorrect addSpacesBeforeCapital (7)"
+		);
 	}
 };
 
