@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(testMatchErr);
 		TESTER_ADD_TEST(testExpect);
 		TESTER_ADD_TEST(testPreservingValueCategories);
+		TESTER_ADD_TEST(testAddresses);
 	}
 
 	template<typename X>
@@ -419,6 +420,37 @@ public:
 		assertValueT<Optional<int>&, int&>();
 		assertValueT<const Optional<int>&, const int&>();
 	}
+
+	void testAddresses() {
+		std::string test_brief = "Divergent address of";
+		std::string state;
+
+		auto assert_equal_addr = [&](u32& expected, u32& got, const std::string& message) {
+			assertEqual(&expected, &got, test_brief + ": " + message + ", " + state);
+		};
+
+		Optional<u32> optional{ 21 };
+		u32&          internal_integer = optional.value();
+		u32           other_integer    = 10;
+		assert_equal_addr(internal_integer, optional.value(), "value");
+		assert_equal_addr(internal_integer, optional.valueOr(other_integer), "valueOr");
+		assert_equal_addr(internal_integer, *optional, "*operator");
+		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");
+		assert_equal_addr(internal_integer, optional.expect<std::string>(""), "expect with error");
+
+		optional = Optional<u32>{ 37 };
+		state    = "after copy";
+		assert_equal_addr(internal_integer, optional.value(), "value");
+		assert_equal_addr(internal_integer, optional.valueOr(other_integer), "valueOr");
+		assert_equal_addr(internal_integer, *optional, "operator*");
+		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");
+		assert_equal_addr(internal_integer, optional.expect<std::string>(""), "expect with error");
+
+		state    = "empty optional";
+		optional = Optional<u32>{};
+		assertEqual(other_integer, optional.valueOr(other_integer), "valueOr");
+	}
+
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");
