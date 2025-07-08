@@ -1,7 +1,5 @@
 #include "vfs.hpp"
 
-#include <iostream>
-
 namespace fs {
 
 

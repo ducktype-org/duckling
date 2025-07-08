@@ -1,5 +1,5 @@
 #include <filesystem/file.hpp>
-#include <filesystem/vfs.hpp>
+#include <filesystem_private/vfs.hpp>
 #include <tester/tester.hpp>
 
 #include <chrono>

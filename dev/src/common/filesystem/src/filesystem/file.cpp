@@ -1,6 +1,6 @@
 #include "file.hpp"
 
-#include <filesystem/vfs.hpp>
+#include <filesystem_private/vfs.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
