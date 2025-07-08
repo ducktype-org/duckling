@@ -61,7 +61,7 @@ namespace base::internal {
 	template<typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
 		static constexpr auto findIndex() {
-			long long result       = -1;
+			i64 result       = -1;
 			bool      missing_type = !((result++, std::is_same_v<T, Types>) || ...);
 
 			return result + missing_type;
