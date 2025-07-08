@@ -298,7 +298,7 @@ private:
 		using namespace compiler::helios;
 		using namespace test_utils;
 
-		auto [_, root_scope]        = getModule(fs::FilePath(path("class_layout")));
+		auto [_, root_scope]        = getModule(fs::File(path("class_layout")));
 		const SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		withContextDo([&](query::Context& ctx) -> void {

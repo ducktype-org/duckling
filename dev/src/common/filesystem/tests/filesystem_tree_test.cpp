@@ -35,7 +35,7 @@ private:
 	}
 
 	void testOtherFeatures() {
-		const auto root = fs::FilePath(path("test_directory_tree"));
+		const auto root = fs::File(path("test_directory_tree"));
 		const auto fst  = fs::FsTree::create(root, test_regex, test_regex);
 
 		ASSERT_EQUAL(false, fst->isEmpty());
@@ -49,13 +49,13 @@ private:
 
 	void testVirtualFiles() {
 		// Create a virtual root directory
-		auto root = fs::FilePath::createVirtualDirectory();
+		auto root = fs::FileManager::createRandomVirtualDirectory();
 
 		// Create subdirectories and files
-		auto sub_dir1 = root.createDirectoryIn("subDir1");
-		auto sub_dir2 = root.createDirectoryIn("subDir2");
-		auto file1    = root.createFileIn("File1 content", "file1.txt");
-		auto file2    = sub_dir1.createFileIn("File2 content", "file2.txt");
+		auto sub_dir1 = fs::FileManager::createDirectoryIn(root, "subDir1");
+		auto sub_dir2 = fs::FileManager::createDirectoryIn(root, "subDir2");
+		auto file1    = fs::FileManager::createFileIn(root, "File1 content", "file1.txt");
+		auto file2    = fs::FileManager::createFileIn(sub_dir1, "File2 content", "file2.txt");
 
 		// Create FsTree from the virtual root directory
 		auto fst = fs::FsTree::create(root);
