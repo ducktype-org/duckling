@@ -57,30 +57,31 @@ namespace base::internal {
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
 	template<typename Variant, typename T>
-	struct alternative_index_aux;
+	struct alternative_index_aux {
+		static constexpr std::size_t INDEX = 0;
+		static_assert(false, "alternative_index() can be used only for variant");
+	};
 
 	template<typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
 		static constexpr auto findIndex() {
-			i64  result       = -1;
-			bool missing_type = not((result++, std::is_same_v<T, Types>) or ...);
+			std::size_t index = static_cast<std::size_t>(-1);
 
-			return result + missing_type;
+			// increase index until matching T
+			bool missing_type = not((index++, std::is_same_v<T, Types>) or ...);
+
+			// when no T in variant, returns sizeof...(Types)
+			return index + missing_type;
 		}
 
-		static constexpr auto checkIndex() {
-			constexpr auto search = findIndex();
-			static_assert(0 <= search and search < sizeof...(Types), "Type not found in variant");
-
-			return search;
-		}
-
-		static constexpr std::size_t VALUE = checkIndex();
+		static constexpr auto INDEX = findIndex();
+		static_assert(INDEX < sizeof...(Types), "Type not found in variant");
 	};
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T>::VALUE;
+		// removing wrappers and using a template helper
+		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T>::INDEX;
 	}
 }
 
