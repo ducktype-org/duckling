@@ -20,6 +20,7 @@ env:
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
+#  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners. See #1021
 
 jobs:
   determine-runners:
@@ -103,6 +104,9 @@ jobs:
       - name: Install LLVM
         run: sudo apt -y install llvm-19 llvm-19-dev
 
+      - name: Install mold
+        run: sudo apt -y install mold
+
       - name: Install GCC 14 and gcov-14
         run: |
           sudo apt update
@@ -174,6 +178,9 @@ jobs:
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               ${{ steps.cmake-flags.outputs.flags }}
+#              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
+#              Temporarily disabled due to disk space issues on GH runners. See #1021
+#              When enabling, move this line upwards, so that it is before the output flags.
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
