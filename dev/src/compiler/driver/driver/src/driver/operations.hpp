@@ -18,7 +18,7 @@ namespace compiler::driver {
 	 * Temporary interface for compiling the entire main package.
 	 */
 	void compilerEntireMainPackageIntoBinary(
-		const fs::FilePath& package_location,
+		const fs::File& package_location,
 		BackendType backend
 	);
 

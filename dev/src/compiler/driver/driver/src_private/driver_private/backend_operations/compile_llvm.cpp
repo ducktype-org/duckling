@@ -1,5 +1,4 @@
 #include "compile_llvm.hpp"
-
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -71,9 +70,6 @@ namespace compiler::driver {
 		// 	mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
 		// }
 
-		// @TODO there should be one instance for all duck compiler options
-		// and it should be passed to the backend drivers
-
-		mod.compile(output_artifact.FILE, backend_llvm::CompilationOutputType::Object);
+		mod.compile(output_artifact.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
 	}
 }

@@ -161,7 +161,7 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	return compiler::driver::options_types::DebugOptions {
  		.lexer_cerr = parsing_result.isFlag("lexer-cerr"),
 		.logger_cerr = parsing_result.isFlag("logger-cerr"),
-	}
+	};
 }
 
 
@@ -191,7 +191,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			}
 		);
 
-		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
+		auto file_to_lex = options.getValue<fs::File>("file").value();
 
 		auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
@@ -234,7 +234,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			}
 		);
 
-		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
+		auto file_to_parse = options.getValue<fs::File>("file").value();
 
 		auto pst = pst::PST(file_to_parse);
 
@@ -270,7 +270,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			}
 		);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile = options.getValue<fs::File>("module").value();
 
 		int exit_code = 0;
 
@@ -322,7 +322,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = clap.parse(command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile = options.getValue<fs::File>("module").value();
 
 		// @TODO: error handling
 		using namespace compiler;
@@ -393,13 +393,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.compilation_artifacts = {
-					.artifacts_path = options.getValue<fs::FilePath>("artifact-location").value().absolutePath(),
+					.artifacts_path = options.getValue<fs::File>("artifact-location").value().nativePath(),
 				},
 				.debug_options = getDebugOptionsFromClap(options),
 			}
 		);
 
-		auto path_to_compile   = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile   = options.getValue<fs::File>("module").value();
 		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
 		                                                       : compiler::driver::BackendType::LLVM;
 

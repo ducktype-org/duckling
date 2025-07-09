@@ -1,5 +1,5 @@
 add_executable(duck src/main.cpp)
-target_link_libraries(duck Printer Lexer PstParser Filesystem Clap Base Diagnostic Config QueryFramework HELIOS MIR Driver)
+target_link_libraries(duck Printer Lexer PstParser Filesystem Clap Base Diagnostic QueryFramework HELIOS MIR Driver)
 
 
 # TODO PR: add cli options test

@@ -49,7 +49,7 @@ namespace compiler::driver {
 
 
 	void compilerEntirePackageIntoBinary(
-		const fs::FilePath& package_location,
+		const fs::File& package_location,
 		BackendType backend
 	) {
 		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
