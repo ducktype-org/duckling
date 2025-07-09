@@ -58,14 +58,15 @@ namespace base::internal {
 
 	template<typename Variant, typename T>
 	struct alternative_index_aux {
-		static constexpr std::size_t INDEX = 0;
+		static constexpr usize findIndex() { return 0; }
+
 		static_assert(false, "alternative_index() can be used only for variant");
 	};
 
 	template<typename T, typename... Types>
 	struct alternative_index_aux<std::variant<Types...>, T> {
-		static constexpr auto findIndex() {
-			std::size_t index = static_cast<std::size_t>(-1);
+		static constexpr usize findIndex() {
+			usize index = std::numeric_limits<usize>::max();
 
 			// increase index until matching T
 			bool missing_type = not((index++, std::is_same_v<T, Types>) or ...);
@@ -74,14 +75,14 @@ namespace base::internal {
 			return index + missing_type;
 		}
 
-		static constexpr auto INDEX = findIndex();
-		static_assert(INDEX < sizeof...(Types), "Type not found in variant");
+		static_assert(findIndex() < sizeof...(Types), "Type not found in variant");
 	};
 
 	template<typename VariantT, typename T>
-	constexpr auto alternative_index() {
+	constexpr usize alternative_index() {
 		// removing wrappers and using a template helper
-		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T>::INDEX;
+		using ClearedVariantT = std::remove_const_t<std::remove_reference_t<VariantT>>;
+		return alternative_index_aux<ClearedVariantT, T>::findIndex();
 	}
 }
 
