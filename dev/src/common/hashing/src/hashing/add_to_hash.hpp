@@ -56,7 +56,7 @@ namespace hashing {
 		// For most types we only want to add to hash some subset of their subobjects (bases +
 		// members). This can be done easily by defining `hashDecompose` friend function that lists
 		// subobjects in an order in which we want to hash them
-		if constexpr (detail::can_hashDecompose<T>) {
+		if constexpr (internal::can_hashDecompose<T>) {
 			std::apply([&](auto&&... args) { (addToHash(hash_alg, args), ...); }, hashDecompose(t));
 		}
 		// Specializations for types that are not ours
@@ -65,29 +65,29 @@ namespace hashing {
 			// -0.0 == 0.0, but they should have the same hash since they compare equal
 			auto t_copy = t;
 			if (t_copy == 0) t_copy = 0;
-			detail::hashAsBytes(hash_alg, t_copy);
+			internal::hashAsBytes(hash_alg, t_copy);
 		}
 		// Specialation for pointers
 		else if constexpr (std::is_pointer_v<T>) {
-			detail::hashAsBytes(hash_alg, t);
+			internal::hashAsBytes(hash_alg, t);
 		}
 		// nullptr_t
 		else if constexpr (std::is_null_pointer_v<T>) {
-			detail::hashAsBytes(hash_alg, 0);
+			internal::hashAsBytes(hash_alg, 0);
 		}
 		// If the range is contiguous and its elements have unique representations we can
 		// treat it as a segment of memory and hash it directly
-		else if constexpr (detail::can_hash_range_as_bytes<HashAlgorithm, T>) {
-			detail::hashRangeAsBytes(hash_alg, t);
+		else if constexpr (internal::can_hash_range_as_bytes<HashAlgorithm, T>) {
+			internal::hashRangeAsBytes(hash_alg, t);
 		}
 		// If for each value of the type there is a unique representation of it in memory,
 		// we can treat it as a sequence of chars and hash it directly
 		else if constexpr (std::has_unique_object_representations_v<T>) {
-			detail::hashAsBytes(hash_alg, t);
+			internal::hashAsBytes(hash_alg, t);
 		}
 		// If type supports std::tuple_size and std::get, we can use them to get and hash its
 		// members
-		else if constexpr (detail::supports_std_get<T>) {
+		else if constexpr (internal::supports_std_get<T>) {
 			[&]<std::size_t... I>(std::index_sequence<I...>) {
 				(addToHash(hash_alg, std::get<I>(t)), ...);
 			}(std::make_index_sequence<std::tuple_size_v<T>>{});
@@ -99,7 +99,7 @@ namespace hashing {
 		}
 		// Some ranges will compare equal but keep their elements in unspecified order
 		else if constexpr (Options.allow_hashing_ranges_with_unspecified_order
-		                   && detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
+		                   && internal::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
 			typename HashAlgorithm::result_type combined_result{};
 			for (auto&& elem: t) {
 				// Note that this copy and hash finalization in cast may be expensive,
@@ -112,7 +112,7 @@ namespace hashing {
 		}
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above
-		else if constexpr (Options.allow_std_hash && detail::can_stdhash<T>) {
+		else if constexpr (Options.allow_std_hash && internal::can_stdhash<T>) {
 			addToHash(hash_alg, std::hash<T>{}(t));
 		} else {
 			static_assert(

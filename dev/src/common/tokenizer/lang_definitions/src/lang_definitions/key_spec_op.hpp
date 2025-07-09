@@ -153,7 +153,7 @@ namespace lang_def {
 		BCType,
 		BCPrimitive,
 		BCPointer,
-		BCStaticTable,
+		BCFixedSizeTable,
 		BCDynamicTable,
 		BCData,
 		BCVariant,
@@ -178,7 +178,7 @@ namespace lang_def {
 		Semicolon,
 		AtSign,
 		Comma,
-		DolarSign,
+		DollarSign,
 		HashSign,
 		//...
 	};

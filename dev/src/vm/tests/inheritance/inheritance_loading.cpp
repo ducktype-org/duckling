@@ -182,7 +182,7 @@ private:
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
 		auto pid = process_pid_response.value().pid;
 
-		fs::FilePath file(path("inheritance_metadata.dbc"));
+		fs::File file(path("inheritance_metadata.dbc"));
 		assertTrue(vm::api::loadFiles(pid, { file }).has_value(), "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);

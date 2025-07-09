@@ -120,7 +120,7 @@ namespace lang_def {
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
-			{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
+			{ Keyword::BCFixedSizeTable, "fixed_size_table", KeywordFlags() },
 			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
 			{ Keyword::BCData, "data", KeywordFlags() },
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
@@ -154,7 +154,7 @@ namespace lang_def {
 		{ Special::Comma, "," },
 		{ Special::AtSign, "@" },
 		{ Special::HashSign, "#" },
-		{ Special::DolarSign, "$" },
+		{ Special::DollarSign, "$" },
 	});
 
 	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({

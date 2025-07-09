@@ -45,7 +45,7 @@ namespace pst {
 		return out;
 	}
 
-	namespace detail {
+	namespace internal {
 		void simpleActionDprint(
 			std::ostream&                                          out,
 			const std::string&                                     kind,
@@ -63,24 +63,30 @@ namespace pst {
 	}
 
 	void Return::dprint(std::ostream& out) const {
-		detail::simpleActionDprint(out, "Return", &expr);
+		internal::simpleActionDprint(out, "Return", &expr);
 	}
 
-	void Break::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Break", &expr); }
+	void Break::dprint(std::ostream& out) const {
+		internal::simpleActionDprint(out, "Break", &expr);
+	}
 
 	void Continue::dprint(std::ostream& out) const {
-		detail::simpleActionDprint(out, "Continue", &expr);
+		internal::simpleActionDprint(out, "Continue", &expr);
 	}
 
-	void Redo::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Redo", &expr); }
+	void Redo::dprint(std::ostream& out) const { internal::simpleActionDprint(out, "Redo", &expr); }
 
 	void Restart::dprint(std::ostream& out) const {
-		detail::simpleActionDprint(out, "Restart", &expr);
+		internal::simpleActionDprint(out, "Restart", &expr);
 	}
 
-	void Defer::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Defer", &expr); }
+	void Defer::dprint(std::ostream& out) const {
+		internal::simpleActionDprint(out, "Defer", &expr);
+	}
 
-	void Throw::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Throw", &expr); }
+	void Throw::dprint(std::ostream& out) const {
+		internal::simpleActionDprint(out, "Throw", &expr);
+	}
 
 	void Return::acceptVisitor(PstVisitor& visitor) const { visitor.visitReturn(*this); }
 

@@ -12,7 +12,7 @@ namespace pst {
 	public:
 		static bool end(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
-			    || detail::Conditions::isImplementsOrBlockGroup(state, fwd);
+			    || internal::Conditions::isImplementsOrBlockGroup(state, fwd);
 		}
 
 		static MBox<ExprElement> parse(LangParserState& state) {

@@ -297,7 +297,7 @@ namespace vm::code {
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		StaticTableTypeMismatchError, "Inner static table type does not match expected type."
+		FixedSizeTableTypeMismatchError, "Inner fixed size table type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
 		StructTypeMismatchError, "Inner struct type does not match expected type."

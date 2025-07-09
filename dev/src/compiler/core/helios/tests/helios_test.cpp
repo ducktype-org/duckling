@@ -84,7 +84,7 @@ private:
 	}
 
 	void testI32Consts() {
-		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/constants")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
 		ASSERT_EQUAL(1'107, getValue("M", root_scope));
 		ASSERT_EQUAL(1, getValue("N.X", root_scope));
@@ -101,7 +101,7 @@ private:
 	}
 
 	void testClassSymbolData() {
-		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/classes")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
@@ -133,7 +133,7 @@ private:
 	}
 
 	void testTypeOf() {
-		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/types")));
 
 		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
 		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
@@ -199,7 +199,7 @@ private:
 	}
 
 	void testEdgeEvals() {
-		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/edge_evals")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/edge_evals")));
 		ASSERT_EQUAL(1, getValue("M1", root_scope));
 		ASSERT_EQUAL(6, getValue("M2", root_scope));
 		ASSERT_EQUAL(7, getValue("O1", root_scope));
@@ -210,7 +210,7 @@ private:
 	}
 
 	void testSimpleHOUT() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
+		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -222,7 +222,7 @@ private:
 	}
 
 	void testSingleFileModuleHOUT() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/simple_scopes")));
+		auto [module, _] = getModule(fs::File(path("test_modules/simple_scopes")));
 
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
@@ -239,7 +239,7 @@ private:
 	}
 
 	void testModuleHOUT() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_module")));
+		auto [module, _] = getModule(fs::File(path("test_modules/hout_module")));
 
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
@@ -256,7 +256,7 @@ private:
 	}
 
 	void testDependencyHOUT() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
+		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
@@ -282,7 +282,7 @@ private:
 
 	void testHoutVisitor() {
 		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::FilePath(path("test_modules/visitor_test_module"))
+			fs::File(path("test_modules/visitor_test_module"))
 		);
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -375,7 +375,7 @@ private:
 	}
 
 	void testImport() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/import_tests")));
+		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -405,7 +405,7 @@ private:
 	}
 
 	void testExprTree() {
-		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getValue("V1", root_scope));
 		auto              sym_v1  = getChain("V1", root_scope).back();
@@ -455,8 +455,7 @@ private:
 	void testError() {
 		using namespace compiler::helios;
 
-		auto [_, root_scope]
-			= getModule(fs::FilePath(path("test_modules/error_generating/bad_expr")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
 
 		try {
 			getValue("InvalidExpr", root_scope);
@@ -481,7 +480,7 @@ private:
 	}
 
 	void testHoutVariables() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/variables")));
+		auto [module, _] = getModule(fs::File(path("test_modules/variables")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -560,7 +559,7 @@ private:
 	}
 
 	void testKeywordLiterals() {
-		auto [module, top_scope] = getModule(fs::FilePath(path("test_modules/keyword_literals")));
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/keyword_literals")));
 
 		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, Signed });
 		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
@@ -635,7 +634,7 @@ private:
 	}
 
 	void testFunctionParameters() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
+		auto [module, _] = getModule(fs::File(path("test_modules/parameters")));
 
 		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
@@ -696,7 +695,7 @@ private:
 	}
 
 	void testExprScopes() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/expr_scopes")));
+		auto [module, _] = getModule(fs::File(path("test_modules/expr_scopes")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
@@ -758,7 +757,7 @@ private:
 	}
 
 	void testFunctionCallExpr() {
-		auto [module, scope] = getModule(fs::FilePath(path("test_modules/function_calls")));
+		auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 		ASSERT_EQUAL(2, hout->functions.size());
@@ -778,7 +777,7 @@ private:
 	}
 
 	void testBuiltinFunctions() {
-		auto [module, scope] = getModule(fs::FilePath(path("test_modules/builtins")));
+		auto [module, scope] = getModule(fs::File(path("test_modules/builtins")));
 		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 		ASSERT_EQUAL(1, hout->functions.size());
 
@@ -859,7 +858,7 @@ private:
 	}
 
 	void testMangler() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
+		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
@@ -905,7 +904,7 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
-		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
+		auto sub_module    = getModule(fs::File(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
@@ -932,7 +931,7 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/global_viariables")));
+		auto [module, _] = getModule(fs::File(path("test_modules/global_viariables")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
