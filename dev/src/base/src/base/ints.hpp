@@ -12,7 +12,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 
 STRONG_TYPEDEF_INT(u8, uint8_t);
 using u16 = uint16_t;

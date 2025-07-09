@@ -44,6 +44,7 @@
 #include "ints.hpp"
 #include "macros/diagnostics.hpp"
 
+#include <limits>
 #include <type_traits>
 #include <variant>
 
@@ -57,14 +58,15 @@ namespace base::internal {
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
 	template<typename Variant, typename T>
-	struct alternative_index_aux {
+	struct AlternativeIndexAux {
+		// placeholder to suppress the error about missing function
 		static constexpr usize findIndex() { return 0; }
 
-		static_assert(false, "alternative_index() can be used only for variant");
+		static_assert(false, "alternativeIndex() can be used only for variant");
 	};
 
 	template<typename T, typename... Types>
-	struct alternative_index_aux<std::variant<Types...>, T> {
+	struct AlternativeIndexAux<std::variant<Types...>, T> {
 		static constexpr usize findIndex() {
 			usize index = std::numeric_limits<usize>::max();
 
@@ -79,10 +81,10 @@ namespace base::internal {
 	};
 
 	template<typename VariantT, typename T>
-	constexpr usize alternative_index() {
+	constexpr usize alternativeIndex() {
 		// removing wrappers and using a template helper
 		using ClearedVariantT = std::remove_const_t<std::remove_reference_t<VariantT>>;
-		return alternative_index_aux<ClearedVariantT, T>::findIndex();
+		return AlternativeIndexAux<ClearedVariantT, T>::findIndex();
 	}
 }
 
@@ -114,15 +116,15 @@ namespace base::internal {
 
 #define variant_case(type, name)                                                                   \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                               \
-	case (::base::internal::alternative_index<decltype(internal_value), type>()):                  \
+	case (::base::internal::alternativeIndex<decltype(internal_value), type>()):                   \
 		if (bool variant_case_stop = true)                                                         \
 			for ([[maybe_unused]] auto&& name = std::get<type>(internal_value); variant_case_stop; \
 			     variant_case_stop            = false)                                             \
 		POP_DIAGNOSTIC
 
-#define variant_case_novalue(type)                                                \
-	break;                                                                        \
-	case (::base::internal::alternative_index<decltype(internal_value), type>()): \
+#define variant_case_novalue(type)                                               \
+	break;                                                                       \
+	case (::base::internal::alternativeIndex<decltype(internal_value), type>()): \
 		if (true)
 
 #define variant_default \
