@@ -313,7 +313,7 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
-		case lang_def::Keyword::BCStaticTable: {
+		case lang_def::Keyword::BCFixedSizeTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
 				state.err->failAndLog(state.getPosition(), "expected identifier");
@@ -322,9 +322,9 @@ namespace vm::loader::parser {
 				if (!size.isNumLiteral()) {
 					state.err->failAndLog(state.getPosition(), "expected number");
 				} else {
-					auto tp         = StaticTableType{ name,
-                                               type_name.getValue(),
-                                               static_cast<usize>(strIDToNum(size.getValue())) };
+					auto tp         = FixedSizeTableType{ name,
+                                                  type_name.getValue(),
+                                                  static_cast<usize>(strIDToNum(size.getValue())) };
 					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
 				}
@@ -651,5 +651,5 @@ namespace vm::loader::parser {
 		}
 	}
 
-	ParsedFile::ParsedFile(fs::FilePath source_file): source_file(std::move(source_file)) {}
+	ParsedFile::ParsedFile(fs::File source_file): source_file(std::move(source_file)) {}
 }

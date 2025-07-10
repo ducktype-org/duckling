@@ -689,7 +689,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(staticTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& dst         = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
@@ -703,7 +703,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(staticTableStore_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto element_type
@@ -721,7 +721,7 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(staticTableLoad_lany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_lany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
 			auto dst_block     = frame->block_stack[dst_block_idx];

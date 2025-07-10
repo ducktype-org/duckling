@@ -12,7 +12,7 @@ function main {
 
 	deinit; # z
 
-	staticTableLoad_lany_lptr       y, x;  # y = *x
+	fixedSizeTableLoad_lany_lptr       y, x;  # y = *x
 
 	deinit; # y
 	deinit; # x

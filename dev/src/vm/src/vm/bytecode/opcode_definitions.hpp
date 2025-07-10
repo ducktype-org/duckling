@@ -344,14 +344,14 @@ DEF_OPCODE(
 
 // expects `ext_l64` to be the next instruction
 DEF_OPCODE(
-	staticTableLea_lptr_lptr,
+	fixedSizeTableLea_lptr_lptr,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* table_ptr,
     vm::opargs::StackLocalI64 	 index */
 )
 // expects `ext_l64` to be the next instruction
 DEF_OPCODE(
-	staticTableLoad_lany_lptr,
+	fixedSizeTableLoad_lany_lptr,
 	vm::opargs::StackLocalAny /* destination */,
 	vm::opargs::StackLocalPtr /* table_ptr,
     vm::opargs::StackLocalI64 	 index */
@@ -359,7 +359,7 @@ DEF_OPCODE(
 
 // expects `ext_l64` to be the next instruction
 DEF_OPCODE(
-	staticTableStore_lptr_lany,
+	fixedSizeTableStore_lptr_lany,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::StackLocalAny /* source,
     vm::opargs::StackLocalI64 	 index */
