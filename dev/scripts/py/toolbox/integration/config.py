@@ -3,7 +3,12 @@ import re
 from typing import Any, Optional
 import yaml
 
-from .utils import ExpressionFillError, VariableNotFound, assert_good_var_name, check_resembles_builtin
+from .utils import (
+    ExpressionFillError,
+    VariableNotFound,
+    assert_good_var_name,
+    check_resembles_builtin,
+)
 
 from ..helpers import truncate_str, exit_with_error
 from .keys import *
@@ -28,6 +33,7 @@ Keys allowed in global context.
 """
 GLOBAL_CONFIG_KEYS = {
     NAME,
+    ENABLED,
     DESCRIPTION,
     TESTS,
     SUBDIRS,
@@ -52,7 +58,11 @@ def _read_config_file(dir_with_config: Path) -> dict:
     return config
 
 
-def load_config(dir_with_config: str, parent: Optional[dict] = None, user_values: Optional[dict] = None) -> dict:
+def load_config(
+    dir_with_config: str,
+    parent: Optional[dict] = None,
+    user_values: Optional[dict] = None,
+) -> dict:
     """
     Loads a DIT config from a `dir_with_config` recursively.
     Does error checking and fills the config structure.
@@ -139,7 +149,7 @@ def config_eval_variables(config: dict, expr: str) -> str:
     raise ExpressionFillError(truncate_str(original_expr, 100))
 
 
-def config_find_and_eval(config: dict, key: str, default = None) -> Optional[str]:
+def config_find_and_eval(config: dict, key: str, default=None) -> Optional[str]:
     """
     Finds a value of a `key` inside `config` and tries to evaluate
     its expression.

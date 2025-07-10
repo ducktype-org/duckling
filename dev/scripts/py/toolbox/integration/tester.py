@@ -101,6 +101,22 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
     Runs a test case from `Case` object.
     Returns an empty string on success, and an error message on error.
     """
+    # Check if `Enabled` evaluates to `true` to see if test-case is enabled or not
+    if case.enabled != '':
+        log_info_if_needed("Checking if test-case is enabled...", dry, verbose)
+        try:
+            dit_exec_command(
+                case.enabled,
+                cwd=test.cwd,
+                capture_output=not verbose,
+                dry=dry,
+                verbose=verbose,
+                exitcode=0  # 0 means it has evaluated to `true`
+            )
+        except BashCommandError as e:
+            return ''
+
+
     # Pre-case command
     if case.pre_case:
         log_info_if_needed("Executing pre-case command...", dry, verbose)
