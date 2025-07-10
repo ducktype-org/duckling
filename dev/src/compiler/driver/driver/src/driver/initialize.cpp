@@ -18,7 +18,7 @@ namespace compiler::driver {
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
 			CORE_ASSERT(
-				fs::FileManager::fileExists(artifacts_options.artifacts_path),
+				fs::FileManager::folderExists(artifacts_options.artifacts_path),
 				"Artifacts path does not exist:", artifacts_options.artifacts_path.nativePath(), "!"
 			);
 			global_state::setters::setRootCollection(
@@ -42,6 +42,5 @@ namespace compiler::driver {
 
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
-		CORE_UNREACHABLE();
 	}
 }
