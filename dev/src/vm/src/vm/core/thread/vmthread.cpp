@@ -429,8 +429,22 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		executing_program = program;
-		for (const auto& [type, id, name]: program->global_data.allData())
-			process_memory.insertGlobalData(id, *type);
+		for (const auto& [global, id, name]: program->global_data.allData()) {
+			process_memory.insertGlobalData(id, global->type);
+			// initialize them 
+			if (global->ctor_name.has_value()) {
+				try {
+					const auto& func = *executing_program->functions.atMaybe(base::StrID(global->ctor_name.value().data()))
+											.expect("Called function does not exist: " + func_name);
+					low::FuncData start_function;
+					start_function = createStartFunctionFor(func, {});
+					i64 exit_code = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+				} catch (const KillProcessException& e) {
+				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+				}
+			}
+		}
 
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))

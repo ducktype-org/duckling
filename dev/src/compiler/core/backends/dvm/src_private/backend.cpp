@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iostream>
 #include <ranges>
+#include <string>
 #include <variant>
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -601,19 +602,26 @@ namespace compiler::backend_vm {
 		for (const auto& global: globals) {
 			auto global_type = getTypeFromLayout(*global.lir_global.layout);
 			compiled_types.types.push_back(global_type);
-			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
-			global_data.global_data.push_back(GlobalData{
-				{}, global.lir_global.mangled_name, typeName(global_type) });
 
+			base::Optional<std::string> ctor_name;
+			base::Optional<std::string> dtor_name;
+			
 			// @TODO: handle ctors and dtors in DMV properly
 			if (global.global_ctor.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, global.global_ctor.value());
+				ctor_name = global.global_ctor.value()->mangled_name.strView();
 				ctors.emplace_back(global.global_ctor.value());
 			}
 			if (global.global_dtor.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, global.global_dtor.value());
+				dtor_name = global.global_dtor.value()->mangled_name.strView();
 				dtors.emplace_back(global.global_dtor.value());
 			}
+			
+			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			global_data.global_data.push_back(GlobalData{
+				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
+
 		}
 
 		// Insert and validate types:
