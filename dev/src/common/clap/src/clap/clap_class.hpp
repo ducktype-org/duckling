@@ -8,10 +8,10 @@
 
 #pragma once
 
+#include "command.hpp"
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 #include "value_parser.hpp"
-#include "command.hpp"
 
 #include "base/maps.hpp"
 #include "base/string_id.hpp"
@@ -45,11 +45,13 @@ namespace clap {
 	// TODOP: A simple wrapper for command, which provides the clap functionality.
 	class Clap final {
 	public:
-		using PreHandler = std::function<void(clap::ParsingResult&)>;
+		using PreHandler     = std::function<void(clap::ParsingResult&)>;
 		using CommandAndArgs = std::pair<const Command&, ParsingResult>;
 
-		Clap();
-		Clap(const std::string& name, const std::string& description);
+		Clap(std::string name, std::string description);
+
+		// Clap is move-only
+		// Clap(Clap&& other) noexcept: Clap() { *this = std::move(other); }
 
 		// Clap is move-only
 		Clap& operator=(Clap&& other) noexcept {
@@ -57,39 +59,37 @@ namespace clap {
 			return *this;
 		}
 
-		// Clap is move-only
-		Clap(Clap&& other) noexcept: Clap() { *this = std::move(other); }
-
-		// TODOP: MODIFIERS 
+		// TODOP: MODIFIERS
 
 		/**
-		 * Adds a subcommand to the Clap.
-		 * @param parameter A parameter constructed with clap::ParamBuilder.
+		 * Adds a subcommand to Clap.
+		 * @param sub_command A created sub command
 		 * @return A reference to self.
 		 */
 		Clap&& addSubcommand(Command&& sub_command);
 
 		/**
-		 * Sets a runner which is run once, before all other handlers.
-		 * Usefull when configuring global options like loggers and lexers.
-		 * @param pre_runner A function to run.
-		 * @return A reference to self.
-		 */
-		Clap&& setPreRunner(PreHandler pre_handler);
-
-		/**
-		 * Adds a global flag/option for clap. Ex. version, help, --let-it-throw, etc.
+		 * Adds a global flag/option for clap. Ex. --version, --help, --let-it-throw, etc
+		 * Adds a parameter to the root command.
 		 * @param parameter A parameter constructed with clap::ParamBuilder.
 		 * @return A reference to self.
 		 */
-		Clap&& addGlobalOption(Parameter&& parameter);
+		Clap&& addGlobalParameter(Parameter&& parameter);
 
 		/**
 		 * Sets the default value parser for the Clap. Might be a nullptr.
 		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
-		Clap&& setDefaultParser(MBox<ValueParser> parser);
+		Clap&& setDefaultValueParser(MBox<ValueParser> parser);
+
+		/**
+		 * Sets a runner which is run once, before all other handlers.
+		 * Usefull when configuring global options like loggers and lexers.
+		 * @param pre_handler A function to run.
+		 * @return A reference to self.
+		 */
+		Clap&& setPreHandler(PreHandler pre_handler);
 
 		/**
 		 * Adds a standard help flag functionality.
@@ -98,22 +98,22 @@ namespace clap {
 		 */
 		Clap&& addHelpFlag();
 
-		// TODOP: FUNCTIONALITY.
-		/**
-		 * Perform parsing.
-		 * @param argc Number of elements in argv.
-		 * @param argv A C-string array.
-		 * @return An object containing parsed command-line arguments.
-		 */
-		ParsingResult parse(usize argc, const char* const* argv);
-		ParsingResult parse(CLIArgs args);
-		ParsingResult parse(const std::string& args);
-		
-		// Main function which chooses the correct command being run, and runs it.
-		int execute(int argc, const char* const* argv);
-
-
 		// TODOP: Getters.
+		/**
+		 * Returns a list of subcommands for this command.
+		 * @return A list of subcommands for this command.
+		 */
+		[[nodiscard]]
+		const base::HashMap<base::StrID, MRef<Clap>>& getSubcommands() const;
+
+		/**
+		 * Named parameters are built with clap::ParamBuilder. They are addressed with
+		 * ``-${SHORT_NAME}`` or ``--${LONG_NAME}``.
+		 * @return A list of named parameters.
+		 */
+		[[nodiscard]]
+		const std::vector<Parameter>& getGlobalParameters() const;
+
 		/**
 		 * A default value parser is used to parse values, that are not directly specified
 		 * in the Clap's specification.
@@ -123,26 +123,45 @@ namespace clap {
 		MCRef<ValueParser> getDefaultValueParser() const;
 
 		/**
-		 * Named parameters are built with clap::ParamBuilder. They are addressed with
-		 * ``-${SHORT_NAME}`` or ``--${LONG_NAME}``.
-		 * @return A list of named parameters.
+		 * A default value parser is used to parse values, that are not directly specified
+		 * in the Clap's specification.
+		 * @return A pointer to the parser. Might be nullptr.
 		 */
 		[[nodiscard]]
-		const std::vector<Parameter>& getParameters() const;
+		const PreHandler& getPreHandler() const;
+
+
+		// TODOP: FUNCTIONALITY.
+		/**
+		 * Perform parsing.
+		 * @param argc Number of elements in argv.
+		 * @param argv A C-string array.
+		 * @return An object containing parsed command-line arguments.
+		 */
+		// TODOP: This may be not needed.
+		// ParsingResult parse(usize argc, const char* const* argv);
+		// ParsingResult parse(CLIArgs args);
+		// ParsingResult parse(const std::string& args);
 
 		/**
-		 * Positional parameters are indexed from zero and they are always required.
-		 * @return A list of positional parameters (their value parsers).
+		 * Performs the parsing. Returns the parsing result and the matched command.
+		 * @param argc Number of elements in argv.
+		 * @param argv A C-string array.
+		 * @return A pair of the command that matched and the parsed parameters.
 		 */
-		[[nodiscard]]
-		const std::vector<Box<ValueParser>>& getPositionalParameters() const;
+		CommandAndArgs newParse(CLIArgs args);
+		CommandAndArgs newParse(usize argc, const char* const* argv);
 
 		/**
-		 * Returns a list of subcommands for this command
-		 * @return A list of subcommands for this command
+		 * Performs the parsing and executes the command.
+		 * @param argc Number of elements in argv.
+		 * @param argv A C-string array.
+		 * @return A return value od a handler specified for the picked command.
 		 */
-		[[nodiscard]]
-		const base::HashMap<base::StrID, MRef<Clap>>& getSubcommands() const;
+		int execute(int argc, const char* const* argv);
+
+		// Version of the above one, but parses from a string and discards the program name.
+		// int execute(const std::string& args); // TODOP: Implement that.
 
 	private:
 		/**
@@ -150,7 +169,7 @@ namespace clap {
 		 * @param result ParsingResult which holds the parsed data.
 		 */
 		CommandAndArgs parse(int argc, const char* const* argv);
-		
+
 		/**
 		 * Validates the result accordingly to the Clap's specification, invokes
 		 * conditionals' conditions, etc.
@@ -158,8 +177,8 @@ namespace clap {
 		 */
 		void validateParsing(ParsingResult& result) const;
 
-		Command root_command; // Root command, stores the global options and subcommands.
+		// Root command, stores the global options, subcommands of the global CLAP object.
+		Command    root_command;
+		PreHandler pre_handler;
 	};
-
-
 }  // clap

@@ -56,6 +56,7 @@ namespace clap {
 		 */
 		[[nodiscard]]
 		const std::string& getFilePath() const;
+
 		/**
 		 * @return Provided arguments as a single string.
 		 */
@@ -80,6 +81,7 @@ namespace clap {
 		 * @param value A value parsed by the parser.
 		 */
 		void insertPositional(const ParsedValue& value);
+
 		/**
 		 * Inserts an extra value.
 		 * @param value A value parsed by the default parser.

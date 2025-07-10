@@ -4,6 +4,7 @@
  */
 
 #include "clap.hpp"
+#include "clap/command.hpp"
 #include "exceptions.hpp"
 #include "param_builder.hpp"
 #include "value_parser.hpp"
@@ -13,6 +14,9 @@
 #include <base/variant.hpp>
 
 #include <cctype>
+#include <exception>
+#include <iostream>
+#include <utility>
 
 /**
  * Basic helper functions.
@@ -248,7 +252,7 @@ namespace {
 			if (parsed.position > parsing_position) {
 				parsing_position = parsed.position;
 				skipWhitespace(parsing_position, args);
-				return { { parsed.value, parsed.raw_source } };
+				return { { .value = parsed.value, .raw_source = parsed.raw_source } };
 			}
 			return {};
 		}
@@ -256,44 +260,136 @@ namespace {
 }
 
 namespace clap {
-	Clap&& Clap::add(Parameter&& parameter) {
-		parameters.push_back(std::move(parameter));
+	Clap::Clap(std::string name, std::string description):
+		  root_command(Command(std::move(name), std::move(description))) {}
+
+	Clap&& Clap::addSubcommand(Command&& sub_command) {
+		root_command.addSubcommand(std::move(sub_command));
 		return std::move(*this);
 	}
 
-	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
+	Clap&& Clap::setPreHandler(PreHandler handler) {
+		pre_handler = std::move(handler);
+		return std::move(*this);
+	}
 
-	ParsingResult Clap::parse(usize argc, const char* const* argv) {
+	Clap&& Clap::addGlobalOption(Parameter&& parameter) {
+		root_command.add(std::move(parameter));
+		return std::move(*this);
+	}
 
-		// TODOP: This should be done recursively and parse subcommands.
-		// if (!args.empty && subcommands.contains(args[0])) {
-		// 		return subcommends[args[0]] -> parse(...)
-		// }
+	Clap&& Clap::setDefaultValueParser(MBox<ValueParser> parser) {
+		root_command.setDefaultValueParser(std::move(parser));
+		return std::move(*this);
+	}
 
+	const Clap::PreHandler& Clap::getHandler() const { return pre_handler; }
+
+	int Clap::execute(int argc, const char* const* argv) {
+		try {
+			// Returns a ParsingResult and a command that matched.
+			auto [command, parsing_result] = parse(argc, argv);
+
+			// Prehandler executes before every other functions. Sets global flags in modules etc.
+			if (pre_handler) pre_handler(parsing_result);
+
+			// TODOP: Command might not have been found.
+			// if (command) {
+			// Get a handler that handles that command.
+			const auto& handler = command.getHandler();
+			if (handler) return handler(parsing_result);
+			// }
+			// No handler available, print help.
+			// printHelp();
+			return 1;
+		} catch (const exceptions::HelpException& e) {
+			// printHelp();
+			return 0;
+		} catch (const exceptions::ClapException& e) {
+			std::cerr << "Error: " << e.what() << '\n';
+			return 1;
+		} catch (const std::exception& e) {
+			std::cerr << "Something went wrong. Non CLAP exception wa thrown\n";
+			return 1;
+		}
+	}
+
+	Clap::CommandAndArgs Clap::newParse(CLIArgs args) { return newParse(args.argc, args.argv); }
+
+	Clap::CommandAndArgs Clap::newParse(usize argc, const char* const* argv) {
+		// TODOP: Remove that.
 		CORE_ASSERT(
 			argc > 0,
 			"clap assumes argc is at least 1, as it is the name of the program from the parameters."
 		);
 
-		ParsingState st(argc, argv);
+		ParsingState                st(argc, argv);
+		const Command*              current_command = &root_command;
+		std::vector<const Command*> path;
+		path.push_back(current_command);
 
-		// Going left to right through chars in args.
+
+		// Find subcommands.
+		bool looking_for_subcommands = true;
+		while (looking_for_subcommands && st.parsing_position < st.args.size()) {
+			usize       token_start = st.parsing_position;
+			std::string token;
+
+			// Parse a single token until the space.
+			while (st.parsing_position < st.args.size()
+			       && not std::isspace(st.args[st.parsing_position])) {
+				token += st.args[st.parsing_position++];
+			}
+
+			// Is token is an option, then we finish looking for commands.
+			if (token.empty() || token.starts_with('-')) {
+				st.parsing_position     = token_start;
+				looking_for_subcommands = false;
+				break;
+			}
+
+			const Command* next_command = nullptr;
+			// TODOP: Use a map.
+			for (const auto& sub_cmd: current_command->getSubcommands()) {
+				if (token == sub_cmd.getName()) {
+					// Found a sub command.
+					next_command = &sub_cmd;
+					break;
+				}
+			}
+
+			// Step deeper into the new command.
+			if (next_command) {
+				current_command = next_command;
+				path.push_back(current_command);
+				// Skip the space after the command name.
+				skipWhitespace(st.parsing_position, st.args);
+			} else {  // No new command found. A token was a positional argument. Go back.
+				st.parsing_position     = token_start;
+				looking_for_subcommands = false;
+			}
+		}
+
+		// After we know the command, we can parse the arguments.
+		// Parameters available for a command are it's parameters and the global ones.
+
 		while (st.parsing_position < st.args.size()) {
 			// It could be a negative number, like -1, or -.5
 			bool is_negative_number = isNegativeNumber(st.parsing_position, st.args);
 
 			if (st.args[st.parsing_position] == '-' && !is_negative_number) {
-				st.parseParameter(getParameters());
+				st.parseParameter(current_command->getParameters());
 			} else {
 				// If not found a "-" parse using default value parser
 				// Check if value is positional or extra.
 				usize current_positional_args = st.result.getPositionalParameterCount();
-				if (current_positional_args < getPositionalParameters().size()) {
-					const auto& param = getPositionalParameters()[current_positional_args];
+				if (current_positional_args < current_command->getPositionalParameters().size()) {
+					const auto& param
+						= current_command->getPositionalParameters()[current_positional_args];
 					st.parsePositional(*param);
 				} else {
 					// So it's an extra argument.
-					auto parser = getDefaultValueParser();
+					auto parser = current_command->getDefaultValueParser();
 					if (parser == nullptr)
 						throw exceptions::NoDefaultValueParser((i32) st.parsing_position, st.args);
 					st.parseExtra(*parser);
@@ -304,22 +400,12 @@ namespace clap {
 		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 		validateParsing(st.result);
 
-		return st.result;
+		return { *current_command, std::move(st.result) };
 	}
 
 	MCRef<ValueParser> Clap::getDefaultValueParser() const { return default_value_parser.ref(); }
 
 	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
-
-	Clap&& Clap::addPositional(Box<ValueParser> parameter) {
-		positional_parameters.push_back(std::move(parameter));
-		return std::move(*this);
-	}
-
-	Clap&& Clap::setDefaultParser(MBox<ValueParser> parser) {
-		default_value_parser = std::move(parser);
-		return std::move(*this);
-	}
 
 	void Clap::validateParsing(ParsingResult& result) const {
 		usize num_positional_args = result.getPositionalParameterCount();
@@ -351,17 +437,13 @@ namespace clap {
 		}
 	}
 
-	Clap::Clap(): default_value_parser(StringParser::make()) {}
-
 	Clap&& Clap::addHelpFlag() {
-		return add(ParamBuilder::ofFlag()
-		               .addShortName('h')
-		               .addLongName("help")
-		               .addShortDesc("Display this information.")
-		               .build());
-	}
-
-	const std::vector<Box<ValueParser>>& Clap::getPositionalParameters() const {
-		return positional_parameters;
+		return addGlobalOption(
+			ParamBuilder::ofFlag()
+				.addShortName('h')
+				.addLongName("help")
+				.addShortDesc("Display this information.")
+				.build()
+		);
 	}
 }  // clap

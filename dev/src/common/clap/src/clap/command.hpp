@@ -22,7 +22,7 @@ namespace clap {
 	public:
 		using Handler = std::function<int(const ParsingResult&)>;
 
-		Command(const std::string& name, const std::string& description);
+		Command(std::string name, std::string description);
 		Command(Command&&) noexcept            = default;
 		Command& operator=(Command&&) noexcept = default;
 
@@ -34,30 +34,46 @@ namespace clap {
 		Command&& addSubcommand(Command&& sub_command);
 		// Sets a function to be run.
 		Command&& setHandler(Handler handler);
+		// Sets a default value parser for this command. Default is the string parser.
+		Command&& setDefaultValueParser(MBox<ValueParser> parser);
 
-		const std::string& getName() const { return name; }
+		[[nodiscard]]
+		const std::string& getName() const;
 
-		const std::string& getDescription() const { return description; }
+		[[nodiscard]]
+		const std::string& getDescription() const;
 
-		const base::HashMap<base::StrID, MRef<Command>>& getSubcommands() const {
-			return subcommands;
-		}
+		// [[nodiscard]]
+		// const base::HashMap<base::StrID, MRef<Command>>& getSubcommands() const;
+		[[nodiscard]]
+		const std::vector<Command>& getSubcommands() const;
 
-		const std::vector<Parameter>& getParameters() const { return parameters; }
+		[[nodiscard]]
+		const std::vector<Parameter>& getParameters() const;
 
-		const std::vector<Box<ValueParser>>& getPositionalParameters() const {
-			return positional_parameters;
-		}
+		[[nodiscard]]
+		const std::vector<Box<ValueParser>>& getPositionalParameters() const;
 
-		const Handler& getHandler() const { return handler; }
+		[[nodiscard]]
+		const Handler& getHandler() const;
+
+		/**
+		 * A default value parser is used to parse values, that are not directly specified
+		 * in the Clap's specification.
+		 * @return A pointer to the parser. Might be nullptr.
+		 */
+		[[nodiscard]]
+		MCRef<ValueParser> getDefaultValueParser() const;
+
 	private:
 		std::string name;
 		std::string description;
+		MBox<ValueParser>             default_value_parser;
 		Handler     handler{};
-
-		MBox<ValueParser>                         default_value_parser;
-		std::vector<Box<ValueParser>>             positional_parameters;
-		std::vector<Parameter>                    parameters;
-		base::HashMap<base::StrID, MRef<Command>> subcommands;
+		
+		std::vector<Box<ValueParser>> positional_parameters;
+		std::vector<Parameter>        parameters;
+		std::vector<Command>          subcommands;
+		// base::HashMap<base::StrID, MRef<Command>> subcommands; // TODOP: maybe it should be a map.
 	};
 };  // clap
