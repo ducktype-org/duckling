@@ -1,8 +1,6 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <helios/queries.hpp>
 #include <helios_private/comp_time/int_eval.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -26,7 +24,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <algorithm>
 #include <vector>
 
 namespace compiler::helios {
@@ -55,7 +52,7 @@ namespace compiler::helios {
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
 	bool isGlobalVar(SymID id) {
-		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "not a variable\n");
+		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 		return getSymRef(id)->global;
 	}
 

@@ -951,6 +951,8 @@ private:
 				= getModule(fs::FilePath(path("test_modules/global_viariables/general")));
 			auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
+			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
+
 			auto glob1 = find_global(hout_unit, base::StrID("B")).value();
 			auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
 
@@ -979,8 +981,10 @@ private:
 			auto [module, _]
 				= getModule(fs::FilePath(path("test_modules/global_viariables/detection")));
 			auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
-			std::vector<char> globals     = { 'A', 'B', 'C' };
-			std::vector<char> not_globals = { 'g', 'h' };
+
+			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
+
+			std::vector<char> globals = { 'A', 'B', 'C' };
 
 			for (const auto& name: globals)
 				ASSERT_TRUE(compiler::helios::isGlobalVar(
