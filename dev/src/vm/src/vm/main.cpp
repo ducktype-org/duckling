@@ -9,84 +9,103 @@
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
+#include <exception>
+
 void showVersion() {
 	std::cout << "VM version 0.0.\n";
 	std::cout << "Configuration: \n";
 	std::cout << vm::getInstructionConfig() << '\n';
 }
 
+clap::Clap getVmClap() {
+	return clap::Clap("dvm", "The Duckling Virtual Machine.")
+	    .addHelpFlag()
+	    .addGlobalParameter(
+			clap::ParamBuilder::ofFlag()
+				.addShortName('v')
+				.addLongName("version")
+				.addShortDesc("Shows version and config")
+				.build()
+		)
+	    .addGlobalParameter(
+			clap::ParamBuilder::ofFlag()
+				.addLongName("stdlib")
+				.addShortDesc("When passed, loads standard library")
+				.build()
+		)
+	    .setPreHandler([](const clap::ParsingResult& options) {
+			if (options.isFlag("version")) {
+				showVersion();
+				throw clap::exceptions::VersionException(options);
+			}
+		})
+	    .addSubcommand(
+			clap::Command("server", "Launch DVM as a http server.")
+				.add(
+					clap::ParamBuilder::ofValue(clap::IntParser::make())
+						.addShortName('p')
+						.addLongName("port")
+						.addShortDesc("Port to listen on.")
+						.required()
+						.build()
+				)
+				.setHandler([](const clap::ParsingResult& options) -> int {
+					vm::Supervisor::get();
+					auto port = options.getValue<i64>("port").value();
+					server(i32(port));
+					return 0;
+				})
+		)
+	    .addSubcommand(
+			clap::Command("run", "Run a .qbc file.")
+				.addPositional(clap::FileParser::make())
+				.add(
+					// TODOP: Maybe this file should be positional?
+					clap::ParamBuilder::ofValue(clap::FileParser::make())
+						.addShortName('f')
+						.addLongName("file")
+						.addShortDesc("Path to the .dbc file to execute.")
+						.optional()
+						.build()
+				)
+				.setHandler([](const clap::ParsingResult& options) {
+					vm::Supervisor::get();
+					if (auto file = options.getValue<fs::FilePath>("file"))
+						return cli(file.value(), options.isFlag("stdlib"));
+					return cli(options.isFlag("stdlib"));
+				})
+		)
+	    .addSubcommand(
+			clap::Command("repl", "Start the VM in REPL mode.")
+				.addPositional(clap::FileParser::make())
+				// TODOP: Maybe REPL should have a file flag as well?
+				.setHandler([](const clap::ParsingResult& _) -> int {
+					vm::Supervisor::get();
+					DuckVMRepl::get().run();
+					return 0;
+				})
+		);
+}
+
 int main(int argc, const char** argv) {
 	init::InitObject _;
-	auto             clap = clap::Clap()
-	                .addHelpFlag()
-	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-	                         .addShortName('s')
-	                         .addLongName("server")
-	                         .addShortDesc("Launch VM as a http server")
-	                         .build())
-	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make(std::regex(".*\\.dbc")))
-	                         .conditional(
-								 [](const clap::ParsingResult& result) {
-									 return !(result.isParam('f') && result.isParam('s'));
-								 },
-								 "File cannot be passed with -s/--server flag"
-							 )
-	                         .addShortName('f')
-	                         .addLongName("file")
-	                         .addShortDesc("Launch given file (only if not -s/--server)")
-	                         .build())
-	                .add(clap::ParamBuilder::ofFlag()
-	                         .addShortName('v')
-	                         .addLongName("version")
-	                         .addShortDesc("Shows version and config")
-	                         .build())
-	                .add(clap::ParamBuilder::ofFlag()
-	                         .conditional(
-								 [](const clap::ParsingResult& result) {
-									 return !(
-										 result.isFlag('r')
-										 && (result.isParam('f') || result.isParam('s'))
-									 );
-								 },
-								 "REPL cannot be used with -s/--server or -f/--file flags"
-							 )
-	                         .addShortName('r')
-	                         .addLongName("repl")
-	                         .addShortDesc("Executes the VM in REPL mode")
-	                         .build())
-	                .add(clap::ParamBuilder::ofFlag()
-	                         .addLongName("stdlib")
-	                         .addShortDesc("When passed, loads standard library")
-	                         .build());
-
-	clap::ParsingResult result;
+	auto             clap = getVmClap();
 
 	try {
-		result = clap.parse(usize(argc), argv);
-	} catch (clap::exceptions::ClapException& e) {
-		printer::StreamPrinter::print({
-			{ "duckling: ", printer::Color::DEFAULT },
-			{ "error: ", printer::Color::RED },
-			{ e.what(), printer::Color::DEFAULT },
-		});
-		return 1;
-	} catch (clap::exceptions::HelpException& e) {
-		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-		std::cout << help_message << '\n';
-		return 0;
-	}
-
-	// Instantiate supervisor
-	vm::Supervisor::get();
-
-	if (result.isFlag('v'))
+		return clap.execute(argc, argv);
+	} catch (const clap::exceptions::VersionException& e) {
 		showVersion();
-	else if (result.isFlag('r'))
-		DuckVMRepl::get().run();
-	else if (auto port = result.getValue<i64>("server"))
-		server(i32(port.value()));
-	else if (auto file = result.getValue<fs::FilePath>("file"))
-		return cli(file.value(), result.isFlag("stdlib"));
-	else
-		return cli(result.isFlag("stdlib"));
+	} catch (const clap::exceptions::HelpException& e) {
+		// printHelp(); // TODOP
+		std::cerr << "Help flag passed\n";
+	} catch (const clap::exceptions::ClapException& e) {
+		printer::StreamPrinter::print(
+			{
+				{ "duckling: ", printer::Color::DEFAULT },
+				{ "error: ", printer::Color::RED },
+				{ e.what(), printer::Color::DEFAULT },
+			}
+		);
+		return 1;
+	} catch (const std::exception& e) { std::cerr << "Non Clap exception caught.\n"; }
 }

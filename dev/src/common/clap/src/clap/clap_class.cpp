@@ -268,13 +268,13 @@ namespace clap {
 		return std::move(*this);
 	}
 
-	Clap&& Clap::setPreHandler(PreHandler handler) {
-		pre_handler = std::move(handler);
+	Clap&& Clap::addGlobalParameter(Parameter&& parameter) {
+		root_command.add(std::move(parameter));
 		return std::move(*this);
 	}
 
-	Clap&& Clap::addGlobalOption(Parameter&& parameter) {
-		root_command.add(std::move(parameter));
+	Clap&& Clap::setPreHandler(PreHandler handler) {
+		pre_handler = std::move(handler);
 		return std::move(*this);
 	}
 
@@ -283,11 +283,34 @@ namespace clap {
 		return std::move(*this);
 	}
 
-	const Clap::PreHandler& Clap::getHandler() const { return pre_handler; }
+	const std::vector<Command>& Clap::getSubcommands() const {
+		return root_command.getSubcommands();
+	}
+
+	const std::vector<Parameter>& Clap::getGlobalParameters() const {
+		return root_command.getParameters();
+	}
+
+	MCRef<ValueParser> Clap::getDefaultValueParser() const {
+		return root_command.getDefaultValueParser();
+	}
+
+	const Clap::PreHandler& Clap::getPreHandler() const { return pre_handler; }
+
+	Clap&& Clap::addHelpFlag() {
+		return addGlobalParameter(
+			ParamBuilder::ofFlag()
+				.addShortName('h')
+				.addLongName("help")
+				.addShortDesc("Display this information.")
+				.build()
+		);
+	}
 
 	int Clap::execute(int argc, const char* const* argv) {
 		try {
 			// Returns a ParsingResult and a command that matched.
+			// TODOP: Move command into parsing result.
 			auto [command, parsing_result] = parse(argc, argv);
 
 			// Prehandler executes before every other functions. Sets global flags in modules etc.
@@ -398,26 +421,23 @@ namespace clap {
 		}
 
 		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-		validateParsing(st.result);
+		validateParsing(*current_command, st.result);
 
 		return { *current_command, std::move(st.result) };
 	}
 
-	MCRef<ValueParser> Clap::getDefaultValueParser() const { return default_value_parser.ref(); }
-
-	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
-
-	void Clap::validateParsing(ParsingResult& result) const {
+	void Clap::validateParsing(const Command& command, ParsingResult& result) const {
 		usize num_positional_args = result.getPositionalParameterCount();
 
-		if (num_positional_args < getPositionalParameters().size()) {
-			const auto& param = getPositionalParameters()[num_positional_args];
+		if (num_positional_args < command.getPositionalParameters().size()) {
+			const auto& param = command.getPositionalParameters()[num_positional_args];
 			throw exceptions::PositionalParameterExpected(
 				result.getPositionalParameterCount(), param->getTypeName()
 			);
 		}
 
-		for (auto& param: parameters) {
+		// Check this command params.
+		for (auto& param: command.getParameters()) {
 			variant_match(param.getParameterNecessity()) {
 				variant_case(Required, _) {
 					if (!result.hasParam(param))
@@ -435,15 +455,25 @@ namespace clap {
 				}
 			}
 		}
-	}
 
-	Clap&& Clap::addHelpFlag() {
-		return addGlobalOption(
-			ParamBuilder::ofFlag()
-				.addShortName('h')
-				.addLongName("help")
-				.addShortDesc("Display this information.")
-				.build()
-		);
+		// Check global params.
+		for (auto& param: root_command.getParameters()) {
+			variant_match(param.getParameterNecessity()) {
+				variant_case(Required, _) {
+					if (!result.hasParam(param))
+						throw exceptions::MissingRequiredParameter(
+							"\"" + getParameterName(param) + "\""
+						);
+				}
+				variant_case(Optional, _) { /* Nothing in this case */ }
+				variant_case(Conditional, c) {
+					if (!c.condition(result)) {
+						throw exceptions::MissingConditionalParameter(
+							getParameterName(param), "reason: " + c.condition_description
+						);
+					}
+				}
+			}
+		}
 	}
 }  // clap

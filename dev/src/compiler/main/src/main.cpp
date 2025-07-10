@@ -6,10 +6,8 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include "clap/clap_class.hpp"
-#include "clap/param_builder.hpp"
-#include "clap/parsing_result.hpp"
-#include "clap/value_parser.hpp"
+#include "diagnostic/logger.hpp"
+#include "lexer/lexer_class.hpp"
 
 #include <clap/clap.hpp>
 #include <config/config.hpp>
@@ -30,17 +28,6 @@
 
 #include <iostream>
 
-constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
-constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
-
-namespace {
-	/**
-	 * @brief Whether main should throw compiler exceptions.
-	 * Used by let-it-throw option.
-	 */
-	constinit bool throwing_main = false;
-}
-
 /**
  * Simple function for showing compilation errors.
  */
@@ -51,220 +38,92 @@ void printContextErrors() {
 	}
 }
 
-/**
- * @brief Type of command callback. The returned int value is the value
- * that will be returned by hole application (i.e. exit status).
- */
-using CommandRunner = std::function<int()>;
+// /**
+//  * @brief Generate help messages with list of all commands
+//  */
+// [[nodiscard]]
+// std::string generateHelpMessage() const {
+// 	std::string out;
+// 	out.reserve(128);
 
-/**
- * @brief Structure representing a single command of "duck main"
- */
-struct Command final {
-	std::string   name;
-	std::string   description;
-	CommandRunner runner;
-};
+// 	out += "Available commands: \n";
+// 	for (auto& cmd: commands) {
+// 		out += "    ";
+// 		out += cmd.name;
+// 		out += std::string(30 - cmd.name.length(), ' ');
+// 		out += cmd.description;
+// 		out += "\n";
+// 	}
+// 	return out;
+// }
 
-/**
- * @brief Structure representing all commands of "duck main"
- */
-struct CommandList final {
-	std::vector<Command> commands;
+// void printHelp(
+// 	const clap::Clap&          clap,
+// 	const clap::ParsingResult& parsing_result,
+// 	const CommandList&         commands,
+// 	bool                       command_mode
+// ) {
+// 	if (command_mode) {
+// 		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
+// 		std::cerr << "\nFor list of available commands use: ./duck --help\n";
+// 	} else {
+// 		std::cerr << commands.generateHelpMessage();
+// 		std::cerr << "\nFor help with given command use: ./duck [command] --help\n\n";
+// 		std::cerr << "General options and usage:\n";
+// 		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
+// 	}
+// }
 
-	/**
-	 * @brief Adds new command to the list.
-	 */
-	void add(std::string name, std::string desc, CommandRunner runner) {
-		commands.emplace_back(
-			Command{
-				.name        = std::move(name),
-				.description = std::move(desc),
-				.runner      = std::move(runner),
-			}
-		);
-	}
 
-	/**
-	 * @brief Generate help messages with list of all commands
-	 */
-	[[nodiscard]]
-	std::string generateHelpMessage() const {
-		std::string out;
-		out.reserve(128);
-
-		out += "Available commands: \n";
-		for (auto& cmd: commands) {
-			out += "    ";
-			out += cmd.name;
-			out += std::string(30 - cmd.name.length(), ' ');
-			out += cmd.description;
-			out += "\n";
-		}
-		return out;
-	}
-
-	struct CommandStatus final {
-		bool was_command_run;
-		int  exit_code;
-	};
-
-	/**
-	 * @brief Runs a command.
-	 * @param what Command to run.
-	 * @return Whether the command was run.
-	 */
-	CommandStatus run(std::string_view what) {
-		for (auto& cmd: commands) {
-			if (cmd.name == what) {
-				int status = cmd.runner();
-				return { .was_command_run = true, .exit_code = status };
-			}
-		}
-		return { .was_command_run = false, .exit_code = 1 };
-	}
-};
-
-void printHelp(
-	const clap::Clap&          clap,
-	const clap::ParsingResult& parsing_result,
-	const CommandList&         commands,
-	bool                       command_mode
-) {
-	if (command_mode) {
-		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
-		std::cerr << "\nFor list of available commands use: ./duck --help\n";
-	} else {
-		std::cerr << commands.generateHelpMessage();
-		std::cerr << "\nFor help with given command use: ./duck [command] --help\n\n";
-		std::cerr << "General options and usage:\n";
-		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
-	}
-}
-
-/**
- * @brief Generate Clap instance with all standard "main" parameters.
- * @return clap::Clap
- */
-clap::Clap getClapForMain() {
-	// standard options:
-	auto clap = config::standardOptions();
-
-	// custom options of main:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName(LET_IT_THROW_NAME)
-			.addShortDesc("Disables exception handling in main (debug option).")
-			.addLongDesc(
-				"If set, unhandled exceptions will not be caught by main procedure. "
-				"It should be used for debugging only in order to preserve "
-				"stack-trace. It can prevent stack-unwinding from happening."
-			)
-			.build()
-	);
-
-	return clap;
-}
-
-/**
- * @brief Parses arguments with @p clap and performs
- * configuration of the program that is independent from any command.
- * @note it assumes that @p clap has parameters
- * added by getClapForMain.
- */
-clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) {
-	// standard options:
-	auto res = config::configureWith(clap, args);
-
-	CORE_ASSERT(
-		throwing_main == res.isFlag("let-it-throw"),
-		"Internal error: let-it-throw flag was not parsed correctly."
-	);
-
-	return res;
-}
-
-/**
- * @brief Wrapper for logic of main function
- */
-int mainProcedure(int argc, const char* const* argv) {
-	init::InitObject _;
-
-	clap::CLIArgs full_args{
-		.argc = base::safeIntConv<usize>(argc),
-		.argv = argv,
-	};
-	clap::CLIArgs command_args{
-		.argc = base::safeIntConv<usize>(argc - 1),
-		.argv = argv + 1,
-	};
-
-	auto clap         = getClapForMain();
-	bool command_mode = false;
-
-	auto commands = getCommandList(command_args, clap);
-
-	try {
-		// @future: improve the way we detect whether there was a command or no and
-		// the way we handle command line arguments.
-		// It is currently done this way, because clap was not designed for
-		// "interactive" options, and "Conditional parameters" don't serve this role well.
-
-		if (argc >= 2 and argv[1][0] != '-') {
-			std::string command = argv[1];
-
-			command_mode        = true;
-			auto command_status = commands.run(command);
-
-			if (not command_status.was_command_run)
-				std::cerr << "Unknown command: " << command << ".\n";
-
-			return command_status.exit_code;
-		} else {
-			command_mode = false;
-
-			clap.add(
-				clap::ParamBuilder::ofFlag()
-					.addLongName("version")
-					.addShortName('v')
-					.addShortDesc("Print version and don't perform any tasks.")
-					.build()
-			);
-
-			auto options = configureDuckMainWith(clap, full_args);
-
-			if (options.isFlag("version")) {
-				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
-				return 0;
-			}
-
-			printHelp(clap, options, commands, command_mode);
-			return 0;
-		}
-	} catch (const clap::exceptions::HelpException& e) {
-		printHelp(clap, e.parsing_result, commands, command_mode);
-		return 0;
-	} catch (const clap::exceptions::ClapException& e) {
-		std::cerr << "Incorrect option: " << e.what() << '\n';
-		std::cerr << "Use --help for available options.\n";
-		return 1;
-	}
-}
-
-/**
- * @brief Generate Clap instance with all standard "main" parameters.
- * @return clap::Clap
- */
-clap::Clap getClapForMain() {
-	// TODOP: Figure out the default options.
+clap::Clap getStandardDucklingOptions() {
 	return clap::Clap("duck", "The Duckling compiler")
-	    .addGlobalOption(
+	    .addGlobalParameter(
 			clap::ParamBuilder::ofFlag()
-				.addLongName("let-it--throw")
-				.addShortDesc("Disables exception handling in main (debug option)")
+				.addLongName("logger-cerr")
+				.addShortDesc("If set, Logger class will immediately print its messages to cerr.")
 				.build()
 		)
-	    // Add other global options from config::StandardOptions()
+	    .addGlobalParameter(
+			clap::ParamBuilder::ofFlag()
+				.addLongName("lexer-cerr")
+				.addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
+				.build()
+		)
+	    .addGlobalParameter(
+			clap::ParamBuilder::ofFlag()
+				.addLongName("let-it-throw")
+				.addShortDesc("Disables exception handling in main (debug option)")
+				.addLongDesc(
+					"If set, unhandled exceptions will not be caught by main procedure. "
+					"It should be used for debugging only in order to preserve "
+					"stack-trace. It can prevent stack-unwinding from happening."
+				)
+				.build()
+		)
+	    .addGlobalParameter(  // TODOP: Add default version flag adding.
+			clap::ParamBuilder::ofFlag()
+				.addShortName('v')
+				.addLongName("version")
+				.addShortDesc("Print version and exit")
+				.build()
+		)
+	    .addHelpFlag()
+	    .setPreHandler([](const clap::ParsingResult& options) {
+			dia::Logger::setImmediatelyDump(options.isFlag("logger-cerr"));
+			lexer::Lexer::setTokenMessages(options.isFlag("lexer-cerr"));
+			if (options.isFlag("version")) {
+				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
+				throw clap::exceptions::VersionException(options);
+			}
+		});
+}
+
+/**
+ * @brief Generate Clap instance with all standard "main" parameters.
+ * @return clap::Clap
+ */
+clap::Clap myGetClapForMain() {
+	return getStandardDucklingOptions()
 	    .addSubcommand(
 			clap::Command("lex", "Runs lexer on a single file and prints the result to cout.")
 				.add(
@@ -275,7 +134,7 @@ clap::Clap getClapForMain() {
 						.required()
 						.build()
 				)
-				.setRunner([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& options) -> int {
 					//   auto options = configureDuckMainWith(clap, command_args); // This is
 		            //   not needed since we it from the top.
 					auto file_to_lex = options.getValue<fs::FilePath>("file").value();
@@ -315,7 +174,7 @@ clap::Clap getClapForMain() {
 						.required()
 						.build()
 				)
-				.setRunner([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& options) -> int {
 					//   auto options = configureDuckMainWith(clap, command_args);
 		            //   not needed since we it from the top.
 
@@ -349,7 +208,7 @@ clap::Clap getClapForMain() {
 						.required()
 						.build()
 				)
-				.setRunner([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& options) -> int {
 					//   auto options = configureDuckMainWith(clap, command_args);
 		            //   not needed since we it from the top.
 
@@ -415,7 +274,7 @@ clap::Clap getClapForMain() {
 						)
 						.build()
 				)
-				.setRunner([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& options) -> int {
 					// auto options = configureDuckMainWith(clap, command_args);
 		            //   not needed since we it from the top.
 
@@ -492,7 +351,7 @@ clap::Clap getClapForMain() {
 						.addShortDesc("Compile to DVM bytecode instead of exe.")
 						.build()
 				)
-				.setRunner([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& options) -> int {
 					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
@@ -514,7 +373,7 @@ clap::Clap getClapForMain() {
 		)
 	    .addSubcommand(
 			clap::Command("throw", "Throws exception (testing command).")
-				.setRunner([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& options) -> int {
 					//   configureDuckMainWith(clap, command_args);
 					throw base::LogicError("Command `throw` thrown successfully!");
 				})
@@ -523,7 +382,7 @@ clap::Clap getClapForMain() {
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-	auto clap = getClapForMain();
+	auto             clap = myGetClapForMain();
 
 	try {
 		return clap.execute(argc, argv);

@@ -31,6 +31,17 @@ namespace clap::exceptions {
 	};
 
 	/**
+	 * Raised when passed ``-v`` / ``--version``.
+	 * It is not an exception per se.
+	 */
+
+	struct VersionException: public base::LogicError {
+		ParsingResult parsing_result;
+
+		explicit VersionException(ParsingResult result);
+	};
+
+	/**
 	 * Raised by value parsers when input is malformed.
 	 */
 	struct ValueParsingException: public ClapException {

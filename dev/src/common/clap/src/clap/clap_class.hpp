@@ -48,16 +48,12 @@ namespace clap {
 		using PreHandler     = std::function<void(clap::ParsingResult&)>;
 		using CommandAndArgs = std::pair<const Command&, ParsingResult>;
 
+		// Clap is move-only
 		Clap(std::string name, std::string description);
-
-		// Clap is move-only
-		// Clap(Clap&& other) noexcept: Clap() { *this = std::move(other); }
-
-		// Clap is move-only
-		Clap& operator=(Clap&& other) noexcept {
-			root_command = std::move(other.root_command);
-			return *this;
-		}
+		Clap(Clap& other)                      = delete;
+		Clap& operator=(Clap& other) noexcept  = delete;
+		Clap(Clap&& other) noexcept            = default;
+		Clap& operator=(Clap&& other) noexcept = default;
 
 		// TODOP: MODIFIERS
 
@@ -104,7 +100,7 @@ namespace clap {
 		 * @return A list of subcommands for this command.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, MRef<Clap>>& getSubcommands() const;
+		const std::vector<Command>& getSubcommands() const;
 
 		/**
 		 * Named parameters are built with clap::ParamBuilder. They are addressed with
@@ -175,7 +171,7 @@ namespace clap {
 		 * conditionals' conditions, etc.
 		 * @param result ParsingResult which holds the parsed data.
 		 */
-		void validateParsing(ParsingResult& result) const;
+		void validateParsing(const Command& command, ParsingResult& result) const;
 
 		// Root command, stores the global options, subcommands of the global CLAP object.
 		Command    root_command;
