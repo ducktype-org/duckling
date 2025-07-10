@@ -3,22 +3,22 @@
 #include <base/int_conv.hpp>
 #include <base/str_utils.hpp>
 
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <array>
 
 // @TODO: Move this to preprocessor/loader directory after #648
-class StableTypeIdNameMapTester: public tester::TestSuite {
+class StableObjIdNameMapTester: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS StableTypeIdNameMapTester
+#define TESTER_CLASS StableObjIdNameMapTester
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testSimple); }
 
 	void testSimple() {
 		std::array strs = { base::StrID("zero"), base::StrID("one"), base::StrID("two") };
-		vm::StableTypeIdNameMap<int> map;
-		auto                         id0 = map.insert(0, strs[0]);
+		vm::StableObjIdNameMap<int> map;
+		auto                        id0 = map.insert(0, strs[0]);
 		ASSERT_EQUAL(0, id0);
 		auto id1 = map.insert(1, strs[1]);
 		ASSERT_EQUAL(1, id1);

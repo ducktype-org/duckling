@@ -92,7 +92,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().valueOr("string");
+			return getCustomValueName().copyValueOr("string");
 		}
 	};
 
@@ -114,7 +114,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().valueOr("int");
+			return getCustomValueName().copyValueOr("int");
 		}
 	};
 
@@ -140,7 +140,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().valueOr("int..int");
+			return getCustomValueName().copyValueOr("int..int");
 		}
 	};
 
@@ -171,7 +171,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().valueOr("file");
+			return getCustomValueName().copyValueOr("file");
 		}
 	};
 
