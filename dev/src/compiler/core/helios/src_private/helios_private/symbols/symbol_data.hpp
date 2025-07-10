@@ -84,11 +84,15 @@ namespace compiler::helios {
 
 		CommonSymbolData common;
 		OtherData        other;
+		bool             global;  // BuiltinFunctions are not considered global.
 
-		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
+		static auto makePSTSymbolData(
+			CommonSymbolData common_data, PstSymbolData pst_data, bool global_data
+		) {
 			return SymbolData{
 				.common = common_data,
 				.other  = pst_data,
+				.global = global_data,
 			};
 		}
 
@@ -99,6 +103,7 @@ namespace compiler::helios {
 					.kind = SymbolKind::BuiltinFunction,
 				},
 				.other  = builtin_data,
+				.global = false,
 			};
 		}
 

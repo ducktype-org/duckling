@@ -52,6 +52,23 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
+	bool isGlobalScope(query::Context& ctx, ScopeID id) {
+		if (scopeDepth(id) == 0) return true;
+
+		switch (getScopeRef(id)->related_pst_element.value().unlock(ctx)->getElementKind()) {
+		case pst::ElementKind::TopLevel:
+		case pst::ElementKind::Namespace:
+		case pst::ElementKind::Const:
+			return true;
+
+		case pst::ElementKind::CodeBlock:
+			return isGlobalScope(ctx, parent(id).value());
+
+		default:
+			return false;
+		}
+	}
+
 	namespace {
 		base::StableVector<ScopeData> scope_table;
 
