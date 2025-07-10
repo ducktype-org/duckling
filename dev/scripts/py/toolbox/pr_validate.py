@@ -28,7 +28,7 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
         clean=False,
         dry=False, filter="",
         fail_fast=False,
-        verbose=True,
+        verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
         build_dir=build)
 
