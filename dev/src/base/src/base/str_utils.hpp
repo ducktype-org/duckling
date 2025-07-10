@@ -35,7 +35,7 @@ namespace base {
 	template<typename EnumType>
 	StrID enumToStr(EnumType v);
 
-	namespace detail {
+	namespace internal {
 
 		template<typename T>
 		concept HasEnumToStr = std::is_enum_v<T> && requires(T t) {
@@ -109,7 +109,7 @@ namespace base {
 	template<typename... T>
 	std::string strConcat(T&&... elements) {
 		std::string out;
-		(detail::strConcat(out, std::forward<T>(elements)), ...);
+		(internal::strConcat(out, std::forward<T>(elements)), ...);
 		return out;
 	}
 

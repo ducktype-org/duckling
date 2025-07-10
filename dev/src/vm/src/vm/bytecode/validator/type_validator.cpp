@@ -485,8 +485,8 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
-			variant_case(StaticTableType, data) {
-				metadata->at(data.name)->defineStaticTable(
+			variant_case(FixedSizeTableType, data) {
+				metadata->at(data.name)->defineFixedSizeTable(
 					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);

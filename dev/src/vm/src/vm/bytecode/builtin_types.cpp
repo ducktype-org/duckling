@@ -27,10 +27,10 @@ namespace vm::code {
 			// https://github.com/ducktype-org/duckling/issues/656
 			TypeOfData(PrimitiveType(base::StrID("void"), 0)),
 
-			// @todo: The approach with a static table of size 10 is temporary.
+			// @todo: The approach with a fixed size table of size 10 is temporary.
 			// It should be changed to a dynamic_table of strings or bytes once those are
 			// implemented. https://github.com/ducktype-org/duckling/issues/725
-			TypeOfData(StaticTableType(base::StrID("argv"), base::StrID("i64"), 10)),
+			TypeOfData(FixedSizeTableType(base::StrID("argv"), base::StrID("i64"), 10)),
 			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))),
 			TypeOfData(FunctionType(
 				base::StrID("main"),

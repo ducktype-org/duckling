@@ -19,7 +19,7 @@ namespace base {
 	constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
 }
 
-namespace base::detail {
+namespace base::internal {
 	inline void strConcat(std::string& out, Bits bits) {
 		out.append(std::to_string(usize(bits)) + "b");
 	}
