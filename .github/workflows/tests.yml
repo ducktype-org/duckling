@@ -307,14 +307,14 @@ jobs:
         env:
           COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
           COV_SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
-          TODO_CURRENT: 'Current TODO count: ${{ needs.build.outputs.todo-count }}'
           TODO_FAIL_MSG: '🙈🙈🙈 - You have added ${{ steps.calc-todo-diff.outputs.value }} TODO(s) to the repo! 🥴❌🥴'
           TODO_SINGLE_GOOD_MSG: '👍👍👍 - You have solved ${{ steps.calc-todo-diff-neg.outputs.value }} TODO!'
           TODO_MULTIPLE_AMAZED_MSG: '🤯🤯🤯 - You have solved **${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🥳🥳🥳'
 
         with:
           github-token: ${{ secrets.QUACKER_PAT }}
-          # Lines start with `\r` because otherwise the created markdown does not parse well.
+          # Lines start, not end with `\n` because otherwise there are many spaces inserted
+          # and the created markdown does not parse well.
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -327,7 +327,7 @@ jobs:
                     \n${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
                     \n___ \
                     \n### TODOs \
-                    \n⭐ ${{ env.TODO_CURRENT }} \
+                    \n⭐ Current TODO count: **${{ needs.build.outputs.todo-count }}** \
                     \n${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }} \
                     '
             })
