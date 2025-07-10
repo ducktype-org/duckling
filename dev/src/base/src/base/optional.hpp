@@ -254,6 +254,7 @@ namespace base {
 			return std::forward<Self>(self).private_optional.value();
 		}
 
+		template<class Self, class U = T>
 		[[nodiscard]]
 		constexpr T copyValueOr(this Self&& self, U&& or_value) {
 			if (self.has_value())

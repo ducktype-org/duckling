@@ -529,6 +529,7 @@ public:
 	}
 
 	void testCopyValueOr() {
+		// Testing if copyValueOr does not return a dangling reference.
 		CountCtrStruct::counter().reset();
 		auto&& result1 = Optional<CountCtrStruct>{ 3 }.copyValueOr(CountCtrStruct{ 4 });
 		checkCountsAndReset(
@@ -552,6 +553,19 @@ public:
 			"copyValueOr on empty r-value"
 		);
 		assertEqual(CountCtrStruct{ 4 }, result2, "copyValueOr failed (empty r-value)");
+
+		// Testing if just passing constructor arguments will suffice.
+		Optional<CountCtrStruct> optional{};
+		assertEqual(
+			CountCtrStruct{ 4 }, optional.copyValueOr({ 4 }), "copyValueOr failed (empty r-value)"
+		);
+
+		CountCtrStruct value{ 5 };
+		assertEqual(
+			CountCtrStruct{ 5 },
+			Optional<CountCtrStruct>{}.copyValueOr(value),
+			"copyValueOr failed (empty r-value)"
+		);
 	}
 };
 
