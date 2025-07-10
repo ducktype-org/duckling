@@ -48,6 +48,10 @@ function main {
     output_l64 tmp;
 
     label Finish;
+    init_lany_type bajt, byte;
+    ucmpG_l8_l8 bajt, bajt;
+    ucmpG_l8_imm bajt, 1;
+    deinit;
     deinit; # tmp4
     deinit; # tmp3
     deinit; # tmp2
