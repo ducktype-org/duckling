@@ -7,9 +7,29 @@ function foo {
 	mov_l32_imm 		b, 1056964608;		# b = 0.5
 	mov_l32_l32 		a, b;				# a = 0.5
 
-#	fadd_l32_l32 		a, b;				# a = 1.0
+	fadd_l32_l32 		a, b;				# a = 1.0
 	fadd_l32_imm		a, 1065353216;		# a = 2.0
 
+	cmpEq_l32_imm 		a, 1073741824;		# a == 2.0
+	jmpIfNot_label 	fail;
+
+	fsub_l32_l32 		a, b;				# a = 1.5
+	fsub_l32_imm 		a, 1056964608;		# a = 1.0
+
+	cmpEq_l32_imm 		a, 1065353216;		# a == 1.0
+	jmpIfNot_label 	fail;
+
+	fmul_l32_l32 		a, b;				# a = 0.5
+	fmul_l32_imm 		a, 1056964608;		# a = 0.25
+
+	cmpEq_l32_imm 		a, 1048576000;		# a == 0.25
+	jmpIfNot_label 	fail;
+
+	fdiv_l32_l32 		a, b;				# a = 0.5
+	fdiv_l32_imm 		a, 1065353216;		# a = 0.5
+
+	cmpEq_l32_l32 		a, b;
+	jmpIfNot_label 		fail;
 
 	mov_l32_l32 		ret_val, a;
 	ret;
