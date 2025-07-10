@@ -1,6 +1,8 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <helios/mangler/mangler.hpp>
+#include <helios/queries.hpp>
 #include <helios_private/comp_time/int_eval.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -24,6 +26,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <algorithm>
 #include <vector>
 
 namespace compiler::helios {
@@ -50,6 +53,11 @@ namespace compiler::helios {
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
+
+	bool isGlobalVar(SymID id) {
+		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "not a variable\n");
+		return getSymRef(id)->global;
+	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
@@ -127,7 +135,8 @@ namespace compiler::helios {
 					.name = function->getName(),
 					.kind = SymbolKind::Function,
 				},
-				pst_data
+				pst_data,
+				isGlobalScope(ctx, scope)
 			));
 		}
 		case pst::StmtKind::Namespace: {
@@ -137,7 +146,8 @@ namespace compiler::helios {
 					.name = namespace_stmt->getName(),
 					.kind = SymbolKind::Namespace,
 				},
-				pst_data
+				pst_data,
+				true
 			));
 		}
 		case pst::StmtKind::Const: {
@@ -147,7 +157,8 @@ namespace compiler::helios {
 					.name = const_stmt->getName(),
 					.kind = SymbolKind::Const,
 				},
-				pst_data
+				pst_data,
+				true
 			));
 		}
 		case pst::StmtKind::Class: {
@@ -157,7 +168,8 @@ namespace compiler::helios {
 					.name = class_stmt->getName(),
 					.kind = SymbolKind::Class,
 				},
-				pst_data
+				pst_data,
+				isGlobalScope(ctx, scope)
 			));
 		}
 		case pst::StmtKind::Alias: {
@@ -168,7 +180,8 @@ namespace compiler::helios {
 					.kind     = SymbolKind::Alias,
 					.is_alias = true,
 				},
-				pst_data
+				pst_data,
+				isGlobalScope(ctx, scope)
 			));
 		}
 		case pst::StmtKind::Using: {
@@ -185,7 +198,8 @@ namespace compiler::helios {
 					.is_wildcard = true,
 					.is_alias    = true,
 				},
-				pst_data
+				pst_data,
+				isGlobalScope(ctx, scope)
 			));
 		}
 		case pst::StmtKind::Variable: {
@@ -197,7 +211,8 @@ namespace compiler::helios {
 					.is_wildcard = false,
 					.is_alias    = false,
 				},
-				pst_data
+				pst_data,
+				isGlobalScope(ctx, scope)
 			));
 		}
 		case pst::StmtKind::Import: {
@@ -210,7 +225,8 @@ namespace compiler::helios {
 					.is_wildcard = false,
 					.is_alias    = false,
 				},
-				pst_data
+				pst_data,
+				true
 			));
 		}
 		case pst::StmtKind::Method: {
@@ -220,7 +236,8 @@ namespace compiler::helios {
 					.name = method->getName(),
 					.kind = SymbolKind::Method,
 				},
-				pst_data
+				pst_data,
+				false
 			));
 		}
 		case pst::StmtKind::Field: {
@@ -231,7 +248,8 @@ namespace compiler::helios {
 					.kind      = SymbolKind::Field,
 					.dependent = true,
 				},
-				pst_data
+				pst_data,
+				false
 			));
 		}
 		case pst::StmtKind::Constructor: {
@@ -241,7 +259,8 @@ namespace compiler::helios {
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
-				pst_data
+				pst_data,
+				false
 			));
 		}
 		case pst::StmtKind::CopyConstructor: {
@@ -251,7 +270,8 @@ namespace compiler::helios {
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
-				pst_data
+				pst_data,
+				false
 			));
 		}
 		case pst::StmtKind::Destructor: {
@@ -260,7 +280,8 @@ namespace compiler::helios {
 					.name = base::StrID("destroy"),
 					.kind = SymbolKind::Destructor,
 				},
-				pst_data
+				pst_data,
+				false
 			));
 		}
 		default:
@@ -289,7 +310,8 @@ namespace compiler::helios {
 				{
 					.scope       = scope,
 					.pst_element = element,
-				}
+				},
+				false
 			));
 		}
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");

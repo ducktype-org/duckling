@@ -30,6 +30,11 @@ namespace compiler::helios {
 	base::StrID name(SymID);
 
 	/**
+	 * @return whether SymID comes from global variable.
+	 */
+	bool isGlobalVar(SymID);
+
+	/**
 	 * @return kind of the symbol
 	 */
 	SymbolKind kind(SymID);

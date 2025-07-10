@@ -930,9 +930,6 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/global_viariables")));
-		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
-
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
@@ -949,24 +946,65 @@ private:
 			return {};
 		};
 
-		auto glob1 = find_global(hout_unit, base::StrID("B")).value();
-		auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
+		{  // General global variable checks.
+			auto [module, _]
+				= getModule(fs::FilePath(path("test_modules/global_viariables/general")));
+			auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		Ref<const compiler::helios::code::Expr> expr1
-			= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value.get()->ref();
-		Ref<const compiler::helios::code::Expr> expr2
-			= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value.get()->ref();
+			auto glob1 = find_global(hout_unit, base::StrID("B")).value();
+			auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
 
-		ASSERT_EQUAL(
-			compiler::helios::code::BuiltinBinary::IntegerAdd,
-			dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr1)->operation
-		);
-		ASSERT_EQUAL(
-			dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee,
-			find_function(hout_unit, base::StrID("foooo")).value().original_symbol
-		);
-		expr1->debugPrint(std::cerr);
-		std::cerr << '\n';
+			Ref<const compiler::helios::code::Expr> expr1
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value)
+			          .initial_value.get()
+			          ->ref();
+			Ref<const compiler::helios::code::Expr> expr2
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value)
+			          .initial_value.get()
+			          ->ref();
+
+			ASSERT_EQUAL(
+				compiler::helios::code::BuiltinBinary::IntegerAdd,
+				dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr1)->operation
+			);
+			ASSERT_EQUAL(
+				dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee,
+				find_function(hout_unit, base::StrID("foooo")).value().original_symbol
+			);
+			expr1->debugPrint(std::cerr);
+			std::cerr << '\n';
+		}
+
+		{  // Global variable detections check (isGlobalVar function).
+			auto [module, _]
+				= getModule(fs::FilePath(path("test_modules/global_viariables/detection")));
+			auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+			std::vector<char> globals     = { 'A', 'B', 'C' };
+			std::vector<char> not_globals = { 'g', 'h' };
+
+			for (const auto& name: globals)
+				ASSERT_TRUE(compiler::helios::isGlobalVar(
+					find_global(hout_unit, base::StrID(name))->helios_symbol
+				));
+
+			auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+				&(*hout_unit.functions[0].content.body->statements[0])
+			);
+
+			ASSERT_TRUE(not compiler::helios::isGlobalVar(var_ptr->helios_symbol));
+
+			var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+				&(*hout_unit.functions[0].content.body->statements[1])
+			);
+
+			ASSERT_TRUE(not compiler::helios::isGlobalVar(var_ptr->helios_symbol));
+
+			var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+				&(*hout_unit.functions[1].content.body->statements[0])
+			);
+
+			ASSERT_TRUE(not compiler::helios::isGlobalVar(var_ptr->helios_symbol));
+		}
 	}
 };
 
