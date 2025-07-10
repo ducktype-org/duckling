@@ -16,9 +16,9 @@ regex FsTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
 FsTree::FsTree(
 	const std::filesystem::path& root, regex reject_file_regex, regex reject_directory_regex
 ):
-	  FsTree(fs::FilePath(root), std::move(reject_file_regex), std::move(reject_directory_regex)) {}
+	  FsTree(fs::File(root), std::move(reject_file_regex), std::move(reject_directory_regex)) {}
 
-FsTree::FsTree(fs::FilePath root, regex reject_file_regex, regex reject_directory_regex):
+FsTree::FsTree(fs::File root, regex reject_file_regex, regex reject_directory_regex):
 	  m_reject_file_regex(std::move(reject_file_regex)),
 	  m_reject_directory_regex(std::move(reject_directory_regex)),
 	  m_root(std::move(root)) {}
@@ -31,7 +31,7 @@ auto FsTree::getParentTree() const -> base::Optional<base::CRef<FsTree>> {
 	return {};
 }
 
-const fs::FilePath& FsTree::getRoot() const { return m_root; }
+const fs::File& FsTree::getRoot() const { return m_root; }
 
 void FsTree::addParent(const std::shared_ptr<FsTree>& new_parent) { m_parent = new_parent; }
 
@@ -51,7 +51,7 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 					"Not unique directory name: ",
 					child_name,
 					" at: ",
-					path.absolutePath(),
+					path.nativePath(),
 					" root: ",
 					root->getRoot().name()
 				));
@@ -66,7 +66,7 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 					"Not unique file name: ",
 					file_name,
 					", at: ",
-					path.absolutePath(),
+					path.nativePath(),
 					", root: ",
 					root->getRoot().name()
 				));
@@ -106,4 +106,4 @@ const base::HashMap<std::string, std::shared_ptr<FsTree>>& FsTree::getDirs() con
 	return m_dirs;
 }
 
-const base::HashMap<std::string, fs::FilePath>& FsTree::getFiles() const { return m_files; }
+const base::HashMap<std::string, fs::File>& FsTree::getFiles() const { return m_files; }

@@ -80,7 +80,7 @@ public:
 	}
 
 private:
-	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
+	pst::PST<> prepare(const std::string& filename) { return { fs::File(filename) }; }
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst = prepare(path(filename));
@@ -128,7 +128,7 @@ private:
 		std::stringstream ss;
 		pst.dprint(ss);
 
-		auto             correct_content = fs::getSimpleFileContent(json_file);
+		auto             correct_content = fs::File(json_file).getContent();
 		std::string_view correct_string  = correct_content.view().stringView();
 
 		if (no_errors) {

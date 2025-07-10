@@ -38,7 +38,7 @@ int notMain(int argc, const char* const* argv) {
 
 	defer(printContextErrors());
 
-	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
+	auto path_to_compile = options.getValue<fs::File>('p').value();
 
 	using namespace compiler;
 

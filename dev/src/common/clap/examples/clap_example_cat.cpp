@@ -9,9 +9,7 @@
 
 #include <iostream>
 
-void printFile(const fs::FilePath& file) {
-	std::cout << file.getContent().view().stdString() << '\n';
-}
+void printFile(const fs::File& file) { std::cout << file.getContent().view().stdString() << '\n'; }
 
 int main(int argc, const char** argv) {
 	// Create a clap object and set value parsers.
@@ -37,13 +35,13 @@ int main(int argc, const char** argv) {
 		while (times--) {
 			// Since we are using clap::FileParser, it automatically links
 			// specified input to real files!
-			auto file1 = result.getPositional<fs::FilePath>(0);
+			auto file1 = result.getPositional<fs::File>(0);
 			printFile(file1);
 
 			// Finally, iterate over 'extra' parameters and print them out as well.
 			// getExtra returns a base::Optional<T>, but we know it has a value.
 			for (usize i = 0; i < result.getExtraParameterCount(); i++)
-				printFile(*result.getExtra<fs::FilePath>(i));
+				printFile(*result.getExtra<fs::File>(i));
 		}
 	} catch (clap::exceptions::HelpException& help) {
 		// Since we added a built-in help flag, we can catch a help exception.

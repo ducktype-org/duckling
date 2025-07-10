@@ -57,7 +57,7 @@ namespace query {
 		Context(Context&&)      = delete;
 
 		template<typename OthQuery>
-		auto query(typename OthQuery::QKey key) -> decltype(auto) {
+		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
 			internal::NodeID dep_id = makeNodeID(OthQuery::id, key);
 			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
