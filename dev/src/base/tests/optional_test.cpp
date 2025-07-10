@@ -37,6 +37,7 @@ public:
 		TESTER_ADD_TEST(testPreservingValueCategories);
 		TESTER_ADD_TEST(testAddresses);
 		TESTER_ADD_TEST(testNoCopyNoMove);
+		TESTER_ADD_TEST(testCopyValueOr);
 	}
 
 	template<typename X>
@@ -463,6 +464,7 @@ public:
 		u32 copy_constructed  = 0;
 		u32 move_assigned     = 0;
 		u32 copy_assigned     = 0;
+		u32 destructed        = 0;
 
 		void reset() { *this = CtrAssignCounter{}; }
 	};
@@ -478,7 +480,6 @@ public:
 		}
 
 		auto operator<=>(const CountCtrStruct&) const = default;
-		~CountCtrStruct() noexcept                    = default;
 
 		u32 value;
 
@@ -503,6 +504,8 @@ public:
 			++counter().move_assigned;
 			return *this;
 		}
+
+		~CountCtrStruct() noexcept { ++counter().destructed; }
 	};
 
 	/**
@@ -528,6 +531,7 @@ public:
 		check_counter(&CtrAssignCounter::move_constructed, "move constructor");
 		check_counter(&CtrAssignCounter::copy_assigned, "copy assignment");
 		check_counter(&CtrAssignCounter::move_assigned, "move assignment");
+		check_counter(&CtrAssignCounter::destructed, "destructed");
 
 		CountCtrStruct::counter().reset();
 	}
@@ -550,6 +554,7 @@ public:
 		checkCountsAndReset(
 			CtrAssignCounter{
 				.value_constructed = 2,
+				.destructed        = 2,
 			},
 			"valueOr on empty x-value"
 		);
@@ -573,9 +578,35 @@ public:
 			"valueOr failed (non-empty x-value)"
 		);
 		checkCountsAndReset(
-			CtrAssignCounter{ .value_constructed = 2, .move_assigned = 0 },
-			"value or on non-empty r-value"
+			CtrAssignCounter{ .value_constructed = 2, .destructed = 2 },
+			"valueOr on non-empty r-value"
 		);
+	}
+
+	void testCopyValueOr() {
+		CountCtrStruct::counter().reset();
+		auto&& result1 = Optional<CountCtrStruct>{ 3 }.copyValueOr(CountCtrStruct{ 4 });
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 2,
+				.move_constructed  = 1,
+				.destructed        = 2,
+			},
+			"copyValueOr on non-empty r-value"
+		);
+		assertEqual(CountCtrStruct{ 3 }, result1, "copyValueOr failed (non-empty r-value)");
+
+		CountCtrStruct::counter().reset();
+		auto&& result2 = Optional<CountCtrStruct>{}.copyValueOr(CountCtrStruct{ 4 });
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 1,
+				.move_constructed  = 1,
+				.destructed        = 1,
+			},
+			"copyValueOr on empty r-value"
+		);
+		assertEqual(CountCtrStruct{ 4 }, result2, "copyValueOr failed (empty r-value)");
 	}
 };
 

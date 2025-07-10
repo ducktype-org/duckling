@@ -266,6 +266,15 @@ namespace base {
 			return static_cast<QualifiedT<Self>>(or_value);
 		}
 
+		template<class Self, class U>
+		[[nodiscard]]
+		constexpr T copyValueOr(this Self&& self, U&& or_value) {
+			if (self.has_value())
+				return std::forward<Self>(self).value();
+			else
+				return static_cast<T>(std::forward<U>(or_value));
+		}
+
 		/**
 		 * Like *ptr - returns an object stored underneath.
 		 * @throws Throws on no value.
