@@ -70,9 +70,9 @@ crow::response toResponse(const std::expected<void, E>& x) {
  * @param port The port number to run the server on.
  */
 void server(i32 port) {
-	crow::SimpleApp                               app;
-	lsp::ExportKeywords                           lsp;
-	std::unordered_map<std::string, fs::FilePath> files;
+	crow::SimpleApp                           app;
+	lsp::ExportKeywords                       lsp;
+	std::unordered_map<std::string, fs::File> files;
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -102,7 +102,7 @@ void server(i32 port) {
 		try {
 			const auto  path    = base64::decode_into<std::string>(base64_path);
 			const auto  content = base64::decode_into<std::string>(base64_content);
-			const auto& file    = fs::FilePath::createTempFile(content);
+			const auto& file    = fs::FileManager::createRandomTempFile(content);
 			files.erase(path);
 			files.emplace(path, file);
 			return crow::response(200, "OK");
