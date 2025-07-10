@@ -154,7 +154,10 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{ derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; } 					 \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				OP* reinterpret_cast<const TYPE*>(&instr->arg1);                         \
+		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
@@ -168,30 +171,14 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
 	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
 	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
-	
-
-#define DEFINE_ARITHMETIC_OP_FLOAT(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{ derefStack<TYPE>(local_stack, instr->arg0) OP 								 \
-			*(reinterpret_cast<TYPE*>(instr->arg1)); }                 					 \
-		FUNCTION_CONT(1);                                                                \
-	}
-	DEFINE_ARITHMETIC_OP_FLOAT(fadd, 64, double, +=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fadd, 32, float, +=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fsub, 64, double, -=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fsub, 32, float, -=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fmul, 64, double, *=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fmul, 32, float, *=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fdiv, 64, double, /=)
-	DEFINE_ARITHMETIC_OP_FLOAT(fdiv, 32, float, /=)
-
+	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
+	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
+	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
+	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
+	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
+	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
+	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
+	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
 
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                         \

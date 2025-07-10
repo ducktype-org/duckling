@@ -7,6 +7,7 @@ class VmUnitTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(floatingPointArithmeticTest);
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
@@ -38,9 +39,9 @@ private:
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 
-	//void floatingPointArithmeticTest() {
-	//	runTestOnVm("floating_point_arithmetic.dbc", {}, {}, {}, 1);
-	//}
+	void floatingPointArithmeticTest() {
+		runTestOnVm("floating_point_arithmetic.dbc", {}, {}, {}, 1);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
