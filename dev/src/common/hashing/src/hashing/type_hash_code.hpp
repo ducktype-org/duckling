@@ -12,7 +12,7 @@
 namespace hashing {
 
 
-	namespace detail {
+	namespace internal {
 
 		/**
 		 * Type that converts string to integral type using a given hash algorithm
@@ -67,7 +67,7 @@ namespace hashing {
 			return static_cast<TypeCode<I, false>>(uniqueString<T, I, HashAlgorithm>());
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * Returns a hash code of a given length for the type
@@ -78,7 +78,7 @@ namespace hashing {
 	 */
 	template<typename T, std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
 	static constexpr TypeCode<I, false> TYPE_HASH_CODE
-		= detail::getIDFromUniqueString<T, I, HashAlgorithm>();
+		= internal::getIDFromUniqueString<T, I, HashAlgorithm>();
 
 
 }  // namespace hashing

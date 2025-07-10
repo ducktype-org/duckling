@@ -27,10 +27,10 @@ int cli(bool load_stdlib) {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
-	return cli(fs::FilePath(filepath), load_stdlib);
+	return cli(fs::File(filepath), load_stdlib);
 }
 
-int cli(const fs::FilePath& filepath, bool load_stdlib) {
+int cli(const fs::File& filepath, bool load_stdlib) {
 	vm::PID pid{};
 
 	std::expected<vm::api::ExitCode, std::string> result

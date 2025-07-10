@@ -71,7 +71,7 @@ namespace {
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
 		using RequiredAfter
-			= std::tuple<Op_staticTableLoad_lany_lptr, Op_staticTableStore_lptr_lany>;
+			= std::tuple<Op_fixedSizeTableLoad_lany_lptr, Op_fixedSizeTableStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -751,39 +751,39 @@ class FunctionValidator {
 				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*source), instr);
 			}
-			variant_case(Op_staticTableLea_lptr_lptr, instr) {
+			variant_case(Op_fixedSizeTableLea_lptr_lptr, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& table_type
-					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (destination.inner != table_type.inner)
-					throw StaticTableTypeMismatchError(instr);
+					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_staticTableLoad_lany_lptr, instr) {
+			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& table_type
-					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (typeName(*destination) != table_type.inner)
-					throw StaticTableTypeMismatchError(instr);
+					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_staticTableStore_lptr_lany, instr) {
+			variant_case(Op_fixedSizeTableStore_lptr_lany, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& table_type
-					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (table_type.inner != typeName(*source))
-					throw StaticTableTypeMismatchError(instr);
+					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}

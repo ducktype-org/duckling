@@ -1,5 +1,7 @@
 #include "vfs.hpp"
 
+#include <iostream>
+
 namespace fs {
 
 
@@ -74,19 +76,24 @@ namespace fs {
 		return true;
 	}
 
-	bool VFS::writeFile(const std::filesystem::path& path, std::string_view content) {
+	bool VFS::writeFile(const std::filesystem::path& path, std::string_view content, bool append) {
 		if (!isVirtualPath(path)) throw base::LogicError("Path is not a vfs path!");
 		MRef<VFSNode> node = findNode(path);
 		if (!node || !node->isFile()) return false;
 
-		std::get<FileData>(node->data).content = content;
+		if (append)
+			std::get<FileData>(node->data).content += content;
+		else
+			std::get<FileData>(node->data).content = content;
 		return true;
 	}
 
 	std::string VFS::readFile(const std::filesystem::path& path) {
 		if (!isVirtualPath(path)) throw base::LogicError("Path is not a vfs path!");
 		MRef<VFSNode> node = findNode(path);
-		if (!node || !node->isFile()) return "";
+		if (!node) CORE_PANIC(std::string("virtual file does not exist: ") + path.string());
+		if (!node->isFile())
+			CORE_PANIC(std::string("virtual path exists but is not a file: ") + path.string());
 
 		return std::get<FileData>(node->data).content;
 	}

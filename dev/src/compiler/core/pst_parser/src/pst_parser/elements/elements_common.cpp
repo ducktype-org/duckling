@@ -2,7 +2,7 @@
 
 #include "../lang_parser_state.hpp"
 
-namespace pst::detail {
+namespace pst::internal {
 	bool Conditions::isComma(const LangParserState& state, i64 fwd) {
 		return state[fwd].is(lang_def::Special::Comma);
 	}

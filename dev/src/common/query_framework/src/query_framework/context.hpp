@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "context_fd.hpp"                      // IWYU pragma: keep
-#include "detail/query_graph/node_id.hpp"
-#include "detail/query_graph/node_making.hpp"  // IWYU pragma: export
-#include "detail/query_graph/query_graph.hpp"
-#include "detail/query_graph/query_state.hpp"
+#include "context_fd.hpp"                        // IWYU pragma: keep
+#include "internal/query_graph/node_id.hpp"
+#include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
+#include "internal/query_graph/query_graph.hpp"
+#include "internal/query_graph/query_state.hpp"
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -17,7 +17,7 @@
 
 namespace query {
 
-	namespace detail {
+	namespace internal {
 		struct ContextAccess;
 	}
 
@@ -34,16 +34,16 @@ namespace query {
 	 */
 	struct Context final {
 	private:
-		detail::NodeID my_node;
-		bool           active = true;
+		internal::NodeID my_node;
+		bool             active = true;
 
-		Context(detail::NodeID my_node): my_node(my_node) {}
-		friend struct query::detail::ContextAccess;
+		Context(internal::NodeID my_node): my_node(my_node) {}
+		friend struct query::internal::ContextAccess;
 
 		/**
 		 * Main query state, that query calls work on.
 		 */
-		static detail::QueryState main_query_state;
+		static internal::QueryState main_query_state;
 
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
@@ -57,9 +57,9 @@ namespace query {
 		Context(Context&&)      = delete;
 
 		template<typename OthQuery>
-		auto query(typename OthQuery::QKey key) -> decltype(auto) {
+		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
-			detail::NodeID dep_id = makeNodeID(OthQuery::id, key);
+			internal::NodeID dep_id = makeNodeID(OthQuery::id, key);
 			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
 
 			this->active = false;
@@ -78,6 +78,6 @@ namespace query {
 		 * @brief Returns a const reference to the main query state.
 		 * Can be safely used outside query framework.
 		 */
-		static const detail::QueryState& getState() { return main_query_state; }
+		static const internal::QueryState& getState() { return main_query_state; }
 	};
 }

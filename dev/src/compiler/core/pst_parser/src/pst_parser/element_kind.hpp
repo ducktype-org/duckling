@@ -14,6 +14,8 @@ namespace pst {
 		TopLevel,
 		Import,
 
+		StmtSpecifier,
+
 		CodeBlock,
 		CodeBlockOrStmt,
 

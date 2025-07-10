@@ -76,7 +76,7 @@ namespace my_map {
 }
 
 template<typename T>
-concept check_hashRangeAsBytes = requires(T t) { detail::hashRangeAsBytes(Fnv1a_32{}, t); };
+concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(Fnv1a_32{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}

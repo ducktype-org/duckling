@@ -1,4 +1,4 @@
-type static_table: tablei64 i64 4
+type fixed_size_table: tablei64 i64 4
 type pointer: ptr_tablei64 tablei64
 
 function main {
@@ -15,12 +15,12 @@ function main {
 	mov_l64_imm         x, 3;        # x := 3
 
 	# t[i] := x (by i)
-	staticTableStore_lptr_lany  arr_ptr, x;       # t[i] := x
+	fixedSizeTableStore_lptr_lany  arr_ptr, x;       # t[i] := x
 	ext_l64             i;
 
 	mov_l64_imm         x, 5;        # x := 5
 
-	staticTableLoad_lany_lptr   ret_val, arr_ptr;
+	fixedSizeTableLoad_lany_lptr   ret_val, arr_ptr;
 	ext_l64             i;
 
 	output_l64          i;

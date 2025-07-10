@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-void base::detail::strConcat(std::string& out, const icu::UnicodeString& unistr) {
+void base::internal::strConcat(std::string& out, const icu::UnicodeString& unistr) {
 	unistr.toUTF8String(out);
 }
 

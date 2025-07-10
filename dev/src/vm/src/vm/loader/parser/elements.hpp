@@ -102,9 +102,9 @@ namespace vm::loader::parser {
 		std::vector<Box<Func>>       functions;
 		std::vector<Box<Type>>       types;
 		std::vector<Box<GlobalData>> global_data;
-		fs::FilePath                 source_file;
+		fs::File                     source_file;
 
-		ParsedFile(fs::FilePath source_file);
+		ParsedFile(fs::File source_file);
 
 		static MBox<ParsedFile> parse(F8ParserState& state);
 		void                    dprint(std::ostream& out) const;

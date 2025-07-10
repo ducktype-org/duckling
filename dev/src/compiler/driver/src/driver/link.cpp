@@ -18,13 +18,14 @@ namespace compiler::driver {
 		// https://github.com/rust-lang/rust/blob/c62239aeb3ba7781a6d7f7055523c1e8c22b409c/compiler/rustc_codegen_ssa/src/back/link.rs#L1442
 		system_command::SystemCommand command("gcc");
 
-		for (const auto& object_file_path: inputs) command.addArg(object_file_path.FILE.native());
+		for (const auto& object_file_path: inputs)
+			command.addArg(object_file_path.FILE.nativePath());
 
 
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");
-		command.addArg(output.FILE.native());
+		command.addArg(output.FILE.nativePath());
 		command.execute();
 	}
 }
