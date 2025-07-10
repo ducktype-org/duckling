@@ -30,7 +30,7 @@ namespace vm::low {
 	 * @brief Global data.
 	 */
 	struct GlobData {
-		TypeCRef type;
+		TypeCRef                    type;
 		base::Optional<std::string> ctor_name;
 		base::Optional<std::string> dtor_name;
 	};
@@ -56,11 +56,9 @@ namespace vm::low {
 			  method_name_pool(method_name_pool) {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 			for (const auto& global: global_data) {
-				GlobData data {
-					.type=this->types->at(global.type),
-					.ctor_name=global.ctor_name,
-					.dtor_name=global.dtor_name
-				};
+				GlobData data{ .type      = this->types->at(global.type),
+					           .ctor_name = global.ctor_name,
+					           .dtor_name = global.dtor_name };
 				this->global_data.insert(data, global.name);
 			}
 		}

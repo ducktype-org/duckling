@@ -605,7 +605,7 @@ namespace compiler::backend_vm {
 
 			base::Optional<std::string> ctor_name;
 			base::Optional<std::string> dtor_name;
-			
+
 			// @TODO: handle ctors and dtors in DMV properly
 			if (global.global_ctor.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, global.global_ctor.value());
@@ -617,11 +617,10 @@ namespace compiler::backend_vm {
 				dtor_name = global.global_dtor.value()->mangled_name.strView();
 				dtors.emplace_back(global.global_dtor.value());
 			}
-			
+
 			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
 			global_data.global_data.push_back(GlobalData{
 				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
-
 		}
 
 		// Insert and validate types:
