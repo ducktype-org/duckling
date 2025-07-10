@@ -254,6 +254,12 @@ namespace base {
 			return std::forward<Self>(self).private_optional.value();
 		}
 
+		/**
+		 * Get the stored value or a given backup.
+		 * @param or_value value to be returned if empty.
+		 * @details Notice that this function returns by value, which may lead to unwanted copies.
+		 * @return Stored value if exists, otherwise or_value.
+		 */
 		template<class Self, class U = T>
 		[[nodiscard]]
 		constexpr T copyValueOr(this Self&& self, U&& or_value) {
