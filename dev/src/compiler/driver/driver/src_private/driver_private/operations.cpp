@@ -1,18 +1,17 @@
 #include "operations.hpp"
 
-#include "backend_operations/llvm_ir_lib.hpp"
-#include "backend_operations/compile_llvm.hpp"
 #include "backend_operations/compile_dvm.hpp"
+#include "backend_operations/compile_llvm.hpp"
+#include "backend_operations/llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
-#include <query_framework/context.hpp>
-
+#include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <base/variant.hpp>
+#include <query_framework/context.hpp>
 
+#include <base/variant.hpp>
 
 namespace compiler::driver {
 
@@ -20,9 +19,7 @@ namespace compiler::driver {
 	 * This is a helper function for compileHOUTUnit.
 	 */
 	BackendModuleData compileHOUTUnitToBackendModuleData(
-		query::Context&                        ctx,
-		base::CRef<compiler::helios::HOUTUnit> hout_unit,
-		base::StrID                            module_id
+		query::Context& ctx, base::CRef<compiler::helios::HOUTUnit> hout_unit, base::StrID module_id
 	) {
 		std::vector<BackendModuleGlobal> globals;
 		globals.reserve(hout_unit->glob_data.size());
@@ -79,37 +76,31 @@ namespace compiler::driver {
 		query::Context&                        ctx,
 		base::CRef<compiler::helios::HOUTUnit> hout_unit,
 		base::StrID                            module_id,
-		const artifacts::FileArtifact&                output_artifact,
+		const artifacts::FileArtifact&         output_artifact,
 		BackendType                            backend_type
 	) {
 		auto module_data = compileHOUTUnitToBackendModuleData(ctx, hout_unit, module_id);
 
-		compileBackendModule(
-			ctx,
-			module_data,
-			output_artifact,
-			backend_type
-		);
+		compileBackendModule(ctx, module_data, output_artifact, backend_type);
 	}
 
-
 	void compileBackendModule(
-		query::Context&          ctx,
-		const BackendModuleData& module_data,
-		const artifacts::FileArtifact&  output_artifact,
-		BackendType              backend_type
+		query::Context&                ctx,
+		const BackendModuleData&       module_data,
+		const artifacts::FileArtifact& output_artifact,
+		BackendType                    backend_type
 	) {
 		switch (backend_type) {
-			case BackendType::LLVM: {
-				compileBackendModuleToLLVM(ctx, module_data, output_artifact);
-				break;
-			}
-			case BackendType::DVM: {
-				compileBackendModuleToDVM(ctx, module_data, output_artifact);
-				break;
-			}
-			default:
-				CORE_PANIC("Unsupported backend type for compilation");
+		case BackendType::LLVM: {
+			compileBackendModuleToLLVM(ctx, module_data, output_artifact);
+			break;
+		}
+		case BackendType::DVM: {
+			compileBackendModuleToDVM(ctx, module_data, output_artifact);
+			break;
+		}
+		default:
+			CORE_PANIC("Unsupported backend type for compilation");
 		}
 	}
 

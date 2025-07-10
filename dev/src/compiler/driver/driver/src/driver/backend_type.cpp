@@ -1,5 +1,6 @@
 
 #include "backend_type.hpp"
+
 #include <base/exceptions.hpp>
 
 namespace compiler::driver {

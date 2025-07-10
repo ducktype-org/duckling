@@ -1,9 +1,9 @@
 #include <artifacts/artifacts.hpp>
 #include <driver/initialize.hpp>
-#include <linker/link.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
+#include <linker/link.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>

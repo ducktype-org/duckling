@@ -1,8 +1,9 @@
 #pragma once
 
-#include <string>
-#include <functional>
 #include <clap/clap.hpp>
+
+#include <functional>
+#include <string>
 
 /**
  * @brief Type of command callback. The returned int value is the value
@@ -36,7 +37,6 @@ struct CommandList final {
 	[[nodiscard]]
 	std::string generateHelpMessage() const;
 
-
 	struct CommandStatus final {
 		bool was_command_run;
 		int  exit_code;
@@ -50,14 +50,12 @@ struct CommandList final {
 	CommandStatus run(std::string_view what);
 };
 
-
-
 /**
  * @brief Generated command list filled with duck-main commands.
  *
  * @param command_args
- * @param clap Reference to the clap instance that commands wil use (its lifetime must be longer than that of the command list).
+ * @param clap Reference to the clap instance that commands wil use (its lifetime must be longer
+ * than that of the command list).
  * @return CommandList
  */
 CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap);
-

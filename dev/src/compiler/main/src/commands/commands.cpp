@@ -1,62 +1,56 @@
 /** @brief This file implements main logic of this module and the commands system
  * to conveniently run (or add) certain functionalities of the Duckling compiler.
-*/
+ */
 
 #include "commands.hpp"
+
 #include <driver/initialize.hpp>
 #include <driver/operations.hpp>
-#include <pst_parser/pst.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lexer/lexer.hpp>
+#include <pst_parser/pst.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
 void CommandList::add(std::string name, std::string desc, CommandRunner runner) {
-		commands.emplace_back(Command{
-			.name        = std::move(name),
-			.description = std::move(desc),
-			.runner      = std::move(runner),
-		});
-	}
-
-
+	commands.emplace_back(Command{
+		.name        = std::move(name),
+		.description = std::move(desc),
+		.runner      = std::move(runner),
+	});
+}
 
 std::string CommandList::generateHelpMessage() const {
-		std::string out;
-		out.reserve(128);
+	std::string out;
+	out.reserve(128);
 
-		out += "Available commands: \n";
-		for (auto& cmd: commands) {
-			out += "    ";
-			out += cmd.name;
-			out += std::string(30 - cmd.name.length(), ' ');
-			out += cmd.description;
-			out += "\n";
-		}
-		return out;
+	out += "Available commands: \n";
+	for (auto& cmd: commands) {
+		out += "    ";
+		out += cmd.name;
+		out += std::string(30 - cmd.name.length(), ' ');
+		out += cmd.description;
+		out += "\n";
 	}
+	return out;
+}
 
-
-    CommandList::CommandStatus CommandList::run(std::string_view what) {
-		for (auto& cmd: commands) {
-			if (cmd.name == what) {
-				int status = cmd.runner();
-				return { .was_command_run = true, .exit_code = status };
-			}
+CommandList::CommandStatus CommandList::run(std::string_view what) {
+	for (auto& cmd: commands) {
+		if (cmd.name == what) {
+			int status = cmd.runner();
+			return { .was_command_run = true, .exit_code = status };
 		}
-		return { .was_command_run = false, .exit_code = 1 };
 	}
-
-
-
-
+	return { .was_command_run = false, .exit_code = 1 };
+}
 
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	const clap::ParsingResult& parsing_result
 ) {
-	return compiler::driver::options_types::DebugOptions {
- 		.lexer_cerr = parsing_result.isFlag("lexer-cerr"),
+	return compiler::driver::options_types::DebugOptions{
+		.lexer_cerr  = parsing_result.isFlag("lexer-cerr"),
 		.logger_cerr = parsing_result.isFlag("logger-cerr"),
 	};
 }
@@ -244,8 +238,8 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		);
 
 		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-		
-		auto output_artifact = query::entryPoint<driver::CompileModule>({root, backend_type});
+
+		auto output_artifact = query::entryPoint<driver::CompileModule>({ root, backend_type });
 
 		// TODO PR:
 		// .compile_to_assembly  = options.isFlag("compile-to-assembly"),
@@ -254,8 +248,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		// 		.add_builtin_library  = options.isFlag("add-builtin-library"),
 
 
-		
-	
 		// int exit_code = 0;
 		// query::utils::withContextDo([&](query::Context& ctx) {
 		// 	driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
@@ -304,16 +296,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			}
 		);
 
-		auto path_to_compile   = options.getValue<fs::File>("module").value();
-		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
-		                                                       : compiler::driver::BackendType::LLVM;
+		auto path_to_compile = options.getValue<fs::File>("module").value();
+		auto backend_type    = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
+		                                                     : compiler::driver::BackendType::LLVM;
 
 		defer(printContextErrors());
 
-		compiler::driver::compilerEntirePackageIntoBinary(
-			path_to_compile,
-			backend_type
-		);
+		compiler::driver::compilerEntirePackageIntoBinary(path_to_compile, backend_type);
 
 		return 0;
 	});

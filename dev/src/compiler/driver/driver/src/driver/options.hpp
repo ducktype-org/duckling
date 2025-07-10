@@ -1,8 +1,9 @@
 #pragma once
 
+#include <filesystem/file.hpp>
+
 #include <base/ints.hpp>
 #include <base/optional.hpp>
-#include <filesystem/file.hpp>
 
 #include <string>
 #include <variant>
@@ -111,7 +112,7 @@ namespace compiler::driver {
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
 			// options_types::CompilationOptions compilation_options;
-			options_types::DebugOptions       debug_options;
+			options_types::DebugOptions debug_options;
 		};
 
 		/**
@@ -122,10 +123,9 @@ namespace compiler::driver {
 		 */
 		std::variant<BareMode, PackageCompilationMode> mode;
 
-		CompilerModeOfOperationAndOptions(BareMode bare_mode)
-			: mode(bare_mode) {}
+		CompilerModeOfOperationAndOptions(BareMode bare_mode): mode(bare_mode) {}
 
-		CompilerModeOfOperationAndOptions(PackageCompilationMode package_mode)
-			: mode(package_mode) {}
+		CompilerModeOfOperationAndOptions(PackageCompilationMode package_mode):
+			  mode(package_mode) {}
 	};
 };

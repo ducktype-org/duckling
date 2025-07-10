@@ -1,13 +1,13 @@
 #include "operations.hpp"
 
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_artifacts_macros.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <global_state/artifacts_location.hpp>
-#include <helios/queries.hpp>
 #include <driver_private/operations.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <global_state/artifacts_location.hpp>
+#include <helios/queries.hpp>
 #include <linker/link.hpp>
+#include <query_framework/query_artifacts_macros.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
 
 #include <utility>
 
@@ -27,31 +27,21 @@ namespace compiler::driver {
 			// compilation. For now its ok.
 			auto output_name = key.queryUnstablePerfectHash().toStringHex();
 
-			auto output = getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
+			auto output
+				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
+			    ));
 			auto module_name
 				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
-			compileHOUTUnit(
-				ctx,
-				&hout,
-				module_name,
-				output,
-				key.backend_type
-			);
+			compileHOUTUnit(ctx, &hout, module_name, output, key.backend_type);
 
 			return output;
 		}
-
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-
-
-	void compilerEntirePackageIntoBinary(
-		const fs::File& package_location,
-		BackendType backend
-	) {
+	void compilerEntirePackageIntoBinary(const fs::File& package_location, BackendType backend) {
 		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;

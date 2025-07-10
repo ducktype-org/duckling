@@ -1,4 +1,5 @@
 #include "compile_llvm.hpp"
+
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -7,9 +8,9 @@
 namespace compiler::driver {
 
 	void compileBackendModuleToLLVM(
-		query::Context&          ctx,
-		const BackendModuleData& lir_module,
-		const artifacts::FileArtifact&  output_artifact
+		query::Context&                ctx,
+		const BackendModuleData&       lir_module,
+		const artifacts::FileArtifact& output_artifact
 	) {
 		backend_llvm::Module mod(lir_module.module_id);
 

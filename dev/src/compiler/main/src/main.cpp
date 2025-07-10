@@ -2,9 +2,10 @@
  * @file main.cpp
  */
 
-#include <clap/clap.hpp>
 #include "cli_options.hpp"
 #include "commands/commands.hpp"
+
+#include <clap/clap.hpp>
 #include <init/init.hpp>
 
 #include <base/exceptions.hpp>
@@ -23,7 +24,6 @@ namespace {
 	 */
 	constinit bool throwing_main = false;
 }
-
 
 void printHelp(
 	const clap::Clap&          clap,
@@ -61,10 +61,6 @@ clap::Clap getClapForMain() {
 
 	return clap;
 }
-
-
-
-
 
 /**
  * @brief Wrapper for logic of main function
