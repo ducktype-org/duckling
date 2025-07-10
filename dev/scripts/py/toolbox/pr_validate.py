@@ -26,7 +26,8 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
     # Step 3 - integration tests
     integration_tests_impl(
         clean=False,
-        dry=False, filter="",
+        dry=False,
+        filter="",
         fail_fast=False,
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
