@@ -8,7 +8,7 @@ namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
 
-	namespace detail {
+	namespace internal {
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
@@ -25,53 +25,53 @@ namespace pst {
 
 			switch (as_keyword) {
 			case Keyword::If:
-				return detail::parseStmt<If>(state);
+				return internal::parseStmt<If>(state);
 
 			case Keyword::Fun:
-				return detail::parseStmt<Fun>(state);
+				return internal::parseStmt<Fun>(state);
 
 			case Keyword::While:
-				return detail::parseStmt<While>(state);
+				return internal::parseStmt<While>(state);
 
 			case Keyword::For:
-				return detail::parseStmt<For>(state);
+				return internal::parseStmt<For>(state);
 
 			case Keyword::Import:
-				return detail::parseStmt<Import>(state);
+				return internal::parseStmt<Import>(state);
 
 			case Keyword::Using:
-				return detail::parseStmt<Using>(state);
+				return internal::parseStmt<Using>(state);
 
 			case Keyword::Namespace:
-				return detail::parseStmt<Namespace>(state);
+				return internal::parseStmt<Namespace>(state);
 
 			case Keyword::Class:
-				return detail::parseStmt<Class>(state);
+				return internal::parseStmt<Class>(state);
 
 			case Keyword::Block:
-				return detail::parseStmt<Block>(state);
+				return internal::parseStmt<Block>(state);
 
 			case Keyword::Const:
-				return detail::parseStmt<Const>(state);
+				return internal::parseStmt<Const>(state);
 
 			case Keyword::Alias:
-				return detail::parseStmt<Alias>(state);
+				return internal::parseStmt<Alias>(state);
 
 			case Keyword::Var:
 			case Keyword::Let:
-				return detail::parseStmt<Variable>(state);
+				return internal::parseStmt<Variable>(state);
 
 			case Keyword::Expand:
-				return detail::parseStmt<Expand>(state);
+				return internal::parseStmt<Expand>(state);
 
 			default:
 				if (StmtSpecifier::SPECIFIERS.contains(as_keyword))
-					return detail::parseStmt<StmtSpecifier>(state);
+					return internal::parseStmt<StmtSpecifier>(state);
 				break;
 			}
 
 			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
-				return detail::parseStmt<Action>(state);
+				return internal::parseStmt<Action>(state);
 
 			if (as_special == Special::Semicolon) {
 				state.tokens().skip();
@@ -79,7 +79,7 @@ namespace pst {
 			}
 
 			// Expr as stmt have semicolon at the end:
-			return detail::parseStmt<ExprStmt>(state);
+			return internal::parseStmt<ExprStmt>(state);
 		}
 	}
 
@@ -101,7 +101,7 @@ namespace pst {
 		auto attributes = collectAttributes(state);
 
 		// Parse Statement
-		MBox<Stmt> out = detail::chooseStmt(state);
+		MBox<Stmt> out = internal::chooseStmt(state);
 
 		// Add Attributes
 		if (out) out->addAttributes(std::move(attributes));

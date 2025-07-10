@@ -8,7 +8,7 @@
 
 #include <base/ints.hpp>
 
-namespace query::detail {
+namespace query::internal {
 	/**
 	 * Unique identifier of query type.
 	 */

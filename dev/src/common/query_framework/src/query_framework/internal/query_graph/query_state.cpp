@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace query::detail {
+namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
 		query_stack_size++;
 

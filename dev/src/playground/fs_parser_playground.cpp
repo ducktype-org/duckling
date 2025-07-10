@@ -49,7 +49,7 @@ int main(int argc, const char* argv[]) {
 	}
 
 	auto fs_tree = fs::FsTree::create(
-		res.getValue<fs::FilePath>('p').valueOr(fs::FilePath(".")),
+		res.getValue<fs::File>('p').valueOr(fs::File(".")),
 		std::regex(res.getValue<std::string>("fileregex").valueOr("\\.*")),
 		std::regex(res.getValue<std::string>("dirregex").valueOr("\\..*"))
 	);

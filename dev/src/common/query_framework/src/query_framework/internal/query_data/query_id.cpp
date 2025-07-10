@@ -11,14 +11,14 @@
 #include <base/maps.hpp>
 
 template<>
-struct std::hash<query::detail::QueryID> {
+struct std::hash<query::internal::QueryID> {
 	[[nodiscard]]
-	size_t operator()(const query::detail::QueryID& id) const {
+	size_t operator()(const query::internal::QueryID& id) const {
 		return id.asInt();
 	}
 };
 
-namespace query::detail {
+namespace query::internal {
 
 	struct QueryIDMaker {
 		static constexpr QueryID make(u64 val) { return { QueryID(val) }; }
