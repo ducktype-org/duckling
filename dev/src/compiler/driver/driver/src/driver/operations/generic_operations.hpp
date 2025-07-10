@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "backend_type.hpp"
+#include "../backend_type.hpp"
 
 #include <artifacts/artifacts.hpp>
 #include <frontend/module_tree/module_id.hpp>

@@ -3,7 +3,7 @@
  */
 
 #include "cli_options.hpp"
-#include "commands/commands.hpp"
+#include "commands.hpp"
 
 #include <clap/clap.hpp>
 #include <init/init.hpp>
