@@ -137,7 +137,7 @@ def setup_build_impl(
     help="The build type.",
     default="debug",
     type=click.Choice(
-        ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
+        ["Debug", "Release", "DevRelease"], case_sensitive=False
     ),
 )
 @click.option(

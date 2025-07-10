@@ -16,6 +16,7 @@
 
 #include <exception>
 #include <string>
+#include <utility>
 
 namespace base {
 
@@ -44,7 +45,7 @@ namespace base {
 		const char* what() const noexcept final;
 
 		// @TODO: use Printer
-		void print(std::ostream& out) const;
+			void print(std::ostream& out) const;
 	};
 
 	/**
@@ -78,21 +79,52 @@ namespace base {
 }
 
 /**
- * Base helper macro, don't use it directly.
- */
+* Base helper macro, don't use it directly.
+*/
 #define DETAIL_THROW_PANIC(panic_title, ...)                            \
 	throw base::Panic(                                                  \
 		"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
 		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
 	)
 
+#ifndef DISABLE_ASSERT
+	/**
+	* @brief Assumption about the code after this line. Usually made after CORE_ASSERT
+	* */
+	#define CORE_ASSUME(expression) [[assume(expression)]]
+#else
+	/**
+	* @brief Assumption about the code after this line. Usually made after CORE_ASSERT
+	* */
+	#define CORE_ASSUME(expression) do {} while (0)
+#endif
 
-/**
- * @brief base::Panic based assert that allows catching for testing purposes.
- */
-#define CORE_ASSERT(cond, what, ...) \
-	if (!(cond))                     \
-	DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
+#ifndef DISABLE_ASSERT
+	/**
+	* @brief Function will not throw in Release build
+	* */
+	#define NOEXCEPT noexcept(false)
+#else
+	/**
+	* @brief Function will not throw in Release build
+	* */
+	#define NOEXCEPT noexcept(true)
+#endif
+
+#ifndef DISABLE_ASSERT
+	/**
+	* @brief base::Panic based assert that allows catching for testing purposes.
+	*/
+	#define CORE_ASSERT(cond, what, ...) \
+		if (!(cond))                     \
+		DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
+#else
+	/**
+	* @brief base::Panic based assert that allows catching for testing purposes.
+	*/
+	#define CORE_ASSERT(cond, what, ...) do {} while (0)
+#endif
+
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
@@ -111,4 +143,6 @@ namespace base {
  * * `if (cond) CORE_PANIC("error description")`,
  * * `default: CORE_PANIC("unhandled case")`.
  */
-#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.")
+#define CORE_UNREACHABLE() \
+	DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");	\
+	std::unreachable()

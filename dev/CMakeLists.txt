@@ -1,4 +1,16 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
+
+# Define custom build types
+set(CMAKE_BUILD_TYPE "DevRelease" CACHE STRING "Choose the build type: Debug, DevRelease, Release")
+set(VALID_BUILD_TYPES Debug DevRelease Release)
+if(NOT "${CMAKE_BUILD_TYPE}" IN_LIST VALID_BUILD_TYPES)
+  message(FATAL_ERROR "Invalid build type: ${CMAKE_BUILD_TYPE}")
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG      "-g -O0")
+set(CMAKE_CXX_FLAGS_DEVRELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE    "-O3 -DDISABLE_ASSERT")
+
 project(Duckling)
 
 cmake_policy(SET CMP0079 NEW)
@@ -14,6 +26,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
+
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_COLOR_MAKEFILE ON)

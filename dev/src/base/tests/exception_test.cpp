@@ -62,13 +62,20 @@ public:
 		try {
 			throwPanic3();
 		} catch (base::Panic& panic) {
+#ifndef DISABLE_ASSERT
 			assertTrue(
 				containsCstr(panic.what(), "    Assertion failed: `false`\n    panic test 3"),
 				"Bad panic reason"
 			);
 			return;
+#else
+			fail("Assert should now throw error in Release");
+#endif
 		}
+
+#ifndef DISABLE_ASSERT
 		fail("Panic what not caught");
+#endif
 	}
 
 	void testPanic4() {
@@ -78,7 +85,9 @@ public:
 			assertTrue(containsCstr(panic.what(), "Unreachable"), "Bad panic reason");
 			return;
 		}
-		fail("Panic what not caught");
+#ifndef DISABLE_ASSERT
+		fail("Panic what not caught.");
+#endif
 	}
 
 	void testNotYetImplemented() {
