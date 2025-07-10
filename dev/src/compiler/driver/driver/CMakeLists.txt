@@ -3,6 +3,9 @@ add_library(Driver
 	src_private/driver_private/backend_operations/compile_dvm.cpp
 
 	src_private/driver_private/operations.cpp
+
+	src/driver/backend_type.cpp
+	src/driver/operations.cpp
 	src/driver/initialize.cpp
 )
 

@@ -22,7 +22,7 @@ namespace compiler::driver {
 				"Artifacts path does not exist:", artifacts_options.artifacts_path.nativePath(), "!"
 			);
 			global_state::setters::setRootCollection(
-				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path)
+				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
 			);
 		}
 	}

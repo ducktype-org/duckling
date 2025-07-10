@@ -404,7 +404,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		defer(printContextErrors());
 
-		compiler::driver::compilerEntireMainPackageIntoBinary(
+		compiler::driver::compilerEntirePackageIntoBinary(
 			path_to_compile,
 			backend_type
 		);

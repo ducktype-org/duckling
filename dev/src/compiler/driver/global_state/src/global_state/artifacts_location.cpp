@@ -7,7 +7,7 @@ namespace global_state {
 		constinit MBox<artifacts::ArtifactCollection> root_collection;
 	}
 
-	Ref<artifacts::ArtifactCollection> gerRootCollection() {
+	Ref<artifacts::ArtifactCollection> getRootCollection() {
 		return root_collection.refMut().toOpt().value();
 	}
 
