@@ -247,7 +247,7 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
 
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
