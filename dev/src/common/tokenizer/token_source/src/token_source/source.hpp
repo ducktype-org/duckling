@@ -44,7 +44,7 @@ namespace tokenizer {
 		/**
 		 * @brief Construct a new TokenSource from file.
 		 */
-		explicit TokenSource(const fs::File&);
+		explicit TokenSource(const fs::FilePath&);
 
 		/**
 		 * @brief Construct a new TokenSource as a macro with parent position.
@@ -92,7 +92,7 @@ namespace tokenizer {
 		CRef<dia::Location> getLocation() const;
 		Ref<dia::Logger>    getLogger();
 		[[nodiscard]]
-		fs::File getPath() const;
+		fs::FilePath getPath() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 

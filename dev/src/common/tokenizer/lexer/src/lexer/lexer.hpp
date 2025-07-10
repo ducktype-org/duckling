@@ -22,5 +22,5 @@ namespace lexer {
 	 * @param file File to tokenize
 	 * @return lexer::TokenData Containing the Tokens
 	 */
-	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& file);
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& file);
 }

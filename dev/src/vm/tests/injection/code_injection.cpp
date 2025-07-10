@@ -66,18 +66,18 @@ private:
 	}
 
 	void multipleFiles() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("multiple_files_1.dbc"));
-		fs::File file2(path("multiple_files_2.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("multiple_files_1.dbc"));
+		fs::FilePath file2(path("multiple_files_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
 
 		runAndCheckExitCode(pid, {}, std::vector<std::string>{}, "123", "123", 0);
 	}
 
 	void injectCode() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("inject_code_1.dbc"));
-		fs::File file2(path("inject_code_2.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("inject_code_1.dbc"));
+		fs::FilePath file2(path("inject_code_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 
@@ -85,32 +85,32 @@ private:
 	}
 
 	void runNoArgFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_no_arg_function.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file(path("call_no_arg_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
 		runAndCheckExitCode(pid, "summer", {}, {}, "735", 0);
 	}
 
 	void runVoidFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_void_function.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file(path("call_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
 		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, "3", 0);
 	}
 
 	void runNonVoidFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file(path("call_non_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
 		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 695, 40 }, {}, {}, 735);
 	}
 
 	void doubleRunFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("repl_1.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 
 		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 8 }, {}, {}, 32);
@@ -118,8 +118,8 @@ private:
 	}
 
 	void manyRunFunctions() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("repl_1.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
 		for (i32 i = 0; i < 100; i++)
@@ -129,22 +129,22 @@ private:
 	void repl() {
 		vm::PID pid = initProcess();
 
-		fs::File file1(path("repl_1.dbc"));
+		fs::FilePath file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 8 }, {}, {}, 32);
 
-		fs::File file2(path("repl_2.dbc"));
+		fs::FilePath file2(path("repl_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, {}, 3);
 	}
 
 	void replWithGlobals() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("repl_with_globals_1.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("repl_with_globals_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "1 2", {}, 0);
 
-		fs::File file2(path("repl_with_globals_2.dbc"));
+		fs::FilePath file2(path("repl_with_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "globaler_reader", std::vector<i64>{}, {}, "12", 0);
 	}
@@ -152,28 +152,28 @@ private:
 	void cyclicRepl() {
 		vm::PID pid = initProcess();
 
-		fs::File file1(path("loaded_func_call_1.dbc"));
+		fs::FilePath file1(path("loaded_func_call_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 4, 8 }, {}, {}, 12);
 
-		fs::File file2(path("loaded_func_call_2.dbc"));
+		fs::FilePath file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 2, 3 }, {}, {}, 10);
 	}
 
 	void separateGlobals() {
-		vm::PID  pid = initProcess();
-		fs::File file1(path("separate_globals_1.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("separate_globals_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 
-		fs::File file2(path("separate_globals_2.dbc"));
+		fs::FilePath file2(path("separate_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "12", "12", 0);
 	}
 
 	void injectExistingFunction() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("inject_code_1.dbc"));
+		vm::PID      pid = initProcess();
+		fs::FilePath file(path("inject_code_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 		ASSERT_TRUE(!vm::api::loadFiles(pid, { file }).has_value());
 	}

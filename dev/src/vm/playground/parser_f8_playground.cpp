@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./vm_benchmark file_name\n";
 		return 1;
 	}
-	fs::File file(argv[1]);
+	fs::FilePath file(argv[1]);
 
 	auto process_pid = vm::api::spawn().value().pid;
 

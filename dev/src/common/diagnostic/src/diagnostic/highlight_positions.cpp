@@ -154,7 +154,7 @@ namespace dia {
                 chunk.back().getSource()->getLines().size()
             );
 
-			out << "File: " << file.nativePath() << "\n";
+			out << "File: " << file.absolutePath() << "\n";
 			out << std::format("Lines: {}-{}\n", first_line, last_line);
 
 			std::vector<SourcePosition> sub_positions;

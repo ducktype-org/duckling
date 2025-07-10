@@ -45,7 +45,23 @@ inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
 /**
  * @brief Holds global map of module path to module id
  */
-inline static base::HashMap<fs::File, ModuleID> module_paths{};
+inline static base::HashMap<fs::FilePath, ModuleID> module_paths{};
+
+SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
+	  path(std::move(path)),
+	  id(FileID::next()),
+	  linked_module(module_id) {
+	lang_file_name = base::StrID(this->path.stem().c_str());
+}
+
+CRef<pst::PST<>> SourceFile::getPST() {
+	if (parse_tree) {
+		return &parse_tree.value();
+	} else {
+		parse_tree.emplace(pst::PST(path));
+		return &parse_tree.value();
+	}
+}
 
 ModuleTree::ModuleTree(): id(ModuleID::next()) {}
 
@@ -91,7 +107,7 @@ void ModuleTree::buildModuleTree(
 }
 
 void ModuleTree::handleNewFile(
-	const std::shared_ptr<ModuleTree>& module_root, const fs::File& filepath
+	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
 ) {
 	if (filepath.isDirectory()) throw base::LogicError("File is not a file, but a directory!");
 
@@ -130,7 +146,7 @@ void ModuleTree::handleNewFile(
 	} else {
 		// File contains content not related to the module.
 		if (!module_root->m_other_files.contains(extension_id))
-			module_root->m_other_files.put(extension_id, std::vector<fs::File>());
+			module_root->m_other_files.put(extension_id, std::vector<fs::FilePath>());
 		module_root->m_other_files[extension_id].push_back(filepath);
 	}
 }
@@ -189,7 +205,7 @@ const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& ModuleTree::getSu
 	return m_submodules;
 }
 
-const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
+const base::HashMap<base::StrID, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
 	return m_other_files;
 }
 
@@ -308,7 +324,7 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 }
 
 CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
-	query::Context&, const fs::File& file_path
+	query::Context&, const fs::FilePath& file_path
 ) {
 	u64 count = 0;
 	for (const auto& [file_id, file]: files)

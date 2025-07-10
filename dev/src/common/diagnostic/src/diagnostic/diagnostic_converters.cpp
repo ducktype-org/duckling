@@ -99,7 +99,7 @@ namespace dia {
 		          .map([&](const SourcePosition& pos) {
 					  return pos.genPrinterContents({ note_ptr->toString(detailed) });
 				  })
-		          .copyValueOr({ note_ptr->toString(detailed) });
+		          .valueOr({ note_ptr->toString(detailed) });
 		result_contents.insert(result_contents.begin(), { severity_tag, "\n" });
 
 		return result_contents;
@@ -240,7 +240,7 @@ namespace dia {
 		CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed
 	) {
 		auto source_position
-			= note_ptr->getSourcePosition().copyValueOr(parent_message->getSourcePosition());
+			= note_ptr->getSourcePosition().valueOr(parent_message->getSourcePosition());
 		auto source_uri = source_position.getSource()->getPath().uri();
 		auto range      = sourcePositionToLspJson(source_position);
 

@@ -43,7 +43,7 @@ private:
 
 		//@TODO: add ctors to DVM ctors when implemented
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 

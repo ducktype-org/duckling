@@ -58,6 +58,8 @@ namespace tester {
 	 * @brief Add spaces before capital letters in a string,
 	 * excluding: first letter, capital letters after capital letters.
 	 *
+	 * @todo improve the logic, so that "ABCSome" results in "ABC Some"
+	 *
 	 * @return std::string
 	 */
 	std::string addSpacesBeforeCapital(std::string_view);

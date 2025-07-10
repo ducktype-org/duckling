@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
 
 	clap::RangeParser::Range range = *result.getValue<clap::RangeParser::Range>("range");
 	auto [begin, end]              = range;
-	i64 n                          = result.getValue<i64>('n').copyValueOr(1);
+	i64 n                          = result.getValue<i64>('n').valueOr(1);
 
 	for (const auto& name: names) {
 		for (i64 i = 0; i < n; i++) {

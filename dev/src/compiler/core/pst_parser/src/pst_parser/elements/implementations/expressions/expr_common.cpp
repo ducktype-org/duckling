@@ -5,12 +5,12 @@
 namespace pst {
 	bool ExprClassify::isComparison(const LangParserState& state, i64 fwd) {
 		return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
-		).copyValueOr(false);
+		).valueOr(false);
 	}
 
 	bool ExprClassify::isAssignment(const LangParserState& state, i64 fwd) {
 		return state[fwd].asBinaryOperator().map([](auto op) { return op.isAssignment(); }
-		).copyValueOr(false);
+		).valueOr(false);
 	}
 
 	bool ExprClassify::exprStmtEnd(const LangParserState& state, i64 fwd) {

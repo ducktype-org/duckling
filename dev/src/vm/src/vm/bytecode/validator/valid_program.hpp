@@ -7,7 +7,7 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_obj_id_name_map.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm::code {
 	/**
@@ -65,11 +65,11 @@ namespace vm::code {
 		 */
 		void insertCode(const code::CodeCollection& collections);
 
-		const StableObjIdNameMap<TypeOfData>& types() const;
+		const StableTypeIdNameMap<TypeOfData>& types() const;
 
-		const StableObjIdNameMap<GlobalData>& globals() const;
+		const StableTypeIdNameMap<GlobalData>& globals() const;
 
-		const StableObjIdNameMap<Function>& functions() const;
+		const StableTypeIdNameMap<Function>& functions() const;
 
 	private:
 		/**
@@ -92,8 +92,8 @@ namespace vm::code {
 		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions);
 
-		StableObjIdNameMap<code::Function>   function_map;
-		StableObjIdNameMap<code::GlobalData> globals_map;
+		StableTypeIdNameMap<code::Function>   function_map;
+		StableTypeIdNameMap<code::GlobalData> globals_map;
 
 		code::TypeContext type_context;
 

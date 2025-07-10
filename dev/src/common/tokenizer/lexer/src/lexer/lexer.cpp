@@ -11,7 +11,7 @@
 #include <base/exceptions.hpp>
 
 namespace lexer {
-	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& path) {
 		auto file = tokenizer::makeTokenSource(path);
 		file->tokenize();
 		if (file->getLogger()->bad()) {

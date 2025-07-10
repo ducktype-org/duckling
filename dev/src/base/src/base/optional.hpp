@@ -164,8 +164,7 @@ namespace base {
 	 */
 	template<class T>
 	requires(!std::is_reference_v<T>) class Optional final {
-		std::optional<T> private_optional;
-
+	protected:
 		/**
 		 * Const and reference qualified type of value in line with qualifications of the
 		 * surrounding optional.
@@ -255,18 +254,15 @@ namespace base {
 		}
 
 		/**
-		 * Get the stored value or a given backup.
-		 * @param or_value value to be returned if empty.
-		 * @details Notice that this function returns by value, which may lead to unwanted copies.
+		 * Get stored value or a given backup.
+		 * @param or_value value to be returned if empty
 		 * @return Stored value if exists, otherwise or_value.
 		 */
-		template<class Self, class U = T>
+		template<class Self>
 		[[nodiscard]]
-		constexpr T copyValueOr(this Self&& self, U&& or_value) {
-			if (self.has_value())
-				return std::forward<Self>(self).value();
-			else
-				return static_cast<T>(std::forward<U>(or_value));
+		constexpr QualifiedT<Self> valueOr(this Self&& self, QualifiedT<Self> or_value) noexcept {
+			if (self.has_value()) return std::forward<Self>(self).value();
+			return std::forward_like<Self>(or_value);
 		}
 
 		/**
@@ -359,6 +355,9 @@ namespace base {
 				return {};
 			}
 		}
+
+	private:
+		std::optional<T> private_optional;
 	};
 
 	template<class U, class T>

@@ -32,14 +32,14 @@ private:
 	 */
 	Box<artifacts::ArtifactCollection> createMockCollection() {
 		return base::makeBox<artifacts::ArtifactCollection>(
-			fs::FileManager::createRandomTempDirectory().nativePath()
+			fs::FilePath::createTempDirectory().absolutePath()
 		);
 	}
 
 	void executableGenerated() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -59,18 +59,18 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
 		});
 	}
 
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -101,7 +101,7 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -126,7 +126,7 @@ private:
 	void builtinCompiles() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::HoutToBinaryDriver driver({
@@ -145,18 +145,18 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
 		});
 	}
 
 	void globalsTest() {
 		using namespace compiler;
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/globals")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/globals")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		// Test with LLVM backend
@@ -177,11 +177,11 @@ private:
 			llvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(std::filesystem::exists(exe.FILE), "Output file does not exist");
+			assertTrue(std::filesystem::exists(obj.FILE), "Object file does not exist");
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE);
+			std::filesystem::remove(obj.FILE);
 		});
 
 		// Test with DVM backend

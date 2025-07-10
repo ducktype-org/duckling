@@ -55,7 +55,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
+	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& paths) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::LoadFiles{ paths }))
 		    .transform(ignoreResponse);

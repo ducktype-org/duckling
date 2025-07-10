@@ -16,7 +16,7 @@ namespace vm::api {
 		struct LoadStdlib {};
 
 		struct LoadFiles {
-			std::vector<fs::File> filenames;
+			std::vector<fs::FilePath> filenames;
 		};
 
 		struct LoadCode {

@@ -59,17 +59,17 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Functio
 	}
 }
 
-const vm::StableObjIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.getCurrentTypes();
 }
 
-const vm::StableObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
+const vm::StableTypeIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return globals_map;
 }
 
-const vm::StableObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+const vm::StableTypeIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return function_map;
 }

@@ -74,20 +74,20 @@ public:
 private:
 	template<typename Element>
 	pst::PST<Element> manualSteps(const std::string& filename) {
-		auto file = tokenizer::makeTokenSource(fs::File(filename));
+		auto file = tokenizer::makeTokenSource(fs::FilePath(filename));
 		file->tokenize();
 		return { std::move(file) };
 	}
 
 	template<typename Element>
 	pst::PST<Element> fromContents(const std::string& filename) {
-		std::string contents{ fs::File(filename).getContent().view().stringView() };
+		std::string contents{ fs::getSimpleFileContent(filename).view().stringView() };
 		return pst::PST<Element>::fromContents(contents);
 	}
 
 	template<typename Element>
 	pst::PST<Element> fromFilename(const std::string& filename) {
-		return { fs::File(filename) };
+		return { fs::FilePath(filename) };
 	}
 
 	template<typename Element>

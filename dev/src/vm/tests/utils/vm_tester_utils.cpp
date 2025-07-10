@@ -44,8 +44,8 @@ void VmTestSuite::runTestOnVm(
 void VmTestSuite::loadInvalidDbc(
 	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 ) {
-	fs::File file(path(dbc_filename));
-	auto     loaded_file_response = vm::api::loadFiles(initProcess(), { file });
+	fs::FilePath file(path(dbc_filename));
+	auto         loaded_file_response = vm::api::loadFiles(initProcess(), { file });
 	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
@@ -61,7 +61,7 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) }).has_value());
+	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::FilePath(path(dbc_filename)) }).has_value());
 }
 
 #define EXPECT_VOID(action)                          \
@@ -97,7 +97,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 	bool                               add_stdlib
 ) -> TestResult {
 	auto pid  = initProcess();
-	auto file = fs::File(path(dbc_filename));
+	auto file = fs::FilePath(path(dbc_filename));
 	if (add_stdlib) EXPECT_VOID(vm::api::loadStdlib(pid));
 	EXPECT_VOID(vm::api::loadFiles(pid, { file }));
 	return runTestImpl(pid, optional_input, optional_output, args);

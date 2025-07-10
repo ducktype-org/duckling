@@ -41,10 +41,8 @@
  */
 #pragma once
 
-#include "ints.hpp"
 #include "macros/diagnostics.hpp"
 
-#include <limits>
 #include <type_traits>
 #include <variant>
 
@@ -57,34 +55,20 @@ namespace base::internal {
 	template<class... Ts>
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
-	template<typename Variant, typename T>
-	struct AlternativeIndexAux {
-		// placeholder to suppress the error about missing function
-		static constexpr usize findIndex() { return 0; }
-
-		static_assert(false, "alternativeIndex() can be used only for variant");
-	};
-
-	template<typename T, typename... Types>
-	struct AlternativeIndexAux<std::variant<Types...>, T> {
-		static constexpr usize findIndex() {
-			usize index = std::numeric_limits<usize>::max();
-
-			// increase index until matching T
-			bool missing_type = not((index++, std::is_same_v<T, Types>) or ...);
-
-			// when no T in variant, returns sizeof...(Types)
-			return index + missing_type;
-		}
-
-		static_assert(findIndex() < sizeof...(Types), "Type not found in variant");
-	};
+	template<typename VariantT, typename T, std::size_t index>
+	constexpr auto alternative_index_aux() {
+		static_assert(std::variant_size_v<VariantT> > index, "Type not found in variant");
+		if constexpr (index == std::variant_size_v<VariantT>)
+			return index;
+		else if constexpr (std::is_same_v<std::variant_alternative_t<index, VariantT>, T>)
+			return index;
+		else
+			return alternative_index_aux<VariantT, T, index + 1>();
+	}
 
 	template<typename VariantT, typename T>
-	constexpr usize alternativeIndex() {
-		// removing wrappers and using a template helper
-		using ClearedVariantT = std::remove_const_t<std::remove_reference_t<VariantT>>;
-		return AlternativeIndexAux<ClearedVariantT, T>::findIndex();
+	constexpr auto alternative_index() {
+		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T, 0>();
 	}
 }
 
@@ -116,15 +100,15 @@ namespace base::internal {
 
 #define variant_case(type, name)                                                                   \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                               \
-	case (::base::internal::alternativeIndex<decltype(internal_value), type>()):                   \
+	case (::base::internal::alternative_index<decltype(internal_value), type>()):                  \
 		if (bool variant_case_stop = true)                                                         \
 			for ([[maybe_unused]] auto&& name = std::get<type>(internal_value); variant_case_stop; \
 			     variant_case_stop            = false)                                             \
 		POP_DIAGNOSTIC
 
-#define variant_case_novalue(type)                                               \
-	break;                                                                       \
-	case (::base::internal::alternativeIndex<decltype(internal_value), type>()): \
+#define variant_case_novalue(type)                                                \
+	break;                                                                        \
+	case (::base::internal::alternative_index<decltype(internal_value), type>()): \
 		if (true)
 
 #define variant_default \

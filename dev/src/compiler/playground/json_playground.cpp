@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./json_testing file_name\n";
 		return 1;
 	}
-	fs::File file(argv[1]);
+	fs::FilePath file(argv[1]);
 
 	pst::PST<> pst{ file };
 

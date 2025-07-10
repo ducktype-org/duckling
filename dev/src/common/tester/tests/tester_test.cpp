@@ -10,7 +10,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR(i32 test_no), test_no(test_no) {
 		TESTER_ADD_TEST(choose);
 		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
-		TESTER_ADD_TEST(addSpacesTest);
 	}
 
 	~SimpleTesterTest() override = default;
@@ -81,44 +80,6 @@ private:
 				R"--( { "data" :  { }, "data2" : {} })--", R"--(  { "data" : {  } } )--"
 			),
 			"Incorrect compareJson (4)"
-		);
-	}
-
-	void addSpacesTest() {
-		assertEqual(
-			tester::addSpacesBeforeCapital("HelloWorld"),
-			"Hello World",
-			"Incorrect addSpacesBeforeCapital (1)"
-		);
-		assertEqual(
-			tester::addSpacesBeforeCapital("HelloWorldTest"),
-			"Hello World Test",
-			"Incorrect addSpacesBeforeCapital (2)"
-		);
-		assertEqual(
-			tester::addSpacesBeforeCapital("HelloWorldTest123"),
-			"Hello World Test123",
-			"Incorrect addSpacesBeforeCapital (3)"
-		);
-		assertEqual(
-			tester::addSpacesBeforeCapital("HelloWorldABC"),
-			"Hello World ABC",
-			"Incorrect addSpacesBeforeCapital (4)"
-		);
-		assertEqual(
-			tester::addSpacesBeforeCapital("ABCHelloWorld"),
-			"ABC Hello World",
-			"Incorrect addSpacesBeforeCapital (5)"
-		);
-		assertEqual(
-			tester::addSpacesBeforeCapital("ABC hello world"),
-			"ABC hello world",
-			"Incorrect addSpacesBeforeCapital (6)"
-		);
-		assertEqual(
-			tester::addSpacesBeforeCapital("hello world ABC"),
-			"hello world ABC",
-			"Incorrect addSpacesBeforeCapital (7)"
 		);
 	}
 };

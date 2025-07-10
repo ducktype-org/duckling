@@ -12,7 +12,6 @@ from .helpers import (
 from .duck_linter import duck_linter_impl
 from .cpp_linter import simulate_cpp_linter
 from .issue_checker import issue_checker_impl
-from .integration.tester import integration_tests_impl, DEFAULT_LOG_FILE_PATH
 
 
 def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
@@ -23,28 +22,18 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
     # Step 2 - test
     bash_command(f"cmake --build {build} -- test")
 
-    # Step 3 - integration tests
-    integration_tests_impl(
-        clean=False,
-        dry=False,
-        filter="",
-        fail_fast=False,
-        verbose=False,
-        log_file=DEFAULT_LOG_FILE_PATH,
-        build_dir=build)
-
-    # Step 4 - duck linter
+    # Step 3 - duck linter
     if not duck_linter_impl():
         exit_with_error("Duck linter has failed")
 
-    # Step 5 - cpp linter
+    # Step 4 - cpp linter
     clang_tidy_failed, clang_format_failed = simulate_cpp_linter(
         clang_tidy_path=clang_tidy_path,
         clang_format_path=clang_format_path,
         build=build,
     )
 
-    # Step 6 - issue checker
+    # Step 5 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
     

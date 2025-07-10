@@ -17,56 +17,56 @@ namespace vm {
 	 * previously stored IDs will map to equal, but copied objects. (old references will not break).
 	 * @note It's not possible to erase values from this structure.
 	 */
-	template<class T, class ObjID = u64>
-	requires(std::constructible_from<ObjID, usize> && std::constructible_from<usize, ObjID>)
-	class StableObjIdNameMap {
+	template<class T, class TID = u64>
+	requires(std::constructible_from<TID, usize> && std::constructible_from<usize, TID>)
+	class StableTypeIdNameMap {
 	public:
-		StableObjIdNameMap()                                     = default;
-		StableObjIdNameMap(const StableObjIdNameMap&)            = default;
-		StableObjIdNameMap(StableObjIdNameMap&&)                 = default;
-		StableObjIdNameMap& operator=(const StableObjIdNameMap&) = default;
-		StableObjIdNameMap& operator=(StableObjIdNameMap&&)      = default;
+		StableTypeIdNameMap()                                      = default;
+		StableTypeIdNameMap(const StableTypeIdNameMap&)            = default;
+		StableTypeIdNameMap(StableTypeIdNameMap&&)                 = default;
+		StableTypeIdNameMap& operator=(const StableTypeIdNameMap&) = default;
+		StableTypeIdNameMap& operator=(StableTypeIdNameMap&&)      = default;
 
-		constexpr ObjID insert(T&& new_value, base::StrID name) {
-			auto id = ObjID(values.size());
+		constexpr TID insert(T&& new_value, base::StrID name) {
+			auto id = TID(values.size());
 			values.push_back(std::move(new_value));
 			createLink(id, name);
 			return id;
 		}
 
-		constexpr ObjID insert(const T& new_value, base::StrID name) {
-			auto id = ObjID(values.size());
+		constexpr TID insert(const T& new_value, base::StrID name) {
+			auto id = TID(values.size());
 			values.push_back(new_value);
 			createLink(id, name);
 			return id;
 		}
 
 		[[nodiscard]]
-		constexpr base::Optional<CRef<T>> atMaybe(ObjID id) const {
+		constexpr base::Optional<CRef<T>> atMaybe(TID id) const {
 			if (usize(id) >= values.size()) return {};
 			return &values[usize(id)];
 		}
 
-		constexpr base::Optional<Ref<T>> atMaybe(ObjID id) {
+		constexpr base::Optional<Ref<T>> atMaybe(TID id) {
 			if (usize(id) >= values.size()) return {};
 			return &values[usize(id)];
 		}
 
 		[[nodiscard]]
 		constexpr base::Optional<CRef<T>> atMaybe(base::StrID name) const {
-			return name_to_id.atMaybe(name).map([&](CRef<ObjID> id) { return at(*id); });
+			return name_to_id.atMaybe(name).map([&](CRef<TID> id) { return at(*id); });
 		}
 
 		constexpr base::Optional<Ref<T>> atMaybe(base::StrID name) {
-			return name_to_id.atMaybe(name).map([&](Ref<ObjID> id) { return at(*id); });
+			return name_to_id.atMaybe(name).map([&](Ref<TID> id) { return at(*id); });
 		}
 
 		[[nodiscard]]
-		constexpr CRef<T> at(ObjID id) const {
+		constexpr CRef<T> at(TID id) const {
 			return atMaybe(id).expect("Value of given ID is not stored");
 		}
 
-		constexpr Ref<T> at(ObjID id) {
+		constexpr Ref<T> at(TID id) {
 			return atMaybe(id).expect("Value of given ID is not stored");
 		}
 
@@ -79,21 +79,21 @@ namespace vm {
 			return atMaybe(name).expect("Value of given name is not stored");
 		}
 
-		constexpr base::Optional<base::StrID> nameOf(ObjID id) const {
+		constexpr base::Optional<base::StrID> nameOf(TID id) const {
 			return id_to_name.atMaybe(id).map([](auto ref) { return base::StrID(std::move(*ref)); });
 		}
 
-		[[nodiscard]] constexpr base::Optional<ObjID> idOf(base::StrID name) const {
+		[[nodiscard]] constexpr base::Optional<TID> idOf(base::StrID name) const {
 			// Mapping to copy
-			return name_to_id.atMaybe(name).map([](CRef<ObjID> t) { return *t; });
+			return name_to_id.atMaybe(name).map([](CRef<TID> t) { return *t; });
 		}
 
 		[[nodiscard]]
-		constexpr bool contains(ObjID id) const {
+		constexpr bool contains(TID id) const {
 			return id_to_name.contains(id);
 		}
 
-		constexpr bool contains(ObjID id) { return id_to_name.contains(id); }
+		constexpr bool contains(TID id) { return id_to_name.contains(id); }
 
 		[[nodiscard]] constexpr bool contains(base::StrID name) const {
 			return name_to_id.contains(name);
@@ -117,26 +117,26 @@ namespace vm {
 
 		[[nodiscard]] constexpr usize size() const { return values.size(); }
 
-		constexpr T& operator[](ObjID id) { return values[static_cast<usize>(id)]; }
+		constexpr T& operator[](TID id) { return values[static_cast<usize>(id)]; }
 
-		constexpr const T& operator[](ObjID id) const { return values[static_cast<usize>(id)]; }
+		constexpr const T& operator[](TID id) const { return values[static_cast<usize>(id)]; }
 
 		/**
 		 * @brief Returns ids of inserted elements.
 		 */
 		constexpr auto ids() const { return id_to_name | std::views::keys; }
 
-		std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> allData() const {
-			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> data;
+		std::vector<std::tuple<CRef<T>, TID, base::StrID>> allData() const {
+			std::vector<std::tuple<CRef<T>, TID, base::StrID>> data;
 			for (usize id = 0; id < size(); id++) {
-				ObjID tid = ObjID(id);
+				TID tid = TID(id);
 				data.emplace_back(at(tid), tid, *nameOf(tid));
 			}
 			return data;
 		}
 
 	private:
-		constexpr void createLink(ObjID id, base::StrID name) {
+		constexpr void createLink(TID id, base::StrID name) {
 			id_to_name.put(id, name);
 			name_to_id.put(name, id);
 		}
@@ -149,7 +149,7 @@ namespace vm {
 		 * * deque does not relocate memory (unlike vector)
 		 */
 		std::deque<T>                   values{};
-		base::HashMap<ObjID, base::StrID> id_to_name{};
-		base::HashMap<base::StrID, ObjID> name_to_id{};
+		base::HashMap<TID, base::StrID> id_to_name{};
+		base::HashMap<base::StrID, TID> name_to_id{};
 	};
 }

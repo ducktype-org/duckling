@@ -35,7 +35,7 @@ namespace dia {
 		 * @brief Returns the file connected to the location.
 		 */
 		[[nodiscard]]
-		virtual fs::File getSourceFile() const
+		virtual fs::FilePath getSourceFile() const
 			= 0;
 
 		/**
@@ -70,20 +70,20 @@ namespace dia {
 		Ref<tokenizer::TokenSource> getSource() const override;
 
 		[[nodiscard]]
-		fs::File getSourceFile() const override;
+		fs::FilePath getSourceFile() const override;
 
 		[[nodiscard]]
 		LocationType getLocationType() const override {
 			return LocationType::FileLocationType;
 		}
 
-		FileLocation(Ref<tokenizer::TokenSource> source, fs::File path):
+		FileLocation(Ref<tokenizer::TokenSource> source, fs::FilePath path):
 			  source(source),
 			  path(std::move(path)) {}
 
 	private:
 		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
-		fs::File                    path;    ///< Path to the original file.
+		fs::FilePath                path;    ///< Path to the original file.
 	};
 
 	/**
@@ -98,7 +98,7 @@ namespace dia {
 		Ref<tokenizer::TokenSource> getSource() const override;
 
 		[[nodiscard]]
-		fs::File getSourceFile() const override;
+		fs::FilePath getSourceFile() const override;
 
 		[[nodiscard]]
 		LocationType getLocationType() const override {
@@ -110,7 +110,7 @@ namespace dia {
 	private:
 		SourcePosition              parent;
 		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
-		fs::File                    path;    ///< Path to original file
+		fs::FilePath                path;    ///< Path to original file
 	};
 
 	class FakeLocation final: public Location {
@@ -127,7 +127,7 @@ namespace dia {
 		Ref<tokenizer::TokenSource> getSource() const override;
 
 		[[nodiscard]]
-		fs::File getSourceFile() const override;
+		fs::FilePath getSourceFile() const override;
 
 		[[nodiscard]]
 		LocationType getLocationType() const override {

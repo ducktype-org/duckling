@@ -104,7 +104,7 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	auto              path          = input.getPositional<fs::File>(0);
+	auto              path          = input.getPositional<fs::FilePath>(0);
 	auto              file_contents = path.getContent();
 	const std::string source_code   = file_contents.view().stdString();
 

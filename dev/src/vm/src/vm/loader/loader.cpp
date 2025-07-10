@@ -102,7 +102,7 @@ namespace {
 }
 
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
-	const std::vector<fs::File>& files
+	const std::vector<fs::FilePath>& files
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
@@ -184,7 +184,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<fs::File>& file_paths
+	const std::vector<fs::FilePath>& file_paths
 ) {
 	auto opt_code_collection = loadFiles(file_paths);
 	if (opt_code_collection.has_value()) return getProgram({ *std::move(opt_code_collection) });

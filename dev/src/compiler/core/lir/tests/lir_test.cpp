@@ -83,7 +83,7 @@ private:
 	};
 
 	LirModuleResult getLirOfModule(std::string_view module_path) {
-		auto [module, scope] = getModule(fs::File(module_path));
+		auto [module, scope] = getModule(fs::FilePath(module_path));
 		LirModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {

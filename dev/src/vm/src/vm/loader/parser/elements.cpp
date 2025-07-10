@@ -651,5 +651,5 @@ namespace vm::loader::parser {
 		}
 	}
 
-	ParsedFile::ParsedFile(fs::File source_file): source_file(std::move(source_file)) {}
+	ParsedFile::ParsedFile(fs::FilePath source_file): source_file(std::move(source_file)) {}
 }

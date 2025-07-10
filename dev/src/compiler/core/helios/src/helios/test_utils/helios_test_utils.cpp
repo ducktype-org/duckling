@@ -21,7 +21,7 @@
 #include <base/anycast.hpp>
 
 namespace compiler::helios::test_utils {
-	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
+	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {

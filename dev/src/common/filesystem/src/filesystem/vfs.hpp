@@ -1,3 +1,8 @@
+/**
+ * @file vfs.hpp
+ * @author Piotr Trzaskowski (piotr.trzaskowski@outlook.com)
+ */
+
 #pragma once
 
 #include <base/box.hpp>
@@ -42,18 +47,15 @@ namespace fs {
 		 * @brief Writes content to a virtual file, the file must already exist.
 		 * @param path The virtual path of the file.
 		 * @param content The content to write to the file.
-		 * @param append If true, appends the content to the file; otherwise, overwrites it.
 		 * @return True if the content was successfully written, false otherwise.
 		 */
-		bool writeFile(
-			const std::filesystem::path& path, std::string_view content, bool append = false
-		);
+		bool writeFile(const std::filesystem::path& path, std::string_view content);
 
 		/**
 		 * @brief Reads the content of a virtual file.
-		 * @details If the file does not exist or is a directory, an exception is thrown
 		 * @param path The virtual path of the file.
-		 * @return The content of the file
+		 * @return The content of the file, or an empty string if the file does not exist or is a
+		 * directory.
 		 */
 		std::string readFile(const std::filesystem::path& path);
 

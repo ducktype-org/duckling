@@ -8,7 +8,7 @@
 
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/utils/stable_obj_id_name_map.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm::code {
 	/**

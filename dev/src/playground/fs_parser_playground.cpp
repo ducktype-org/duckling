@@ -49,9 +49,9 @@ int main(int argc, const char* argv[]) {
 	}
 
 	auto fs_tree = fs::FsTree::create(
-		res.getValue<fs::File>('p').copyValueOr(fs::File(".")),
-		std::regex(res.getValue<std::string>("fileregex").copyValueOr("\\.*")),
-		std::regex(res.getValue<std::string>("dirregex").copyValueOr("\\..*"))
+		res.getValue<fs::FilePath>('p').valueOr(fs::FilePath(".")),
+		std::regex(res.getValue<std::string>("fileregex").valueOr("\\.*")),
+		std::regex(res.getValue<std::string>("dirregex").valueOr("\\..*"))
 	);
 	if (!res.isFlag("noprint")) std::cout << fs_tree->prettyPrint();
 	countFiles(*fs_tree);

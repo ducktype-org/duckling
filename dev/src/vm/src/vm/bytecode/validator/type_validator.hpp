@@ -2,7 +2,7 @@
 
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_obj_id_name_map.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm::code {
 	/**
@@ -16,7 +16,7 @@ namespace vm::code {
 		 */
 		void insertType(const TypeOfData& type);
 
-		const StableObjIdNameMap<TypeOfData>& getCurrentTypes() const;
+		const StableTypeIdNameMap<TypeOfData>& getCurrentTypes() const;
 
 		/**
 		 * @brief Creates TypeMetadata by building types.
@@ -24,6 +24,6 @@ namespace vm::code {
 		Box<TypeMetadata> validateAndProduceTypeMetadata() const;
 
 	private:
-		StableObjIdNameMap<TypeOfData> types;
+		StableTypeIdNameMap<TypeOfData> types;
 	};
 }

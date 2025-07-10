@@ -127,9 +127,9 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 
 // ============== VM API Functions ==============
 bool DuckVMRepl::loadOnVm(const std::string& code) {
-	bool     bad                 = false;
-	fs::File file                = fs::FileManager::createRandomTempFile(code);
-	auto     load_files_response = vm::api::loadFiles(pid, { file });
+	bool         bad                 = false;
+	fs::FilePath file                = fs::FilePath::createTempFile(code);
+	auto         load_files_response = vm::api::loadFiles(pid, { file });
 	if (!load_files_response.has_value()) {
 		auto err     = load_files_response.error();
 		auto core_op = std::get<vm::api::CoreOperationError>(err);

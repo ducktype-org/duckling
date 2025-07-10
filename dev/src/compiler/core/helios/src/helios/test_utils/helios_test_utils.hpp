@@ -11,7 +11,7 @@ namespace compiler::helios::test_utils {
 	 * @param path The path to the module directory.
 	 * @return The module's ModuleID and ScopeID.
 	 */
-	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path);
+	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path);
 
 	/**
 	 * Get the SymIDs of all symbols in a chain in a given scope.

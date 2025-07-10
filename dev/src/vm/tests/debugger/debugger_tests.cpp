@@ -28,8 +28,8 @@ private:
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
-		fs::File file(path(std::string(path_name)));
-		auto     loaded_file_response = vm::api::loadFiles(pid, { file });
+		fs::FilePath file(path(std::string(path_name)));
+		auto         loaded_file_response = vm::api::loadFiles(pid, { file });
 		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
 		return pid;
 	}

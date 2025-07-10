@@ -27,8 +27,8 @@ private:
 	void parseInvalidDbc(
 		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 	) {
-		fs::File file(path(dbc_filename));
-		auto     parsing_result = parser::parse({ file });
+		fs::FilePath file(path(dbc_filename));
+		auto         parsing_result = parser::parse({ file });
 		match_optional(parsing_result) {
 			opt_err(logger) {
 				std::stringstream ss;

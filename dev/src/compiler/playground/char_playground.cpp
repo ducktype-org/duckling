@@ -11,8 +11,8 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./char_testing file_name\n";
 		return 1;
 	}
-	fs::File path(argv[1]);
-	auto     file = tokenizer::makeTokenSource(path);
+	fs::FilePath path(argv[1]);
+	auto         file = tokenizer::makeTokenSource(path);
 
 	file->decode<fs::Encoding::UTF8>();
 

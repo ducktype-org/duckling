@@ -15,7 +15,7 @@ namespace compiler::driver {
 	 */
 	class PackageCompilationDriver final {
 		BackendType                   backend;
-		fs::File                      package_location;
+		fs::FilePath                  package_location;
 		artifacts::ArtifactCollection root_artifact_collection;
 
 	public:
@@ -24,7 +24,9 @@ namespace compiler::driver {
 		PackageCompilationDriver(const PackageCompilationDriver&) = delete;
 
 		PackageCompilationDriver(
-			BackendType backend, fs::File package_location, std::filesystem::path artifact_location
+			BackendType           backend,
+			fs::FilePath          package_location,
+			std::filesystem::path artifact_location
 		);
 
 		/**
