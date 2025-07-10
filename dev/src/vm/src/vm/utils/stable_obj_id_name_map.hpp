@@ -19,13 +19,13 @@ namespace vm {
 	 */
 	template<class T, class TID = u64>
 	requires(std::constructible_from<TID, usize> && std::constructible_from<usize, TID>)
-	class StableTypeIdNameMap {
+	class StableObjIdNameMap {
 	public:
-		StableTypeIdNameMap()                                      = default;
-		StableTypeIdNameMap(const StableTypeIdNameMap&)            = default;
-		StableTypeIdNameMap(StableTypeIdNameMap&&)                 = default;
-		StableTypeIdNameMap& operator=(const StableTypeIdNameMap&) = default;
-		StableTypeIdNameMap& operator=(StableTypeIdNameMap&&)      = default;
+		StableObjIdNameMap()                                     = default;
+		StableObjIdNameMap(const StableObjIdNameMap&)            = default;
+		StableObjIdNameMap(StableObjIdNameMap&&)                 = default;
+		StableObjIdNameMap& operator=(const StableObjIdNameMap&) = default;
+		StableObjIdNameMap& operator=(StableObjIdNameMap&&)      = default;
 
 		constexpr TID insert(T&& new_value, base::StrID name) {
 			auto id = TID(values.size());

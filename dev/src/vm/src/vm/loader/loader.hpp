@@ -10,7 +10,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/parser/elements.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <expected>
 #include <vector>
