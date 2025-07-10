@@ -29,11 +29,11 @@ namespace compiler::driver {
 		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, dvm_globals };
 		vm::code::CodeCollection code_collection = module.build();
 
-		std::ofstream dvm_file(output_artifact.FILE, std::ios::binary);
+		std::ofstream dvm_file(output_artifact.FILE.getPath(), std::ios::binary);
 		if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 		vm::code::serialize(code_collection, dvm_file);
 		dvm_file.close();
-		std::cout << "DVM file written to: " << output_artifact.FILE.string() << "\n";
+		std::cout << "DVM file written to: " << output_artifact.FILE.nativePath() << "\n";
 		// this->code_collection.emplace_back(std::move(code_collection));
 	}
 

@@ -2,6 +2,7 @@
 
 #include <base/ints.hpp>
 #include <base/optional.hpp>
+#include <filesystem/file.hpp>
 
 #include <string>
 #include <variant>
@@ -26,7 +27,7 @@ namespace compiler::driver {
 			//     u64 level;
 			// };
 
-			struct BackendOptions {
+			struct BackendOptions final {
 				struct VMBackend {};
 
 				struct LLVMBackend {};
@@ -48,14 +49,13 @@ namespace compiler::driver {
 			BackendOptions backend;
 		};
 
-		struct DebugOptions {
+		struct DebugOptions final {
 			bool lexer_cerr;
 			bool logger_cerr;
 		};
 
-		struct ArtifactsOptions {
-			// PR: change it to FS:
-			std::string artifacts_path;
+		struct ArtifactsOptions final {
+			fs::File artifacts_path;
 
 			// struct IncrementalCompilation {
 			//     bool enabled;

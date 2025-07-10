@@ -1,6 +1,6 @@
 #include <artifacts/artifacts.hpp>
-#include <driver/hout_to_binary_driver.hpp>
-#include <driver/link.hpp>
+#include <driver/initialize.hpp>
+#include <linker/link.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>

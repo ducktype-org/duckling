@@ -323,49 +323,48 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto options = clap.parse(command_args);
 
 		auto path_to_compile = options.getValue<fs::File>("module").value();
-
-		// @TODO: error handling
 		using namespace compiler;
-		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-		auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
 		auto backend_type
 			= options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM;
 
-		driver::HoutToBinaryDriver driver{
-			driver::BackendOptions{
-				.backend_type         = backend_type,
-				.compile_to_assembly  = options.isFlag("compile-to-assembly"),
-				.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
-				.dvm_code_only_memory = options.isFlag("dvm-run"),
-				.add_builtin_library  = options.isFlag("add-builtin-library"),
-			},
-		};
-
-		// mock collection for purpose of compilation of single module:
-		artifacts::ArtifactCollection base_artifact_collection{
-			"./duck_build/",
-		};
-		auto output_name = backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
-		auto output_artifact
-			= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
-
-		int exit_code = 0;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
-			if (options.isFlag("dvm-run")) {
-				auto run_result = driver.run();
-				if (run_result.has_value()) {
-					exit_code = run_result.value().exit_code;
-				} else {
-					std::cerr << "Error: " << run_result.error() << "\n";
-					exit_code = 1;
-				}
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.compilation_artifacts = {
+					.artifacts_path = fs::File("./duck_build/"),
+				},
+				.debug_options = getDebugOptionsFromClap(options),
 			}
-		});
+		);
 
-		return exit_code;
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+		
+		auto output_artifact = query::entryPoint<driver::CompileModule>({root, backend_type});
+
+		// TODO PR:
+		// .compile_to_assembly  = options.isFlag("compile-to-assembly"),
+		// 		.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
+		// 		.dvm_code_only_memory = options.isFlag("dvm-run"),
+		// 		.add_builtin_library  = options.isFlag("add-builtin-library"),
+
+
+		
+	
+		// int exit_code = 0;
+		// query::utils::withContextDo([&](query::Context& ctx) {
+		// 	driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
+		// 	if (options.isFlag("dvm-run")) {
+		// 		auto run_result = driver.run();
+		// 		if (run_result.has_value()) {
+		// 			exit_code = run_result.value().exit_code;
+		// 		} else {
+		// 			std::cerr << "Error: " << run_result.error() << "\n";
+		// 			exit_code = 1;
+		// 		}
+		// 	}
+		// });
+
+		return 0;
 	});
 	commands.add("compile_package", "compile given package into a binary.", [&]() {
 		// modify clap as needed:
@@ -393,7 +392,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.compilation_artifacts = {
-					.artifacts_path = options.getValue<fs::File>("artifact-location").value().nativePath(),
+					.artifacts_path = options.getValue<fs::File>("artifact-location").value(),
 				},
 				.debug_options = getDebugOptionsFromClap(options),
 			}
