@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
 		// Real parsing happens here. Only this operation may throw clap exception.
 		const clap::ParsingResult result = clap.parse(base::safeIntConv<usize>(argc), argv);
 
-		i64 times = result.getValue<i64>('n').valueOr(1);
+		i64 times = result.getValue<i64>('n').copyValueOr(1);
 		while (times--) {
 			// Since we are using clap::FileParser, it automatically links
 			// specified input to real files!

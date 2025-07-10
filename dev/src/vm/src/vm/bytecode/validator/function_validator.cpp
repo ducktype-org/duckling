@@ -817,12 +817,12 @@ class FunctionValidator {
 				    // if the previous instruction can take this extension.
 				    // Extensions must always come after some instruction, so it's invalid for it to
 				    // be the first instruction in a function (to not have a predecessor).
-					return predecessor.map(acceptsExtension<T>).valueOr(false);
+					return predecessor.map(acceptsExtension<T>).copyValueOr(false);
 				else
 					// It is invalid if the current instruction is not an extension, but the
 				    // previous instruction *requires* one. If there was no previous instruction,
 				    // it's not invalid.
-					return !predecessor.map(requiresSomeExtension).valueOr(false);
+					return !predecessor.map(requiresSomeExtension).copyValueOr(false);
 			},
 			instruction
 		);
