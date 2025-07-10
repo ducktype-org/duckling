@@ -243,6 +243,11 @@ jobs:
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+        
+      - name: Integration Tests
+        id: integration-tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest
 
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
