@@ -23,8 +23,6 @@
 #include <iostream>
 #include <regex>
 
-// @TODO
-
 const std::regex is_string_literal{ R"--(^.*string_literal$)--" };
 const std::regex is_preproc{ R"--(^preproc_.*$)--" };
 
