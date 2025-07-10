@@ -126,6 +126,9 @@ namespace clap {
 		[[nodiscard]]
 		const PreHandler& getPreHandler() const;
 
+		[[nodiscard]]
+		const Command& getRootCommand() const;
+
 
 		// TODOP: FUNCTIONALITY.
 		/**

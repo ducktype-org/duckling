@@ -297,6 +297,8 @@ namespace clap {
 
 	const Clap::PreHandler& Clap::getPreHandler() const { return pre_handler; }
 
+	const Command& Clap::getRootCommand() const { return root_command; }
+
 	Clap&& Clap::addHelpFlag() {
 		return addGlobalParameter(
 			ParamBuilder::ofFlag()

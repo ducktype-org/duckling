@@ -24,11 +24,14 @@ namespace clap {
 		 * @param clap The clap object used for parsing.
 		 * @param parsing_result Parsing result from help exception.
 		 * @return A nicely formatted string with a help message.
+		 // TODOP: Refector this comment.
 		 */
-		static std::string generate(const Clap& clap, const ParsingResult& parsing_result);
+		static std::string generate(
+		const Clap&                  clap,
+		const Command&               command,
+		const std::vector<const Command*>& command_path,
+		const std::string&           program_name
+		);
 	};
 
 }  // clap
-
-
-// TODOP: this should be done recursively for all subcommands.
