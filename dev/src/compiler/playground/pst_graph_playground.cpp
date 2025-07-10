@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./pst_graph duckling_file svg_out_file\n";
 		return 1;
 	}
-	fs::FilePath file(argv[1]);
-	pst::PST<>   pst(file);
+	fs::File   file(argv[1]);
+	pst::PST<> pst(file);
 
 	if (pst.getLogger()->bad()) {
 		pst.getLogger()->dumpLog(false, std::cerr);
