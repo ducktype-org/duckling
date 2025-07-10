@@ -254,19 +254,6 @@ namespace base {
 			return std::forward<Self>(self).private_optional.value();
 		}
 
-		/**
-		 * Get stored value or a given backup.
-		 * @param or_value value to be returned if empty
-		 * @return Stored value if exists, otherwise or_value.
-		 */
-		template<class Self>
-		[[nodiscard]]
-		constexpr QualifiedT<Self> valueOr(this Self&& self, QualifiedT<Self> or_value) noexcept {
-			if (self.has_value()) return std::forward<Self>(self).value();
-			return static_cast<QualifiedT<Self>>(or_value);
-		}
-
-		template<class Self, class U>
 		[[nodiscard]]
 		constexpr T copyValueOr(this Self&& self, U&& or_value) {
 			if (self.has_value())
