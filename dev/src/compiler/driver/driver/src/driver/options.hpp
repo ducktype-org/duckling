@@ -118,6 +118,7 @@ namespace compiler::driver {
 		 * @note: in the future this might hold more modes,
 		 * like repl mode, script compilation mode, lsp deamon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
+		 * We might also want to restrain compiler functionality based on the mode.
 		 */
 		std::variant<BareMode, PackageCompilationMode> mode;
 
