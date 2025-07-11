@@ -63,7 +63,7 @@ namespace vm::low {
 			}
 		}
 
-		Box<TypeMetadata>                           types;
+		Box<TypeMetadata>                          types;
 		StableObjIdNameMap<FuncData, usize>        functions;
 		StableObjIdNameMap<GlobData, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
