@@ -206,22 +206,8 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
 		             .build());
 
-		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("add-builtin-library")
-		             .addShortDesc("Links builtin library into the final executable.")
-		             .build());
-		clap.add(
-			clap::ParamBuilder::ofFlag()
-				.addLongName("dvm-run")
-				.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
-				.conditional(
-					[](const clap::ParsingResult& result) {
-						return not(result.isFlag("dvm-run") && not result.isFlag("dvm-backend"));
-					},
-					"Cannot run the code on the DVM without the --dvm-backend option."
-				)
-				.build()
-		);
+
+
 
 		auto options = clap.parse(command_args);
 
@@ -243,27 +229,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 		auto output_artifact = query::entryPoint<driver::CompileModule>({ root, backend_type });
-
-		// TODO PR:
-		// .compile_to_assembly  = options.isFlag("dump-llvm-asm"),
-		// 		.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
-		// 		.dvm_code_only_memory = options.isFlag("dvm-run"),
-		// 		.add_builtin_library  = options.isFlag("add-builtin-library"),
-
-
-		// int exit_code = 0;
-		// query::utils::withContextDo([&](query::Context& ctx) {
-		// 	driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
-		// 	if (options.isFlag("dvm-run")) {
-		// 		auto run_result = driver.run();
-		// 		if (run_result.has_value()) {
-		// 			exit_code = run_result.value().exit_code;
-		// 		} else {
-		// 			std::cerr << "Error: " << run_result.error() << "\n";
-		// 			exit_code = 1;
-		// 		}
-		// 	}
-		// });
 
 		return 0;
 	});
@@ -308,6 +273,50 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		compiler::driver::compilerEntirePackageIntoBinary(path_to_compile, backend_type);
 
 		return 0;
+	});
+	commands.add("run_dvm", "compile given module to DVM (in-memory) and run it", [&]() {
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('m')
+		             .addLongName("module")
+		             .addShortDesc("Path to the module")
+		             .required()
+		             .build());
+		clap.add(clap::ParamBuilder::ofFlag()
+				.addLongName("add-builtin-library")
+				.addShortDesc("Links builtin library into the final executable.")
+				.build());
+
+		auto options = clap.parse(command_args);
+
+		auto path_to_compile = options.getValue<fs::File>("module").value();
+		using namespace compiler;
+
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.compilation_artifacts = {
+					.artifacts_path = fs::File("./duck_build/"),
+				},
+				.debug_options = getDebugOptionsFromClap(options),
+			}
+		);
+
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+		int exit_code = 0;
+		// query::utils::withContextDo([&](query::Context& ctx) {
+		// 	driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
+		// 	if (options.isFlag("dvm-run")) {
+		// 		auto run_result = driver.run();
+		// 		if (run_result.has_value()) {
+		// 			exit_code = run_result.value().exit_code;
+		// 		} else {
+		// 			std::cerr << "Error: " << run_result.error() << "\n";
+		// 			exit_code = 1;
+		// 		}
+		// 	}
+		// });
+
+		return exit_code;
 	});
 	commands.add("throw", "Throws exception (testing command).", [&]() -> int {
 		clap.parse(command_args);

@@ -30,8 +30,6 @@ namespace compiler::driver {
 		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, dvm_globals };
 	
 		return module.build();
-
-\
 		// this->code_collection.emplace_back(std::move(code_collection));
 	}
 
