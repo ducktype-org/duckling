@@ -6,7 +6,12 @@ from .utils import (
     log_info_if_needed,
     print_failure,
     print_success,
-    write_log, print_neutral, TestStatistics, Success, Failure, Disabled,
+    write_log,
+    print_neutral,
+    TestStatistics,
+    Success,
+    Failure,
+    Disabled,
 )
 
 from ..helpers import (
@@ -20,15 +25,14 @@ from ..helpers import (
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
-
 def run_test(
-        test: Test,
-        path: str,
-        filter: str,
-        dry: bool,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: Path,
+    test: Test,
+    path: str,
+    filter: str,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -43,19 +47,17 @@ def run_test(
             verbose=verbose,
         )
     stats = TestStatistics([], [], [])
-    simplified_filter = filter[len(path) + 1:]
+    simplified_filter = filter[len(path) + 1 :]
     log_info(f"===== {path} =====")
     for i, case in enumerate(test.cases):
         if not case.name.startswith(simplified_filter):
             continue
         log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
-        case_path = path + '/' + case.name
+        case_path = path + "/" + case.name
         try:
             match run_case(test, case, dry, verbose, log_file):
                 case Failure(f):
-                    print_failure(
-                        f"Case `{case.name}` has failed because: {f.error}"
-                    )
+                    print_failure(f"Case `{case.name}` has failed because: {f.error}")
                     stats.failed.append(case_path)
                 case Success():
                     if not dry:
@@ -108,7 +110,7 @@ def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
 
 
 def run_case(
-        test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
+    test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
 ) -> Success | Failure | Disabled:
     """
     Runs a test case from `Case` object.
@@ -191,7 +193,7 @@ def run_case(
                 test_err,
                 test_expected_err,
                 log_file,
-                verbose
+                verbose,
             )
             return Failure(f"Stderrs do not match.")
 
@@ -229,14 +231,14 @@ def clean_test(test: Test, path: str, dry: bool, verbose: bool):
 
 
 def run_tests(
-        tests: TestNode,
-        filter: str,
-        tree: list[str],
-        clean: bool,
-        dry: bool,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: Path,
+    tests: TestNode,
+    filter: str,
+    tree: list[str],
+    clean: bool,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
 ) -> TestStatistics:
     """
     A recursive function for running all tests.
@@ -262,9 +264,7 @@ def run_tests(
         if clean:
             clean_test(test, path, dry, verbose)
         else:
-            stats = run_test(
-                test, path, filter, dry, fail_fast, verbose, log_file
-            )
+            stats = run_test(test, path, filter, dry, fail_fast, verbose, log_file)
             all_stats += stats
             if fail_fast and len(stats.failed) > 0:
                 return all_stats
@@ -278,13 +278,13 @@ def run_tests(
 
 
 def integration_tests_impl(
-        clean: bool,
-        dry: bool,
-        filter: str,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: str,
-        build_dir: str,
+    clean: bool,
+    dry: bool,
+    filter: str,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: str,
+    build_dir: str,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -303,7 +303,11 @@ def integration_tests_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    user_values = {"build_dir": str(Path(build_dir).absolute())}
+    user_values = {
+        "build_dir": str(Path(build_dir).absolute()),
+        "dev_dir": str(Path.cwd().absolute()),
+    }
+
     test_set = load_tests("integration_tests", user_values=user_values)
 
     (succeeded, failed, disabled) = run_tests(

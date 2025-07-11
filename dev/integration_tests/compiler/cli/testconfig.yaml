@@ -6,6 +6,7 @@ Tests:
   cli-options:
     Cases:
       help-message:
+        PreCase: "echo @{dev_dir}"
         # Tests help flag works
         run_args: "-h"
       something-wrong:
