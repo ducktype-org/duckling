@@ -79,5 +79,7 @@ namespace compiler::helios::code {
 				"findUnaryBuiltin called with unsupported type: {}", expr_type.getType().getKind()
 			);
 		}
+
+		CORE_UNREACHABLE();
 	}
 }

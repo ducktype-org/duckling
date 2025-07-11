@@ -166,8 +166,6 @@ namespace tsh {
 			);
 		}
 
-		[[nodiscard]]
-
 		/**
 		 * @brief Three-way comparison with another SymbolType.
 		 *
