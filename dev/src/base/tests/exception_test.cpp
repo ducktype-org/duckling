@@ -74,7 +74,7 @@ public:
 		}
 
 #ifndef DISABLE_ASSERT
-		fail("Panic what not caught");
+		fail("Panic was not caught");
 #endif
 	}
 
@@ -86,7 +86,7 @@ public:
 			return;
 		}
 #ifndef DISABLE_ASSERT
-		fail("Panic what not caught.");
+		fail("Panic was not caught.");
 #endif
 	}
 
