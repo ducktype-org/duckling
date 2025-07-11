@@ -5,7 +5,8 @@ add_library(Driver
 	src_private/driver_private/operations.cpp
 
 	src/driver/backend_type.cpp
-	src/driver/operations.cpp
+	src/driver/operations/generic_operations.cpp
+	src/driver/operations/dvm_operations.cpp
 	src/driver/initialize.cpp
 )
 
