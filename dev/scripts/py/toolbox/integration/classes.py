@@ -13,6 +13,7 @@ class Case:
     """
 
     name: str
+    enabled: str
     run: str
     pre_case: str
     post_case: str

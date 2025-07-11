@@ -1,5 +1,7 @@
 import pathlib
 import sys
+from dataclasses import dataclass, astuple
+
 from ..helpers import (
     click_log,
     exec_bash_command,
@@ -50,6 +52,9 @@ def print_success(msg, file=sys.stdout):
 def print_failure(msg, file=sys.stdout):
     click_log("FAIL", msg, fg="red", file=file)
 
+def print_neutral(msg, file=sys.stdout):
+    click_log("INFO", msg, fg="white", file=file)
+
 
 def dit_exec_command(
     command: str,
@@ -82,3 +87,40 @@ def write_log(msg, log_file):
 def log_info_if_needed(msg: str, dry: bool, verbose: bool):
     if dry or verbose:
         log_info(msg)
+
+
+@dataclass
+class Success:
+    pass
+
+
+@dataclass
+class Failure:
+    error: str
+
+
+@dataclass
+class Disabled:
+    pass
+
+
+@dataclass
+class TestStatistics:
+    """
+    Describes the number of ran and succeeded, failed, disabled test cases.
+    """
+    succeeded: list[str]
+    failed: list[str]
+    disabled: list[str]
+
+    def __add__(self, other):
+        return TestStatistics(self.succeeded + other.succeeded, self.failed + other.failed,
+                              self.disabled + other.disabled)
+
+    def iadd(self, other):
+        self.failed += other.failed
+        self.succeeded += other.succeeded
+        self.disabled += other.disabled
+
+    def __iter__(self):
+        return iter(astuple(self))
