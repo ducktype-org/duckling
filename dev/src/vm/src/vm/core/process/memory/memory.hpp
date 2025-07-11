@@ -76,14 +76,14 @@ namespace vm {
 		void freeBlock(Ref<Block> block);
 
 		/**
-		* @brief Attempts to insert global data associated with the given ID.
-		* 
-		* @param id The unique identifier for the global data.
-		* @param type The type reference to associate with the global data.
-		* @return true if the global data was inserted successfully (i.e., it did not already exist); false otherwise.
-		*/
+		 * @brief Attempts to insert global data associated with the given ID.
+		 *
+		 * @param id The unique identifier for the global data.
+		 * @param type The type reference to associate with the global data.
+		 * @return true if the global data was inserted successfully (i.e., it did not already
+		 * exist); false otherwise.
+		 */
 		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
-
 
 		/**
 		 * @brief Returns a view of global data by the id.

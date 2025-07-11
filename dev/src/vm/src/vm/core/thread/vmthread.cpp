@@ -431,7 +431,8 @@ namespace vm {
 		executing_program = program;
 		for (const auto& [global, id, name]: program->global_data.allData()) {
 			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (process_memory.tryInsertGlobalData(id, global->type) && global->ctor_name.has_value()) {
+			if (process_memory.tryInsertGlobalData(id, global->type)
+			    && global->ctor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->functions
 					                        .atMaybe(base::StrID(global->ctor_name.value().data()))
