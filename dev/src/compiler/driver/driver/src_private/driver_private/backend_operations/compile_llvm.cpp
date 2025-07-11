@@ -1,17 +1,17 @@
 #include "compile_llvm.hpp"
 
+#include "llvm_ir_lib.hpp"
+
 #include <backends/llvm/llvm_backend.hpp>
+#include <global_state/artifacts_location.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <system_command/system_command.hpp>
-#include <global_state/artifacts_location.hpp>
-#include "llvm_ir_lib.hpp"
 
 namespace compiler::driver {
 
 	backend_llvm::Module compileLIRModuleToLLVM(
-		query::Context&                ctx,
-		const LIRModuleData&       lir_module
+		query::Context& ctx, const LIRModuleData& lir_module
 		// const artifacts::FileArtifact& output_artifact
 	) {
 		backend_llvm::Module mod(lir_module.module_id);

@@ -23,8 +23,7 @@ namespace compiler::driver {
 	// };
 
 	vm::code::CodeCollection compileLIRModuleToDVM(
-		query::Context&                ctx,
-		const LIRModuleData&       lir_module
+		query::Context& ctx, const LIRModuleData& lir_module
 		// const artifacts::FileArtifact& output_artifact
 	);
 }

@@ -15,7 +15,7 @@ namespace compiler::driver {
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
 			dia::Logger::setImmediatelyDump(debug_options.logger_cerr);
 			lexer::Lexer::setTokenMessages(debug_options.lexer_cerr);
-			global_state::getDynamicDebugOptions()->llvm_dump_ir = debug_options.dump_llvm_ir;
+			global_state::getDynamicDebugOptions()->llvm_dump_ir  = debug_options.dump_llvm_ir;
 			global_state::getDynamicDebugOptions()->llvm_dump_asm = debug_options.dump_llvm_asm;
 		}
 

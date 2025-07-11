@@ -1,8 +1,8 @@
 #include "generic_operations.hpp"
 
-#include <driver_private/operations.hpp>
-#include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
+#include <driver_private/backend_operations/compile_llvm.hpp>
+#include <driver_private/operations.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
@@ -20,7 +20,6 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <fstream>
-
 #include <utility>
 
 namespace compiler::driver {
@@ -34,9 +33,12 @@ namespace compiler::driver {
 
 		static auto typeExtension(BackendType backend) {
 			switch (backend) {
-				case BackendType::LLVM: return ".o";
-				case BackendType::DVM: return ".dvc";
-				default: CORE_PANIC("bad backend type");
+			case BackendType::LLVM:
+				return ".o";
+			case BackendType::DVM:
+				return ".dvc";
+			default:
+				CORE_PANIC("bad backend type");
 			}
 		}
 
@@ -45,7 +47,8 @@ namespace compiler::driver {
 
 			// Note: in the future it should use stable hashing for incremental
 			// compilation. For now its ok.
-			auto output_name = key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+			auto output_name
+				= key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
@@ -56,30 +59,34 @@ namespace compiler::driver {
 			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name);
 
 			switch (key.backend_type) {
-				case BackendType::LLVM: {
-					auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
-					llvm_module.compile(output.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
-					
-					if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
-						base::StrID llvm_ir_path
-							= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
-						llvm_module.debugDumpToFile(llvm_ir_path);
-					}
-					if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
-						base::StrID assembly_path
-							= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
-						llvm_module.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
-					}
+			case BackendType::LLVM: {
+				auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
+				llvm_module.compile(
+					output.FILE.getPath(), backend_llvm::CompilationOutputType::Object
+				);
 
+				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
+					base::StrID llvm_ir_path
+						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
+					llvm_module.debugDumpToFile(llvm_ir_path);
 				}
-				case BackendType::DVM: {
-					auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
-					std::ofstream dvm_file(output.FILE.getPath(), std::ios::binary);
-					if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
-					vm::code::serialize(dvm_code_collection, dvm_file);
-					dvm_file.close();
+				if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
+					base::StrID assembly_path
+						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
+					llvm_module.compile(
+						assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly
+					);
 				}
-				default: CORE_PANIC("bad backend type");
+			}
+			case BackendType::DVM: {
+				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+				std::ofstream dvm_file(output.FILE.getPath(), std::ios::binary);
+				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
+				vm::code::serialize(dvm_code_collection, dvm_file);
+				dvm_file.close();
+			}
+			default:
+				CORE_PANIC("bad backend type");
 			}
 
 			return output;
@@ -114,14 +121,12 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx,
-		frontend::ModuleID module_id,
-		bool add_builtin_library
+		query::Context& ctx, frontend::ModuleID module_id, bool add_builtin_library
 	) {
-		auto hout = ctx.query<helios::QueryModuleHOUT>(module_id);
+		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
 		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
-					
+
 
 		vm::PID pid{};
 

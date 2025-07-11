@@ -50,9 +50,9 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	const clap::ParsingResult& parsing_result
 ) {
 	return compiler::driver::options_types::DebugOptions{
-		.lexer_cerr  = parsing_result.isFlag("lexer-cerr"),
-		.logger_cerr = parsing_result.isFlag("logger-cerr"),
-		.dump_llvm_ir = parsing_result.isFlag("dump-llvm-ir"),
+		.lexer_cerr    = parsing_result.isFlag("lexer-cerr"),
+		.logger_cerr   = parsing_result.isFlag("logger-cerr"),
+		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
 		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
 	};
 }
@@ -206,8 +206,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .build());
 
 
-
-
 		auto options = clap.parse(command_args);
 
 		auto path_to_compile = options.getValue<fs::File>("module").value();
@@ -281,9 +279,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
-				.addLongName("add-builtin-library")
-				.addShortDesc("Links builtin library into the final executable.")
-				.build());
+		             .addLongName("add-builtin-library")
+		             .addShortDesc("Links builtin library into the final executable.")
+		             .build());
 
 		auto options = clap.parse(command_args);
 
@@ -303,11 +301,8 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		int exit_code = 0;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto run_result = driver::runModuleOnDVM(
-				ctx,
-				root,
-				options.isFlag("add-builtin-library")
-			);
+			auto run_result
+				= driver::runModuleOnDVM(ctx, root, options.isFlag("add-builtin-library"));
 			if (run_result.has_value()) {
 				exit_code = run_result.value().exit_code;
 			} else {
