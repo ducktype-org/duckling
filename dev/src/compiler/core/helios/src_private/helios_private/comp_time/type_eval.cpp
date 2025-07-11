@@ -72,14 +72,17 @@ namespace compiler::helios {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(tsh::SymbolType<>{
-					ctx.query<tsh::QueryTupleType>({ subtypes }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				});
+				output(
+					tsh::SymbolType<>{
+						ctx.query<tsh::QueryTupleType>({ subtypes }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					}
+				);
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			void visitVariantTypeConstructorExpr(
+				const code::VariantTypeConstructorExpr& expr
 			) override {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
@@ -92,15 +95,40 @@ namespace compiler::helios {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(tsh::SymbolType<>{
-					ctx.query<tsh::QueryVariantType>({ subtypes }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				});
+				output(
+					tsh::SymbolType<>{
+						ctx.query<tsh::QueryVariantType>({ subtypes }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					}
+				);
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
 				expr.inner->acceptVisitor(*this);
+			}
+
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+				auto value = evalHoutExprToType(ctx, expr.expr.ref());
+				if (value.hasError()) {
+					failed = true;
+					return;
+				}
+
+				switch (expr.operation) {
+				case code::BuiltinUnary::Ref: {
+					output(value.value().withReferenceKind(tsh::ReferenceKind::Ref));
+					return;
+				}
+				case code::BuiltinUnary::Box: {
+					output(value.value().withReferenceKind(tsh::ReferenceKind::Box));
+				}
+				default:
+					CORE_PANIC(
+						"ShortPathVisitor encountered unsupported unary operation: {}",
+						static_cast<std::uint8_t>(expr.operation)
+					);
+				}
 			}
 		};
 

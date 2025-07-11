@@ -159,6 +159,15 @@ namespace tsh {
 			return uniqueness;
 		}
 
+		[[nodiscard]]
+		SymbolType<ABSTRACT_TYPE> withReferenceKind(const ReferenceKind new_reference_kind) const {
+			return SymbolType<ABSTRACT_TYPE>(
+				abstract_type, new_reference_kind, mutability, leakage, uniqueness
+			);
+		}
+
+		[[nodiscard]]
+
 		/**
 		 * @brief Three-way comparison with another SymbolType.
 		 *

@@ -58,27 +58,26 @@ namespace compiler::helios::code {
 	}
 
 	base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr) {
-		// note: this is mock that works only for very simple int, bool operations.
-		// when refactoring it remember about binaryBuiltin
-
 		auto expr_type = expr->expression_type;
 
-		// if (expr_type.getType().getKind() != tsh::Kind::Integral
-		//     and expr_type.getType().getKind() != tsh::Kind::Bool) {
-		// 	// No builtins for this case for types other than ints and bools for now.
-		// 	return {};
-		// }
-
-		// @TODO: change to base::map when possible
-		const static std::map<base::StrID, BuiltinUnary> operators = {
-			{ base::StrID("-"), BuiltinUnary::IntegerNegation },
-			{ keywordToStr(lang_def::Keyword::Not), BuiltinUnary::BooleanNot },
-			{ keywordToStr(lang_def::Keyword::Ref), BuiltinUnary::Ref },
-			{ keywordToStr(lang_def::Keyword::Box), BuiltinUnary::Box },
-		};
-
-		if (operators.contains(op)) return operators.at(op);
-
-		return {};
+		switch (expr_type.getType().getKind()) {
+		case tsh::Kind::Integral:
+			if (op == base::StrID("-")) return BuiltinUnary::IntegerNegation;
+			break;
+		case tsh::Kind::Bool:
+			if (op == keywordToStr(lang_def::Keyword::Not)) return BuiltinUnary::BooleanNot;
+			break;
+		case tsh::Kind::Meta:
+			if (op == keywordToStr(lang_def::Keyword::Ref)) {
+				return BuiltinUnary::Ref;
+			} else if (op == keywordToStr(lang_def::Keyword::Box)) {
+				return BuiltinUnary::Box;
+			}  // No builtins for meta types other than ref and box for now.
+			break;
+		default:
+			CORE_PANIC(
+				"findUnaryBuiltin called with unsupported type: {}", expr_type.getType().getKind()
+			);
+		}
 	}
 }
