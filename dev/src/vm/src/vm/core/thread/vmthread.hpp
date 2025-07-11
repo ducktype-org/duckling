@@ -253,6 +253,11 @@ namespace vm {
 			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
 		);
 
+		/**
+		 * @brief Run destructors of global variables.
+		 */
+		void runGlobalDestructors();
+
 		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 
 		// Given lock cannot be a lock on external_api_mutex

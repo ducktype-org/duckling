@@ -434,9 +434,12 @@ namespace vm {
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->functions
-					                        .atMaybe(base::StrID(global->ctor_name.value().data()))
-					                        .expect("Called function does not exist: " + func_name);
+					const auto& func
+						= *executing_program->functions
+					           .atMaybe(base::StrID(global->ctor_name.value().data()))
+					           .expect(
+								   "Called function does not exist: " + global->ctor_name.value()
+							   );
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
 					i64 exit_code  = executeFunction(start_function, func);
@@ -464,6 +467,30 @@ namespace vm {
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		}
+	}
+
+	/**
+	 * @brief Function to be called when the VMProcess is destroyed.
+	 */
+	void VMThread::runGlobalDestructors() {
+		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
+			if (global->dtor_name.has_value()) {
+				try {
+					const auto& func
+						= *executing_program->functions
+					           .atMaybe(base::StrID(global->dtor_name.value().data()))
+					           .expect(
+								   "Called function does not exist: " + global->dtor_name.value()
+							   );
+					low::FuncData start_function;
+					start_function = createStartFunctionFor(func, {});
+					i64 exit_code  = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+				} catch (const KillProcessException& e) {
+					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+				}
+			}
 		}
 	}
 
