@@ -112,15 +112,15 @@ Config file variables (linked to a node in the test tree, not inherited):
 
 General variables (not tied to any context):
 
-- `Run` - Required - Command executed in order to run a test case.
-- `Clean` - Command executed explicitly by the user to clean all the test artifacts.
-- `PreTest` - Command executed **before** running a test.
-- `PostTest` - Command executed **after** running a test.
-- `PreCase` - Command executed **before** running a test case.
-- `PostCase` - Command executed **after** running a test case.
+- `Run` - Required - Bash command executed in order to run a test case.
+- `Clean` - Bash command executed explicitly by the user to clean all the test artifacts.
+- `PreTest` - Bash command executed **before** running a test.
+- `PostTest` - Bash command executed **after** running a test.
+- `PreCase` - Bash command executed **before** running a test case.
+- `PostCase` - Bash command executed **after** running a test case.
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
 - `ExitCode` - Expected test case's exit code - defaults to 0.
-- `Enabled` - Command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
+- `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 
 Test specific:
 
@@ -135,7 +135,6 @@ Case specific:
 - `Input` - Stdin passed to a program.
 - `Output` - Expected stdout of a program.
 - `Err` - Expected stderr of a program.
-- `RunArgs` - Arguments passed to a program.
 - Additionally: `Run`, `PreCase`, `PostCase`, `TimeOut`, `ExitCode`, `Enabled` explained above.
 
 `Input`, `Output`, `Err` inside a case can be specified as follows:
