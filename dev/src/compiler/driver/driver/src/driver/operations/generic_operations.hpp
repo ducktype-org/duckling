@@ -19,10 +19,18 @@ namespace compiler::driver {
 	 */
 	void compilerEntirePackageIntoBinary(const fs::File& package_location, BackendType backend);
 
+	struct RunOutput final {
+		int exit_code;
+	};
+
 	/**
 	 * Temporary interface for compiling and running code on DVM in-memory.
 	 */
-	std::expected<RunOutput, std::string>  runModuleOnDVM(frontend::ModuleID module_id, bool add_builtin_library);
+	std::expected<RunOutput, std::string>  runModuleOnDVM(
+		query::Context& ctx,
+		frontend::ModuleID module_id,
+		bool add_builtin_library
+	);
 
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;

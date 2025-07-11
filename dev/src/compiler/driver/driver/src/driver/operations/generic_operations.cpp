@@ -15,7 +15,7 @@
 
 // #include <vm/api/data/api_error.hpp>
 // #include <vm/api/data/process_info.hpp>
-// #include <vm/api/vm.hpp>
+#include <vm/api/vm.hpp>
 // #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
@@ -111,6 +111,35 @@ namespace compiler::driver {
 			objects.push_back(emitBuiltinLLVMObjectFile());
 			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
 		}
+	}
+
+	std::expected<RunOutput, std::string> runModuleOnDVM(
+		query::Context& ctx,
+		frontend::ModuleID module_id,
+		bool add_builtin_library
+	) {
+		auto hout = ctx.query<helios::QueryModuleHOUT>(module_id);
+		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
+		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+					
+
+		vm::PID pid{};
+
+		return vm::api::spawn()
+		    .and_then([&](vm::api::ProcessInfo process) {
+				pid = process.pid;
+				if (add_builtin_library) return vm::api::loadStdlib(pid);
+				return std::expected<void, vm::api::ApiError>{};
+			})
+		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection }); })
+		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
+		    .and_then([&] { return vm::api::run(pid); })
+		    .and_then([&] { return vm::api::join(pid); })
+		    .and_then([&] { return vm::api::getExitCode(pid); })
+		    .transform_error(vm::api::errorToString)
+		    .transform([](auto exit_code) {
+				return RunOutput{ .exit_code = base::safeIntConv<int>(exit_code) };
+			});
 	}
 
 }

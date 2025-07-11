@@ -6,7 +6,6 @@
 
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
-#include <driver/operations/dvm_operations.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lexer/lexer.hpp>
@@ -303,18 +302,19 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 		int exit_code = 0;
-		// query::utils::withContextDo([&](query::Context& ctx) {
-		// 	driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
-		// 	if (options.isFlag("dvm-run")) {
-		// 		auto run_result = driver.run();
-		// 		if (run_result.has_value()) {
-		// 			exit_code = run_result.value().exit_code;
-		// 		} else {
-		// 			std::cerr << "Error: " << run_result.error() << "\n";
-		// 			exit_code = 1;
-		// 		}
-		// 	}
-		// });
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto run_result = driver::runModuleOnDVM(
+				ctx,
+				root,
+				options.isFlag("add-builtin-library")
+			);
+			if (run_result.has_value()) {
+				exit_code = run_result.value().exit_code;
+			} else {
+				std::cerr << "Error: " << run_result.error() << "\n";
+				exit_code = 1;
+			}
+		});
 
 		return exit_code;
 	});
