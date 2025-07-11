@@ -1,14 +1,22 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
+#include <base/exceptions.hpp>
+
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleTesterTest
 	i32 test_no;
+	i32 exception_no = 0;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR(i32 test_no), test_no(test_no) {
+	static constexpr i32 NUM_FAILING_TESTS   = 7;
+	static constexpr i32 NUM_EXCEPTION_TESTS = 7;
+
+	TESTER_TEST_SIMPLE_CONSTRUCTOR(i32 test_no, i32 exception_no), test_no(test_no),
+		exception_no(exception_no) {
 		TESTER_ADD_TEST(choose);
+		TESTER_ADD_TEST(throwException);
 		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
 		TESTER_ADD_TEST(addSpacesTest);
 	}
@@ -26,6 +34,33 @@ private:
 			return catchNoThrow();
 		case 3:
 			return failingIsNotThrowingStd();
+		case 4:
+			return assertTrueFails();
+		case 5:
+			return assertFalseFails();
+		case 6:
+			return assertEqualFails();
+		default:
+			return;
+		}
+	}
+
+	void throwException() {
+		switch (exception_no) {
+		case 0:
+			return;
+		case 1:
+			throw base::Panic("panic", "This is a panic test");
+		case 2:
+			throw base::LogicError("Logic Error");
+		case 3:
+			throw base::NotYetImplemented("Not yet implemented");
+		case 4:
+			throw base::Exception();
+		case 5:
+			throw std::runtime_error("This is a runtime error test");
+		case 6:
+			throw std::logic_error("Logic Error");
 		default:
 			return;
 		}
@@ -61,6 +96,21 @@ private:
 		assertThrows<std::logic_error>(
 			[&]() { throw std::exception(); }, "expected failure: Wrong exception was thrown"
 		);
+	}
+
+	void assertTrueFails() {
+		message("Expected to fail: checks that assertTrue fails when condition is false");
+		assertTrue(false, "expected failure: assertTrue failed");
+	}
+
+	void assertFalseFails() {
+		message("Expected to fail: checks that assertFalse fails when condition is true");
+		assertFalse(true, "expected failure: assertFalse failed");
+	}
+
+	void assertEqualFails() {
+		message("Expected to fail: checks that assertEqual fails when values are not equal");
+		assertEqual(1, 2, "expected failure: assertEqual failed");
 	}
 
 	void verySimpleTestingUtilsTest() {
@@ -128,15 +178,19 @@ int main(int argc, const char**) {
 
 	auto config = tester::getTestConfig("/common/tester/tests/");
 
-	SimpleTesterTest passing_test(std::move(config), 0);
+	SimpleTesterTest passing_test(config, 0, 0);
 	if (!passing_test.run()) return 1;
 
 	/* The tests below are "expected to fail".
 	 * Currently there is no way to specify that.
-	 * @TODO: change that when "expected to fail" is added
+	 * @TODO: change that when "expected to fail" is added #1049
 	 */
-	for (i32 i = 1; i < 4; i++) {
-		SimpleTesterTest failing_test(config, i);
+	for (i32 i = 1; i < SimpleTesterTest::NUM_FAILING_TESTS; i++) {
+		SimpleTesterTest failing_test(config, i, 0);
 		if (failing_test.run()) return 1;
+	}
+	for (i32 i = 1; i < SimpleTesterTest::NUM_EXCEPTION_TESTS; i++) {
+		SimpleTesterTest exception_test(config, 0, i);
+		if (exception_test.run()) return 1;
 	}
 }
