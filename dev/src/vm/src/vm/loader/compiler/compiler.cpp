@@ -19,22 +19,22 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <expected>
 
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableTypeIdNameMap<code::Function>&         func_map;
-			const TypeMetadata&                                type_map;
-			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
-			const base::HashMap<i32, base::StrID>&             method_id_to_name;
-			const base::HashMap<base::StrID, i32>&             method_name_to_id;
-			base::Optional<code::Function>                     function{};
-			base::HashMap<base::StrID, usize>                  label_positions{};
-			base::HashMap<base::StrID, usize>                  local_offset_map{};
-			usize                                              local_stack_size{};
+			const StableObjIdNameMap<code::Function>&         func_map;
+			const TypeMetadata&                               type_map;
+			const StableObjIdNameMap<TypeCRef, GlobalDataID>& globals;
+			const base::HashMap<i32, base::StrID>&            method_id_to_name;
+			const base::HashMap<base::StrID, i32>&            method_name_to_id;
+			base::Optional<code::Function>                    function{};
+			base::HashMap<base::StrID, usize>                 label_positions{};
+			base::HashMap<base::StrID, usize>                 local_offset_map{};
+			usize                                             local_stack_size{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -304,8 +304,8 @@ namespace vm::loader::compiler {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
-		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto                                        ctx = CompilationContext(
+		StableObjIdNameMap<TypeCRef, GlobalDataID> globals;
+		auto                                       ctx = CompilationContext(
             program.functions(), *types, globals, method_id_to_name, method_name_to_id
         );
 

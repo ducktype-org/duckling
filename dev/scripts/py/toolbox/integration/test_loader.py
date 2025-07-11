@@ -33,6 +33,7 @@ CASE_ALLOWED_KEYS = {
     ERR,
     TIME_OUT,
     EXIT_CODE,
+    ENABLED,
     PARENT,
 }
 
@@ -69,6 +70,7 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
         return Case(
             name=case_dict[CASE_NAME],
             run=config_find_and_eval(case_dict, RUN),
+            enabled=config_find_and_eval(case_dict, ENABLED, default=""),
             pre_case=config_find_and_eval(case_dict, PRE_CASE, default=""),
             post_case=config_find_and_eval(case_dict, POST_CASE, default=""),
             input=io_data[0],
