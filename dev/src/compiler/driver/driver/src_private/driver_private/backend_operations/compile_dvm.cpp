@@ -11,13 +11,12 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <expected>
-#include <fstream>
 
 namespace compiler::driver {
-	void compileBackendModuleToDVM(
+	vm::code::CodeCollection compileBackendModuleToDVM(
 		query::Context&                query_ctx,
-		const BackendModuleData&       data,
-		const artifacts::FileArtifact& output_artifact
+		const BackendModuleData&       data
+		// const artifacts::FileArtifact& output_artifact
 	) {
 		std::vector<backend_vm::BackendDVMGlobal> dvm_globals;
 		for (const auto& global: data.globals) {
@@ -29,13 +28,14 @@ namespace compiler::driver {
 			dvm_globals.emplace_back(std::move(dvm_global));
 		}
 		backend_vm::Module       module{ query_ctx, data.module_id, data.functions, dvm_globals };
-		vm::code::CodeCollection code_collection = module.build();
+	
+		return module.build();
 
-		std::ofstream dvm_file(output_artifact.FILE.getPath(), std::ios::binary);
-		if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
-		vm::code::serialize(code_collection, dvm_file);
-		dvm_file.close();
-		std::cout << "DVM file written to: " << output_artifact.FILE.nativePath() << "\n";
+		// std::ofstream dvm_file(output_artifact.FILE.getPath(), std::ios::binary);
+		// if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
+		// vm::code::serialize(code_collection, dvm_file);
+		// dvm_file.close();
+		// std::cout << "DVM file written to: " << output_artifact.FILE.nativePath() << "\n";
 		// this->code_collection.emplace_back(std::move(code_collection));
 	}
 

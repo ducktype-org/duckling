@@ -5,7 +5,8 @@
 #include "commands.hpp"
 
 #include <driver/initialize.hpp>
-#include <driver/operations.hpp>
+#include <driver/operations/generic_operations.hpp>
+#include <driver/operations/dvm_operations.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lexer/lexer.hpp>

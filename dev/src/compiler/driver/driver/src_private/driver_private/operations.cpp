@@ -1,8 +1,7 @@
 #include "operations.hpp"
 
-#include "backend_operations/compile_dvm.hpp"
-#include "backend_operations/compile_llvm.hpp"
-#include "backend_operations/llvm_ir_lib.hpp"
+// #include "backend_operations/compile_dvm.hpp"
+// #include "backend_operations/compile_llvm.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -15,9 +14,7 @@
 
 namespace compiler::driver {
 
-	/**
-	 * This is a helper function for compileHOUTUnit.
-	 */
+
 	BackendModuleData compileHOUTUnitToBackendModuleData(
 		query::Context& ctx, base::CRef<compiler::helios::HOUTUnit> hout_unit, base::StrID module_id
 	) {
@@ -72,43 +69,37 @@ namespace compiler::driver {
 		};
 	}
 
-	void compileHOUTUnit(
-		query::Context&                        ctx,
-		base::CRef<compiler::helios::HOUTUnit> hout_unit,
-		base::StrID                            module_id,
-		const artifacts::FileArtifact&         output_artifact,
-		BackendType                            backend_type
-	) {
-		auto module_data = compileHOUTUnitToBackendModuleData(ctx, hout_unit, module_id);
+	// void compileHOUTUnit(
+	// 	query::Context&                        ctx,
+	// 	base::CRef<compiler::helios::HOUTUnit> hout_unit,
+	// 	base::StrID                            module_id,
+	// 	const artifacts::FileArtifact&         output_artifact,
+	// 	BackendType                            backend_type
+	// ) {
+	// 	auto module_data = compileHOUTUnitToBackendModuleData(ctx, hout_unit, module_id);
 
-		compileBackendModule(ctx, module_data, output_artifact, backend_type);
-	}
+	// 	compileBackendModule(ctx, module_data, output_artifact, backend_type);
+	// }
 
-	void compileBackendModule(
-		query::Context&                ctx,
-		const BackendModuleData&       module_data,
-		const artifacts::FileArtifact& output_artifact,
-		BackendType                    backend_type
-	) {
-		switch (backend_type) {
-		case BackendType::LLVM: {
-			compileBackendModuleToLLVM(ctx, module_data, output_artifact);
-			break;
-		}
-		case BackendType::DVM: {
-			compileBackendModuleToDVM(ctx, module_data, output_artifact);
-			break;
-		}
-		default:
-			CORE_PANIC("Unsupported backend type for compilation");
-		}
-	}
+	// void compileBackendModule(
+	// 	query::Context&                ctx,
+	// 	const BackendModuleData&       module_data,
+	// 	const artifacts::FileArtifact& output_artifact,
+	// 	BackendType                    backend_type
+	// ) {
+	// 	switch (backend_type) {
+	// 	case BackendType::LLVM: {
+	// 		compileBackendModuleToLLVM(ctx, module_data, output_artifact);
+	// 		break;
+	// 	}
+	// 	case BackendType::DVM: {
+	// 		compileBackendModuleToDVM(ctx, module_data, output_artifact);
+	// 		break;
+	// 	}
+	// 	default:
+	// 		CORE_PANIC("Unsupported backend type for compilation");
+	// 	}
+	// }
 
-	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {
-		auto builtin_obj_file
-			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID("builtins_llvm.o"));
-		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-		mod.compile(builtin_obj_file.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
-		return builtin_obj_file;
-	}
+	
 }

@@ -11,38 +11,37 @@
 
 namespace compiler::driver {
 
-	/**
-	 * @brief Compiles the HOUTUnit to the backend module.
-	 * Only used internally by the driver.
-	 * @param module_data MModule to compile.
-	 * @param output_artifact Artifact to write the compiled module to.
-	 */
-	void compileHOUTUnit(
-		query::Context&                        ctx,
-		base::CRef<compiler::helios::HOUTUnit> hout_unit,
-		base::StrID                            module_id,
-		const artifacts::FileArtifact&         output_artifact,
-		BackendType                            backend_type
+	// /**
+	//  * @brief Compiles the HOUTUnit to the backend module.
+	//  * Only used internally by the driver.
+	//  * @param module_data MModule to compile.
+	//  * @param output_artifact Artifact to write the compiled module to.
+	//  */
+	// void compileHOUTUnit(
+	// 	query::Context&                        ctx,
+	// 	base::CRef<compiler::helios::HOUTUnit> hout_unit,
+	// 	base::StrID                            module_id,
+	// 	const artifacts::FileArtifact&         output_artifact,
+	// 	BackendType                            backend_type
+	// );
+
+	BackendModuleData compileHOUTUnitToBackendModuleData(
+		query::Context& ctx, base::CRef<compiler::helios::HOUTUnit> hout_unit, base::StrID module_id
 	);
 
 
-	/**
-	 * @brief Compile given the LIR functions and module data to the backend module.
-	 * Outputs the module value.
-	 * @param module_data MModule to compile.
-	 * @param output_artifact Artifact to write the compiled module to.
-	 */
-	void compileBackendModule(
-		query::Context&                ctx,
-		const BackendModuleData&       module_data,
-		const artifacts::FileArtifact& output_artifact,
-		BackendType                    backend_type
-	);
+	// /**
+	//  * @brief Compile given the LIR functions and module data to the backend module.
+	//  * Outputs the module value.
+	//  * @param module_data MModule to compile.
+	//  * @param output_artifact Artifact to write the compiled module to.
+	//  */
+	// void compileBackendModule(
+	// 	query::Context&                ctx,
+	// 	const BackendModuleData&       module_data,
+	// 	const artifacts::FileArtifact& output_artifact,
+	// 	BackendType                    backend_type
+	// );
 
 
-	// todo PR: move elsewhere
-	/**
-	 * Compile builtin LLVM library into an object file.
-	 */
-	artifacts::FileArtifact emitBuiltinLLVMObjectFile();
 }

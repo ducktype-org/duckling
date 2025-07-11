@@ -4,13 +4,15 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <system_command/system_command.hpp>
+#include <global_state/artifacts_location.hpp>
+#include "llvm_ir_lib.hpp"
 
 namespace compiler::driver {
 
-	void compileBackendModuleToLLVM(
+	backend_llvm::Module compileBackendModuleToLLVM(
 		query::Context&                ctx,
-		const BackendModuleData&       lir_module,
-		const artifacts::FileArtifact& output_artifact
+		const BackendModuleData&       lir_module
+		// const artifacts::FileArtifact& output_artifact
 	) {
 		backend_llvm::Module mod(lir_module.module_id);
 
@@ -58,6 +60,8 @@ namespace compiler::driver {
 
 		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
+		return mod;
+
 		// TODO PR:
 		// if (options->dump_llvm_ir) {
 		// 	base::StrID llvm_ir_path
@@ -71,6 +75,14 @@ namespace compiler::driver {
 		// 	mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
 		// }
 
-		mod.compile(output_artifact.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+		// mod.compile(output_artifact.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+	}
+
+	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {
+		auto builtin_obj_file
+			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID("builtins_llvm.o"));
+		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
+		mod.compile(builtin_obj_file.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+		return builtin_obj_file;
 	}
 }

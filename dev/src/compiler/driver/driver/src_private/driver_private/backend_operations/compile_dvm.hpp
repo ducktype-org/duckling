@@ -22,9 +22,9 @@ namespace compiler::driver {
 	// 	auto run() -> std::expected<RunOutput, std::string> final;
 	// };
 
-	void compileBackendModuleToDVM(
+	vm::code::CodeCollection compileBackendModuleToDVM(
 		query::Context&                ctx,
-		const BackendModuleData&       lir_module,
-		const artifacts::FileArtifact& output_artifact
+		const BackendModuleData&       lir_module
+		// const artifacts::FileArtifact& output_artifact
 	);
 }
