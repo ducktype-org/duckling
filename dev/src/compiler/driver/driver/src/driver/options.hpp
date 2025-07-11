@@ -53,6 +53,8 @@ namespace compiler::driver {
 		struct DebugOptions final {
 			bool lexer_cerr;
 			bool logger_cerr;
+			bool dump_llvm_ir;
+			bool dump_llvm_asm;
 		};
 
 		struct ArtifactsOptions final {

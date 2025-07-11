@@ -53,6 +53,8 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	return compiler::driver::options_types::DebugOptions{
 		.lexer_cerr  = parsing_result.isFlag("lexer-cerr"),
 		.logger_cerr = parsing_result.isFlag("logger-cerr"),
+		.dump_llvm_ir = parsing_result.isFlag("dump-llvm-ir"),
+		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
 	};
 }
 
@@ -200,7 +202,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Compile to DVM bytecode.")
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("compile-to-assembly")
+		             .addLongName("dump-llvm-asm")
 		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
 		             .build());
 
@@ -243,7 +245,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto output_artifact = query::entryPoint<driver::CompileModule>({ root, backend_type });
 
 		// TODO PR:
-		// .compile_to_assembly  = options.isFlag("compile-to-assembly"),
+		// .compile_to_assembly  = options.isFlag("dump-llvm-asm"),
 		// 		.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
 		// 		.dvm_code_only_memory = options.isFlag("dvm-run"),
 		// 		.add_builtin_library  = options.isFlag("add-builtin-library"),

@@ -5,6 +5,7 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <global_state/options.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
@@ -59,19 +60,16 @@ namespace compiler::driver {
 					auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
 					llvm_module.compile(output.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
 					
-
-					// TODO PR:
-					// if (options->dump_llvm_ir) {
-					// 	base::StrID llvm_ir_path
-					// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
-					// 	mod.debugDumpToFile(llvm_ir_path);
-					// }
-
-					// if (options->compile_to_assembly) {
-					// 	base::StrID assembly_path
-					// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
-					// 	mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
-					// }
+					if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
+						base::StrID llvm_ir_path
+							= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
+						llvm_module.debugDumpToFile(llvm_ir_path);
+					}
+					if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
+						base::StrID assembly_path
+							= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
+						llvm_module.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
+					}
 
 				}
 				case BackendType::DVM: {
