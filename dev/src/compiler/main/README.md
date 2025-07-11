@@ -1,4 +1,4 @@
-Main duckc cli binary main.
+Main binary of duckc cli.
 
 
 
