@@ -8,7 +8,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <utility>
 
@@ -50,9 +50,9 @@ namespace vm::low {
 				this->global_data.insert(this->types->at(global.type), global.name);
 		}
 
-		Box<TypeMetadata>                           types;
-		StableTypeIdNameMap<FuncData, usize>        functions;
-		StableTypeIdNameMap<TypeCRef, GlobalDataID> global_data;
+		Box<TypeMetadata>                          types;
+		StableObjIdNameMap<FuncData, usize>        functions;
+		StableObjIdNameMap<TypeCRef, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<i32, base::StrID> method_name_pool;

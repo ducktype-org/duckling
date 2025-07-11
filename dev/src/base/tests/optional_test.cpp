@@ -36,7 +36,6 @@ public:
 		TESTER_ADD_TEST(testExpect);
 		TESTER_ADD_TEST(testPreservingValueCategories);
 		TESTER_ADD_TEST(testAddresses);
-		TESTER_ADD_TEST(testNoCopyNoMove);
 		TESTER_ADD_TEST(testCopyValueOr);
 	}
 
@@ -404,7 +403,6 @@ public:
 #define expected_value                   std::declval<ExpectedValueT>()
 
 		ASSERT_EQUAL_TYPES(decltype(optional.value()), ExpectedValueT);
-		ASSERT_EQUAL_TYPES(decltype(optional.valueOr(expected_value)), ExpectedValueT);
 		ASSERT_EQUAL_TYPES(decltype(*optional), ExpectedValueT);
 		ASSERT_EQUAL_TYPES(decltype(optional.expect("")), ExpectedValueT);
 		ASSERT_EQUAL_TYPES(decltype(optional.template expect<int>(5)), ExpectedValueT);
@@ -436,7 +434,6 @@ public:
 		u32&          internal_integer = optional.value();
 		u32           other_integer    = 10;
 		assert_equal_addr(internal_integer, optional.value(), "value");
-		assert_equal_addr(internal_integer, optional.valueOr(other_integer), "valueOr");
 		assert_equal_addr(internal_integer, *optional, "*operator");
 		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");
 		assert_equal_addr(internal_integer, optional.expect<std::string>(""), "expect with error");
@@ -444,14 +441,9 @@ public:
 		optional = Optional<u32>{ 37 };
 		state    = "after copy";
 		assert_equal_addr(internal_integer, optional.value(), "value");
-		assert_equal_addr(internal_integer, optional.valueOr(other_integer), "valueOr");
 		assert_equal_addr(internal_integer, *optional, "operator*");
 		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");
 		assert_equal_addr(internal_integer, optional.expect<std::string>(""), "expect with error");
-
-		state    = "empty optional";
-		optional = Optional<u32>{};
-		assertEqual(other_integer, optional.valueOr(other_integer), "valueOr");
 	}
 
 	/**
@@ -536,54 +528,8 @@ public:
 		CountCtrStruct::counter().reset();
 	}
 
-	void testNoCopyNoMove() {
-		CountCtrStruct or_value{ 4 };
-		CountCtrStruct::counter().reset();
-
-		base::Optional<CountCtrStruct> optional{};
-		checkCountsAndReset(CtrAssignCounter{}, "constructing empty");
-
-		assertEqual(or_value, optional.valueOr(or_value), "valueOr failed (empty l-value)");
-		checkCountsAndReset(CtrAssignCounter{}, "valueOr on empty l-value");
-
-		assertEqual(
-			CountCtrStruct{ 5 },
-			std::move(optional).valueOr(CountCtrStruct{ 5 }),
-			"valueOr failed (empty x-value)"
-		);
-		checkCountsAndReset(
-			CtrAssignCounter{
-				.value_constructed = 2,
-				.destructed        = 2,
-			},
-			"valueOr on empty x-value"
-		);
-
-		base::Optional<CountCtrStruct> optional2{ 3 };
-		checkCountsAndReset(
-			CtrAssignCounter{
-				.value_constructed = 1,
-			},
-			"constructing from value"
-		);
-
-		assertEqual(
-			optional2.value(), optional2.valueOr(or_value), "valueOr failed (non-empty l-value)"
-		);
-		checkCountsAndReset(CtrAssignCounter{}, "valueOr on non-empty l-value");
-
-		assertEqual(
-			CountCtrStruct{ 3 },
-			std::move(optional2).valueOr(CountCtrStruct{ 5 }),
-			"valueOr failed (non-empty x-value)"
-		);
-		checkCountsAndReset(
-			CtrAssignCounter{ .value_constructed = 2, .destructed = 2 },
-			"valueOr on non-empty r-value"
-		);
-	}
-
 	void testCopyValueOr() {
+		// Testing if copyValueOr does not return a dangling reference.
 		CountCtrStruct::counter().reset();
 		auto&& result1 = Optional<CountCtrStruct>{ 3 }.copyValueOr(CountCtrStruct{ 4 });
 		checkCountsAndReset(
@@ -607,6 +553,19 @@ public:
 			"copyValueOr on empty r-value"
 		);
 		assertEqual(CountCtrStruct{ 4 }, result2, "copyValueOr failed (empty r-value)");
+
+		// Testing if just passing constructor arguments will suffice.
+		Optional<CountCtrStruct> optional{};
+		assertEqual(
+			CountCtrStruct{ 4 }, optional.copyValueOr({ 4 }), "copyValueOr failed (empty r-value)"
+		);
+
+		CountCtrStruct value{ 5 };
+		assertEqual(
+			CountCtrStruct{ 5 },
+			Optional<CountCtrStruct>{}.copyValueOr(value),
+			"copyValueOr failed (empty r-value)"
+		);
 	}
 };
 
