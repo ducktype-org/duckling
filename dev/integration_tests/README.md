@@ -119,7 +119,8 @@ General variables (not tied to any context):
 - `PreCase` - Command executed **before** running a test case.
 - `PostCase` - Command executed **after** running a test case.
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
-- `ExitCode` - Expected exit code - defaults to 0.
+- `ExitCode` - Expected test case's exit code - defaults to 0.
+- `Enabled` - Command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 
 Test specific:
 
@@ -135,7 +136,7 @@ Case specific:
 - `Output` - Expected stdout of a program.
 - `Err` - Expected stderr of a program.
 - `RunArgs` - Arguments passed to a program.
-- Additionally: `Run`, `PreCase`, `PostCase`, `TimeOut`, `ExitCode`, explained above.
+- Additionally: `Run`, `PreCase`, `PostCase`, `TimeOut`, `ExitCode`, `Enabled` explained above.
 
 `Input`, `Output`, `Err` inside a case can be specified as follows:
 
