@@ -13,8 +13,8 @@ struct SimpleStruct {
 };
 
 int main() {
-	fs::FilePath          fs_root_path = fs::FilePath::createTempDirectory();
-	std::filesystem::path root         = fs_root_path.absolutePath();
+	fs::File              fs_root_file = fs::FileManager::createRandomTempDirectory();
+	std::filesystem::path root         = fs_root_file.nativePath();
 
 	const auto b0 = base::StrID("b0");
 	const auto b1 = base::StrID("b1");
@@ -37,7 +37,7 @@ int main() {
 
 		// Create a file artifact
 		auto          file0 = collection.fileArtifactNew(f0);
-		std::ofstream file(file0.FILE);
+		std::ofstream file(file0.FILE.getPath());
 		file << "Hello!\n";
 		file.close();
 
@@ -57,7 +57,7 @@ int main() {
 		assert(collection.blobArtifactAt(b1).getData<SimpleStruct>() == simple_struct);
 
 		auto          file0 = collection.fileArtifactAt(f0);
-		std::ifstream file(file0.FILE);
+		std::ifstream file(file0.FILE.getPath());
 		std::string   data;
 		file >> data;
 		file.close();

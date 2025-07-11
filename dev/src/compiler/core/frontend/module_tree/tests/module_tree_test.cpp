@@ -21,7 +21,7 @@ public:
 
 private:
 	void parseModule() {
-		auto pth = fs::FilePath(path("test_module"));
+		auto pth = fs::File(path("test_module"));
 		auto mt  = ModuleTree::create(pth, test_regex, test_regex);
 
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
@@ -56,7 +56,7 @@ private:
 	}
 
 	void testOtherFeatures() {
-		auto pth = fs::FilePath(path("test_module"));
+		auto pth = fs::File(path("test_module"));
 		auto mt  = ModuleTree::create(pth);
 
 		ASSERT_EQUAL("test_module", mt->getName());
@@ -102,7 +102,7 @@ private:
 	}
 
 	void testQueries() {
-		auto pth  = fs::FilePath(path("test_module"));
+		auto pth  = fs::File(path("test_module"));
 		auto root = query::entryPoint<QueryModuleTree>(pth);
 
 		[[maybe_unused]] auto awe

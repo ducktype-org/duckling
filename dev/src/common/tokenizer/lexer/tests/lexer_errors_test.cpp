@@ -33,7 +33,7 @@ class LexerErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto file = tokenizer::makeTokenSource(fs::FilePath::createVirtualFile(code));
+			auto file = tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(code));
 			return file->tokenize() == good;
 		}
 

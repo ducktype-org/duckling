@@ -7,7 +7,7 @@
 
 #include "query_int.hpp"  // IWYU pragma: export
 
-namespace query::detail {
+namespace query::internal {
 	/**
 	 * @brief Dummy value used for side-inputs return values.
 	 */
@@ -37,10 +37,10 @@ namespace query::detail {
  * @note Query side-inputs have to be called by hand, when given data is read.
  * Special care should be taken to always do it, to prevent non registered input being used.
  */
-#define DECLARE_QUERY_SIDE_INPUT(query_type, key)                                      \
-	DECLARE_QUERY_AUX(                                                                 \
-		query_type,                                                                    \
-		key,                                                                           \
-		query::detail::SideInputMockValue,                                             \
-		::query::detail::QueryData(::query::detail::QueryType::SideInput, #query_type) \
+#define DECLARE_QUERY_SIDE_INPUT(query_type, key)                                          \
+	DECLARE_QUERY_AUX(                                                                     \
+		query_type,                                                                        \
+		key,                                                                               \
+		query::internal::SideInputMockValue,                                               \
+		::query::internal::QueryData(::query::internal::QueryType::SideInput, #query_type) \
 	)

@@ -3,18 +3,18 @@
 #include <diagnostic/source_position.hpp>
 #include <lexer/token.hpp>
 #include <query_framework/context.hpp>
-#include <query_framework/detail/query_graph/query_graph.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 
 namespace pst {
 	/**
 	 * @brief Returns the minimal set of Source Positions that contain the tokens that are included
 	 * in PST dependencies of a given query. Should be used for insight/diagnostics.
 	 */
-	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID);
+	std::vector<dia::SourcePosition> queryPositionDependencies(query::internal::NodeID);
 
 	template<typename Query>
 	std::vector<dia::SourcePosition> queryPositionDependencies(typename Query::QKey key) {
-		query::detail::NodeID node_id = query::detail::makeNodeID(Query::getID(), key);
+		query::internal::NodeID node_id = query::internal::makeNodeID(Query::getID(), key);
 		return queryPositionDependencies(node_id);
 	}
 
@@ -23,11 +23,11 @@ namespace pst {
 	 * Should be used for insight/diagnostics, this version is more usefull for things that want to
 	 * further analyze like lsp.
 	 */
-	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::detail::NodeID);
+	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::internal::NodeID);
 
 	template<typename Query>
 	std::vector<CRef<lexer::Token>> queryTokenDependencies(typename Query::QKey key) {
-		query::detail::NodeID node_id = query::detail::makeNodeID(Query::getID(), key);
+		query::internal::NodeID node_id = query::internal::makeNodeID(Query::getID(), key);
 		return queryTokenDependencies(node_id);
 	}
 }

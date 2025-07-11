@@ -18,7 +18,7 @@ void printContextErrors() {
 	}
 }
 
-void printQueryDeps(const std::vector<query::detail::NodeID>& deps) {
+void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
 	std::cerr << "Dependencies:\n";
 	for (auto& i: deps)
 		std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val << "\n";
@@ -47,7 +47,7 @@ int notMain(int argc, const char* const* argv) {
 		return 1;
 	}
 
-	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
+	auto path_to_compile = options.getValue<fs::File>('p').value();
 
 	using namespace compiler;
 
@@ -60,7 +60,7 @@ int notMain(int argc, const char* const* argv) {
 
 	std::cerr << "Inputs of entire hout:\n";
 
-	auto pst_access_id = pst::detail::PSTAccessSideInput::getID();
+	auto pst_access_id = pst::internal::PSTAccessSideInput::getID();
 	auto deps
 		= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryTopLevelEntities>(
 			root, pst_access_id

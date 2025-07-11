@@ -485,8 +485,8 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
-			variant_case(StaticTableType, data) {
-				metadata->at(data.name)->defineStaticTable(
+			variant_case(FixedSizeTableType, data) {
+				metadata->at(data.name)->defineFixedSizeTable(
 					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);
@@ -548,7 +548,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 	return metadata;
 }
 
-const vm::StableTypeIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
+const vm::StableObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
 
 void TypeContext::insertType(const TypeOfData& type) {
 	const auto name = typeName(type);

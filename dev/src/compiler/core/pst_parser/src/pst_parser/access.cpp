@@ -4,7 +4,7 @@
 
 #include <query_framework/query_input_impl.hpp>
 
-namespace pst::detail {
+namespace pst::internal {
 
 	IMPLEMENT_QUERY_SIDE_INPUT(PSTAccessSideInput);
 
