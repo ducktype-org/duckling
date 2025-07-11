@@ -1,6 +1,8 @@
 #include "generic_operations.hpp"
 
 #include <driver_private/operations.hpp>
+#include <driver_private/backend_operations/compile_llvm.hpp>
+#include <driver_private/backend_operations/compile_dvm.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <helios/queries.hpp>
@@ -8,6 +10,15 @@
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
+
+
+// #include <vm/api/data/api_error.hpp>
+// #include <vm/api/data/process_info.hpp>
+// #include <vm/api/vm.hpp>
+// #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
+
+#include <fstream>
 
 #include <utility>
 
@@ -41,7 +52,37 @@ namespace compiler::driver {
 			auto module_name
 				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
-			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name, output, key.backend_type);
+			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name);
+
+			switch (key.backend_type) {
+				case BackendType::LLVM: {
+					auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
+					llvm_module.compile(output.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+					
+
+					// TODO PR:
+					// if (options->dump_llvm_ir) {
+					// 	base::StrID llvm_ir_path
+					// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
+					// 	mod.debugDumpToFile(llvm_ir_path);
+					// }
+
+					// if (options->compile_to_assembly) {
+					// 	base::StrID assembly_path
+					// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
+					// 	mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
+					// }
+
+				}
+				case BackendType::DVM: {
+					auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+					std::ofstream dvm_file(output.FILE.getPath(), std::ios::binary);
+					if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
+					vm::code::serialize(dvm_code_collection, dvm_file);
+					dvm_file.close();
+				}
+				default: CORE_PANIC("bad backend type");
+			}
 
 			return output;
 		}

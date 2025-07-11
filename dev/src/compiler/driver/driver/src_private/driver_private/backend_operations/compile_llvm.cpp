@@ -9,7 +9,7 @@
 
 namespace compiler::driver {
 
-	backend_llvm::Module compileBackendModuleToLLVM(
+	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context&                ctx,
 		const LIRModuleData&       lir_module
 		// const artifacts::FileArtifact& output_artifact
@@ -61,21 +61,6 @@ namespace compiler::driver {
 		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
 		return mod;
-
-		// TODO PR:
-		// if (options->dump_llvm_ir) {
-		// 	base::StrID llvm_ir_path
-		// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
-		// 	mod.debugDumpToFile(llvm_ir_path);
-		// }
-
-		// if (options->compile_to_assembly) {
-		// 	base::StrID assembly_path
-		// 		= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
-		// 	mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
-		// }
-
-		// mod.compile(output_artifact.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
 	}
 
 	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {

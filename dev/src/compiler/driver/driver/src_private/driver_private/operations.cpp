@@ -89,11 +89,11 @@ namespace compiler::driver {
 	// ) {
 	// 	switch (backend_type) {
 	// 	case BackendType::LLVM: {
-	// 		compileBackendModuleToLLVM(ctx, module_data, output_artifact);
+	// 		compileLIRModuleToLLVM(ctx, module_data, output_artifact);
 	// 		break;
 	// 	}
 	// 	case BackendType::DVM: {
-	// 		compileBackendModuleToDVM(ctx, module_data, output_artifact);
+	// 		compileLIRModuleToDVM(ctx, module_data, output_artifact);
 	// 		break;
 	// 	}
 	// 	default:
