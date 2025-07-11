@@ -17,7 +17,7 @@ from .keys import *
 """
 Builtin keys allowed inside a Test.
 """
-TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, ENABLED, CASES, PARENT}
+TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT}
 
 
 """
@@ -26,7 +26,6 @@ Builtin keys allowed inside a Case.
 CASE_ALLOWED_KEYS = {
     CASE_NAME,
     RUN,
-    ENABLED,
     PRE_CASE,
     POST_CASE,
     INPUT,
@@ -34,6 +33,7 @@ CASE_ALLOWED_KEYS = {
     ERR,
     TIME_OUT,
     EXIT_CODE,
+    ENABLED,
     PARENT,
 }
 

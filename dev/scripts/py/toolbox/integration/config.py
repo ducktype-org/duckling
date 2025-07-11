@@ -26,6 +26,7 @@ GENERAL_VARIABLES = {
     POST_CASE,
     TIME_OUT,
     EXIT_CODE,
+    ENABLED,
 }
 
 """
@@ -33,7 +34,6 @@ Keys allowed in global context.
 """
 GLOBAL_CONFIG_KEYS = {
     NAME,
-    ENABLED,
     DESCRIPTION,
     TESTS,
     SUBDIRS,
