@@ -6,6 +6,10 @@
 
 #pragma once
 
+/**
+ * Add a static function to Query Implementation Struct that
+ * returns given query artifact collection.
+ */
 #define QUERY_ARTIFACTS_MACROS                                                                  \
 	static Ref<artifacts::ArtifactCollection> getQueryArtifactsCollection() {                   \
 		static Ref<artifacts::ArtifactCollection> collection                                    \

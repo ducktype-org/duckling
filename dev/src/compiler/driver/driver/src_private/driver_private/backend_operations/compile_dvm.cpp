@@ -15,7 +15,7 @@
 namespace compiler::driver {
 	vm::code::CodeCollection compileBackendModuleToDVM(
 		query::Context&                query_ctx,
-		const BackendModuleData&       data
+		const LIRModuleData&       data
 		// const artifacts::FileArtifact& output_artifact
 	) {
 		std::vector<backend_vm::BackendDVMGlobal> dvm_globals;

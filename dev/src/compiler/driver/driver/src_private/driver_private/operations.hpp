@@ -25,7 +25,7 @@ namespace compiler::driver {
 	// 	BackendType                            backend_type
 	// );
 
-	BackendModuleData compileHOUTUnitToBackendModuleData(
+	LIRModuleData compileHOUTUnitToLIRModuleData(
 		query::Context& ctx, base::CRef<compiler::helios::HOUTUnit> hout_unit, base::StrID module_id
 	);
 
@@ -38,7 +38,7 @@ namespace compiler::driver {
 	//  */
 	// void compileBackendModule(
 	// 	query::Context&                ctx,
-	// 	const BackendModuleData&       module_data,
+	// 	const LIRModuleData&       module_data,
 	// 	const artifacts::FileArtifact& output_artifact,
 	// 	BackendType                    backend_type
 	// );

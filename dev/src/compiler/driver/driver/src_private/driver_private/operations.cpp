@@ -15,10 +15,10 @@
 namespace compiler::driver {
 
 
-	BackendModuleData compileHOUTUnitToBackendModuleData(
+	LIRModuleData compileHOUTUnitToLIRModuleData(
 		query::Context& ctx, base::CRef<compiler::helios::HOUTUnit> hout_unit, base::StrID module_id
 	) {
-		std::vector<BackendModuleGlobal> globals;
+		std::vector<LIRModuleGlobal> globals;
 		globals.reserve(hout_unit->glob_data.size());
 
 		for (const auto& hout_global: hout_unit->glob_data) {
@@ -29,7 +29,7 @@ namespace compiler::driver {
 					CRef mir_function
 						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_global })->value();
 					auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
-					globals.emplace_back(BackendModuleGlobal{
+					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
 						// @TODO: add legit dtors when implemented #929
 						.global_ctor = lir_function,
@@ -62,7 +62,7 @@ namespace compiler::driver {
 			functions.push_back(lir_function);
 		}
 
-		return BackendModuleData{
+		return LIRModuleData{
 			.module_id = module_id,
 			.functions = functions,
 			.globals   = globals,
@@ -76,14 +76,14 @@ namespace compiler::driver {
 	// 	const artifacts::FileArtifact&         output_artifact,
 	// 	BackendType                            backend_type
 	// ) {
-	// 	auto module_data = compileHOUTUnitToBackendModuleData(ctx, hout_unit, module_id);
+	// 	auto module_data = compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_id);
 
 	// 	compileBackendModule(ctx, module_data, output_artifact, backend_type);
 	// }
 
 	// void compileBackendModule(
 	// 	query::Context&                ctx,
-	// 	const BackendModuleData&       module_data,
+	// 	const LIRModuleData&       module_data,
 	// 	const artifacts::FileArtifact& output_artifact,
 	// 	BackendType                    backend_type
 	// ) {

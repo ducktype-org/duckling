@@ -11,7 +11,7 @@ namespace compiler::driver {
 
 	backend_llvm::Module compileBackendModuleToLLVM(
 		query::Context&                ctx,
-		const BackendModuleData&       lir_module
+		const LIRModuleData&       lir_module
 		// const artifacts::FileArtifact& output_artifact
 	) {
 		backend_llvm::Module mod(lir_module.module_id);

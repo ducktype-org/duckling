@@ -24,7 +24,7 @@ namespace compiler::driver {
 
 	vm::code::CodeCollection compileBackendModuleToDVM(
 		query::Context&                ctx,
-		const BackendModuleData&       lir_module
+		const LIRModuleData&       lir_module
 		// const artifacts::FileArtifact& output_artifact
 	);
 }

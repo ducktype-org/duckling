@@ -20,12 +20,20 @@ namespace compiler::driver {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
+		static auto typeExtension(BackendType backend) {
+			switch (backend) {
+				case BackendType::LLVM: return ".o";
+				case BackendType::DVM: return ".dvc";
+				default: CORE_PANIC("bad backend type");
+			}
+		}
+
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
 			// Note: in the future it should use stable hashing for incremental
 			// compilation. For now its ok.
-			auto output_name = key.queryUnstablePerfectHash().toStringHex();
+			auto output_name = key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
@@ -33,7 +41,7 @@ namespace compiler::driver {
 			auto module_name
 				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
 
-			compileHOUTUnit(ctx, &hout, module_name, output, key.backend_type);
+			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name, output, key.backend_type);
 
 			return output;
 		}
