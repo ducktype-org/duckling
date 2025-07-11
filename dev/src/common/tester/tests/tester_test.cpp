@@ -6,17 +6,22 @@
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleTesterTest
-	i32 test_no;
-	i32 exception_no = 0;
 
 public:
-	static constexpr i32 NUM_FAILING_TESTS   = 7;
-	static constexpr i32 NUM_EXCEPTION_TESTS = 7;
-
-	TESTER_TEST_SIMPLE_CONSTRUCTOR(i32 test_no, i32 exception_no), test_no(test_no),
-		exception_no(exception_no) {
-		TESTER_ADD_TEST(choose);
-		TESTER_ADD_TEST(throwException);
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(happy);
+		TESTER_ADD_SHOULD_FAIL_TEST(failingIsNotThrowingStd);
+		TESTER_ADD_SHOULD_FAIL_TEST(catchNoThrow);
+		TESTER_ADD_SHOULD_FAIL_TEST(catchWrongThrow);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertTrueFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertFalseFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertEqualFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwPanic);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwLogicError);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwNYI);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwException);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwStdRuntimeError);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwStdLogicError);
 		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
 		TESTER_ADD_TEST(addSpacesTest);
 	}
@@ -24,47 +29,17 @@ public:
 	~SimpleTesterTest() override = default;
 
 private:
-	void choose() {
-		switch (test_no) {
-		case 0:
-			return happy();
-		case 1:
-			return failingIsNotThrowingStd();
-		case 2:
-			return catchNoThrow();
-		case 3:
-			return failingIsNotThrowingStd();
-		case 4:
-			return assertTrueFails();
-		case 5:
-			return assertFalseFails();
-		case 6:
-			return assertEqualFails();
-		default:
-			return;
-		}
-	}
+	void throwPanic() { throw base::Panic("panic", "This is a panic test"); }
 
-	void throwException() {
-		switch (exception_no) {
-		case 0:
-			return;
-		case 1:
-			throw base::Panic("panic", "This is a panic test");
-		case 2:
-			throw base::LogicError("Logic Error");
-		case 3:
-			throw base::NotYetImplemented("Not yet implemented");
-		case 4:
-			throw base::Exception();
-		case 5:
-			throw std::runtime_error("This is a runtime error test");
-		case 6:
-			throw std::logic_error("Logic Error");
-		default:
-			return;
-		}
-	}
+	void throwLogicError() { throw base::LogicError("Logic Error"); }
+
+	void throwNYI() { throw base::NotYetImplemented("Not yet implemented"); }
+
+	void throwException() { throw base::Exception(); }
+
+	void throwStdRuntimeError() { throw std::runtime_error("This is a runtime error test"); }
+
+	void throwStdLogicError() { throw std::logic_error("Logic Error"); }
 
 	void happy() {
 		assertThrows<std::logic_error>([&]() { throw std::logic_error("Hi!"); }, "Logic Error");
@@ -178,19 +153,6 @@ int main(int argc, const char**) {
 
 	auto config = tester::getTestConfig("/common/tester/tests/");
 
-	SimpleTesterTest passing_test(config, 0, 0);
-	if (!passing_test.run()) return 1;
-
-	/* The tests below are "expected to fail".
-	 * Currently there is no way to specify that.
-	 * @TODO: change that when "expected to fail" is added #1049
-	 */
-	for (i32 i = 1; i < SimpleTesterTest::NUM_FAILING_TESTS; i++) {
-		SimpleTesterTest failing_test(config, i, 0);
-		if (failing_test.run()) return 1;
-	}
-	for (i32 i = 1; i < SimpleTesterTest::NUM_EXCEPTION_TESTS; i++) {
-		SimpleTesterTest exception_test(config, 0, i);
-		if (exception_test.run()) return 1;
-	}
+	SimpleTesterTest test(config);
+	if (!test.run()) return 1;
 }
