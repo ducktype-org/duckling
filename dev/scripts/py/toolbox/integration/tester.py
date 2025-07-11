@@ -1,5 +1,6 @@
 from pathlib import Path
 from .test_loader import Case, Test, TestNode, load_tests
+from click import option
 
 from .utils import (
     dit_exec_command,
@@ -277,7 +278,7 @@ def run_tests(
     return all_stats
 
 
-def integration_tests_impl(
+def impl(
     clean: bool,
     dry: bool,
     filter: str,
@@ -330,4 +331,67 @@ def integration_tests_impl(
             + f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean:
-        print_success(f"All tests have run successfully!")
+        print_success(f"All [{ran_tests}/{ran_tests}] have run successfully!")
+
+def clean(func):
+    return option(
+        "-c",
+        "--clean",
+        is_flag=True,
+        default=False,
+        help="Runs `Clean` command on every test. If passed, no tests are ran.",
+    )(func)
+
+def dry(func):
+    return option(
+        "-d",
+        "--dry",
+        is_flag=True,
+        default=False,
+        help="Only prints commands to be executed instead of really executing them",
+    )(func)
+
+def filter(func):
+    return option(
+        "-t",
+        "--filter",
+        type=str,
+        default="",
+        help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+    )(func)
+
+def fail_fast(func):
+    return option(
+        "-f",
+        "--fail-fast",
+        is_flag=True,
+        default=False,
+        help="Whether to fail upon a testcase failure. If not passed, runs all tests regardless of their result.",
+    )(func)
+
+def verbose(func):
+    return option(
+        "-v",
+        "--verbose",
+        is_flag=True,
+        default=False,
+        help="Prints some debug information about test cases",
+    )(func)
+
+def log_file(func):
+    return option(
+        "-l",
+        "--log-file",
+        type=str,
+        default=str(DEFAULT_LOG_FILE_PATH),
+        help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
+    )(func)
+
+def build_dir(func):
+    return option(
+        "-b",
+        "--build_dir",
+        prompt="Build directory",
+        help="The name of the project build directory which is passed to the framework.",
+        default="build",
+    )(func)

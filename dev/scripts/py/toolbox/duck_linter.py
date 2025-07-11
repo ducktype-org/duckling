@@ -1,6 +1,7 @@
 from typing import List
 import re
 from pathlib import Path
+from click import option
 
 from .cpp_linter import get_files_for_linter
 from .helpers import log_info, log_warning, log_new_line
@@ -53,7 +54,7 @@ def get_source_files(all, relative_to, no_merge_base) -> List[SourceFile]:
     return source_files
 
 
-def duck_linter_impl(
+def impl(
     all: bool = False,
     branch: str = "origin/main",
     verbose: bool = False,
@@ -68,3 +69,40 @@ def duck_linter_impl(
             passed_all = False
 
     return passed_all
+
+def all_flag(func):
+    return option(
+        "-a",
+        "--all",
+        is_flag=True,
+        default=False,
+        help="Check all files, not just the ones that are modified",
+    )(func)
+
+def branch(func):
+    return option(
+        "-r",
+        "--branch",
+        help="The branch relative to which the diff is created.",
+        type=str,
+        default="origin/main",
+    )(func)
+
+def verbose(func):
+    return option(
+        "-v",
+        "--verbose",
+        is_flag=True,
+        default=False,
+        help="Also shows checks files that didn't had any errors.",
+    )(func)
+
+def no_merge_base(func):
+    return option(
+        "--no-merge-base",
+        is_flag=True,
+        default=False,
+        help="On no-merge-base: compare against the latest commit on `branch` "
+        "instead of the commit which is the LCA of `branch` and current branch. "
+        "This feature allows to run the linter on a shallow clone.",
+    )(func)
