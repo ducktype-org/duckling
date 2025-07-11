@@ -2,20 +2,9 @@
 
 #include <backends/dvm/backend.hpp>
 
-#include <base/int_conv.hpp>
-
-#include <vm/api/data/api_error.hpp>
-#include <vm/api/data/process_info.hpp>
-#include <vm/api/vm.hpp>
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/serializer/serializer.hpp>
-
-#include <expected>
-
 namespace compiler::driver {
 	vm::code::CodeCollection compileLIRModuleToDVM(
 		query::Context& query_ctx, const LIRModuleData& data
-		// const artifacts::FileArtifact& output_artifact
 	) {
 		std::vector<backend_vm::BackendDVMGlobal> dvm_globals;
 		for (const auto& global: data.globals) {
@@ -30,5 +19,4 @@ namespace compiler::driver {
 
 		return module.build();
 	}
-
 }

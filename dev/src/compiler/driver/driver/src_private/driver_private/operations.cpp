@@ -1,10 +1,5 @@
 #include "operations.hpp"
 
-// #include "backend_operations/compile_dvm.hpp"
-// #include "backend_operations/compile_llvm.hpp"
-
-#include <backends/llvm/llvm_backend.hpp>
-#include <global_state/artifacts_location.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
@@ -68,38 +63,4 @@ namespace compiler::driver {
 			.globals   = globals,
 		};
 	}
-
-	// void compileHOUTUnit(
-	// 	query::Context&                        ctx,
-	// 	base::CRef<compiler::helios::HOUTUnit> hout_unit,
-	// 	base::StrID                            module_id,
-	// 	const artifacts::FileArtifact&         output_artifact,
-	// 	BackendType                            backend_type
-	// ) {
-	// 	auto module_data = compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_id);
-
-	// 	compileBackendModule(ctx, module_data, output_artifact, backend_type);
-	// }
-
-	// void compileBackendModule(
-	// 	query::Context&                ctx,
-	// 	const LIRModuleData&       module_data,
-	// 	const artifacts::FileArtifact& output_artifact,
-	// 	BackendType                    backend_type
-	// ) {
-	// 	switch (backend_type) {
-	// 	case BackendType::LLVM: {
-	// 		compileLIRModuleToLLVM(ctx, module_data, output_artifact);
-	// 		break;
-	// 	}
-	// 	case BackendType::DVM: {
-	// 		compileLIRModuleToDVM(ctx, module_data, output_artifact);
-	// 		break;
-	// 	}
-	// 	default:
-	// 		CORE_PANIC("Unsupported backend type for compilation");
-	// 	}
-	// }
-
-
 }

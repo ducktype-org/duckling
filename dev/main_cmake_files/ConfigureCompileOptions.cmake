@@ -15,6 +15,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Werror=return-local-addr "
 		"-Werror=free-nonheap-object "
 		"-Werror=conversion "
+		"-Werror=implicit-fallthrough "
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "

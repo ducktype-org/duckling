@@ -77,6 +77,7 @@ namespace compiler::driver {
 						assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly
 					);
 				}
+				break;
 			}
 			case BackendType::DVM: {
 				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
@@ -84,6 +85,7 @@ namespace compiler::driver {
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
 				dvm_file.close();
+				break;
 			}
 			default:
 				CORE_PANIC("bad backend type");

@@ -10,7 +10,6 @@ namespace compiler::driver {
 
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, const LIRModuleData& lir_module
-		// const artifacts::FileArtifact& output_artifact
 	);
 
 
