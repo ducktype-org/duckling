@@ -3,6 +3,7 @@ import os
 import pathlib
 import sys
 import tempfile
+from click import option
 
 from .helpers import (
     BashCommandError,
@@ -184,7 +185,7 @@ def run_linter_on(
     return logs, clang_tidy_failed, clang_format_failed
 
 
-def simulate_cpp_linter(
+def impl(
     clang_tidy_path: str,
     clang_format_path: str,
     build: str,
@@ -223,3 +224,69 @@ def simulate_cpp_linter(
             clang_format_failed = False
 
     return clang_tidy_failed, clang_format_failed
+
+def tidy(func):
+    return option(
+        "-t",
+        "--tidy",
+        "clang_tidy_path",
+        prompt="clang-tidy path",
+        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+        default="clang-tidy-19",
+    )(func)
+
+def format(func):
+    return option(
+        "-f",
+        "--format",
+        "clang_format_path",
+        prompt="clang-format path",
+        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+        default="clang-format-19",
+    )(func)
+
+def build(func):
+    return option(
+        "-b",
+        "--build",
+        prompt="build folder",
+        help="Path to build folder with compile_commands.json",
+        default="build",
+    )(func)
+
+def threads(func):
+    return option(
+        "-j",
+        "--threads",
+        help="On how many threads can linter use. Defaults to os.cpu_count()",
+        type=int,
+        default=os.cpu_count() or 1,
+    )(func)
+
+def branch(func):
+    return option(
+        "-r",
+        "--branch",
+        help="The branch relative to which the diff is created.",
+        type=str,
+        default="origin/main",
+    )(func)
+
+def all_flag(func):
+    return option(
+        "-a",
+        "--all",
+        is_flag=True,
+        default=False,
+        help="Check all files, not just the ones that are modified",
+    )(func)
+
+def no_merge_base(func):
+    return option(
+        "--no-merge-base",
+        is_flag=True,
+        default=False,
+        help="On no-merge-base: compare against the latest commit on `branch` "
+        "instead of the commit which is the LCA of `branch` and current branch. "
+        "This feature allows to run the linter on a shallow clone.",
+    )(func)

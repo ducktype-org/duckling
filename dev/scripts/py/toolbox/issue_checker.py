@@ -1,9 +1,15 @@
 import re
 import json
-from pathlib import Path
-from .cpp_linter import get_files_for_linter
-from .helpers import log_info, log_warning, log_new_line, bash_command_get_output, BashCommandError
+from .helpers import (
+    BashCommandError,
+    log_info, 
+    log_warning, 
+    log_new_line, 
+    bash_command_get_output, 
+)
+
 import os
+from click import option
 
 def get_issues_from_github():
     import shutil
@@ -80,7 +86,7 @@ def get_issues_from_github():
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
 
-def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+def impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
     if(not issues):
         issues = get_issues_from_github()
         if not issues:
@@ -131,3 +137,22 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
     return not found_any
+
+def branch(func):
+    return option(
+        "-r",
+        "--branch",
+        help="The branch relative to which the diff is created.",
+        type=str,
+        default="origin/main",
+    )(func)
+
+def no_merge_base(func):
+    return option(
+        "--no-merge-base",
+        is_flag=True,
+        default=False,
+        help="On no-merge-base: compare against the latest commit on `branch` "
+        "instead of the commit which is the LCA of `branch` and current branch. "
+        "This feature allows to run the checker on a shallow clone.",
+    )(func)

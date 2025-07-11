@@ -1,21 +1,16 @@
 from .helpers import (
-    BashCommandError,
     bash_command,
-    bash_command_get_output,
     exit_with_error,
-    get_input,
-    log_info,
-    log_new_line,
-    log_warning,
 )
+from click import option
 
-from .duck_linter import duck_linter_impl
-from .cpp_linter import simulate_cpp_linter
-from .issue_checker import issue_checker_impl
-from .integration.tester import integration_tests_impl, DEFAULT_LOG_FILE_PATH
+from .duck_linter import impl as duck_linter_impl
+from .cpp_linter import impl as cpp_linter_impl
+from .issue_checker import impl as issue_checker_impl
+from .integration.tester import impl as integration_tests_impl, DEFAULT_LOG_FILE_PATH
 
 
-def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
+def impl(clang_tidy_path: str, clang_format_path: str, build: str):
     
     # Step 1 - build
     bash_command(f"cmake --build {build} -- all build_all_tests build_all_playgrounds")
@@ -38,7 +33,7 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
         exit_with_error("Duck linter has failed")
 
     # Step 5 - cpp linter
-    clang_tidy_failed, clang_format_failed = simulate_cpp_linter(
+    clang_tidy_failed, clang_format_failed = cpp_linter_impl(
         clang_tidy_path=clang_tidy_path,
         clang_format_path=clang_format_path,
         build=build,
@@ -52,3 +47,32 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
         exit_with_error(
             f"CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}"
         )
+
+def tidy(func):
+    return option(
+        "-t",
+        "--tidy",
+        "clang_tidy_path",
+        prompt="clang-tidy path",
+        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+        default="clang-tidy-19",
+    )(func)
+
+def format(func):
+    return option(
+        "-f",
+        "--format",
+        "clang_format_path",
+        prompt="clang-format path",
+        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+        default="clang-format-19",
+    )(func)
+
+def build(func):
+    return option(
+        "-b",
+        "--build",
+        prompt="build folder",
+        help="Path to build folder with compile_commands.json",
+        default="build",
+    )(func)
