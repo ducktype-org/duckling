@@ -1,4 +1,4 @@
-type static_table: tablei64 i64 8000000
+type fixed_size_table: tablei64 i64 8000000
 
 function main {
     # [0, 8) main ret_val

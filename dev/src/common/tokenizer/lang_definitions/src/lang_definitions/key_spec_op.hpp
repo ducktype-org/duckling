@@ -154,7 +154,7 @@ namespace lang_def {
 		BCType,
 		BCPrimitive,
 		BCPointer,
-		BCStaticTable,
+		BCFixedSizeTable,
 		BCDynamicTable,
 		BCData,
 		BCVariant,

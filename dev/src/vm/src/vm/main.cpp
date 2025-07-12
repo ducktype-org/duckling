@@ -85,7 +85,7 @@ int main(int argc, const char** argv) {
 		DuckVMRepl::get().run();
 	else if (auto port = result.getValue<i64>("server"))
 		server(i32(port.value()));
-	else if (auto file = result.getValue<fs::FilePath>("file"))
+	else if (auto file = result.getValue<fs::File>("file"))
 		return cli(file.value(), result.isFlag("stdlib"));
 	else
 		return cli(result.isFlag("stdlib"));

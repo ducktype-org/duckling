@@ -27,7 +27,7 @@ namespace dia {
 
 	Ref<tokenizer::TokenSource> FileLocation::getSource() const { return source; }
 
-	fs::FilePath FileLocation::getSourceFile() const { return path; }
+	fs::File FileLocation::getSourceFile() const { return path; }
 
 	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> source):
 		  parent(parent),
@@ -36,7 +36,7 @@ namespace dia {
 
 	Ref<tokenizer::TokenSource> MacroLocation::getSource() const { return source; }
 
-	fs::FilePath MacroLocation::getSourceFile() const { return path; }
+	fs::File MacroLocation::getSourceFile() const { return path; }
 
 	void MacroLocation::printSuffixInfo(printer::PrinterOStream& out) const {
 		out << "Expanded here: \n";
@@ -61,7 +61,7 @@ namespace dia {
 		CORE_PANIC("Tried to access a fake location from a fake position.");
 	}
 
-	fs::FilePath FakeLocation::getSourceFile() const {
+	fs::File FakeLocation::getSourceFile() const {
 		CORE_PANIC("Tried to access a fake location from a fake position.");
 	}
 

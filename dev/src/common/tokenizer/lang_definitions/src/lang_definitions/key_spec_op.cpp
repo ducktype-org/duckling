@@ -121,7 +121,7 @@ namespace lang_def {
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
-			{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
+			{ Keyword::BCFixedSizeTable, "fixed_size_table", KeywordFlags() },
 			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
 			{ Keyword::BCData, "data", KeywordFlags() },
 			{ Keyword::BCVariant, "variant", KeywordFlags() },

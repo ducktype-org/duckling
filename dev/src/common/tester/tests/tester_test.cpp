@@ -1,34 +1,45 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
+#include <base/exceptions.hpp>
+
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleTesterTest
-	i32 test_no;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR(i32 test_no), test_no(test_no) {
-		TESTER_ADD_TEST(choose);
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(happy);
+		TESTER_ADD_SHOULD_FAIL_TEST(failingIsNotThrowingStd);
+		TESTER_ADD_SHOULD_FAIL_TEST(catchNoThrow);
+		TESTER_ADD_SHOULD_FAIL_TEST(catchWrongThrow);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertTrueFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertFalseFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(assertEqualFails);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwPanic);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwLogicError);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwNYI);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwException);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwStdRuntimeError);
+		TESTER_ADD_SHOULD_FAIL_TEST(throwStdLogicError);
 		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
+		TESTER_ADD_TEST(addSpacesTest);
 	}
 
 	~SimpleTesterTest() override = default;
 
 private:
-	void choose() {
-		switch (test_no) {
-		case 0:
-			return happy();
-		case 1:
-			return failingIsNotThrowingStd();
-		case 2:
-			return catchNoThrow();
-		case 3:
-			return failingIsNotThrowingStd();
-		default:
-			return;
-		}
-	}
+	void throwPanic() { throw base::Panic("panic", "This is a panic test"); }
+
+	void throwLogicError() { throw base::LogicError("Logic Error"); }
+
+	void throwNYI() { throw base::NotYetImplemented("Not yet implemented"); }
+
+	void throwException() { throw base::Exception(); }
+
+	void throwStdRuntimeError() { throw std::runtime_error("This is a runtime error test"); }
+
+	void throwStdLogicError() { throw std::logic_error("Logic Error"); }
 
 	void happy() {
 		assertThrows<std::logic_error>([&]() { throw std::logic_error("Hi!"); }, "Logic Error");
@@ -62,6 +73,21 @@ private:
 		);
 	}
 
+	void assertTrueFails() {
+		message("Expected to fail: checks that assertTrue fails when condition is false");
+		assertTrue(false, "expected failure: assertTrue failed");
+	}
+
+	void assertFalseFails() {
+		message("Expected to fail: checks that assertFalse fails when condition is true");
+		assertFalse(true, "expected failure: assertFalse failed");
+	}
+
+	void assertEqualFails() {
+		message("Expected to fail: checks that assertEqual fails when values are not equal");
+		assertEqual(1, 2, "expected failure: assertEqual failed");
+	}
+
 	void verySimpleTestingUtilsTest() {
 		assertTrue(testing_utils::compareJson(" {}", "{ }"), "Incorrect compareJson (1)");
 
@@ -82,6 +108,44 @@ private:
 			"Incorrect compareJson (4)"
 		);
 	}
+
+	void addSpacesTest() {
+		assertEqual(
+			tester::addSpacesBeforeCapital("HelloWorld"),
+			"Hello World",
+			"Incorrect addSpacesBeforeCapital (1)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("HelloWorldTest"),
+			"Hello World Test",
+			"Incorrect addSpacesBeforeCapital (2)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("HelloWorldTest123"),
+			"Hello World Test123",
+			"Incorrect addSpacesBeforeCapital (3)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("HelloWorldABC"),
+			"Hello World ABC",
+			"Incorrect addSpacesBeforeCapital (4)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("ABCHelloWorld"),
+			"ABC Hello World",
+			"Incorrect addSpacesBeforeCapital (5)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("ABC hello world"),
+			"ABC hello world",
+			"Incorrect addSpacesBeforeCapital (6)"
+		);
+		assertEqual(
+			tester::addSpacesBeforeCapital("hello world ABC"),
+			"hello world ABC",
+			"Incorrect addSpacesBeforeCapital (7)"
+		);
+	}
 };
 
 int main(int argc, const char**) {
@@ -89,15 +153,6 @@ int main(int argc, const char**) {
 
 	auto config = tester::getTestConfig("/common/tester/tests/");
 
-	SimpleTesterTest passing_test(std::move(config), 0);
-	if (!passing_test.run()) return 1;
-
-	/* The tests below are "expected to fail".
-	 * Currently there is no way to specify that.
-	 * @TODO: change that when "expected to fail" is added
-	 */
-	for (i32 i = 1; i < 4; i++) {
-		SimpleTesterTest failing_test(config, i);
-		if (failing_test.run()) return 1;
-	}
+	SimpleTesterTest test(config);
+	if (!test.run()) return 1;
 }
