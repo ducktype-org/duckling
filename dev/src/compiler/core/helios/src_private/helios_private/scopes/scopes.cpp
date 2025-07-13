@@ -53,7 +53,6 @@ namespace compiler::helios {
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
 	bool isGlobalScope(query::Context& ctx, ScopeID id) {
-		if (scopeDepth(id) == 0) return true;
 
 		switch (getScopeRef(id)->related_pst_element.value().unlock(ctx)->getElementKind()) {
 		case pst::ElementKind::TopLevel:
