@@ -166,7 +166,7 @@ namespace compiler::helios {
 					.kind = SymbolKind::Class,
 				},
 				pst_data,
-				isGlobalScope(ctx, scope)
+				true
 			));
 		}
 		case pst::StmtKind::Alias: {
