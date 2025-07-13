@@ -147,8 +147,14 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 			}
 
-			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {
-				result = ctx.query<QueryConstValueOf>(expr.symbols.back());
+			void visitAccessExpr(const code::AccessExpr&) final {
+				throw base::NotYetImplemented(
+					"Evaluation of access expressions is not implemented yet"
+				);
+			}
+
+			void visitSequenceExpr(const code::SequenceExpr& seq) final {
+				result = evaluateExpr(ctx, *seq.expressions.back());
 			}
 		};
 

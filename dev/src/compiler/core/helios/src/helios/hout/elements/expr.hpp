@@ -232,18 +232,14 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
-	 * @NOTE Currently it is just a mockup. Should be refactored to AccessExpr
-	 * -----
-	 * @TODO: We should implement shortening of the SymbolList, ex. leave only
-	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList
-	 # and represent it as a Access/Call tree.
+	 * @brief Represents a field access to an expression, like "some_struct.field".
+	 * For now it is a mockup, doesn't work.
 	 */
-	struct LinkedIdentifierExpr: public Expr {
-		SymbolList symbols;
+	struct AccessExpr final: public Expr {
+		base::Box<Expr> base;
+		base::StrID     field;
 
-		LinkedIdentifierExpr(query::Context& ctx, SymbolList symbols);
-
+		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
@@ -252,10 +248,28 @@ namespace compiler::helios::code {
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
-		SymID                        callee;
+		base::Box<Expr>              callee;
 		std::vector<base::Box<Expr>> arguments;
 
-		CallExpr(query::Context& ctx, SymID callee, std::vector<base::Box<Expr>> arguments);
+		CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief Represent a sequence of expressions, like "a, b, c;".
+	 * The results of all the expressions are discarded, except for the last one.
+	 * The last one is also the result of the whole sequence.
+	 *
+	 * Acts like a comma operator in C/C++:
+	 * > the comma operator is a binary operator that evaluates its first operand and discards the
+	 * result, and then evaluates the second operand and returns this value
+	 */
+	struct SequenceExpr final: public Expr {
+		std::vector<base::Box<Expr>> expressions;
+
+		SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

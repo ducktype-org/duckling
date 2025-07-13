@@ -117,9 +117,9 @@ namespace compiler::backend_vm {
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
 			AddLirFuncContext(
-				query::Context&                            ctx,
-				CRef<lir::Function>                        lir_function,
-				const vm::StableTypeIdNameMap<TypeOfData>& type_map
+				query::Context&                           ctx,
+				CRef<lir::Function>                       lir_function,
+				const vm::StableObjIdNameMap<TypeOfData>& type_map
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
@@ -293,7 +293,7 @@ namespace compiler::backend_vm {
 						return vm::opargs::StackLocalPtr(name);
 				}
 
-				INVALID_CASE(vm::code::StaticTableType, "output target");
+				INVALID_CASE(vm::code::FixedSizeTableType, "output target");
 				INVALID_CASE(vm::code::DynamicTableType, "output target");
 				INVALID_CASE(vm::code::DataType, "output target");
 				INVALID_CASE(vm::code::VariantType, "output target");

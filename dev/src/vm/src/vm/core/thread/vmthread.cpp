@@ -231,7 +231,7 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
-					MAKE_BYTECODE_INSTRUCTION(staticTableStore_lptr_lany, 8, 32),
+					MAKE_BYTECODE_INSTRUCTION(fixedSizeTableStore_lptr_lany, 8, 32),
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
 				}

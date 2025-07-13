@@ -31,9 +31,7 @@ namespace compiler::helios {
 		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
 
 		void visitParenthesisExpr(const ParenthesisExpr& val) override {
-			HoutResultingSymbolListVisitor vis(ctx);
-			val.inner->acceptVisitor(vis);
-			symbol = vis.symbol;
+			val.inner->acceptVisitor(*this);
 		}
 
 		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
@@ -42,16 +40,20 @@ namespace compiler::helios {
 			throw base::NotYetImplemented("Cannot evaluate symbol after unary operators");
 		}
 
-		void visitLinkedIdentifierExpr(const LinkedIdentifierExpr& expr) override {
-			// this is very much a mock, LinkedIdentifierExpr should be deleted:
-			symbol = expr.symbols.back();
-		}
-
 		void visitLiteralTypeExpr(const LiteralTypeExpr&) override {
 			// @TODO ZPP 3.3 -- make this functionality work on more then just sym ids.
 		}
 
-		void visitCallExpr(const CallExpr& call) override { symbol = call.callee; }
+		void visitCallExpr(const CallExpr& call) override { call.callee->acceptVisitor(*this); }
+
+		void visitSequenceExpr(const SequenceExpr& seq) override {
+			if (seq.expressions.empty()) return;
+
+			auto                           last = seq.expressions.back().ref();
+			HoutResultingSymbolListVisitor vis(ctx);
+			last->acceptVisitor(vis);
+			symbol = vis.symbol;
+		}
 	};
 
 	base::Optional<SymID> querySymIDOfHOUTExpr(query::Context& ctx, CRef<code::Expr> expr) {
