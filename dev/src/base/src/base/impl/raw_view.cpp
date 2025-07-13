@@ -31,7 +31,7 @@ namespace base {
 
 	usize RawView::size() const { return arr_size; }
 
-	byte RawView::operator[](usize index) { return begin[index]; }
+	byte RawView::operator[](usize index) const { return begin[index]; }
 
 	RawArray RawView::getBegin() const { return begin; }
 }

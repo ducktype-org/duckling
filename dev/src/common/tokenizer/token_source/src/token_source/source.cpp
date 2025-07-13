@@ -33,7 +33,7 @@ namespace tokenizer {
 
 	TokenSource::TokenSource(dia::SourcePosition parent, const std::string_view contents):
 		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenSource>(this))) {
-		content.emplace(fs::FileContent::fromString(contents));
+		content.emplace(base::SharedView(contents.data()));
 	}
 
 	void TokenSource::countLines() {
@@ -99,7 +99,7 @@ namespace tokenizer {
 		token_data.emplace(lexer.tokenize());
 	}
 
-	const fs::FileContent TokenSource::getContent() const { return content.value(); }
+	const base::SharedView TokenSource::getContent() const { return content.value(); }
 
 	const lexer::CharArray& TokenSource::getChars() const {
 		if (!decoded) CORE_PANIC("Tried to access nonexistant Character data.");

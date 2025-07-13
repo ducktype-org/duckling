@@ -17,7 +17,7 @@ The key design principle is that `File` provides the same operations regardless 
 
 ### File Class
 The `File` class can represent both **files** and **directories**. It provides:
-- Unified access to content via `FileContent` objects
+- Unified access to content via `base::SharedView` objects
 - Path manipulation and metadata access
 - Content reading/writing operations
 - Directory listing capabilities

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "file_content.hpp"
-
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
@@ -56,7 +54,7 @@ namespace fs {
 	 * filesystems.
 	 *   - Support for creating unique paths for files and directories.
 	 * - **Content Management**:
-	 *   - Retrieve file content as `FileContent` objects.
+	 *   - Retrieve file content as `base::SharedView` objects.
 	 *   - Support for safe content retrieval with error handling.
 	 * - **Path Utilities**:
 	 *   - Retrieve parent paths, absolute paths, URIs, and file extensions.
@@ -126,9 +124,9 @@ namespace fs {
 		u64 queryUnstablePerfectHash() const;
 
 		[[nodiscard]]
-		FileContent getContent() const;
+		base::SharedView getContent() const;
 		[[nodiscard]]
-		std::expected<FileContent, std::string> getContentSafe() const;
+		std::expected<base::SharedView, std::string> getContentSafe() const;
 
 		[[nodiscard]]
 		std::string_view strView() const;

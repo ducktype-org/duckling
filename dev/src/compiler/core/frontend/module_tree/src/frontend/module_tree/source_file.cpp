@@ -6,7 +6,7 @@
 
 namespace {
 	using ContentMap
-		= base::HashMap<std::filesystem::path, fs::FileContent, std::hash<std::filesystem::path>>;
+		= base::HashMap<std::filesystem::path, base::SharedView, std::hash<std::filesystem::path>>;
 	ContentMap to_content;
 }
 
@@ -30,7 +30,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	fs::FileContent SourceFile::getCachedContent() const {
+	base::SharedView SourceFile::getCachedContent() const {
 		auto abs_path = this->path.nativePath();
 		auto it       = to_content.find(abs_path);
 		if (it != to_content.end()) return it->second;

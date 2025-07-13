@@ -32,7 +32,7 @@ private:
 		auto a_good_content = fs::File(path("a_file.txt")).getContent();
 		auto b_good_content = fs::File(path("b_file.txt")).getContent();
 
-		// loops twice to see if behavior is ok after all previous fileContents where destroyed
+		// loops twice to see if behavior is ok after all previous base::SharedView where destroyed
 		for (i32 i = 0; i < 2; i++) {
 			fs::File a1(path("a_file.txt"));
 			fs::File a2(path("a_file.txt"));

@@ -6,6 +6,7 @@
 
 #include "ints.hpp"
 
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -51,7 +52,7 @@ namespace base {
 		[[nodiscard]]
 		RawArray getBegin() const;
 
-		byte operator[](usize index);
+		byte operator[](usize index) const;
 		bool operator==(const RawView& oth) const;
 	};
 
@@ -133,6 +134,42 @@ namespace base {
 		}
 
 		~OwningView() { delete[] begin; }
+	};
+
+	/**
+	 * @brief Shared immutable byte array view
+	 */
+	class SharedView final {
+		std::shared_ptr<OwningView> content;
+
+	public:
+		SharedView()                  = default;
+		SharedView(const SharedView&) = default;
+		SharedView(SharedView&&)      = default;
+
+		SharedView& operator=(const SharedView&) = default;
+		SharedView& operator=(SharedView&&)      = default;
+
+		explicit SharedView(std::nullptr_t) {}
+
+		/**
+		 * @note Takes ownership of shared_ptr
+		 */
+		explicit SharedView(std::shared_ptr<OwningView> content): content(std::move(content)) {}
+
+		/**
+		 * @note Takes ownership, begin should be on heap.
+		 */
+		SharedView(byte* begin, usize size): content(std::make_shared<OwningView>(begin, size)) {}
+
+		// Makes copy
+		explicit SharedView(const char* const c_str):
+			  content(std::make_shared<OwningView>(c_str)) {}
+
+		[[nodiscard]]
+		const RawView view() const {
+			return content ? content->view() : RawView{};
+		}
 	};
 }
 

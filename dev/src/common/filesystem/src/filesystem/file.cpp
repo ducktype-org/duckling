@@ -338,14 +338,14 @@ namespace fs {
 
 	// --- File methods (non-static, formerly FilePath) ---
 
-	FileContent File::getContent() const {
+	base::SharedView File::getContent() const {
 		if (type == FileType::Virtual) {
 			auto content = vfs->readFile(path);
 
 			auto r_array = new byte[content.size()];
 			std::ranges::copy(content, reinterpret_cast<char*>(r_array));
 
-			return FileContent(std::make_shared<base::OwningView>(r_array, content.size()));
+			return { r_array, content.size() };
 		} else {
 			std::ifstream file(path, std::ios::in | std::ios::binary);
 			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string() + ", error: ");
@@ -362,12 +362,12 @@ namespace fs {
 			auto r_array = new byte[file_size];
 			file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
 
-			return FileContent(std::make_shared<base::OwningView>(r_array, file_size));
+			return { r_array, file_size };
 		}
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<FileContent, std::string> File::getContentSafe() const {
+	std::expected<base::SharedView, std::string> File::getContentSafe() const {
 		if ((type != FileType::Virtual && !exists(path))
 		    || (type == FileType::Virtual && vfs->exists(path))) {
 			return std::unexpected(base::strConcat(
