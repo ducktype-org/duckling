@@ -248,10 +248,10 @@ namespace compiler::helios::code {
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
-		SymID                        callee;
+		base::Box<Expr>              callee;
 		std::vector<base::Box<Expr>> arguments;
 
-		CallExpr(query::Context& ctx, SymID callee, std::vector<base::Box<Expr>> arguments);
+		CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
