@@ -1,6 +1,6 @@
-@page dia-templates Diagnostic message templates
+@page dia-templates Diagnostic templates
 
-Message templates (or, actually, *info templates*) are recipes for
+Diagnostic templates (or, actually, *info templates*) are recipes for
 converting the raw diagnostic data
 emitted by the compiler into a human-readable messages.
 
@@ -15,7 +15,7 @@ of the compiler's source code.
 
 > This document goes through the technicalities of creating and using
 info templates. For more information on guidelines about writing the content
-of these templates, see the @TODO.
+of these templates, see the \ref dia-guidelines guidelines page.
 
 ## Anatomy of an info template
 A template describes the representation of a standalone, coherent
@@ -227,3 +227,134 @@ All macros should be defined under the `macros` node
 at the root of the file.
 
 ## Anatomy of a message template
+
+A message template (`<message>`) is represented as a tree, where each node
+introduces new content or functionality to the message. There are a couple
+of node types, depending on their purpose:
+- text node,
+- concatenation node,
+- parameter node,
+- macro node,
+- matching node,
+- include node.
+
+All message templates are evaluated lazily (thanks to the matching node,
+not all branches of the template tree have to be evaluated), which is crucial
+for handling optional template parameters.
+
+### Text node
+
+The text node is just plain text. It does not introduce any metadata.
+Text nodes are leaves in the message template node tree.
+
+~~~~~yaml
+"Example text node in quotes."
+
+Example text not in quotes.
+
+>
+Example text
+that is split
+across multiple lines
+for readability.
+~~~~~
+> Examples of text nodes. Because the general format of the template file
+is YAML, the text can be specified with and without quotes. It can also
+be split into multiple lines.
+
+### Concatenation node
+
+The concatenation node, as the name suggests, concatenates multiple nodes.
+It is represented as a YAML list.
+
+~~~~~yaml
+- "The parameter is "
+- param: "my_parameter"
+- "."
+~~~~~
+> Example of a concatenation node comprising of a text node, a parameter node,
+and another text node.
+
+### Parameter node
+
+The parameter node, upon evaluation, is replaced by the template parameter
+it refers to which has been passed down by the compiler.
+
+Evaluating a missing optional parameter results in an error.
+However, because of lazy and conditional template evaluation
+(see [**the matching node**](#matching-node)),
+it is possible for such a node to exist in the message template tree
+provided it does not get evaluated.
+
+When evaluated inside an edge class' message template, and if there are two
+parameters of the same name (one global for the entire info and one local
+for this edge class), the parameter node is replaced by the local parameter
+(local parameters shadow the global ones).
+
+~~~~~yaml
+param: <param_name>
+~~~~~
+> A scheme for defining a parameter node.
+
+### Macro node
+
+The macro node, upon evaluation, is replaced by the content of the macro
+it refers to.
+
+~~~~~yaml
+macro: <macro_name>
+~~~~~
+> A scheme for defining a macro node.
+
+### Matching node
+
+The matching node introduces logic to the message template evaluation.
+Upon evaluation, the textual content of the `case` field (plain text
+without any metadata) is evaluated and then matched with all cases
+specified in the `of` field. Once a match is found, all other cases are
+discarded and only the content of the matching one is evaluated.
+
+A few things to note about the matching algorithm:
+- cases are divided into *exact cases* and *class cases*,
+- *exact cases* are matched first, in order of appearance, only later
+*class cases*, also in order of appearance, except for the `[other]` case,
+which is considered last,
+- *exact cases* are matched exactly with the value of the `case` field,
+- *class cases* are matched more broadly, depending on the logic associated
+with a given class,
+- *class cases* are specified in square brackets,
+- `[other]` is a special class case, required in every matching node,
+which always produces a match.
+
+> Currently, there is only one class case - `[other]`. More are to be
+introduced when needed.
+
+~~~~~yaml
+case: <message>
+of:
+  <case_1>: <message>
+  <case_2>: <message>
+  "[other]": <message>
+~~~~~
+> A scheme for defining a matching node. Any number of cases can be introduced.
+The `[other]` class case is required.
+
+### Include node
+
+The include node introduces a simple interaction on a fragment of the message
+(specified in the `on` field).
+Upon interaction, the UI is supposed to show the user an info
+identified by the `include` field of this node (it acts as a sort
+of hyperlink to that info).
+
+> Note that the scope of included infos is quite limited as it is currently only
+possible to include non-parametrized infos without code fragments.
+
+~~~~~yaml
+on: <message>
+include:
+  type: <type>
+  family: <family>
+  name: <name>
+~~~~~
+> A scheme for defining an include node.
