@@ -30,7 +30,7 @@ namespace compiler::helios {
 	base::StrID name(SymID);
 
 	/**
-	 * @return whether SymID comes from global variable.
+	 * @return whether SymID is a global variable.
 	 */
 	bool isGlobalVar(SymID);
 
