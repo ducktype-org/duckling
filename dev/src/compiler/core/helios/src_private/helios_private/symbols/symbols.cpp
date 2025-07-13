@@ -133,7 +133,7 @@ namespace compiler::helios {
 					.kind = SymbolKind::Function,
 				},
 				pst_data,
-				isGlobalScope(ctx, scope)
+				true
 			));
 		}
 		case pst::StmtKind::Namespace: {
