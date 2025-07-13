@@ -250,9 +250,46 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
-			(void) call_expr;
+			// @TODO write tests for this case when parser will support it
+			// @TODO maybe chose one style of error messages in this file
+
+			std::vector<Box<Expr>> call_arguments;
+			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
+				auto arg_expr
+					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
+				if (arg_expr.hasError()) return query::QError(errors::Failed());
+				call_arguments.emplace_back(std::move(arg_expr.value()));
+			}
+			auto expr_type = current_expr->expression_type.getSymbolType();
+			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
+
+			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+						call_expr->getSourcePosition(), "Invalid number of arguments"
+					)
+				);
+				return query::QError(errors::Failed());
+			}
+
+			std::vector<base::Box<Expr>> coerced_arguments;
+			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+				auto coerced = coerceExpression(
+					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
+				);
+				if (coerced.hasError()) {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+							call_expr->getSourcePosition(), "Invalid argument type"
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+				coerced_arguments.emplace_back(std::move(coerced.value()));
+			}
+
 			auto node = makeBox<CallExpr>(
-				query_ctx, std::move(current_expr), std::vector<base::Box<Expr>>()
+				query_ctx, std::move(current_expr), std::move(coerced_arguments)
 			);
 			return ChainState::ofExpr(std::move(node));
 		}

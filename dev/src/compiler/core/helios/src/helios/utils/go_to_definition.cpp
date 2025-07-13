@@ -31,9 +31,7 @@ namespace compiler::helios {
 		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
 
 		void visitParenthesisExpr(const ParenthesisExpr& val) override {
-			HoutResultingSymbolListVisitor vis(ctx);
-			val.inner->acceptVisitor(vis);
-			symbol = vis.symbol;
+			val.inner->acceptVisitor(*this);
 		}
 
 		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
