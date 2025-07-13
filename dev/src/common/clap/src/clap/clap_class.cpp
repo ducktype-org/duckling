@@ -5,6 +5,7 @@
 
 #include "clap.hpp"
 #include "clap/command.hpp"
+#include "clap/parsing_result.hpp"
 #include "exceptions.hpp"
 #include "param_builder.hpp"
 #include "value_parser.hpp"
@@ -313,7 +314,7 @@ namespace clap {
 		try {
 			// Returns a ParsingResult and a command that matched.
 			// TODOP: Move command into parsing result.
-			auto [command, parsing_result] = parse(argc, argv);
+			auto parsing_result = parse(argc, argv);
 
 			// Prehandler executes before every other functions. Sets global flags in modules etc.
 			if (pre_handler) pre_handler(parsing_result);
@@ -321,7 +322,7 @@ namespace clap {
 			// TODOP: Command might not have been found.
 			// if (command) {
 			// Get a handler that handles that command.
-			const auto& handler = command.getHandler();
+			const auto& handler = parsing_result.getMatchedCommand().getHandler();
 			if (handler) return handler(parsing_result);
 			// }
 			// No handler available, print help.
@@ -339,9 +340,9 @@ namespace clap {
 		}
 	}
 
-	Clap::CommandAndArgs Clap::newParse(CLIArgs args) { return newParse(args.argc, args.argv); }
+	ParsingResult Clap::newParse(CLIArgs args) { return newParse(args.argc, args.argv); }
 
-	Clap::CommandAndArgs Clap::newParse(usize argc, const char* const* argv) {
+	ParsingResult Clap::newParse(usize argc, const char* const* argv) {
 		// TODOP: Remove that.
 		CORE_ASSERT(
 			argc > 0,
@@ -422,15 +423,17 @@ namespace clap {
 			}
 		}
 
+		// Save the picked command in the parsing state.
+		st.result.setMatchedCommand(current_command, std::move(path));
 		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-		validateParsing(*current_command, st.result);
+		validateParsing(st.result);
 
-		return { *current_command, std::move(st.result) };
+		return std::move(st.result);
 	}
 
-	void Clap::validateParsing(const Command& command, ParsingResult& result) const {
+	void Clap::validateParsing(ParsingResult& result) const {
 		usize num_positional_args = result.getPositionalParameterCount();
-
+		auto command = result.getMatchedCommand();
 		if (num_positional_args < command.getPositionalParameters().size()) {
 			const auto& param = command.getPositionalParameters()[num_positional_args];
 			throw exceptions::PositionalParameterExpected(

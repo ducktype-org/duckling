@@ -5,6 +5,7 @@
  */
 
 #pragma once
+#include "clap/command.hpp"
 #include "parameter.hpp"
 
 #include <base/anycast.hpp>
@@ -87,6 +88,13 @@ namespace clap {
 		 * @param value A value parsed by the default parser.
 		 */
 		void insertExtra(const ParsedValue& value);
+
+		/**
+		 * @brief Sets the command that was matched during parsing.
+		 * @param command A pointer to the matched command.
+		 * @param path A vector of pointers representing the path to the matched command.
+		 */
+		void setMatchedCommand(const Command* cmd, std::vector<const Command*> path);
 
 		/**
 		 * The main way to retrieve a value of a parameter from ParsingResult.
@@ -196,10 +204,22 @@ namespace clap {
 		[[nodiscard]]
 		usize getNamedParameterCount() const;
 
-	private:
-		std::string file_path;
-		std::string args;
+		/**
+		 * Returns a reference to the command that was matched by the parser.
+		 * @return Command which was run.
+		 */
+		[[nodiscard]]
+		const Command& getMatchedCommand() const;
 
+		/**
+		 * Returns the full path of commands which lead to the matched commands.
+		 * @return A vector of commands on the path.
+		 */
+		[[nodiscard]]
+		const std::vector<const Command*>& getCommandPath() const;
+
+
+	private:
 		/**
 		 * Internally, ParsingResult addresses each parameter with an id.
 		 * This method is used to insert and query or just query the id of
@@ -225,6 +245,11 @@ namespace clap {
 		 * according name has been inserted before or not.
 		 */
 		base::Optional<usize> getID(const base::RawView& name) const;
+
+		std::string                 file_path;
+		std::string                 args;
+		const clap::Command*        command = nullptr;  // Command which was run.
+		std::vector<const Command*> command_path;       // A path to the command which was run.
 
 		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;

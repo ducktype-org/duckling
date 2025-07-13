@@ -46,7 +46,6 @@ namespace clap {
 	class Clap final {
 	public:
 		using PreHandler     = std::function<void(clap::ParsingResult&)>;
-		using CommandAndArgs = std::pair<const Command&, ParsingResult>;
 
 		// Clap is move-only
 		Clap(std::string name, std::string description);
@@ -148,8 +147,8 @@ namespace clap {
 		 * @param argv A C-string array.
 		 * @return A pair of the command that matched and the parsed parameters.
 		 */
-		CommandAndArgs newParse(CLIArgs args);
-		CommandAndArgs newParse(usize argc, const char* const* argv);
+		ParsingResult newParse(CLIArgs args);
+		ParsingResult newParse(usize argc, const char* const* argv);
 
 		/**
 		 * Performs the parsing and executes the command.
@@ -167,14 +166,15 @@ namespace clap {
 		 * Parses the argv, returns a command to be run and it's parameters.
 		 * @param result ParsingResult which holds the parsed data.
 		 */
-		CommandAndArgs parse(int argc, const char* const* argv);
+		ParsingResult parse(int argc, const char* const* argv);
 
 		/**
 		 * Validates the result accordingly to the Clap's specification, invokes
 		 * conditionals' conditions, etc.
 		 * @param result ParsingResult which holds the parsed data.
 		 */
-		void validateParsing(const Command& command, ParsingResult& result) const;
+		void validateParsing(ParsingResult& result) const;
+		
 
 		// Root command, stores the global options, subcommands of the global CLAP object.
 		Command    root_command;

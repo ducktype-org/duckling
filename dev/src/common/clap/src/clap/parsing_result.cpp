@@ -71,6 +71,11 @@ namespace clap {
 
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
 
+	void ParsingResult::setMatchedCommand(const Command* cmd, std::vector<const Command*> path) {
+		command      = cmd;
+		command_path = std::move(path);
+	}
+
 	usize ParsingResult::getPositionalParameterCount() const { return positional_values.size(); }
 
 	usize ParsingResult::getExtraParameterCount() const { return extra_values.size(); }
@@ -78,6 +83,14 @@ namespace clap {
 	usize ParsingResult::getFlagCount() const { return flags.size(); }
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
+
+	const Command& ParsingResult::getMatchedCommand() const {
+		return *command;
+	}
+
+	const std::vector<const Command*>& ParsingResult::getCommandPath() const {
+		return command_path;
+	}
 
 	ParsingResult& ParsingResult::operator=(const ParsingResult& other) {
 		file_path         = other.file_path;
