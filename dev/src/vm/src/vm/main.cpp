@@ -90,9 +90,10 @@ clap::Clap getVmClap() {
 int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clap = getVmClap();
+	// clap.dPrint();
 
 	try {
-		return clap.execute(argc, argv);
+		return clap.execute(usize(argc), argv);
 	} catch (const clap::exceptions::VersionException& e) {
 		showVersion();
 	} catch (const clap::exceptions::HelpException& e) {

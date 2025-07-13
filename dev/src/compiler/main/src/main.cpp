@@ -6,6 +6,7 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
+#include "clap/help_message_generator.hpp"
 #include "diagnostic/logger.hpp"
 #include "lexer/lexer_class.hpp"
 
@@ -37,43 +38,6 @@ void printContextErrors() {
 		query::Context::logger.dumpLog(true, std::cerr);
 	}
 }
-
-// /**
-//  * @brief Generate help messages with list of all commands
-//  */
-// [[nodiscard]]
-// std::string generateHelpMessage() const {
-// 	std::string out;
-// 	out.reserve(128);
-
-// 	out += "Available commands: \n";
-// 	for (auto& cmd: commands) {
-// 		out += "    ";
-// 		out += cmd.name;
-// 		out += std::string(30 - cmd.name.length(), ' ');
-// 		out += cmd.description;
-// 		out += "\n";
-// 	}
-// 	return out;
-// }
-
-// void printHelp(
-// 	const clap::Clap&          clap,
-// 	const clap::ParsingResult& parsing_result,
-// 	const CommandList&         commands,
-// 	bool                       command_mode
-// ) {
-// 	if (command_mode) {
-// 		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
-// 		std::cerr << "\nFor list of available commands use: ./duck --help\n";
-// 	} else {
-// 		std::cerr << commands.generateHelpMessage();
-// 		std::cerr << "\nFor help with given command use: ./duck [command] --help\n\n";
-// 		std::cerr << "General options and usage:\n";
-// 		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
-// 	}
-// }
-
 
 clap::Clap getStandardDucklingOptions() {
 	return clap::Clap("duck", "The Duckling compiler")
@@ -373,7 +337,7 @@ clap::Clap myGetClapForMain() {
 		)
 	    .addSubcommand(
 			clap::Command("throw", "Throws exception (testing command).")
-				.setHandler([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clap::ParsingResult& _) -> int {
 					//   configureDuckMainWith(clap, command_args);
 					throw base::LogicError("Command `throw` thrown successfully!");
 				})
@@ -385,7 +349,7 @@ int main(int argc, const char* argv[]) {
 	auto             clap = myGetClapForMain();
 
 	try {
-		return clap.execute(argc, argv);
+		return clap.execute(usize(argc), argv);
 	} catch (const base::Exception& e) {
 		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
 		std::cerr << e.what();

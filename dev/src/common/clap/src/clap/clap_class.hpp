@@ -45,7 +45,7 @@ namespace clap {
 	// TODOP: A simple wrapper for command, which provides the clap functionality.
 	class Clap final {
 	public:
-		using PreHandler     = std::function<void(clap::ParsingResult&)>;
+		using PreHandler = std::function<void(clap::ParsingResult&)>;
 
 		// Clap is move-only
 		Clap(std::string name, std::string description);
@@ -147,8 +147,8 @@ namespace clap {
 		 * @param argv A C-string array.
 		 * @return A pair of the command that matched and the parsed parameters.
 		 */
-		ParsingResult newParse(CLIArgs args);
-		ParsingResult newParse(usize argc, const char* const* argv);
+		ParsingResult parse(CLIArgs args);
+		ParsingResult parse(usize argc, const char* const* argv);
 
 		/**
 		 * Performs the parsing and executes the command.
@@ -156,25 +156,22 @@ namespace clap {
 		 * @param argv A C-string array.
 		 * @return A return value od a handler specified for the picked command.
 		 */
-		int execute(int argc, const char* const* argv);
+		int execute(usize argc, const char* const* argv);
 
 		// Version of the above one, but parses from a string and discards the program name.
 		// int execute(const std::string& args); // TODOP: Implement that.
+		
+		// TODOP: Remove that.
+		void dPrint(); 
 
 	private:
-		/**
-		 * Parses the argv, returns a command to be run and it's parameters.
-		 * @param result ParsingResult which holds the parsed data.
-		 */
-		ParsingResult parse(int argc, const char* const* argv);
-
 		/**
 		 * Validates the result accordingly to the Clap's specification, invokes
 		 * conditionals' conditions, etc.
 		 * @param result ParsingResult which holds the parsed data.
 		 */
 		void validateParsing(ParsingResult& result) const;
-		
+
 
 		// Root command, stores the global options, subcommands of the global CLAP object.
 		Command    root_command;

@@ -5,11 +5,14 @@
 
 #include "clap.hpp"
 #include "clap/command.hpp"
+#include "clap/help_message_generator.hpp"
+#include "clap/parameter.hpp"
 #include "clap/parsing_result.hpp"
 #include "exceptions.hpp"
 #include "param_builder.hpp"
 #include "value_parser.hpp"
 
+#include "base/optional.hpp"
 #include <base/box.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
@@ -116,9 +119,13 @@ namespace {
 			args = mergeArgs(argc, argv);
 			skipWhitespace(parsing_position, args);
 
+			std::cout << "Parsing state initial args: " << args << '\n';
+
+
 			// Check if program is invoked using "./" or by name. This is potentially unsafe.
 			usize path_offset = 0;
 			if (argv[0][0] == '.' && argv[0][1] == '/') path_offset = 2;
+			std::cout << "Path offset: " << path_offset << '\n';
 
 			result = clap::ParsingResult(argv[0] + path_offset, args);
 		}
@@ -153,15 +160,38 @@ namespace {
 		 * Tries to perform parsing of a named parameter. It could be a flag or a value parameter.
 		 * @param parameters All the available parameters.
 		 */
-		void parseParameter(const std::vector<clap::Parameter>& parameters) {
+		void parseParameter(
+			const std::vector<clap::Parameter>& local_params,
+			const std::vector<clap::Parameter>& global_params
+		) {
+			std::cout << "Local Params: \n";
+			for (const auto& loca: local_params)
+				std::cout << loca.getLongName()->stdString() << " | ";
+			std::cout << '\n';
+			std::cout << "\nGlobal Params: \n";
+			for (const auto& glob: global_params)
+				std::cout << glob.getLongName()->stdString() << " | ";
+			std::cout << '\n';
+
+
 			auto [param_name, name_type] = parseName();
 			if (name_type == NameType::EmptyName)
 				throw clap::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
 
-			if (name_type == NameType::LongName)
-				findParameterAndParse(parameters, param_name, name_type);
-			else
-				for (char c: param_name) findParameterAndParse(parameters, { c }, name_type);
+			if (name_type == NameType::LongName) {
+				// Look through the local parameters, the through the global ones.
+				if (!findParameterAndParse(local_params, param_name, name_type)) {
+					if (!findParameterAndParse(global_params, param_name, name_type))
+						throw clap::exceptions::InvalidParameterName(param_name);
+				}
+			} else {
+				for (char c: param_name) {
+					if (!findParameterAndParse(local_params, { c }, name_type)) {
+						if (!findParameterAndParse(global_params, { c }, name_type))
+							throw clap::exceptions::InvalidParameterName({ c });
+					}
+				}
+			}
 		}
 
 	private:
@@ -196,13 +226,13 @@ namespace {
 		 * @param param_name The parsed name.
 		 * @param name_type Type of the parsed name.
 		 */
-		void findParameterAndParse(
+		bool findParameterAndParse(
 			const std::vector<clap::Parameter>& parameters,
 			const std::string&                  param_name,
 			NameType                            name_type
 		) {
-			bool found_parameter = false;
 			for (auto& parameter: parameters) {
+				bool found_parameter = false;
 				if (name_type == NameType::LongName) {
 					if_opt_some(parameter.getLongName(), name) {
 						if (name == param_name.c_str()) found_parameter = true;
@@ -214,10 +244,10 @@ namespace {
 				}
 				if (found_parameter) {
 					parseWithParameter(parameter, param_name);
-					break;
+					return true;
 				}
 			}
-			if (!found_parameter) throw clap::exceptions::InvalidParameterName(param_name);
+			return false;
 		}
 
 		/**
@@ -310,49 +340,95 @@ namespace clap {
 		);
 	}
 
-	int Clap::execute(int argc, const char* const* argv) {
+	int Clap::execute(usize argc, const char* const* argv) {
 		try {
+			std::cout << "Entering execute:\n";
+			std::cout << "Argc: " << argc << '\n';
+			std::cout << "Arguments:\n";
+			for (usize i = 0; i < argc; ++i)
+				std::cout << "  argv[" << i << "]: " << (argv[i] ? argv[i] : "nullptr") << '\n';
+
+
 			// Returns a ParsingResult and a command that matched.
-			// TODOP: Move command into parsing result.
 			auto parsing_result = parse(argc, argv);
 
+			parsing_result.dPrint();
 			// Prehandler executes before every other functions. Sets global flags in modules etc.
 			if (pre_handler) pre_handler(parsing_result);
 
 			// TODOP: Command might not have been found.
 			// if (command) {
 			// Get a handler that handles that command.
-			const auto& handler = parsing_result.getMatchedCommand().getHandler();
+			const auto& handler = parsing_result.getMatchedCommand()->getHandler();
 			if (handler) return handler(parsing_result);
 			// }
 			// No handler available, print help.
 			// printHelp();
 			return 1;
 		} catch (const exceptions::HelpException& e) {
-			// printHelp();
+			std::cout << "Help exception caught\n";
+			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
 		} catch (const exceptions::ClapException& e) {
 			std::cerr << "Error: " << e.what() << '\n';
 			return 1;
-		} catch (const std::exception& e) {
-			std::cerr << "Something went wrong. Non CLAP exception wa thrown\n";
-			return 1;
-		}
+		} 
 	}
 
-	ParsingResult Clap::newParse(CLIArgs args) { return newParse(args.argc, args.argv); }
+	void Clap::dPrint() {
+		// Helper lambda to print a command and its subcommands recursively
+		std::function<void(const Command&, int)> print_command;
+		print_command = [&](const Command& cmd, int indent) {
+			std::string ind(usize(2 * indent), ' ');
+			std::cout << ind << "Command: " << cmd.getName() << "\n";
+			std::cout << ind << "  Description: " << cmd.getDescription() << "\n";
 
-	ParsingResult Clap::newParse(usize argc, const char* const* argv) {
+			// Print parameters
+			if (!cmd.getParameters().empty()) {
+				std::cout << ind << "  Parameters:\n";
+				for (const auto& param: cmd.getParameters()) {
+					std::cout << ind << "    - ";
+					if (param.getShortName().has_value())
+						std::cout << "--" << param.getShortName().value() << " ";
+					if (param.getLongName().has_value())
+						std::cout << "-" << param.getLongName()->stdString() << " ";
+					std::cout << ": " << param.getShortDesc().stdString() << "\n";
+				}
+			}
+
+			// Print positional parameters
+			if (!cmd.getPositionalParameters().empty()) {
+				std::cout << ind << "  Positional parameters:\n";
+				for (size_t i = 0; i < cmd.getPositionalParameters().size(); ++i) {
+					auto& parser = cmd.getPositionalParameters()[i];
+					std::cout << ind << "    [" << i << "]: " << parser->getTypeName() << "\n";
+				}
+			}
+
+			// Print subcommands recursively
+			if (!cmd.getSubcommands().empty()) {
+				std::cout << ind << "  Subcommands:\n";
+				for (const auto& sub: cmd.getSubcommands()) print_command(sub, indent + 2);
+			}
+		};
+
+		std::cout << "CLAP structure dump:\n";
+		print_command(root_command, 0);
+	}
+
+	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
+
+	ParsingResult Clap::parse(usize argc, const char* const* argv) {
 		// TODOP: Remove that.
 		CORE_ASSERT(
 			argc > 0,
 			"clap assumes argc is at least 1, as it is the name of the program from the parameters."
 		);
 
-		ParsingState                st(argc, argv);
-		const Command*              current_command = &root_command;
-		std::vector<const Command*> path;
-		path.push_back(current_command);
+		ParsingState               st(argc, argv);
+		const Command*             current_command = &root_command;
+		std::vector<CRef<Command>> path;
+		path.emplace_back(current_command);
 
 
 		// Find subcommands.
@@ -387,7 +463,7 @@ namespace clap {
 			// Step deeper into the new command.
 			if (next_command) {
 				current_command = next_command;
-				path.push_back(current_command);
+				path.emplace_back(current_command);
 				// Skip the space after the command name.
 				skipWhitespace(st.parsing_position, st.args);
 			} else {  // No new command found. A token was a positional argument. Go back.
@@ -398,13 +474,12 @@ namespace clap {
 
 		// After we know the command, we can parse the arguments.
 		// Parameters available for a command are it's parameters and the global ones.
-
 		while (st.parsing_position < st.args.size()) {
 			// It could be a negative number, like -1, or -.5
 			bool is_negative_number = isNegativeNumber(st.parsing_position, st.args);
 
 			if (st.args[st.parsing_position] == '-' && !is_negative_number) {
-				st.parseParameter(current_command->getParameters());
+				st.parseParameter(current_command->getParameters(), root_command.getParameters());
 			} else {
 				// If not found a "-" parse using default value parser
 				// Check if value is positional or extra.
@@ -433,16 +508,16 @@ namespace clap {
 
 	void Clap::validateParsing(ParsingResult& result) const {
 		usize num_positional_args = result.getPositionalParameterCount();
-		auto command = result.getMatchedCommand();
-		if (num_positional_args < command.getPositionalParameters().size()) {
-			const auto& param = command.getPositionalParameters()[num_positional_args];
+		auto  command             = result.getMatchedCommand();
+		if (num_positional_args < command->getPositionalParameters().size()) {
+			const auto& param = command->getPositionalParameters()[num_positional_args];
 			throw exceptions::PositionalParameterExpected(
 				result.getPositionalParameterCount(), param->getTypeName()
 			);
 		}
 
 		// Check this command params.
-		for (auto& param: command.getParameters()) {
+		for (auto& param: command->getParameters()) {
 			variant_match(param.getParameterNecessity()) {
 				variant_case(Required, _) {
 					if (!result.hasParam(param))

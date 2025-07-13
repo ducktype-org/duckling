@@ -5,6 +5,8 @@
 
 #include "parsing_result.hpp"
 
+#include <iostream>
+
 namespace clap {
 	ParsingResult::ParsingResult(std::string file_path, std::string args):
 		  file_path(std::move(file_path)),
@@ -71,7 +73,7 @@ namespace clap {
 
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
 
-	void ParsingResult::setMatchedCommand(const Command* cmd, std::vector<const Command*> path) {
+	void ParsingResult::setMatchedCommand(CRef<Command> cmd, std::vector<CRef<Command>> path) {
 		command      = cmd;
 		command_path = std::move(path);
 	}
@@ -84,13 +86,12 @@ namespace clap {
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
 
-	const Command& ParsingResult::getMatchedCommand() const {
-		return *command;
+	CRef<Command> ParsingResult::getMatchedCommand() const {
+		// TODOP: What about empty optionals?
+		return command.value();
 	}
 
-	const std::vector<const Command*>& ParsingResult::getCommandPath() const {
-		return command_path;
-	}
+	const std::vector<CRef<Command>>& ParsingResult::getCommandPath() const { return command_path; }
 
 	ParsingResult& ParsingResult::operator=(const ParsingResult& other) {
 		file_path         = other.file_path;
@@ -105,5 +106,62 @@ namespace clap {
 			long_names_to_id.put(elem.first, elem.second);
 		for (const auto& elem: other.id_to_value) id_to_value.put(elem.first, elem.second);
 		return *this;
+	}
+
+	void ParsingResult::dPrint() {
+		std::cout << "ParsingResult dump:\n";
+		std::cout << "  File path: " << file_path << "\n";
+		std::cout << "  Args: " << args << "\n";
+
+		// Matched command path
+		std::cout << "  Command path: ";
+		if (command_path.empty()) {
+			std::cout << "(none)\n";
+		} else {
+			for (size_t i = 0; i < command_path.size(); ++i) {
+				std::cout << command_path[i]->getName();
+				if (i + 1 < command_path.size()) std::cout << " -> ";
+			}
+			std::cout << "\n";
+		}
+
+		// Flags
+		std::cout << "  Flags (" << flags.size() << "): ";
+		if (flags.empty()) {
+			std::cout << "(none)\n";
+		} else {
+			for (auto id: flags) std::cout << id << " ";
+			std::cout << "\n";
+		}
+
+		// Named parameters
+		std::cout << "  Named parameters (" << id_to_value.size() << "):\n";
+		for (const auto& [id, val]: id_to_value) {
+			std::cout << "    id=" << id << ", value=";
+			try {
+				std::cout << std::any_cast<std::string>(val.value);
+			} catch (...) { std::cout << "<non-string>"; }
+			std::cout << ", raw='" << val.raw_source << "'\n";
+		}
+
+		// Positional values
+		std::cout << "  Positional values (" << positional_values.size() << "):\n";
+		for (size_t i = 0; i < positional_values.size(); ++i) {
+			std::cout << "    [" << i << "]: ";
+			try {
+				std::cout << std::any_cast<std::string>(positional_values[i].value);
+			} catch (...) { std::cout << "<non-string>"; }
+			std::cout << ", raw='" << positional_values[i].raw_source << "'\n";
+		}
+
+		// Extra values
+		std::cout << "  Extra values (" << extra_values.size() << "):\n";
+		for (size_t i = 0; i < extra_values.size(); ++i) {
+			std::cout << "    [" << i << "]: ";
+			try {
+				std::cout << std::any_cast<std::string>(extra_values[i].value);
+			} catch (...) { std::cout << "<non-string>"; }
+			std::cout << ", raw='" << extra_values[i].raw_source << "'\n";
+		}
 	}
 }

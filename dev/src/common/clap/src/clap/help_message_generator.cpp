@@ -7,6 +7,7 @@
 
 #include "clap/command.hpp"
 #include "clap/parameter.hpp"
+#include "clap/parsing_result.hpp"
 
 #include "base/optional.hpp"
 #include <base/variant.hpp>
@@ -28,27 +29,23 @@ namespace {
 
 	/**
 	 * @brief Generates "Usage" based on the command path.
-	 * @param program_name The name of the executable.
-	 * @param command_path The path from the root command to the current one.
-	 * @param command The specific command for which help is generated.
+	 * @param result The result of parsing.
 	 * @return A formatted "Usage" string.
 	 */
-	std::string generateUsage(
-		const std::string&                       program_name,
-		const std::vector<const clap::Command*>& command_path,
-		const clap::Command&                     command
-	) {
+	std::string generateUsage(const clap::ParsingResult& result) {
+		auto              command = result.getMatchedCommand();
 		std::stringstream usage;
-		usage << "Usage" << program_name;
+		usage << "Usage: " << getFileName(result.getFilePath());
 		// Add a path to this command.
-		for (const auto& cmd: command_path | std::views::drop(1)) usage << " " << cmd->getName();
+		for (const auto& cmd: result.getCommandPath() | std::views::drop(1))
+			usage << " " << cmd->getName();
 
-		if (not command.getSubcommands().empty()) {
+		if (not command->getSubcommands().empty()) {
 			usage << " <COMMAND> [OPTIONS]";
 			return usage.str();
 		}
 
-		for (const auto& param: command.getParameters()) {
+		for (const auto& param: command->getParameters()) {
 			variant_match(param.getParameterNecessity()) {
 				variant_case(clap::Required, _) {
 					usage << " ";
@@ -64,10 +61,10 @@ namespace {
 				}
 			}
 		}
-		for (const auto& positional: command.getPositionalParameters())
+		for (const auto& positional: command->getPositionalParameters())
 			usage << " <" << positional->getTypeName() << ">";
-		usage << " [OPTIONS]";
-		auto default_parser = command.getDefaultValueParser();
+		usage << " [OPTIONS] ";
+		auto default_parser = command->getDefaultValueParser();
 		if (default_parser != nullptr) usage << "[" + default_parser->getTypeName() + "...]";
 		return usage.str();
 	}
@@ -126,25 +123,24 @@ std::string generateSubcommandsBlock(
 }
 
 namespace clap {
-	std::string HelpMessageGenerator::generate(
-		const Clap&                        clap,
-		const Command&                     command,
-		const std::vector<const Command*>& command_path,
-		const std::string&                 program_name
-	) {
+	std::string HelpMessageGenerator::generate(const Clap& clap, const ParsingResult& result) {
 		std::stringstream output;
-		if (not command.getDescription().empty()) output << command.getDescription() << "\n\n";
-		output << generateUsage(program_name, command_path, command) << '\n';
-		output << generateOptionsBlock("Options:", command.getParameters());
-		output << generateSubcommandsBlock(command.getSubcommands());
+		auto              command      = result.getMatchedCommand();
+		auto              command_path = result.getCommandPath();
+		auto program_name = command->getName();  // TODOP: This may be not what we want.
 
-		if (&command != &clap.getRootCommand()) {  // TODOP: Write a comparision operator.
+		if (not command->getDescription().empty()) output << command->getDescription() << "\n\n";
+		output << generateUsage(result) << '\n';
+		output << generateOptionsBlock("Options:", command->getParameters());
+		output << generateSubcommandsBlock(command->getSubcommands());
+
+		if (command.get() != &clap.getRootCommand()) {  // TODOP: Write a comparision operator.
 			output << generateOptionsBlock("Global Options:", clap.getRootCommand().getParameters());
 		}
 
-		if (not command.getSubcommands().empty()) {
+		if (not command->getSubcommands().empty()) {
 			output << "\nRun '" << program_name
-				   << " <COMMAND> --help for more information on a command.";
+				   << " <COMMAND> --help for more information on a command.\n";
 		}
 		return output.str();
 	}

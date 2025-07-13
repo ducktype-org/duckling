@@ -3,6 +3,8 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
+#include "clap/exceptions.hpp"
+
 #include <base64.hpp>
 #include <clap/clap.hpp>
 
@@ -236,6 +238,40 @@ void showVersion() {
 	std::cout << "DucklingLS daemon version 0.0.\n";
 }
 
+clap::Clap getLspDaemonCLI() {
+	return clap::Clap("lsp_deamon", "The Duckling Language Server Protocol daemon.")
+	    .addHelpFlag()
+	    .addGlobalParameter(
+			clap::ParamBuilder::ofFlag()
+				.addShortName('v')
+				.addLongName("version")
+				.addShortDesc("Show version information and exit")
+				.build()
+		)
+	    .setPreHandler([](const clap::ParsingResult& options) {
+			if (options.isFlag("version")) {
+				showVersion();
+				throw clap::exceptions::VersionException(options);
+			}
+		})
+	    .addSubcommand(
+			clap::Command("start", "Starts the LSP server on a given port")
+				.add(
+					clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+						.addShortName('p')
+						.addLongName("port")
+						.addShortDesc("The port for the server to listen on.")
+						.required()
+						.build()
+				)
+				.setHandler([](const clap::ParsingResult& options) {
+					auto port = options.getValue<i64>("port").value();
+					server(i32(port));
+					return 0;
+				})
+		);
+}
+
 /**
  * @brief The main function of the LSP daemon.
  *
@@ -251,24 +287,11 @@ void showVersion() {
  */
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
-	auto clap = clap::Clap()
-	                .addHelpFlag()
-	                .add(clap::ParamBuilder::ofFlag()
-	                         .addShortName('v')
-	                         .addLongName("version")
-	                         .addShortDesc("Show version information")
-	                         .build())
-	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-	                         .addShortName('p')
-	                         .addLongName("port")
-	                         .addShortDesc("Choose port for server")
-	                         .build());
-
-	clap::ParsingResult result;
+	auto clap = getLspDaemonCLI();
 
 	try {
 		// Parse the command-line arguments
-		result = clap.parse(base::safeIntConv<usize>(argc), argv);
+		return clap.execute(usize(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		// Handle general parsing exceptions and print error message
 		printer::StreamPrinter      console = printer::StreamPrinter();
@@ -283,12 +306,13 @@ int main(int argc, const char** argv) {
 		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
 		std::cout << help_message << '\n';
 		return 0;
+	} catch (clap::exceptions::VersionException& e) {
+		// Handle version exception and print version message
+		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		showVersion();
+		return 0;
+	} catch(const std::exception& e) {
+		std::cerr << "An unexpected error occured: " << e.what() << '\n';
+		return 1;
 	}
-
-	if (result.isFlag("version")) showVersion();
-	// Check if the port parameter is provided and start the server on the specified port
-	else if (auto port = result.getValue<i64>("port"))
-		server(i32(port.value()));
-	else
-		throw std::runtime_error("No port or file specified");
 }

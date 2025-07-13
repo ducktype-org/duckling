@@ -1,6 +1,8 @@
 add_library(Clap
 	src/clap/clap_class.cpp
 	src/clap/clap.hpp
+	src/clap/command.hpp
+	src/clap/command.cpp
 	src/clap/parameter.cpp
 	src/clap/parameter.hpp
 	src/clap/value_parser.cpp

@@ -1,4 +1,3 @@
-#pragma once
 #include "command.hpp"
 
 namespace clap {
@@ -56,3 +55,4 @@ namespace clap {
 
 	MCRef<ValueParser> Command::getDefaultValueParser() const { return default_value_parser.ref(); }
 }
+

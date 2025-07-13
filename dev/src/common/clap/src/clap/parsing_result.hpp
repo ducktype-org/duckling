@@ -19,7 +19,7 @@
 #include <vector>
 
 namespace clap {
-	class Clap;
+	class Command; // Forward declaration.
 
 	struct ParsedValue final {
 		std::any    value;
@@ -94,7 +94,7 @@ namespace clap {
 		 * @param command A pointer to the matched command.
 		 * @param path A vector of pointers representing the path to the matched command.
 		 */
-		void setMatchedCommand(const Command* cmd, std::vector<const Command*> path);
+		void setMatchedCommand(CRef<Command> cmd, std::vector<CRef<Command>> path);
 
 		/**
 		 * The main way to retrieve a value of a parameter from ParsingResult.
@@ -209,14 +209,17 @@ namespace clap {
 		 * @return Command which was run.
 		 */
 		[[nodiscard]]
-		const Command& getMatchedCommand() const;
+		CRef<Command> getMatchedCommand() const;
 
 		/**
 		 * Returns the full path of commands which lead to the matched commands.
 		 * @return A vector of commands on the path.
 		 */
 		[[nodiscard]]
-		const std::vector<const Command*>& getCommandPath() const;
+		const std::vector<CRef<Command>>& getCommandPath() const;
+		
+		void dPrint();
+
 
 
 	private:
@@ -246,10 +249,10 @@ namespace clap {
 		 */
 		base::Optional<usize> getID(const base::RawView& name) const;
 
-		std::string                 file_path;
-		std::string                 args;
-		const clap::Command*        command = nullptr;  // Command which was run.
-		std::vector<const Command*> command_path;       // A path to the command which was run.
+		std::string                   file_path;
+		std::string                   args;
+		base::Optional<CRef<Command>> command;       // Command which was run.
+		std::vector<CRef<Command>>    command_path;  // A path to the command which was run.
 
 		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;
