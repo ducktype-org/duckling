@@ -103,6 +103,12 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
+	/**
+	 * @brief Creates a dynamically generated (meaning it's generated at the moment of a program
+	 * invocation) start function for a specified function. For now, mainly used by the REPL mode.
+	 *
+	 * @note For more detailed explanation go to `createProgramStartFunction`.
+	 */
 	low::FuncData VMThread::createStartFunctionFor(
 		const low::FuncData& func, const FunctionRunArguments& func_args
 	) {
@@ -111,11 +117,9 @@ namespace vm {
 		start_function.arg_size = 0;
 		start_function.ret_size = 0;
 
-		auto called_func_type = executing_program->types->atMaybe(func.name).expect(
-			"Expected the called function to exist!"
-		);
-		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
-		                    .expect("Type i64 is expected to exist!");
+		// @note All the following are guaranteed to exist or their existence was checked earlier.
+		auto called_func_type = executing_program->types->at(func.name);
+		auto i64_type         = executing_program->types->at(base::StrID("i64"));
 
 		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
 		auto funcs              = executing_program->functions;
@@ -161,32 +165,40 @@ namespace vm {
 		return start_function;
 	}
 
+	/**
+	 * @brief Creates a dynamically generated (meaning it's generated at the moment of a program
+	 * invocation) start function for a program.
+	 *
+	 * Just like in libc, the start function pushes the program arguments on to the stack and
+	 * performs the call to main. After the main returns, it deinitializes the argv memory and
+	 * exits, leaving one block on the block stack, which contains the return value of the program.
+	 *
+	 * @note This is done in VMThread, since it depends on the arguments passed during the call
+	 * which may vary from call to call and creating a generic start function using builders in the
+	 * loading phase is not possible. This also results in the need to create the function in it's
+	 * low representation.
+	 * @todo This is a mock implementation. Since strings and dynamic arrays don't exist in the VM
+	 * yet, the passed arguments are expected to be strings representing a numerical value and are
+	 * passed as `i64` to the main function. Additionally, in the future, we might want to add a
+	 * separate start function builder because the start function creation will get a lot more
+	 * complicated, after we start using VmValue or default value constructors which have to be
+	 * invoked before main.
+	 */
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
 	) {
-		// Just like in libc, the start function pushes the program arguments on to the stack and
-		// performs the call to the actual function. After the called function returns, it
-		// deinitializes the argv memory and exits, leaving one block on the block stack, which
-		// contains the return value of the program.
-
 		low::FuncData start_function;
 		start_function.name     = base::StrID("vm_start_function");
 		start_function.arg_size = 0;
 		start_function.ret_size = 0;
 
 		// Types
-		auto called_func_type = executing_program->types->atMaybe(func.name).expect(
-			"Expected the called function to exist!"
-		);
-		auto called_return_type
-			= called_func_type->getResultType().expect("Expected main to have a return value!");
-		auto argv_type = executing_program->types->atMaybe(base::StrID("argv"))
-		                     .expect("All programs are expected to have an existing argv type!");
-		auto argv_ptr_type
-			= executing_program->types->atMaybe(base::StrID("ptr_argv"))
-		          .expect("All programs are expected to have an existing argv pointer type!");
-		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
-		                    .expect("Type i64 is expected to exist!");
+		// @note All the following are guaranteed to exist or their existence was checked earlier.
+		auto called_func_type   = executing_program->types->at(func.name);
+		auto called_return_type = called_func_type->getResultType().value();
+		auto argv_type          = executing_program->types->at(base::StrID("argv"));
+		auto argv_ptr_type      = executing_program->types->at(base::StrID("ptr_argv"));
+		auto i64_type           = executing_program->types->at(base::StrID("i64"));
 
 		// TypeIDs to pass to opcodes.
 		i32  func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
