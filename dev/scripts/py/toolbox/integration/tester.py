@@ -7,6 +7,11 @@ from .utils import (
     print_failure,
     print_success,
     write_log,
+    print_neutral,
+    TestStatistics,
+    Success,
+    Failure,
+    Disabled,
 )
 
 from ..helpers import (
@@ -22,16 +27,16 @@ DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 def run_test(
     test: Test,
+    path: str,
     filter: str,
     dry: bool,
     fail_fast: bool,
     verbose: bool,
     log_file: Path,
-) -> bool:
+) -> TestStatistics:
     """
     Runs a test from `Test` object.
     """
-    success = True
     if test.pre_test:
         log_info_if_needed("Executing pre-test...", dry, verbose)
         dit_exec_command(
@@ -41,19 +46,27 @@ def run_test(
             dry=dry,
             verbose=verbose,
         )
+    stats = TestStatistics([], [], [])
+    simplified_filter = filter[len(path) + 1 :]
+    log_info(f"===== {path} =====")
     for i, case in enumerate(test.cases):
-        if not case.name.startswith(filter):
+        if not case.name.startswith(simplified_filter):
             continue
-        log_info(f"Run [{i + 1}/{len(test)}] - {case.name}")
+        log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
+        case_path = path + "/" + case.name
         try:
-            if err := run_case(test, case, dry, verbose, log_file):
-                print_failure(
-                    f"Case `{test.name}/{case.name}` has failed because: {err}"
-                )
-                success = False
-            else:
-                if not dry:
-                    print_success(f"Case `{test.name}/{case.name}` passed")
+            match run_case(test, case, dry, verbose, log_file):
+                case Failure(f):
+                    print_failure(f"Case `{case.name}` has failed because: {f.error}")
+                    stats.failed.append(case_path)
+                case Success():
+                    if not dry:
+                        stats.succeeded.append(case_path)
+                        print_success(f"Case `{case.name}` passed")
+                case Disabled():
+                    if not dry:
+                        stats.disabled.append(case_path)
+                        print_neutral(f"Case `{case.name}` disabled")
         except BashCommandError as e:
             if e.exit_code == 124:
                 print_failure(
@@ -65,7 +78,7 @@ def run_test(
                 f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
                 log_file=log_file,
             )
-            success = False
+            stats.failed.append(case_path)
             if fail_fast:
                 break
     if test.post_test:
@@ -77,7 +90,7 @@ def run_test(
             dry=dry,
             verbose=verbose,
         )
-    return success
+    return stats
 
 
 def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
@@ -96,11 +109,28 @@ def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
     )
 
 
-def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -> str:
+def run_case(
+    test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
+) -> Success | Failure | Disabled:
     """
     Runs a test case from `Case` object.
     Returns an empty string on success, and an error message on error.
     """
+    # Check if `Enabled` evaluates to `true` to see if test-case is enabled or not
+    if case.enabled != "":
+        log_info_if_needed("Checking if test-case is enabled...", dry, verbose)
+        try:
+            dit_exec_command(
+                case.enabled,
+                cwd=test.cwd,
+                capture_output=not verbose,
+                dry=dry,
+                verbose=verbose,
+                exitcode=0,  # expects 0 -- 0 means it has evaluated to `true`
+            )
+        except BashCommandError:
+            return Disabled()
+
     # Pre-case command
     if case.pre_case:
         log_info_if_needed("Executing pre-case command...", dry, verbose)
@@ -145,9 +175,9 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
                 test_output,
                 test_expected_output,
                 log_file,
-                verbose
+                verbose,
             )
-            return f"Stdouts do not match."
+            return Failure(f"Stdouts do not match.")
 
     # Compare test and expected err.
     if case.expected_err:
@@ -163,8 +193,9 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
                 test_err,
                 test_expected_err,
                 log_file,
+                verbose,
             )
-            return f"Stderrs do not match."
+            return Failure(f"Stderrs do not match.")
 
     # Post-case command
     if case.post_case:
@@ -178,13 +209,14 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
             dry=dry,
         )
 
-    return ""
+    return Success()
 
 
-def clean_test(test: Test, dry: bool, verbose: bool):
+def clean_test(test: Test, path: str, dry: bool, verbose: bool):
     """
     Performs cleaning on a test.
     """
+    log_info(f"Cleaning: {path}")
     try:
         if test.clean:
             dit_exec_command(
@@ -207,7 +239,7 @@ def run_tests(
     fail_fast: bool,
     verbose: bool,
     log_file: Path,
-) -> list[str]:
+) -> TestStatistics:
     """
     A recursive function for running all tests.
     A single call executes all tests in a given tree node.
@@ -218,8 +250,7 @@ def run_tests(
 
     """
     tree.append(tests.name)
-    failed_tests = []
-    ran_tests = 0
+    all_stats = TestStatistics([], [], [])
 
     for test in tests.tests:
         path = "/".join(tree + [test.name])
@@ -231,27 +262,19 @@ def run_tests(
             continue
 
         if clean:
-            log_info(f"Cleaning: {path}")
-            clean_test(test, dry, verbose)
+            clean_test(test, path, dry, verbose)
         else:
-            log_info(f"Testing: {path}")
-            test_success = run_test(
-                test, filter[len(path) + 1 :], dry, fail_fast, verbose, log_file
-            )
-            ran_tests += 1
-            if not test_success:
-                failed_tests.append(path)
-                if fail_fast:
-                    return failed_tests, ran_tests
+            stats = run_test(test, path, filter, dry, fail_fast, verbose, log_file)
+            all_stats += stats
+            if fail_fast and len(stats.failed) > 0:
+                return all_stats
 
     for subtest in tests.subtests:
-        new_failed_tests, new_ran_tests = run_tests(
+        all_stats += run_tests(
             subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file
         )
-        failed_tests += new_failed_tests
-        ran_tests += new_ran_tests
 
-    return failed_tests, ran_tests
+    return all_stats
 
 
 def integration_tests_impl(
@@ -280,22 +303,31 @@ def integration_tests_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    user_values = {"build_dir": str(Path(build_dir).absolute())}
+    user_values = {
+        "build_dir": str(Path(build_dir).absolute()),
+        "dev_dir": str(Path.cwd().absolute()),
+    }
+
     test_set = load_tests("integration_tests", user_values=user_values)
 
-    failed_tests, ran_tests = run_tests(
+    (succeeded, failed, disabled) = run_tests(
         test_set, filter, [], clean, dry, fail_fast, verbose, log_file
     )
 
     if dry:
         return
 
-    if failed_tests:
-        num_failed = len(failed_tests)
-        failed_tests = map(lambda x: " - " + x, failed_tests)
+    total_test_count = len(succeeded) + len(failed) + len(disabled)
+    print(f"Ran test count: {total_test_count}")
+    print(f" - Succeeded: {len(succeeded)}")
+    print(f" - Disabled:  {len(disabled)}")
+    print(f" - Failed:    {len(failed)}")
+
+    if len(failed):
+        failed_tests = map(lambda x: " - " + x, failed)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}{num_failed}/{ran_tests} tests failed:\n{'\n'.join(failed_tests)}\n"
+            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
             + f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean:
-        print_success(f"All [{ran_tests}/{ran_tests}] have run successfully!")
+        print_success(f"All tests have run successfully!")
