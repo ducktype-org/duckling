@@ -4,6 +4,8 @@
  */
 #include "fs_tree.hpp"
 
+#include "filesystem/file.hpp"
+
 using std::regex;
 using namespace std::filesystem;
 using namespace fs;
@@ -40,10 +42,12 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 		// If we don't check for this, then we might get some weird cycles.
 		if (path.isSymlink()) continue;
 
-		if (path.isDirectory()) {
-			// If a file is a directory, then instantiate a new FsTree with path as its root.
-			if (!root->isDirectoryNameValid(path.name())) continue;
-			auto child = create(path, root->m_reject_file_regex, root->m_reject_directory_regex);
+		File file(path);
+
+		if (file.isDirectory()) {
+			// If a file is a directory, then instantiate a new FsTree with file as its root.
+			if (!root->isDirectoryNameValid(file.name())) continue;
+			auto child = create(file, root->m_reject_file_regex, root->m_reject_directory_regex);
 			child->addParent(root);
 			auto child_name = child->getRoot().name();
 			if (root->m_dirs.contains(child_name)) {
@@ -51,7 +55,7 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 					"Not unique directory name: ",
 					child_name,
 					" at: ",
-					path.nativePath(),
+					file.getFilePath().native(),
 					" root: ",
 					root->getRoot().name()
 				));
@@ -59,18 +63,18 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 			root->m_dirs.put(child_name, child);
 		} else {
 			// If a file is not a directory, then add it to FsTree's files storage.
-			if (!root->isFileNameValid(path.name())) continue;
-			auto file_name = path.name();
+			if (!root->isFileNameValid(file.name())) continue;
+			auto file_name = file.name();
 			if (root->m_files.contains(file_name))
 				throw base::LogicError(base::strConcat(
 					"Not unique file name: ",
 					file_name,
 					", at: ",
-					path.nativePath(),
+					file.getFilePath().native(),
 					", root: ",
 					root->getRoot().name()
 				));
-			root->m_files.put(file_name, path);
+			root->m_files.put(file_name, file);
 		}
 	}
 }

@@ -241,7 +241,7 @@ namespace dia {
 	) {
 		auto source_position
 			= note_ptr->getSourcePosition().copyValueOr(parent_message->getSourcePosition());
-		auto source_uri = source_position.getSource()->getPath().uri();
+		auto source_uri = source_position.getSource()->getPath().getFilePath().uri();
 		auto range      = sourcePositionToLspJson(source_position);
 
 		// clang-format off

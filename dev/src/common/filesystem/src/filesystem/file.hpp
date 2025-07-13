@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file_path.hpp"
+
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
@@ -83,15 +85,13 @@ namespace fs {
 	 * auto virtualDir = FileManager::createRandomVirtualDirectory();
 	 *
 	 * // Add a file to the virtual directory
-	 * auto virtualFile = FileManager::createFileIn(virtualDir, "Virtual content");
+	 * auto virtualFile = virtualDir.createSubFile("Virtual content");
 	 * ```
 	 */
 	class File {
 		using FileHash = std::hash<std::filesystem::path>;
 
-		std::filesystem::path path;
-
-		bool is_symlink;
+		FilePath path;
 
 		FileType     type;
 		FileCategory category;
@@ -106,7 +106,7 @@ namespace fs {
 		File(File&&)                 = default;
 		~File()                      = default;
 
-		File(const std::filesystem::path& path);
+		File(const FilePath& path);
 
 		bool operator==(const File& oth) const {
 			bool are_equal = path == oth.path;
@@ -128,22 +128,13 @@ namespace fs {
 		[[nodiscard]]
 		std::expected<base::SharedView, std::string> getContentSafe() const;
 
-		[[nodiscard]]
-		std::string_view strView() const;
-
-		[[nodiscard]] std::filesystem::path getPath() const { return path; }
-
-		[[nodiscard]]
-		File parentPath() const;
-
-		[[nodiscard]]
-		std::string nativePath() const;
-
-		[[nodiscard]]
-		std::string uri() const;
+		[[nodiscard]] FilePath getFilePath() const { return path; }
 
 		[[nodiscard]]
 		std::string name() const;
+
+		[[nodiscard]]
+		std::string stem() const;
 
 		[[nodiscard]]
 		FileType getType() const noexcept {
@@ -157,38 +148,59 @@ namespace fs {
 		bool isDirectory() const noexcept;
 
 		/**
-		 * @brief Returns the contents of a directory as a vector of File objects.
-		 *
-		 * This method works for both physical and virtual directories.
-		 *
-		 * @return A vector of File objects representing the contents of the directory.
-		 */
-		[[nodiscard]]
-		std::vector<File> listFilePaths() const;
-
-		/**
-		 * @brief Checks if the file path is a symbolic link.
-		 *
-		 * For virtual files, this will always return false.
-		 *
-		 * @return True if the file path is a symbolic link, false otherwise.
-		 */
-		[[nodiscard]]
-		bool isSymlink() const noexcept;
-
-		/**
 		 * @brief Writes content to the file.
 		 *
 		 * This method works for both physical and virtual files.
 		 *
 		 * @param new_content The content to write to the file.
 		 * @param append If true, appends to the file; if false, overwrites the file.
-		 * @throws CORE_PANIC if the file operation fails or if append is used with virtual files.
 		 */
 		void writeToFile(std::string_view new_content, bool append = false) const;
 
+		/**
+		 * @brief Returns the contents of a directory as a vector of FilePath objects.
+		 *
+		 * This method works for both physical and virtual directories.
+		 *
+		 * @return A vector of FilePath objects representing the contents of the directory.
+		 */
 		[[nodiscard]]
-		std::string stem() const;
+		std::vector<FilePath> listFilePaths() const;
+
+		/**
+		 * @brief Creates a subdirectory inside this directory.
+		 *
+		 * This method works for virtual and temporary directories.
+		 *
+		 * @param custom_name A custom name. If left default then creates a new random name.
+		 * @return A File representing the newly created subdirectory.
+		 */
+		[[nodiscard]]
+		File createSubDirectory(std::string_view custom_name = "") const;
+
+		/**
+		 * @brief Creates a file inside this directory.
+		 *
+		 * This method works for virtual and temporary directories.
+		 *
+		 * @param new_file_content Content of the file to be created
+		 * @param custom_name A custom name. If left default then creates a new random name.
+		 * @return A File representing the newly created file.
+		 */
+		[[nodiscard]]
+		File createSubFile(std::string_view new_file_content, std::string_view custom_name = "")
+			const;
+
+		/**
+		 * @brief Checks if this file or directory exists.
+		 *
+		 * This method works for all file types (physical, virtual, temporary).
+		 *
+		 * @return True if the file or directory exists, false otherwise.
+		 */
+		[[nodiscard]]
+		bool exists() const;
+
 		[[nodiscard]]
 		std::string extension() const;
 
@@ -204,25 +216,6 @@ namespace fs {
 	 */
 	class FileManager {
 	public:
-		/**
-		 * Returns the default temporary directory as a File.
-		 */
-		static File getDefaultTempDirectory();
-
-		/**
-		 * Returns the default virtual directory as a File.
-		 */
-		static File getDefaultVirtualDirectory();
-
-		/**
-		 * Creates a new directory inside the given directory File. It is required that the
-		 * directory is a temporary or virtual directory.
-		 * @param directory The directory File.
-		 * @param custom_name A custom name. If left default then creates a new random name.
-		 * @return A File representing the newly created directory.
-		 */
-		static File createDirectoryIn(const File& directory, std::string_view custom_name = "");
-
 		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
 		 * name.
@@ -252,20 +245,6 @@ namespace fs {
 		static File createRandomTempFile(std::string_view content = "");
 
 		/**
-		 * Creates a new file inside the given directory File. Is required that the directory is a
-		 * temporary or virtual directory.
-		 * @param directory The directory File.
-		 * @param new_file_content Content of the file to be created
-		 * @param custom_name A custom name. If left default then creates a new random name.
-		 * @return A File representing the newly created file.
-		 */
-		static File createFileIn(
-			const File&      directory,
-			std::string_view new_file_content,
-			std::string_view custom_name = ""
-		);
-
-		/**
 		 * @brief Creates a physical file in the physical filesystem's root directory or at the
 		 * given absolute path. If the file already exists and override is false, throws an error.
 		 * If override is true, overwrites the file.
@@ -276,9 +255,7 @@ namespace fs {
 		 * @return The created File object.
 		 */
 		static File createPhysicalFile(
-			const std::filesystem::path& path,
-			std::string_view             content         = "",
-			bool                         allow_overwrite = false
+			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
 		);
 
 		/**
@@ -290,9 +267,7 @@ namespace fs {
 		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createPhysicalFolder(
-			const std::filesystem::path& path, bool allow_overwrite = false
-		);
+		static File createPhysicalFolder(const FilePath& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Creates a virtual file in the virtual filesystem's root directory or at the given
@@ -303,9 +278,7 @@ namespace fs {
 		 * @return The created File object.
 		 */
 		static File createVirtualFile(
-			const std::filesystem::path& path,
-			std::string_view             content         = "",
-			bool                         allow_overwrite = false
+			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
 		);
 
 		/**
@@ -315,22 +288,17 @@ namespace fs {
 		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createVirtualFolder(
-			const std::filesystem::path& path, bool allow_overwrite = false
-		);
+		static File createVirtualFolder(const FilePath& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Creates a temporary file in the system's temporary directory or at the given path.
-		 * The path must contain a temporary location.
-		 * @param path The path to the file (will be placed in temp directory if not already).
+		 * @param path The path to the file (should be inside the system temp directory).
 		 * @param content The content to write to the file.
 		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File object.
 		 */
 		static File createTempFile(
-			const std::filesystem::path& path,
-			std::string_view             content         = "",
-			bool                         allow_overwrite = false
+			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
 		);
 
 		/**
@@ -340,35 +308,7 @@ namespace fs {
 		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
-		static File createTempFolder(const std::filesystem::path& path, bool allow_overwrite = false);
-
-		/**
-		 * @brief Checks if a file exists at the given path (physical, virtual, or temp).
-		 * @param path The path to check.
-		 * @return True if the file exists, false otherwise.
-		 */
-		static bool fileExists(const std::filesystem::path& path);
-
-		/**
-		 * @brief Checks if a file exists for the given File object.
-		 * @param file The File object to check.
-		 * @return True if the file exists, false otherwise.
-		 */
-		static bool fileExists(const File& file);
-
-		/**
-		 * @brief Checks if a folder exists at the given path (physical, virtual, or temp).
-		 * @param path The path to check.
-		 * @return True if the folder exists, false otherwise.
-		 */
-		static bool folderExists(const std::filesystem::path& path);
-
-		/**
-		 * @brief Checks if a folder exists for the given File object.
-		 * @param file The File object to check.
-		 * @return True if the folder exists, false otherwise.
-		 */
-		static bool folderExists(const File& file);
+		static File createTempFolder(const FilePath& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Deletes a file specified by a File object, according to its type.
@@ -384,32 +324,6 @@ namespace fs {
 		 * @return True if the folder was deleted, false otherwise.
 		 */
 		static bool deleteFolder(const File& folder, bool force = false);
-
-		/**
-		 * @brief Converts a path to a virtual path by prefixing with the VFS root path.
-		 * The path must be phisical.
-		 * @param path The path to convert.
-		 * @return The virtual path.
-		 */
-		static std::filesystem::path toVirtualPath(const std::filesystem::path& path);
-
-		/**
-		 * @brief Converts a virtual path to a relative path by removing the VFS root prefix.
-		 * It require that the path is virtual.
-		 * @param path The virtual path.
-		 * @return The path without the VFS root prefix.
-		 */
-		static std::filesystem::path fromVirtualPath(const std::filesystem::path& path);
-
-		/**
-		 * @brief Checks if the given path is a symbolic link.
-		 *
-		 * For virtual files, this will always return false.
-		 *
-		 * @param path The path to check.
-		 * @return True if the path is a symbolic link, false otherwise.
-		 */
-		static bool isSymlink(const std::filesystem::path& path) noexcept;
 	};
 }
 

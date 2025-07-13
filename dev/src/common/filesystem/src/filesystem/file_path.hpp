@@ -1,0 +1,234 @@
+#pragma once
+
+#include <filesystem>
+#include <string>
+#include <type_traits>
+
+namespace fs {
+
+	/**
+	 * @brief Represents the type of a file path.
+	 */
+	enum class PathType {
+		Physical,
+		Virtual,
+		Temporary,
+	};
+
+	/**
+	 * @class FilePath
+	 * @brief Abstract wrapper over std::filesystem::path with safe path operations.
+	 *
+	 * Provides a safe interface for path manipulation across different filesystem types
+	 * without performing canonicalization operations. Supports conversion between
+	 * virtual and physical paths.
+	 */
+	class FilePath {
+	private:
+		std::filesystem::path path;
+		PathType              type;
+
+		/**
+		 * @brief Determines the path type based on the path string.
+		 * @param path_str The path string to analyze.
+		 * @return The determined PathType.
+		 */
+		static PathType determinePathType(const std::filesystem::path& path);
+
+	public:
+		/**
+		 * @brief Constructor accepting any type convertible to std::filesystem::path.
+		 * @tparam T Type that is convertible to std::filesystem::path.
+		 * @param path_like The path-like object to construct from.
+		 */
+		template<typename T>
+		requires std::is_convertible_v<T, std::filesystem::path>
+		FilePath(T&& path_like): path(std::forward<T>(path_like)), type(determinePathType(path)) {}
+
+		/**
+		 * @brief Gets the underlying std::filesystem::path.
+		 * @return The filesystem path.
+		 */
+		[[nodiscard]] const std::filesystem::path& getPath() const noexcept { return path; }
+
+		/**
+		 * @brief Gets the path type.
+		 * @return The PathType of this path.
+		 */
+		[[nodiscard]] PathType getType() const noexcept { return type; }
+
+		/**
+		 * @brief Gets the string representation of the path.
+		 * @return String representation of the path.
+		 */
+		[[nodiscard]] std::string string() const { return path.string(); }
+
+		/**
+		 * @brief Gets the string view representation of the path.
+		 * @return String view representation of the path.
+		 */
+		[[nodiscard]] std::string_view strView() const { return path.c_str(); }
+
+		/**
+		 * @brief Gets the generic string representation of the path.
+		 * @return Generic string representation of the path.
+		 */
+		[[nodiscard]] std::string genericString() const { return path.generic_string(); }
+
+		/**
+		 * @brief Gets the native string representation of the path.
+		 * @return Native string representation of the path.
+		 */
+		[[nodiscard]] std::string native() const { return path.native(); }
+
+		/**
+		 * @brief Gets the name component of the path (filename for files, directory name for
+		 * directories).
+		 * @return String representing the name.
+		 */
+		[[nodiscard]] std::string name() const {
+			return std::filesystem::absolute(path).filename();
+		}
+
+		/**
+		 * @brief Gets the parent path.
+		 * @return FilePath representing the parent directory.
+		 */
+		[[nodiscard]] FilePath parentPath() const { return path.parent_path(); }
+
+		/**
+		 * @brief Gets the file extension.
+		 * @return String representing the file extension.
+		 */
+		[[nodiscard]] std::string extension() const { return path.extension().string(); }
+
+		/**
+		 * @brief Gets the stem (filename without extension).
+		 * @return String representing the stem.
+		 */
+		[[nodiscard]] std::string stem() const { return path.stem().string(); }
+
+		/**
+		 * @brief Gets the canonical path.
+		 * @return FilePath representing the canonical path.
+		 * @throws std::filesystem::filesystem_error if the path does not exist or cannot be resolved.
+		 */
+		[[nodiscard]] FilePath canonical() const;
+
+		/**
+		 * @brief Checks if the path is a symbolic link.
+		 * @return True if the path is a symbolic link, false otherwise.
+		 */
+		[[nodiscard]] bool isSymlink() const;
+
+		/**
+		 * @brief Safely joins this path with another path component.
+		 * @param component The path component to join.
+		 * @return New FilePath with the joined path.
+		 */
+		[[nodiscard]] FilePath join(const std::filesystem::path& component) const;
+
+		/**
+		 * @brief Safely joins this path with another FilePath.
+		 * @param other The FilePath to join.
+		 * @return New FilePath with the joined path.
+		 */
+		[[nodiscard]] FilePath join(const FilePath& other) const;
+
+		/**
+		 * @brief Operator/ for path joining.
+		 * @param component The path component to join.
+		 * @return New FilePath with the joined path.
+		 */
+		[[nodiscard]] FilePath operator/(const std::filesystem::path& component) const;
+
+		/**
+		 * @brief Operator/ for FilePath joining.
+		 * @param other The FilePath to join.
+		 * @return New FilePath with the joined path.
+		 */
+		[[nodiscard]] FilePath operator/(const FilePath& other) const;
+
+		/**
+		 * @brief Converts this path to a virtual path.
+		 * @return FilePath representing the virtual path.
+		 * @throws CORE_PANIC if the path is already virtual or conversion fails.
+		 */
+		[[nodiscard]] FilePath toVirtualPath() const;
+
+		/**
+		 * @brief Converts this virtual path to a physical path.
+		 * @return FilePath representing the physical path.
+		 * @throws CORE_PANIC if the path is not virtual or conversion fails.
+		 */
+		[[nodiscard]] FilePath toPhysicalPath() const;
+
+		/**
+		 * @brief Checks if this path is virtual.
+		 * @return True if the path is virtual, false otherwise.
+		 */
+		[[nodiscard]] bool isVirtual() const noexcept { return type == PathType::Virtual; }
+
+		/**
+		 * @brief Checks if this path is physical.
+		 * @return True if the path is physical, false otherwise.
+		 */
+		[[nodiscard]] bool isPhysical() const noexcept { return type == PathType::Physical; }
+
+		/**
+		 * @brief Checks if this path is temporary.
+		 * @return True if the path is temporary, false otherwise.
+		 */
+		[[nodiscard]] bool isTemporary() const noexcept { return type == PathType::Temporary; }
+
+		/**
+		 * @brief Makes this path absolute without canonicalization.
+		 * @return FilePath representing the absolute path.
+		 */
+		[[nodiscard]] FilePath absolute() const;
+
+		/**
+		 * @brief Checks if the path is absolute.
+		 * @return True if the path is absolute, false otherwise.
+		 */
+		[[nodiscard]] bool isAbsolute() const noexcept { return path.is_absolute(); }
+
+		/**
+		 * @brief Checks if the path is relative.
+		 * @return True if the path is relative, false otherwise.
+		 */
+		[[nodiscard]] bool isRelative() const noexcept { return path.is_relative(); }
+
+		/**
+		 * @brief Checks if the path is empty.
+		 * @return True if the path is empty, false otherwise.
+		 */
+		[[nodiscard]] bool empty() const noexcept { return path.empty(); }
+
+		/**
+		 * @brief Checks if the path exists.
+		 * @return True if the path exists, false otherwise.
+		 */
+		[[nodiscard]] bool exists() const;
+
+		[[nodiscard]] std::string uri() const;
+
+		/**
+		 * Returns the default temporary directory as a FilePath.
+		 */
+		[[nodiscard]] static FilePath getDefaultTempDirectoryPath();
+
+		/**
+		 * Returns the default virtual directory as a FilePath.
+		 */
+		[[nodiscard]] static FilePath getDefaultVirtualDirectoryPath();
+
+		// Comparison operators
+		auto operator<=>(const FilePath& other) const noexcept { return path <=> other.path; }
+
+		bool operator==(const FilePath& other) const noexcept { return path == other.path; }
+
+		// Conversion to std::filesystem::path
+		operator std::filesystem::path() const { return path; }
+	};
+}

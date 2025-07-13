@@ -1,3 +1,5 @@
+#include "filesystem/file_path.hpp"
+
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file.hpp>
 
@@ -75,8 +77,8 @@ void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& conte
 void artifacts::ArtifactCollection::loadData() {
 	// Read blob data.
 	auto artc_file_path = getArtcFile();
-	if (fs::FileManager::fileExists(artc_file_path)) {
-		std::ifstream     artc_file(artc_file_path);
+	if (artc_file_path.exists()) {
+		std::ifstream     artc_file(artc_file_path.getPath());
 		std::stringstream content;
 		content << artc_file.rdbuf();
 		parseBlobsFromBytes(content);
@@ -98,7 +100,7 @@ void artifacts::ArtifactCollection::flushDown() {
 	std::cerr << "Flushing ArtifactCollection at: " << std::filesystem::absolute(artc_file_path)
 			  << '\n';
 
-	std::ofstream file(artc_file_path);
+	std::ofstream file(artc_file_path.getPath());
 	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
 	for (const auto& [blob_name, blob]: blob_artifacts) {
 		const auto& data = blob_data[blob_name];
@@ -115,7 +117,7 @@ void artifacts::ArtifactCollection::flushDown() {
 	for (auto&& [_, sub_collection]: sub_collections) sub_collection->flushDown();
 }
 
-std::filesystem::path artifacts::ArtifactCollection::getArtcFile() const {
+fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
 	return PATH / (PATH.filename().string() + ".artc");
 }
 

@@ -1,8 +1,6 @@
 #include "vfs.hpp"
 
 namespace fs {
-
-
 	// VFSNode implementation
 	VFS::VFSNode::VFSNode(std::string name, std::variant<FileData, DirectoryData> data):
 		  name(std::move(name)),
@@ -146,7 +144,11 @@ namespace fs {
 
 	bool VFS::isVirtualPath(const std::filesystem::path& path) {
 		if (path.empty()) return false;
-		return *path.begin() == "vfs:";
+
+		// Check if path starts with "vfs:"
+		if (*path.begin() != "vfs:") return false;
+
+		return true;
 	}
 
 	Ref<VFS> VFS::getInstance() {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "filesystem/file_path.hpp"
+
 #include <filesystem/file.hpp>
 #include <hashing/hash.hpp>
 
@@ -201,6 +203,6 @@ namespace artifacts {
 		 * @brief Return path to a `.artc` file with blob content.
 		 * .artc file is the file which stores blob data.
 		 */
-		std::filesystem::path getArtcFile() const;
+		fs::FilePath getArtcFile() const;
 	};
 }

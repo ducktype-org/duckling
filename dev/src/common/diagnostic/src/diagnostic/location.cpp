@@ -4,7 +4,7 @@
 
 namespace dia {
 	void Location::printPrefixInfo(printer::PrinterOStream& out) const {
-		out << "In file: " << getSourceFile().strView().data();
+		out << "In file: " << getSourceFile().getFilePath().strView().data();
 	}
 
 	void Location::printMessage(

@@ -40,8 +40,7 @@ The Virtual Filesystem (VFS) is particularly useful for scenarios where you need
 auto virtual_root = fs::FileManager::createRandomVirtualDirectory();
 
 // Add a file at a specific path within the virtual filesystem
-auto config_file = fs::FileManager::createFileIn(
-    virtual_root, 
+auto config_file = virtual_root.createSubFile(
     "debug=true\nversion=1.0", 
     "config.txt"
 );
@@ -76,7 +75,7 @@ Converts a physical filesystem path to a virtual path by prefixing with the VFS 
 ```cpp
 // Convert physical path to virtual path
 std::filesystem::path physical_path = "/home/user/source.cpp";
-auto virtual_path = fs::FileManager::toVirtualPath(physical_path);
+auto virtual_path = physical_path.toVirtualPath();
 // Result: "vfs:/home/user/source.cpp"
 ```
 
@@ -86,7 +85,7 @@ Converts a virtual path back to a physical path by removing the VFS root prefix:
 ```cpp
 // Convert virtual path back to physical path
 std::filesystem::path virtual_path = "vfs:/home/user/source.cpp";
-auto physical_path = fs::FileManager::fromVirtualPath(virtual_path);
+auto physical_path = virtual_path.toPhysicalPath();
 // Result: "/home/user/source.cpp"
 ```
 
@@ -100,7 +99,7 @@ auto physical_file = fs::FileManager::createPhysicalFile("./test.txt", "original
 // Copy physical file content to virtual filesystem
 auto physical_content = physical_file.getContent();
 auto content_string = physical_content.view().stringView();
-auto virtual_file = fs::FileManager::createVirtualFile(fs::FileManager::toVirtualPath(physical_file.getPath()), content_string);
+auto virtual_file = fs::FileManager::createVirtualFile(physical_file.getPath(.toVirtualPath()), content_string);
 
 // Now both files exist independently - physical and virtual
 ```
@@ -128,9 +127,8 @@ This separation ensures that:
 auto vfs_root = fs::FileManager::createRandomVirtualDirectory();
 
 // Create nested directory structure
-auto src_dir = fs::FileManager::createDirectoryIn(vfs_root, "src");
-auto main_file = fs::FileManager::createFileIn(
-    src_dir, 
+auto src_dir = vfs_root.createSubDirectory("src");
+auto main_file = src_dir.createSubFile(
     "#include <iostream>\nint main() { return 0; }", 
     "main.cpp"
 );
