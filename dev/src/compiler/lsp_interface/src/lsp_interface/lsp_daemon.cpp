@@ -291,7 +291,7 @@ int main(int argc, const char** argv) {
 
 	try {
 		// Parse the command-line arguments
-		return clap.execute(usize(argc), argv);
+		return clap.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		// Handle general parsing exceptions and print error message
 		printer::StreamPrinter      console = printer::StreamPrinter();

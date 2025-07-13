@@ -164,16 +164,6 @@ namespace {
 			const std::vector<clap::Parameter>& local_params,
 			const std::vector<clap::Parameter>& global_params
 		) {
-			std::cout << "Local Params: \n";
-			for (const auto& loca: local_params)
-				std::cout << loca.getLongName()->stdString() << " | ";
-			std::cout << '\n';
-			std::cout << "\nGlobal Params: \n";
-			for (const auto& glob: global_params)
-				std::cout << glob.getLongName()->stdString() << " | ";
-			std::cout << '\n';
-
-
 			auto [param_name, name_type] = parseName();
 			if (name_type == NameType::EmptyName)
 				throw clap::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
@@ -342,17 +332,18 @@ namespace clap {
 
 	int Clap::execute(usize argc, const char* const* argv) {
 		try {
-			std::cout << "Entering execute:\n";
-			std::cout << "Argc: " << argc << '\n';
-			std::cout << "Arguments:\n";
-			for (usize i = 0; i < argc; ++i)
-				std::cout << "  argv[" << i << "]: " << (argv[i] ? argv[i] : "nullptr") << '\n';
+			// TODOP: Remove that.
+			// std::cout << "Entering execute:\n";
+			// std::cout << "Argc: " << argc << '\n';
+			// std::cout << "Arguments:\n";
+			// for (usize i = 0; i < argc; ++i)
+			// 	std::cout << "  argv[" << i << "]: " << (argv[i] ? argv[i] : "nullptr") << '\n';
 
 
 			// Returns a ParsingResult and a command that matched.
 			auto parsing_result = parse(argc, argv);
 
-			parsing_result.dPrint();
+			// parsing_result.dPrint();
 			// Prehandler executes before every other functions. Sets global flags in modules etc.
 			if (pre_handler) pre_handler(parsing_result);
 

@@ -10,6 +10,7 @@
 #include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
+#include "base/int_conv.hpp"
 
 void showVersion() {
 	std::cout << "VM version 0.0.\n";
@@ -93,7 +94,7 @@ int main(int argc, const char** argv) {
 	// clap.dPrint();
 
 	try {
-		return clap.execute(usize(argc), argv);
+		return clap.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const clap::exceptions::VersionException& e) {
 		showVersion();
 	} catch (const clap::exceptions::HelpException& e) {

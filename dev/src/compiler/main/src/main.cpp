@@ -349,7 +349,7 @@ int main(int argc, const char* argv[]) {
 	auto             clap = myGetClapForMain();
 
 	try {
-		return clap.execute(usize(argc), argv);
+		return clap.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
