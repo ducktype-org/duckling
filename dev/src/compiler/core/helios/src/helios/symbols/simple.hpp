@@ -31,8 +31,9 @@ namespace compiler::helios {
 
 	/**
 	 * @return whether SymID is a global variable.
-	 * @note This function iterates through parents of the PST elements of the symbol to obtain this information. It might be changed in the future, especially when more kinds of global variables will appear (for example analog to C++ static variables)
-	 * in the future.
+	 * @note This function iterates through parents of the PST elements of the symbol to obtain this
+	 * information. It might be changed in the future, especially when more kinds of global
+	 * variables will appear (for example analog to C++ static variables).
 	 */
 	bool isGlobalVar(query::Context&, SymID);
 
