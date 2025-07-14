@@ -6,11 +6,8 @@ from .helpers import (
     log_warning, 
     log_new_line, 
     bash_command_get_output,
-    exit_with_error,
 )
-from pathlib import Path
 import os
-from click import option, command, argument
 
 def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
     if(not issues):
@@ -138,42 +135,3 @@ def get_issues_from_github():
     except BashCommandError as e:
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
-
-
-@command()
-@argument(
-    "issues", 
-    nargs=-1, 
-    type=str
-)
-@option(
-    "-r",
-    "--branch",
-    help="The branch relative to which the diff is created.",
-    type=str,
-    default="origin/main",
-)
-@option(
-    "--no-merge-base",
-    is_flag=True,
-    default=False,
-    help="On no-merge-base: compare against the latest commit on `branch` "
-    "instead of the commit which is the LCA of `branch` and current branch. "
-    "This feature allows to run the checker on a shallow clone.",
-)
-def issue_checker(*args, **kwargs):
-    """Checks for occurrences of #issue_number in source files and prints file, line, and summary.
-
-    If no issue numbers are provided, the script will attempt to fetch them from GitHub using the 'gh' CLI.
-    You must be authenticated with 'gh' for this to work.
-    """
-    if not issue_checker_impl(*args, **kwargs):
-        exit_with_error(
-            "Issue checker found issues numbers related to this pull request in the code"
-        )
-
-if __name__ == "__main__":
-    if Path.cwd().name != "dev":
-        exit_with_error("Please run this script from the dev/ directory.")
-
-    issue_checker()

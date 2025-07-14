@@ -1,0 +1,29 @@
+from ..impl.run_preprocessor import run_preprocessor_impl
+from click import command, option
+
+@command()
+@option(
+    "-b",
+    "--build-dir",
+    prompt="build directory",
+    help="The name of the build directory with enabled docs.",
+    default="build",
+)
+@option(
+    "-c",
+    "--cmake-path",
+    prompt="CMake file path",
+    help="Path to a parent directory of cmake file defining the compilation of the file (for example the one defining add_library).",
+)
+@option(
+    "-f",
+    "--source-file",
+    prompt="Source file path",
+    help="File name to run preprocessor on, relative to cmake path (for example whatever was written in add_library).",
+    type=str,
+)
+def run_preprocessor(*args, **kwargs):
+    """Runs the preprocessor on the given file
+    using CMake build system."""
+
+    run_preprocessor_impl(*args, **kwargs)

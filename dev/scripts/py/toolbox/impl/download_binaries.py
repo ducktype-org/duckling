@@ -1,5 +1,3 @@
-from click import option, command
-from pathlib import Path
 from .helpers import (
     exit_with_error,
     log_info,
@@ -48,29 +46,3 @@ def download_binaries_impl(force=False, single=False):
             file.download(force)
 
     log_info("Download done")
-
-@command()
-@option(
-    "-f",
-    "--force",
-    help="Whether or not to force the download of files that already exits",
-    is_flag=True,
-    type=bool,
-    default=False,
-)
-@option(
-    "-s",
-    "--single",
-    help="Download a single file, that is fuzzily named as passed in this flag",
-    type=str,
-    default="",
-)
-def download_binaries(*args, **kwargs):
-    """Downloads necessary binary files from the internet"""
-    download_binaries_impl(*args, **kwargs)
-
-if __name__ == "__main__":
-    if Path.cwd().name != "dev":
-        exit_with_error("Please run this script from the dev/ directory.")
-
-    download_binaries()
