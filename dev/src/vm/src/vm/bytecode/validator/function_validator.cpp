@@ -360,7 +360,7 @@ class FunctionValidator {
 		for (auto arg: args) {
 			variant_match(arg) {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
-	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
+	variant_case(opargs::StackLocal##BIT_COUNT, local) {                                         \
 		if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);           \
 		CRef<TypeOfData> entry = current_stack.at(local.var_name);                               \
 		variant_match(*entry) {                                                                  \
@@ -372,7 +372,7 @@ class FunctionValidator {
 		}                                                                                        \
 	}
 #define GLOBAL_CASE(BIT_COUNT)                                                                   \
-	variant_case(opargs::GlobalI##BIT_COUNT, global) {                                           \
+	variant_case(opargs::Global##BIT_COUNT, global) {                                            \
 		if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);       \
 		CRef<GlobalData> entry = globals.at(global.global_data_name);                            \
 		auto             type  = tod_map.at(entry->type);                                        \

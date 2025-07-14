@@ -87,6 +87,7 @@ namespace tester {
 			curr_global_res = &res;
 
 			runTest(t.test);
+			if (t.should_fail) res.success = !res.success;
 			resultHandler(t, res);
 
 			passed += curr_global_res->success;
@@ -101,8 +102,9 @@ namespace tester {
 		return failed == 0 && passed == tests.size();
 	}
 
-	void TestSuite::addTest(TestType test, std::string_view test_name) {
-		tests.push_back(TestData{ .test = test, .name = std::string(test_name) });
+	void TestSuite::addTest(TestType test, std::string_view test_name, bool should_fail) {
+		tests.push_back(TestData{
+			.test = test, .name = std::string(test_name), .should_fail = should_fail });
 	}
 
 	void TestSuite::runTest(TestType test) {
