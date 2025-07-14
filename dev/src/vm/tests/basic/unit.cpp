@@ -38,6 +38,7 @@ private:
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
+
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 5); }
 };
 
