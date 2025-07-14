@@ -117,7 +117,6 @@ namespace fs {
 	std::string FilePath::uri() const {
 		std::string p = path.generic_string();
 #ifdef _WIN32
-		// Dodajemy trzeci slash i obsługujemy literę dysku
 		if (!p.empty() && p[1] == ':') return "file:///" + p;
 #endif
 		return "file://" + p;
