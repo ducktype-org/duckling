@@ -116,7 +116,7 @@ jobs:
         run: sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
 
       - name: Install Ninja
-        run: sudo apt -y ninja-build
+        run: sudo apt -y install ninja-build
 
       - name: Check installations
         run: |
