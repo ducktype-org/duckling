@@ -43,8 +43,8 @@ namespace vm::code {
 		Identifier name;
 		Identifier type;
 
-		base::Optional<std::string> ctor_name;
-		base::Optional<std::string> dtor_name;
+		base::Optional<Identifier> ctor_name;
+		base::Optional<Identifier> dtor_name;
 	};
 
 	/**

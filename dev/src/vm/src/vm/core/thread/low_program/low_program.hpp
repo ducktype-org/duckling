@@ -32,9 +32,9 @@ namespace vm::low {
 	 * @brief Global data.
 	 */
 	struct GlobData {
-		TypeCRef                    type;
-		base::Optional<std::string> ctor_name;
-		base::Optional<std::string> dtor_name;
+		TypeCRef                         type;
+		base::Optional<code::Identifier> ctor_name;
+		base::Optional<code::Identifier> dtor_name;
 	};
 
 	/**
@@ -56,7 +56,7 @@ namespace vm::low {
 		):
 			  types(std::move(types)),
 			  method_name_pool(method_name_pool) {
-			std::unordered_map<std::string, std::string> ctor_functions;
+			std::unordered_map<std::string, code::Identifier> ctor_functions;
 
 			for (const auto& func: functions) {
 				this->functions.insert(func, func.name);
@@ -67,7 +67,7 @@ namespace vm::low {
 				std::string                fname  = func.name.str();
 				if (fname.starts_with(prefix)) {
 					std::string global_name(fname.substr(prefix.size()));
-					ctor_functions[global_name] = func.name.str();
+					ctor_functions[global_name] = func.name;
 				}
 			}
 
@@ -80,7 +80,7 @@ namespace vm::low {
 				if (ctor_functions.contains(gname)) {
 					data.ctor_name = ctor_functions[gname];
 					std::cerr << "Linked ctor to global: " << gname << " <- "
-							  << data.ctor_name.value() << "\n";
+							  << data.ctor_name.value().str.strView() << "\n";
 				}
 
 				this->global_data.insert(data, global.name);

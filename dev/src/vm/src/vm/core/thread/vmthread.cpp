@@ -436,9 +436,10 @@ namespace vm {
 				try {
 					const auto& func
 						= *executing_program->functions
-					           .atMaybe(base::StrID(global->ctor_name.value().data()))
+					           .atMaybe(base::StrID(global->ctor_name.value().str.str().data()))
 					           .expect(
-								   "Called function does not exist: " + global->ctor_name.value()
+								   "Called function does not exist: "
+								   + global->ctor_name.value().str.str()
 							   );
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
@@ -479,9 +480,10 @@ namespace vm {
 				try {
 					const auto& func
 						= *executing_program->functions
-					           .atMaybe(base::StrID(global->dtor_name.value().data()))
+					           .atMaybe(base::StrID(global->dtor_name.value().str.str().data()))
 					           .expect(
-								   "Called function does not exist: " + global->dtor_name.value()
+								   "Called function does not exist: "
+								   + global->dtor_name.value().str.str()
 							   );
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
