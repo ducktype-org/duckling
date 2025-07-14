@@ -5,8 +5,6 @@ import re
 import click
 import shutil
 
-BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
-
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')

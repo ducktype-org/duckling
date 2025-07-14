@@ -1,4 +1,5 @@
 from ..impl.download_llvm import download_llvm_impl
+from .helpers import version
 from click import command, option, Choice
 
 @command()
@@ -15,13 +16,7 @@ from click import command, option, Choice
     default=True,
     is_flag=True,
 )
-@option(
-    "-v",
-    "--version",
-    prompt="LLVM Version",
-    help="Version of LLVM release, ex. 19.1.4",
-    default="19.1.7",
-)
+@version
 @option(
     "-o",
     "--os",

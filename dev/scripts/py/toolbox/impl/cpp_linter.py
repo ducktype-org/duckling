@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-import os
+from os import cpu_count
 from pathlib import Path
 import sys
 import tempfile
@@ -18,16 +18,26 @@ from .helpers import (
 def cpp_linter_impl(
     clang_tidy_path: str,
     clang_format_path: str,
-    build: str,
-    threads: int = os.cpu_count() or 1,
+    build_dir: str,
+    thread_count: str = "default",
     branch: str = "origin/main",
     all: bool = False,
     no_merge_base: bool = False,
 ) -> tuple[bool, bool]:
-    build_folder = Path(build)
+    build_folder = Path(build_dir)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
-
+    
+    threads = cpu_count() or 1
+    if thread_count == "default":
+        pass
+    if thread_count.isdigit():
+        threads = int(thread_count)
+    else:
+        exit_with_error(
+            f'Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and "default".'
+        )
+    
     file_diffs = get_files_for_linter(all, branch, no_merge_base)
     log_info(f"Found {file_diffs=}")
 

@@ -1,17 +1,12 @@
 from ..impl.install_llvm import install_llvm_impl
-from ..impl.helpers import (
-    BUILD_SYSTEMS
+from .helpers import (
+    version,
+    build_system,
 )
 from click import command, option, Choice
 
 @command()
-@option(
-    "-v",
-    "--version",
-    prompt="LLVM Version",
-    help="Version of LLVM release to compile, ex. 19.1.7",
-    default="19.1.7",
-)
+@version
 @option(
     "-r",
     "--ram",
@@ -45,15 +40,7 @@ from click import command, option, Choice
     default="lld",
     type=Choice(["default", "lld", "mold"], case_sensitive=False),
 )
-@option(
-    "-b",
-    "--build-tool",
-    "build_tool",
-    prompt="Build system",
-    help="Build system to use",
-    default="Ninja",
-    type=BUILD_SYSTEMS,
-)
+@build_system
 @option(
     "-t",
     "--targets",

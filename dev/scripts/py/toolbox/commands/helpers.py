@@ -1,12 +1,10 @@
-# @TODO, determine if it makes sense to use any of these decorators in mentioned file
-from click import option
+from click import option, Choice
 from ..impl.helpers import (
 	default_compiler_from_ctx,
-    BUILD_SYSTEMS,
 )
-from os import cpu_count
 
-# issue_checker, duck_linter, cpp_linter
+BUILD_SYSTEMS = Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
+
 def no_merge_base(func):
     return option(
         "--no-merge-base",
@@ -17,7 +15,6 @@ def no_merge_base(func):
         "This feature allows to run the checker on a shallow clone.",
     )(func)
 
-# duck_linter, cpp_linter
 def all_flag(func):
     return option(
         "-a",
@@ -27,7 +24,6 @@ def all_flag(func):
         help="Check all files, not just the ones that are modified",
     )(func)
 
-# cpp_linter, pr_validate
 def format(func):
     return option(
         "-f",
@@ -38,7 +34,6 @@ def format(func):
         default="clang-format-19",
     )(func)
 
-# cpp_linter, pr_validate
 def tidy(func):
     return option(
         "-t",
@@ -49,7 +44,6 @@ def tidy(func):
         default="clang-tidy-19",
     )(func)
 
-# downlad_llvm, install_llvm
 def version(func):
     return option(
         "-v",
@@ -59,6 +53,7 @@ def version(func):
         default="19.1.7",
     )(func)
 
+# @TODO determine how to deal with options about the compilers
 # install_llvm, setup_build
 def c_compiler(func):
     return option(
@@ -81,7 +76,6 @@ def cxx_compiler(func):
         cls=default_compiler_from_ctx("cxx_compiler"),
     )(func)
 
-# issue_checker, duck_linter, cpp_linter
 def branch(func):
     return option(
         "-r",
@@ -91,54 +85,41 @@ def branch(func):
         default="origin/main",
     )(func)
 
-# coverage, setup_build, itest?
-def build_dir1(func):
+def build_dir(prompt, help):
     return option(
         "-b",
         "--build_dir",
-        prompt="Build dir name",
-        help="The name of the directory.",
+        prompt=prompt,
+        help=help,
         default="build",
-    )(func)
+    )
 
-# itest?, test, cpp_preprocessor, docs
-def build_dir2(func):
-    option(
-        "-b",
-        "--build_dir",
-        prompt="build directory with docs enabled",
-        help="The name of the build directory with enabled docs.",
-        default="build",
-    )(func)
-
-# cpp_linter, coverage
-def threads(func):
+def thread_count(help):
     return option(
         "-j",
-        "--threads",
-        help="On how many threads can linter use. Defaults to os.cpu_count()",
-        type=int,
-        default=cpu_count() or 1,
-    )(func)
+        "--thread-count",
+        prompt="Number of threads to use",
+        help=help,
+        type=str,
+        default="default",
+    )
 
-# install_llvm, setup_build
 def build_system(func):
     return option(
         "-b",
-        "--build-tool",
-        "build_tool",
+        "--build_system",
+        "build_system",
         prompt="Build system",
         help="Build system to use",
         default="Ninja",
         type=BUILD_SYSTEMS,
     )(func)
 
-# duck_linter, itest
-def verbose(func):
+def verbose(help):
     return option(
         "-v",
         "--verbose",
         is_flag=True,
         default=False,
-        help="Also shows checks files that didn't had any errors.",
-    )(func)
+        help=help,
+    )

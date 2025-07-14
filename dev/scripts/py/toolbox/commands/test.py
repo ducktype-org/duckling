@@ -1,13 +1,13 @@
 from ..impl.test import test_impl
+from .helpers import (
+    build_dir,
+)
 from click import command, option, BOOL
 
 @command()
-@option(
-    "-b",
-    "--build_dir",
-    prompt="build directory with docs enabled",
-    help="The name of the build directory with enabled docs.",
-    default="build",
+@build_dir(
+    prompt="build directory with docs enabled", 
+    help="The name of the build directory with enabled docs."
 )
 @option(
     "-m",

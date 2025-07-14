@@ -1,26 +1,17 @@
 from ..impl.setup_build import setup_build_impl
+from .helpers import (
+    build_system,
+    build_dir,
+)
 from ..impl.helpers import (
     default_compiler_from_ctx,
-    BUILD_SYSTEMS,
 )
 from click import Choice, option, command
 
+
 @command()
-@option(
-    "-b",
-    "--build_dir",
-    prompt="Build dir name",
-    help="The name of the directory.",
-    default="build",
-)
-@option(
-    "-s",
-    "--build-system",
-    prompt="Build system",
-    help="The build system to use",
-    type=BUILD_SYSTEMS,
-    default="Ninja",
-)
+@build_dir(prompt="Build dir name", help="The name of the directory.")
+@build_system
 @option(
     "-t",
     "--type",

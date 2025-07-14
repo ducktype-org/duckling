@@ -20,7 +20,7 @@ def install_llvm_impl(
     c_compiler,
     cxx_compiler,
     linker,
-    build_tool,
+    build_system,
     targets,
     source_dir_path,
     use_old_build,
@@ -91,7 +91,7 @@ def install_llvm_impl(
     # Build the cmake command
     cmake_cmd_parts = [
         f"cmake -S {sources_path}/llvm -B {build_dir}",
-        f"-G '{build_tool}'",
+        f"-G '{build_system}'",
         f"-DCMAKE_BUILD_TYPE=Release",
         f"-DCMAKE_INSTALL_PREFIX={install_dir}",
         f"-DLLVM_TARGETS_TO_BUILD={targets}",

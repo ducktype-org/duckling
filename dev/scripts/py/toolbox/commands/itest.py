@@ -2,6 +2,10 @@ from ..impl.integration.tester import (
     DEFAULT_LOG_FILE_PATH, 
     tester_impl,
 )
+from .helpers import (
+    verbose,
+    build_dir,
+)
 from click import command, option
 
 @command()
@@ -33,12 +37,8 @@ from click import command, option
     default=False,
     help="Whether to fail upon a testcase failure. If not passed, runs all tests regardless of their result.",
 )
-@option(
-    "-v",
-    "--verbose",
-    is_flag=True,
-    default=False,
-    help="Prints some debug information about test cases",
+@verbose(
+    help="Prints some debug information about test cases"
 )
 @option(
     "-l",
@@ -47,13 +47,7 @@ from click import command, option
     default=str(DEFAULT_LOG_FILE_PATH),
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
-@option(
-    "-b",
-    "--build_dir",
-    prompt="Build directory",
-    help="The name of the project build directory which is passed to the framework.",
-    default="build",
-)
+@build_dir(prompt="Build directory", help="The name of the project build directory which is passed to the framework.")
 def itest(*args, **kwargs):
     """Runs integration tests"""
     tester_impl(*args, **kwargs)
