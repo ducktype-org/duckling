@@ -193,7 +193,7 @@ IncludeCategories:
   - Regex:           '^("|<)(llvm|llvm-c|clang|clang-c)/'
     Priority:        1
     SortPriority:    6
-  # External libs such as icu(unicode/uniset.h)/crow/asio/json:
+  # External libs such as unicode, json, graphviz:
   - Regex:           '^("|<)(unicode/|crow/|json/|nlohmann/|graphviz/|tree_sitter/|tree-sitter-cpp.h|graphviz/|base64)'
     Priority:        2
     SortPriority:    7
