@@ -1020,5 +1020,6 @@ private:
 			});
 		}
 	}
+};
 
-TESTER_COMMON_MAIN("/src/compiler/core/helios/tests/");
+TESTER_COMMON_MAIN("/src/compiler/core/helios/tests/")
