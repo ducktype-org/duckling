@@ -34,7 +34,7 @@ namespace compiler::helios {
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
 						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
-					if (kind(sym) == SymbolKind::Variable)
+					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
@@ -83,7 +83,7 @@ namespace compiler::helios {
 				// grab constants:
 				if (kind(sym) == SymbolKind::Const)
 					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
-				if (kind(sym) == SymbolKind::Variable)
+				if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
