@@ -31,9 +31,7 @@ namespace compiler::helios {
 		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
 
 		void visitParenthesisExpr(const ParenthesisExpr& val) override {
-			HoutResultingSymbolListVisitor vis(ctx);
-			val.inner->acceptVisitor(vis);
-			symbol = vis.symbol;
+			val.inner->acceptVisitor(*this);
 		}
 
 		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
@@ -46,7 +44,7 @@ namespace compiler::helios {
 			// @TODO ZPP 3.3 -- make this functionality work on more then just sym ids.
 		}
 
-		void visitCallExpr(const CallExpr& call) override { symbol = call.callee; }
+		void visitCallExpr(const CallExpr& call) override { call.callee->acceptVisitor(*this); }
 
 		void visitSequenceExpr(const SequenceExpr& seq) override {
 			if (seq.expressions.empty()) return;
