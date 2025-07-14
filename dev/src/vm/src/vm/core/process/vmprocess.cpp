@@ -292,7 +292,7 @@ namespace vm {
 	VMProcess::~VMProcess() {
 		for (auto& t: vm_threads)
 			if (t.exec_thread) (void) (stop());
-		if (getMainVMThread().exec_thread) getMainVMThread().runGlobalDestructors();
+		if (getMainVMThread().exec_thread) getMainVMThread().execGlobalDestructors();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }

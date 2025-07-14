@@ -256,7 +256,7 @@ namespace vm {
 		/**
 		 * @brief Run destructors of global variables.
 		 */
-		void runGlobalDestructors();
+		void execGlobalDestructors();
 
 		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 

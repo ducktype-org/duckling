@@ -473,7 +473,7 @@ namespace vm {
 	/**
 	 * @brief Function to be called when the VMProcess is destroyed.
 	 */
-	void VMThread::runGlobalDestructors() {
+	void VMThread::execGlobalDestructors() {
 		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
