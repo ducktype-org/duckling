@@ -54,13 +54,10 @@ namespace compiler::helios {
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
-		auto pst_el = getSymRef(id)->getPSTData()->pst_element;
 
 		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_contex
 			= [&](const pst::Access<pst::LangElement>& el) -> bool {
-			
 			switch (el->getElementKind()) {
-
 			case pst::ElementKind::TopLevel:
 			case pst::ElementKind::Namespace:
 				return true;
@@ -71,7 +68,7 @@ namespace compiler::helios {
 			case pst::ElementKind::While:
 			case pst::ElementKind::For:
 				return false;
-			
+
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
@@ -82,7 +79,7 @@ namespace compiler::helios {
 			}
 		};
 
-		return global_variable_pst_contex(pst_el.unlock(ctx));
+		return global_variable_pst_contex(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }

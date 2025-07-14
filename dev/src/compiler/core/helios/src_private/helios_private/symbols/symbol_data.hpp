@@ -86,7 +86,10 @@ namespace compiler::helios {
 		OtherData        other;
 
 		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
-			return SymbolData{ .common = common_data, .other = pst_data };
+			return SymbolData{
+				.common = common_data,
+				.other  = pst_data,
+			};
 		}
 
 		static auto makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
@@ -95,7 +98,7 @@ namespace compiler::helios {
 					.name = name,
 					.kind = SymbolKind::BuiltinFunction,
 				},
-				.other  = builtin_data
+				.other  = builtin_data,
 			};
 		}
 
