@@ -131,8 +131,9 @@ namespace query::internal {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                           \
-	auto type::QueryType::internal_query(const type::QKey& key, ::query::internal::NodeID from)   \
-		-> type::QResult {                                                                        \
+	auto type::QueryType::internal_query(                                                         \
+		const type::QKey& key, ::query::internal::NodeID from                                     \
+	) -> type::QResult {                                                                          \
 		return ::query::internal::standardQueryEntry<type>(key, from);                            \
 	}                                                                                             \
 	decltype(type::QueryType::id) type::QueryType::id                                             \

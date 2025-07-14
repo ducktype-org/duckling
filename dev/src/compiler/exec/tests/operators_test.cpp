@@ -2,8 +2,9 @@
 #include <exec/exec.hpp>
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
-#include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
+
+#include <tester/tester.hpp>
 using namespace exec;
 
 class SimpleExecTest: public tester::TestSuite {

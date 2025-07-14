@@ -2,12 +2,13 @@
 
 #include "backend_options.hpp"
 
-#include <artifacts/artifacts.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
+
+#include <artifacts/artifacts.hpp>
 
 #include <expected>
 

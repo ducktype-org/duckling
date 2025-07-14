@@ -1,11 +1,11 @@
 #include "file.hpp"
 
-#include <filesystem/vfs.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
+
+#include <filesystem/vfs.hpp>
 
 #include <algorithm>
 #include <fstream>

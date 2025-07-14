@@ -1,6 +1,7 @@
 #include "vm_tester_utils.hpp"
 
 #include <nlohmann/json_fwd.hpp>
+
 #include <tester/tester.hpp>
 
 #include <vm/api/data/status.hpp>

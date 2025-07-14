@@ -1,7 +1,8 @@
 #include <exec/ctv.hpp>
 #include <operations/operation.hpp>
-#include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
+
+#include <tester/tester.hpp>
 
 class OperationsTest: public tester::TestSuite {
 #undef TESTER_CLASS

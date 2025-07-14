@@ -4,6 +4,7 @@
  */
 
 #include <base64.hpp>
+
 #include <clap/clap.hpp>
 
 #include <iostream>
@@ -19,13 +20,14 @@ POP_DIAGNOSTIC;
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/int_conv.hpp>
 #include <base/macros/diagnostics.hpp>
 #include <base/variant.hpp>
+
+#include <filesystem/file.hpp>
 
 #include <vm/cli.hpp>
 #include <vm/server.hpp>

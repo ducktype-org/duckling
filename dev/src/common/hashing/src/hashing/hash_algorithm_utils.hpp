@@ -167,8 +167,7 @@ namespace hashing {
 		   && requires(HashAlgorithm::result_type res) {
 				  {
 					  res ^= res
-				  }
-				  -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
+				  } -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
 			  };
 
 		/**

@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/constexpr_cat.hpp>
+
+#include <tester/tester.hpp>
 
 class ConstexprCatTest: public tester::TestSuite {
 #undef TESTER_CLASS

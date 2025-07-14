@@ -12,7 +12,7 @@
 #include <sstream>                 // IWYU pragma: export
 
 #define MAKE_FLAG_TYPE(namespace_name, enum_name, flag_name, ...)                              \
-	MAKE_STRINGIFYABLE_ENUM(namespace_name, u32, enum_name, __VA_ARGS__)                                                                    \
+	MAKE_STRINGIFYABLE_ENUM(namespace_name, u32, enum_name, __VA_ARGS__)                       \
                                                                                                \
 	static_assert(                                                                             \
 		static_cast<u32>(namespace_name::enum_name::COUNT) < 64, "Too many flag options."      \

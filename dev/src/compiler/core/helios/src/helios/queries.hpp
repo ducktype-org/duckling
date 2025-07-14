@@ -9,6 +9,7 @@
 #include "scope_symbol_id.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
+
 #include <query_framework/query_int.hpp>
 
 #include <vector>
