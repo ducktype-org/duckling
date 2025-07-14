@@ -34,7 +34,7 @@ namespace compiler::helios {
 	 * @note This function iterates through all pst_symbols, the switch case will have to be updated
 	 * in the future.
 	 */
-	bool isGlobalVar(query::Context&,  SymID);
+	bool isGlobalVar(query::Context&, SymID);
 
 	/**
 	 * @return kind of the symbol
