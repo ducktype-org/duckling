@@ -43,7 +43,6 @@
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
-#include <variant>
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
