@@ -34,6 +34,7 @@ private:
 	}
 
 	void badConversionTest() {
+		#if defined(DEBUG) || defined(DEVRELEASE)
 		assertThrows<base::Panic>(
 			[]() { base::strToEnum<n::ZeroElements>(base::StrID("A")); },
 			"Bad conversion from string to enum was valid"
@@ -59,6 +60,7 @@ private:
 		checkThatCountDoesNotConvert<n::TwoElements>();
 		checkThatCountDoesNotConvert<n::ThreeElements>();
 		checkThatCountDoesNotConvert<n::SingedInt>();
+		#endif
 	}
 
 	void goodConversionTest() {

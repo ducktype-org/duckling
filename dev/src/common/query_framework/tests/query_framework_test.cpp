@@ -406,6 +406,7 @@ private:
 	}
 
 	void testDeps() {
+		#if defined(DEBUG) || defined(DEVRELEASE)
 		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
@@ -439,6 +440,7 @@ private:
 				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
+		#endif
 	}
 
 	void testSideInput() {
@@ -453,10 +455,12 @@ private:
 	}
 
 	void entryPointSanityTest() {
+		#if defined(DEBUG) || defined(DEVRELEASE)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CallingEntryPoint>(1); },
 			"Calling entry point from query did not panicked."
 		);
+		#endif
 	}
 
 	template<class Query>
