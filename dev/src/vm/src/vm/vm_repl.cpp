@@ -36,7 +36,7 @@ void DuckVMRepl::run() {
 		} else if (strip(stripped_line) == "!{") {
 			processExecuteInstructionList();
 		} else if (lstrip(line).starts_with("#")) {
-			processGlobalInitialization(line);
+			processGlobalnitialization(line);
 		} else if (lstrip(line).starts_with("$")) {
 			processGlobalOutput(line);
 		} else if (lstrip(line).starts_with("!")) {
@@ -165,7 +165,7 @@ void DuckVMRepl::processCodeInjection() {
 	loadOnVm(function_code);
 }
 
-void DuckVMRepl::processGlobalInitialization(std::string& line) {
+void DuckVMRepl::processGlobalnitialization(std::string& line) {
 	std::string global_name = strip(std::string(line).substr(1, line.find(' ')));
 	u64         comma_pos   = line.find(' ');
 	std::string global_type = strip(line.substr(comma_pos + 1));
