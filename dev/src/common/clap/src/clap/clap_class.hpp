@@ -48,7 +48,7 @@ namespace clap {
 		using PreHandler = std::function<void(clap::ParsingResult&)>;
 
 		// Clap is move-only
-		Clap(std::string name, std::string description);
+		Clap(std::string name, std::string description = "");
 		Clap(Clap& other)                      = delete;
 		Clap& operator=(Clap& other) noexcept  = delete;
 		Clap(Clap&& other) noexcept            = default;
@@ -70,6 +70,7 @@ namespace clap {
 		 * @return A reference to self.
 		 */
 		Clap&& addGlobalParameter(Parameter&& parameter);
+		Clap&& addPositional(Box<ValueParser> parser);
 
 		/**
 		 * Sets the default value parser for the Clap. Might be a nullptr.
@@ -160,9 +161,9 @@ namespace clap {
 
 		// Version of the above one, but parses from a string and discards the program name.
 		// int execute(const std::string& args); // TODOP: Implement that.
-		
+
 		// TODOP: Remove that.
-		void dPrint(); 
+		void dPrint();
 
 	private:
 		/**

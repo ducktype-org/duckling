@@ -119,13 +119,9 @@ namespace {
 			args = mergeArgs(argc, argv);
 			skipWhitespace(parsing_position, args);
 
-			std::cout << "Parsing state initial args: " << args << '\n';
-
-
 			// Check if program is invoked using "./" or by name. This is potentially unsafe.
 			usize path_offset = 0;
 			if (argv[0][0] == '.' && argv[0][1] == '/') path_offset = 2;
-			std::cout << "Path offset: " << path_offset << '\n';
 
 			result = clap::ParsingResult(argv[0] + path_offset, args);
 		}
@@ -294,6 +290,11 @@ namespace clap {
 		return std::move(*this);
 	}
 
+	Clap&& Clap::addPositional(Box<ValueParser> parser) {
+		root_command.addPositional(std::move(parser));
+		return std::move(*this);
+	}
+
 	Clap&& Clap::setPreHandler(PreHandler handler) {
 		pre_handler = std::move(handler);
 		return std::move(*this);
@@ -357,13 +358,12 @@ namespace clap {
 			// printHelp();
 			return 1;
 		} catch (const exceptions::HelpException& e) {
-			std::cout << "Help exception caught\n";
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
 		} catch (const exceptions::ClapException& e) {
 			std::cerr << "Error: " << e.what() << '\n';
 			return 1;
-		} 
+		}
 	}
 
 	void Clap::dPrint() {

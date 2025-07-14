@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <iomanip>
 #include <ios>
+#include <iostream>
 #include <ranges>
 #include <sstream>
 #include <string>
@@ -36,6 +37,7 @@ namespace {
 		auto              command = result.getMatchedCommand();
 		std::stringstream usage;
 		usage << "Usage: " << getFileName(result.getFilePath());
+
 		// Add a path to this command.
 		for (const auto& cmd: result.getCommandPath() | std::views::drop(1))
 			usage << " " << cmd->getName();
@@ -50,14 +52,14 @@ namespace {
 				variant_case(clap::Required, _) {
 					usage << " ";
 					bool has_long_name = param.getLongName().has_value();
-					// If a log name is available, we prefer it.
+					// If a long name is available, we prefer it.
 					if (has_long_name)
 						usage << "--" << param.getLongName()->stdString();
 					else if (param.getShortName().has_value())
 						usage << "-" << param.getShortName().value();
 
 					if (param.getValueParser() != nullptr)
-						usage << " < " << param.getValueParser()->getTypeName() << ">";
+						usage << " <" << param.getValueParser()->getTypeName() << ">";
 				}
 			}
 		}
@@ -101,7 +103,6 @@ std::string generateOptionsBlock(
 			std::string       line;
 			while (std::getline(input, line))
 				output << std::setw(padding) << std::left << " " << line << '\n';
-			output << '\n';
 		}
 	}
 	return output.str();
@@ -126,17 +127,15 @@ namespace clap {
 	std::string HelpMessageGenerator::generate(const Clap& clap, const ParsingResult& result) {
 		std::stringstream output;
 		auto              command      = result.getMatchedCommand();
-		auto              command_path = result.getCommandPath();
-		auto program_name = command->getName();  // TODOP: This may be not what we want.
+		auto              program_name = getFileName(result.getFilePath());
 
-		if (not command->getDescription().empty()) output << command->getDescription() << "\n\n";
 		output << generateUsage(result) << '\n';
-		output << generateOptionsBlock("Options:", command->getParameters());
+		if (command.get() != &clap.getRootCommand()) {
+			output << generateOptionsBlock("Global options:", clap.getRootCommand().getParameters());
+		}
+		output << generateOptionsBlock("Subcommand options:", command->getParameters());
 		output << generateSubcommandsBlock(command->getSubcommands());
 
-		if (command.get() != &clap.getRootCommand()) {  // TODOP: Write a comparision operator.
-			output << generateOptionsBlock("Global Options:", clap.getRootCommand().getParameters());
-		}
 
 		if (not command->getSubcommands().empty()) {
 			output << "\nRun '" << program_name

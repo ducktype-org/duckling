@@ -6,12 +6,8 @@
 
 #pragma once
 
-#include "clap/parsing_result.hpp"
-
 #include <clap/clap.hpp>
 
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 namespace clap {
@@ -26,7 +22,6 @@ namespace clap {
 		 * @param clap The clap object used for parsing.
 		 * @param parsing_result Parsing result from help exception.
 		 * @return A nicely formatted string with a help message.
-		 // TODOP: Refector this comment.
 		 */
 		static std::string generate(const Clap& clap, const ParsingResult& result);
 	};

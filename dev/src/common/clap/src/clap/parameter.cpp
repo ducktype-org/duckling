@@ -4,6 +4,7 @@
  */
 
 #include "parameter.hpp"
+#include <tuple>
 
 namespace clap {
 

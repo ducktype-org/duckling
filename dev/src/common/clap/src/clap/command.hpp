@@ -64,15 +64,14 @@ namespace clap {
 		 */
 		[[nodiscard]]
 		MCRef<ValueParser> getDefaultValueParser() const;
-		
 
 
 	private:
-		std::string name;
-		std::string description;
-		MBox<ValueParser>             default_value_parser;
-		Handler     handler{};
-		
+		std::string       name;
+		std::string       description;
+		MBox<ValueParser> default_value_parser;
+		Handler           handler{};
+
 		std::vector<Box<ValueParser>> positional_parameters;
 		std::vector<Parameter>        parameters;
 		std::vector<Command>          subcommands;
