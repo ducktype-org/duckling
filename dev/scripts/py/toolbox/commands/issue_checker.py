@@ -14,7 +14,9 @@ from click import argument, command
     nargs=-1, 
     type=str
 )
-@branch
+@branch(
+    help="The branch relative to which the diff is created.",
+)
 @no_merge_base
 def issue_checker(*args, **kwargs):
     """Checks for occurrences of #issue_number in source files and prints file, line, and summary.

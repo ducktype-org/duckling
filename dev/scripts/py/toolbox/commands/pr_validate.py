@@ -1,16 +1,19 @@
 from ..impl.pr_validate import pr_validate_impl
 from .helpers import (
     build_dir,
-    format,
-    tidy,
+    clang_format,
+    clang_tidy,
 )
 from click import command
 
 @command()
-@format
-@tidy
+@clang_format(
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+)
+@clang_tidy(
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+)
 @build_dir(
-    prompt="build folder",
     help="Path to build folder with compile_commands.json",
 )
 def pr_validate(*args, **kwargs):

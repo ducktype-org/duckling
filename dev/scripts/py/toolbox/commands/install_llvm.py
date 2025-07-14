@@ -1,12 +1,16 @@
 from ..impl.install_llvm import install_llvm_impl
 from .helpers import (
-    version,
+    llvm_version,
     build_system,
+    cxx_compiler,
+    cc_compiler,
 )
 from click import command, option, Choice
 
 @command()
-@version
+@llvm_version(
+    help="Version of LLVM release to compile, ex. 19.1.7",
+)
 @option(
     "-r",
     "--ram",
@@ -16,18 +20,12 @@ from click import command, option, Choice
     default="16",
     type=str,
 )
-@option(
-    "-x",
-    "--cxx_compiler",
-    prompt="C++ compiler path",
+@cxx_compiler(
     help="A path to the C++ compiler to compile with",
     default="default",
     type=str,
 )
-@option(
-    "-c",
-    "--c-compiler",
-    prompt="C compiler path",
+@cc_compiler(
     help="A path to the C compiler to compile with",
     default="default",
     type=str,
@@ -40,7 +38,9 @@ from click import command, option, Choice
     default="lld",
     type=Choice(["default", "lld", "mold"], case_sensitive=False),
 )
-@build_system
+@build_system(
+    help="Build system to use",
+)
 @option(
     "-t",
     "--targets",

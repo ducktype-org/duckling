@@ -19,7 +19,7 @@ def cpp_linter_impl(
     clang_tidy_path: str,
     clang_format_path: str,
     build_dir: str,
-    thread_count: str = "default",
+    thread_count: int = cpu_count() or 1,
     branch: str = "origin/main",
     all: bool = False,
     no_merge_base: bool = False,
@@ -28,23 +28,13 @@ def cpp_linter_impl(
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
     
-    threads = cpu_count() or 1
-    if thread_count == "default":
-        pass
-    if thread_count.isdigit():
-        threads = int(thread_count)
-    else:
-        exit_with_error(
-            f'Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and "default".'
-        )
-    
     file_diffs = get_files_for_linter(all, branch, no_merge_base)
     log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False
     clang_tidy_failed = False
 
-    with ThreadPoolExecutor(max_workers=threads) as e:
+    with ThreadPoolExecutor(max_workers=thread_count) as e:
 
         def call_linter(fd: tuple[str, list[tuple[int, int]]]):
             return run_linter_on(clang_tidy_path, clang_format_path, build_folder, *fd)

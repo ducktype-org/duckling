@@ -15,9 +15,9 @@ from .internet_file import (
 )
 
 def install_llvm_impl(
-    version,
+    llvm_version,
     ram_gb,
-    c_compiler,
+    cc_compiler,
     cxx_compiler,
     linker,
     build_system,
@@ -43,7 +43,7 @@ def install_llvm_impl(
         source_dir_path.mkdir(parents=True, exist_ok=True)
 
     link, downloaded_name, extracted_name, friendly_name = get_llvm_source_strings(
-        version
+        llvm_version
     )
     extracted_name = Path(extracted_name)
     if not (source_dir_path / extracted_name).exists():
@@ -104,8 +104,8 @@ def install_llvm_impl(
 
     if cxx_compiler != "default":
         cmake_cmd_parts.append(f"-DCMAKE_CXX_COMPILER={cxx_compiler}")
-    if c_compiler != "default":
-        cmake_cmd_parts.append(f"-DCMAKE_C_COMPILER={c_compiler}")
+    if cc_compiler != "default":
+        cmake_cmd_parts.append(f"-DCMAKE_C_COMPILER={cc_compiler}")
 
     cmake_command = " \\\n  ".join(cmake_cmd_parts)
     log_info(f"Running cmake command...")
@@ -119,5 +119,5 @@ def install_llvm_impl(
     log_info("Installing LLVM...")
     bash_command(f"cmake --build {build_dir} --target install")
 
-    log_info(f"LLVM {version} has been built and installed to {install_dir}")
+    log_info(f"LLVM {llvm_version} has been built and installed to {install_dir}")
     log_new_line()

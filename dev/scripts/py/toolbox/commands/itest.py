@@ -47,7 +47,9 @@ from click import command, option
     default=str(DEFAULT_LOG_FILE_PATH),
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
-@build_dir(prompt="Build directory", help="The name of the project build directory which is passed to the framework.")
+@build_dir(
+    help="The name of the project build directory which is passed to the framework."
+)
 def itest(*args, **kwargs):
     """Runs integration tests"""
     tester_impl(*args, **kwargs)

@@ -10,7 +10,7 @@ from .internet_file import (
     callback_unTAR,
 )
 
-def download_llvm_impl(version, os, arch):
+def download_llvm_impl(llvm_version, os, arch):
     log_info("==========================")
     log_warning(
         "Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/"
@@ -25,7 +25,7 @@ def download_llvm_impl(version, os, arch):
     log_info("==========================")
     log_new_line()
 
-    link, downloaded, extracted, friendly = get_llvm_strings(version, os, arch)
+    link, downloaded, extracted, friendly = get_llvm_strings(llvm_version, os, arch)
 
     llvm_file = InternetFile(
         downloaded,

@@ -5,121 +5,123 @@ from ..impl.helpers import (
 
 BUILD_SYSTEMS = Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
-def no_merge_base(func):
-    return option(
+def create_option(*def_arg, **def_kwargs):
+    def specialize_option(*arg, **kwargs):
+        return option(
+            *(arg or def_arg),
+            **{**def_kwargs, **kwargs}
+        )
+    
+    return specialize_option
+
+def no_merge_base(*args, **kwargs):
+    return create_option(
         "--no-merge-base",
         is_flag=True,
+        type=bool,
         default=False,
-        help="On no-merge-base: compare against the latest commit on `branch` "
-        "instead of the commit which is the LCA of `branch` and current branch. "
-        "This feature allows to run the checker on a shallow clone.",
-    )(func)
+    )(*args, **kwargs)
 
-def all_flag(func):
-    return option(
+def all_flag(*args, **kwargs):
+    return create_option(
         "-a",
         "--all",
+        "all",
         is_flag=True,
+        prompt="all files?",
+        type=bool,
         default=False,
-        help="Check all files, not just the ones that are modified",
-    )(func)
+    )(*args, **kwargs)
 
-def format(func):
-    return option(
+def clang_format(*args, **kwargs):
+    return create_option(
         "-f",
         "--format",
         "clang_format_path",
         prompt="clang-format path",
-        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+        type=str,
         default="clang-format-19",
-    )(func)
+    )(*args, **kwargs)
 
-def tidy(func):
-    return option(
+def clang_tidy(*args, **kwargs):
+    return create_option(
         "-t",
         "--tidy",
         "clang_tidy_path",
         prompt="clang-tidy path",
-        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+        type=str,
         default="clang-tidy-19",
-    )(func)
+    )(*args, **kwargs)
 
-def version(func):
-    return option(
+def llvm_version(*args, **kwargs):
+    return create_option(
         "-v",
-        "--version",
+        "--llvm-version",
+        "llvm_version",
         prompt="LLVM Version",
-        help="Version of LLVM release to compile, ex. 19.1.7",
+        type=str,
         default="19.1.7",
-    )(func)
+    )(*args, **kwargs)
 
-# @TODO determine how to deal with options about the compilers
-# install_llvm, setup_build
-def c_compiler(func):
-    return option(
+def cc_compiler(*args, **kwargs):
+    return create_option(
         "-c",
         "--cc-compiler",
+        "cc_compiler",
         prompt="C compiler path",
-        help="A path to the C complier to compile with",
-        cls=default_compiler_from_ctx("cc_compiler"),
-    )(func)
+    )(*args, **kwargs)
 
-# install_llvm, setup_build
-def cxx_compiler(func):
-    option(
+def cxx_compiler(*args, **kwargs):
+    return create_option(
         "-x",
         "--cxx-compiler",
+        "cxx_compiler",
         prompt="C++ compiler path",
-        help="A path to the C++ complier to compile with",
-        # this overrides the click.Option class to use the default_compiler_from_ctx
-        # instead, so it can get ctx and infer and set the default value
-        cls=default_compiler_from_ctx("cxx_compiler"),
-    )(func)
+    )(*args, **kwargs)
 
-def branch(func):
-    return option(
+def branch(*args, **kwargs):
+    return create_option(
         "-r",
         "--branch",
-        help="The branch relative to which the diff is created.",
+        "branch",
+        prompt="branch on git",
         type=str,
         default="origin/main",
-    )(func)
+    )(*args, **kwargs)
 
-def build_dir(prompt, help):
-    return option(
+def build_dir(*args, **kwargs):
+    return create_option(
         "-b",
-        "--build_dir",
-        prompt=prompt,
-        help=help,
+        "--build-dir",
+        "build_dir",
+        prompt="build directory",
+        type=str,
         default="build",
-    )
+    )(*args, **kwargs)
 
-def thread_count(help):
-    return option(
+def thread_count(*args, **kwargs):
+    return create_option(
         "-j",
         "--thread-count",
+        "thread_count",
         prompt="Number of threads to use",
-        help=help,
-        type=str,
-        default="default",
-    )
+    )(*args, **kwargs)
 
-def build_system(func):
-    return option(
+def build_system(*args, **kwargs):
+    return create_option(
         "-b",
         "--build_system",
         "build_system",
         prompt="Build system",
-        help="Build system to use",
         default="Ninja",
         type=BUILD_SYSTEMS,
-    )(func)
+    )(*args, **kwargs)
 
-def verbose(help):
-    return option(
+def verbose(*args, **kwargs):
+    return create_option(
         "-v",
         "--verbose",
+        "verbose",
         is_flag=True,
         default=False,
-        help=help,
-    )
+    )(*args, **kwargs)

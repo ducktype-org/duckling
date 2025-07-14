@@ -2,6 +2,8 @@ from ..impl.setup_build import setup_build_impl
 from .helpers import (
     build_system,
     build_dir,
+    cxx_compiler,
+    cc_compiler,
 )
 from ..impl.helpers import (
     default_compiler_from_ctx,
@@ -10,8 +12,12 @@ from click import Choice, option, command
 
 
 @command()
-@build_dir(prompt="Build dir name", help="The name of the directory.")
-@build_system
+@build_dir(
+    help="The name of the directory."
+)
+@build_system(
+    help="Build system to use",
+)
 @option(
     "-t",
     "--type",
@@ -31,19 +37,14 @@ from click import Choice, option, command
     default=True,
     is_flag=True,
 )
-@option(
-    "-x",
-    "--cxx-compiler",
-    prompt="C++ compiler path",
+# @TODO check if it is necessary to get compiler path from context
+@cxx_compiler(
     help="A path to the C++ complier to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
     cls=default_compiler_from_ctx("cxx_compiler"),
 )
-@option(
-    "-c",
-    "--cc-compiler",
-    prompt="C compiler path",
+@cc_compiler(
     help="A path to the C complier to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value

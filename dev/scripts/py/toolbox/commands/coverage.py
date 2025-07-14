@@ -6,9 +6,13 @@ from .helpers import (
 from click import command
 
 @command()
-@build_dir(prompt="Build dir name", help = "The name of the directory")
+@build_dir(
+    help = "The name of the directory"
+)
 @thread_count(
     help="Number of threads used when building",
+    default="default",
+    type=str,
 )
 def coverage(*args, **kwargs):
     """Builds and runs coverage inside given build directory.
