@@ -1,4 +1,3 @@
-#include <graphviz/gvc.h>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 
@@ -6,6 +5,8 @@
 
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
+
+#include <graphviz/gvc.h>
 
 #include <iostream>
 

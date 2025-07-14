@@ -3,9 +3,9 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include <base64.hpp>
-
 #include <clap/clap.hpp>
+
+#include <base64.hpp>
 
 #include <iostream>
 

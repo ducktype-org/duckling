@@ -1,11 +1,11 @@
 #include "vm_tester_utils.hpp"
 
-#include <nlohmann/json_fwd.hpp>
-
 #include <tester/tester.hpp>
 
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+
+#include <nlohmann/json_fwd.hpp>
 
 #include <variant>
 
