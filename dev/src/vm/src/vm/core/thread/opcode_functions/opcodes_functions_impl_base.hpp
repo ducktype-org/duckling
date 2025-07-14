@@ -34,6 +34,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/type.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -145,40 +146,45 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				OP* reinterpret_cast<const TYPE*>(&instr->arg1);                         \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP, IS_FLOAT)                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {      \
+		{                                                                                     \
+			derefStack<TYPE>(local_stack, instr->arg0)                                        \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                                \
+		}                                                                                     \
+		FUNCTION_CONT(1);                                                                     \
+	}                                                                                         \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {               \
+		{                                                                                     \
+			if constexpr (IS_FLOAT) {                                                         \
+				derefStack<TYPE>(local_stack, instr->arg0)                                    \
+					OP static_cast<TYPE>(*reinterpret_cast<const float*>(&instr->arg1));      \
+			} else {                                                                          \
+				derefStack<TYPE>(local_stack, instr->arg0) OP static_cast<TYPE>(instr->arg1); \
+			}                                                                                 \
+		}                                                                                     \
+		FUNCTION_CONT(1);                                                                     \
 	}
 
-	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
-	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
-	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
-	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
-	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
-	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
-	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
-	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
-	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
-	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
-	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
-	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
-	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
-	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
-	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
-	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
-	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
-	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
+	DEFINE_ARITHMETIC_OP(add, 64, i64, +=, false)
+	DEFINE_ARITHMETIC_OP(add, 32, i32, +=, false)
+	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=, false)
+	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=, false)
+	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=, false)
+	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=, false)
+	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=, false)
+	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=, false)
+	DEFINE_ARITHMETIC_OP(div, 64, i64, /=, false)
+	DEFINE_ARITHMETIC_OP(div, 32, i32, /=, false)
+
+	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=, true)
+	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=, true)
+	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=, true)
+	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=, true)
+	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=, true)
+	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=, true)
+	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=, true)
+	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=, true)
 
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                         \
