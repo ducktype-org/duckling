@@ -2,7 +2,7 @@
 import click
 from pathlib import Path
 
-from toolbox.helpers import (
+from .helpers import (
     bash_command,
     bash_command_get_output,
     exit_with_error,

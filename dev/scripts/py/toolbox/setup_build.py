@@ -1,6 +1,6 @@
 from pathlib import Path
 from shutil import rmtree
-from click import option, Choice
+from click import option, Choice, command
 
 from .helpers import (
     bash_command,
@@ -10,12 +10,13 @@ from .helpers import (
     supports_cmake_linker_type,
     should_add_linker_flags,
     default_compiler_from_ctx,
+    exit_with_error,
 )
 
 BUILD_SYSTEMS = Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 
-def impl(
+def setup_build_impl(
     build_dir,
     build_system,
     type,
@@ -63,105 +64,96 @@ def impl(
         with_venv(cmd)
     else:
         bash_command(cmd)
-        
 
-def build_dir(func):
-    return option(
-		"-b",
-		"--build_dir",
-		prompt="Build dir name",
-		help="The name of the directory.",
-		default="build",
-	)(func)
 
-def build_system(func):
-    return option(
-		"-s",
-		"--build-system",
-		prompt="Build system",
-		help="The build system to use",
-		type=BUILD_SYSTEMS,
-		default="Ninja",
-	)(func)
-
-def build_type(func):
-    return option(
-		"-t",
-		"--type",
-		prompt="build type",
-		help="The build type.",
-		default="debug",
-		type=Choice(
-			["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
-		),
-	)(func)
-
-def build_doc(func):
-    return option(
-		"-d",
-		"--docs",
-		prompt="Build docs",
-		help="Whether or not to build the docs.",
-		type=bool,
-		default=True,
-		is_flag=True,
-	)(func)
-
-def cxx_compiler(func):
-    return option(
-		"-x",
-		"--cxx-compiler",
-		prompt="C++ compiler path",
-		help="A path to the C++ complier to compile with",
-		# this overrides the click.Option class to use the default_compiler_from_ctx
-		# instead, so it can get ctx and infer and set the default value
-		cls=default_compiler_from_ctx("cxx_compiler"),
-	)(func)
-
-def cc_compiler(func):
-    return option(
-		"-c",
-		"--cc-compiler",
-		prompt="C compiler path",
-		help="A path to the C complier to compile with",
-		# this overrides the click.Option class to use the default_compiler_from_ctx
-		# instead, so it can get ctx and infer and set the default value
-		cls=default_compiler_from_ctx("cc_compiler"),
-	)(func)
-
-def ccache(func):
-    return option(
-		"--ccache",
-		prompt="Use ccache",
-		help="Whether or not to use ccache.",
-		type=bool,
-		default=False,
-		is_flag=True,
-	)(func)
-
-def coverage(func):
-    return option(
-		"--coverage",
-		prompt="Enable coverage",
-		help="Whether or not to enable coverage",
-		type=bool,
-		default=False,
-		is_flag=True,
-	)(func)
-
+@command()
+@option(
+    "-b",
+    "--build_dir",
+    prompt="Build dir name",
+    help="The name of the directory.",
+    default="build",
+)
+@option(
+    "-s",
+    "--build-system",
+    prompt="Build system",
+    help="The build system to use",
+    type=BUILD_SYSTEMS,
+    default="Ninja",
+)
+@option(
+    "-t",
+    "--type",
+    prompt="build type",
+    help="The build type.",
+    default="debug",
+    type=Choice(
+        ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
+    ),
+)
+@option(
+    "-d",
+    "--docs",
+    prompt="Build docs",
+    help="Whether or not to build the docs.",
+    type=bool,
+    default=True,
+    is_flag=True,
+)
+@option(
+    "-x",
+    "--cxx-compiler",
+    prompt="C++ compiler path",
+    help="A path to the C++ complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cxx_compiler"),
+)
+@option(
+    "-c",
+    "--cc-compiler",
+    prompt="C compiler path",
+    help="A path to the C complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cc_compiler"),
+)
+@option(
+    "--ccache",
+    prompt="Use ccache",
+    help="Whether or not to use ccache.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--coverage",
+    prompt="Enable coverage",
+    help="Whether or not to enable coverage",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 # @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
-def gcov_version(func):
-    return option(
-		"--gcov-version",
-		prompt="GCOV version",
-		help="GCOV version that will be passed to find_program in CMAKE",
-		default="gcov-14",
-	)(func)
+@option(
+    "--gcov-version",
+    prompt="GCOV version",
+    help="GCOV version that will be passed to find_program in CMAKE",
+    default="gcov-14",
+)
+@option(
+    "--linker",
+    prompt="Linker",
+    help="Specify the linker type to use",
+    default="default",
+)
+def setup_build(*args, **kwargs):
+    """Makes a build folder"""
+    setup_build_impl(*args, **kwargs)
 
-def linker(func):
-    return option(
-		"--linker",
-		prompt="Linker",
-		help="Specify the linker type to use",
-		default="default",
-	)(func)
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
+
+    setup_build()

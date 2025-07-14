@@ -6,7 +6,11 @@ import sys
 import requests
 import math
 
-from .helpers import bash_command, exit_with_error, log_info
+from .helpers import (
+    bash_command, 
+    exit_with_error, 
+    log_info,
+)
 
 
 class InternetFile:

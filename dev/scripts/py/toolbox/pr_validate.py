@@ -2,15 +2,15 @@ from .helpers import (
     bash_command,
     exit_with_error,
 )
-from click import option
+from click import option, command
+from pathlib import Path
+from .duck_linter import duck_linter_impl
+from .cpp_linter import cpp_linter_impl
+from .issue_checker import issue_checker_impl
+from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 
-from .duck_linter import impl as duck_linter_impl
-from .cpp_linter import impl as cpp_linter_impl
-from .issue_checker import impl as issue_checker_impl
-from .integration.tester import impl as integration_tests_impl, DEFAULT_LOG_FILE_PATH
 
-
-def impl(clang_tidy_path: str, clang_format_path: str, build: str):
+def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
     
     # Step 1 - build
     bash_command(f"cmake --build {build} -- all build_all_tests build_all_playgrounds")
@@ -19,7 +19,7 @@ def impl(clang_tidy_path: str, clang_format_path: str, build: str):
     bash_command(f"cmake --build {build} -- test")
 
     # Step 3 - integration tests
-    integration_tests_impl(
+    tester_impl(
         clean=False,
         dry=False,
         filter="",
@@ -48,31 +48,39 @@ def impl(clang_tidy_path: str, clang_format_path: str, build: str):
             f"CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}"
         )
 
-def tidy(func):
-    return option(
-        "-t",
-        "--tidy",
-        "clang_tidy_path",
-        prompt="clang-tidy path",
-        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
-        default="clang-tidy-19",
-    )(func)
+@command()
+@option(
+    "-t",
+    "--tidy",
+    "clang_tidy_path",
+    prompt="clang-tidy path",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
+)
+@option(
+    "-f",
+    "--format",
+    "clang_format_path",
+    prompt="clang-format path",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
+)
+@option(
+    "-b",
+    "--build",
+    prompt="build folder",
+    help="Path to build folder with compile_commands.json",
+    default="build",
+)
+def pr_validate(*args, **kwargs):
+    """Runs a set of actions to validate branch state before PR.
+    Actions include: building everything, running tests, linter, duck-linter, issue-checker.
+    In the future we might add integration tests.
+    """
+    pr_validate_impl(*args, **kwargs)
 
-def format(func):
-    return option(
-        "-f",
-        "--format",
-        "clang_format_path",
-        prompt="clang-format path",
-        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
-        default="clang-format-19",
-    )(func)
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
 
-def build(func):
-    return option(
-        "-b",
-        "--build",
-        prompt="build folder",
-        help="Path to build folder with compile_commands.json",
-        default="build",
-    )(func)
+    pr_validate()

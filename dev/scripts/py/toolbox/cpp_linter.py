@@ -1,9 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
-import pathlib
+from pathlib import Path
 import sys
 import tempfile
-from click import option
+from click import option, command
 
 from .helpers import (
     BashCommandError,
@@ -15,6 +15,46 @@ from .helpers import (
     log_new_line,
     log_warning,
 )
+
+def cpp_linter_impl(
+    clang_tidy_path: str,
+    clang_format_path: str,
+    build: str,
+    threads: int = os.cpu_count() or 1,
+    branch: str = "origin/main",
+    all: bool = False,
+    no_merge_base: bool = False,
+) -> tuple[bool, bool]:
+    build_folder = Path(build)
+    if not build_folder.exists():
+        exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
+
+    file_diffs = get_files_for_linter(all, branch, no_merge_base)
+    log_info(f"Found {file_diffs=}")
+
+    clang_format_failed = False
+    clang_tidy_failed = False
+
+    with ThreadPoolExecutor(max_workers=threads) as e:
+
+        def call_linter(fd: tuple[str, list[tuple[int, int]]]):
+            return run_linter_on(clang_tidy_path, clang_format_path, build_folder, *fd)
+
+        results = e.map(call_linter, file_diffs.items())
+
+        for logs, ct_failed, cf_failed in results:
+            sys.stdout.write(logs)
+            clang_tidy_failed |= ct_failed
+            clang_format_failed |= cf_failed
+
+    if clang_format_failed:
+        log_new_line()
+        to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
+        if to_format.lower() in ["y", ""]:
+            bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
+            clang_format_failed = False
+
+    return clang_tidy_failed, clang_format_failed
 
 
 def get_unstaged_new_files() -> bool:
@@ -108,7 +148,7 @@ def get_files_for_linter(all, branch, no_merge_base):
 
 def clang_tidy_on(
     clang_tidy_path: str,
-    build_folder: pathlib.Path,
+    build_folder: Path,
     file: str,
     file_diffs: list[tuple[int, int]],
     log_file,
@@ -161,7 +201,7 @@ def clang_format_on(
 
 
 def run_linter_on(
-    clang_tidy_path: str, clang_format_path: str, build_folder: pathlib.Path, file, diff
+    clang_tidy_path: str, clang_format_path: str, build_folder: Path, file, diff
 ) -> tuple[str, bool, bool]:
     clang_format_failed = False
     clang_tidy_failed = False
@@ -185,108 +225,72 @@ def run_linter_on(
     return logs, clang_tidy_failed, clang_format_failed
 
 
-def impl(
-    clang_tidy_path: str,
-    clang_format_path: str,
-    build: str,
-    threads: int = os.cpu_count() or 1,
-    branch: str = "origin/main",
-    all: bool = False,
-    no_merge_base: bool = False,
-) -> tuple[bool, bool]:
-    build_folder = pathlib.Path(build)
-    if not build_folder.exists():
-        exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
+@command()
+@option(
+    "-t",
+    "--tidy",
+    "clang_tidy_path",
+    prompt="clang-tidy path",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
+)
+@option(
+    "-f",
+    "--format",
+    "clang_format_path",
+    prompt="clang-format path",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
+)
+@option(
+    "-b",
+    "--build",
+    prompt="build folder",
+    help="Path to build folder with compile_commands.json",
+    default="build",
+)
+@option(
+    "-j",
+    "--threads",
+    help="On how many threads can linter use. Defaults to os.cpu_count()",
+    type=int,
+    default=os.cpu_count() or 1,
+)
+@option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
+@option(
+    "-a",
+    "--all",
+    is_flag=True,
+    default=False,
+    help="Check all files, not just the ones that are modified",
+)
+@option(
+    "--no-merge-base",
+    is_flag=True,
+    default=False,
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the linter on a shallow clone.",
+)
+def cpp_linter(*args, **kwargs):
+    """Simulates clang-tidy and clang-format as if in a workflow.
 
-    file_diffs = get_files_for_linter(all, branch, no_merge_base)
-    log_info(f"Found {file_diffs=}")
+    It compares the current branch's working tree with the most recent common ancestor shared with the 'main' branch (called the merge base).
+    """
+    clang_tidy_failed, clang_format_failed = cpp_linter_impl(*args, **kwargs)
+    if clang_tidy_failed or clang_format_failed:
+        exit_with_error(
+            f"Linter has failed because: {clang_tidy_failed=}, {clang_format_failed=}"
+        )
 
-    clang_format_failed = False
-    clang_tidy_failed = False
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
 
-    with ThreadPoolExecutor(max_workers=threads) as e:
-
-        def call_linter(fd: tuple[str, list[tuple[int, int]]]):
-            return run_linter_on(clang_tidy_path, clang_format_path, build_folder, *fd)
-
-        results = e.map(call_linter, file_diffs.items())
-
-        for logs, ct_failed, cf_failed in results:
-            sys.stdout.write(logs)
-            clang_tidy_failed |= ct_failed
-            clang_format_failed |= cf_failed
-
-    if clang_format_failed:
-        log_new_line()
-        to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
-        if to_format.lower() in ["y", ""]:
-            bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
-            clang_format_failed = False
-
-    return clang_tidy_failed, clang_format_failed
-
-def tidy(func):
-    return option(
-        "-t",
-        "--tidy",
-        "clang_tidy_path",
-        prompt="clang-tidy path",
-        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
-        default="clang-tidy-19",
-    )(func)
-
-def format(func):
-    return option(
-        "-f",
-        "--format",
-        "clang_format_path",
-        prompt="clang-format path",
-        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
-        default="clang-format-19",
-    )(func)
-
-def build(func):
-    return option(
-        "-b",
-        "--build",
-        prompt="build folder",
-        help="Path to build folder with compile_commands.json",
-        default="build",
-    )(func)
-
-def threads(func):
-    return option(
-        "-j",
-        "--threads",
-        help="On how many threads can linter use. Defaults to os.cpu_count()",
-        type=int,
-        default=os.cpu_count() or 1,
-    )(func)
-
-def branch(func):
-    return option(
-        "-r",
-        "--branch",
-        help="The branch relative to which the diff is created.",
-        type=str,
-        default="origin/main",
-    )(func)
-
-def all_flag(func):
-    return option(
-        "-a",
-        "--all",
-        is_flag=True,
-        default=False,
-        help="Check all files, not just the ones that are modified",
-    )(func)
-
-def no_merge_base(func):
-    return option(
-        "--no-merge-base",
-        is_flag=True,
-        default=False,
-        help="On no-merge-base: compare against the latest commit on `branch` "
-        "instead of the commit which is the LCA of `branch` and current branch. "
-        "This feature allows to run the linter on a shallow clone.",
-    )(func)
+    cpp_linter()

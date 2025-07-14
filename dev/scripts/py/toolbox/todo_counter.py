@@ -1,7 +1,12 @@
-from .helpers import bash_command_get_output, log_info
-from click import option
+from .helpers import (
+    bash_command_get_output, 
+    log_info,
+    exit_with_error,
+)
+from click import option, command
+from pathlib import Path
 
-def impl(branch: str, count_only: bool, pattern: list[str]):
+def todo_counter_impl(branch: str, count_only: bool, pattern: list[str]):
 
     if len(pattern) == 0:
         patterns = ["TODO", "FIXME"]
@@ -25,30 +30,35 @@ def impl(branch: str, count_only: bool, pattern: list[str]):
         else:
             print(count)
 
-def branch(func):
-    return option(
-        "-b",
-        "--branch",
-        type=str,
-        default="",
-        help="Branch for which to count (empty string means the current branch). It can also be any other commit reference understood be git (e.g. HEAD~1)",
-    )(func)
+@command()
+@option(
+    "-b",
+    "--branch",
+    type=str,
+    default="",
+    help="Branch for which to count (empty string means the current branch). It can also be any other commit reference understood be git (e.g. HEAD~1)",
+)
+@option(
+    "-c",
+    "--count-only",
+    is_flag=True,
+    default=False,
+    help="Only show the counts and nothing else",
+)
+@option(
+    "-p",
+    "--pattern",
+    type=str,
+    required=False,
+    multiple=True,
+    help="Search for a given pattern instead of the default ones (todo and fixme). If passed multiple times, all the patterns will be searched for",
+)
+def todo_counter(*args, **kwargs):
+    """Prints counts of todos and similar comments in the code"""
+    todo_counter_impl(*args, **kwargs)
 
-def count_only_flag(func):
-    return option(
-        "-c",
-        "--count-only",
-        is_flag=True,
-        default=False,
-        help="Only show the counts and nothing else",
-    )(func)
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
 
-def pattern(func):
-    return option(
-        "-p",
-        "--pattern",
-        type=str,
-        required=False,
-        multiple=True,
-        help="Search for a given pattern instead of the default ones (todo and fixme). If passed multiple times, all the patterns will be searched for",
-    )(func)
+    todo_counter()

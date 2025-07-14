@@ -1,9 +1,11 @@
-from click import option, Choice
+from click import option, command, Choice
+from pathlib import Path
 from .helpers import (
     get_llvm_strings,
     log_info,
     log_new_line,
     log_warning,
+    exit_with_error,
 )
 
 from .internet_file import (
@@ -11,7 +13,7 @@ from .internet_file import (
     callback_unTAR,
 )
 
-def impl(version, os, arch):
+def download_llvm_impl(version, os, arch):
     log_info("==========================")
     log_warning(
         "Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/"
@@ -36,47 +38,51 @@ def impl(version, os, arch):
         ],
     )
     llvm_file.download()
-    
-def confirm(func):
-    return option(
-		"-c",
-		"--confirm",
-		prompt=(
-			"From LLVM 19 onwards, the releases are compiled with unfavourable compile options, so it is recommended to either:\n"
-			" - use the LLVM from your distribution (e.g. apt install llvm-19)\n"
-			" - build LLVM from source (see `install-llvm` command)\n"
-			"Do you want to continue with the download?"
-		),
-		type=bool,
-		default=True,
-		is_flag=True,
-	)(func)
 
-def version(func):
-    return option(
-		"-v",
-		"--version",
-		prompt="LLVM Version",
-		help="Version of LLVM release, ex. 19.1.4",
-		default="19.1.7",
-	)(func)
 
-def os(func):
-	return option(
-		"-o",
-		"--os",
-		prompt="Operating system",
-		help="Operating system of the target machine",
-		default="linux",
-		type=Choice(["Linux", "macOS", "Windows"], case_sensitive=False),
-	)(func)
+@command()
+@option(
+    "-c",
+    "--confirm",
+    prompt=(
+        "From LLVM 19 onwards, the releases are compiled with unfavourable compile options, so it is recommended to either:\n"
+        " - use the LLVM from your distribution (e.g. apt install llvm-19)\n"
+        " - build LLVM from source (see `install-llvm` command)\n"
+        "Do you want to continue with the download?"
+    ),
+    type=bool,
+    default=True,
+    is_flag=True,
+)
+@option(
+    "-v",
+    "--version",
+    prompt="LLVM Version",
+    help="Version of LLVM release, ex. 19.1.4",
+    default="19.1.7",
+)
+@option(
+    "-o",
+    "--os",
+    prompt="Operating system",
+    help="Operating system of the target machine",
+    default="linux",
+    type=Choice(["Linux", "macOS", "Windows"], case_sensitive=False),
+)
+@option(
+    "-a",
+    "--arch",
+    prompt="Architecture",
+    help="Architecture of the target machine",
+    default="X64",
+    type=Choice(["X64", "ARM64"], case_sensitive=False),
+)
+def download_llvm(*args, **kwargs):
+    """Downloads the specified version of LLVM."""
+    download_llvm_impl(*args, **kwargs)
 
-def architecture(func):
-	return option(
-		"-a",
-		"--arch",
-		prompt="Architecture",
-		help="Architecture of the target machine",
-		default="X64",
-		type=Choice(["X64", "ARM64"], case_sensitive=False),
-	)(func)
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
+
+    download_llvm()

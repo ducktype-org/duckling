@@ -5,11 +5,64 @@ from .helpers import (
     log_info, 
     log_warning, 
     log_new_line, 
-    bash_command_get_output, 
+    bash_command_get_output,
+    exit_with_error,
 )
-
+from pathlib import Path
 import os
-from click import option
+from click import option, command, argument
+
+def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+    if(not issues):
+        issues = get_issues_from_github()
+        if not issues:
+            return True
+
+    valid_issue_numbers = []
+    for num in issues:
+        num_str = str(num).strip()
+        if not num_str:
+            continue
+        if not num_str.isdigit() or int(num_str) <= 0:
+            log_warning(f"Issue number '{num_str}' is not a positive integer. Skipping.")
+            continue
+        valid_issue_numbers.append(num_str)
+    if not valid_issue_numbers:
+        log_warning("No valid issue numbers provided.")
+        return True
+
+    # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
+    patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
+
+    try:
+        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
+        files = [f for f in files_str.strip().split('\n') if f]
+    except Exception as e:
+        log_warning(f"Could not get file list from git: {e}")
+        return True
+
+    found_any = False
+    summary = {num: 0 for num in valid_issue_numbers}
+
+    for file in files:
+        if os.path.isdir(file):
+            continue
+        try:
+            with open(file, "r") as f:
+                for i, line in enumerate(f, 1):
+                    for idx, pat in enumerate(patterns):
+                        if pat.search(line):
+                            log_warning(f"{file}:{i}: {line.strip()}")
+                            summary[valid_issue_numbers[idx]] += 1
+                            found_any = True
+        except Exception:
+            continue
+    
+    log_new_line()
+    log_info("Summary:")
+    for num in valid_issue_numbers:
+        log_info(f"#{num}: {summary[num]} occurrence(s)")
+    return not found_any
 
 def get_issues_from_github():
     import shutil
@@ -86,73 +139,41 @@ def get_issues_from_github():
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
 
-def impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
-    if(not issues):
-        issues = get_issues_from_github()
-        if not issues:
-            return True
 
-    valid_issue_numbers = []
-    for num in issues:
-        num_str = str(num).strip()
-        if not num_str:
-            continue
-        if not num_str.isdigit() or int(num_str) <= 0:
-            log_warning(f"Issue number '{num_str}' is not a positive integer. Skipping.")
-            continue
-        valid_issue_numbers.append(num_str)
-    if not valid_issue_numbers:
-        log_warning("No valid issue numbers provided.")
-        return True
+@command()
+@argument(
+    "issues", 
+    nargs=-1, 
+    type=str
+)
+@option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
+@option(
+    "--no-merge-base",
+    is_flag=True,
+    default=False,
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the checker on a shallow clone.",
+)
+def issue_checker(*args, **kwargs):
+    """Checks for occurrences of #issue_number in source files and prints file, line, and summary.
 
-    # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
-    patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
+    If no issue numbers are provided, the script will attempt to fetch them from GitHub using the 'gh' CLI.
+    You must be authenticated with 'gh' for this to work.
+    """
+    if not issue_checker_impl(*args, **kwargs):
+        exit_with_error(
+            "Issue checker found issues numbers related to this pull request in the code"
+        )
 
-    try:
-        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-        files = [f for f in files_str.strip().split('\n') if f]
-    except Exception as e:
-        log_warning(f"Could not get file list from git: {e}")
-        return True
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
 
-    found_any = False
-    summary = {num: 0 for num in valid_issue_numbers}
-
-    for file in files:
-        if os.path.isdir(file):
-            continue
-        try:
-            with open(file, "r") as f:
-                for i, line in enumerate(f, 1):
-                    for idx, pat in enumerate(patterns):
-                        if pat.search(line):
-                            log_warning(f"{file}:{i}: {line.strip()}")
-                            summary[valid_issue_numbers[idx]] += 1
-                            found_any = True
-        except Exception:
-            continue
-    
-    log_new_line()
-    log_info("Summary:")
-    for num in valid_issue_numbers:
-        log_info(f"#{num}: {summary[num]} occurrence(s)")
-    return not found_any
-
-def branch(func):
-    return option(
-        "-r",
-        "--branch",
-        help="The branch relative to which the diff is created.",
-        type=str,
-        default="origin/main",
-    )(func)
-
-def no_merge_base(func):
-    return option(
-        "--no-merge-base",
-        is_flag=True,
-        default=False,
-        help="On no-merge-base: compare against the latest commit on `branch` "
-        "instead of the commit which is the LCA of `branch` and current branch. "
-        "This feature allows to run the checker on a shallow clone.",
-    )(func)
+    issue_checker()

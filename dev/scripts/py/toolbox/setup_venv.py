@@ -1,14 +1,16 @@
 from pathlib import Path
 from os import path as os_path
 from sys import executable
+from click import command
 
 from .helpers import (
     bash_command,
     log_info,
     with_venv,
+    exit_with_error,
 )
 
-def impl():
+def setup_venv_impl():
     if not Path(".venv").exists():
         log_info("Creating venv...")
         bash_command(executable + " -m venv .venv")
@@ -18,4 +20,14 @@ def impl():
         log_info("Done creating venv.")
     else:
         log_info("Venv already exits. Skip.")
-        
+
+@command()
+def setup_venv():
+    """Setups python virtual environment, download dependencies"""
+    setup_venv_impl()
+
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
+
+    setup_venv()

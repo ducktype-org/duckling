@@ -1,7 +1,7 @@
 from pathlib import Path
 from os import cpu_count, path as os_path
 from shutil import rmtree
-from click import option, Choice
+from click import option, command, Choice
 
 BUILD_SYSTEMS = Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
@@ -10,6 +10,7 @@ from .helpers import (
     get_llvm_source_strings,
     log_info,
     log_new_line,
+    exit_with_error,
 )
 
 from .internet_file import (
@@ -17,7 +18,7 @@ from .internet_file import (
     callback_unTAR,
 )
 
-def impl(
+def install_llvm_impl(
     version,
     ram_gb,
     c_compiler,
@@ -124,94 +125,94 @@ def impl(
 
     log_info(f"LLVM {version} has been built and installed to {install_dir}")
     log_new_line()
-    
-def version(func):
-    return option(
-		"-v",
-		"--version",
-		prompt="LLVM Version",
-		help="Version of LLVM release to compile, ex. 19.1.7",
-		default="19.1.7",
-	)(func)
 
-def ram(func):
-    return option(
-		"-r",
-		"--ram",
-		"ram_gb",
-		prompt="Available RAM (GB)",
-		help="Amount of RAM available for linking (1 link job per 16GB)",
-		default="16",
-		type=str,
-	)(func)
 
-def cxx_compiler(func):
-    return option(
-		"-x",
-		"--cxx_compiler",
-		prompt="C++ compiler path",
-		help="A path to the C++ compiler to compile with",
-		default="default",
-		type=str,
-	)(func)
+@command()
+@option(
+    "-v",
+    "--version",
+    prompt="LLVM Version",
+    help="Version of LLVM release to compile, ex. 19.1.7",
+    default="19.1.7",
+)
+@option(
+    "-r",
+    "--ram",
+    "ram_gb",
+    prompt="Available RAM (GB)",
+    help="Amount of RAM available for linking (1 link job per 16GB)",
+    default="16",
+    type=str,
+)
+@option(
+    "-x",
+    "--cxx_compiler",
+    prompt="C++ compiler path",
+    help="A path to the C++ compiler to compile with",
+    default="default",
+    type=str,
+)
+@option(
+    "-c",
+    "--c-compiler",
+    prompt="C compiler path",
+    help="A path to the C compiler to compile with",
+    default="default",
+    type=str,
+)
+@option(
+    "-l",
+    "--linker",
+    prompt="Linker to use (using one of the newer linkers (lld/mold) will speed up the compilation)",
+    help="Linker to use for building LLVM.",
+    default="lld",
+    type=Choice(["default", "lld", "mold"], case_sensitive=False),
+)
+@option(
+    "-b",
+    "--build-tool",
+    "build_tool",
+    prompt="Build system",
+    help="Build system to use",
+    default="Ninja",
+    type=BUILD_SYSTEMS,
+)
+@option(
+    "-t",
+    "--targets",
+    prompt="LLVM targets to build (using 'all' will increase the build time about 3 times).",
+    help="LLVM architecture targets to build.",
+    default="Native",
+    type=Choice(["Native", "X86", "all"], case_sensitive=False),
+)
+@option(
+    "-s",
+    "--source-dir",
+    "source_dir_path",
+    prompt="LLVM source directory",
+    help="Directory where LLVM sources will be extracted",
+    default="~/llvm",
+    type=str,
+)
+@option(
+    "--use-old-build",
+    prompt="Use old build directory",
+    help="Whether or not to use the old build directory",
+    default=False,
+    type=bool,
+)
+def install_llvm(*args, **kwargs):
+    """Compiles LLVM from source with specified options.
 
-def c_compiler(func):
-    return option(
-		"-c",
-		"--c-compiler",
-		prompt="C compiler path",
-		help="A path to the C compiler to compile with",
-		default="default",
-		type=str,
-	)(func)
+    This command will download LLVM source code, build it with the specified options,
+    and install it to the 'scripts/downloads/installed' directory.
+    Important! Is is advised to try to use the LLVM from your
+    distribution (e.g. apt install llvm-19) first.
+    """
+    install_llvm_impl(*args, **kwargs)
 
-def linker(func):
-    return option(
-		"-l",
-		"--linker",
-		prompt="Linker to use (using one of the newer linkers (lld/mold) will speed up the compilation)",
-		help="Linker to use for building LLVM.",
-		default="lld",
-		type=Choice(["default", "lld", "mold"], case_sensitive=False),
-	)(func)
+if __name__ == "__main__":
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
 
-def build_tool(func):
-    return option(
-		"-b",
-		"--build-tool",
-		"build_tool",
-		prompt="Build system",
-		help="Build system to use",
-		default="Ninja",
-		type=BUILD_SYSTEMS,
-	)(func)
-
-def targets(func):
-    return option(
-		"-t",
-		"--targets",
-		prompt="LLVM targets to build (using 'all' will increase the build time about 3 times).",
-		help="LLVM architecture targets to build.",
-		default="Native",
-		type=Choice(["Native", "X86", "all"], case_sensitive=False),
-	)(func)
-
-def source_dir(func):
-    return option(
-		"-s",
-		"--source-dir",
-		"source_dir_path",
-		prompt="LLVM source directory",
-		help="Directory where LLVM sources will be extracted",
-		default="~/llvm",
-		type=str,
-	)(func)
-
-def use_old_dir(func):
-    return option(
-		"--use-old-build",
-		prompt="Use old build directory",
-		help="Whether or not to use the old build directory",
-		default=False,
-		type=bool,
-	)(func)
+    install_llvm()
