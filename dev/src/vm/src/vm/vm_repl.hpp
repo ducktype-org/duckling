@@ -96,7 +96,7 @@ private:
 
 	// Process User Requests
 	void processCodeInjection();
-	void processGlobalnitialization(std::string& line);
+	void processGlobalInitialization(std::string& line);
 	void processGlobalOutput(std::string& line);
 	void processExecuteInstruction(std::string& line);
 	void processExecuteInstructionList();
