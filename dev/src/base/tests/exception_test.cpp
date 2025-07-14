@@ -62,7 +62,7 @@ public:
 		try {
 			throwPanic3();
 		} catch (base::Panic& panic) {
-#ifndef DISABLE_ASSERT
+#if defined(DEBUG) || defined(DEVRELEASE)
 			assertTrue(
 				containsCstr(panic.what(), "    Assertion failed: `false`\n    panic test 3"),
 				"Bad panic reason"
@@ -73,7 +73,7 @@ public:
 #endif
 		}
 
-#ifndef DISABLE_ASSERT
+#if defined(DEBUG) || defined(DEVRELEASE)
 		fail("Panic was not caught");
 #endif
 	}
@@ -85,7 +85,7 @@ public:
 			assertTrue(containsCstr(panic.what(), "Unreachable"), "Bad panic reason");
 			return;
 		}
-#ifndef DISABLE_ASSERT
+#if defined(DEBUG) || defined(DEVRELEASE)
 		fail("Panic was not caught.");
 #endif
 	}

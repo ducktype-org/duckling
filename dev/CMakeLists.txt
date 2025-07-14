@@ -1,15 +1,6 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
-# Define custom build types
-set(CMAKE_BUILD_TYPE "DevRelease" CACHE STRING "Choose the build type: Debug, DevRelease, Release")
-set(VALID_BUILD_TYPES Debug DevRelease Release)
-if(NOT "${CMAKE_BUILD_TYPE}" IN_LIST VALID_BUILD_TYPES)
-  message(FATAL_ERROR "Invalid build type: ${CMAKE_BUILD_TYPE}")
-endif()
-
-set(CMAKE_CXX_FLAGS_DEBUG      "-g -O0")
-set(CMAKE_CXX_FLAGS_DEVRELEASE "-O3")
-set(CMAKE_CXX_FLAGS_RELEASE    "-O3 -DDISABLE_ASSERT")
+include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureBuildTypes.cmake)
 
 project(Duckling)
 

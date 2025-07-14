@@ -87,7 +87,7 @@ namespace base {
 		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
 	)
 
-#ifndef DISABLE_ASSERT
+#if defined(DEBUG) || defined(DEVRELEASE)
 	/**
 	* @brief Assumption about the code after this line. Usually made after CORE_ASSERT
 	* */
@@ -99,7 +99,7 @@ namespace base {
 	#define CORE_ASSUME(expression) do {} while (0)
 #endif
 
-#ifndef DISABLE_ASSERT
+#if defined(DEBUG) || defined(DEVRELEASE)
 	/**
 	* @brief Function will not throw in Release build
 	* */
@@ -111,7 +111,7 @@ namespace base {
 	#define NOEXCEPT noexcept(true)
 #endif
 
-#ifndef DISABLE_ASSERT
+#if defined(DEBUG) || defined(DEVRELEASE)
 	/**
 	* @brief base::Panic based assert that allows catching for testing purposes.
 	*/
