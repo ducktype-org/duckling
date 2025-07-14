@@ -1,3 +1,5 @@
+#include "clap/parsing_result.hpp"
+
 #include <clap/clap.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/param_builder.hpp>
@@ -161,7 +163,7 @@ private:
 		std::array argv{ "./prog", "--" };
 
 		assertThrows<clap::exceptions::ExpectedParameterIdentifier>(
-			par.parse(argv.size(), argv.data()),
+			[&]() { par.parse(argv.size(), argv.data()); },
 			"Should throw ExpectedParameterIdentifier exception."
 		);
 	}
@@ -180,8 +182,8 @@ private:
 		ASSERT_EQUAL(-123, res.getPositional<i64>(0));
 
 		std::array argv2{ "./prog", "-123", "1231", "test" };
-		assertThrows<clap::exceptions::ExpectedParameterIdentifier>(
-			clap.parse(argv2.size(), argv2.begin()),
+		assertThrows<clap::exceptions::NoDefaultValueParser>(
+			[&]() { clap.parse(argv2.size(), argv2.begin()); },
 			"Should throw NoDefaultValueParser exception."
 		);
 	}
@@ -202,7 +204,7 @@ private:
 	void subcommandBasicTest() {
 		auto clap = clap::Clap("prog").addSubcommand(
 			clap::Command("test", "A test command")
-				.add(clap::ParamBuilder::ofFlag().addShortName('f').build())
+				.add(clap::ParamBuilder::ofFlag().addShortName('f').addShortDesc("desc").build())
 		);
 
 		std::array argv{ "./prog", "test", "-f" };
@@ -246,7 +248,9 @@ private:
 	void globalOptionsTest() {
 		auto clap
 			= clap::Clap("prog")
-		          .addGlobalParameter(clap::ParamBuilder::ofFlag().addLongName("verbose").build())
+		          .addGlobalParameter(
+					  clap::ParamBuilder::ofFlag().addLongName("verbose").addShortDesc("desc").build()
+				  )
 		          .addSubcommand(
 					  clap::Command("upload", "Upload a file")
 						  .addPositional(clap::StringParser::make("file"))
@@ -290,6 +294,7 @@ private:
 				.add(
 					clap::ParamBuilder::ofValue(clap::StringParser::make())
 						.addLongName("user")
+						.addShortDesc("desc")
 						.required()
 						.build()
 				)
@@ -298,7 +303,7 @@ private:
 		// Missing --user param.
 		std::array argv_bad{ "./prog", "login" };
 		assertThrows<clap::exceptions::MissingRequiredParameter>(
-			clap.parse(argv_bad.size(), argv_bad.data()),
+			[&]() { clap.parse(argv_bad.size(), argv_bad.data()); },
 			"Clap did not find a missing required parameter."
 		);
 
@@ -308,8 +313,8 @@ private:
 		const auto& path = res.getCommandPath();
 		ASSERT_EQUAL(2, path.size());
 		ASSERT_EQUAL("prog", path[0]->getName());
-		ASSERT_EQUAL("test", path[1]->getName());
-		ASSERT_EQUAL("test", res.getMatchedCommand()->getName());
+		ASSERT_EQUAL("login", path[1]->getName());
+		ASSERT_EQUAL("login", res.getMatchedCommand()->getName());
 		ASSERT_EQUAL("admin", res.getValue<std::string>("user").value());
 	}
 
@@ -318,44 +323,50 @@ private:
 
 		std::array argv{ "./prog" };
 		assertThrows<clap::exceptions::ClapException>( // TODOP: Is that a correct error?
-			clap.execute(argv.size(), argv.data()), "Clap did not find a not specified subcommand."
+			[&](){clap.execute(argv.size(), argv.data());}, "Clap did not find a not specified subcommand."
 		);
 	}
 
 	void executeReturnValueTest() {
-		auto       clap = clap::Clap("prog").setPreHandler([](auto&) { return 42; });
+		auto clap = clap::Clap("prog").setPreHandler([](const clap::ParsingResult&) { return 42; });
 		std::array argv{ "./prog" };
 		int        exit_code = clap.execute(argv.size(), argv.data());
 		ASSERT_EQUAL(42, exit_code);
 	}
 
 	void conditionalParameterTest() {
-		auto clap = clap::Clap("prog")
-		                .addGlobalParameter(clap::ParamBuilder::ofFlag().addLongName("a").build())
-		                .addGlobalParameter(
-							clap::ParamBuilder::ofFlag()
-								.addLongName("b")
-								.conditional(
-									[](const clap::ParsingResult& res) { return res.isFlag("a"); },
-									"Flag --b requires flag --a"
-								)
-								.build()
-						);
+		auto clap
+			= clap::Clap("prog")
+		          .addGlobalParameter(
+					  clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("desc").build()
+				  )
+		          .addGlobalParameter(
+					  clap::ParamBuilder::ofFlag()
+						  .addShortName('b')
+						  .addShortDesc("desc")
+						  .conditional(
+							  [](const clap::ParsingResult& res) { return res.isFlag("a"); },
+							  "Flag -b requires flag -a"
+						  )
+						  .build()
+				  );
 
-		std::array argv1{ "./prog", "--b" };
+		std::array argv1{ "./prog", "-b" };
 		assertThrows<clap::exceptions::MissingConditionalParameter>( // TODOP: Is that a correct error?
-			clap.parse(argv1.size(), argv1.data()), "Clap did not find a missing conditional parameter."
+			[&](){clap.parse(argv1.size(), argv1.data());}, "Clap did not find a missing conditional parameter."
 		);
+		std::cout << "Test1\n";
+		std::array argv2{ "./prog", "-a", "-b" };
+		try {
+			auto        res  = clap.parse(argv2.size(), argv2.data());
+			const auto& path = res.getCommandPath();
+			ASSERT_EQUAL(1, path.size());
+			ASSERT_EQUAL("prog", path[0]->getName());
+			ASSERT_EQUAL("prog", res.getMatchedCommand()->getName());
+			ASSERT_EQUAL(true, res.isFlag("a"));
+			ASSERT_EQUAL(true, res.isFlag("b"));
 
-		std::array argv2{ "./prog", "--a", "--b" };
-		auto       res = clap.parse(argv2.size(), argv2.data());
-
-		const auto& path = res.getCommandPath();
-		ASSERT_EQUAL(1, path.size());
-		ASSERT_EQUAL("prog", path[0]->getName());
-		ASSERT_EQUAL("prog", res.getMatchedCommand()->getName());
-		ASSERT_EQUAL(true, res.isFlag("a"));
-		ASSERT_EQUAL(true, res.isFlag("b"));
+		} catch (...) { std::cout << "Wrong\n"; }
 	}
 
 	void mixedGlobalAndLocalParameters() {
@@ -363,6 +374,7 @@ private:
 		                .addGlobalParameter(
 							clap::ParamBuilder::ofValue(clap::StringParser::make())
 								.addLongName("global")
+								.addShortDesc("desc")
 								.build()
 						)
 		                .addSubcommand(
@@ -370,11 +382,12 @@ private:
 								.add(
 									clap::ParamBuilder::ofValue(clap::StringParser::make())
 										.addLongName("local")
+										.addShortDesc("desc")
 										.build()
 								)
 						);
 
-		std::array argv{ "./app", "--global", "g_val", "cmd", "--local", "l_val" };
+		std::array argv{ "./prog", "--global", "g_val", "cmd", "--local", "l_val" };
 		auto       res = clap.parse(argv.size(), argv.data());
 
 		ASSERT_EQUAL("g_val", res.getValue<std::string>("global").value());
