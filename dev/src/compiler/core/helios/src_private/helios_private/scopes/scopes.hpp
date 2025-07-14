@@ -54,11 +54,6 @@ namespace compiler::helios {
 	u64 scopeDepth(ScopeID);
 
 	/**
-	 * @return whether ScopeID is global.
-	 */
-	bool isGlobalScope(query::Context&, ScopeID);
-
-	/**
 	 * @brief Query root scope for given module.
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.

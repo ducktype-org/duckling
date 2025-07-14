@@ -24,6 +24,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <functional>
 #include <vector>
 
 namespace compiler::helios {
@@ -51,9 +52,37 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
-	bool isGlobalVar(SymID id) {
+	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
-		return getSymRef(id)->global;
+		auto pst_el = getSymRef(id)->getPSTData()->pst_element;
+
+		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_contex
+			= [&](const pst::Access<pst::LangElement>& el) -> bool {
+			
+			switch (el->getElementKind()) {
+
+			case pst::ElementKind::TopLevel:
+			case pst::ElementKind::Namespace:
+				return true;
+
+			case pst::ElementKind::Class:
+			case pst::ElementKind::Fun:
+			case pst::ElementKind::If:
+			case pst::ElementKind::While:
+			case pst::ElementKind::For:
+				return false;
+			
+			case pst::ElementKind::CodeBlock:
+			case pst::ElementKind::CodeBlockOrStmt:
+			case pst::ElementKind::Variable:
+				if (el->getParent().has_value())
+					return global_variable_pst_contex(el->getParent().value().unlock(ctx));
+			default:
+				CORE_PANIC("Unexpected pst path of variable");
+			}
+		};
+
+		return global_variable_pst_contex(pst_el.unlock(ctx));
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
@@ -132,8 +161,7 @@ namespace compiler::helios {
 					.name = function->getName(),
 					.kind = SymbolKind::Function,
 				},
-				pst_data,
-				true
+				pst_data
 			));
 		}
 		case pst::StmtKind::Namespace: {
@@ -143,8 +171,7 @@ namespace compiler::helios {
 					.name = namespace_stmt->getName(),
 					.kind = SymbolKind::Namespace,
 				},
-				pst_data,
-				true
+				pst_data
 			));
 		}
 		case pst::StmtKind::Const: {
@@ -154,8 +181,7 @@ namespace compiler::helios {
 					.name = const_stmt->getName(),
 					.kind = SymbolKind::Const,
 				},
-				pst_data,
-				true
+				pst_data
 			));
 		}
 		case pst::StmtKind::Class: {
@@ -165,8 +191,7 @@ namespace compiler::helios {
 					.name = class_stmt->getName(),
 					.kind = SymbolKind::Class,
 				},
-				pst_data,
-				true
+				pst_data
 			));
 		}
 		case pst::StmtKind::Alias: {
@@ -177,8 +202,7 @@ namespace compiler::helios {
 					.kind     = SymbolKind::Alias,
 					.is_alias = true,
 				},
-				pst_data,
-				isGlobalScope(ctx, scope)
+				pst_data
 			));
 		}
 		case pst::StmtKind::Using: {
@@ -195,8 +219,7 @@ namespace compiler::helios {
 					.is_wildcard = true,
 					.is_alias    = true,
 				},
-				pst_data,
-				isGlobalScope(ctx, scope)
+				pst_data
 			));
 		}
 		case pst::StmtKind::Variable: {
@@ -208,8 +231,7 @@ namespace compiler::helios {
 					.is_wildcard = false,
 					.is_alias    = false,
 				},
-				pst_data,
-				isGlobalScope(ctx, scope)
+				pst_data
 			));
 		}
 		case pst::StmtKind::Import: {
@@ -222,8 +244,7 @@ namespace compiler::helios {
 					.is_wildcard = false,
 					.is_alias    = false,
 				},
-				pst_data,
-				true
+				pst_data
 			));
 		}
 		case pst::StmtKind::Method: {
@@ -233,8 +254,7 @@ namespace compiler::helios {
 					.name = method->getName(),
 					.kind = SymbolKind::Method,
 				},
-				pst_data,
-				false
+				pst_data
 			));
 		}
 		case pst::StmtKind::Field: {
@@ -245,8 +265,7 @@ namespace compiler::helios {
 					.kind      = SymbolKind::Field,
 					.dependent = true,
 				},
-				pst_data,
-				false
+				pst_data
 			));
 		}
 		case pst::StmtKind::Constructor: {
@@ -256,8 +275,7 @@ namespace compiler::helios {
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
-				pst_data,
-				false
+				pst_data
 			));
 		}
 		case pst::StmtKind::CopyConstructor: {
@@ -267,8 +285,7 @@ namespace compiler::helios {
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
-				pst_data,
-				false
+				pst_data
 			));
 		}
 		case pst::StmtKind::Destructor: {
@@ -277,8 +294,7 @@ namespace compiler::helios {
 					.name = base::StrID("destroy"),
 					.kind = SymbolKind::Destructor,
 				},
-				pst_data,
-				false
+				pst_data
 			));
 		}
 		default:
@@ -307,8 +323,7 @@ namespace compiler::helios {
 				{
 					.scope       = scope,
 					.pst_element = element,
-				},
-				false
+				}
 			));
 		}
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");

@@ -984,29 +984,30 @@ private:
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
 
 			std::vector<char> globals = { 'A', 'B', 'C' };
+			query::utils::withContextDo([&](query::Context& ctx) {
+				for (const auto& name: globals)
+					ASSERT_TRUE(compiler::helios::isGlobalVar(
+						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+					));
 
-			for (const auto& name: globals)
-				ASSERT_TRUE(compiler::helios::isGlobalVar(
-					find_global(hout_unit, base::StrID(name))->helios_symbol
-				));
+				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*hout_unit.functions[0].content.body->statements[0])
+				);
 
-			auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-				&(*hout_unit.functions[0].content.body->statements[0])
-			);
+				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
-			ASSERT_TRUE(not compiler::helios::isGlobalVar(var_ptr->helios_symbol));
+				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*hout_unit.functions[0].content.body->statements[1])
+				);
 
-			var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-				&(*hout_unit.functions[0].content.body->statements[1])
-			);
+				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
-			ASSERT_TRUE(not compiler::helios::isGlobalVar(var_ptr->helios_symbol));
+				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*hout_unit.functions[1].content.body->statements[0])
+				);
 
-			var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-				&(*hout_unit.functions[1].content.body->statements[0])
-			);
-
-			ASSERT_TRUE(not compiler::helios::isGlobalVar(var_ptr->helios_symbol));
+				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+			});
 		}
 	}
 };

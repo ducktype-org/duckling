@@ -31,8 +31,10 @@ namespace compiler::helios {
 
 	/**
 	 * @return whether SymID is a global variable.
+	 * @note This function iterates through all pst_symbols, the switch case will have to be updated
+	 * in the future.
 	 */
-	bool isGlobalVar(SymID);
+	bool isGlobalVar(query::Context&,  SymID);
 
 	/**
 	 * @return kind of the symbol
