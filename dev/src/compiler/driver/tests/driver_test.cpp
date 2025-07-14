@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(builtinCompiles);
 		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(globalsInitializationTest);
 	}
 
 private:
@@ -201,6 +202,31 @@ private:
 			auto run_result = dvm_driver.run();
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
+		});
+	}
+	void globalsInitializationTest() {
+		using namespace compiler;
+		auto module
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/globals_initialization")));
+		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
+
+		// Test with DVM backend
+		driver::HoutToBinaryDriver dvm_driver({
+			.backend_type         = driver::BackendType::DVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
+		});
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+
+			auto run_result = dvm_driver.run();
+			ASSERT_TRUE(run_result.has_value());
+			ASSERT_EQUAL_PRINT(5, run_result.value().exit_code);
 		});
 	}
 };
