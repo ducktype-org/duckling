@@ -1,10 +1,7 @@
 #include "file.hpp"
 
-#include "filesystem/file_path.hpp"
-
 #include <filesystem_private/vfs.hpp>
 
-#include "base/str_utils.hpp"
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
@@ -144,7 +141,7 @@ namespace fs {
 			std::filesystem::remove_all(abs_path.getPath());
 		}
 		std::filesystem::create_directories(abs_path.getPath());
-		return File(abs_path);
+		return abs_path;
 	}
 
 	File FileManager::createVirtualFile(

@@ -4,8 +4,6 @@
  */
 #include "fs_tree.hpp"
 
-#include "filesystem/file.hpp"
-
 using std::regex;
 using namespace std::filesystem;
 using namespace fs;

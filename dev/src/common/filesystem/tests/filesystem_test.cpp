@@ -1,5 +1,3 @@
-#include "filesystem/file_path.hpp"
-
 #include <filesystem/file.hpp>
 #include <filesystem_private/vfs.hpp>
 #include <tester/tester.hpp>
@@ -53,6 +51,30 @@ private:
 				"Wrong b_file content"
 			);
 		}
+
+		// Test FilePath::canonical() on virtual path (should throw)
+		try {
+			fs::FilePath vpath("vfs:/some_virtual_path");
+			(void) vpath.canonical();
+			assertTrue(false, "canonical() on virtual path should throw");
+		} catch (const base::Panic&) {
+			// Expected
+		}
+
+		// Test FilePath::join(const FilePath&)
+		fs::FilePath p1("abc");
+		fs::FilePath p2("def");
+		auto         joined = p1.join(p2);
+		assertTrue(joined.string().find("def") != std::string::npos, "join(FilePath) failed");
+
+		// Test FilePath::operator/(const FilePath&)
+		auto joined2 = p1 / p2;
+		assertTrue(joined2.string().find("def") != std::string::npos, "operator/ failed");
+
+		// Test FilePath::absolute() on virtual path (should return itself)
+		fs::FilePath vpath2("vfs:/abs_test");
+		auto         abs_vpath = vpath2.absolute();
+		assertTrue(abs_vpath == vpath2, "absolute() on virtual path should return itself");
 	}
 
 	void vfsTest() {
