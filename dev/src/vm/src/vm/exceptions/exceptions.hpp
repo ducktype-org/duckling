@@ -1,5 +1,4 @@
-#ifndef EXCEPTIONS_H_
-#define EXCEPTIONS_H_
+#pragma once
 #include <base/exceptions.hpp>
 
 namespace vm::exceptions {
@@ -25,6 +24,3 @@ namespace vm::exceptions {
         DoubleFreeException();
     };
 }
-
-
-#endif // EXCEPTIONS_H_

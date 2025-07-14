@@ -1,6 +1,7 @@
 add_subdirectory(api)
 add_subdirectory(bytecode)
 add_subdirectory(core)
+add_subdirectory(exceptions)
 add_subdirectory(events)
 add_subdirectory(loader)
 add_subdirectory(services)

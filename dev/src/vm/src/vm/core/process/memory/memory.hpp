@@ -7,7 +7,7 @@
 #include "frame.hpp"
 #include "pointer.hpp"
 #include "thread_stack.hpp"
-#include <vm/exceptions.hpp>
+#include <vm/exceptions/exceptions.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
