@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 	}
 
@@ -38,6 +39,8 @@ private:
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
+
+	void globalInitializationTest() { runTestOnVm("global_initialization.dbc", {}, {}, {}, 5); }
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 5); }
 };
