@@ -204,10 +204,12 @@ private:
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 		});
 	}
+
 	void globalsInitializationTest() {
 		using namespace compiler;
-		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/globals_initialization")));
+		auto module = query::entryPoint<frontend::QueryModuleTree>(
+			fs::File(path("modules/globals_initialization"))
+		);
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		// Test with DVM backend
