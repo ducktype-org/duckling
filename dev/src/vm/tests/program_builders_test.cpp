@@ -42,8 +42,8 @@ private:
 
 		// Test `mov_l32_l32`
 		instr_builder.setKind(OpKind::mov);
-		const auto arg0 = vm::opargs::StackLocalI32{ base::StrID("arg0") };
-		const auto arg1 = vm::opargs::StackLocalI32{ base::StrID("arg1") };
+		const auto arg0 = vm::opargs::StackLocal32{ base::StrID("arg0") };
+		const auto arg1 = vm::opargs::StackLocal32{ base::StrID("arg1") };
 		instr_builder.pushArgs(arg0, arg1);
 		std::vector<Instruction> instr = instr_builder.build();
 		ASSERT_TRUE(instr.size() == 1);
