@@ -1,5 +1,6 @@
 from pathlib import Path
 from .test_loader import Case, Test, TestNode, load_tests
+from click import option, command
 
 from .utils import (
     dit_exec_command,
@@ -24,6 +25,60 @@ from ..helpers import (
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
+def tester_impl(
+    clean: bool,
+    dry: bool,
+    filter: str,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: str,
+    build_dir: str,
+):
+    """
+    The driver function of Duckling Integration Tests framework.
+    """
+    log_info("Running integration tests...")
+
+    log_file = Path(log_file)
+    if log_file.exists():
+        if log_file.absolute() != DEFAULT_LOG_FILE_PATH and log_file.stat().st_size > 0:
+            log_warning(
+                f"File: {log_file} already exists and is NOT empty! It will be overwritten!"
+            )
+            inp = get_input(f"Continue anyway: [y/N] ").lower()
+            if inp not in ["y"]:
+                exit_with_error("Exiting...")
+        log_file.unlink()
+        log_file = Path(log_file)
+
+    user_values = {
+        "build_dir": str(Path(build_dir).absolute()),
+        "dev_dir": str(Path.cwd().absolute()),
+    }
+
+    test_set = load_tests("integration_tests", user_values=user_values)
+
+    (succeeded, failed, disabled) = run_tests(
+        test_set, filter, [], clean, dry, fail_fast, verbose, log_file
+    )
+
+    if dry:
+        return
+
+    total_test_count = len(succeeded) + len(failed) + len(disabled)
+    print(f"Ran test count: {total_test_count}")
+    print(f" - Succeeded: {len(succeeded)}")
+    print(f" - Disabled:  {len(disabled)}")
+    print(f" - Failed:    {len(failed)}")
+
+    if len(failed):
+        failed_tests = map(lambda x: " - " + x, failed)
+        exit_with_error(
+            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
+            + f"Please see log file '{log_file.absolute()}' for more info."
+        )
+    elif not clean:
+        print_success(f"All tests have run successfully!")
 
 def run_test(
     test: Test,
@@ -275,59 +330,3 @@ def run_tests(
         )
 
     return all_stats
-
-
-def integration_tests_impl(
-    clean: bool,
-    dry: bool,
-    filter: str,
-    fail_fast: bool,
-    verbose: bool,
-    log_file: str,
-    build_dir: str,
-):
-    """
-    The driver function of Duckling Integration Tests framework.
-    """
-    log_info("Running integration tests...")
-
-    log_file = Path(log_file)
-    if log_file.exists():
-        if log_file.absolute() != DEFAULT_LOG_FILE_PATH and log_file.stat().st_size > 0:
-            log_warning(
-                f"File: {log_file} already exists and is NOT empty! It will be overwritten!"
-            )
-            inp = get_input(f"Continue anyway: [y/N] ").lower()
-            if inp not in ["y"]:
-                exit_with_error("Exiting...")
-        log_file.unlink()
-        log_file = Path(log_file)
-
-    user_values = {
-        "build_dir": str(Path(build_dir).absolute()),
-        "dev_dir": str(Path.cwd().absolute()),
-    }
-
-    test_set = load_tests("integration_tests", user_values=user_values)
-
-    (succeeded, failed, disabled) = run_tests(
-        test_set, filter, [], clean, dry, fail_fast, verbose, log_file
-    )
-
-    if dry:
-        return
-
-    total_test_count = len(succeeded) + len(failed) + len(disabled)
-    print(f"Ran test count: {total_test_count}")
-    print(f" - Succeeded: {len(succeeded)}")
-    print(f" - Disabled:  {len(disabled)}")
-    print(f" - Failed:    {len(failed)}")
-
-    if len(failed):
-        failed_tests = map(lambda x: " - " + x, failed)
-        exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
-            + f"Please see log file '{log_file.absolute()}' for more info."
-        )
-    elif not clean:
-        print_success(f"All tests have run successfully!")

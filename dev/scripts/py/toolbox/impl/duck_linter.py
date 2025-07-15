@@ -3,9 +3,30 @@ import re
 from pathlib import Path
 
 from .cpp_linter import get_files_for_linter
-from .helpers import log_info, log_warning, log_new_line
+from .helpers import (
+    log_info, 
+    log_warning, 
+    log_new_line, 
+)
 
 _RELATIVE_IMPORT_REGEX = re.compile(r'#include "(.*?)"')
+
+
+def duck_linter_impl(
+    all: bool = False,
+    branch: str = "origin/main",
+    verbose: bool = False,
+    no_merge_base: bool = False,
+):
+    passed_all = True
+
+    file = get_source_files(all, branch, no_merge_base)
+    for f in file:
+        passed = f.runAllChecks(verbose)
+        if not passed:
+            passed_all = False
+
+    return passed_all
 
 
 class SourceFile:
@@ -51,20 +72,3 @@ def get_source_files(all, relative_to, no_merge_base) -> List[SourceFile]:
         if file.endswith(".cpp") or file.endswith(".hpp"):
             source_files.append(SourceFile(file))
     return source_files
-
-
-def duck_linter_impl(
-    all: bool = False,
-    branch: str = "origin/main",
-    verbose: bool = False,
-    no_merge_base: bool = False,
-):
-    passed_all = True
-
-    file = get_source_files(all, branch, no_merge_base)
-    for f in file:
-        passed = f.runAllChecks(verbose)
-        if not passed:
-            passed_all = False
-
-    return passed_all
