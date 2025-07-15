@@ -2,7 +2,6 @@
 #include <operations/constructors.hpp>
 #include <operations/create_default.hpp>
 #include <operations/operation.hpp>
-#include <typesystem/typesystem.hpp>
 
 #include <tester/tester.hpp>
 
