@@ -65,11 +65,11 @@ namespace vm::code {
 		 */
 		void insertCode(const code::CodeCollection& collections);
 
-		const StableObjIdNameMap<TypeOfData>& types() const;
+		const ObjIdNameMap<TypeOfData>& types() const;
 
-		const StableObjIdNameMap<GlobalData>& globals() const;
+		const ObjIdNameMap<GlobalData>& globals() const;
 
-		const StableObjIdNameMap<Function>& functions() const;
+		const ObjIdNameMap<Function>& functions() const;
 
 	private:
 		/**
@@ -92,8 +92,8 @@ namespace vm::code {
 		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions);
 
-		StableObjIdNameMap<code::Function>   function_map;
-		StableObjIdNameMap<code::GlobalData> globals_map;
+		ObjIdNameMap<code::Function>   function_map;
+		ObjIdNameMap<code::GlobalData> globals_map;
 
 		code::TypeContext type_context;
 

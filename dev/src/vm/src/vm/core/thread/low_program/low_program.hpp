@@ -51,8 +51,8 @@ namespace vm::low {
 		}
 
 		Box<TypeMetadata>                          types;
-		StableObjIdNameMap<FuncData, usize>        functions;
-		StableObjIdNameMap<TypeCRef, GlobalDataID> global_data;
+		ObjIdNameMap<FuncData, usize>        functions;
+		ObjIdNameMap<TypeCRef, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<i32, base::StrID> method_name_pool;

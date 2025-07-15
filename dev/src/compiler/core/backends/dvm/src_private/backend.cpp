@@ -119,7 +119,7 @@ namespace compiler::backend_vm {
 			AddLirFuncContext(
 				query::Context&                           ctx,
 				CRef<lir::Function>                       lir_function,
-				const vm::StableObjIdNameMap<TypeOfData>& type_map
+				const vm::ObjIdNameMap<TypeOfData>& type_map
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),

@@ -26,9 +26,9 @@
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableObjIdNameMap<code::Function>&         func_map;
+			const ObjIdNameMap<code::Function>&         func_map;
 			const TypeMetadata&                               type_map;
-			const StableObjIdNameMap<TypeCRef, GlobalDataID>& globals;
+			const ObjIdNameMap<TypeCRef, GlobalDataID>& globals;
 			const base::HashMap<i32, base::StrID>&            method_id_to_name;
 			const base::HashMap<base::StrID, i32>&            method_name_to_id;
 			base::Optional<code::Function>                    function{};
@@ -304,7 +304,7 @@ namespace vm::loader::compiler {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
-		StableObjIdNameMap<TypeCRef, GlobalDataID> globals;
+		ObjIdNameMap<TypeCRef, GlobalDataID> globals;
 		auto                                       ctx = CompilationContext(
             program.functions(), *types, globals, method_id_to_name, method_name_to_id
         );
