@@ -1,8 +1,21 @@
 from ..impl.download_llvm import download_llvm_impl
-from .helpers import llvm_version
+from .helpers import (
+    llvm_version,
+)
 from click import command, option, Choice
 
 @command()
+@llvm_version(
+    help="Version of LLVM release to compile, ex. 19.1.7",
+)
+@option(
+    "-a",
+    "--arch",
+    prompt="Architecture",
+    help="Architecture of the target machine",
+    default="X64",
+    type=Choice(["X64", "ARM64"], case_sensitive=False),
+)
 @option(
     "-c",
     "--confirm",
@@ -16,9 +29,6 @@ from click import command, option, Choice
     default=True,
     is_flag=True,
 )
-@llvm_version(
-    help="Version of LLVM release to compile, ex. 19.1.7",
-)
 @option(
     "-o",
     "--os",
@@ -26,14 +36,6 @@ from click import command, option, Choice
     help="Operating system of the target machine",
     default="linux",
     type=Choice(["Linux", "macOS", "Windows"], case_sensitive=False),
-)
-@option(
-    "-a",
-    "--arch",
-    prompt="Architecture",
-    help="Architecture of the target machine",
-    default="X64",
-    type=Choice(["X64", "ARM64"], case_sensitive=False),
 )
 def download_llvm(*args, **kwargs):
     """Downloads the specified version of LLVM."""

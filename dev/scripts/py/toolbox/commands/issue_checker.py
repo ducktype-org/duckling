@@ -1,7 +1,7 @@
 from ..impl.issue_checker import issue_checker_impl
 from .helpers import (
     branch,
-    no_merge_base
+    no_merge_base,
 )
 from ..impl.helpers import (
     exit_with_error,
@@ -17,7 +17,11 @@ from click import argument, command
 @branch(
     help="The branch relative to which the diff is created.",
 )
-@no_merge_base
+@no_merge_base(
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the checker on a shallow clone.",
+)
 def issue_checker(*args, **kwargs):
     """Checks for occurrences of #issue_number in source files and prints file, line, and summary.
 

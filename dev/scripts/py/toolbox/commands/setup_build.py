@@ -18,37 +18,18 @@ from click import Choice, option, command
 @build_system(
     help="Build system to use",
 )
-@option(
-    "-t",
-    "--type",
-    prompt="build type",
-    help="The build type.",
-    default="debug",
-    type=Choice(
-        ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
-    ),
-)
-@option(
-    "-d",
-    "--docs",
-    prompt="Build docs",
-    help="Whether or not to build the docs.",
-    type=bool,
-    default=True,
-    is_flag=True,
-)
 # @TODO check if it is necessary to get compiler path from context
-@cxx_compiler(
-    help="A path to the C++ complier to compile with",
-    # this overrides the click.Option class to use the default_compiler_from_ctx
-    # instead, so it can get ctx and infer and set the default value
-    cls=default_compiler_from_ctx("cxx_compiler"),
-)
 @cc_compiler(
     help="A path to the C complier to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
     cls=default_compiler_from_ctx("cc_compiler"),
+)
+@cxx_compiler(
+    help="A path to the C++ complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cxx_compiler"),
 )
 @option(
     "--ccache",
@@ -66,6 +47,15 @@ from click import Choice, option, command
     default=False,
     is_flag=True,
 )
+@option(
+    "-d",
+    "--docs",
+    prompt="Build docs",
+    help="Whether or not to build the docs.",
+    type=bool,
+    default=True,
+    is_flag=True,
+)
 # @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
 @option(
     "--gcov-version",
@@ -78,6 +68,16 @@ from click import Choice, option, command
     prompt="Linker",
     help="Specify the linker type to use",
     default="default",
+)
+@option(
+    "-t",
+    "--type",
+    prompt="build type",
+    help="The build type.",
+    default="debug",
+    type=Choice(
+        ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
+    ),
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""

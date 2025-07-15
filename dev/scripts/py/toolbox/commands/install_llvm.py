@@ -1,15 +1,36 @@
 from ..impl.install_llvm import install_llvm_impl
 from .helpers import (
-    llvm_version,
     build_system,
-    cxx_compiler,
     cc_compiler,
+    cxx_compiler,
+    llvm_version,
 )
 from click import command, option, Choice
 
 @command()
+@build_system(
+    help="Build system to use",
+)
+@cc_compiler(
+    help="A path to the C compiler to compile with",
+    default="default",
+    type=str,
+)
+@cxx_compiler(
+    help="A path to the C++ compiler to compile with",
+    default="default",
+    type=str,
+)
 @llvm_version(
     help="Version of LLVM release to compile, ex. 19.1.7",
+)
+@option(
+    "-l",
+    "--linker",
+    prompt="Linker to use (using one of the newer linkers (lld/mold) will speed up the compilation)",
+    help="Linker to use for building LLVM.",
+    default="lld",
+    type=Choice(["default", "lld", "mold"], case_sensitive=False),
 )
 @option(
     "-r",
@@ -20,35 +41,6 @@ from click import command, option, Choice
     default="16",
     type=str,
 )
-@cxx_compiler(
-    help="A path to the C++ compiler to compile with",
-    default="default",
-    type=str,
-)
-@cc_compiler(
-    help="A path to the C compiler to compile with",
-    default="default",
-    type=str,
-)
-@option(
-    "-l",
-    "--linker",
-    prompt="Linker to use (using one of the newer linkers (lld/mold) will speed up the compilation)",
-    help="Linker to use for building LLVM.",
-    default="lld",
-    type=Choice(["default", "lld", "mold"], case_sensitive=False),
-)
-@build_system(
-    help="Build system to use",
-)
-@option(
-    "-t",
-    "--targets",
-    prompt="LLVM targets to build (using 'all' will increase the build time about 3 times).",
-    help="LLVM architecture targets to build.",
-    default="Native",
-    type=Choice(["Native", "X86", "all"], case_sensitive=False),
-)
 @option(
     "-s",
     "--source-dir",
@@ -57,6 +49,14 @@ from click import command, option, Choice
     help="Directory where LLVM sources will be extracted",
     default="~/llvm",
     type=str,
+)
+@option(
+    "-t",
+    "--targets",
+    prompt="LLVM targets to build (using 'all' will increase the build time about 3 times).",
+    help="LLVM architecture targets to build.",
+    default="Native",
+    type=Choice(["Native", "X86", "all"], case_sensitive=False),
 )
 @option(
     "--use-old-build",

@@ -1,11 +1,12 @@
 from click import option, Choice
-from ..impl.helpers import (
-	default_compiler_from_ctx,
-)
 
 BUILD_SYSTEMS = Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 def create_option(*def_arg, **def_kwargs):
+    """
+    Creates a customizable `click.option` decorator with predefined defaults,
+    allowing overrides at the point of use.
+    """
     def specialize_option(*arg, **kwargs):
         return option(
             *(arg or def_arg),
@@ -14,13 +15,7 @@ def create_option(*def_arg, **def_kwargs):
     
     return specialize_option
 
-def no_merge_base(*args, **kwargs):
-    return create_option(
-        "--no-merge-base",
-        is_flag=True,
-        type=bool,
-        default=False,
-    )(*args, **kwargs)
+# HERE DEFINE REPEATING FLAGS
 
 def all_flag(*args, **kwargs):
     return create_option(
@@ -28,9 +23,45 @@ def all_flag(*args, **kwargs):
         "--all",
         "all",
         is_flag=True,
-        prompt="all files?",
         type=bool,
         default=False,
+    )(*args, **kwargs)
+
+def branch(*args, **kwargs):
+    return create_option(
+        "-r",
+        "--branch",
+        "branch",
+        type=str,
+        default="origin/main",
+    )(*args, **kwargs)
+
+def build_dir(*args, **kwargs):
+    return create_option(
+        "-b",
+        "--build-dir",
+        "build_dir",
+        prompt="build directory",
+        type=str,
+        default="build",
+    )(*args, **kwargs)
+
+def build_system(*args, **kwargs):
+    return create_option(
+        "-b",
+        "--build-system",
+        "build_system",
+        prompt="Build system",
+        default="Ninja",
+        type=BUILD_SYSTEMS,
+    )(*args, **kwargs)
+
+def cc_compiler(*args, **kwargs):
+    return create_option(
+        "-c",
+        "--cc-compiler",
+        "cc_compiler",
+        prompt="C compiler path",
     )(*args, **kwargs)
 
 def clang_format(*args, **kwargs):
@@ -53,6 +84,14 @@ def clang_tidy(*args, **kwargs):
         default="clang-tidy-19",
     )(*args, **kwargs)
 
+def cxx_compiler(*args, **kwargs):
+    return create_option(
+        "-x",
+        "--cxx-compiler",
+        "cxx_compiler",
+        prompt="C++ compiler path",
+    )(*args, **kwargs)
+
 def llvm_version(*args, **kwargs):
     return create_option(
         "-v",
@@ -63,40 +102,12 @@ def llvm_version(*args, **kwargs):
         default="19.1.7",
     )(*args, **kwargs)
 
-def cc_compiler(*args, **kwargs):
+def no_merge_base(*args, **kwargs):
     return create_option(
-        "-c",
-        "--cc-compiler",
-        "cc_compiler",
-        prompt="C compiler path",
-    )(*args, **kwargs)
-
-def cxx_compiler(*args, **kwargs):
-    return create_option(
-        "-x",
-        "--cxx-compiler",
-        "cxx_compiler",
-        prompt="C++ compiler path",
-    )(*args, **kwargs)
-
-def branch(*args, **kwargs):
-    return create_option(
-        "-r",
-        "--branch",
-        "branch",
-        prompt="branch on git",
-        type=str,
-        default="origin/main",
-    )(*args, **kwargs)
-
-def build_dir(*args, **kwargs):
-    return create_option(
-        "-b",
-        "--build-dir",
-        "build_dir",
-        prompt="build directory",
-        type=str,
-        default="build",
+        "--no-merge-base",
+        is_flag=True,
+        type=bool,
+        default=False,
     )(*args, **kwargs)
 
 def thread_count(*args, **kwargs):
@@ -105,16 +116,6 @@ def thread_count(*args, **kwargs):
         "--thread-count",
         "thread_count",
         prompt="Number of threads to use",
-    )(*args, **kwargs)
-
-def build_system(*args, **kwargs):
-    return create_option(
-        "-b",
-        "--build_system",
-        "build_system",
-        prompt="Build system",
-        default="Ninja",
-        type=BUILD_SYSTEMS,
     )(*args, **kwargs)
 
 def verbose(*args, **kwargs):

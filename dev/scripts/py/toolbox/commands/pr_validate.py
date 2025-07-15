@@ -7,14 +7,14 @@ from .helpers import (
 from click import command
 
 @command()
+@build_dir(
+    help="Path to build folder with compile_commands.json",
+)
 @clang_format(
     help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
 )
 @clang_tidy(
     help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
-)
-@build_dir(
-    help="Path to build folder with compile_commands.json",
 )
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
