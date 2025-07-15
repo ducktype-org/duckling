@@ -117,9 +117,9 @@ namespace vm {
 		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
 		                    .expect("Type i64 is expected to exist!");
 
-		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
-		auto funcs              = executing_program->functions;
-		i32  called_function_id = 0;
+		i32         i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		const auto& funcs              = executing_program->functions;
+		i32         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
@@ -189,12 +189,12 @@ namespace vm {
 		                    .expect("Type i64 is expected to exist!");
 
 		// TypeIDs to pass to opcodes.
-		i32  func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
-		i32  argv_type_id       = base::safeIntConv<i32>(argv_type->getID().asInt());
-		i32  argv_ptr_type_id   = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
-		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
-		auto funcs              = executing_program->functions;
-		i32  called_function_id = 0;
+		i32         func_ret_type_id = base::safeIntConv<i32>(called_return_type->getID().asInt());
+		i32         argv_type_id     = base::safeIntConv<i32>(argv_type->getID().asInt());
+		i32         argv_ptr_type_id = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
+		i32         i64_type_id      = base::safeIntConv<i32>(i64_type->getID().asInt());
+		const auto& funcs            = executing_program->functions;
+		i32         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
