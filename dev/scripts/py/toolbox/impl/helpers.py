@@ -265,6 +265,9 @@ def get_cpu_count():
     # cpu_count might return None
     return os.cpu_count() or 1
 
+def get_dev_directory():
+    # The dev directory is where the toolbox is run.
+    return pathlib.Path.cwd().absolute()
 
 def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
     if cxx_compiler is None or cc_compiler is None:
