@@ -69,6 +69,7 @@ namespace vm::low {
 					std::string global_name(fname.substr(prefix.size()));
 					ctor_functions[global_name] = func.name;
 				}
+				// @TODO: Add similar one for destructors
 			}
 
 			for (const auto& global: global_data) {
@@ -82,6 +83,7 @@ namespace vm::low {
 					std::cerr << "Linked ctor to global: " << gname << " <- "
 							  << data.ctor_name.value().str.strView() << "\n";
 				}
+				// @TODO: Add similar one for destructors
 
 				this->global_data.insert(data, global.name);
 				std::cerr << "Inserting: " << gname << "\n";
