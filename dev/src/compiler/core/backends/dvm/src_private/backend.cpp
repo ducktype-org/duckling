@@ -617,7 +617,7 @@ namespace compiler::backend_vm {
 				dtor_name = global.global_dtor.value()->mangled_name;
 				dtors.emplace_back(global.global_dtor.value());
 			}
-			
+
 			base::Optional<Identifier> ctor_name_identifier;
 			base::Optional<Identifier> dtor_name_identifier;
 
