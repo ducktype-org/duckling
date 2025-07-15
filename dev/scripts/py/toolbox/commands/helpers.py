@@ -39,7 +39,7 @@ def build_dir(*args, **kwargs):
         "-b",
         "--build-dir",
         "build_dir",
-        prompt="build directory",
+        prompt="Build directory",
         type=str,
         default="build",
     )(*args, **kwargs)
