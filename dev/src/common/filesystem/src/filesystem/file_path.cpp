@@ -51,14 +51,9 @@ namespace fs {
 		return std::filesystem::is_symlink(path);
 	}
 
-	FilePath FilePath::join(const std::filesystem::path& component) const {
-		return path / component;
-	}
-
-	FilePath FilePath::join(const FilePath& other) const { return path / other.path; }
-
-	FilePath FilePath::operator/(const std::filesystem::path& component) const {
-		return join(component);
+	FilePath FilePath::join(const FilePath& other) const {
+		CORE_ASSERT(other.isRelative(), "Cannot join absolute path: " + other.path.string());
+		return path / other.path;
 	}
 
 	FilePath FilePath::operator/(const FilePath& other) const { return join(other); }

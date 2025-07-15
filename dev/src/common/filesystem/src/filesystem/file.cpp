@@ -20,10 +20,6 @@ namespace {
 		if (!directory.isDirectory()) CORE_PANIC("Parent is not a directory");
 	}
 
-	void requireNotPhysical(const fs::File& file) {
-		if (file.getType() == fs::FileType::Physical) CORE_PANIC("File is physical");
-	}
-
 	void requireFile(const fs::File& file) {
 		if (!file.isFile()) CORE_PANIC("Path is not a file");
 	}
@@ -51,7 +47,7 @@ namespace {
 		for (size_t try_no = 0; try_no < 64; try_no++) {
 			std::string name;
 			for (int i = 0; i < name_len; i++) name.push_back(name_chars[dist(rng)]);
-			auto candidate = prefix_path / std::filesystem::path(name);
+			auto candidate = prefix_path / name;
 			if (!exists(candidate.getPath())) return candidate;
 		}
 		CORE_PANIC("Couldn't create a new name in: " + prefix_path.absolute().string());
@@ -69,7 +65,6 @@ namespace {
 	 */
 	fs::FilePath genPathInDirectory(const fs::File& directory, std::string_view custom_name = "") {
 		requireDirectory(directory);
-		requireNotPhysical(directory);
 
 		auto         type     = directory.getType();
 		fs::FilePath dir_path = directory.getFilePath();
@@ -77,7 +72,7 @@ namespace {
 		if (custom_name.empty()) {
 			return randomName(dir_path);
 		} else {
-			auto candidate = dir_path / std::filesystem::path(custom_name);
+			auto candidate = dir_path / custom_name;
 
 			if ((type == fs::FileType::Virtual && vfs->exists(candidate.getPath()))
 			    || (type != fs::FileType::Virtual && exists(candidate.getPath())))
@@ -371,8 +366,7 @@ namespace fs {
 		if (type == FileType::Virtual) {
 			// Virtual filesystem
 			auto entries = vfs->listDirectory(path);
-			for (const auto& entry: entries)
-				result.emplace_back(path / std::filesystem::path(entry));
+			for (const auto& entry: entries) result.emplace_back(path / entry);
 		} else {
 			// Physical or Temporary filesystem
 			for (const auto& entry: std::filesystem::directory_iterator(path.getPath()))

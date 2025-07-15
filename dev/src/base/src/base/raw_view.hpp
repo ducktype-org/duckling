@@ -150,8 +150,6 @@ namespace base {
 		SharedView& operator=(const SharedView&) = default;
 		SharedView& operator=(SharedView&&)      = default;
 
-		explicit SharedView(std::nullptr_t) {}
-
 		/**
 		 * @note Takes ownership of shared_ptr
 		 */

@@ -1,20 +1,22 @@
 #pragma once
 
+#include <base/exceptions.hpp>
+#include <base/stringifyable_enum.hpp>
+
 #include <filesystem>
 #include <string>
 #include <type_traits>
 
+/**
+ * @brief Represents the type of a file path.
+ */
+MAKE_STRINGIFYABLE_ENUM(fs, u64, PathType,
+	Physical,   ///< Physical path on the filesystem.
+	Virtual,    ///< Virtual path in the virtual filesystem.
+	Temporary   ///< Temporary path in the system's temporary directory.
+);
+
 namespace fs {
-
-	/**
-	 * @brief Represents the type of a file path.
-	 */
-	enum class PathType {
-		Physical,
-		Virtual,
-		Temporary,
-	};
-
 	/**
 	 * @class FilePath
 	 * @brief Abstract wrapper over std::filesystem::path with safe path operations.
@@ -122,25 +124,11 @@ namespace fs {
 		[[nodiscard]] bool isSymlink() const;
 
 		/**
-		 * @brief Safely joins this path with another path component.
-		 * @param component The path component to join.
-		 * @return New FilePath with the joined path.
-		 */
-		[[nodiscard]] FilePath join(const std::filesystem::path& component) const;
-
-		/**
 		 * @brief Safely joins this path with another FilePath.
 		 * @param other The FilePath to join.
 		 * @return New FilePath with the joined path.
 		 */
 		[[nodiscard]] FilePath join(const FilePath& other) const;
-
-		/**
-		 * @brief Operator/ for path joining.
-		 * @param component The path component to join.
-		 * @return New FilePath with the joined path.
-		 */
-		[[nodiscard]] FilePath operator/(const std::filesystem::path& component) const;
 
 		/**
 		 * @brief Operator/ for FilePath joining.
@@ -224,9 +212,15 @@ namespace fs {
 		[[nodiscard]] static FilePath getDefaultVirtualDirectoryPath();
 
 		// Comparison operators
-		auto operator<=>(const FilePath& other) const noexcept { return path <=> other.path; }
+		auto operator<=>(const FilePath& other) const { return path <=> other.path; }
 
-		bool operator==(const FilePath& other) const noexcept { return path == other.path; }
+		auto operator==(const FilePath& other) const {
+			if (path == other.path)
+				CORE_ASSERT(
+					other.type == type, "FilePath has different types, this should never happen"
+				);
+			return path == other.path;
+		}
 
 		// Conversion to std::filesystem::path
 		operator std::filesystem::path() const { return path; }

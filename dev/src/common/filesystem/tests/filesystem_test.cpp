@@ -301,6 +301,18 @@ private:
 			physical_folder2.isDirectory(), "Physical folder should be recreated with override"
 		);
 
+		auto new_phisical_file = physical_folder2.createSubFile("content", "duplicate.txt");
+		auto new_phisical_dir  = physical_folder2.createSubDirectory("some_dir");
+		assertTrue(
+			new_phisical_file.getType() == fs::FileType::Physical,
+			"Physical file should be created in physical folder"
+		);
+		assertTrue(
+			new_phisical_dir.getType() == fs::FileType::Physical,
+			"Physical directory should be created in physical folder"
+		);
+
+
 		// Test virtual file creation with override
 		auto virtual_file_path = virtual_dir.getFilePath().native() + "/allow_overwritetest.txt";
 		fs::FileManager::createVirtualFile(virtual_file_path, "original");
@@ -462,6 +474,9 @@ private:
 		// Cleanup test directories
 		fs::FileManager::deleteFolder(test_virtual_dir, true);
 		fs::FileManager::deleteFolder(test_temp_dir, true);
+		fs::FileManager::deleteFolder(physical_folder2, true);
+		assertFalse(physical_folder2.exists(), "Physical folder should not exist after deletion");
+
 		std::filesystem::remove_all(physical_folder_path);
 		std::filesystem::remove_all(temp_folder_path);
 		std::filesystem::remove(simple_physical_path);
