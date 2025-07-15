@@ -23,7 +23,7 @@ from click import command
         "This feature allows to run the checker on a shallow clone.",
 )
 @verbose(
-    help="Also shows checked files that didn't had any errors."
+    help="Also shows checked files that didn't have any errors."
 )
 def duck_linter(*args, **kwargs):
     """Check for violations of
