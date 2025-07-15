@@ -20,6 +20,7 @@ env:
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
+  BUILD_SYSTEM: Ninja
 #  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners. See #1021
 
 jobs:
@@ -90,6 +91,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Update apt
+        run: sudo apt update
+
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
@@ -109,9 +113,10 @@ jobs:
         run: sudo apt -y install mold
 
       - name: Install GCC 14 and gcov-14
-        run: |
-          sudo apt update
-          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+        run: sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+
+      - name: Install Ninja
+        run: sudo apt -y install ninja-build
 
       - name: Check installations
         run: |
@@ -172,6 +177,7 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
+              -G ${{ env.BUILD_SYSTEM }} \
               -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
               -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
               -D BUILD_DOCS=OFF \
@@ -181,7 +187,7 @@ jobs:
               ${{ steps.cmake-flags.outputs.flags }}
 #              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
 #              Temporarily disabled due to disk space issues on GH runners. See #1021
-#              When enabling, move this line upwards, so that it is before the output flags.
+#              When enabling, move this line upwards, so that it is before the cmake-flags value.
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
@@ -244,7 +250,7 @@ jobs:
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
-        
+
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
