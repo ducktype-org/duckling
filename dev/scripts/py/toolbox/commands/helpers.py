@@ -28,7 +28,6 @@ def all_flag(*args, **kwargs):
         "--all",
         "all",
         is_flag=True,
-        prompt="all files?",
         type=bool,
         default=False,
     )(*args, **kwargs)
