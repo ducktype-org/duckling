@@ -276,15 +276,15 @@ namespace compiler::backend_vm {
 							primitive.size
 						));
 					if (is_global) {
-						if (primitive.size == 8) return vm::opargs::GlobalI64{ name };
-						if (primitive.size == 4) return vm::opargs::GlobalI32{ name };
-						if (primitive.size == 2) return vm::opargs::GlobalI16{ name };
-						if (primitive.size == 1) return vm::opargs::GlobalI8{ name };
+						if (primitive.size == 8) return vm::opargs::Global64{ name };
+						if (primitive.size == 4) return vm::opargs::Global32{ name };
+						if (primitive.size == 2) return vm::opargs::Global16{ name };
+						if (primitive.size == 1) return vm::opargs::Global8{ name };
 					} else {
-						if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
-						if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
-						if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
-						if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
+						if (primitive.size == 8) return vm::opargs::StackLocal64{ name };
+						if (primitive.size == 4) return vm::opargs::StackLocal32{ name };
+						if (primitive.size == 2) return vm::opargs::StackLocal16{ name };
+						if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 					}
 				}
 				variant_case(vm::code::PointerType, pointer) {
@@ -570,7 +570,7 @@ namespace compiler::backend_vm {
 					ctx.bytecode_func,
 					{
 						OpKind::mov,
-						vm::opargs::StackLocalI64(base::StrID("ret_val")),
+						vm::opargs::StackLocal64(base::StrID("ret_val")),
 						lirValueToOpArg(ctx, terminator.arguments.at(0)),
 					}
 				);
