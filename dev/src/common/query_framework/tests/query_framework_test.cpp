@@ -550,6 +550,7 @@ private:
 	}
 
 	void testContextSanityCheck() {
+#if defined(DEBUG) || defined(DEVRELEASE)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<context_leak::LeakQuery>(1); },
 			"Bad context usage not detected"
@@ -558,6 +559,7 @@ private:
 			context_leak::use_leaked_query_happened,
 			"Something else happened, the test is inconclusive"
 		);
+#endif
 	}
 
 	void serializeDeserializeGraphTest() {

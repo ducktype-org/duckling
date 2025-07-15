@@ -1,5 +1,5 @@
 # Define custom build types
-set(VALID_BUILD_TYPES Debug DevRelease Release)
+set(VALID_BUILD_TYPES Debug DevRelease Release ReleaseHelper)
 if(NOT "${CMAKE_BUILD_TYPE}" IN_LIST VALID_BUILD_TYPES)
   message(FATAL_ERROR "Invalid build type: ${CMAKE_BUILD_TYPE}")
 endif()

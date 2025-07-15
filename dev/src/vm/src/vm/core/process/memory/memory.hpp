@@ -7,7 +7,6 @@
 #include "frame.hpp"
 #include "pointer.hpp"
 #include "thread_stack.hpp"
-#include <vm/exceptions/exceptions.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
@@ -119,11 +118,11 @@ namespace vm {
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
 				-> base::ModRawView {
-			if (pointer.block == nullptr) throw exceptions::NullPointerAccessException();
+			if (pointer.block == nullptr) CORE_PANIC("Pointer is null");
 			std::lock_guard lock(*pointer.block->mutex_ref);
-			if (pointer.block->deallocated) throw exceptions::DoubleFreeException();
+			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
-				throw exceptions::OutOfBlockBoundsException();
+				CORE_PANIC("Pointer out of bounds");
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
