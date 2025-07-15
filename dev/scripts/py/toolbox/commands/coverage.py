@@ -1,9 +1,11 @@
-from ..impl.coverage import coverage_impl
+from click import command
+
 from .helpers import (
     build_dir,
     thread_count,
 )
-from click import command, option, Choice
+from ..impl.coverage import coverage_impl
+
 
 @command()
 @build_dir(
