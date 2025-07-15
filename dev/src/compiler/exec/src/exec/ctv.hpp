@@ -7,7 +7,6 @@
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
-#include <base/unique_pointer.hpp>
 
 #include <query_framework/query_entry_point.hpp>
 
