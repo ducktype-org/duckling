@@ -1,9 +1,65 @@
 import re
 import json
-from pathlib import Path
-from .cpp_linter import get_files_for_linter
-from .helpers import log_info, log_warning, log_new_line, bash_command_get_output, BashCommandError
+from .helpers import (
+    BashCommandError,
+    log_info, 
+    log_warning, 
+    log_new_line, 
+    bash_command_get_output,
+)
 import os
+
+def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+    if(not issues):
+        issues = get_issues_from_github()
+        if not issues:
+            return True
+
+    valid_issue_numbers = []
+    for num in issues:
+        num_str = str(num).strip()
+        if not num_str:
+            continue
+        if not num_str.isdigit() or int(num_str) <= 0:
+            log_warning(f"Issue number '{num_str}' is not a positive integer. Skipping.")
+            continue
+        valid_issue_numbers.append(num_str)
+    if not valid_issue_numbers:
+        log_warning("No valid issue numbers provided.")
+        return True
+
+    # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
+    patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
+
+    try:
+        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
+        files = [f for f in files_str.strip().split('\n') if f]
+    except Exception as e:
+        log_warning(f"Could not get file list from git: {e}")
+        return True
+
+    found_any = False
+    summary = {num: 0 for num in valid_issue_numbers}
+
+    for file in files:
+        if os.path.isdir(file):
+            continue
+        try:
+            with open(file, "r") as f:
+                for i, line in enumerate(f, 1):
+                    for idx, pat in enumerate(patterns):
+                        if pat.search(line):
+                            log_warning(f"{file}:{i}: {line.strip()}")
+                            summary[valid_issue_numbers[idx]] += 1
+                            found_any = True
+        except Exception:
+            continue
+    
+    log_new_line()
+    log_info("Summary:")
+    for num in valid_issue_numbers:
+        log_info(f"#{num}: {summary[num]} occurrence(s)")
+    return not found_any
 
 def get_issues_from_github():
     import shutil
@@ -79,55 +135,3 @@ def get_issues_from_github():
     except BashCommandError as e:
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
-
-def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
-    if(not issues):
-        issues = get_issues_from_github()
-        if not issues:
-            return True
-
-    valid_issue_numbers = []
-    for num in issues:
-        num_str = str(num).strip()
-        if not num_str:
-            continue
-        if not num_str.isdigit() or int(num_str) <= 0:
-            log_warning(f"Issue number '{num_str}' is not a positive integer. Skipping.")
-            continue
-        valid_issue_numbers.append(num_str)
-    if not valid_issue_numbers:
-        log_warning("No valid issue numbers provided.")
-        return True
-
-    # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
-    patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
-
-    try:
-        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-        files = [f for f in files_str.strip().split('\n') if f]
-    except Exception as e:
-        log_warning(f"Could not get file list from git: {e}")
-        return True
-
-    found_any = False
-    summary = {num: 0 for num in valid_issue_numbers}
-
-    for file in files:
-        if os.path.isdir(file):
-            continue
-        try:
-            with open(file, "r") as f:
-                for i, line in enumerate(f, 1):
-                    for idx, pat in enumerate(patterns):
-                        if pat.search(line):
-                            log_warning(f"{file}:{i}: {line.strip()}")
-                            summary[valid_issue_numbers[idx]] += 1
-                            found_any = True
-        except Exception:
-            continue
-    
-    log_new_line()
-    log_info("Summary:")
-    for num in valid_issue_numbers:
-        log_info(f"#{num}: {summary[num]} occurrence(s)")
-    return not found_any

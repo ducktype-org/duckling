@@ -6,7 +6,11 @@ import sys
 import requests
 import math
 
-from .helpers import bash_command, exit_with_error, log_info
+from .helpers import (
+    bash_command, 
+    exit_with_error, 
+    log_info,
+)
 
 
 class InternetFile:
@@ -54,7 +58,7 @@ class InternetFile:
                             + "}"
                         )
                     else:
-                        toolbox.helpers.log_info(
+                        log_info(
                             f"Cannot display a progress bar during downloading of {self.path}..."
                         )
 

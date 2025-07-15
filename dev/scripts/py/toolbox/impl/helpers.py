@@ -2,11 +2,8 @@ import pathlib
 import subprocess as sp
 import sys
 import re
-
 import click
-
 import shutil
-
 
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
