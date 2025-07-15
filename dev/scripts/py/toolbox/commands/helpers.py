@@ -1,7 +1,5 @@
 from click import option, Choice
 
-BUILD_SYSTEMS = Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
-
 def create_option(*def_arg, **def_kwargs):
     """
     Creates a customizable `click.option` decorator with predefined defaults,
@@ -53,7 +51,7 @@ def build_system(*args, **kwargs):
         "build_system",
         prompt="Build system",
         default="Ninja",
-        type=BUILD_SYSTEMS,
+        type=Choice(["Ninja", "Unix Makefiles"], case_sensitive=False),
     )(*args, **kwargs)
 
 def cc_compiler(*args, **kwargs):
