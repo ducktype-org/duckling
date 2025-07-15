@@ -80,8 +80,8 @@ namespace vm {
 		/**
 		 * @brief Returns a view of global data by the id.
 		 */
-		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id
-		) -> base::ModRawView {
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
+			-> base::ModRawView {
 			std::lock_guard lock(mutex);
 			return global_data.atMaybe(id).expect("Id not stored!")->modView();
 		}
@@ -115,8 +115,9 @@ namespace vm {
 		// @todo panics slows down the execution of the code in executor
 		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
-		static constexpr __attribute__((always_inline)
-		) auto getPointerData(Pointer pointer, u64 size_bytes) -> base::ModRawView {
+		static constexpr
+			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
+				-> base::ModRawView {
 			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
 			std::lock_guard lock(*pointer.block->mutex_ref);
 			if (pointer.block->deallocated) CORE_PANIC("Data was freed");

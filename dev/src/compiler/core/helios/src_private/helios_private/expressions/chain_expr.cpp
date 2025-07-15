@@ -206,8 +206,8 @@ namespace compiler::helios::code {
 		 * Case when as a first element we have an identifier not followed by a call expression,
 		 * like "foo.bar.c".
 		 */
-		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident
-		) -> query::QResult<ChainState, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident)
+			-> query::QResult<ChainState, errors::Failed> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
@@ -235,8 +235,8 @@ namespace compiler::helios::code {
 		 * Case when as a first element in the chain
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
-		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr
-		) -> query::QResult<ChainState, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
+			-> query::QResult<ChainState, errors::Failed> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::QError(errors::Failed());
 			auto hout_expr = std::move(expr).value();
@@ -461,8 +461,8 @@ namespace compiler::helios::code {
 		 * Helper function of @p processPSTExpr that processes a value given the
 		 * lookup result of the name.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol
-		) -> query::QResult<ChainState, errors::Failed> {
+		auto processNamespaceOrValue(const SymID& symbol)
+			-> query::QResult<ChainState, errors::Failed> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {

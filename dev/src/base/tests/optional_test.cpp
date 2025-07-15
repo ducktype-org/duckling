@@ -510,7 +510,7 @@ public:
 			return (std::stringstream{} << "expected: " << expected << ", but got: " << got).str();
 		};
 
-		auto check_counter = [&](u32 CtrAssignCounter::*value, const std::string& name) {
+		auto check_counter = [&](u32 CtrAssignCounter::* value, const std::string& name) {
 			assertEqual(
 				counter.*value,
 				CountCtrStruct::counter().*value,
