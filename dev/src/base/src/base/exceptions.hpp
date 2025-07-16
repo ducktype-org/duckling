@@ -79,8 +79,8 @@ namespace base {
 }
 
 /**
-* Base helper macro, don't use it directly.
-*/
+ * Base helper macro, don't use it directly.
+ */
 #define DETAIL_THROW_PANIC(panic_title, ...)                            \
 	throw base::Panic(                                                  \
 		"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
@@ -89,40 +89,44 @@ namespace base {
 
 #if defined(DEBUG) || defined(DEVRELEASE)
 	/**
-	* @brief Assumption about the code after this line. Usually made after CORE_ASSERT
-	* */
+     * @brief Assumption about the code after this line. Usually made after CORE_ASSERT
+     * */
 	#define CORE_ASSUME(expression) [[assume(expression)]]
 #else
 	/**
-	* @brief Assumption about the code after this line. Usually made after CORE_ASSERT
-	* */
-	#define CORE_ASSUME(expression) do {} while (0)
+     * @brief Assumption about the code after this line. Usually made after CORE_ASSERT
+     * */
+	#define CORE_ASSUME(expression) \
+		do {                        \
+		} while (0)
 #endif
 
 #if defined(DEBUG) || defined(DEVRELEASE)
 	/**
-	* @brief Function will not throw in Release build
-	* */
+     * @brief Function will not throw in Release build
+     * */
 	#define NOEXCEPT noexcept(false)
 #else
 	/**
-	* @brief Function will not throw in Release build
-	* */
+     * @brief Function will not throw in Release build
+     * */
 	#define NOEXCEPT noexcept(true)
 #endif
 
 #if defined(DEBUG) || defined(DEVRELEASE)
 	/**
-	* @brief base::Panic based assert that allows catching for testing purposes.
-	*/
+     * @brief base::Panic based assert that allows catching for testing purposes.
+     */
 	#define CORE_ASSERT(cond, what, ...) \
 		if (!(cond))                     \
 		DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
 #else
 	/**
-	* @brief base::Panic based assert that allows catching for testing purposes.
-	*/
-	#define CORE_ASSERT(cond, what, ...) do {} while (0)
+     * @brief base::Panic based assert that allows catching for testing purposes.
+     */
+	#define CORE_ASSERT(cond, what, ...) \
+		do {                             \
+		} while (0)
 #endif
 
 
@@ -143,6 +147,6 @@ namespace base {
  * * `if (cond) CORE_PANIC("error description")`,
  * * `default: CORE_PANIC("unhandled case")`.
  */
-#define CORE_UNREACHABLE() \
-	DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");	\
+#define CORE_UNREACHABLE()                                      \
+	DETAIL_THROW_PANIC("    Unreachable code reached! Panic."); \
 	std::unreachable()
