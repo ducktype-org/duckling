@@ -5,7 +5,6 @@
 
 #include "help_message_generator.hpp"
 
-#include "command.hpp"
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 
@@ -109,7 +108,7 @@ std::string generateOptionsBlock(
 }
 
 std::string generateSubcommandsBlock(
-	const std::vector<clap::Command>& subcommands, int padding = 27
+	const std::vector<clap::Clap>& subcommands, int padding = 27
 ) {
 	if (subcommands.empty()) return "";
 	std::stringstream output;
@@ -130,8 +129,8 @@ namespace clap {
 		auto              program_name = getFileName(result.getFilePath());
 
 		output << generateUsage(result) << '\n';
-		if (command->get() != &clap.getRootCommand()) {
-			output << generateOptionsBlock("Global options:", clap.getRootCommand().getParameters());
+		if (command->get() != &clap) {
+			output << generateOptionsBlock("Global options:", clap.getParameters());
 		}
 		output << generateOptionsBlock("Subcommand options:", command->get()->getParameters());
 		output << generateSubcommandsBlock(command->get()->getSubcommands());

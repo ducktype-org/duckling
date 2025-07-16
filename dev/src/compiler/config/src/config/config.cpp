@@ -8,7 +8,7 @@ namespace config {
 		// TODOP: Think about that.
 		return clap::Clap("duck")
 		    .addHelpFlag()
-		    .addGlobalParameter(
+		    .add(
 				clap::ParamBuilder::ofFlag()
 					.addLongName("logger-cerr")
 					.addShortDesc(
@@ -17,7 +17,7 @@ namespace config {
 					)
 					.build()
 			)
-		    .addGlobalParameter(
+		    .add(
 				clap::ParamBuilder::ofFlag()
 					.addLongName("lexer-cerr")
 					.addShortDesc(

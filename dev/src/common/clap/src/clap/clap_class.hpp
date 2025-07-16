@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "command.hpp"
 #include "parameter.hpp"
 #include "parsing_result.hpp"
+#include "parsing_state.hpp"
 #include "value_parser.hpp"
 
 #include "base/maps.hpp"
@@ -43,10 +43,13 @@ namespace clap {
 	 * Refer to the clap docs for more complete example.
 	 */
 	// TODOP: A simple wrapper for command, which provides the clap functionality.
+
+	class ParsingState;  // Forward declaration.
 	class Clap final {
 	public:
 		// TODOP: Signature of a functoin which is run for global configs.
 		using PreHandler = std::function<void(clap::ParsingResult&)>;
+		using Handler    = std::function<int(const ParsingResult&)>;
 
 		// Clap is move-only
 		Clap(std::string name, std::string description = "");
@@ -55,21 +58,29 @@ namespace clap {
 		Clap(Clap&& other) noexcept            = default;
 		Clap& operator=(Clap&& other) noexcept = default;
 
+
+		/**
+		 * Adds a flag/option to the command clap. Ex. --version, --help, --let-it-throw, etc
+		 * @param parameter A parameter constructed with clap::ParamBuilder.
+		 * @return A reference to self.
+		 */
+		Clap&& add(Parameter&& param);
+
+		// Adds a positional argument.
+		Clap&& addPositional(Box<ValueParser> parser);
+
 		/**
 		 * Adds a subcommand to Clap.
 		 * @param sub_command A created sub command
 		 * @return A reference to self.
 		 */
-		Clap&& addSubcommand(Command&& sub_command);
+		Clap&& addSubcommand(Clap&& sub_command);
 
+		// Sets a function to be run.
 		/**
-		 * Adds a global flag/option for clap. Ex. --version, --help, --let-it-throw, etc
-		 * Adds a parameter to the root command.
-		 * @param parameter A parameter constructed with clap::ParamBuilder.
-		 * @return A reference to self.
+		 * TODOP: Docs
 		 */
-		Clap&& addGlobalParameter(Parameter&& parameter);
-		Clap&& addPositional(Box<ValueParser> parser);
+		Clap&& setHandler(Handler handler);
 
 		/**
 		 * Sets a runner which is run once, before all other handlers.
@@ -94,19 +105,16 @@ namespace clap {
 		Clap&& addHelpFlag();
 
 		/**
-		 * Returns a list of subcommands for this command.
-		 * @return A list of subcommands for this command.
+		 * TODOP: Docs
 		 */
 		[[nodiscard]]
-		const std::vector<Command>& getSubcommands() const;
+		const std::string& getName() const;
 
 		/**
-		 * Named parameters are built with clap::ParamBuilder. They are addressed with
-		 * ``-${SHORT_NAME}`` or ``--${LONG_NAME}``.
-		 * @return A list of named parameters.
+		 * TODOP: Docs
 		 */
 		[[nodiscard]]
-		const std::vector<Parameter>& getGlobalParameters() const;
+		const std::string& getDescription() const;
 
 		/**
 		 * A default value parser is used to parse values, that are not directly specified
@@ -117,15 +125,53 @@ namespace clap {
 		MCRef<ValueParser> getDefaultValueParser() const;
 
 		/**
-		 * A default value parser is used to parse values, that are not directly specified
-		 * in the Clap's specification.
-		 * @return A pointer to the parser. Might be nullptr.
+		 * TODOP: Docs
 		 */
 		[[nodiscard]]
 		const PreHandler& getPreHandler() const;
 
+		/**
+		 * TODOP: Docs
+		 */
 		[[nodiscard]]
-		const Command& getRootCommand() const;
+		const Handler& getHandler() const;
+
+		/**
+		 * Named parameters are built with clap::ParamBuilder. They are addressed with
+		 * ``-${SHORT_NAME}`` or ``--${LONG_NAME}``.
+		 * @return A list of named parameters.
+		 */
+		[[nodiscard]]
+		const std::vector<Parameter>& getParameters() const;
+
+		/**
+		 * TODOP: Docs
+		 */
+		[[nodiscard]]
+		const std::vector<Box<ValueParser>>& getPositionalParameters() const;
+
+		/**
+		 * Returns a list of subcommands for this command.
+		 * @return A list of subcommands for this command.
+		 */
+		[[nodiscard]]
+		const std::vector<Clap>& getSubcommands() const;
+
+		/**
+		 * TODOP: Docs
+		 */
+		[[nodiscard]]
+		base::Optional<CRef<Clap>> getSubcommand(const std::string& subcommand_name) const;
+
+		/**
+		 * TODOP: Docs
+		 */
+		[[nodiscard]] bool isLeaf() const;
+
+		/**
+		 * TODOP: Docs
+		 */
+		[[nodiscard]] bool isRoot() const;
 
 		/**
 		 * Performs the parsing. Returns the parsing result and the matched command.
@@ -134,6 +180,9 @@ namespace clap {
 		 * @return A pair of the command that matched and the parsed parameters.
 		 */
 		ParsingResult parse(CLIArgs args);
+		/**
+		 * TODOP: Docs
+		 */
 		ParsingResult parse(usize argc, const char* const* argv);
 		// ParsingResult parse(const std::string& args); // TODOP: implement that.
 
@@ -144,14 +193,17 @@ namespace clap {
 		 * @return A return value od a handler specified for the picked command.
 		 */
 		int execute(usize argc, const char* const* argv);
-
-		// Version of the above one, but parses from a string and discards the program name.
+		/**
+		 * TODOP: Docs
+		 */
 		// int execute(const std::string& args); // TODOP: Implement that.
 
-		// TODOP: Remove that.
-		void dPrint();
-
 	private:
+		/**
+		 * TODOP: Docs
+		 */
+		void parse(ParsingState& state) const;
+
 		/**
 		 * Validates the result accordingly to the Clap's specification, invokes
 		 * conditionals' conditions, etc.
@@ -160,8 +212,20 @@ namespace clap {
 		void validateParsing(ParsingResult& result) const;
 
 
-		// Root command, stores the global options, subcommands of the global CLAP object.
-		Command    root_command;
-		PreHandler pre_handler;
+		/**
+		 * TODOP: Docs
+		 */
+		std::string name;
+		std::string description;
+		// Is it a leaf in the tree. Has no subcommands.
+		bool              is_leaf;
+		bool              is_root;
+		MBox<ValueParser> default_value_parser;
+		PreHandler        pre_handler{};
+		Handler           handler{};
+
+		std::vector<Parameter>        parameters;
+		std::vector<Box<ValueParser>> positional_parameters;
+		std::vector<Clap>             subcommands;
 	};
 }  // clap

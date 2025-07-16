@@ -21,14 +21,14 @@ void showVersion() {
 clap::Clap getVmClap() {
 	return clap::Clap("dvm", "The Duckling Virtual Machine.")
 	    .addHelpFlag()
-	    .addGlobalParameter(
+	    .add(
 			clap::ParamBuilder::ofFlag()
 				.addShortName('v')
 				.addLongName("version")
 				.addShortDesc("Shows version and config")
 				.build()
 		)
-	    .addGlobalParameter(
+	    .add(
 			clap::ParamBuilder::ofFlag()
 				.addLongName("stdlib")
 				.addShortDesc("When passed, loads standard library")
@@ -41,7 +41,7 @@ clap::Clap getVmClap() {
 			}
 		})
 	    .addSubcommand(
-			clap::Command("server", "Launch DVM as a http server.")
+			clap::Clap("server", "Launch DVM as a http server.")
 				.add(
 					clap::ParamBuilder::ofValue(clap::IntParser::make())
 						.addShortName('p')
@@ -58,7 +58,7 @@ clap::Clap getVmClap() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("run", "Run a .qbc file.")
+			clap::Clap("run", "Run a .qbc file.")
 				.addPositional(clap::FileParser::make())
 				.add(
 					// TODOP: Maybe this file should be positional?
@@ -77,7 +77,7 @@ clap::Clap getVmClap() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("repl", "Start the VM in REPL mode.")
+			clap::Clap("repl", "Start the VM in REPL mode.")
 				.addPositional(clap::FileParser::make())
 				// TODOP: Maybe REPL should have a file flag as well?
 				.setHandler([](const clap::ParsingResult& _) -> int {

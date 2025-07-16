@@ -79,7 +79,7 @@ private:
 	void namedTest() {
 		auto par = clap::Clap("prog")
 		               .setDefaultValueParser(clap::IntParser::make())
-		               .addGlobalParameter(
+		               .add(
 						   clap::ParamBuilder::ofValue(clap::IntParser::make())
 							   .addShortName('n')
 							   .addLongName("nnn")
@@ -107,7 +107,7 @@ private:
 	void flagTest() {
 		auto par = clap::Clap("prog")
 		               .setDefaultValueParser(clap::IntParser::make())
-		               .addGlobalParameter(
+		               .add(
 						   clap::ParamBuilder::ofFlag()
 							   .addShortName('f')
 							   .addLongName("flag")
@@ -139,13 +139,13 @@ private:
 		auto par
 			= clap::Clap("prog")
 		          .setDefaultValueParser(clap::IntParser::make())
-		          .addGlobalParameter(
+		          .add(
 					  clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("Desc").build()
 				  )
-		          .addGlobalParameter(
+		          .add(
 					  clap::ParamBuilder::ofFlag().addShortName('b').addShortDesc("Desc").build()
 				  )
-		          .addGlobalParameter(
+		          .add(
 					  clap::ParamBuilder::ofValue(clap::IntParser::make())
 						  .addShortName('c')
 						  .addShortDesc("Desc")
@@ -194,7 +194,7 @@ private:
 	}
 
 	void escapingTest() {
-		auto clap = clap::Clap("prog").addGlobalParameter(
+		auto clap = clap::Clap("prog").add(
 			clap::ParamBuilder::ofValue(clap::StringParser::make())
 				.addShortName('f')
 				.addShortDesc("test")
@@ -208,7 +208,7 @@ private:
 
 	void subcommandBasicTest() {
 		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Command("test", "A test command")
+			clap::Clap("test", "A test command")
 				.add(clap::ParamBuilder::ofFlag().addShortName('f').addShortDesc("desc").build())
 		);
 
@@ -227,9 +227,9 @@ private:
 
 	void subcommandNestedTest() {
 		auto clap = clap::Clap("git").addSubcommand(
-			clap::Command("remote", "Manage remotes")
+			clap::Clap("remote", "Manage remotes")
 				.addSubcommand(
-					clap::Command("add", "Add a remote")
+					clap::Clap("add", "Add a remote")
 						.addPositional(clap::StringParser::make("name"))
 						.addPositional(clap::StringParser::make("url"))
 				)
@@ -253,11 +253,11 @@ private:
 	void globalOptionsTest() {
 		auto clap
 			= clap::Clap("prog")
-		          .addGlobalParameter(
+		          .add(
 					  clap::ParamBuilder::ofFlag().addLongName("verbose").addShortDesc("desc").build()
 				  )
 		          .addSubcommand(
-					  clap::Command("upload", "Upload a file")
+					  clap::Clap("upload", "Upload a file")
 						  .addPositional(clap::StringParser::make("file"))
 				  );
 
@@ -277,7 +277,7 @@ private:
 							return 420;
 						})
 		                .addSubcommand(
-							clap::Command("cmd", "A command")
+							clap::Clap("cmd", "A command")
 								.setHandler([&](const clap::ParsingResult&) -> int {
 									call_order.emplace_back("handler");
 									return 123;
@@ -295,7 +295,7 @@ private:
 
 	void requiredParameterValidation() {
 		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Command("login", "Log in")
+			clap::Clap("login", "Log in")
 				.add(
 					clap::ParamBuilder::ofValue(clap::StringParser::make())
 						.addLongName("user")
@@ -325,7 +325,7 @@ private:
 
 	void subcommandNotSpecifiedError() {
 		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Command("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
+			clap::Clap("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
 		);
 
 		std::array argv{ "./prog" };
@@ -339,9 +339,9 @@ private:
 		assertThrows<clap::exceptions::CoexistingPositionalAndSubcommand>(
 			[&]() {
 				auto clap = clap::Clap("prog").addSubcommand(
-					clap::Command("test", "desc")
+					clap::Clap("test", "desc")
 						.addPositional(clap::IntParser::make())
-						.addSubcommand(clap::Command("tests", "desc"))
+						.addSubcommand(clap::Clap("tests", "desc"))
 				);
 			},
 			"Clap did not find a coexisting subcommand and positional argument."
@@ -350,8 +350,8 @@ private:
 		assertThrows<clap::exceptions::CoexistingPositionalAndSubcommand>(
 			[&]() {
 				auto clap = clap::Clap("prog").addSubcommand(
-					clap::Command("test", "desc")
-						.addSubcommand(clap::Command("tests", "desc"))
+					clap::Clap("test", "desc")
+						.addSubcommand(clap::Clap("tests", "desc"))
 						.addPositional(clap::IntParser::make())
 				);
 			},
@@ -365,10 +365,10 @@ private:
 				auto clap
 					= clap::Clap("prog")
 			              .addSubcommand(
-							  clap::Command("test", "desc").addPositional(clap::IntParser::make())
+							  clap::Clap("test", "desc").addPositional(clap::IntParser::make())
 						  )
 			              .addSubcommand(
-							  clap::Command("test", "desc").addPositional(clap::IntParser::make())
+							  clap::Clap("test", "desc").addPositional(clap::IntParser::make())
 						  );
 			},
 			"Clap did not find a coexisting subcommand and positional argument."
@@ -377,7 +377,7 @@ private:
 
 	void executeReturnValueTest() {
 		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Command("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
+			clap::Clap("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
 		);
 		std::array argv{ "./prog", "test" };
 		int        exit_code = clap.execute(argv.size(), argv.data());
@@ -385,7 +385,7 @@ private:
 	}
 
 	void noHandlerSpecified() {
-		auto       clap = clap::Clap("prog").addSubcommand(clap::Command("test", "desc"));
+		auto       clap = clap::Clap("prog").addSubcommand(clap::Clap("test", "desc"));
 		std::array argv{ "./prog", "test" };
 		assertThrows<clap::exceptions::NoHandlerSpecified>(
 			[&]() { clap.execute(argv.size(), argv.data()); },
@@ -396,10 +396,10 @@ private:
 	void conditionalParameterTest() {
 		auto clap
 			= clap::Clap("prog")
-		          .addGlobalParameter(
+		          .add(
 					  clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("desc").build()
 				  )
-		          .addGlobalParameter(
+		          .add(
 					  clap::ParamBuilder::ofFlag()
 						  .addShortName('b')
 						  .addShortDesc("desc")
@@ -429,14 +429,14 @@ private:
 
 	void mixedGlobalAndLocalParameters() {
 		auto clap = clap::Clap("prog")
-		                .addGlobalParameter(
+		                .add(
 							clap::ParamBuilder::ofValue(clap::StringParser::make())
 								.addLongName("global")
 								.addShortDesc("desc")
 								.build()
 						)
 		                .addSubcommand(
-							clap::Command("cmd", "desc")
+							clap::Clap("cmd", "desc")
 								.add(
 									clap::ParamBuilder::ofValue(clap::StringParser::make())
 										.addLongName("local")

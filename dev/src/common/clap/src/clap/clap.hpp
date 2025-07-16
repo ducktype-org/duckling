@@ -6,7 +6,6 @@
 #pragma once
 
 #include "clap_class.hpp"
-#include "command.hpp"
 #include "exceptions.hpp"
 #include "help_message_generator.hpp"
 #include "param_builder.hpp"

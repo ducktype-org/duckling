@@ -241,7 +241,7 @@ void showVersion() {
 clap::Clap getLspDaemonCLI() {
 	return clap::Clap("lsp_deamon", "The Duckling Language Server Protocol daemon.")
 	    .addHelpFlag()
-	    .addGlobalParameter(
+	    .add(
 			clap::ParamBuilder::ofFlag()
 				.addShortName('v')
 				.addLongName("version")
@@ -255,7 +255,7 @@ clap::Clap getLspDaemonCLI() {
 			}
 		})
 	    .addSubcommand(
-			clap::Command("start", "Starts the LSP server on a given port")
+			clap::Clap("start", "Starts the LSP server on a given port")
 				.add(
 					clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
 						.addShortName('p')

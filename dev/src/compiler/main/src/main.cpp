@@ -41,19 +41,19 @@ void printContextErrors() {
 
 clap::Clap getStandardDucklingOptions() {
 	return clap::Clap("duck", "The Duckling compiler")
-	    .addGlobalParameter(
+	    .add(
 			clap::ParamBuilder::ofFlag()
 				.addLongName("logger-cerr")
 				.addShortDesc("If set, Logger class will immediately print its messages to cerr.")
 				.build()
 		)
-	    .addGlobalParameter(
+	    .add(
 			clap::ParamBuilder::ofFlag()
 				.addLongName("lexer-cerr")
 				.addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
 				.build()
 		)
-	    .addGlobalParameter(
+	    .add(
 			clap::ParamBuilder::ofFlag()
 				.addLongName("let-it-throw")
 				.addShortDesc("Disables exception handling in main (debug option)")
@@ -64,7 +64,7 @@ clap::Clap getStandardDucklingOptions() {
 				)
 				.build()
 		)
-	    .addGlobalParameter(  // TODOP: Add default version flag adding.
+	    .add(  // TODOP: Add default version flag adding.
 			clap::ParamBuilder::ofFlag()
 				.addShortName('v')
 				.addLongName("version")
@@ -89,7 +89,7 @@ clap::Clap getStandardDucklingOptions() {
 clap::Clap myGetClapForMain() {
 	return getStandardDucklingOptions()
 	    .addSubcommand(
-			clap::Command("lex", "Runs lexer on a single file and prints the result to cout.")
+			clap::Clap("lex", "Runs lexer on a single file and prints the result to cout.")
 				.add(
 					clap::ParamBuilder::ofValue(clap::FileParser::make())
 						.addShortName('f')
@@ -129,7 +129,7 @@ clap::Clap myGetClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("parse", "Runs parser on a single file and prints result in json to cout.")
+			clap::Clap("parse", "Runs parser on a single file and prints result in json to cout.")
 				.add(
 					clap::ParamBuilder::ofValue(clap::FileParser::make())
 						.addShortName('f')
@@ -163,7 +163,7 @@ clap::Clap myGetClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("get_hout", "Debug prints hout-unit of a module.")
+			clap::Clap("get_hout", "Debug prints hout-unit of a module.")
 				.add(
 					clap::ParamBuilder::ofValue(clap::FileParser::make())
 						.addShortName('m')
@@ -190,7 +190,7 @@ clap::Clap myGetClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("compile_module", "Compile given module into a binary.")
+			clap::Clap("compile_module", "Compile given module into a binary.")
 				.add(
 					clap::ParamBuilder::ofValue(clap::FileParser::make())
 						.addShortName('m')
@@ -292,7 +292,7 @@ clap::Clap myGetClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("compile_package", "Compile given package into a binary.")
+			clap::Clap("compile_package", "Compile given package into a binary.")
 				.add(
 					clap::ParamBuilder::ofValue(clap::FileParser::make())
 						.addShortName('m')
@@ -336,7 +336,7 @@ clap::Clap myGetClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Command("throw", "Throws exception (testing command).")
+			clap::Clap("throw", "Throws exception (testing command).")
 				.setHandler([](const clap::ParsingResult& _) -> int {
 					//   configureDuckMainWith(clap, command_args);
 					throw base::LogicError("Command `throw` thrown successfully!");
