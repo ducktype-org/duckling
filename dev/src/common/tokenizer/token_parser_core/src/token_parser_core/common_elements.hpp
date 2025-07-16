@@ -1,10 +1,11 @@
 #pragma once
 
-#include <diagnostic/source_position.hpp>
 #include <lexer/token.hpp>
 
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 namespace tpc {
 	/**
