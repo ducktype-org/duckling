@@ -1,5 +1,4 @@
 /**
- * @file expression_type.cpp
  * @brief deduceTypeFromExpressionType implementation
  */
 
