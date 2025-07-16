@@ -41,7 +41,6 @@ def surgically_remove_coverage_files(build_path: Path):
 
         # For each .gcno file, find its source files.
         source_files = get_sources_of_gcno_file(gcno_path)
-        # print(f"Found source files:\n{source_files}")
         # If any of them don't exist...
         if any(not file.exists() for file in source_files):
             # Delete the .gcno file
