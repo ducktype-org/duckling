@@ -1,6 +1,6 @@
-#include <init/init.hpp>
-
 #include <base/exceptions.hpp>
+
+#include <init/init.hpp>
 
 int main() {
 	init::InitObject _;
