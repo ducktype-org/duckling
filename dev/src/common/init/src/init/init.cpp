@@ -54,12 +54,17 @@ namespace init {
 		 * Ensured that the function is only registered on InitObject construction.
 		 */
 		void initStateAtexitHandler() {
+			if (not getInitState()->was_deinit) {
+				std::cerr << "WARNING: InitObject was used but its dtor was not called. "
+							 "This can happen for example when std::exit was used or when "
+							 "exception was not caught, "
+							 "and should be treated as a bug in the proper compiler executable.";
+			}
 			getInitState()->was_deinit = true;
-			if (getInitState()->was_init != true) {
+			if (not getInitState()->was_init) {
 				// this should only be called if InitObject was used.
 				std::terminate();
 			}
-			std::cerr << "WARNING: InitObject used but dtor not called due to std::exit call.";
 		}
 
 		/**
@@ -109,7 +114,8 @@ namespace init {
 		CORE_ASSERT(not state->was_init, "InitObject can only be created once");
 		state->was_init = true;
 
-		CORE_ASSERT(not std::atexit(initStateAtexitHandler), "Cannot register atexit handler");
+		auto handler_fail = std::atexit(initStateAtexitHandler);
+		CORE_ASSERT(not handler_fail, "Cannot register atexit handler");
 
 		for (auto& function: state->init_function_list) function();
 	}
