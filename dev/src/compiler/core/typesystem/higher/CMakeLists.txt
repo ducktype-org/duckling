@@ -1,4 +1,4 @@
-add_library(TypeSystemHigher
+add_library(TypeSystemHigher STATIC
         src/typesystem/higher/queries/implicit_coercibility.cpp
         src/typesystem/higher/queries/types.cpp
         src/typesystem/higher/abstract_type.cpp

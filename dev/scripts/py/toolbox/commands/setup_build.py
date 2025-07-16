@@ -79,6 +79,14 @@ from click import Choice, option, command
         ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
     ),
 )
+@option(
+    "--shared_libs",
+    prompt="Build shared libraries",
+    help="Whether to use shared or static libraries.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)
