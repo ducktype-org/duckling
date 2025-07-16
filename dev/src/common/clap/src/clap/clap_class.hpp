@@ -45,6 +45,7 @@ namespace clap {
 	// TODOP: A simple wrapper for command, which provides the clap functionality.
 	class Clap final {
 	public:
+		// TODOP: Signature of a functoin which is run for global configs.
 		using PreHandler = std::function<void(clap::ParsingResult&)>;
 
 		// Clap is move-only
@@ -53,8 +54,6 @@ namespace clap {
 		Clap& operator=(Clap& other) noexcept  = delete;
 		Clap(Clap&& other) noexcept            = default;
 		Clap& operator=(Clap&& other) noexcept = default;
-
-		// TODOP: MODIFIERS
 
 		/**
 		 * Adds a subcommand to Clap.
@@ -73,13 +72,6 @@ namespace clap {
 		Clap&& addPositional(Box<ValueParser> parser);
 
 		/**
-		 * Sets the default value parser for the Clap. Might be a nullptr.
-		 * @param parser A value parser to be used.
-		 * @return A reference to self.
-		 */
-		Clap&& setDefaultValueParser(MBox<ValueParser> parser);
-
-		/**
 		 * Sets a runner which is run once, before all other handlers.
 		 * Usefull when configuring global options like loggers and lexers.
 		 * @param pre_handler A function to run.
@@ -88,13 +80,19 @@ namespace clap {
 		Clap&& setPreHandler(PreHandler pre_handler);
 
 		/**
+		 * Sets the default value parser for the whole Clap. Might be a nullptr.
+		 * @param parser A value parser to be used.
+		 * @return A reference to self.
+		 */
+		Clap&& setDefaultValueParser(MBox<ValueParser> parser);
+
+		/**
 		 * Adds a standard help flag functionality.
 		 * If flag is passed raises clap::exceptions::HelpException.
 		 * @return A reference to self.
 		 */
 		Clap&& addHelpFlag();
 
-		// TODOP: Getters.
 		/**
 		 * Returns a list of subcommands for this command.
 		 * @return A list of subcommands for this command.
@@ -129,19 +127,6 @@ namespace clap {
 		[[nodiscard]]
 		const Command& getRootCommand() const;
 
-
-		// TODOP: FUNCTIONALITY.
-		/**
-		 * Perform parsing.
-		 * @param argc Number of elements in argv.
-		 * @param argv A C-string array.
-		 * @return An object containing parsed command-line arguments.
-		 */
-		// TODOP: This may be not needed.
-		// ParsingResult parse(usize argc, const char* const* argv);
-		// ParsingResult parse(CLIArgs args);
-		// ParsingResult parse(const std::string& args);
-
 		/**
 		 * Performs the parsing. Returns the parsing result and the matched command.
 		 * @param argc Number of elements in argv.
@@ -150,6 +135,7 @@ namespace clap {
 		 */
 		ParsingResult parse(CLIArgs args);
 		ParsingResult parse(usize argc, const char* const* argv);
+		// ParsingResult parse(const std::string& args); // TODOP: implement that.
 
 		/**
 		 * Performs the parsing and executes the command.

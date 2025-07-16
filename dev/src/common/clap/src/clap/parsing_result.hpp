@@ -5,7 +5,6 @@
  */
 
 #pragma once
-#include "clap/command.hpp"
 #include "parameter.hpp"
 
 #include <base/anycast.hpp>
@@ -90,11 +89,10 @@ namespace clap {
 		void insertExtra(const ParsedValue& value);
 
 		/**
-		 * @brief Sets the command that was matched during parsing.
-		 * @param command A pointer to the matched command.
-		 * @param path A vector of pointers representing the path to the matched command.
+		 * @brief Adds a command to the command path. Updated the matched command.
+		 * @param cmd The matched command.
 		 */
-		void setMatchedCommand(CRef<Command> cmd, std::vector<CRef<Command>> path);
+		void addToPath(CRef<Command> cmd);
 
 		/**
 		 * The main way to retrieve a value of a parameter from ParsingResult.
@@ -209,7 +207,7 @@ namespace clap {
 		 * @return Command which was run.
 		 */
 		[[nodiscard]]
-		CRef<Command> getMatchedCommand() const;
+		base::Optional<CRef<Command>> getMatchedCommand() const;
 
 		/**
 		 * Returns the full path of commands which lead to the matched commands.
@@ -218,6 +216,7 @@ namespace clap {
 		[[nodiscard]]
 		const std::vector<CRef<Command>>& getCommandPath() const;
 		
+		// TODOP: Remove that.
 		void dPrint();
 
 
@@ -251,8 +250,11 @@ namespace clap {
 
 		std::string                   file_path;
 		std::string                   args;
-		base::Optional<CRef<Command>> command;       // Command which was run.
-		std::vector<CRef<Command>>    command_path;  // A path to the command which was run.
+
+		// Command which was run.
+		base::Optional<CRef<Command>> command{};       
+		// A path to the command which was run.
+		std::vector<CRef<Command>>    command_path{};  
 
 		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;

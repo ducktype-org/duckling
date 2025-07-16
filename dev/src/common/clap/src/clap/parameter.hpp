@@ -69,6 +69,13 @@ namespace clap {
 		[[nodiscard]]
 		const ParameterNecessity& getParameterNecessity() const;
 
+		/**
+		 * Returns a name of the parameter.
+		 * A long name if available, short name otherwise or an empty optional is none is specified.
+		 * @return  Optional name of the parameter.
+		 */
+		[[nodiscard]] base::Optional<std::string> getParameterName() const;
+
 	private:
 		Parameter() = default;
 		base::Optional<char>          short_name;

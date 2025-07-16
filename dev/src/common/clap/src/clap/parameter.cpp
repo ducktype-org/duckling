@@ -4,7 +4,8 @@
  */
 
 #include "parameter.hpp"
-#include <tuple>
+
+#include <string>
 
 namespace clap {
 
@@ -20,5 +21,12 @@ namespace clap {
 
 	const ParameterNecessity& Parameter::getParameterNecessity() const {
 		return parameter_necessity;
+	}
+
+	base::Optional<std::string> Parameter::getParameterName() const {
+		if_opt_some(long_name, name) return name.stdString();
+		// Brace initializer, because name is a char.
+		if_opt_some(short_name, name) return { { name } };
+		return {};
 	}
 }

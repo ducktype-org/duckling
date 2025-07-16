@@ -9,6 +9,8 @@ add_library(Clap
 	src/clap/value_parser.hpp
 	src/clap/parsing_result.cpp
 	src/clap/parsing_result.hpp
+	src/clap/parsing_state.cpp
+	src/clap/parsing_state.hpp
 	src/clap/param_builder.hpp
 	src/clap/param_builder.cpp
 	src/clap/exceptions.cpp

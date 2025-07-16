@@ -4,8 +4,10 @@
  */
 
 #include "parsing_result.hpp"
+#include "command.hpp"
 
 #include <iostream>
+#include "base/optional.hpp"
 
 namespace clap {
 	ParsingResult::ParsingResult(std::string file_path, std::string args):
@@ -73,9 +75,9 @@ namespace clap {
 
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
 
-	void ParsingResult::setMatchedCommand(CRef<Command> cmd, std::vector<CRef<Command>> path) {
+	void ParsingResult::addToPath(CRef<Command> cmd) {
 		command      = cmd;
-		command_path = std::move(path);
+		command_path.push_back(cmd);
 	}
 
 	usize ParsingResult::getPositionalParameterCount() const { return positional_values.size(); }
@@ -86,9 +88,8 @@ namespace clap {
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
 
-	CRef<Command> ParsingResult::getMatchedCommand() const {
-		// TODOP: What about empty optionals?
-		return command.value();
+	base::Optional<CRef<Command>> ParsingResult::getMatchedCommand() const {
+		return command;
 	}
 
 	const std::vector<CRef<Command>>& ParsingResult::getCommandPath() const { return command_path; }

@@ -1,10 +1,11 @@
 #pragma once
 
+#include "exceptions.hpp"
 #include "parameter.hpp"
-#include "parsing_result.hpp"
 #include "value_parser.hpp"
 
 #include "base/maps.hpp"
+#include "base/optional.hpp"
 #include "base/string_id.hpp"
 #include <base/ints.hpp>
 
@@ -13,6 +14,9 @@
 #include <vector>
 
 namespace clap {
+	// Forward declaration.
+	class ParsingResult;
+	class ParsingState;
 
 	/**
 	 * @brief Structure representing a single command.
@@ -43,8 +47,6 @@ namespace clap {
 		[[nodiscard]]
 		const std::string& getDescription() const;
 
-		// [[nodiscard]]
-		// const base::HashMap<base::StrID, MRef<Command>>& getSubcommands() const;
 		[[nodiscard]]
 		const std::vector<Command>& getSubcommands() const;
 
@@ -57,6 +59,12 @@ namespace clap {
 		[[nodiscard]]
 		const Handler& getHandler() const;
 
+		[[nodiscard]] bool isLeaf() const;
+
+		[[nodiscard]]
+		base::Optional<CRef<Command>> getSubcommand(const std::string& subcommand_name) const;
+
+
 		/**
 		 * A default value parser is used to parse values, that are not directly specified
 		 * in the Clap's specification.
@@ -65,16 +73,21 @@ namespace clap {
 		[[nodiscard]]
 		MCRef<ValueParser> getDefaultValueParser() const;
 
+		// Main parsing function for the command.
+		// TODOP: Better docs.
+		void parse(ParsingState& state, const Command& root_command) const;
+
 
 	private:
-		std::string       name;
-		std::string       description;
+		std::string name;
+		std::string description;
+		// Is it a leaf in the tree. Has no subcommands.
+		bool              is_leaf;
 		MBox<ValueParser> default_value_parser;
 		Handler           handler{};
 
 		std::vector<Box<ValueParser>> positional_parameters;
 		std::vector<Parameter>        parameters;
 		std::vector<Command>          subcommands;
-		// base::HashMap<base::StrID, MRef<Command>> subcommands; // TODOP: maybe it should be a map.
 	};
 };  // clap

@@ -14,14 +14,14 @@
 namespace clap::exceptions {
 
 	/**
-	 * Base struct for all the parsing-related exceptions.
+	 * @brief Base struct for all the parsing-related exceptions.
 	 */
 	struct ClapException: public base::LogicError {
 		explicit ClapException(const std::string& message);
 	};
 
 	/**
-	 * Raised when passed ``-h`` / ``--help``.
+	 * @brief Raised when passed ``-h`` / ``--help``.
 	 * It is not an exception per se.
 	 */
 	struct HelpException: public base::LogicError {
@@ -31,7 +31,7 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised when passed ``-v`` / ``--version``.
+	 * @brief Raised when passed ``-v`` / ``--version``.
 	 * It is not an exception per se.
 	 */
 
@@ -42,7 +42,7 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised by value parsers when input is malformed.
+	 * @brief Raised by value parsers when input is malformed.
 	 */
 	struct ValueParsingException: public ClapException {
 		ValueParsingException(
@@ -55,66 +55,94 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised by value parser clap::FileParser when a passed file does not exist.
+	 * @brief Raised by value parser clap::FileParser when a passed file does not exist.
 	 */
 	struct FileDoesNotExist: public ClapException {
 		explicit FileDoesNotExist(const std::filesystem::path& path);
 	};
 
 	/**
-	 * Raised when user did not pass a necessary positional argument.
+	 * @brief Raised when user did not pass a necessary positional argument.
 	 */
 	struct PositionalParameterExpected: public ClapException {
 		PositionalParameterExpected(usize param_index, const std::string& param_type);
 	};
 
 	/**
-	 * Raised when user passes an unknown parameter.
+	 * @brief Raised when user passes an unknown parameter.
 	 */
 	struct InvalidParameterName: public ClapException {
 		explicit InvalidParameterName(const std::string& name);
 	};
 
 	/**
-	 * Raised when parameter was passed twice.
+	 * @brief Raised when parameter was passed twice.
 	 */
 	struct DuplicatedParameter: public ClapException {
 		explicit DuplicatedParameter(const std::string& name);
 	};
 
 	/**
-	 * Raised when user does not pass a value to a parameter.
+	 * @brief Raised when user does not pass a value to a parameter.
 	 */
 	struct ParameterRequiresValue: public ClapException {
 		ParameterRequiresValue(const std::string& name, const std::string& value_type);
 	};
 
 	/**
-	 * Raised when user does not pass a parameter name after ``-`` or ``--``.
+	 * @brief Raised when user does not pass a parameter name after ``-`` or ``--``.
 	 */
 	struct ExpectedParameterIdentifier: public ClapException {
 		ExpectedParameterIdentifier(i32 at, std::string_view source);
 	};
 
 	/**
-	 * Raised when user does not pass a required parameter.
+	 * @brief Raised when user does not pass a required parameter.
 	 */
 	struct MissingRequiredParameter: public ClapException {
 		explicit MissingRequiredParameter(const std::string& name);
 	};
 
 	/**
-	 * Raised when conditional parameter's condition is not met.
+	 * @brief Raised when conditional parameter's condition is not met.
 	 */
 	struct MissingConditionalParameter: public ClapException {
 		explicit MissingConditionalParameter(const std::string& name, std::string_view why = "");
 	};
 
 	/**
-	 * Raised when user has specified extra arguments, but Clap has Clap::default_value_parser
-	 * set to nullptr.
+	 * @brief Raised when user has specified extra arguments, but Clap has
+	 * Clap::default_value_parser set to nullptr.
 	 */
 	struct NoDefaultValueParser: public ClapException {
 		explicit NoDefaultValueParser(i32 at, std::string_view values);
+	};
+
+	/**
+	 * @brief Raised when the subcommand is not specified.
+	 * Fe. we finish parsing in a command which has a non-empty subcommand list.
+	 */
+	struct UnknownSubcommand: public ClapException {
+		explicit UnknownSubcommand(
+			const std::string& unknown_name, const std::string& parent_command_name
+		);
+	};
+
+	/**
+	 * @brief Raised when a subcommand with a duplicate name is added to a command.
+	 * Detected at the time of definition, not parsing.
+	 */
+	struct DuplicateSubcommand: public ClapException {
+		explicit DuplicateSubcommand(
+			const std::string& duplicate_name, const std::string& parent_command_name
+		);
+	};
+
+	/**
+	 * @brief Raised when trying to declare positional arguments and subcommands in the same
+	 * command. Detected at the time of definition, not parsing.
+	 */
+	struct CoexistingPositionalAndSubcommand: public ClapException {
+		explicit CoexistingPositionalAndSubcommand(const std::string& command_name);
 	};
 }

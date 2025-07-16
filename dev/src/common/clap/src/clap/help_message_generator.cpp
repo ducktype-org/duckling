@@ -5,9 +5,9 @@
 
 #include "help_message_generator.hpp"
 
-#include "clap/command.hpp"
-#include "clap/parameter.hpp"
-#include "clap/parsing_result.hpp"
+#include "command.hpp"
+#include "parameter.hpp"
+#include "parsing_result.hpp"
 
 #include "base/optional.hpp"
 #include <base/variant.hpp>
@@ -41,13 +41,13 @@ namespace {
 		// Add a path to this command.
 		for (const auto& cmd: result.getCommandPath() | std::views::drop(1))
 			usage << " " << cmd->getName();
-
-		if (not command->getSubcommands().empty()) {
+		
+		if (not command->get()->getSubcommands().empty()) {
 			usage << " <COMMAND> [OPTIONS]";
 			return usage.str();
 		}
 
-		for (const auto& param: command->getParameters()) {
+		for (const auto& param: command->get()->getParameters()) {
 			variant_match(param.getParameterNecessity()) {
 				variant_case(clap::Required, _) {
 					usage << " ";
@@ -63,10 +63,10 @@ namespace {
 				}
 			}
 		}
-		for (const auto& positional: command->getPositionalParameters())
+		for (const auto& positional: command->get()->getPositionalParameters())
 			usage << " <" << positional->getTypeName() << ">";
 		usage << " [OPTIONS] ";
-		auto default_parser = command->getDefaultValueParser();
+		auto default_parser = command->get()->getDefaultValueParser();
 		if (default_parser != nullptr) usage << "[" + default_parser->getTypeName() + "...]";
 		return usage.str();
 	}
@@ -130,14 +130,14 @@ namespace clap {
 		auto              program_name = getFileName(result.getFilePath());
 
 		output << generateUsage(result) << '\n';
-		if (command.get() != &clap.getRootCommand()) {
+		if (command->get() != &clap.getRootCommand()) {
 			output << generateOptionsBlock("Global options:", clap.getRootCommand().getParameters());
 		}
-		output << generateOptionsBlock("Subcommand options:", command->getParameters());
-		output << generateSubcommandsBlock(command->getSubcommands());
+		output << generateOptionsBlock("Subcommand options:", command->get()->getParameters());
+		output << generateSubcommandsBlock(command->get()->getSubcommands());
 
 
-		if (not command->getSubcommands().empty()) {
+		if (not command->get()->getSubcommands().empty()) {
 			output << "\nRun '" << program_name
 				   << " <COMMAND> --help for more information on a command.\n";
 		}
