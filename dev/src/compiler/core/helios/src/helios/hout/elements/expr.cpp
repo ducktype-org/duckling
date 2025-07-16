@@ -298,9 +298,7 @@ namespace compiler::helios::code {
 			expr->debugPrint(out);
 			break;
 		default:
-			CORE_PANIC(
-				"unsupported unary operation"
-			);
+			CORE_PANIC("unsupported unary operation");
 		}
 	}
 

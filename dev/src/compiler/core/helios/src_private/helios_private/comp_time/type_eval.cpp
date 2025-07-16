@@ -71,17 +71,14 @@ namespace compiler::helios {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(
-					tsh::SymbolType<>{
-						ctx.query<tsh::QueryTupleType>({ subtypes }),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					}
-				);
+				output(tsh::SymbolType<>{
+					ctx.query<tsh::QueryTupleType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				});
 			}
 
-			void visitVariantTypeConstructorExpr(
-				const code::VariantTypeConstructorExpr& expr
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
@@ -94,13 +91,11 @@ namespace compiler::helios {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(
-					tsh::SymbolType<>{
-						ctx.query<tsh::QueryVariantType>({ subtypes }),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					}
-				);
+				output(tsh::SymbolType<>{
+					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				});
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {

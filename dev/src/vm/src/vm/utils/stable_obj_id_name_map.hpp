@@ -148,7 +148,7 @@ namespace vm {
 		 * * Deleting from the structure is not possible.
 		 * * deque does not relocate memory (unlike vector)
 		 */
-		std::deque<T>                   values{};
+		std::deque<T>                     values{};
 		base::HashMap<ObjID, base::StrID> id_to_name{};
 		base::HashMap<base::StrID, ObjID> name_to_id{};
 	};
