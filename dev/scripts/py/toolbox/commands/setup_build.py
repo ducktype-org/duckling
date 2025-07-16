@@ -19,17 +19,17 @@ from click import Choice, option, command
     help="Build system to use",
 )
 # @TODO check if it is necessary to get compiler path from context
-@cc_compiler(
-    help="A path to the C complier to compile with",
-    # this overrides the click.Option class to use the default_compiler_from_ctx
-    # instead, so it can get ctx and infer and set the default value
-    cls=default_compiler_from_ctx("cc_compiler"),
-)
 @cxx_compiler(
-    help="A path to the C++ complier to compile with",
+    help="A path to the C++ compiler to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
     cls=default_compiler_from_ctx("cxx_compiler"),
+)
+@cc_compiler(
+    help="A path to the C compiler to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cc_compiler"),
 )
 @option(
     "--ccache",
