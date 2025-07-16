@@ -108,7 +108,7 @@ namespace clap {
 	}
 
 	std::string ParsingState::peekToken() {
-		if (hasMoreArgs()) {
+		if (!hasMoreArgs()) {
 			throw exceptions::ClapException(
 				"Parser error: peekToken() called with no more arguments"
 			);
@@ -125,7 +125,7 @@ namespace clap {
 	bool ParsingState::hasMoreArgs() const { return parsing_position < args.size(); }
 
 	void ParsingState::consumeToken() {
-		if (hasMoreArgs()) return;
+		if (!hasMoreArgs()) return;
 
 		// Skip whitespace's before the token.
 		skipWhitespace(parsing_position, args);

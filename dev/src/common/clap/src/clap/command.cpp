@@ -6,6 +6,7 @@
 
 #include "base/optional.hpp"
 
+#include <iostream>
 #include <string>
 
 /**
@@ -113,8 +114,8 @@ namespace clap {
 		st.result.addToPath(this);
 
 		while (st.hasMoreArgs()) {
-			const std::string& token              = st.peekToken();
-			bool               is_negative_number = isNegativeNumber(token);
+			const std::string& token = st.peekToken();
+			bool is_negative_number = isNegativeNumber(token);
 
 			// Parameter
 			if (token.starts_with('-') && !is_negative_number)
@@ -131,7 +132,7 @@ namespace clap {
 				if (!is_leaf) {
 					// If it's not subcommand (its a positional) and this subcommand is not a leaf
 					// then we throw an error, since the subcommand is not specified.
-					throw exceptions::UnknownSubcommand(token, name);
+					throw exceptions::SubcommandNotSpecified(name);
 				}
 
 				// If not found a "-" parse using default value parser.
@@ -147,6 +148,11 @@ namespace clap {
 					st.parseExtra(*parser);
 				}
 			}
+		}
+		// The only way we get here is if we parsed all arguments and we're the matched subcommand.
+		// We need to be a leaf in the tree.
+		if (!is_leaf) {
+			throw exceptions::SubcommandNotSpecified(name);
 		}
 	}
 }

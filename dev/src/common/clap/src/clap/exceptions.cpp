@@ -113,16 +113,12 @@ namespace clap::exceptions {
 			  )
 		  ) {}
 
-	UnknownSubcommand::UnknownSubcommand(
-		const std::string& unknown_name, const std::string& parent_command_name
-	):
+	SubcommandNotSpecified::SubcommandNotSpecified(const std::string& command_name):
 		  ClapException(
 			  base::strConcat(
-				  "'\"",
-				  unknown_name,
-				  "\" is not a recognized subcommand for \"",
-				  parent_command_name,
-				  "\".\n"
+				  "Command \"",
+				  command_name,
+				  "\" cannot be executed on its own. Please specify a subcommand.\n"
 			  )
 		  ) {}
 
@@ -149,4 +145,12 @@ namespace clap::exceptions {
 				  "\".\n"
 			  )
 		  ) {}
+
+	NoHandlerSpecified::NoHandlerSpecified(const std::string& command_name):
+		  ClapException(
+			  base::strConcat(
+				  "No handler specified for the executed command: \"", command_name, "\".\n"
+			  )
+		  ) {}
+
 }

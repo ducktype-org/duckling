@@ -1,4 +1,6 @@
 #include "clap/parsing_result.hpp"
+#include "clap/parsing_state.hpp"
+#include "clap/value_parser.hpp"
 
 #include <clap/clap.hpp>
 #include <clap/exceptions.hpp>
@@ -29,8 +31,11 @@ public:
 		TESTER_ADD_TEST(globalOptionsTest);
 		TESTER_ADD_TEST(preHandlerAndHandlerExecutionOrder);
 		TESTER_ADD_TEST(requiredParameterValidation);
-		TESTER_ADD_TEST(noCommandSpecifiedError);
+		TESTER_ADD_TEST(subcommandNotSpecifiedError);
 		TESTER_ADD_TEST(executeReturnValueTest);
+		TESTER_ADD_TEST(noHandlerSpecified);
+		TESTER_ADD_TEST(coexistingSubcommandsAndPositionals);
+		TESTER_ADD_TEST(duplicateSubcommand);
 		TESTER_ADD_TEST(conditionalParameterTest);
 		TESTER_ADD_TEST(mixedGlobalAndLocalParameters);
 	}
@@ -318,20 +323,74 @@ private:
 		ASSERT_EQUAL("admin", res.getValue<std::string>("user").value());
 	}
 
-	void noCommandSpecifiedError() {
-		auto clap = clap::Clap("prog").addSubcommand(clap::Command("test", "desc"));
+	void subcommandNotSpecifiedError() {
+		auto clap = clap::Clap("prog").addSubcommand(
+			clap::Command("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
+		);
 
 		std::array argv{ "./prog" };
-		assertThrows<clap::exceptions::ClapException>( // TODOP: Is that a correct error?
-			[&](){clap.execute(argv.size(), argv.data());}, "Clap did not find a not specified subcommand."
+		assertThrows<clap::exceptions::SubcommandNotSpecified>(
+			[&]() { clap.execute(argv.size(), argv.data()); },
+			"Clap did not find a not specified subcommand."
+		);
+	}
+
+	void coexistingSubcommandsAndPositionals() {
+		assertThrows<clap::exceptions::CoexistingPositionalAndSubcommand>(
+			[&]() {
+				auto clap = clap::Clap("prog").addSubcommand(
+					clap::Command("test", "desc")
+						.addPositional(clap::IntParser::make())
+						.addSubcommand(clap::Command("tests", "desc"))
+				);
+			},
+			"Clap did not find a coexisting subcommand and positional argument."
+		);
+
+		assertThrows<clap::exceptions::CoexistingPositionalAndSubcommand>(
+			[&]() {
+				auto clap = clap::Clap("prog").addSubcommand(
+					clap::Command("test", "desc")
+						.addSubcommand(clap::Command("tests", "desc"))
+						.addPositional(clap::IntParser::make())
+				);
+			},
+			"Clap did not find a coexisting subcommand and positional argument."
+		);
+	}
+
+	void duplicateSubcommand() {
+		assertThrows<clap::exceptions::DuplicateSubcommand>(
+			[&]() {
+				auto clap
+					= clap::Clap("prog")
+			              .addSubcommand(
+							  clap::Command("test", "desc").addPositional(clap::IntParser::make())
+						  )
+			              .addSubcommand(
+							  clap::Command("test", "desc").addPositional(clap::IntParser::make())
+						  );
+			},
+			"Clap did not find a coexisting subcommand and positional argument."
 		);
 	}
 
 	void executeReturnValueTest() {
-		auto clap = clap::Clap("prog").setPreHandler([](const clap::ParsingResult&) { return 42; });
-		std::array argv{ "./prog" };
+		auto clap = clap::Clap("prog").addSubcommand(
+			clap::Command("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
+		);
+		std::array argv{ "./prog", "test" };
 		int        exit_code = clap.execute(argv.size(), argv.data());
 		ASSERT_EQUAL(42, exit_code);
+	}
+
+	void noHandlerSpecified() {
+		auto       clap = clap::Clap("prog").addSubcommand(clap::Command("test", "desc"));
+		std::array argv{ "./prog", "test" };
+		assertThrows<clap::exceptions::NoHandlerSpecified>(
+			[&]() { clap.execute(argv.size(), argv.data()); },
+			"Clap did not find a unspecified handler."
+		);
 	}
 
 	void conditionalParameterTest() {
@@ -345,28 +404,29 @@ private:
 						  .addShortName('b')
 						  .addShortDesc("desc")
 						  .conditional(
-							  [](const clap::ParsingResult& res) { return res.isFlag("a"); },
+							  [](const clap::ParsingResult& res) { return res.isFlag('a'); },
 							  "Flag -b requires flag -a"
 						  )
 						  .build()
 				  );
-
-		std::array argv1{ "./prog", "-b" };
-		assertThrows<clap::exceptions::MissingConditionalParameter>( // TODOP: Is that a correct error?
-			[&](){clap.parse(argv1.size(), argv1.data());}, "Clap did not find a missing conditional parameter."
-		);
 		std::cout << "Test1\n";
-		std::array argv2{ "./prog", "-a", "-b" };
-		try {
-			auto        res  = clap.parse(argv2.size(), argv2.data());
-			const auto& path = res.getCommandPath();
-			ASSERT_EQUAL(1, path.size());
-			ASSERT_EQUAL("prog", path[0]->getName());
-			ASSERT_EQUAL("prog", res.getMatchedCommand()->get()->getName());
-			ASSERT_EQUAL(true, res.isFlag("a"));
-			ASSERT_EQUAL(true, res.isFlag("b"));
+		std::array argv1{ "./prog", "-b" };
+		assertThrows<clap::exceptions::MissingConditionalParameter>(
+			[&]() { clap.parse(argv1.size(), argv1.data()); },
+			"Clap did not find a missing conditional parameter."
+		);
 
-		} catch (...) { std::cout << "Wrong\n"; }
+		std::cout << "Test2\n";
+		std::array argv2{ "./prog", "-a", "-b" };
+
+		auto        res  = clap.parse(argv2.size(), argv2.data());
+		const auto& path = res.getCommandPath();
+		ASSERT_EQUAL(1, path.size());
+		ASSERT_EQUAL("prog", path[0]->getName());
+		// TODOP: This get() is strange
+		ASSERT_EQUAL("prog", res.getMatchedCommand()->get()->getName());
+		ASSERT_EQUAL(true, res.isFlag('a'));
+		ASSERT_EQUAL(true, res.isFlag('b'));
 	}
 
 	void mixedGlobalAndLocalParameters() {

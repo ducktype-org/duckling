@@ -122,10 +122,8 @@ namespace clap::exceptions {
 	 * @brief Raised when the subcommand is not specified.
 	 * Fe. we finish parsing in a command which has a non-empty subcommand list.
 	 */
-	struct UnknownSubcommand: public ClapException {
-		explicit UnknownSubcommand(
-			const std::string& unknown_name, const std::string& parent_command_name
-		);
+	struct SubcommandNotSpecified: public ClapException {
+		explicit SubcommandNotSpecified(const std::string& command_name);
 	};
 
 	/**
@@ -144,5 +142,13 @@ namespace clap::exceptions {
 	 */
 	struct CoexistingPositionalAndSubcommand: public ClapException {
 		explicit CoexistingPositionalAndSubcommand(const std::string& command_name);
+	};
+
+	/**
+	 * @brief Raised when performing execute and the matched command lacks definition of the handler
+	 * function.
+	 */
+	struct NoHandlerSpecified: public ClapException {
+		explicit NoHandlerSpecified(const std::string& command_name);
 	};
 }

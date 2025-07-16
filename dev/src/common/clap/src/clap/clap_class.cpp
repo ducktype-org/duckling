@@ -78,13 +78,6 @@ namespace clap {
 
 	int Clap::execute(usize argc, const char* const* argv) {
 		try {
-			// TODOP: Remove that.
-			// std::cout << "Entering execute:\n";
-			// std::cout << "Argc: " << argc << '\n';
-			// std::cout << "Arguments:\n";
-			// for (usize i = 0; i < argc; ++i)
-			// 	std::cout << "  argv[" << i << "]: " << (argv[i] ? argv[i] : "nullptr") << '\n';
-
 			// Returns a ParsingResult and a command that matched.
 			auto parsing_result = parse(argc, argv);
 
@@ -99,9 +92,7 @@ namespace clap {
 				if (handler)
 					return handler(parsing_result);
 				else
-					throw exceptions::ClapException(
-						"Handler for a matched command was not specified."
-					);
+					throw exceptions::NoHandlerSpecified(command->getName());
 			}
 
 			throw exceptions::ClapException("No of the commands matched!");
@@ -114,9 +105,6 @@ namespace clap {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			// TODOP: Maybe don't catch errors here.
 			return 0;
-		} catch (const exceptions::ClapException& e) {
-			std::cerr << "Error: " << e.what() << '\n';
-			return 1;
 		}
 	}
 
@@ -173,9 +161,9 @@ namespace clap {
 
 		// Initialize the parsing state.
 		ParsingState st(argc, argv);
-		st.result.addToPath(&root_command);
 
 		// Perform the recursive parsing.
+		// TODOP: This root command is not needed as a param I believe.
 		root_command.parse(st, root_command);
 		validateParsing(st.result);
 		return std::move(st.result);
@@ -208,14 +196,15 @@ namespace clap {
 								"\"" + maybe_param_name.value() + "\""
 							);
 					}
-					variant_case(Optional, _) { /* Nothing in this case */ }
-					variant_case(Conditional, c) {
-						if (!c.condition(result)) {
-							throw exceptions::MissingConditionalParameter(
-								maybe_param_name.value(), "reason: " + c.condition_description
-							);
+					variant_case(Optional, _) {
+						/* Nothing in this case */ }
+						variant_case(Conditional, c) {
+							if (!c.condition(result)) {
+								throw exceptions::MissingConditionalParameter(
+									maybe_param_name.value(), "reason: " + c.condition_description
+								);
+							}
 						}
-					}
 				}
 			}
 		};
