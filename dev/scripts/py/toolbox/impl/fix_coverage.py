@@ -74,7 +74,7 @@ def nuke_coverage_files(build_path: Path):
 
 
 # See description of PR #1081 for solution explanation.
-def fix_coverage_impl(build_dir, precision):
+def fix_coverage_impl(build_dir: str, precision: str):
     # Preamble
     log_info("Running fix coverage...")
     build_path = Path(build_dir)
