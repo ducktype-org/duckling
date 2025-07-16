@@ -34,7 +34,6 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/type.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -145,6 +144,8 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	// TODO: when implementing immidiate values for double arg1 is only 32 bits long. Fix this
+	//  implementation when arg1 will be u64 type (remove if, IS_FLOAT and static_cast)
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP, IS_FLOAT)                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {      \
 		{                                                                                     \
