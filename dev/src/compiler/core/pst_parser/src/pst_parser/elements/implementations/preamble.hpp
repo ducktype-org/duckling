@@ -8,7 +8,7 @@
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
-#include <lexer/classifications.hpp>
+#include <unicode_classification/classifications.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 

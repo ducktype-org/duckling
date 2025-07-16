@@ -1,6 +1,6 @@
 #include "decode.hpp"
 
-#include "classifications.hpp"
+#include <unicode_classification/classifications.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <token_source/forward.hpp>

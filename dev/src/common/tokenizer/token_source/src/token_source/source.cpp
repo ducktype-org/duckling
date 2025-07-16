@@ -1,7 +1,7 @@
 #include "source.hpp"
 
 #include <diagnostic/location.hpp>
-#include <lexer/classifications.hpp>
+#include <unicode_classification/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
 

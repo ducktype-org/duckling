@@ -1,6 +1,6 @@
 #pragma once
 
-#include "classifications.hpp"
+#include <unicode_classification/classifications.hpp>
 
 #include <base/raw_view.hpp>
 
