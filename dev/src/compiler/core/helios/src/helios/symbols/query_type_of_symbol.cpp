@@ -57,11 +57,11 @@ namespace compiler::helios {
 						auto parsed = (ctx.query<QueryHoutOfExpr>({stmt->getValue().value().unlock(ctx)->getExpr()}));
 						if (parsed.hasValue()) {
 							const auto& expr_type = parsed.value()->expression_type;
-							setTypeOfSymbol(tsh::expressionTypeToSymbolType(expr_type));
+							setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
 						} else
-							CORE_PANIC("Const declaration with value that does not evaluate to a type.");
+							throw base::NotYetImplemented("Const declaration with value that does not evaluate to a type. This should be a compilation error");
 					} else {
-						CORE_PANIC("Const declaration without type or value, this is a bug in the parser.");
+						CORE_PANIC("Variable declaration without type or value, this should not parse in the parser.");
 					}
 				}
 			}
@@ -74,11 +74,11 @@ namespace compiler::helios {
 						auto parsed = (ctx.query<QueryHoutOfExpr>({stmt->getValue().value().unlock(ctx)->getExpr()}));
 						if (parsed.hasValue()) {
 							const auto& expr_type = parsed.value()->expression_type;
-							setTypeOfSymbol(tsh::expressionTypeToSymbolType(expr_type));
+							setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
 						} else
-							CORE_PANIC("Variable declaration with value that does not evaluate to a type.");
+							throw base::NotYetImplemented("Const declaration with value that does not evaluate to a type. This should be a compilation error");
 					} else {
-						CORE_PANIC("Variable declaration without type or value, this is a bug in the parser.");
+						CORE_PANIC("Variable declaration without type or value, this should not parse in the parser.");
 					}
 				}
 			}
