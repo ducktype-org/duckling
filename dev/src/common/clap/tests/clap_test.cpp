@@ -1,5 +1,4 @@
 #include "clap/parsing_result.hpp"
-#include "clap/parsing_state.hpp"
 #include "clap/value_parser.hpp"
 
 #include <clap/clap.hpp>
@@ -215,8 +214,8 @@ private:
 		std::array argv{ "./prog", "test", "-f" };
 		auto       res = clap.parse(argv.size(), argv.data());
 
-		ASSERT_EQUAL("test", res.getMatchedCommand()->get()->getName());
-		ASSERT_EQUAL("A test command", res.getMatchedCommand()->get()->getDescription());
+		ASSERT_EQUAL("test", res.getMatchedCommand().value()->getName());
+		ASSERT_EQUAL("A test command", res.getMatchedCommand().value()->getDescription());
 		ASSERT_EQUAL(true, res.isFlag('f'));
 
 		const auto& path = res.getCommandPath();
@@ -238,7 +237,7 @@ private:
 		std::array argv{ "./git", "remote", "add", "origin", "http://git.com" };
 		auto       res = clap.parse(argv.size(), argv.data());
 
-		ASSERT_EQUAL("add", res.getMatchedCommand()->get()->getName());
+		ASSERT_EQUAL("add", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL(2, res.getPositionalParameterCount());
 		ASSERT_EQUAL("origin", res.getPositional<std::string>(0));
 		ASSERT_EQUAL("http://git.com", res.getPositional<std::string>(1));
@@ -264,7 +263,7 @@ private:
 		std::array argv{ "./prog", "--verbose", "upload", "data.zip" };
 		auto       res = clap.parse(argv.size(), argv.data());
 
-		ASSERT_EQUAL("upload", res.getMatchedCommand()->get()->getName());
+		ASSERT_EQUAL("upload", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL(true, res.isFlag("verbose"));
 		ASSERT_EQUAL("data.zip", res.getPositional<std::string>(0));
 	}
@@ -421,8 +420,7 @@ private:
 		const auto& path = res.getCommandPath();
 		ASSERT_EQUAL(1, path.size());
 		ASSERT_EQUAL("prog", path[0]->getName());
-		// TODOP: This get() is strange
-		ASSERT_EQUAL("prog", res.getMatchedCommand()->get()->getName());
+		ASSERT_EQUAL("prog", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL(true, res.isFlag('a'));
 		ASSERT_EQUAL(true, res.isFlag('b'));
 	}

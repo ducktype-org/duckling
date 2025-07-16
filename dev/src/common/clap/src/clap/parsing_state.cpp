@@ -2,10 +2,6 @@
 
 #include "clap/exceptions.hpp"
 
-#include "base/ints.hpp"
-
-#include <cctype>
-
 /**
  * Basic helper functions.
  */

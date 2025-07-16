@@ -1,6 +1,5 @@
 /**
- * ParsingState related.
- * TODOP: Refactor this comment.
+ * Represents the state of command line argument parsing.
  */
 #pragma once
 
