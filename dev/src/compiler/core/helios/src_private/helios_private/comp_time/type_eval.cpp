@@ -27,7 +27,6 @@ namespace compiler::helios {
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
 		 * @note It might be changed to virtual function on expr in the future for performance.
 		 * For now it is kept as a visitor for code simplicity.
-		 * @todo Handle reference specification. #608
 		 */
 		struct ShortPathVisitor: code::HoutExprVisitorPanicky {
 			query::Context& ctx;
