@@ -1,9 +1,10 @@
+import click
+import os
 import pathlib
+import re
+import shutil
 import subprocess as sp
 import sys
-import re
-import click
-import shutil
 
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
@@ -260,6 +261,9 @@ def get_program_version(prog):
     match = re.search(r"(\d+(\.\d+)+)", version_info)
     return match.group(0) if match else None
 
+def get_dev_directory():
+    # The dev directory is where the toolbox is run.
+    return pathlib.Path.cwd().absolute()
 
 def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
     if cxx_compiler is None or cc_compiler is None:
@@ -295,7 +299,7 @@ def supports_cmake_linker_type():
     cmake_version_str = get_program_version("cmake")
     if not cmake_version_str:
         exit_with_error("CMake is not installed or its version could not be determined.")
-    
+
     current = parse_version_tuple(cmake_version_str)
     required = (3, 29, 0)
     return current >= required

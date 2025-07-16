@@ -3,6 +3,7 @@ from .helpers import (
     build_dir,
     clang_format,
     clang_tidy,
+    thread_count,
 )
 from click import command
 
@@ -15,6 +16,9 @@ from click import command
 )
 @clang_tidy(
     help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+)
+@thread_count(
+    help="Number of threads used when building and linting. Defaults to the number of available threads.",
 )
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
