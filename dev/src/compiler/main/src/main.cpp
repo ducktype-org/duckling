@@ -337,7 +337,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		artifacts::ArtifactCollection base_artifact_collection{
 			"./duck_build/",
 		};
-		auto output_name = backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
+		auto output_name = backend_type == driver::BackendType::DVM ? "module.dbc" : "module.o";
 		auto output_artifact
 			= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
 

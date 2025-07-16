@@ -115,8 +115,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
-			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+			auto dbc_obj    = collection->fileArtifactNew(base::StrID("test_module.dbc"));
+			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), dbc_obj);
 
 			auto run_result = driver.run();
 			ASSERT_TRUE(run_result.has_value());
@@ -196,8 +196,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
-			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+			auto dbc_obj    = collection->fileArtifactNew(base::StrID("test_module.dbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), dbc_obj);
 
 			auto run_result = dvm_driver.run();
 			ASSERT_TRUE(run_result.has_value());
@@ -223,8 +223,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
-			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+			auto dbc_obj    = collection->fileArtifactNew(base::StrID("test_module.dbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), dbc_obj);
 
 			auto run_result = dvm_driver.run();
 			ASSERT_TRUE(run_result.has_value());
