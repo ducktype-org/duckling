@@ -1036,8 +1036,8 @@ private:
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
 
-		// TODO: fix how floats are deduced
-		// TODO: fix how tuples are deduced
+		// @TODO: #925 fix how floats are deduced
+		// @TODO: #925 fix how tuples are deduced
 
 		// Vars
 		ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
