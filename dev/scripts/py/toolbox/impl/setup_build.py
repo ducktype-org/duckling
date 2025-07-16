@@ -22,6 +22,7 @@ def setup_build_impl(
     ccache,
     coverage,
     linker,
+    shared_libs,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -45,6 +46,7 @@ def setup_build_impl(
         f"-D GCOV_VERSION={gcov_version}",
         f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
         f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
+        f"-D BUILD_SHARED_LIBS={'ON' if shared_libs else 'OFF'}",
     ]
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():

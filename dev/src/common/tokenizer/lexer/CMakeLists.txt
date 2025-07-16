@@ -1,4 +1,4 @@
-add_library(Lexer
+add_library(Lexer STATIC
 	src/lexer/char.cpp
 	src/lexer/token.cpp
 	src/lexer/lexer.cpp
