@@ -100,10 +100,12 @@ namespace std {
 	struct basic_common_reference<base::Ref<R>, T, RQual, TQual> {
 		using type = std::common_reference_t<R&, TQual<T>>;
 	};
+
 	template<class R, class T, template<class> class RQual, template<class> class TQual>
 	struct basic_common_reference<T, base::Ref<R>, TQual, RQual> {
 		using type = std::common_reference_t<TQual<T>, R&>;
 	};
+
 	template<class R, class T, template<class> class RQual, template<class> class TQual>
 	struct basic_common_reference<base::Ref<R>, base::Ref<T>, RQual, TQual> {
 		using type = std::common_reference_t<R&, T&>;
@@ -177,6 +179,8 @@ namespace base {
 
 		// Acessors:
 
+		operator T&() const { return **this; }
+
 		/**
 		 * @brief Null checked access method. Returns optional Ref to the pointed value.
 		 * If MRef was in null state, the optional will be empty.
@@ -249,6 +253,23 @@ namespace base {
 	auto  operator->() const { return element_name.operator->(); } \
 	auto& operator*() const { return element_name.operator*(); }
 
+}
+
+namespace std {
+	template<class R, class T, template<class> class RQual, template<class> class TQual>
+	struct basic_common_reference<base::MRef<R>, T, RQual, TQual> {
+		using type = std::common_reference_t<R&, TQual<T>>;
+	};
+
+	template<class R, class T, template<class> class RQual, template<class> class TQual>
+	struct basic_common_reference<T, base::MRef<R>, TQual, RQual> {
+		using type = std::common_reference_t<TQual<T>, R&>;
+	};
+
+	template<class R, class T, template<class> class RQual, template<class> class TQual>
+	struct basic_common_reference<base::MRef<R>, base::MRef<T>, RQual, TQual> {
+		using type = std::common_reference_t<R&, T&>;
+	};
 }
 
 // global namespace export:
