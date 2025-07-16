@@ -4,6 +4,9 @@
 #include <base/stable_hashmap.hpp>
 #include <base/strongly_typed_int.hpp>
 
+#include <functional>
+#include <ranges>
+
 STRONG_TYPEDEF_INT_DIMENSIONAL(SomeID, usize);
 
 class StableListTestSimple: public tester::TestSuite {
@@ -69,6 +72,43 @@ private:
 
 		assertTrue(*ref == 4, "Stable list ref not stable");
 		assertTrue(*c_ref == 2, "Bad stable list c_ref");
+	}
+
+	template<class StableIt>
+	void staticAssertIterator() {
+		using ::base::StableVector;
+		static_assert(std::same_as<
+					  std::iter_reference_t<const StableIt>,
+					  std::iter_reference_t<StableIt>>);
+		static_assert(std::same_as<
+					  std::iter_rvalue_reference_t<const StableIt>,
+					  std::iter_rvalue_reference_t<StableIt>>);
+		static_assert(std::indirectly_readable<StableIt>);
+		static_assert(std::input_or_output_iterator<StableIt>);
+		static_assert(std::input_iterator<StableIt>);
+		static_assert(std::random_access_iterator<StableIt>);
+	}
+
+	template<class Data>
+	void staticAssertRange() {
+		using Vector = ::base::StableVector<Data>;
+
+		staticAssertIterator<typename Vector::Iterator>();
+		staticAssertIterator<typename Vector::ConstIterator>();
+		static_assert(std::same_as<std::ranges::range_reference_t<Vector>, ::base::Ref<Data>>);
+	}
+
+	void stableVectorTestRanges() {
+		using ::base::StableVector;
+		staticAssertRange<const int>();
+		staticAssertRange<int>();
+
+		StableVector<int> vector;
+		vector.pushBack(5);
+		vector.pushBack(1);
+		auto new_range = vector | std::views::transform([](const CRef<int>& x) { return 2 * *x; })
+		               | std::views::filter([](const int& x) { return x >= 5; });
+		assertEqual(10, *new_range.begin(), "Transformed and filtered");
 	}
 
 	void stableHashMapTest() {

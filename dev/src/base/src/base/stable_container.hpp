@@ -7,9 +7,188 @@
 #include "box.hpp"
 #include "ref.hpp"
 
-#include <vector>
+#include <deque>
+#include <iterator>
 
 namespace base {
+	namespace internal {
+		template<class Data>
+		class BaseStableVector {
+			using ContainerT = std::deque<Data>;
+			ContainerT data;
+			static_assert(
+				std::is_same_v<typename ContainerT::size_type, usize>,
+				"When this fail, figure out what to do."
+			);
+
+			BaseStableVector(ContainerT&& data): data(std::move(data)) {}
+
+			BaseStableVector(const ContainerT& data): data(std::move(data)) {}
+
+			template<class T>
+			friend class BaseStableVector;
+
+			template<class BaseType, class ReferenceType, class ValueType>
+			class IteratorBase {
+				BaseType base;
+				friend class BaseStableVector;
+
+				explicit IteratorBase(BaseType&& other_base): base{ std::move(other_base) } {}
+
+				explicit IteratorBase(const BaseType& other_base): base{ other_base } {}
+
+			public:
+				using value_type      = ValueType;
+				using reference       = ReferenceType;
+				using pointer         = ValueType*;
+				using difference_type = std::iter_difference_t<BaseType>;
+
+				IteratorBase()                    = default;
+				IteratorBase(const IteratorBase&) = default;
+				IteratorBase(IteratorBase&&)      = default;
+
+				IteratorBase& operator=(IteratorBase&&)      = default;
+				IteratorBase& operator=(const IteratorBase&) = default;
+
+				ReferenceType operator*() const { return ReferenceType{ &*base }; }
+
+				ReferenceType operator[](difference_type diff) const {
+					return ReferenceType{ &base[diff] };
+				}
+
+				pointer operator->() const { return operator->(base); }
+
+				IteratorBase& operator++() {
+					++base;
+					return *this;
+				}
+
+				IteratorBase operator++(int) { return Iterator{ base++ }; }
+
+				IteratorBase& operator--() {
+					--base;
+					return *this;
+				}
+
+				IteratorBase operator--(int) { return Iterator{ base-- }; }
+
+				IteratorBase operator-(difference_type diff) const {
+					return Iterator{ base - diff };
+				}
+
+				difference_type operator-(const IteratorBase& other) const {
+					return base - other.base;
+				}
+
+				IteratorBase& operator-=(difference_type diff) {
+					base -= diff;
+					return *this;
+				}
+
+				IteratorBase operator+(difference_type diff) const {
+					return Iterator{ base + diff };
+				}
+
+				IteratorBase& operator+=(difference_type diff) {
+					base += diff;
+					return *this;
+				}
+
+				auto operator<=>(const IteratorBase&) const = default;
+			};
+
+			template<class... Args>
+			friend IteratorBase<Args...> operator+(
+				IteratorBase<Args...>::difference_type diff, const IteratorBase<Args...>& self
+			) {
+				return self + diff;
+			}
+
+		public:
+			using RefT  = Ref<Data>;
+			using CRefT = CRef<Data>;
+
+			using Iterator = IteratorBase<typename ContainerT::iterator, RefT, Data>;
+			using ConstIterator
+				= IteratorBase<typename ContainerT::const_iterator, CRefT, const Data>;
+			static_assert(std::same_as<typename ConstIterator::reference, CRefT>);
+			static_assert(std::same_as<
+						  typename ConstIterator::reference,
+						  std::iter_reference_t<ConstIterator>>);
+			static_assert(std::same_as<std::iter_reference_t<ConstIterator>, CRefT>);
+
+			BaseStableVector()                   = default;
+			BaseStableVector(BaseStableVector&&) = default;
+
+			/**
+			 * @note explicit delete here causes much better compiler errors.
+			 * @note It is deleted because data member can't be copied in a simple way.
+			 */
+			BaseStableVector(const BaseStableVector&) = delete;
+
+			[[nodiscard]]
+			constexpr usize size() const noexcept {
+				return data.size();
+			}
+
+			[[nodiscard]]
+			constexpr bool empty() const noexcept {
+				return data.empty();
+			}
+
+			[[nodiscard]]
+			constexpr bool notEmpty() const noexcept {
+				return not data.empty();
+			}
+
+			[[nodiscard]]
+			constexpr RefT operator[](usize pos) {
+				return RefT{ &data.at(pos) };
+			}
+
+			[[nodiscard]]
+			constexpr CRefT operator[](usize pos) const {
+				return CRefT{ &data.at(pos) };
+			}
+
+			constexpr void pushBack(const Data& value) { data.emplace_back(value); }
+
+			void pushBack(Data&& value) { data.emplace_back(std::move(value)); }
+
+			[[nodiscard]]
+			RefT last() {
+				return &data.back();
+			}
+
+			[[nodiscard]]
+			CRefT last() const {
+				return &data.back();
+			}
+
+			/**
+			 * Returns index of the last element (i.e. size - 1).
+			 */
+			[[nodiscard]]
+			constexpr usize lastIndex() const {
+				CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty BaseStableVector");
+				return size() - 1;
+			}
+
+			template<class... Args>
+			constexpr void emplaceBack(Args&&... args) {
+				data.emplace_back(std::forward<Args>(args)...);
+			}
+
+			Iterator begin() { return Iterator{ data.begin() }; }
+
+			ConstIterator begin() const { return ConstIterator{ data.begin() }; }
+
+			Iterator end() { return Iterator{ data.end() }; }
+
+			ConstIterator end() const { return ConstIterator{ data.end() }; }
+		};
+
+	}
 
 	/**
 	 * @brief Expandable list (like std::vector), but with stable references (References never
@@ -19,23 +198,18 @@ namespace base {
 	 *
 	 * @note Add stable range based iteration (Probably with indexes)
 	 */
-	template<typename Data>
-	class StableVector final {
-		std::vector<Box<Data>> data;
-		static_assert(
-			std::is_same_v<typename std::vector<Box<Data>>::size_type, usize>,
-			"When this fail, figure out what to do."
-		);
+	template<class Data>
+	class StableVector;
 
-		StableVector(std::vector<Box<Data>> data): data(std::move(data)) {}
+	template<class Data>
+	class StableVector<const Data>: private internal::BaseStableVector<Data> {
+		using Base = internal::BaseStableVector<Data>;
 
-		template<class T>
-		friend class StableVector;
+		friend class StableVector<Data>;
+
+		explicit StableVector(Base&& base): Base{ std::move(base) } {}
 
 	public:
-		using RefT  = Ref<Data>;
-		using CRefT = CRef<Data>;
-
 		StableVector()               = default;
 		StableVector(StableVector&&) = default;
 
@@ -45,86 +219,71 @@ namespace base {
 		 */
 		StableVector(const StableVector&) = delete;
 
-		[[nodiscard]]
-		constexpr usize size() const noexcept {
-			return data.size();
-		}
+		StableVector<const Data> toConstData() && { return std::move(*this); }
+
+		using Base::size, Base::empty, Base::notEmpty, Base::pushBack, Base::lastIndex,
+			Base::emplaceBack;
+		using RefT          = Base::CRefT;
+		using CRefT         = Base::CRefT;
+		using Iterator      = Base::ConstIterator;
+		using ConstIterator = Base::ConstIterator;
 
 		[[nodiscard]]
-		constexpr bool empty() const noexcept {
-			return data.empty();
-		}
-
-		[[nodiscard]]
-		constexpr bool notEmpty() const noexcept {
-			return not data.empty();
-		}
-
-		[[nodiscard]]
-		constexpr Ref<Data> operator[](usize pos) {
-			return data.at(pos).refMut();
+		constexpr CRefT operator[](usize pos) {
+			return Base::operator[](pos);
 		}
 
 		[[nodiscard]]
-		constexpr CRef<Data> operator[](usize pos) const {
-			return data.at(pos).ref();
-		}
-
-		constexpr void pushBack(const Data& value) {
-			auto new_ptr = makeBox<Data>(value);
-			data.emplace_back(std::move(new_ptr));
-		}
-
-		void pushBack(Data&& value) {
-			auto new_ptr = makeBox<Data>(std::move(value));
-			data.emplace_back(std::move(new_ptr));
+		constexpr CRefT operator[](usize pos) const {
+			return Base::operator[](pos);
 		}
 
 		[[nodiscard]]
-		RefT last() {
-			return data.back().refMut();
+		CRefT last() {
+			return Base::last();
 		}
 
 		[[nodiscard]]
 		CRefT last() const {
-			return data.back().ref();
+			return Base::last();
 		}
 
+		ConstIterator begin() const { return Base::begin(); }
+
+		ConstIterator end() const { return Base::end(); }
+	};
+
+	template<class Data>
+	class StableVector: private internal::BaseStableVector<Data> {
+		using Base = internal::BaseStableVector<Data>;
+
+	public:
+		StableVector()               = default;
+		StableVector(StableVector&&) = default;
 		/**
-		 * Returns index of the last element (i.e. size - 1).
+		 * @note explicit delete here causes much better compiler errors.
+		 * @note It is deleted because data member can't be copied in a simple way.
 		 */
-		[[nodiscard]]
-		constexpr usize lastIndex() const {
-			CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty StableVector");
-			return size() - 1;
-		}
+		StableVector(const StableVector&) = delete;
 
-		template<class... Args>
-		constexpr void emplaceBack(Args&&... args) {
-			auto new_ptr = makeBox<Data>(std::forward<Args>(args)...);
-			data.emplace_back(std::move(new_ptr));
-		}
-
-		auto begin() const { return data.begin(); }
-
-		auto end() const { return data.end(); }
+		using Base::size, Base::empty, Base::notEmpty, Base::operator[], Base::pushBack, Base::last,
+			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end;
+		using RefT          = Base::RefT;
+		using CRefT         = Base::CRefT;
+		using Iterator      = Base::Iterator;
+		using ConstIterator = Base::ConstIterator;
 
 		/**
 		 * @brief Converts stable vector into
 		 * A stable vector storing the same objects but as const Data (instead of Data).
-		 * It is useful when we want to "lock" the state of the objects stored in StableVector.
+		 * It is useful when we want to "lock" the state of the objects stored in BaseStableVector.
 		 * @note References created before this operation may still modify the data.
 		 *
 		 * The original container is left in an empty state, and should not be used again.
 		 */
 		StableVector<const Data> toConstData() && {
-			// we have to do this this way, since
-			// std does not provide any direct vector<T> -> vector<Q> construction.
-			std::vector<Box<const Data>> casted;
-			casted.reserve(data.size());
-			for (auto& item: data) casted.emplace_back(std::move(item));
-			data.clear();
-			return StableVector<const Data>(std::move(casted));
+			return StableVector<const Data>{ std::move(*this) };
 		}
 	};
+
 }
