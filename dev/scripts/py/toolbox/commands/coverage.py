@@ -12,9 +12,7 @@ from ..impl.coverage import coverage_impl
     help="The name of the directory"
 )
 @thread_count(
-    help="Number of threads used when building",
-    default="default",
-    type=str,
+    help="Number of threads used when building. Defaults to the number of available threads.",
 )
 def coverage(*args, **kwargs):
     """Builds and runs coverage inside given build directory.

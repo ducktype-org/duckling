@@ -1,4 +1,7 @@
+import os
+
 from click import option, Choice
+
 
 def create_option(*def_arg, **def_kwargs):
     """
@@ -90,6 +93,12 @@ def cc_compiler(*args, **kwargs):
         prompt="C compiler path",
     )(*args, **kwargs)
 
+
+def get_cpu_count() -> int:
+    # cpu_count might return None
+    return os.cpu_count() or 1
+
+
 def llvm_version(*args, **kwargs):
     return create_option(
         "-v",
@@ -114,6 +123,9 @@ def thread_count(*args, **kwargs):
         "--thread-count",
         "thread_count",
         prompt="Number of threads to use",
+        help="Number of threads used when linting. Defaults to the number of available threads.",
+        default=get_cpu_count(),
+        type=int,
     )(*args, **kwargs)
 
 def verbose(*args, **kwargs):

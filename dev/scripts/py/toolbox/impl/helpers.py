@@ -261,10 +261,6 @@ def get_program_version(prog):
     match = re.search(r"(\d+(\.\d+)+)", version_info)
     return match.group(0) if match else None
 
-def get_cpu_count():
-    # cpu_count might return None
-    return os.cpu_count() or 1
-
 def get_dev_directory():
     # The dev directory is where the toolbox is run.
     return pathlib.Path.cwd().absolute()
