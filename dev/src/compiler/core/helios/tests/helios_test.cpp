@@ -62,6 +62,8 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
+
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1020,6 +1022,33 @@ private:
 				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 			});
 		}
+	}
+
+	/**
+	 * This checks if all consts and vars in the module have proper types.
+	 */
+	void testTypeOfConstAndVar() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/type_deduction")));
+
+		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
+
+		auto foo            = getChain("foo", root_scope).back();
+		auto foo_body_scope = getFunctionBodyScope(foo);
+
+		// @TODO: #925 fix how floats are deduced
+		// @TODO: #925 fix how tuples are deduced
+
+		// Vars
+		ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
+
+		// Consts
+		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
 	}
 };
 
