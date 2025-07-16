@@ -22,6 +22,7 @@ add_library(HELIOS
 	src/helios/symbols/query_class_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/utils/go_to_definition.cpp
+	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
 )
