@@ -83,27 +83,18 @@ namespace clap {
 		}
 	}
 
-	void ParsingState::parseParameter(
-		const std::vector<clap::Parameter>& local_params,
-		const std::vector<clap::Parameter>& global_params
-	) {
+	void ParsingState::parseParameter(const std::vector<clap::Parameter>& params) {
 		auto [param_name, name_type] = parseName();
 		if (name_type == NameType::EmptyName)
 			throw clap::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
 
 		if (name_type == NameType::LongName) {
-			// Look through the local parameters, the through the global ones.
-			if (!findParameterAndParse(local_params, param_name, name_type)) {
-				if (!findParameterAndParse(global_params, param_name, name_type))
-					throw clap::exceptions::InvalidParameterName(param_name);
-			}
+			if (!findParameterAndParse(params, param_name, name_type))
+				throw clap::exceptions::InvalidParameterName(param_name);
 		} else {
-			for (char c: param_name) {
-				if (!findParameterAndParse(local_params, { c }, name_type)) {
-					if (!findParameterAndParse(global_params, { c }, name_type))
-						throw clap::exceptions::InvalidParameterName({ c });
-				}
-			}
+			for (char c: param_name)
+				if (!findParameterAndParse(params, { c }, name_type))
+					throw clap::exceptions::InvalidParameterName({ c });
 		}
 	}
 

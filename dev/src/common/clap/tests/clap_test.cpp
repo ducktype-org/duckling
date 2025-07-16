@@ -409,14 +409,12 @@ private:
 						  )
 						  .build()
 				  );
-		std::cout << "Test1\n";
 		std::array argv1{ "./prog", "-b" };
 		assertThrows<clap::exceptions::MissingConditionalParameter>(
 			[&]() { clap.parse(argv1.size(), argv1.data()); },
 			"Clap did not find a missing conditional parameter."
 		);
 
-		std::cout << "Test2\n";
 		std::array argv2{ "./prog", "-a", "-b" };
 
 		auto        res  = clap.parse(argv2.size(), argv2.data());
@@ -452,6 +450,13 @@ private:
 
 		ASSERT_EQUAL("g_val", res.getValue<std::string>("global").value());
 		ASSERT_EQUAL("l_val", res.getValue<std::string>("local").value());
+
+		// Wrong order `--global` is not visible for the cmd subcommand.
+		std::array argv2{ "./prog", "cmd", "--global", "g_val", "--local", "l_val" };
+		assertThrows<clap::exceptions::InvalidParameterName>(
+			[&]() { clap.parse(argv2.size(), argv2.data()); },
+			"Clap did not find an invalid parameter name."
+		);
 	}
 };
 

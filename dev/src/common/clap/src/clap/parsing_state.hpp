@@ -20,8 +20,8 @@ namespace clap {
 	 */
 	class ParsingState {
 	public:
-		usize               parsing_position = 0;  /// Position in the args.
-		std::string         args;                  /// Merged arguments.
+		usize         parsing_position = 0;  /// Position in the args.
+		std::string   args;                  /// Merged arguments.
 		ParsingResult result;                /// The result of the parsing.
 
 		ParsingState(usize argc, const char* const* argv);
@@ -44,10 +44,7 @@ namespace clap {
 		 * @param parameters All the available parameters.
 		 * TODOP: Update that comment.
 		 */
-		void parseParameter(
-			const std::vector<clap::Parameter>& local_params,
-			const std::vector<clap::Parameter>& global_params
-		);
+		void parseParameter(const std::vector<clap::Parameter>& params);
 
 		/**
 		 * @brief Peeks at the token starting from `parsing_position` to the first space and returns

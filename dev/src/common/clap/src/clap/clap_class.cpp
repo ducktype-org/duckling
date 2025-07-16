@@ -164,7 +164,7 @@ namespace clap {
 
 		// Perform the recursive parsing.
 		// TODOP: This root command is not needed as a param I believe.
-		root_command.parse(st, root_command);
+		root_command.parse(st);
 		validateParsing(st.result);
 		return std::move(st.result);
 	}

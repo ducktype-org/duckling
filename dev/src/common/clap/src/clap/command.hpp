@@ -75,7 +75,7 @@ namespace clap {
 
 		// Main parsing function for the command.
 		// TODOP: Better docs.
-		void parse(ParsingState& state, const Command& root_command) const;
+		void parse(ParsingState& state) const;
 
 
 	private:

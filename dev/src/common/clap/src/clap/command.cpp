@@ -47,14 +47,13 @@ namespace clap {
 	Command&& Command::addSubcommand(Command&& sub_command) {
 		if (!positional_parameters.empty())
 			throw clap::exceptions::CoexistingPositionalAndSubcommand(name);
-		is_leaf = false;
 
 		// Check for duplicates.
-		// TODOP: Map.
 		for (const auto& subcmd: subcommands)
 			if (subcmd.getName() == sub_command.getName())
 				throw clap::exceptions::DuplicateSubcommand(sub_command.getName(), name);
 
+		is_leaf = false;
 		subcommands.emplace_back(std::move(sub_command));
 		return std::move(*this);
 	}
@@ -101,7 +100,6 @@ namespace clap {
 	bool Command::isLeaf() const { return is_leaf; }
 
 	base::Optional<CRef<Command>> Command::getSubcommand(const std::string& subcommand_name) const {
-		// TODOP: Map.
 		for (const auto& cmd: subcommands)
 			if (cmd.getName() == subcommand_name) return &cmd;
 		return {};
@@ -109,23 +107,23 @@ namespace clap {
 
 	MCRef<ValueParser> Command::getDefaultValueParser() const { return default_value_parser.ref(); }
 
-	void Command::parse(ParsingState& st, const Command& root_command) const {
+	void Command::parse(ParsingState& st) const {
 		// Add `this` command to the result path.
 		st.result.addToPath(this);
 
 		while (st.hasMoreArgs()) {
-			const std::string& token = st.peekToken();
-			bool is_negative_number = isNegativeNumber(token);
+			const std::string& token              = st.peekToken();
+			bool               is_negative_number = isNegativeNumber(token);
 
 			// Parameter
 			if (token.starts_with('-') && !is_negative_number)
-				st.parseParameter(parameters, root_command.getParameters());
+				st.parseParameter(parameters);
 			else {  // Subcommand or positional.
 				auto maybe_subcmd = getSubcommand(token);
 				if_opt_some(maybe_subcmd, subcmd) {
 					// It's a subcommand, go down the tree.
 					st.consumeToken();
-					subcmd->parse(st, root_command);
+					subcmd->parse(st);
 					return;
 				}
 
@@ -149,10 +147,8 @@ namespace clap {
 				}
 			}
 		}
-		// The only way we get here is if we parsed all arguments and we're the matched subcommand.
-		// We need to be a leaf in the tree.
-		if (!is_leaf) {
-			throw exceptions::SubcommandNotSpecified(name);
-		}
+		// The only way we get here is when all arguments where parsed.
+		// This means `this` is the matched subcommand which has to be a leaf.
+		if (!is_leaf) throw exceptions::SubcommandNotSpecified(name);
 	}
 }
