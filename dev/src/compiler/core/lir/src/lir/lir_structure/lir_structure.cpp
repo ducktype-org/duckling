@@ -27,7 +27,7 @@ namespace compiler::lir {
 		base::Map<LocalRef, usize> local_ids;
 		usize                      next_id = 0;
 		for (const auto& local: local_list) {
-			local_ids.put(local.ref(), next_id);
+			local_ids.put(local, next_id);
 			next_id++;
 		}
 		return local_ids;
@@ -40,7 +40,7 @@ namespace compiler::lir {
 			block_map.put(block, true);
 		}
 		for (const auto& block: blocks)
-			if (!block_map.contains(block.ref())) return base::BAD;
+			if (!block_map.contains(block)) return base::BAD;
 		return base::OK;
 	}
 
@@ -156,7 +156,7 @@ namespace compiler::lir {
 			output << "[LIR] Function \"" << function.mangled_name.strView() << "\":\n";
 
 			for (const auto& local: function.local_list) {
-				printLocalDesc(local.ref());
+				printLocalDesc(local);
 				output << "\n";
 			}
 			output << "{\n";

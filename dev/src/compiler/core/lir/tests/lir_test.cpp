@@ -138,7 +138,7 @@ private:
 			// this might change in the future:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
-			for (auto& local: foo_lir->local_list) {
+			for (const auto& local: foo_lir->local_list) {
 				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
@@ -203,7 +203,7 @@ private:
 		bool was_y = false;
 		bool was_z = false;
 
-		for (auto& local: foo_lir->local_list) {
+		for (const auto& local: foo_lir->local_list) {
 			if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "x") {
 				ASSERT_TRUE(not was_x);
 				ASSERT_EQUAL(local->parameter_index.value(), 0);
@@ -256,7 +256,7 @@ private:
 
 			// Check local variable 'a'
 			bool found_a = false;
-			for (auto& local: foo_lir->local_list) {
+			for (const auto& local: foo_lir->local_list) {
 				if (local->helios_id.has_value() && helios::name(local->helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(

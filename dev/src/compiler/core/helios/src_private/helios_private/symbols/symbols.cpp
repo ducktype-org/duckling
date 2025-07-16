@@ -94,7 +94,8 @@ namespace compiler::helios {
 		);
 		std::vector<SymID> output;
 		output.reserve(symbol_table.size());
-		for (auto& symbol: symbol_table) output.push_back(GetSymRef_Functor::make(symbol.ref()));
+
+		for (const auto& symbol: symbol_table) output.push_back(GetSymRef_Functor::make(symbol));
 		return output;
 	}
 

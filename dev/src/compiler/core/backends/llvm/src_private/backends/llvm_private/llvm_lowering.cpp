@@ -286,13 +286,13 @@ namespace compiler::backend_llvm {
 			llvm::BasicBlock* locals_block
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
-			for (auto& var: lir_function->local_list) {
+			for (const auto& var: lir_function->local_list) {
 				CORE_ASSERT(
 					var->layout.getSize() > Bits(0),
 					"local variable with size 0 is not allowed in LLVM"
 				);
 				auto reg = locals_builder.CreateAlloca(
-					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
+					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var)
 				);
 
 				// If local is a parameter we initialize it from
@@ -302,7 +302,7 @@ namespace compiler::backend_llvm {
 						fun->getArg(base::safeIntConv<unsigned>(parameter_index)), reg
 					);
 				}
-				local_register_map.put(var.ref(), reg);
+				local_register_map.put(var, reg);
 			}
 
 			generateMainBlocks(fun);

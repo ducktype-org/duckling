@@ -342,7 +342,7 @@ private:
 			bool was_y = false;
 			bool was_z = false;
 
-			for (auto& local: locals) {
+			for (const auto& local: locals) {
 				if (local->getName() == "x") {
 					ASSERT_TRUE(not was_x);
 					ASSERT_EQUAL(local->parameter_index.value(), 0);

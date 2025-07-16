@@ -68,8 +68,8 @@ namespace compiler::helios {
 			"getAllHeliosScopes called from within query!"
 		);
 		std::vector<ScopeID> out;
-		for (auto& scope_data: scope_table)
-			out.emplace_back(ScopeAccess_Functor::idOf(scope_data.refMut()));
+		for (const auto& scope_data: scope_table)
+			out.emplace_back(ScopeAccess_Functor::idOf(scope_data));
 		return out;
 	}
 
