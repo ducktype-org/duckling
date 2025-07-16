@@ -10,7 +10,7 @@ def create_option(*def_arg, **def_kwargs):
             *(arg or def_arg),
             **{**def_kwargs, **kwargs}
         )
-    
+
     return specialize_option
 
 # HERE DEFINE REPEATING FLAGS
@@ -54,14 +54,6 @@ def build_system(*args, **kwargs):
         type=Choice(["Ninja", "Unix Makefiles"], case_sensitive=False),
     )(*args, **kwargs)
 
-def cc_compiler(*args, **kwargs):
-    return create_option(
-        "-c",
-        "--cc-compiler",
-        "cc_compiler",
-        prompt="C compiler path",
-    )(*args, **kwargs)
-
 def clang_format(*args, **kwargs):
     return create_option(
         "-f",
@@ -88,6 +80,14 @@ def cxx_compiler(*args, **kwargs):
         "--cxx-compiler",
         "cxx_compiler",
         prompt="C++ compiler path",
+    )(*args, **kwargs)
+
+def cc_compiler(*args, **kwargs):
+    return create_option(
+        "-c",
+        "--cc-compiler",
+        "cc_compiler",
+        prompt="C compiler path",
     )(*args, **kwargs)
 
 def llvm_version(*args, **kwargs):

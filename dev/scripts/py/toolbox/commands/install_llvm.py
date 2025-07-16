@@ -11,13 +11,13 @@ from click import command, option, Choice
 @build_system(
     help="Build system to use",
 )
-@cc_compiler(
-    help="A path to the C compiler to compile with",
+@cxx_compiler(
+    help="A path to the C++ compiler to compile with",
     default="default",
     type=str,
 )
-@cxx_compiler(
-    help="A path to the C++ compiler to compile with",
+@cc_compiler(
+    help="A path to the C compiler to compile with",
     default="default",
     type=str,
 )
