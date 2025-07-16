@@ -76,7 +76,7 @@ from click import Choice, option, command
     help="The build type.",
     default="debug",
     type=Choice(
-        ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"], case_sensitive=False
+        ["Debug", "Release", "DevRelease"], case_sensitive=False
     ),
 )
 def setup_build(*args, **kwargs):
