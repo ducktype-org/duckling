@@ -55,7 +55,7 @@ class PSTBuilderTest: public tester::TestSuite {
 	Example<pst::TopLevel, true>   emptyTopLevel{ "" };
 	Example<pst::Block, true>      emptyBlock{ "block {}" };
 	Example<pst::While, false>     badChoice{ "block {}" };
-	Example<pst::CodeBlock, false> noBrackets{ "const x:i32=3;" };
+	Example<pst::Block, false> noBrackets{ "const x:i32=3;" };
 
 	void exampleTests() {
 		testExample(emptyTopLevel);
@@ -67,7 +67,6 @@ class PSTBuilderTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(equivalencyTest<pst::TopLevel>);
-		TESTER_ADD_TEST(equivalencyTest<pst::CodeBlockOrStmt>);
 		TESTER_ADD_TEST(exampleTests);
 	}
 

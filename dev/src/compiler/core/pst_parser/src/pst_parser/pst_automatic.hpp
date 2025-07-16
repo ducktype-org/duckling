@@ -34,6 +34,11 @@ namespace pst {
 	using lang_def::Special;
 	using lexer::Operator;
 
+	template<typename T>
+	inline T fwdVal(T& t) {
+		return t;
+	}
+
 	template<typename State>
 	class PSTAutomatic {
 	protected:
@@ -57,95 +62,102 @@ namespace pst {
 		 * @brief Parses the expected keyword. Skips on success, logs error on failure.
 		 * @param key The expected keyword.
 		 */
-		void one(Keyword key, bool ignorable = false) {
+		PSTAutomatic& one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
 				state.log(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
+			return *this;
 		}
 
 		/**
 		 * @brief Parses the expected Special token. Skips on success, logs error on failure.
 		 * @param spec The expected special token.
 		 */
-		void one(Special spec, bool ignorable = false) {
+		PSTAutomatic& one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
 				state.log(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
+			return *this;
 		}
 
 		/**
 		 * @brief Parses the expected operator. Skips on success, logs error on failure.
 		 * @param op The expected operator.
 		 */
-		void one(Operator op, bool ignorable = false) {
+		PSTAutomatic& one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
 				state.log(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
+			return *this;
 		}
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		void one(tpc::Keyword* result, bool ignorable = false) {
+		PSTAutomatic& one(tpc::Keyword* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isKeyword()) {
 				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
 				if (!ignorable) skipNotSemicolon();
-				return;
+				return *this;
 			}
 			el->addToken(state[0]);
 			*result = lang_def::strAsKeyword(state.tokens().next().getValue());
+			return *this;
 		}
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		void one(tpc::Identifier* result, bool ignorable = false) {
+		PSTAutomatic& one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) skipNotSemicolon();
-				return;
+				return *this;
 			}
 			el->addToken(state[0]);
 			result->value = state.tokens().next().getValue();
+			return *this;
 		}
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		void one(tpc::OptionalIdentifier* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(tpc::OptionalIdentifier* result, [[maybe_unused]] bool ignorable = false) {
 			if (state.ctokens().peek().isIdentifier()) {
 				el->addToken(state[0]);
 				result->value = state.tokens().next().getValue();
 			}
+			return *this;
 		}
 
 		/**
 		 * @brief Parses a string to @p result. Skips on success, does nothing on failure.
 		 * @param result The place to store the parsed string.
 		 */
-		void one(tpc::StringValue* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(tpc::StringValue* result, [[maybe_unused]] bool ignorable = false) {
 			if (!state.ctokens().peek().isString()) {
 				state.log(makeBox<tpc::NoStringError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) skipNotSemicolon();
-				return;
+				return *this;
 			}
 			el->addToken(state[0]);
 			result->value = state.tokens().next().getValue();
+			return *this;
 		}
 
 		/**
@@ -153,8 +165,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(MBox<T>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(MBox<T>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
+			return *this;
 		}
 
 		/**
@@ -162,8 +175,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(AccessInternal<T>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(AccessInternal<T>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
+			return *this;
 		}
 
 		/**
@@ -171,8 +185,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
+			return *this;
 		}
 
 		/**
@@ -180,8 +195,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(base::Optional<AccessInternal<T>>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(base::Optional<AccessInternal<T>>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
+			return *this;
 		}
 
 		/**
@@ -191,12 +207,13 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
-		void assign(Sink* sink, MBox<El> sub_tree) {
+		PSTAutomatic& assign(Sink* sink, MBox<El> sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
 				*sink = std::move(sub_tree);
 			}
+			return *this;
 		}
 
 		/**
@@ -210,9 +227,62 @@ namespace pst {
 		 * @param args Arguments passed to the parsing function
 		 */
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
-		void with(Sink* sink, MBox<El> fun(State&, Args...), Args&&... args) {
+		PSTAutomatic& with(Sink* sink, MBox<El> fun(State&, Args...), Args&&... args) {
 			MBox<El> result = fun(state, std::forward<Args>(args)...);
 			assign(sink, std::move(result));
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 *
+		 * The return type of the parsed function usually has to be specified with the first
+		 * template argument.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param args Arguments passed to the parsing function
+		 */
+		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
+		PSTAutomatic& withDef(Sink* sink, Args&&... args) {
+			MBox<El> result = El::parse(state, std::forward<Args>(args)...);
+			assign(sink, std::move(result));
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 */
+		template<std::derived_from<LangElement> El, typename... Args>
+		PSTAutomatic& withDef(MBox<El>* result, Args&&... args) {
+			with(result, El::parse, std::forward<Args>(args)...);
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 */
+		template<std::derived_from<LangElement> El, typename... Args>
+		PSTAutomatic& withDef(AccessInternal<El>* result, Args&&... args) {
+			with(result, El::parse, std::forward<Args>(args)...);
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 */
+		template<std::derived_from<LangElement> El, typename... Args>
+		PSTAutomatic& withDef(base::Optional<MBox<El>>* result, Args&&... args) {
+			with(result, El::parse, std::forward<Args>(args)...);
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 */
+		template<std::derived_from<LangElement> El, typename... Args>
+		PSTAutomatic& withDef(base::Optional<AccessInternal<El>>* result, Args&&... args) {
+			with(result, El::parse, std::forward<Args>(args)...);
+			return *this;
 		}
 
 		/**
@@ -232,33 +302,37 @@ namespace pst {
 		/**
 		 * @brief Eats any token other then a semicolon
 		 */
-		void eatOne() {
+		PSTAutomatic& eatOne() {
 			if (state.notEmpty() && !state[0].is(Special::Semicolon))
 				el->addToken(state.tokens().next());
+			return *this;
 		}
 
 		/**
 		 * @brief Skips any token other then a semicolon
 		 */
-		void skipNotSemicolon() {
+		PSTAutomatic& skipNotSemicolon() {
 			if (state.notEmpty() && !state[0].is(Special::Semicolon)) state.tokens().skip();
+			return *this;
 		}
 
 		/**
 		 * @brief Automatic version of the ParserState function
 		 */
-		void goDown() {
+		PSTAutomatic& goDown() {
 			el->addToken(state[0].getSentinelBegin());
 			state.goDown();
+			return *this;
 		}
 
 		/**
 		 * @brief Automatic version of the ParserState function
 		 */
-		void goUpAndSkip() {
+		PSTAutomatic& goUpAndSkip() {
 			state.goUp();
 			el->addToken(state[0].getSentinelEnd());
 			skipNotSemicolon();
+			return *this;
 		}
 
 		/**
@@ -266,8 +340,9 @@ namespace pst {
 		 * @note Forces the first element to be skipped on error if it's a token.
 		 */
 		template<typename T>
-		void all(T t) {
+		PSTAutomatic& all(T t) {
 			one(t);
+			return *this;
 		}
 
 		/**
@@ -275,9 +350,10 @@ namespace pst {
 		 * @note Forces the first element to be skipped on error if it's a token.
 		 */
 		template<typename T, typename... Q>
-		void all(T t, Q... q) {
+		PSTAutomatic& all(T t, Q... q) {
 			one(t);
 			parseRest(q...);
+			return *this;
 		}
 
 	private:

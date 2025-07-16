@@ -3,9 +3,13 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<CodeBlock> CodeBlock::parse(LangParserState& state) {
+	MBox<CodeBlock> CodeBlock::parse(LangParserState& state, CodeBlockType order_type) {
+		CORE_ASSERT(order_type != Undefined, "Parsing with an undefined ordering type");
+
 		auto position = state.getPosition();
 		auto out      = makeBox<CodeBlock>(position);
+
+		out->type = order_type;
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.log(makeBox<error::BlockStartError>(state.getPosition()));

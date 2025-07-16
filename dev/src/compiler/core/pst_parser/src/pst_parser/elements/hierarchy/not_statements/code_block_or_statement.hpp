@@ -15,7 +15,7 @@ namespace pst {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 
-		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
+		static MBox<CodeBlockOrStmt> parse(LangParserState& state, CodeBlock::CodeBlockType code_block_order_type);
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
 

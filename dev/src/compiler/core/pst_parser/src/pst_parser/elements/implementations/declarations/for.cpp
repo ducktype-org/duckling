@@ -60,7 +60,7 @@ namespace pst {
 			state.parse(out).goUpAndSkip();
 		}
 
-		state.parse(out).one(&out->body, true);
+		state.parse(out).withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
 		return out;
 	}

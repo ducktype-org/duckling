@@ -36,7 +36,7 @@ namespace pst {
 		if (state.notEmpty()) state.log(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out).all(NamedOperator::Assign, &out->body);
+		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
 		return out;
 	}

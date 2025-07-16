@@ -7,7 +7,21 @@ namespace pst {
 	 * @brief Code Block that contains statements.
 	 */
 	class CodeBlock final: public NotStmt {
+	public:
+		/**
+		 * @brief Type of code block
+		 *
+		 * Relevant for some behaviors, for example path to node as different blocks can be ordered like in a function or more unordered like in the global scope.
+		 */
+		enum CodeBlockType {
+			Unordered, 
+			Ordered,
+			Undefined,
+		};
+
+	private:
 		std::vector<AccessInternal<Stmt>> statements;
+		CodeBlockType type = Undefined;
 
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
@@ -16,7 +30,7 @@ namespace pst {
 			this->element_kind = ElementKind::CodeBlock;
 		}
 
-		static MBox<CodeBlock> parse(LangParserState& state);
+		static MBox<CodeBlock> parse(LangParserState& state, CodeBlockType order_type);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
 
