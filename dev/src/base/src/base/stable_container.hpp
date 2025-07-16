@@ -127,31 +127,31 @@ namespace base {
 			BaseStableVector(const BaseStableVector&) = delete;
 
 			[[nodiscard]]
-			constexpr usize size() const noexcept {
+			usize size() const noexcept {
 				return data.size();
 			}
 
 			[[nodiscard]]
-			constexpr bool empty() const noexcept {
+			bool empty() const noexcept {
 				return data.empty();
 			}
 
 			[[nodiscard]]
-			constexpr bool notEmpty() const noexcept {
+			bool notEmpty() const noexcept {
 				return not data.empty();
 			}
 
 			[[nodiscard]]
-			constexpr RefT operator[](usize pos) {
+			RefT operator[](usize pos) {
 				return RefT{ &data.at(pos) };
 			}
 
 			[[nodiscard]]
-			constexpr CRefT operator[](usize pos) const {
+			CRefT operator[](usize pos) const {
 				return CRefT{ &data.at(pos) };
 			}
 
-			constexpr void pushBack(const Data& value) { data.emplace_back(value); }
+			void pushBack(const Data& value) { data.emplace_back(value); }
 
 			void pushBack(Data&& value) { data.emplace_back(std::move(value)); }
 
@@ -169,13 +169,13 @@ namespace base {
 			 * Returns index of the last element (i.e. size - 1).
 			 */
 			[[nodiscard]]
-			constexpr usize lastIndex() const {
+			usize lastIndex() const {
 				CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty BaseStableVector");
 				return size() - 1;
 			}
 
 			template<class... Args>
-			constexpr void emplaceBack(Args&&... args) {
+			void emplaceBack(Args&&... args) {
 				data.emplace_back(std::forward<Args>(args)...);
 			}
 
@@ -229,12 +229,12 @@ namespace base {
 		using ConstIterator = Base::ConstIterator;
 
 		[[nodiscard]]
-		constexpr CRefT operator[](usize pos) {
+		CRefT operator[](usize pos) {
 			return Base::operator[](pos);
 		}
 
 		[[nodiscard]]
-		constexpr CRefT operator[](usize pos) const {
+		CRefT operator[](usize pos) const {
 			return Base::operator[](pos);
 		}
 
