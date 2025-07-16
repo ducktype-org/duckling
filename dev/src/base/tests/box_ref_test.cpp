@@ -30,6 +30,26 @@ static_assert(
 	std::is_constructible_v<MRef<int>, std::nullptr_t>, "MRef should be constructible from nullptr"
 );
 
+static_assert(std::common_reference_with<Ref<int>, int&>, "Ref should define a common reference");
+static_assert(
+	std::common_reference_with<const Ref<const int>, int&>, "Ref should define a common reference"
+);
+static_assert(
+	std::common_reference_with<Ref<int>, const int&>, "Ref should define a common reference"
+);
+static_assert(
+	std::same_as<std::common_reference_t<Ref<int>, int&>, int&>,
+	"Ref should have a well defined common reference"
+);
+static_assert(
+	std::same_as<std::common_reference_t<Ref<const int>, int&>, const int&>,
+	"Ref should have a well defined common reference"
+);
+static_assert(
+	std::same_as<std::common_reference_t<Ref<int>, const int&>, const int&>,
+	"Ref should have a well defined common reference"
+);
+
 // Box, MBox asserts:
 static_assert(not std::is_copy_constructible_v<Box<int>>, "Box should be copy constructible");
 static_assert(not std::is_copy_constructible_v<MBox<int>>, "MBox should be copy constructible");
