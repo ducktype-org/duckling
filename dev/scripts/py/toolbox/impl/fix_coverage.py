@@ -73,6 +73,7 @@ def nuke_coverage_files(build_path: Path):
         nuke_extension(build_path, ext)
 
 
+# See description of PR #1081 for solution explanation.
 def fix_coverage_impl(build_dir, precision):
     # Preamble
     log_info("Running fix coverage...")
