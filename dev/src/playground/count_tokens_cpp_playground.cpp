@@ -11,14 +11,15 @@
  * @note Outputs and returns -1 on error in code;
  */
 
+#include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
+
 #include <tree-sitter-cpp.h>
 #include <tree_sitter/api.h>
-
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
 
 #include <iostream>
 #include <regex>

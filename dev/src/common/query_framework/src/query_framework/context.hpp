@@ -10,10 +10,10 @@
 #include "internal/query_graph/query_graph.hpp"
 #include "internal/query_graph/query_state.hpp"
 
+#include <base/defer.hpp>
+
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
-
-#include <base/defer.hpp>
 
 namespace query {
 

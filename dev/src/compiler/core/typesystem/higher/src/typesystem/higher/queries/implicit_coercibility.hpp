@@ -31,9 +31,9 @@
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
 
-#include <query_framework/query_int.hpp>
-
 #include <base/maps.hpp>
+
+#include <query_framework/query_int.hpp>
 
 // In the future, coercibility could work significantly differently.
 // For example, these functions could also return the OperationID of the coercion operation.
