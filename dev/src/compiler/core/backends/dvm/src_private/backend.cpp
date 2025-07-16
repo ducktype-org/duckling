@@ -606,7 +606,6 @@ namespace compiler::backend_vm {
 			base::Optional<base::StrID> ctor_name;
 			base::Optional<base::StrID> dtor_name;
 
-			// @TODO: handle ctors and dtors in DMV properly
 			if (global.global_ctor.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, global.global_ctor.value());
 				ctor_name = global.global_ctor.value()->mangled_name;
