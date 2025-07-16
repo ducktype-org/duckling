@@ -47,7 +47,7 @@ function which when given a `vm::code::Function` reference returns a new
 `Function` object representing the same function, but with correctness
 guarantees and eliminated dead code. Any errors found during the validation
 process are signalled by throwing a `vm::code::ValidationError` subclass.
-This errors are defined in the `errors.hpp` file.
+These errors are defined in the `errors.hpp` file.
 
 *Note for connoisseurs*: dead code elimination may seem like an out-of-place
 silly optimization, but is actually necessary. Many of the checks require
@@ -62,8 +62,10 @@ to compile code for which the assumptions do not hold. Therefore, the unchecked
 The implementation in the corresponding `.cpp` file is in the `FunctionValidator`
 class. We traverse the control flow graph depth-first simulating the stack
 operations e.g. (de)initializing variables, casting, calling functions
-by keeping track of the current stack state modulo the actual values,
-we only care about their types. This is done by the helper `LocalStack` class.
+by keeping track of the current stack state, which records only the types 
+of values present on the stack — not their actual values. This is because 
+bytecode validation focuses on ensuring type correctness for each instruction, 
+rather than tracking runtime values. The is done by the helper `LocalStack` class. 
 We require that each instruction is always executed with some fixed stack
 state, if this is not the case, we throw an error.
 

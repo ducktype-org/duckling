@@ -183,6 +183,10 @@ namespace vm {
 	 * separate start function builder because the start function creation will get a lot more
 	 * complicated, after we start using VmValue or default value constructors which have to be
 	 * invoked before main.
+	 *
+	 * This should change after: 
+	 * https://github.com/ducktype-org/duckling/issues/722
+	 * https://github.com/ducktype-org/duckling/issues/724
 	 */
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
