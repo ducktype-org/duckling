@@ -1,4 +1,3 @@
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -8,6 +7,8 @@
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
+
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
@@ -159,6 +160,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simple_using{ "using std.math" };
+
+	Example<pst::StmtSpecifier, true>  public_specifier{ "public expand \"return 0;\";" };
+	Example<pst::StmtSpecifier, true>  private_specifier{ "private fun foo() = {}" };
+	Example<pst::StmtSpecifier, true>  protected_specifier{ "protected class x{}" };
+	Example<pst::StmtSpecifier, true>  public_block{ "public {class x{}}" };
+	Example<pst::StmtSpecifier, false> bad_specifier{ "def class x{}" };
+	Example<pst::StmtSpecifier, false> empty_specifier{ "public" };
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };

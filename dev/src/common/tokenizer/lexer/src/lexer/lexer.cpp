@@ -5,13 +5,14 @@
 
 #include "lexer.hpp"
 
-#include <diagnostic/logger.hpp>
 #include <token_source/source.hpp>
 
 #include <base/exceptions.hpp>
 
+#include <diagnostic/logger.hpp>
+
 namespace lexer {
-	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& path) {
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
 		auto file = tokenizer::makeTokenSource(path);
 		file->tokenize();
 		if (file->getLogger()->bad()) {

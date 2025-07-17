@@ -4,12 +4,13 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
+
+#include <query_framework/context.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -26,6 +27,7 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(functionCallsTest);
 		TESTER_ADD_TEST(builtinFuncsTest);
+		TESTER_ADD_TEST(globalVariablesTest);
 	}
 
 protected:
@@ -35,13 +37,47 @@ private:
 	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		std::vector<CRef<lir::Function>> funcs;
-		base::StrID                      module_name;
-		vm::code::CodeCollection         code;
+		std::vector<CRef<lir::Function>>                    funcs;
+		std::vector<compiler::backend_vm::BackendDVMGlobal> globals;
+		base::StrID                                         module_name;
+		vm::code::CodeCollection                            code;
+
+		//@TODO: add ctors to DVM ctors when implemented
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+
+			for (auto& hout_glob: top_level->glob_data) {
+				auto lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				variant_match(hout_glob.value) {
+					variant_case(helios::HOUTGlobalVariable, var) {
+						CRef mir_func
+							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+						globals.emplace_back(
+							lir_glob,
+							// @TODO: add legit dtors when implemented #929
+							lir_func,
+							std::nullopt
+						);
+					}
+					variant_case(helios::HOUTGlobalConst, cnst) {
+						// @TODO: create global constant ctors if necessary
+						fail(base::strConcat(
+							"Creating ctors for constant variables is not implemented yet. ",
+							"Global constant: ",
+							hout_glob.original_name.strView()
+						));
+					}
+					variant_default {
+						fail(base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_glob.original_name.strView()
+						));
+					}
+				}
+			}
 			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>(
@@ -49,7 +85,7 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
-			backend_vm::Module m{ ctx, module_name, funcs };
+			backend_vm::Module m{ ctx, module_name, funcs, globals };
 			code = m.build();
 		});
 		return code;
@@ -76,6 +112,8 @@ private:
 	void functionCallsTest() { runTest("modules/function_calls", {}, {}, {}, 4); }
 
 	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
+
+	void globalVariablesTest() { runTest("modules/globals", {}, {}, {}, 48); }
 };
 
 

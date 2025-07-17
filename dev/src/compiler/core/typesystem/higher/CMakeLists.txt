@@ -8,6 +8,7 @@ add_library(TypeSystemHigher
         src/typesystem/higher/all.cpp
         src/typesystem/higher/internal/abstract_type_impl.cpp
         src/typesystem/higher/internal/queries.cpp
+        src/typesystem/higher/expression_type.cpp
 )
 
 # @FIXME: adding HELIOS dependency for SymID introduces cyclic dependency (but everything compiles).

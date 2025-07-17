@@ -1,14 +1,16 @@
 #pragma once
 
-#include "../../lang_parser_state.hpp"
+#include "../../lang_parser_element.hpp"
+#include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 
 #include <base/string_id.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 #include <set>
 
@@ -41,6 +43,7 @@ namespace pst {
 		Fun,
 		Namespace,
 		CodeDecl,
+		StmtSpecifier,
 		Action,
 		ExprStmt,
 		Class,
@@ -149,8 +152,8 @@ namespace pst {
 	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
-		base::StrID                   name;
-		std::vector<CRef<tpc::Token>> specifiers;
+		base::StrID                     name;
+		std::vector<CRef<lexer::Token>> specifiers;
 	};
 
 	/**

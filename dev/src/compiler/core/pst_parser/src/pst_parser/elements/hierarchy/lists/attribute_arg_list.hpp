@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Attribute argument list.
 	 */
 	class AtrArgList final:
-		  public List<UniversalExprHolder, detail::NameGetters::attributeArgList> {
+		  public List<UniversalExprHolder, internal::NameGetters::attributeArgList> {
 	public:
 		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
 

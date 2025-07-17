@@ -8,7 +8,6 @@
 
 #include "mir_lifetimes.hpp"
 
-#include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -16,14 +15,17 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <stack>
 #include <unordered_set>
@@ -35,6 +37,10 @@ namespace compiler::mir {
 
 	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
 		return function.queryUnstablePerfectHash();
+	}
+
+	u64 KeyOf_LowerGlobalDataToMirFunction::queryUnstablePerfectHash() const {
+		return global_data.helios_symbol.queryUnstablePerfectHash();
 	}
 
 	struct InstructionHole;
@@ -254,6 +260,7 @@ namespace compiler::mir {
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
+		tsh::FunctionAbstractType        function_type;
 
 		LifetimeScopeTree lifetime_scope_tree;
 
@@ -276,10 +283,42 @@ namespace compiler::mir {
 		ScopeRef no_lifetime_scope;
 
 		query::Context& ctx;
-		helios::SymID   helios_symbol;
+
+		/**
+		 * HELIOS SymID releted to the function.
+		 * Functions without a helios_id are functions created for eg. from expressions
+		 */
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
+		HSymID helios_symbol;
 
 	public:
-		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
+		FunctionBuilder(query::Context& ctx, const HSymID helios_symbol):
+			  function_type([&]() {
+				  variant_match(helios_symbol) {
+					  variant_case(FunctionSymID, fun_sym) {
+						  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
+					          ->expect("Handling errors in MIR is not supported yet")
+					          .getType();
+					  }
+					  variant_default {
+						  CORE_PANIC(
+							  "FunctionBuilder constructor should be called only with FunctionSymID"
+						  );
+					  }
+				  }
+
+				  CORE_UNREACHABLE();
+			  }()),
+			  lifetime_scope_tree(),
+			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
+			  no_lifetime_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
+			  ctx(ctx),
+			  helios_symbol(helios_symbol) {}
+
+		FunctionBuilder(
+			query::Context& ctx, const HSymID helios_symbol, tsh::FunctionAbstractType function_type
+		):
+			  function_type(function_type),
 			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  no_lifetime_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  ctx(ctx),
@@ -307,14 +346,6 @@ namespace compiler::mir {
 				if (block.id != entry_block_id)  // entry block is already added to the block_order
 					block_order.emplace_back(block.id);
 			}
-
-			const auto function_type
-				= tsh::SymbolType<tsh::FunctionAbstractType>(
-					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
-						  ->expect("Handling errors in HOUT is not supported yet")
-				)
-			          .getType();
-
 			// we sanity check here, that all local variable have a lifetime scope,
 			for (auto& local: local_list)
 				CORE_ASSERT(local->scope.has_value(), "Local variable without lifetime scope");
@@ -408,11 +439,11 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		MutLocalRef findLocal(const helios::SymID helios_id) const {
+		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id) const {
 			// @TODO: Optimize into a hashmap.
 			for (const auto& local: local_list)
 				if (local->helios_id == helios_id) return local.refMut();
-			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
+			return {};
 		}
 
 		[[nodiscard]]
@@ -452,17 +483,16 @@ namespace compiler::mir {
 		 * This is needed only for some assertins.
 		 */
 		[[nodiscard]]
-		helios::SymID getHeliosSymbol() const {
+		HSymID getHeliosSymbol() const {
 			return helios_symbol;
 		}
 	};
 
 	/**
-	 * @brief Visitor that collects all local variables in the function and adds them directly to
-	 * the FunctionBuilder.
-	 * It sets variable scopes for parameters, but doesn't set it for other local variables.
-	 * Scope of other local variables is set when visiting VariableStmt in StmtBlockVisitor,
-	 * since only then is the scope of the variable known.
+	 * @brief Visitor that collects all local variables in the function and adds them directly
+	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
+	 * other local variables. Scope of other local variables is set when visiting VariableStmt
+	 * in StmtBlockVisitor, since only then is the scope of the variable known.
 	 */
 	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
 		FunctionBuilder& function;
@@ -482,10 +512,22 @@ namespace compiler::mir {
 		 * FunctionBuilder.
 		 */
 		void collect(const helios::HOUTFunction& hout_function) {
-			CORE_ASSERT(
-				hout_function.original_symbol == function.getHeliosSymbol(),
-				"Bad function passed to LocalVarCollectionVisitor"
-			);
+			auto function_helios_symbol = function.getHeliosSymbol();
+			variant_match(function_helios_symbol) {
+				variant_case(FunctionSymID, function_sym) {
+					CORE_ASSERT(
+						function_sym.id == hout_function.original_symbol,
+						"Bad function passed to LocalVarCollectionVisitor"
+					);
+				}
+
+				variant_default {
+					CORE_PANIC(
+						"The Function wasn't created from HOUTFunction, so you should not use "
+						"collect."
+					);
+				}
+			}
 
 			u64 parameter_index = 0;
 			for (const auto& parameter: *hout_function.content.parameters) {
@@ -742,8 +784,15 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			auto local = function.findLocal(stmt.helios_symbol);
+			auto optional_local = function.findLocal(stmt.helios_symbol);
 
+			CORE_ASSERT(
+				optional_local.has_value(),
+				"Variable statement refers to local variable that is not defined in the "
+				"function."
+			);
+
+			auto local = optional_local.value();
 			// we set the lifetime scope of the local variable here
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
@@ -786,18 +835,29 @@ namespace compiler::mir {
 				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
 
 			CORE_ASSERT(
-				location_value_result.isLocal(),
-				"Left side of assignment statement doesn't contain reference to local variable."
+				location_value_result.isLocal() || location_value_result.isGlobal(),
+				"Left side of assignment statement doesn't contain reference to local "
+				"variable or "
+				"a global variable."
 			);
-			auto local = location_value_result.get<LocalRef>();
-			target_construction_hole.fill(Instruction{
-				Operation::Assign,
-				{ local },
-				{ new_value },
-				{},
-				assignment_scope,
-			});
-			output({ l_continuation });
+			std::visit(
+				[&](auto&& ref) {
+					using T = std::decay_t<decltype(ref)>;
+					if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T, MirGlobal>) {
+						target_construction_hole.fill(Instruction{
+							Operation::Assign,
+							{ ref },
+							{ new_value },
+							{},
+							assignment_scope,
+						});
+						output({ l_continuation });
+					} else {
+						CORE_PANIC("Assignment to unsupported MIRValue type");
+					}
+				},
+				location_value_result.getVariant()
+			);
 		}
 	};
 
@@ -846,8 +906,16 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ .begin = continuation,
-			         .value = MIRValue{ LocalRef(function.findLocal(expr.symbol).get()) } });
+			auto optional_local = function.findLocal(expr.symbol);
+
+			if (optional_local.has_value()) {
+				output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
+			} else {
+				//@TODO: chack if the symbol is a real global variable.
+				output({ .begin = continuation,
+				         .value = MIRValue{
+							 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) } });
+			}
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -969,8 +1037,12 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
-		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
-			throw base::NotYetImplemented("linked identifier expr");
+		void visitAccessExpr(const hc::AccessExpr&) override {
+			throw base::NotYetImplemented("access expr lowering");
+		}
+
+		void visitSequenceExpr(const hc::SequenceExpr&) override {
+			throw base::NotYetImplemented("sequence expr lowering");
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
@@ -980,7 +1052,15 @@ namespace compiler::mir {
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
-			args.emplace_back(MirFunctionLiteral{ expr.callee });
+
+			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
+			if (not function_symid.has_value()) {
+				CORE_PANIC(
+					"Call expression where callee is not an identifier expression is currently not "
+					"supported."
+				);
+			}
+			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
 				auto [expr_continuation, sub_res]
 					= lowerExpr(*arg, sub_continuation, function, expr_scope);
@@ -1066,6 +1146,7 @@ namespace compiler::mir {
 					};
 				}
 				variant_case(LocalRef, local) { return local->type; }
+				variant_case(MirGlobal, global) { return global.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();
@@ -1111,7 +1192,7 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
-		FunctionBuilder function_builder{ ctx, function.original_symbol };
+		FunctionBuilder function_builder{ ctx, FunctionSymID{ function.original_symbol } };
 		function_builder.setName(function.original_name);
 
 		LocalVarCollectionVisitor visitor{ function_builder };
@@ -1134,7 +1215,8 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
-	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable ones.
+	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable
+	 * ones.
 	 */
 	Function eliminateUnreachable(Function function) {
 		std::unordered_set<BlockID> reachable;
@@ -1169,16 +1251,16 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a mock-up.
+	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a
+	 * mock-up.
 	 *
 	 * This function deals with this terminator:
 	 * * if block doesn't exists it means that it was unreachable, we do nothing
 	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
 	 * * if block is reachable and function returns value, throws missing return error
-
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	helios::errors::HResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+	query::QResult<Function, helios::errors::Failed> finalizeFunctionEnd(
 		query::Context&, Function function
 	) {
 		CORE_ASSERT(
@@ -1198,9 +1280,9 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			// @todo there should be logging here of missing return value / control reaches the end
-			// of non-void function
-			return helios::errors::HError(helios::errors::Failed());
+			// @todo there should be logging here of missing return value / control reaches the
+			// end of non-void function
+			return query::QError(helios::errors::Failed());
 		}
 	}
 
@@ -1227,4 +1309,75 @@ namespace compiler::mir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
+
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMirCtor, LowerGlobalDataToMirFunctionResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data.value))
+				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
+
+			auto global_init_expr
+				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
+
+			auto function_type = ctx.query<tsh::QueryFunctionType>({
+				{},
+				tsh::SymbolType{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				},
+			});
+
+			// first step: lowering to pre-mir (cfg+quad)
+			// create function builder
+			FunctionBuilder function_builder{ ctx,
+				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
+				                              function_type };
+			function_builder.setName(
+				base::StrID(base::strConcat(
+								"_GLOBAL_",
+								key.global_data.original_name,
+								key.global_data.helios_symbol.queryUnstablePerfectHash()
+				)
+			                    .c_str())
+			);
+
+			auto last_block = function_builder.newBlock();
+			last_block->setTerminator(
+				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
+			);
+
+			auto assing_instr = last_block->addHole();
+
+			auto lowerexpr_res = lowerExpr(
+				*global_init_expr.get(),
+				last_block,
+				function_builder,
+				function_builder.getTopLevelScope()
+			);
+
+			assing_instr.fill(Instruction{
+				Operation::Assign,
+				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+				{ lowerexpr_res.value },
+				{},
+				function_builder.getTopLevelScope(),
+			});
+
+			function_builder.setEntry(lowerexpr_res.begin);
+
+			auto function_no_lifetime = function_builder.build();
+
+			// second step: lifetime stuff
+			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			return function_reachable;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMirCtor)
 }

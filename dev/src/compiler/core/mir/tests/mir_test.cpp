@@ -7,11 +7,12 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <typesystem/higher/queries.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/queries.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -36,7 +37,7 @@ public:
 
 private:
 	void simpleTest() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_simple_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/mir_simple_test")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -78,13 +79,22 @@ private:
 	}
 
 	void simpleVarTest() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
 			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+
+			auto globals = unit->glob_data;
+			ASSERT_EQUAL(2, globals.size());
+			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
+
+			// @TODO #906 change it to whatever is produced by the mangler
+			auto& c_ctor
+				= ctx.query<compiler::mir::LowerGlobalDataToMirCtor>({ globals.at(0) })->value();
+			ASSERT_TRUE(c_ctor.name.strView().starts_with("_GLOBAL_c"));
 
 			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
@@ -121,8 +131,14 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
 			// those assertions might change when we improve mir generaration:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
+			// Check that the first instruction assigns to a global
+			{
+				const auto& instr = foo_mir.blocks[BlockID(7)].instructions.at(0);
+				ASSERT_TRUE(std::holds_alternative<compiler::mir::MirGlobal>(instr.output.value()));
+			}
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 1);
@@ -180,7 +196,7 @@ private:
 	}
 
 	void testTerminatorSuccessors() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -225,7 +241,7 @@ private:
 		// @TODO: add better tests once proper lifetimes implementation is in place
 		// But we do want to make sure, that it compiles and does not throw:
 
-		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -242,7 +258,7 @@ private:
 	}
 
 	void simpleBools() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/booleans")));
+		auto [module, scope] = getModule(fs::File(path("modules/booleans")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -269,7 +285,7 @@ private:
 	}
 
 	void simpleFunctionCalls() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/function_calls")));
+		auto [module, scope] = getModule(fs::File(path("modules/function_calls")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -306,7 +322,7 @@ private:
 	}
 
 	void functionParametersTest() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/function_with_parameters")));
+		auto [module, scope] = getModule(fs::File(path("modules/function_with_parameters")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -370,7 +386,7 @@ private:
 	}
 
 	void functionEndTest() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/function_end_test")));
+		auto [module, scope] = getModule(fs::File(path("modules/function_end_test")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);

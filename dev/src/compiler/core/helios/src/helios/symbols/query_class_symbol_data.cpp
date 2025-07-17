@@ -11,6 +11,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/pst_visitor.hpp>
+
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
@@ -76,7 +77,7 @@ namespace compiler::helios {
 					class_info.base = tp.value().getType();
 				} else {
 					// We just fail here, error should be reported by EvalExprToType
-					return errors::HError(errors::Failed());
+					return query::QError(errors::Failed());
 				}
 			}
 
@@ -89,7 +90,7 @@ namespace compiler::helios {
 						class_info.implements.push_back(tp.value().getType());
 					} else {
 						// We just fail here, error should be reported by EvalExprToType
-						return errors::HError(errors::Failed());
+						return query::QError(errors::Failed());
 					}
 				}
 			}

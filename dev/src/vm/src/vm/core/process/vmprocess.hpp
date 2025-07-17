@@ -1,8 +1,8 @@
 #pragma once
 
-#include <listener/listener.hpp>
-
 #include <base/optional.hpp>
+
+#include <listener/listener.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
@@ -108,7 +108,7 @@ namespace vm {
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::FilePath>, std::vector<code::CodeCollection>>& source
+			const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
 		);
 
 		/**

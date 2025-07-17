@@ -2,22 +2,24 @@
 
 #include <helios/symbols/simple.hpp>
 
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <iomanip>
 #include <sstream>
+#include <variant>
 
 namespace compiler::mir {
 	Function::Function(
-		base::StrID                         name,
-		tsh::SymbolType<>                   return_type,
-		std::vector<tsh::SymbolType<>>      parameter_types,
-		base::StableHashMap<BlockID, Block> blocks,
-		std::vector<BlockID>                block_order,
-		base::StableVector<const MirLocal>  local_list,
-		LifetimeScopeTree                   lifetime_scope_tree,
-		ScopeRef                            no_lifetime_scope,
-		helios::SymID                       helios_id
+		base::StrID                                     name,
+		tsh::SymbolType<>                               return_type,
+		std::vector<tsh::SymbolType<>>                  parameter_types,
+		base::StableHashMap<BlockID, Block>             blocks,
+		std::vector<BlockID>                            block_order,
+		base::StableVector<const MirLocal>              local_list,
+		LifetimeScopeTree                               lifetime_scope_tree,
+		ScopeRef                                        no_lifetime_scope,
+		std::variant<FunctionSymID, GlobalVariableCTOR> helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -29,7 +31,15 @@ namespace compiler::mir {
 		  no_lifetime_scope(no_lifetime_scope),
 		  helios_id(helios_id) {}
 
-	u64 Function::queryUnstablePerfectHash() const { return helios_id.queryUnstablePerfectHash(); }
+	u64 Function::queryUnstablePerfectHash() const {
+		variant_match(this->helios_id) {
+			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
+			variant_case(GlobalVariableCTOR, global_ctor) {
+				return global_ctor.global_var_id.queryUnstablePerfectHash();
+			}
+		}
+		CORE_UNREACHABLE();
+	}
 
 	bool isTerminating(Operation op) {
 		switch (op) {
@@ -72,8 +82,15 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "[MIR] Function " << name.strView() << ": TODO -> "
-			   << this->return_type.toString() << "\n";
+		output << "[MIR] Function " << name.strView() << ": ";
+		output << "(";
+		std::string_view separator = "";
+		for (auto& type: this->parameter_types) {
+			output << separator << type.toString();
+			separator = ", ";
+		}
+		output << ")";
+		output << " -> " << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";
@@ -108,7 +125,13 @@ namespace compiler::mir {
 		output << std::left << std::setw(12);
 		std::stringstream output_value;
 		if (this->output.has_value()) {
-			this->output.value()->debugPrint(output_value);
+			variant_match(this->output.value()) {
+				variant_case(LocalRef, local) { local->debugPrint(output_value); }
+				variant_case(MirGlobal, global) { global.debugPrint(output_value); }
+				variant_default {
+					CORE_PANIC("MIR debug print: Unexpected Instruction output value alternative");
+				}
+			}
 			output_value << " :=";
 		}
 		output << output_value.str() << " ";
@@ -153,6 +176,15 @@ namespace compiler::mir {
 		}
 	}
 
+	void MirGlobal::debugPrint(std::ostream& output, bool detailed) const {
+		output << "Global(" << name(helios_id).strView() << ")";
+		if (detailed) {
+			output << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
+			output << ", Type: ";
+			output << this->type.toString();
+		}
+	}
+
 	base::StrID MirLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
@@ -172,6 +204,7 @@ namespace compiler::mir {
 			variant_case(MirFunctionLiteral, func) {
 				output << "Function(" << name(func.helios_id).strView() << ")";
 			}
+			variant_case(MirGlobal, global) { global.debugPrint(output); }
 			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
 	}

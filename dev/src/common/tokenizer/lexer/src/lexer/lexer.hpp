@@ -7,10 +7,11 @@
 
 #include "token.hpp"
 
-#include <filesystem/file.hpp>
 #include <token_source/forward.hpp>
 
 #include <base/box.hpp>
+
+#include <filesystem/file.hpp>
 
 namespace lexer {
 	/**
@@ -22,5 +23,5 @@ namespace lexer {
 	 * @param file File to tokenize
 	 * @return lexer::TokenData Containing the Tokens
 	 */
-	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& file);
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& file);
 }

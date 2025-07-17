@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lir/lir_structure/lir_structure.hpp>  // @TODO #404 relax it
+
 #include <query_framework/context_fd.hpp>
 
 namespace compiler::backend_llvm {
@@ -20,4 +21,14 @@ namespace compiler::backend_llvm {
 	void addFunctionToModuleImpl(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	);
+
+	void addFunctionToModuleCtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	);
+
+	void addFunctionToModuleDtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	);
+
+	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global);
 }

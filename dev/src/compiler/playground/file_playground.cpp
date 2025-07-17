@@ -1,6 +1,6 @@
-#include <filesystem/file.hpp>
-
 #include <base/exceptions.hpp>
+
+#include <filesystem/file.hpp>
 
 #include <iostream>
 
@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./file_testing file_name\n";
 		return 1;
 	}
-	fs::FilePath file(argv[1]);
+	fs::File file(argv[1]);
 
 	auto out = file.getContent();
 	std::cout << out.size() << "\n";

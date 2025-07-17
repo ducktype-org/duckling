@@ -7,10 +7,10 @@
 
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
-
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 using fs::FsTree;
 using std::regex;
@@ -31,7 +31,7 @@ inline static base::HashMap<ModuleID, std::shared_ptr<ModuleTree>> modules{};
  * @TODO: this holding a reference is dangerous:
  * @TODO: change it during frontend queryfication #731 ?
  */
-inline static base::HashMap<FileID, SourceFile&> files{};
+inline static base::HashMap<FileID, base::Ref<SourceFile>> files{};
 
 /**
  * @brief Map storting FileID of each parsed PST (by root element ID)
@@ -45,23 +45,7 @@ inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
 /**
  * @brief Holds global map of module path to module id
  */
-inline static base::HashMap<fs::FilePath, ModuleID> module_paths{};
-
-SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
-	  path(std::move(path)),
-	  id(FileID::next()),
-	  linked_module(module_id) {
-	lang_file_name = base::StrID(this->path.stem().c_str());
-}
-
-CRef<pst::PST<>> SourceFile::getPST() {
-	if (parse_tree) {
-		return &parse_tree.value();
-	} else {
-		parse_tree.emplace(pst::PST(path));
-		return &parse_tree.value();
-	}
-}
+inline static base::HashMap<fs::File, ModuleID> module_paths{};
 
 ModuleTree::ModuleTree(): id(ModuleID::next()) {}
 
@@ -76,9 +60,9 @@ std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root)
 	// at this point references inside module tree are stable, so we can fill "files" map:
 	if (ptr->hasMainSourceFile()) {
 		auto& main = ptr->m_main_source_file.value();
-		files.put(main.id, main);
+		files.put(main.id, &main);
 	}
-	for (auto& file: ptr->m_source_files) files.put(file.id, file);
+	for (auto& file: ptr->m_source_files) files.put(file.id, &file);
 
 	return ptr;
 }
@@ -107,7 +91,7 @@ void ModuleTree::buildModuleTree(
 }
 
 void ModuleTree::handleNewFile(
-	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
+	const std::shared_ptr<ModuleTree>& module_root, const fs::File& filepath
 ) {
 	if (filepath.isDirectory()) throw base::LogicError("File is not a file, but a directory!");
 
@@ -140,21 +124,21 @@ void ModuleTree::handleNewFile(
 			submodule->m_main_source_file.emplace(filepath, submodule->getID());
 			submodule->m_parent = module_root;
 			if_opt_some(submodule->m_main_source_file, main_file) {
-				files.put(main_file.id, main_file);
+				files.put(main_file.id, &main_file);
 			}
 		}
 	} else {
 		// File contains content not related to the module.
 		if (!module_root->m_other_files.contains(extension_id))
-			module_root->m_other_files.put(extension_id, std::vector<fs::FilePath>());
+			module_root->m_other_files.put(extension_id, std::vector<fs::File>());
 		module_root->m_other_files[extension_id].push_back(filepath);
 	}
 }
 
-base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
+base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
 	if (m_parent.has_value()) {
 		CORE_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
-		return *m_parent->lock();
+		return &*m_parent->lock();
 	}
 	return {};
 }
@@ -205,7 +189,7 @@ const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& ModuleTree::getSu
 	return m_submodules;
 }
 
-const base::HashMap<base::StrID, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
+const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
 	return m_other_files;
 }
 
@@ -225,7 +209,8 @@ std::string compiler::frontend::printModuleTree(ModuleID module) {
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		const auto& module_tree = modules.at(key);
-		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); });
+		return module_tree->getParentModule().map([](const auto& parent) { return parent->getID(); }
+		);
 	}
 
 	QUERY_AUTO_NO_CACHE
@@ -288,7 +273,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		auto& file = files.at(key);
-		auto  pst  = file.getPST();
+		auto  pst  = file->getPST();
 		root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 		// @todo modify it, when making proper helios errors
@@ -316,22 +301,22 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 
 	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-	auto result  = files.at(file_id).linked_module;
+	auto result  = files.at(file_id)->linked_module;
 	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 
 	return result;
 }
 
 CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
-	query::Context&, const fs::FilePath& file_path
+	query::Context&, const fs::File& file_path
 ) {
 	u64 count = 0;
 	for (const auto& [file_id, file]: files)
-		if (file.path == file_path) count++;
+		if (file->path == file_path) count++;
 	CORE_ASSERT(count == 1, "File not found in module tree");
 
 	for (const auto& [file_id, file]: files)
-		if (file.path == file_path) return file.getPST();
+		if (file->path == file_path) return file->getPST();
 
 	CORE_UNREACHABLE();
 }

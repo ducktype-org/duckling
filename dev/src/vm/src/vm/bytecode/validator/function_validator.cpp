@@ -15,7 +15,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <variant>
 
@@ -71,7 +71,7 @@ namespace {
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
 		using RequiredAfter
-			= std::tuple<Op_staticTableLoad_lany_lptr, Op_staticTableStore_lptr_lany>;
+			= std::tuple<Op_fixedSizeTableLoad_lany_lptr, Op_fixedSizeTableStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -100,20 +100,20 @@ namespace {
 	};
 
 	template<Extension E>
-	bool acceptsExtension(const Instruction& instr) {
+	bool acceptsExtension(CRef<Instruction> instr) {
 		return holdsOneOf<
 			Cat<typename ExtensionMetadata<E>::RequiredAfter,
-		        typename ExtensionMetadata<E>::OptionalAfter>>(instr);
+		        typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
 	}
 
-	bool requiresSomeExtension(const Instruction& instr) {
-		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(instr);
+	bool requiresSomeExtension(CRef<Instruction> instr) {
+		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
 	}
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
-		const PointerType&                     pointer,
-		const StableTypeIdNameMap<TypeOfData>& tod_map,
+		const PointerType&                    pointer,
+		const StableObjIdNameMap<TypeOfData>& tod_map,
 		Args&&... error_args
 	) {
 		const auto& pointed_type = tod_map.at(pointer.inner);
@@ -156,7 +156,7 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<StableTypeIdNameMap<TypeOfData>>        tod_map;
+	CRef<StableObjIdNameMap<TypeOfData>>         tod_map;
 	[[maybe_unused]] CRef<TypeMetadata>          type_metadata;
 	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
 
@@ -167,9 +167,9 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const FunctionType&                    function_type,
-		const StableTypeIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                    type_metadata
+		const FunctionType&                   function_type,
+		const StableObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&                   type_metadata
 	):
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
@@ -228,11 +228,11 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const StableTypeIdNameMap<TypeOfData>& tod_map;
-	const TypeMetadata&                    type_metadata;
-	const StableTypeIdNameMap<GlobalData>& globals;
-	const Function&                        function;
-	FunctionType                           function_type;
+	const StableObjIdNameMap<TypeOfData>& tod_map;
+	const TypeMetadata&                   type_metadata;
+	const StableObjIdNameMap<GlobalData>& globals;
+	const Function&                       function;
+	FunctionType                          function_type;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -276,13 +276,13 @@ class FunctionValidator {
 		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
-            if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-                return inh_meta.virtual_methods.contains(instr.arg1.method_name);
-            }
+            if_opt_some(
+                type.getInheritanceMetadata(), inh_meta
+            ) return inh_meta->virtual_methods.contains(instr.arg1.method_name);
             return false;
         });
 		auto        inh_meta = it->getInheritanceMetadata().value();
-		impl_name            = inh_meta.virtual_methods[instr.arg1.method_name]->getName();
+		impl_name            = inh_meta->virtual_methods[instr.arg1.method_name]->getName();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
 		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
@@ -360,7 +360,7 @@ class FunctionValidator {
 		for (auto arg: args) {
 			variant_match(arg) {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
-	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
+	variant_case(opargs::StackLocal##BIT_COUNT, local) {                                         \
 		if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);           \
 		CRef<TypeOfData> entry = current_stack.at(local.var_name);                               \
 		variant_match(*entry) {                                                                  \
@@ -372,7 +372,7 @@ class FunctionValidator {
 		}                                                                                        \
 	}
 #define GLOBAL_CASE(BIT_COUNT)                                                                   \
-	variant_case(opargs::GlobalI##BIT_COUNT, global) {                                           \
+	variant_case(opargs::Global##BIT_COUNT, global) {                                            \
 		if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);       \
 		CRef<GlobalData> entry = globals.at(global.global_data_name);                            \
 		auto             type  = tod_map.at(entry->type);                                        \
@@ -512,9 +512,9 @@ class FunctionValidator {
 	 * @note Presence of extensions is checked by different function: `validateExtension`.
 	 */
 	void validateArgTypesNonTrivially(
-		const Instruction&                                  instruction,
-		[[maybe_unused]] base::Optional<const Instruction&> next_instruction,
-		const LocalStack&                                   current_stack
+		const Instruction&                                       instruction,
+		[[maybe_unused]] base::Optional<base::CRef<Instruction>> next_instruction,
+		const LocalStack&                                        current_stack
 	) const {
 		variant_match(instruction) {
 			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
@@ -607,6 +607,26 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
+			variant_case_novalue(Op_umul_l64_l64) {}
+			variant_case_novalue(Op_umul_l64_imm) {}
+			variant_case_novalue(Op_umul_l32_l32) {}
+			variant_case_novalue(Op_umul_l32_imm) {}
+			variant_case_novalue(Op_umod_l64_l64) {}
+			variant_case_novalue(Op_umod_l64_imm) {}
+			variant_case_novalue(Op_umod_l32_l32) {}
+			variant_case_novalue(Op_umod_l32_imm) {}
+			variant_case_novalue(Op_udiv_l64_l64) {}
+			variant_case_novalue(Op_udiv_l64_imm) {}
+			variant_case_novalue(Op_udiv_l32_l32) {}
+			variant_case_novalue(Op_udiv_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l64_l64) {}
+			variant_case_novalue(Op_ucmpG_l64_imm) {}
+			variant_case_novalue(Op_ucmpG_l32_l32) {}
+			variant_case_novalue(Op_ucmpG_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l8_l8) {}
+			variant_case_novalue(Op_ucmpG_l8_imm) {}
+
+
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type
 					= std::get<VariantType>(*current_stack.at(instr.arg0.var_name));
@@ -625,7 +645,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
 				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
@@ -652,7 +672,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
 				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_label) {}
@@ -675,11 +695,11 @@ class FunctionValidator {
 				std::function<void(TypeCRef)> check_for_superclasses = [&](TypeCRef inh_type) {
 					if (valid) return;
 					if_opt_some(inh_type->getInheritanceMetadata(), imd) {
-						if (imd.virtual_methods.contains(instr.arg1.method_name)) {
+						if (imd->virtual_methods.contains(instr.arg1.method_name)) {
 							valid = true;
 							return;
 						}
-						for (const auto& iface: imd.implements) check_for_superclasses(iface);
+						for (const auto& iface: imd->implements) check_for_superclasses(iface);
 
 						if_opt_some(inh_type->getSuperClass(), super) {
 							check_for_superclasses(super);
@@ -728,7 +748,7 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction);
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, destination.inner, instr);
 			}
 			variant_case(Op_structLoad_lany_lptr, instr) {
@@ -738,7 +758,7 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*destination), instr);
 			}
 			variant_case(Op_structStore_lptr_lany, instr) {
@@ -748,42 +768,42 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
 				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*source), instr);
 			}
-			variant_case(Op_staticTableLea_lptr_lptr, instr) {
+			variant_case(Op_fixedSizeTableLea_lptr_lptr, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& table_type
-					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (destination.inner != table_type.inner)
-					throw StaticTableTypeMismatchError(instr);
+					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_staticTableLoad_lany_lptr, instr) {
+			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& table_type
-					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (typeName(*destination) != table_type.inner)
-					throw StaticTableTypeMismatchError(instr);
+					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_staticTableStore_lptr_lany, instr) {
+			variant_case(Op_fixedSizeTableStore_lptr_lany, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& table_type
-					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (table_type.inner != typeName(*source))
-					throw StaticTableTypeMismatchError(instr);
+					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}
@@ -806,7 +826,7 @@ class FunctionValidator {
 	 * extension.
 	 */
 	void validateExtension(
-		base::Optional<const Instruction&> predecessor, const Instruction& instruction
+		base::Optional<base::CRef<Instruction>> predecessor, const Instruction& instruction
 	) const {
 		// This check assumes that the last instruction in a function is non-extendable,
 		// this is checked in `validate`.
@@ -817,12 +837,12 @@ class FunctionValidator {
 				    // if the previous instruction can take this extension.
 				    // Extensions must always come after some instruction, so it's invalid for it to
 				    // be the first instruction in a function (to not have a predecessor).
-					return predecessor.map(acceptsExtension<T>).valueOr(false);
+					return predecessor.map(acceptsExtension<T>).copyValueOr(false);
 				else
 					// It is invalid if the current instruction is not an extension, but the
 				    // previous instruction *requires* one. If there was no previous instruction,
 				    // it's not invalid.
-					return !predecessor.map(requiresSomeExtension).valueOr(false);
+					return !predecessor.map(requiresSomeExtension).copyValueOr(false);
 			},
 			instruction
 		);
@@ -908,7 +928,7 @@ class FunctionValidator {
 
 		while (index != function.body.size()) {
 			validateExtension(
-				index > 0 ? instructions[index - 1] : base::Optional<const Instruction&>(),
+				index > 0 ? &instructions[index - 1] : base::Optional<base::CRef<Instruction>>(),
 				instructions[index]
 			);
 
@@ -916,8 +936,8 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(
 				instructions[index],
-				index + 1 < instructions.size() ? instructions[index + 1]
-												: base::Optional<const Instruction&>(),
+				index + 1 < instructions.size() ? &instructions[index + 1]
+												: base::Optional<base::CRef<Instruction>>(),
 				local_stack
 			);
 
@@ -935,7 +955,7 @@ class FunctionValidator {
 				variant_case(Op_label, instr) {
 					match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
 						opt_some(label_state) {
-							if (label_state != local_stack.getStackState())
+							if (*label_state != local_stack.getStackState())
 								throw StackStructureMismatchError(
 									instr, jumps_to_label.at(instr.arg0.label_name)
 								);
@@ -993,10 +1013,10 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const StableTypeIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                    type_metadata,
-		const StableTypeIdNameMap<GlobalData>& globals,
-		const Function&                        function
+		const StableObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&                   type_metadata,
+		const StableObjIdNameMap<GlobalData>& globals,
+		const Function&                       function
 	):
 		  tod_map(tod_map),
 		  type_metadata(type_metadata),
@@ -1023,10 +1043,10 @@ public:
 };
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
-	const StableTypeIdNameMap<TypeOfData>& tod_map,
-	const TypeMetadata&                    type_metadata,
-	const StableTypeIdNameMap<GlobalData>& globals_map,
-	const Function&                        function
+	const StableObjIdNameMap<TypeOfData>& tod_map,
+	const TypeMetadata&                   type_metadata,
+	const StableObjIdNameMap<GlobalData>& globals_map,
+	const Function&                       function
 ) {
 	FunctionValidator validator(tod_map, type_metadata, globals_map, function);
 

@@ -22,16 +22,16 @@ namespace pst {
 		/**
 		 * @brief Common function for getting a list of tokens that a query depends on.
 		 */
-		auto viewDependentTokens(query::detail::NodeID id) {
+		auto viewDependentTokens(query::internal::NodeID id) {
 			using namespace std::views;
 
 			auto nodes = query::Context::getState().getGraph().getNodeDepsFiltered(
-				id, detail::PSTAccessSideInput::getID()
+				id, internal::PSTAccessSideInput::getID()
 			);
 
 			// We can retrieve the LangElement ID from the NodeId hash, because
 			// LangElement ID is used as the first element of the unstable hash value.
-			static auto get_pst_node = [](query::detail::NodeID lid) {
+			static auto get_pst_node = [](query::internal::NodeID lid) {
 				return LangElement::getByID(lid.hash.val.data.at(0));
 			};
 			static auto get_tokens = [](AccessLocked<LangElement> locked) {
@@ -48,10 +48,10 @@ namespace pst {
 		}
 	}
 
-	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID id) {
+	std::vector<dia::SourcePosition> queryPositionDependencies(query::internal::NodeID id) {
 		using namespace std::views;
 
-		static auto get_token_pos = [](CRef<tpc::Token> tok) { return tok->getPosition(); };
+		static auto get_token_pos = [](CRef<lexer::Token> tok) { return tok->getPosition(); };
 
 		auto x = viewDependentTokens(id) | transform(get_token_pos);
 
@@ -79,7 +79,7 @@ namespace pst {
 		return merged_positions;
 	}
 
-	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::detail::NodeID id) {
+	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::internal::NodeID id) {
 		using namespace std::views;
 
 		auto x = viewDependentTokens(id);

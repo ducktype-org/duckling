@@ -10,8 +10,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <query_framework/context.hpp>
 #include <typesystem/higher/queries.hpp>
+
+#include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
 
@@ -29,8 +30,9 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
-	EXPR_VISITOR(LinkedIdentifierExpr)
 	EXPR_VISITOR(CallExpr)
+	EXPR_VISITOR(AccessExpr)
+	EXPR_VISITOR(SequenceExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
 		  Expr(
@@ -273,25 +275,6 @@ namespace compiler::helios::code {
 		  ),
 		  subtypes(std::move(subtypes)) {}
 
-	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {
-		for (bool add_dot = false; auto&& symbol: symbols) {
-			if (add_dot) out << ".";
-			out << name(symbol).str();
-			add_dot = true;
-		}
-	}
-
-	LinkedIdentifierExpr::LinkedIdentifierExpr(query::Context& ctx, SymbolList symbols):
-		  Expr(
-
-			  tsh::ExpressionType(
-				  ctx.query<QueryTypeOfSymbol>(symbols.back())
-					  ->expect("Not handling errors here yet"),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
-		  symbols(std::move(symbols)) {}
-
 	UnaryOperatorExpr::UnaryOperatorExpr(BuiltinUnary operation, Box<Expr> expr):
 		  Expr(expr->expression_type),
 		  operation(operation),
@@ -324,21 +307,17 @@ namespace compiler::helios::code {
 		}
 	}
 
-	CallExpr::CallExpr(query::Context& ctx, SymID callee, std::vector<Box<Expr>> arguments):
-		  Expr(
-
-			  tsh::ExpressionType(
-				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
-	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
-	                                    .getType()),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  )
-		  ),
-		  callee(callee),
+	CallExpr::CallExpr(query::Context&, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
+		  Expr(tsh::ExpressionType(
+			  getCallResultType(callee->expression_type.getType()),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  callee(std::move(callee)),
 		  arguments(std::move(arguments)) {}
 
 	void CallExpr::debugPrint(std::ostream& out) const {
-		out << name(callee).strView() << "(";
+		callee->debugPrint(out);
+		out << "(";
 		bool add_comma = false;
 		for (auto&& arg: arguments) {
 			if (add_comma) out << ", ";
@@ -347,4 +326,27 @@ namespace compiler::helios::code {
 		}
 		out << ")";
 	}
+
+	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, base::StrID field):
+		  Expr(base->expression_type),
+		  base(std::move(base)),
+		  field(field) {}
+
+	void AccessExpr::debugPrint(std::ostream& out) const {
+		base->debugPrint(out);
+		out << "." << field.str();
+	}
+
+	SequenceExpr::SequenceExpr(query::Context&, std::vector<Box<Expr>> expressions):
+		  Expr(expressions.back()->expression_type),
+		  expressions(std::move(expressions)) {}
+
+	void SequenceExpr::debugPrint(std::ostream& out) const {
+		for (bool add_comma = false; auto&& expr: expressions) {
+			if (add_comma) out << ", ";
+			expr->debugPrint(out);
+			add_comma = true;
+		}
+	}
+
 }

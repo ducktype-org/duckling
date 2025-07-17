@@ -2,16 +2,17 @@
 
 #include "classifications.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <token_source/forward.hpp>
 #include <token_source/source.hpp>
 
 #include <base/convert.hpp>
 #include <base/int_conv.hpp>
 
+#include <diagnostic/source_position.hpp>
+
 namespace lexer {
 
-	namespace detail {
+	namespace internal {
 		std::string decodeError(
 			Ref<tokenizer::TokenSource> file, usize byte, const std::string& reason
 		) {
@@ -43,7 +44,7 @@ namespace lexer {
 
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return detail::decodeError(file, byte, reason());
+			return internal::decodeError(file, byte, reason());
 		}
 
 		[[nodiscard]]

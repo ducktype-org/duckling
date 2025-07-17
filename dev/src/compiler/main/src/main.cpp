@@ -6,20 +6,23 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <clap/clap.hpp>
 #include <config/config.hpp>
-#include <driver/driver.hpp>
-#include <filesystem/file.hpp>
+#include <driver/hout_to_binary_driver.hpp>
+#include <driver/package_compilation_driver.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
-#include <query_framework/query_entry_point.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
+
+#include <clap/clap.hpp>
+#include <filesystem/file.hpp>
+#include <init/init.hpp>
+#include <printer/stream_printer.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
@@ -191,7 +194,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
+		auto file_to_lex = options.getValue<fs::File>("file").value();
 
 		auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
@@ -228,7 +231,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
+		auto file_to_parse = options.getValue<fs::File>("file").value();
 
 		auto pst = pst::PST(file_to_parse);
 
@@ -258,7 +261,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile = options.getValue<fs::File>("module").value();
 
 		int exit_code = 0;
 
@@ -278,24 +281,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Path to the module")
 		             .required()
 		             .build());
-		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-		             .addShortName('o')
-		             .addLongName("output")
-		             .addShortDesc("Link the ouptut to the output file")
-		             .conditional(
-						 [](const clap::ParsingResult& result) {
-							 return not(result.isParam("output") && result.isFlag("dvm-backend"));
-						 },
-						 "Currently DVM backend doesn't support linking. "
-					 )
-		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("dump-llvm-ir")
 		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("dvm-backend")
-		             .addShortDesc("Compile to DVM bytcode.")
+		             .addShortDesc("Compile to DVM bytecode.")
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("compile-to-assembly")
@@ -321,7 +313,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile = options.getValue<fs::File>("module").value();
 
 		// @TODO: error handling
 		using namespace compiler;
@@ -332,34 +324,39 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto backend_type
 			= options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM;
 
-		driver::Driver driver{
-			driver::Options{
-				.backend_type           = backend_type,
-				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
-				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
-				.dvm_code_only_memory   = options.isFlag("dvm-run"),
-				.add_builtin_library    = options.isFlag("add-builtin-library"),
-				.external_objects_files = {},
-				.external_libs          = {},
+		driver::HoutToBinaryDriver driver{
+			driver::BackendOptions{
+				.backend_type         = backend_type,
+				.compile_to_assembly  = options.isFlag("compile-to-assembly"),
+				.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
+				.dvm_code_only_memory = options.isFlag("dvm-run"),
+				.add_builtin_library  = options.isFlag("add-builtin-library"),
 			},
 		};
 
-		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+		// mock collection for purpose of compilation of single module:
+		artifacts::ArtifactCollection base_artifact_collection{
+			"./duck_build/",
+		};
+		auto output_name = backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
+		auto output_artifact
+			= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
 
-		if (options.isParam("output"))
-			driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
-
-		if (options.isFlag("dvm-run")) {
-			auto run_result = driver.run();
-			if (run_result.has_value()) {
-				return run_result.value().exit_code;
-			} else {
-				std::cerr << "Error: " << run_result.error() << "\n";
-				return 1;
+		int exit_code = 0;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			driver.compileHOUTUnit(ctx, &top_level, base::StrID("main_module"), output_artifact);
+			if (options.isFlag("dvm-run")) {
+				auto run_result = driver.run();
+				if (run_result.has_value()) {
+					exit_code = run_result.value().exit_code;
+				} else {
+					std::cerr << "Error: " << run_result.error() << "\n";
+					exit_code = 1;
+				}
 			}
-		}
+		});
 
-		return 0;
+		return exit_code;
 	});
 	commands.add("compile_package", "compile given package into a binary.", [&]() {
 		// modify clap as needed:
@@ -370,44 +367,33 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-		             .addShortName('o')
-		             .addLongName("output")
-		             .addShortDesc("Path to the output file")
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('a')
+		             .addLongName("artifact-location")
+		             .addShortDesc("Path to the top-level folder with build artifacts")
 		             .required()
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("dvm-backend")
+		             .addShortDesc("Compile to DVM bytecode instead of exe.")
 		             .build());
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile   = options.getValue<fs::File>("module").value();
+		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
+		                                                       : compiler::driver::BackendType::LLVM;
+		auto artifact_location = options.getValue<fs::File>("artifact-location").value();
 
 		defer(printContextErrors());
 
-		// @TODO: error handling
-		using namespace compiler;
-		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
-
-		driver::Driver driver{
-			driver::Options{
-				.backend_type           = driver::BackendType::LLVM,
-				.compile_to_assembly    = false,
-				.dump_llvm_ir           = false,
-				.dvm_code_only_memory   = false,
-				.add_builtin_library    = true,
-				.external_objects_files = {},
-				.external_libs          = {},
-			},
+		compiler::driver::PackageCompilationDriver driver{
+			backend_type,
+			path_to_compile,
+			artifact_location.nativePath(),
 		};
-
-		u64 i = 0;
-		for (const auto& module: modules)
-			driver.compileHOUTUnit(
-				&module, base::StrID(base::strConcat("main_module", i++).c_str())
-			);
-
-		driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
+		driver.compilerEntirePackageIntoBinary();
 
 		return 0;
 	});

@@ -1,8 +1,9 @@
-#include <artifacts/artifacts.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/optional.hpp>
+
+#include <artifacts/artifacts.hpp>
+#include <filesystem/file.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -22,6 +23,8 @@ base::RawView artifacts::BlobArtifact::getDataView() const {
 
 artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	  PATH(std::move(root)) {
+	CORE_ASSERT(std::filesystem::exists(PATH), "ArtifactCollection path does not exist");
+	CORE_ASSERT(std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory");
 	loadData();
 }
 
@@ -72,7 +75,7 @@ void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& conte
 void artifacts::ArtifactCollection::loadData() {
 	// Read blob data.
 	auto artc_file_path = getArtcFile();
-	if (exists(artc_file_path)) {
+	if (fs::FileManager::fileExists(artc_file_path)) {
 		std::ifstream     artc_file(artc_file_path);
 		std::stringstream content;
 		content << artc_file.rdbuf();
@@ -92,7 +95,8 @@ void artifacts::ArtifactCollection::loadData() {
 
 void artifacts::ArtifactCollection::flushDown() {
 	auto artc_file_path = getArtcFile();
-	std::cerr << "Flushing ArtifactCollection at: " << absolute(artc_file_path) << '\n';
+	std::cerr << "Flushing ArtifactCollection at: " << std::filesystem::absolute(artc_file_path)
+			  << '\n';
 
 	std::ofstream file(artc_file_path);
 	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
@@ -129,7 +133,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 		!sub_collections.contains(collection_name), "Sub-collection with this name already exists"
 	);
 	auto new_path = PATH / collection_name.strView();
-	if (!exists(new_path)) create_directory(new_path);
+	if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
 	sub_collections.put(
 		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
 	);
@@ -156,7 +160,7 @@ base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection
 	base::StrID collection_name
 ) {
 	return sub_collections.atMaybe(collection_name).map([](const auto& ref) {
-		return ref.refMut();
+		return ref->refMut();
 	});
 }
 
@@ -166,14 +170,14 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactNew(
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	auto file_path = PATH / artifact_name.strView();
 
-	if (!exists(file_path)) std::ofstream(file_path).close();  // create the file
+	if (!std::filesystem::exists(file_path)) std::ofstream(file_path).close();  // create the file
 
 	file_artifacts.put(
 		artifact_name,
 		FileArtifact{
 			.PARENT = this,
 			.NAME   = artifact_name,
-			.FILE   = file_path,
+			.FILE   = fs::File(file_path),
 		}
 	);
 	return fileArtifactAt(artifact_name);
@@ -183,8 +187,8 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNe
 	base::StrID artifact_name
 ) {
 	match_optional(fileArtifactAtMaybe(artifact_name)) {
-		opt_some(artifact) return artifact;
-		opt_none return fileArtifactAt(artifact_name);
+		opt_some(artifact) return *artifact;
+		opt_none return fileArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
@@ -194,7 +198,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAt(bas
 	return file_artifacts.at(artifact_name);
 }
 
-base::Optional<const artifacts::FileArtifact&> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(
 	base::StrID artifact_name
 ) const {
 	return file_artifacts.atMaybe(artifact_name);
@@ -213,8 +217,8 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNe
 	base::StrID artifact_name
 ) {
 	match_optional(blobArtifactAtMaybe(artifact_name)) {
-		opt_some(artifact) return artifact;
-		opt_none return blobArtifactAt(artifact_name);
+		opt_some(artifact) return *artifact;
+		opt_none return blobArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
@@ -224,7 +228,7 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAt(bas
 	return blob_artifacts.at(artifact_name);
 }
 
-base::Optional<const artifacts::BlobArtifact&> artifacts::ArtifactCollection::blobArtifactAtMaybe(
+base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybe(
 	base::StrID artifact_name
 ) const {
 	return blob_artifacts.atMaybe(artifact_name);

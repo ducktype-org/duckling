@@ -99,7 +99,9 @@ namespace compiler::backend_llvm {
 	 * @brief Compiles the module to an object file or assembly file.
 	 */
 	void compileModuleToObject(
-		Ref<ModuleImpl> module_impl, base::StrID output_file, CompilationOutputType output_type
+		Ref<ModuleImpl>              module_impl,
+		const std::filesystem::path& output_file,
+		CompilationOutputType        output_type
 	) {
 		auto m              = module_impl->module.refMut();
 		auto target_triple  = llvm::sys::getDefaultTargetTriple();
@@ -109,9 +111,7 @@ namespace compiler::backend_llvm {
 
 		// Using raw_fd_ostream is the recommended way to write files in LLVM,
 		// as it is much more efficient than using std::ofstream.
-		llvm::raw_fd_ostream output_stream(
-			output_file.strView(), error_code, llvm::sys::fs::OF_None
-		);
+		llvm::raw_fd_ostream output_stream(output_file.native(), error_code, llvm::sys::fs::OF_None);
 		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
 
 		if (output_type == CompilationOutputType::Assembly)
@@ -119,6 +119,6 @@ namespace compiler::backend_llvm {
 		else
 			emitObject(m, target_machine, &output_stream);
 
-		llvm::errs() << "Compiled LLVM module to the file: " << output_file.strView() << "\n";
+		llvm::errs() << "Compiled LLVM module to the file: " << output_file.string() << "\n";
 	}
 }

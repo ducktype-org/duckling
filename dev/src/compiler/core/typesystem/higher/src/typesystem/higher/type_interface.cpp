@@ -3,9 +3,10 @@
 #include "queries.hpp"
 
 #include <helios/symbols/simple.hpp>
-#include <query_framework/context.hpp>
 
 #include <base/optional.hpp>
+
+#include <query_framework/context.hpp>
 
 namespace tsh {
 	namespace {
@@ -85,7 +86,7 @@ namespace tsh {
 		// Since this resolution step really only considers methods, we discard fields.
 		if (method.isField()) return non_matches;
 
-		std::vector<Parameter> parameters = method.getParameters().value();
+		std::vector<Parameter> parameters = *method.getParameters().value();
 		std::vector<bool>      param_was_provided(parameters.size());
 		bool                   coercion_present = false;
 

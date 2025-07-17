@@ -14,14 +14,15 @@
 #include <pst_parser/elements/hierarchy/not_statements/fun_param.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <pst_parser/pst_visitor.hpp>
+
+#include <base/anycast.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#include <base/anycast.hpp>
-
 namespace compiler::helios::test_utils {
-	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
+	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
@@ -72,10 +73,11 @@ namespace compiler::helios::test_utils {
 
 	Box<code::Expr> getExprOfConst(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
+				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
 		public:
@@ -89,15 +91,16 @@ namespace compiler::helios::test_utils {
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
-		return std::move(visitor.expr_tree).value();
+		return std::move(visitor.expr_tree.value()).value();
 	}
 
 	Box<code::Expr> getExprOfVariable(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>, errors::Failed>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
+				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
+				expr_tree.emplace(query::entryPoint<QueryHoutOfExpr>(expr));
 			}
 
 		public:
@@ -111,7 +114,7 @@ namespace compiler::helios::test_utils {
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
-		return std::move(visitor.expr_tree).value();
+		return std::move(visitor.expr_tree.value()).value();
 	}
 
 	ScopeID getFunctionBodyScope(SymID sym) {

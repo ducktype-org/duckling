@@ -6,8 +6,11 @@
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <base/ints.hpp>
+#include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
+#include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
 
@@ -200,15 +203,50 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Represents a global value in MIR.
+	 *
+	 * This structure is used to reference a global variable in MIR code. It is directly connected
+	 * to the value from HOUT global data, allowing the MIR to operate on global variables defined
+	 * at the HOUT level.
+	 *
+	 * @details
+	 * - The `helios_id` field is the HELIOS SymID of the global variable, used for referencing.
+	 * - The `type` field stores the type of the global variable.
+	 *
+	 * This structure enables MIR instructions to refer to and manipulate global variables that
+	 * originate from HOUT global data.
+	 */
+	struct MirGlobal final {
+		/**
+		 * @brief HELIOS SymID of the global variable.
+		 * It is used to reference the global variable in the code.
+		 */
+		helios::SymID helios_id;
+
+		/**
+		 * @brief Type of the global variable.
+		 */
+		tsh::SymbolType<> type;
+
+		MirGlobal(helios::SymID helios_id, tsh::SymbolType<> type):
+			  helios_id(helios_id),
+			  type(type) {}
+
+		bool operator==(const MirGlobal& other) const = default;
+
+		void debugPrint(std::ostream& output, bool detailed = false) const;
+	};
+
+	/**
 	 * @brief Structure representing any MIR value.
 	 */
 	struct MIRValue final {
 	private:
-		// @TODO: global, literal, ...
+		// @TODO: literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
 		using ValueType
-			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
+			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
 
 		ValueType value;
 
@@ -224,6 +262,8 @@ namespace compiler::mir {
 		MIRValue(BlockID value): value(value) {}
 
 		MIRValue(MirFunctionLiteral value): value(value) {}
+
+		MIRValue(MirGlobal value): value(value) {}
 
 		bool operator==(const MIRValue& other) const = default;
 
@@ -250,6 +290,11 @@ namespace compiler::mir {
 		bool isLocal() const {
 			return std::holds_alternative<LocalRef>(value);
 		}
+
+		[[nodiscard]]
+		bool isGlobal() const {
+			return std::holds_alternative<MirGlobal>(value);
+		}
 	};
 
 	/**
@@ -275,7 +320,7 @@ namespace compiler::mir {
 	struct Instruction final {
 		Operation operation = Operation::Uninitialized;
 
-		base::Optional<LocalRef> output;
+		base::Optional<std::variant<LocalRef, MirGlobal>> output;
 
 		std::vector<MIRValue> arguments;
 
@@ -299,11 +344,11 @@ namespace compiler::mir {
 		Instruction(Instruction&&) = default;
 
 		Instruction(
-			Operation                  operation,
-			base::Optional<LocalRef>   output,
-			std::vector<MIRValue>      arguments,
-			std::vector<OperationFlag> flags,
-			ScopeRef                   scope
+			Operation                                         operation,
+			base::Optional<std::variant<LocalRef, MirGlobal>> output,
+			std::vector<MIRValue>                             arguments,
+			std::vector<OperationFlag>                        flags,
+			ScopeRef                                          scope
 		):
 			  operation(operation),
 			  output(output),
@@ -355,6 +400,14 @@ namespace compiler::mir {
 		ScopeRef beginScope() const;
 	};
 
+	struct FunctionSymID final {
+		helios::SymID id;
+	};
+
+	struct GlobalVariableCTOR final {
+		helios::SymID global_var_id;
+	};
+
 	/**
 	 * @brief Function in MIR.
 	 */
@@ -397,10 +450,13 @@ namespace compiler::mir {
 		 */
 		ScopeRef no_lifetime_scope;
 
-		// helios ID for hashes, ... this it temporary?
-		// pushing this ID all the way here is problematic
-		// it should be optional at best
-		helios::SymID helios_id;
+		/**
+		 * HELIOS SymID releted to the function.
+		 * Functions without a helios_id are functions created for eg. from expressions
+		 */
+		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;
+
+		HSymID helios_id;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
@@ -420,7 +476,7 @@ namespace compiler::mir {
 			base::StableVector<const MirLocal>  local_list,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			ScopeRef                            no_lifetime_scope,
-			helios::SymID                       helios_id
+			HSymID                              helios_id
 		);
 
 		[[nodiscard]]

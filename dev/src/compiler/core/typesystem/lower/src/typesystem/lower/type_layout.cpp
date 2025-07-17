@@ -2,10 +2,11 @@
 
 #include "queries.hpp"
 
-#include <query_framework/context.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/variant.hpp>
+
+#include <query_framework/context.hpp>
 
 using base::bytes2bits;
 
@@ -155,7 +156,7 @@ namespace tsl {
 			ss << getIndent(indent + 1) << element_layout.toStringIdentification() << "\n";
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+		ss << getIndent(indent) << "} : " << base::toString(getSize());
 		return ss.str();
 	}
 
@@ -198,8 +199,8 @@ namespace tsl {
 		std::stringstream ss{};
 
 		// Display the tag and data sizes
-		ss << getIndent(indent) << "variant (tag : " << std::to_string(tag_size)
-		   << ", data : " << std::to_string(data_size) << ") {\n";
+		ss << getIndent(indent) << "variant (tag : " << base::toString(tag_size)
+		   << ", data : " << base::toString(data_size) << ") {\n";
 
 		// Display the components
 		for (const auto component_type: index_to_type) {
@@ -211,7 +212,7 @@ namespace tsl {
 		}
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+		ss << getIndent(indent) << "} : " << base::toString(getSize());
 
 		return ss.str();
 	}
@@ -262,11 +263,11 @@ namespace tsl {
 			else
 				ss << getIndent(indent + 1) << component_layout.toStringIdentification();
 			// Display the offset
-			ss << " @ " << std::to_string(component_offset) << "\n";
+			ss << " @ " << base::toString(component_offset) << "\n";
 		}
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+		ss << getIndent(indent) << "} : " << base::toString(getSize());
 
 		return ss.str();
 	}
@@ -344,11 +345,11 @@ namespace tsl {
 			else
 				ss << getIndent(indent + 1) << field_layout.toStringIdentification();
 			// Display the offset
-			ss << " @ " << std::to_string(field_offset) << "\n";
+			ss << " @ " << base::toString(field_offset) << "\n";
 		}
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+		ss << getIndent(indent) << "} : " << base::toString(getSize());
 
 		return ss.str();
 	}

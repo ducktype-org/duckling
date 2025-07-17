@@ -1,6 +1,7 @@
-#include <tester/tester.hpp>
-
 #include <base/maps.hpp>
+#include <base/ref.hpp>
+
+#include <tester/tester.hpp>
 
 class AtMaybeTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -18,8 +19,8 @@ private:
 		m.put(1, "one");
 		m.put(2, "two");
 		ASSERT_EQUAL(true, m.contains(1));
-		ASSERT_EQUAL("one", m.atMaybe(1).value());
-		ASSERT_EQUAL("two", m.atMaybe(2).value());
+		ASSERT_EQUAL("one", *(m.atMaybe(1).value()));
+		ASSERT_EQUAL("two", *(m.atMaybe(2).value()));
 		ASSERT_EQUAL(false, m.atMaybe(3).has_value());
 	}
 
@@ -28,8 +29,8 @@ private:
 		m.put(1, "one");
 		m.put(2, "two");
 		ASSERT_EQUAL(true, m.contains(1));
-		ASSERT_EQUAL("one", m.atMaybe(1).value());
-		ASSERT_EQUAL("two", m.atMaybe(2).value());
+		ASSERT_EQUAL("one", *(m.atMaybe(1).value()));
+		ASSERT_EQUAL("two", *(m.atMaybe(2).value()));
 		ASSERT_EQUAL(false, m.atMaybe(3).has_value());
 	}
 };

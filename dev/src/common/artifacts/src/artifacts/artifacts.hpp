@@ -1,12 +1,12 @@
 #pragma once
 
-#include <filesystem/file.hpp>
-#include <hashing/hash.hpp>
-
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
+
+#include <filesystem/file.hpp>
+#include <hashing/hash.hpp>
 
 #include <type_traits>
 
@@ -46,13 +46,8 @@ namespace artifacts {
 
 		/**
 		 * @brief File that stores this `FileArtifact`'s data.
-		 * @note Currently we are not providing any functionality regarding read/writing, so
-		 * feel free to simply read and write to and from this file.
-		 * @note fs::FilePath when lazily reads the content for pointed file the first time, it will
-		 * not reload it's content. Also, we heavily modify filesystem structure, which our
-		 * `fs::FilePath` is not suited for.
 		 */
-		const std::filesystem::path FILE;
+		const fs::File FILE;
 	};
 
 	/**
@@ -136,7 +131,8 @@ namespace artifacts {
 
 		const FileArtifact& fileArtifactAt(base::StrID artifact_name) const;
 
-		base::Optional<const FileArtifact&> fileArtifactAtMaybe(base::StrID artifact_name) const;
+		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
+		) const;
 
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////
 
@@ -146,7 +142,8 @@ namespace artifacts {
 
 		const BlobArtifact& blobArtifactAt(base::StrID artifact_name) const;
 
-		base::Optional<const BlobArtifact&> blobArtifactAtMaybe(base::StrID artifact_name) const;
+		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybe(base::StrID artifact_name
+		) const;
 
 		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 

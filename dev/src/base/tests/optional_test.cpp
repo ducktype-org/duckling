@@ -3,11 +3,13 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
+#include <base/optional.hpp>
+#include <base/ref.hpp>
+
 #include <tester/tester.hpp>
 
-#include <base/optional.hpp>
-
 #include <expected>
+#include <sstream>
 
 using base::Optional;
 
@@ -32,16 +34,32 @@ public:
 		TESTER_ADD_TEST(ifOptSomeTest);
 		TESTER_ADD_TEST(testMatchErr);
 		TESTER_ADD_TEST(testExpect);
+		TESTER_ADD_TEST(testPreservingValueCategories);
+		TESTER_ADD_TEST(testAddresses);
+		TESTER_ADD_TEST(testCopyValueOr);
 	}
 
-	template<class T, class U>
+	template<typename X>
+	struct is_ref: std::false_type {};
+
+	template<typename Y>
+	struct is_ref<Ref<Y>>: std::true_type {};
+
+	template<typename T, typename U>
 	void spaceshipPaste(T& a, T& b, base::Optional<U>& o1, base::Optional<U>& o2) {
-		if (a < b) ASSERT_EQUAL(true, o1 < o2);
-		if (a == b) ASSERT_EQUAL(true, o1 == o2);
-		if (a <= b) ASSERT_EQUAL(true, o1 <= o2);
-		if (a > b) ASSERT_EQUAL(true, o1 > o2);
-		if (a != b) ASSERT_EQUAL(true, o1 != o2);
-		if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
+		auto get_val = [](auto& opt) -> decltype(auto) {
+			if constexpr (is_ref<U>::value)
+				return *opt.value();
+			else
+				return opt.value();
+		};
+
+		if (a < b) ASSERT_EQUAL(true, get_val(o1) < get_val(o2));
+		if (a == b) ASSERT_EQUAL(true, get_val(o1) == get_val(o2));
+		if (a <= b) ASSERT_EQUAL(true, get_val(o1) <= get_val(o2));
+		if (a > b) ASSERT_EQUAL(true, get_val(o1) > get_val(o2));
+		if (a != b) ASSERT_EQUAL(true, get_val(o1) != get_val(o2));
+		if (a >= b) ASSERT_EQUAL(true, get_val(o1) >= get_val(o2));
 	}
 
 	void basicTest() {
@@ -53,6 +71,18 @@ public:
 		opt2 = base::Optional(2);
 		ASSERT_TRUE(opt2.has_value());
 		ASSERT_EQUAL(opt2.value(), 2);
+
+		opt2 = opt;
+		ASSERT_TRUE(opt.has_value());
+		ASSERT_TRUE(opt2.has_value());
+		ASSERT_EQUAL(opt.value(), 4);
+		ASSERT_EQUAL(opt2.value(), 4);
+
+		opt2.value() = 3;
+		ASSERT_TRUE(opt.has_value());
+		ASSERT_TRUE(opt2.has_value());
+		ASSERT_EQUAL(opt.value(), 4);
+		ASSERT_EQUAL(opt2.value(), 3);
 	}
 
 	void macroTest() {
@@ -103,6 +133,20 @@ public:
 		);
 	}
 
+	struct MemberFunction {
+		int value;
+
+		// Making the type non-copyable
+		MemberFunction(int v): value{ v } {}
+
+		MemberFunction(const MemberFunction&)            = delete;
+		MemberFunction& operator=(const MemberFunction&) = delete;
+
+		Optional<int> memberFunctionL() & { return value; }
+
+		Optional<int> memberFunctionR() && { return 2 * value; }
+	};
+
 	void mapTest() {
 		Optional<int> opt(4);
 
@@ -115,6 +159,13 @@ public:
 		Optional<int> empty;
 		auto          result3 = empty.map([](int val) { return val * 2; });
 		assertTrue(result3.empty(), "Result3 is not empty!");
+
+		Optional<MemberFunction> opt2{ 10 };
+		auto                     result4 = opt2.map(&MemberFunction::memberFunctionL);
+		ASSERT_EQUAL(result4.value(), 10);
+
+		auto result5 = std::move(opt2).map(&MemberFunction::memberFunctionR);
+		ASSERT_EQUAL(result5.value(), 20);
 	}
 
 	void flatMapTest() {
@@ -125,16 +176,23 @@ public:
 		Optional<int> empty;
 		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
 		assertTrue(result2.empty(), "Result2 is not empty!");
+
+		Optional<MemberFunction> opt2{ 10 };
+		auto                     result3 = opt2.flatMap(&MemberFunction::memberFunctionL);
+		ASSERT_EQUAL(result3.value(), 10);
+
+		auto result4 = std::move(opt2).flatMap(&MemberFunction::memberFunctionR);
+		ASSERT_EQUAL(result4.value(), 20);
 	}
 
 	void testReference() {
-		std::vector<int>            vec = { 1, 2, 3 };
-		Optional<std::vector<int>&> opt_vec(vec);
-		opt_vec.value()[0]++;
+		std::vector<int>                      vec = { 1, 2, 3 };
+		Optional<base::Ref<std::vector<int>>> opt_vec(&vec);
+		(*opt_vec.value())[0]++;
 		vec[1] = 30;
 		for (usize i = 0; i < vec.size(); i++) {
 			assertTrue(
-				vec[i] == opt_vec.value()[i],
+				vec[i] == (*opt_vec.value())[i],
 				base::strConcat("Values at index ", i, " are not equal, but it's a reference.")
 			);
 		}
@@ -154,12 +212,12 @@ public:
 		b = str2;
 		ASSERT_EQUAL(str2, *b);
 
-		base::Optional<std::string&> c;
-		c = str1;
-		ASSERT_EQUAL(str1, *c);
-		c = str2;
-		ASSERT_EQUAL(str2, *c);
-		c.value()[0] = 'd';
+		base::Optional<base::Ref<std::string>> c;
+		c = &str1;
+		ASSERT_EQUAL(str1, *c.value());
+		c = &str2;
+		ASSERT_EQUAL(str2, *c.value());
+		(*c.value())[0] = 'd';
 		ASSERT_EQUAL(str2[0], 'd');
 	}
 
@@ -170,13 +228,13 @@ public:
 		ASSERT_EQUAL("2", *a);
 		ASSERT_EQUAL("1", *b);
 
-		std::string                  str1 = "123";
-		std::string                  str2 = "321";
-		base::Optional<std::string&> c    = str1;
-		base::Optional<std::string&> d    = str2;
+		std::string                            str1 = "123";
+		std::string                            str2 = "321";
+		base::Optional<base::Ref<std::string>> c    = &str1;
+		base::Optional<base::Ref<std::string>> d    = &str2;
 		std::swap(c, d);
-		ASSERT_EQUAL(str2, *c);
-		ASSERT_EQUAL(str1, *d);
+		ASSERT_EQUAL(str2, *c.value());
+		ASSERT_EQUAL(str1, *d.value());
 	}
 
 	void testFromDocs() {
@@ -198,10 +256,10 @@ public:
 		// --------------------------------------------------
 
 		// base::Optional can also hold a reference!
-		std::string                  name = "Duckling";
-		base::Optional<std::string&> opt_name(name);
+		std::string                            name = "Duckling";
+		base::Optional<base::Ref<std::string>> opt_name(&name);
 
-		opt_name.value().push_back('!');
+		opt_name.value()->push_back('!');
 		ASSERT_EQUAL("Duckling!", name);
 	}
 
@@ -210,8 +268,8 @@ public:
 		int b = 2;
 		// Reference
 		for (int i = 0; i < 3; i++) {
-			base::Optional<int&> o1 = a;
-			base::Optional<int&> o2 = b;
+			base::Optional<base::Ref<int>> o1 = &a;
+			base::Optional<base::Ref<int>> o2 = &b;
 			spaceshipPaste(a, b, o1, o2);
 			a++;
 		}
@@ -245,10 +303,10 @@ public:
 		opt->push_back('c');
 		ASSERT_EQUAL("c", opt.value());
 
-		std::string                  str;
-		base::Optional<std::string&> opt_ref(str);
-		opt_ref->push_back('r');
-		ASSERT_EQUAL("r", opt_ref.value());
+		std::string                            str;
+		base::Optional<base::Ref<std::string>> opt_ref(&str);
+		opt_ref.value()->push_back('r');
+		ASSERT_EQUAL("r", *opt_ref.value());
 	}
 
 	void ifOptSomeTest() {
@@ -327,7 +385,7 @@ public:
 
 	void testExpect() {
 		try {
-			(void) Optional<float&>().expect<int>(21);
+			(void) Optional<base::Ref<float>>().expect<int>(21);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 21); }
 
@@ -336,6 +394,178 @@ public:
 			(void) empty.expect<int>(42);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 42); }
+	}
+
+	template<typename OptionalT, typename ExpectedValueT>
+	void assertValueT() {
+#define ASSERT_EQUAL_TYPES(type1, type2) ASSERT_TRUE((std::same_as<type1, type2>) )
+#define optional                         std::declval<OptionalT>()
+#define expected_value                   std::declval<ExpectedValueT>()
+
+		ASSERT_EQUAL_TYPES(decltype(optional.value()), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(*optional), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.expect("")), ExpectedValueT);
+		ASSERT_EQUAL_TYPES(decltype(optional.template expect<int>(5)), ExpectedValueT);
+
+#undef expected_value
+#undef optional
+#undef ASSERT_EQUAL_TYPES
+	}
+
+	void testPreservingValueCategories() {
+		// Value is an x-value
+		assertValueT<Optional<int>&&, int&&>();
+		assertValueT<const Optional<int>&&, const int&&>();
+
+		// Value is an l-value
+		assertValueT<Optional<int>&, int&>();
+		assertValueT<const Optional<int>&, const int&>();
+	}
+
+	void testAddresses() {
+		std::string test_brief = "Divergent address of";
+		std::string state;
+
+		auto assert_equal_addr = [&](u32& expected, u32& got, const std::string& message) {
+			assertEqual(&expected, &got, test_brief + ": " + message + ", " + state);
+		};
+
+		Optional<u32> optional{ 21 };
+		u32&          internal_integer = optional.value();
+		u32           other_integer    = 10;
+		assert_equal_addr(internal_integer, optional.value(), "value");
+		assert_equal_addr(internal_integer, *optional, "*operator");
+		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");
+		assert_equal_addr(internal_integer, optional.expect<std::string>(""), "expect with error");
+
+		optional = Optional<u32>{ 37 };
+		state    = "after copy";
+		assert_equal_addr(internal_integer, optional.value(), "value");
+		assert_equal_addr(internal_integer, *optional, "operator*");
+		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");
+		assert_equal_addr(internal_integer, optional.expect<std::string>(""), "expect with error");
+	}
+
+	/**
+	 * @struct CtrAssignCounter
+	 * @brief Represents the number of times the constructors and assignments where invoked.
+	 */
+	struct CtrAssignCounter {
+		u32 value_constructed = 0;
+		u32 move_constructed  = 0;
+		u32 copy_constructed  = 0;
+		u32 move_assigned     = 0;
+		u32 copy_assigned     = 0;
+		u32 destructed        = 0;
+
+		void reset() { *this = CtrAssignCounter{}; }
+	};
+
+	/**
+	 * @struct CountCtrStruct
+	 * @brief Holds a u32 value and counts how many times each constructor was invoked.
+	 */
+	struct CountCtrStruct {
+		static CtrAssignCounter& counter() {
+			static CtrAssignCounter counter{};
+			return counter;
+		}
+
+		auto operator<=>(const CountCtrStruct&) const = default;
+
+		u32 value;
+
+		CountCtrStruct(u32 value) noexcept: value{ value } { ++counter().value_constructed; }
+
+		CountCtrStruct(CountCtrStruct&& other) noexcept: value{ other.value } {
+			++counter().move_constructed;
+		}
+
+		CountCtrStruct(const CountCtrStruct& other) noexcept: value{ other.value } {
+			++counter().copy_constructed;
+		}
+
+		CountCtrStruct& operator=(const CountCtrStruct& other) & noexcept {
+			value = other.value;
+			++counter().copy_assigned;
+			return *this;
+		}
+
+		CountCtrStruct& operator=(CountCtrStruct&& other) & noexcept {
+			value = other.value;
+			++counter().move_assigned;
+			return *this;
+		}
+
+		~CountCtrStruct() noexcept { ++counter().destructed; }
+	};
+
+	/**
+	 * @brief Checks one-by-one if each constructor and assignment was invoked exactly the
+	 * number of times it was expected to be, printing an informing message on error.
+	 * After that it resets the counts.
+	 */
+	void checkCountsAndReset(CtrAssignCounter counter, std::string description) {
+		auto details = [](u32 expected, u32 got) -> std::string {
+			return (std::stringstream{} << "expected: " << expected << ", but got: " << got).str();
+		};
+
+		auto check_counter = [&](u32 CtrAssignCounter::* value, const std::string& name) {
+			assertEqual(
+				counter.*value,
+				CountCtrStruct::counter().*value,
+				"Unexpected " + name + " (" + description + ") "
+					+ details(counter.*value, CountCtrStruct::counter().*value)
+			);
+		};
+		check_counter(&CtrAssignCounter::value_constructed, "value constructor");
+		check_counter(&CtrAssignCounter::copy_constructed, "copy constructor");
+		check_counter(&CtrAssignCounter::move_constructed, "move constructor");
+		check_counter(&CtrAssignCounter::copy_assigned, "copy assignment");
+		check_counter(&CtrAssignCounter::move_assigned, "move assignment");
+		check_counter(&CtrAssignCounter::destructed, "destructed");
+
+		CountCtrStruct::counter().reset();
+	}
+
+	void testCopyValueOr() {
+		// Testing if copyValueOr does not return a dangling reference.
+		CountCtrStruct::counter().reset();
+		auto&& result1 = Optional<CountCtrStruct>{ 3 }.copyValueOr(CountCtrStruct{ 4 });
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 2,
+				.move_constructed  = 1,
+				.destructed        = 2,
+			},
+			"copyValueOr on non-empty r-value"
+		);
+		assertEqual(CountCtrStruct{ 3 }, result1, "copyValueOr failed (non-empty r-value)");
+
+		CountCtrStruct::counter().reset();
+		auto&& result2 = Optional<CountCtrStruct>{}.copyValueOr(CountCtrStruct{ 4 });
+		checkCountsAndReset(
+			CtrAssignCounter{
+				.value_constructed = 1,
+				.move_constructed  = 1,
+				.destructed        = 1,
+			},
+			"copyValueOr on empty r-value"
+		);
+		assertEqual(CountCtrStruct{ 4 }, result2, "copyValueOr failed (empty r-value)");
+
+		// Testing if just passing constructor arguments will suffice.
+		Optional<CountCtrStruct> optional{};
+		assertEqual(
+			CountCtrStruct{ 4 }, optional.copyValueOr({ 4 }), "copyValueOr failed (empty r-value)"
+		);
+
+		CountCtrStruct value{ 5 };
+		assertEqual(
+			CountCtrStruct{ 5 },
+			Optional<CountCtrStruct>{}.copyValueOr(value),
+			"copyValueOr failed (empty r-value)"
+		);
 	}
 };
 

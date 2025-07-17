@@ -2,7 +2,6 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <helios/helios_result.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -17,7 +16,6 @@
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_impl.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -25,6 +23,9 @@
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <set>
 
@@ -537,7 +538,7 @@ namespace compiler::helios {
 			if (pst_ref.getLogger()->good()) {
 				return { pst_ref.getRootElement() };
 			} else {
-				return errors::HError(
+				return query::QError(
 					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
 				);
 			}
@@ -545,7 +546,7 @@ namespace compiler::helios {
 
 		static auto load(UKHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
-				return QResWithACD{ extractResult(value.value().data), value->acd };
+				return QResWithACD{ extractResult(value.value()->data), (value.value())->acd };
 			return {};
 		}
 

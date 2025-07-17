@@ -1,6 +1,7 @@
 #include "compiler.hpp"
 
 #include <base/int_conv.hpp>
+#include <base/ints.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
@@ -19,22 +20,22 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <expected>
 
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableTypeIdNameMap<code::Function>&         func_map;
-			const TypeMetadata&                                type_map;
-			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
-			const base::HashMap<i32, base::StrID>&             method_id_to_name;
-			const base::HashMap<base::StrID, i32>&             method_name_to_id;
-			base::Optional<code::Function>                     function{};
-			base::HashMap<base::StrID, usize>                  label_positions{};
-			base::HashMap<base::StrID, usize>                  local_offset_map{};
-			usize                                              local_stack_size{};
+			const StableObjIdNameMap<code::Function>&         func_map;
+			const TypeMetadata&                               type_map;
+			const StableObjIdNameMap<TypeCRef, GlobalDataID>& globals;
+			const base::HashMap<u64, base::StrID>&            method_id_to_name;
+			const base::HashMap<base::StrID, u64>&            method_name_to_id;
+			base::Optional<code::Function>                    function{};
+			base::HashMap<base::StrID, usize>                 label_positions{};
+			base::HashMap<base::StrID, usize>                 local_offset_map{};
+			usize                                             local_stack_size{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -80,7 +81,7 @@ namespace vm::loader::compiler {
 					);
 				}
 				variant_case(vm::opargs::MethodName, method) {
-					return ctx.method_name_to_id[method.method_name];
+					return base::safeIntConv<i64>(ctx.method_name_to_id[method.method_name]);
 				}
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
@@ -126,8 +127,8 @@ namespace vm::loader::compiler {
 
 				func_data.bc.emplace_back(makeLowInstruction(
 					low::fix8FromInstr(op),
-					base::safeIntConv<i32>(arg_0),
-					base::safeIntConv<i32>(arg_1)
+					Memory::interpret<u64>(arg_0),
+					Memory::interpret<u64>(arg_1)
 				));
 			}
 			return func_data;
@@ -158,7 +159,7 @@ namespace vm::loader::compiler {
 
 			auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
 				if_opt_some(offsets.atMaybe(local.var_name), offset) {
-					if (offset != curr_stack_size) {
+					if (*offset != curr_stack_size) {
 						// ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
 						CORE_PANIC(
 							"DuplicatedLocalNameError - used a variable again at a different offset"
@@ -184,20 +185,20 @@ namespace vm::loader::compiler {
 				// @todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 				auto it = std::ranges::find_if(ctx.type_map, [&](const auto& type) {
 					if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-						return inh_meta.virtual_methods.contains(method_name);
+						return (*inh_meta).virtual_methods.contains(method_name);
 					}
 					return false;
 				});
 				if (it != ctx.type_map.end()) {
 					auto inh_meta = it->getInheritanceMetadata().value();
-					return inh_meta.virtual_methods[method_name]->getParameterCount();
+					return inh_meta->virtual_methods[method_name]->getParameterCount();
 				}
 				CORE_UNREACHABLE();
 			};
 
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
-			push(base::StrID("ret_val"), func_type.result->getName());
-			for (auto [idx, param_type]: std::views::enumerate(func_type.parameters))
+			push(base::StrID("ret_val"), func_type->result->getName());
+			for (auto [idx, param_type]: std::views::enumerate(func_type->parameters))
 				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type->getName());
 
 			// instruction index, stack state, stack size
@@ -285,13 +286,13 @@ namespace vm::loader::compiler {
 	low::LowVMProgram compile(const code::ValidProgram& program) {
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
-		i32                             current_ix = 0;
-		base::HashMap<i32, base::StrID> method_id_to_name;
-		base::HashMap<base::StrID, i32> method_name_to_id;
+		u64                             current_ix = 0;
+		base::HashMap<u64, base::StrID> method_id_to_name;
+		base::HashMap<base::StrID, u64> method_name_to_id;
 		for (const auto& type: *types) {
 			if_opt_some(type.getInheritanceMetadata(), metadata) {
 				//@todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
-				for (auto& [name, impl]: metadata.vtable) {
+				for (auto& [name, impl]: metadata->vtable) {
 					if (!method_name_to_id.contains(name)) {
 						method_id_to_name.put(current_ix, name);
 						method_name_to_id.put(name, current_ix);
@@ -304,8 +305,8 @@ namespace vm::loader::compiler {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
-		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto                                        ctx = CompilationContext(
+		StableObjIdNameMap<TypeCRef, GlobalDataID> globals;
+		auto                                       ctx = CompilationContext(
             program.functions(), *types, globals, method_id_to_name, method_name_to_id
         );
 

@@ -1,8 +1,9 @@
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
+#include <token_source/source.hpp>
+
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
-#include <token_source/source.hpp>
 
 #include <array>
 #include <sstream>
@@ -33,7 +34,7 @@ class LexerErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto file = tokenizer::makeTokenSource(fs::FilePath::createVirtualFile(code));
+			auto file = tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(code));
 			return file->tokenize() == good;
 		}
 

@@ -1,5 +1,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
@@ -21,7 +22,7 @@ public:
 
 private:
 	void parseModule() {
-		auto pth = fs::FilePath(path("test_module"));
+		auto pth = fs::File(path("test_module"));
 		auto mt  = ModuleTree::create(pth, test_regex, test_regex);
 
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
@@ -56,7 +57,7 @@ private:
 	}
 
 	void testOtherFeatures() {
-		auto pth = fs::FilePath(path("test_module"));
+		auto pth = fs::File(path("test_module"));
 		auto mt  = ModuleTree::create(pth);
 
 		ASSERT_EQUAL("test_module", mt->getName());
@@ -64,7 +65,8 @@ private:
 		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
 		ASSERT_EQUAL(true, mt->getParentModule().empty());
 		ASSERT_EQUAL(
-			mt->getName(), mt->getSubmodules()[base::StrID("awe")]->getParentModule()->getName()
+			mt->getName(),
+			mt->getSubmodules()[base::StrID("awe")]->getParentModule().value()->getName()
 		);
 
 		auto awe_module     = mt->getSubmodules()[base::StrID("awe")];
@@ -94,14 +96,14 @@ private:
 			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
 		);
 
-		ASSERT_EQUAL(mt->getID(), awe_module->getParentModule().value().getID());
-		ASSERT_EQUAL(mt->getID(), another_module->getParentModule().value().getID());
-		ASSERT_EQUAL(another_module->getID(), awesome_module->getParentModule().value().getID());
-		ASSERT_EQUAL(awesome_module->getID(), mod_module->getParentModule().value().getID());
+		ASSERT_EQUAL(mt->getID(), awe_module->getParentModule().value()->getID());
+		ASSERT_EQUAL(mt->getID(), another_module->getParentModule().value()->getID());
+		ASSERT_EQUAL(another_module->getID(), awesome_module->getParentModule().value()->getID());
+		ASSERT_EQUAL(awesome_module->getID(), mod_module->getParentModule().value()->getID());
 	}
 
 	void testQueries() {
-		auto pth  = fs::FilePath(path("test_module"));
+		auto pth  = fs::File(path("test_module"));
 		auto root = query::entryPoint<QueryModuleTree>(pth);
 
 		[[maybe_unused]] auto awe

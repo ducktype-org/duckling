@@ -7,10 +7,11 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -21,7 +22,7 @@ namespace compiler::helios {
 		struct CouldNotEvalShortPath {};
 
 		using ShortPathResult
-			= errors::HResult<tsh::SymbolType<>, CouldNotEvalShortPath, errors::Failed>;
+			= query::QResult<tsh::SymbolType<>, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
@@ -108,13 +109,13 @@ namespace compiler::helios {
 			ShortPathVisitor visitor(ctx);
 			expr->acceptVisitor(visitor);
 
-			if (visitor.failed) return errors::HError(errors::Failed());
+			if (visitor.failed) return query::QError(errors::Failed());
 
 			ShortPathResult short_path_result = visitor.result.value();
 
 			if (short_path_result.hasError()) {
 				variant_match(short_path_result.error()) {
-					variant_case(errors::Failed, _) { return errors::HError(errors::Failed()); }
+					variant_case(errors::Failed, _) { return query::QError(errors::Failed()); }
 					variant_case(CouldNotEvalShortPath, _) {
 						throw base::NotYetImplemented("Comp time when short-path eval failed");
 					}
@@ -127,7 +128,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (parsed.hasError()) return errors::HError(parsed.error());
+			if (parsed.hasError()) return query::QError(parsed.error());
 
 			// note: this assert might be changed to a compiler error in the future:
 			CORE_ASSERT(

@@ -11,10 +11,10 @@
  */
 #pragma once
 
-#include <init/init.hpp>
-
 #include <base/flag.hpp>
 #include <base/string_id.hpp>
+
+#include <init/init.hpp>
 
 namespace lang_def {
 
@@ -29,7 +29,6 @@ namespace lang_def {
 		NotAKeyword,
 
 		// Non-code declaration
-		// @TODO: struct or class?
 		Fun,
 		Class,
 		Namespace,
@@ -154,7 +153,7 @@ namespace lang_def {
 		BCType,
 		BCPrimitive,
 		BCPointer,
-		BCStaticTable,
+		BCFixedSizeTable,
 		BCDynamicTable,
 		BCData,
 		BCVariant,
@@ -179,7 +178,7 @@ namespace lang_def {
 		Semicolon,
 		AtSign,
 		Comma,
-		DolarSign,
+		DollarSign,
 		HashSign,
 		//...
 	};

@@ -23,11 +23,12 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/generic_query_key.hpp>
-#include <pst_parser/lang_parser_state.hpp>
-#include <query_framework/query_int.hpp>
 
 #include <base/bit256.hpp>
 #include <base/string_id.hpp>
+
+#include <diagnostic/logger.hpp>
+#include <query_framework/query_int.hpp>
 
 namespace compiler::helios {
 	/**
@@ -121,7 +122,7 @@ namespace compiler::helios {
 	template<typename Element>
 	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia::Logger>>;
 	template<typename Element>
-	using ExpansionResult = errors::HResult<pst::AccessLocked<Element>, ExpansionError<Element>>;
+	using ExpansionResult = query::QResult<pst::AccessLocked<Element>, ExpansionError<Element>>;
 
 	/**
 	 * @brief Query the expansion of an expand statement.

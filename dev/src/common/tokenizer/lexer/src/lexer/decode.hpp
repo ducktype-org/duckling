@@ -2,9 +2,10 @@
 
 #include "char.hpp"
 
+#include <token_source/forward.hpp>
+
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
-#include <token_source/forward.hpp>
 
 namespace lexer {
 	/**

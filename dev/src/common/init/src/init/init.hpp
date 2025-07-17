@@ -38,7 +38,7 @@ namespace init {
 }
 
 /**
- * Runs peace of code during static initialization phase.
+ * Runs piece of code during static initialization phase.
  *
  * It is usually used with `registerForInit` function, like this:
  * `RUN_BEFORE_MAIN(init::registerForInit(some_init_func));`

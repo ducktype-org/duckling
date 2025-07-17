@@ -1,8 +1,8 @@
-#include <tester/tester.hpp>
-
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/strongly_typed_int.hpp>
+
+#include <tester/tester.hpp>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(SomeID, usize);
 
@@ -80,7 +80,7 @@ private:
 
 		ASSERT_EQUAL("test", map["lol"]);
 		ASSERT_EQUAL(true, map.atMaybe("lol2").empty());
-		ASSERT_EQUAL("test", map.atMaybe("lol").value());
+		ASSERT_EQUAL("test", *map.atMaybe("lol").value());
 
 		map.clear();
 		ASSERT_EQUAL(0, map.size());

@@ -6,6 +6,8 @@
 #pragma once
 #include "file.hpp"
 
+#include <base/ref.hpp>
+
 #include <regex>
 
 namespace fs {
@@ -32,7 +34,7 @@ namespace fs {
 		/**
 		 * The main factory of FsTree. Constructs a new FsTree.
 		 * @param root Any object, that can be used as a path:
-		 * std::string/fs::FilePath/std::filesystem::path.
+		 * std::string/fs::File/std::filesystem::path.
 		 * @param file_reject A regex used to reject files.
 		 * @param dir_reject A regex used to reject directories.
 		 * @return The newly-constructed FsTree.
@@ -60,7 +62,7 @@ namespace fs {
 		 * @return Map name -> file in the directory.
 		 */
 		[[nodiscard]]
-		const base::HashMap<std::string, FilePath>& getFiles() const;
+		const base::HashMap<std::string, File>& getFiles() const;
 
 		/**
 		 * Accessor to tree's parent tree. A tree might not have an link to parent tree.
@@ -68,14 +70,14 @@ namespace fs {
 		 * inside the base::Optional.
 		 */
 		[[nodiscard]]
-		base::Optional<const FsTree&> getParentTree() const;
+		base::Optional<base::CRef<FsTree>> getParentTree() const;
 
 		/**
 		 * Accesses the directory, that was used as a FsTree root.
 		 * @return Path to the file.
 		 */
 		[[nodiscard]]
-		const FilePath& getRoot() const;
+		const File& getRoot() const;
 
 		/**
 		 * Checks if the tree has any files or directories inside.
@@ -93,7 +95,7 @@ namespace fs {
 
 	private:
 		explicit FsTree(
-			FilePath   root,
+			File       root,
 			std::regex reject_file_regex      = default_reject_file_regex,
 			std::regex reject_directory_regex = default_reject_directory_regex
 		);
@@ -127,7 +129,7 @@ namespace fs {
 		/**
 		 * A link to the directory used as a root.
 		 */
-		FilePath m_root;
+		File m_root;
 
 		/**
 		 * A pointer to the tree's parent tree.
@@ -136,9 +138,9 @@ namespace fs {
 		base::Optional<std::weak_ptr<FsTree>> m_parent;
 
 		/**
-		 * A map of filenames to the appropriate fs::FilePath from inside this directory.
+		 * A map of filenames to the appropriate fs::File from inside this directory.
 		 */
-		base::HashMap<std::string, FilePath> m_files;
+		base::HashMap<std::string, File> m_files;
 		/**
 		 * A map of directory names to the appropriate FsTrees from inside this directory.
 		 */

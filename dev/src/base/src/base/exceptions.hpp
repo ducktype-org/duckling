@@ -18,6 +18,13 @@
 #include <string>
 
 namespace base {
+
+	/**
+	 * Generates a stack trace, in the form of string.
+	 * Currently used only in Panic, but can be usefull for debug.
+	 */
+	std::string getCurrentStackTrace();
+
 	/**
 	 * @brief Exception intended to replace c++ assert errors for additional functionalities.
 	 */

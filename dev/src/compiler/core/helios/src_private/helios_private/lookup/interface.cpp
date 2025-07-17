@@ -1,11 +1,12 @@
 #include "interface.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <query_framework/context.hpp>
 
 #include <base/variant.hpp>
+
+#include <diagnostic/source_position.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
 
@@ -38,7 +39,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	errors::HResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
+	query::QResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,
@@ -61,7 +62,7 @@ namespace compiler::helios {
 				}
 				variant_default { CORE_PANIC("Invalid state"); }
 			}
-			return errors::HError(errors::Failed());
+			return query::QError(errors::Failed());
 		}
 
 		const auto& symbols = get_as_single.value();

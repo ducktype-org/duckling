@@ -1,4 +1,3 @@
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -7,6 +6,8 @@
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
+
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
@@ -74,20 +75,20 @@ public:
 private:
 	template<typename Element>
 	pst::PST<Element> manualSteps(const std::string& filename) {
-		auto file = tokenizer::makeTokenSource(fs::FilePath(filename));
+		auto file = tokenizer::makeTokenSource(fs::File(filename));
 		file->tokenize();
 		return { std::move(file) };
 	}
 
 	template<typename Element>
 	pst::PST<Element> fromContents(const std::string& filename) {
-		std::string contents{ fs::getSimpleFileContent(filename).view().stringView() };
+		std::string contents{ fs::File(filename).getContent().view().stringView() };
 		return pst::PST<Element>::fromContents(contents);
 	}
 
 	template<typename Element>
 	pst::PST<Element> fromFilename(const std::string& filename) {
-		return { fs::FilePath(filename) };
+		return { fs::File(filename) };
 	}
 
 	template<typename Element>

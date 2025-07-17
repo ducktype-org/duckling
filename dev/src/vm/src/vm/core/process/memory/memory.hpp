@@ -83,7 +83,7 @@ namespace vm {
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
 			-> base::ModRawView {
 			std::lock_guard lock(mutex);
-			return global_data.atMaybe(id).expect("Id not stored!").modView();
+			return global_data.atMaybe(id).expect("Id not stored!")->modView();
 		}
 
 		// =================== Variant operations ===================
@@ -145,5 +145,12 @@ namespace vm {
 
 		[[nodiscard]]
 		auto requestBlockType(BlockID id) -> TypeCRef;
+
+		// ======================== Utility =========================
+
+		template<typename T, typename U>
+		requires(sizeof(T) <= sizeof(U)) constexpr static T& interpret(U& value) {
+			return *(reinterpret_cast<T*>(&value));
+		}
 	};
 }

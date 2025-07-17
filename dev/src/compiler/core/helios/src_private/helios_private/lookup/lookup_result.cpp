@@ -2,9 +2,10 @@
 
 #include <helios/helios_errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <query_framework/context.hpp>
 
 #include <base/exceptions.hpp>
+
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
 
@@ -21,10 +22,10 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
+	query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
 	) const {
-		if (isEmpty()) return errors::HError(errors::SymbolNotFound());
-		if (!isSingle()) return errors::HError(errors::Ambiguity());
+		if (isEmpty()) return query::QError(errors::SymbolNotFound());
+		if (!isSingle()) return query::QError(errors::Ambiguity());
 
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 

@@ -6,6 +6,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
+
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
@@ -13,12 +14,12 @@
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
-			Context&                             ctx;
-			errors::HResult<i64, errors::Failed> result;
+			Context&                            ctx;
+			query::QResult<i64, errors::Failed> result;
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 
-			static errors::HResult<i64, errors::Failed> evaluateExpr(
+			static query::QResult<i64, errors::Failed> evaluateExpr(
 				Context& ctx, const code::Expr& expr
 			) {
 				EvaluateHoutExprVisitor visitor(ctx);
@@ -79,7 +80,7 @@ namespace compiler::helios {
 					result = lhs_value % rhs_value;
 					break;
 				case code::BuiltinBinary::IntegerPow:
-					result = std::pow(lhs_value, rhs_value);
+					result = static_cast<i64>(std::pow(lhs_value, rhs_value));
 					break;
 				case code::BuiltinBinary::BooleanAnd:
 					result = lhs_value and rhs_value;
@@ -88,7 +89,7 @@ namespace compiler::helios {
 					result = lhs_value or rhs_value;
 					break;
 				default:
-					result = errors::HError(errors::Failed());
+					result = query::QError(errors::Failed());
 					throw base::NotYetImplemented(
 						"Evaluation of different than '+-*/%**' binary operators is not "
 						"implemented yet"
@@ -106,7 +107,7 @@ namespace compiler::helios {
 					result = -result_value;
 					break;
 				default:
-					result = errors::HError(errors::Failed());
+					result = query::QError(errors::Failed());
 					break;
 				}
 			}
@@ -147,14 +148,20 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 			}
 
-			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {
-				result = ctx.query<QueryConstValueOf>(expr.symbols.back());
+			void visitAccessExpr(const code::AccessExpr&) final {
+				throw base::NotYetImplemented(
+					"Evaluation of access expressions is not implemented yet"
+				);
+			}
+
+			void visitSequenceExpr(const code::SequenceExpr& seq) final {
+				result = evaluateExpr(ctx, *seq.expressions.back());
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (eval.hasError()) return errors::HError(errors::Failed());
+			if (eval.hasError()) return query::QError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
 

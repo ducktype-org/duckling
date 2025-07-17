@@ -1,8 +1,9 @@
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
+#include <token_source/source.hpp>
+
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
-#include <token_source/source.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -48,13 +49,13 @@ public:
 
 private:
 	void simplePositionTest() {
-		fs::FilePath file(path("fun.duck"));
+		fs::File file(path("fun.duck"));
 		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
 		print(td->getTokenData().tokens, result_stream);
 
-		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
+		auto corr_json = fs::File(path("fun_position.json")).getContent();
 		auto corr      = corr_json.view().stringView();
 
 		assertTrue(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");
@@ -63,8 +64,8 @@ private:
 	void positionCompTest() {
 		using namespace std::views;
 		auto content = repeat(' ') | take(20) | std::ranges::to<std::string>();
-		auto file1   = fs::FilePath::createVirtualFile(content);
-		auto file2   = fs::FilePath::createVirtualFile(content);
+		auto file1   = fs::FileManager::createRandomVirtualFile(content);
+		auto file2   = fs::FileManager::createRandomVirtualFile(content);
 
 		auto td1 = lexer::tokenizeFile(file1);
 		auto td2 = lexer::tokenizeFile(file2);

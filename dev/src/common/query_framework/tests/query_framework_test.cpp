@@ -1,19 +1,22 @@
-#include <query_framework/detail/query_graph/node_id.hpp>
-#include <query_framework/detail/query_graph/query_graph.hpp>
+#include <base/anycast.hpp>
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/variant.hpp>
+
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
 #include <query_framework/query_input_impl.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include <base/anycast.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/stable_hashmap.hpp>
-
 #include <sstream>
+#include <type_traits>
 
 struct Key1 {
 	u64            v;
@@ -317,6 +320,45 @@ DECLARE_QUERY(CallEmptyQueryNTimesSideInput, u64, u64);
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
 
+struct NoctrKey {
+	[[nodiscard]]
+	u64 queryUnstablePerfectHash() const noexcept {
+		return value;
+	}
+
+	static NoctrKey keyCreate(u32 value) noexcept { return NoctrKey{ value }; }
+
+	~NoctrKey() noexcept = default;
+
+	u32 value;
+
+private:
+	NoctrKey(u32 value) noexcept: value{ value } {}
+
+	NoctrKey(NoctrKey&&) noexcept                   = default;
+	NoctrKey(const NoctrKey&) noexcept              = default;
+	NoctrKey& operator=(const NoctrKey&) & noexcept = default;
+	NoctrKey& operator=(NoctrKey&&) & noexcept      = default;
+};
+
+DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32);
+
+struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
+	static auto provide(Context& context, const QKey& key) -> PResult {
+		if (key.value == 0)
+			return 0;
+		else if (key.value == 1)
+			return 1;
+		else
+			return context.query<DoNotCopyKeys>(NoctrKey::keyCreate(key.value - 1))
+			     + context.query<DoNotCopyKeys>(NoctrKey::keyCreate(key.value - 2));
+	}
+
+	QUERY_AUTO_CACHE_COPY
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(DoNotCopyKeys);
+
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS QueryTest
@@ -338,6 +380,9 @@ public:
 		TESTER_ADD_TEST(debugPrintTest);
 		TESTER_ADD_TEST(testContextSanityCheck);
 		TESTER_ADD_TEST(serializeDeserializeGraphTest);
+		TESTER_ADD_TEST(testQueryResultConcept);
+		TESTER_ADD_TEST(testQueryResult);
+		TESTER_ADD_TEST(testNoKeyCopy);
 	}
 
 private:
@@ -519,11 +564,11 @@ private:
 		// Serialize the graph
 		auto serialized_data = graph.serialize();
 
-		auto deserialized_graph = query::detail::QueryGraph::deserialize(serialized_data);
+		auto deserialized_graph = query::internal::QueryGraph::deserialize(serialized_data);
 
 		auto serialized_data2 = deserialized_graph.serialize();
 
-		auto deserialized_graph2 = query::detail::QueryGraph::deserialize(serialized_data2);
+		auto deserialized_graph2 = query::internal::QueryGraph::deserialize(serialized_data2);
 
 		ASSERT_EQUAL(serialized_data.size(), serialized_data2.size());
 
@@ -535,11 +580,132 @@ private:
 		const auto& graph2 = query::Context::getState().getGraph();
 
 		auto serialized_data3    = graph2.serialize();
-		auto deserialized_graph3 = query::detail::QueryGraph::deserialize(serialized_data3);
+		auto deserialized_graph3 = query::internal::QueryGraph::deserialize(serialized_data3);
 
 		ASSERT_TRUE(serialized_data3.size() != serialized_data2.size());
 		ASSERT_TRUE(graph2.compare(deserialized_graph3));
 		ASSERT_TRUE(!deserialized_graph3.compare(deserialized_graph2));
+	}
+
+	void testQueryResultConcept() {
+		using namespace query::impl;
+
+		static_assert(std::is_same_v<
+					  std::variant<int, float, bool>,
+					  FlattenVariant_t<std::variant<int, float, std::variant<bool>>>>);
+
+		static_assert(IsIn_v<int, int>);
+		static_assert(IsIn_v<int, float, double, int>);
+		static_assert(IsIn_v<int, float, int, double, int>);
+		static_assert(!IsIn_v<int, float, double>);
+
+		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
+		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
+		static_assert(!std::is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
+
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
+		static_assert(!std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int, float>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<int, int, float, int, int>,
+					  std::variant<float, int>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<int, int, float, std::variant<int, int>>,
+					  std::variant<float, int>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<
+						  std::variant<int, float, int>,
+						  int,
+						  int,
+						  float,
+						  std::variant<int, int>>,
+					  std::variant<float, int>>);
+
+		struct A {};
+
+		std::variant<std::variant<int, float>, std::variant<int, A>> y;
+
+		UniqueTypesVariant_t<decltype(y)> y1 = 1;
+
+		variant_match(y1) {
+			variant_case(int, val) ASSERT_EQUAL(val, 1);
+			variant_default CORE_PANIC("Invalid state");
+		}
+
+		static_assert(std::is_same_v<
+					  std::variant<int, float, bool>,
+					  UniqueTypesVariant_t<
+						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
+	}
+
+	void testQueryResult() {
+		using namespace query;
+
+		static_assert(std::is_same_v<query::QResult<int, int>::ErrorType, int>);
+		static_assert(std::is_same_v<query::QResult<int, std::variant<int>>::ErrorType, int>);
+		static_assert(std::is_same_v<
+					  query::QResult<int, int, std::variant<float>>::ErrorType,
+					  std::variant<int, float>>);
+		static_assert(std::is_same_v<
+					  query::QResult<int, int, bool>::ErrorType,
+					  std::variant<int, bool>>);
+		static_assert(std::is_same_v<
+					  query::QResult<int, int, int, int, float>::ErrorType,
+					  std::variant<int, float>>);
+		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
+		// impl::FlattenVariant_t<typename T>)
+
+		query::QResult<int, float> hr1 = 1;
+		ASSERT_TRUE(hr1.hasValue());
+		ASSERT_TRUE(bool(hr1));
+		ASSERT_TRUE(!hr1.hasError());
+		ASSERT_EQUAL(1, hr1.value());
+
+		int                            temp_val = hr1.value();
+		base::Optional<base::Ref<int>> opt1     = base::Ref<int>(&temp_val);
+		ASSERT_TRUE(opt1.has_value());
+		ASSERT_EQUAL(1, **opt1);
+
+		query::QResult<std::string, float> hr2        = "Value";
+		base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
+		ASSERT_EQUAL("Value", stolen_opt);
+
+		std::string                           info  = "Hello";
+		query::QResult<int, std::string_view> whoa2 = query::QError(std::string_view(info));
+		ASSERT_TRUE(!whoa2.hasValue());
+		ASSERT_TRUE(whoa2.hasError());
+		ASSERT_TRUE(!bool(whoa2));
+		ASSERT_EQUAL(whoa2.error(), "Hello");
+
+		struct Err1 {};
+
+		struct Err2 {};
+
+		struct Err3 {};
+
+		struct Err4 {};
+
+		query::QResult<int, Err2, Err4> sub_result = query::QError(Err2());
+		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
+		query::QResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
+		static_assert(std::is_same_v<
+					  decltype(result)::ErrorType,
+					  std::variant<Err1, Err3, Err2, Err4>>);
+		bool entered2 = false;
+		ASSERT_TRUE(!result.hasValue());
+		ASSERT_TRUE(result.hasError());
+		variant_match(result.error()) {
+			variant_case(Err2, value) { entered2 = true; }
+			variant_default CORE_PANIC("Invalid branch");
+		}
+		ASSERT_TRUE(entered2);
+	}
+
+	void testNoKeyCopy() {
+		assertEqual(
+			query::entryPoint<DoNotCopyKeys>(NoctrKey::keyCreate(4)), 3, "Should be fibonacci(4) = 3"
+		);
 	}
 };
 
