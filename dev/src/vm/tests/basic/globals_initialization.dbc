@@ -1,35 +1,36 @@
+# var f: i64 = 7;
+# var g: i64 = 5;
+
+# fun main() = {
+#     g = f;
+#     return g;
+# }
+
 type primitive: i64 8
 type fun: main { i64, ptr_argv } i64
 type fun: f_ctor { } void
 type fun: g_ctor { } void
 
-
 global_data f i64 {
-    constructor: f_ctor,
+    constructor: f_ctor
 };
+
 global_data g i64 {
-    constructor: g_ctor,
+    constructor: g_ctor
 };
 
 function f_ctor {
-    label                   label_0;
-    # Operation: Assign
-    mov_g64_imm            f,       7;
-    # Terminator: ReturnVoid
+    mov_g64_imm f, 7;
     ret;
 }
 
 function g_ctor {
-    label                   label_0;
-    # Operation: Assign
-    mov_g64_imm            g,       5;
-    # Terminator: ReturnVoid
+    mov_g64_imm g, 5;
     ret;
 }
 
 function main {
-    label                   label_0;
-    # Terminator: ReturnValue
-    mov_l64_g64             ret_val,g;
+    mov_g64_g64 g, f;
+    mov_l64_g64 ret_val, g;
     ret;
 }

@@ -17,7 +17,7 @@ public:
 		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
-		TESTER_ADD_TEST(globalsInitialization2Test);
+		TESTER_ADD_TEST(globalDestructorTest);
 	}
 
 private:
@@ -44,11 +44,9 @@ private:
 
 	void globalInitializationTest() { runTestOnVm("global_initialization.dbc", {}, {}, {}, 5); }
 
-	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 5); }
+	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
 
-	void globalsInitialization2Test() {
-		runTestOnVm("globals_initialization_2.dbc", {}, {}, {}, 7);
-	}
+	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5, true); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
