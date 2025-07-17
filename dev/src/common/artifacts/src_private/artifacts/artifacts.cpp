@@ -1,8 +1,9 @@
-#include <artifacts/artifacts.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/optional.hpp>
+
+#include <artifacts/artifacts.hpp>
+#include <filesystem/file.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -74,7 +75,7 @@ void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& conte
 void artifacts::ArtifactCollection::loadData() {
 	// Read blob data.
 	auto artc_file_path = getArtcFile();
-	if (exists(artc_file_path)) {
+	if (fs::FileManager::fileExists(artc_file_path)) {
 		std::ifstream     artc_file(artc_file_path);
 		std::stringstream content;
 		content << artc_file.rdbuf();
@@ -94,7 +95,8 @@ void artifacts::ArtifactCollection::loadData() {
 
 void artifacts::ArtifactCollection::flushDown() {
 	auto artc_file_path = getArtcFile();
-	std::cerr << "Flushing ArtifactCollection at: " << absolute(artc_file_path) << '\n';
+	std::cerr << "Flushing ArtifactCollection at: " << std::filesystem::absolute(artc_file_path)
+			  << '\n';
 
 	std::ofstream file(artc_file_path);
 	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
@@ -131,7 +133,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 		!sub_collections.contains(collection_name), "Sub-collection with this name already exists"
 	);
 	auto new_path = PATH / collection_name.strView();
-	if (!exists(new_path)) create_directory(new_path);
+	if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
 	sub_collections.put(
 		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
 	);
@@ -168,14 +170,14 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactNew(
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	auto file_path = PATH / artifact_name.strView();
 
-	if (!exists(file_path)) std::ofstream(file_path).close();  // create the file
+	if (!std::filesystem::exists(file_path)) std::ofstream(file_path).close();  // create the file
 
 	file_artifacts.put(
 		artifact_name,
 		FileArtifact{
 			.PARENT = this,
 			.NAME   = artifact_name,
-			.FILE   = file_path,
+			.FILE   = fs::File(file_path),
 		}
 	);
 	return fileArtifactAt(artifact_name);

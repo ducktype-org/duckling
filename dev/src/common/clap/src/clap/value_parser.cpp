@@ -110,7 +110,7 @@ namespace clap {
 
 		if (!std::filesystem::exists(path)) throw clap::exceptions::FileDoesNotExist(path);
 
-		fs::FilePath file(path);
+		fs::File file(path);
 
 		return { .value = file, .raw_source = result.raw_source, .position = result.position };
 	}

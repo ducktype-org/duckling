@@ -15,15 +15,17 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_result.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <stack>
 #include <unordered_set>
@@ -1050,7 +1052,15 @@ namespace compiler::mir {
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
-			args.emplace_back(MirFunctionLiteral{ expr.callee });
+
+			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
+			if (not function_symid.has_value()) {
+				CORE_PANIC(
+					"Call expression where callee is not an identifier expression is currently not "
+					"supported."
+				);
+			}
+			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
 				auto [expr_continuation, sub_res]
 					= lowerExpr(*arg, sub_continuation, function, expr_scope);

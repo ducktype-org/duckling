@@ -16,8 +16,6 @@
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_result.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -25,6 +23,9 @@
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <set>
 

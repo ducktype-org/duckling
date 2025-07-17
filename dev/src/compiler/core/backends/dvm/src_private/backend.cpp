@@ -1,12 +1,13 @@
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <query_framework/context.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/context.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
@@ -117,9 +118,9 @@ namespace compiler::backend_vm {
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
 			AddLirFuncContext(
-				query::Context&                            ctx,
-				CRef<lir::Function>                        lir_function,
-				const vm::StableTypeIdNameMap<TypeOfData>& type_map
+				query::Context&                           ctx,
+				CRef<lir::Function>                       lir_function,
+				const vm::StableObjIdNameMap<TypeOfData>& type_map
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
@@ -275,15 +276,15 @@ namespace compiler::backend_vm {
 							primitive.size
 						));
 					if (is_global) {
-						if (primitive.size == 8) return vm::opargs::GlobalI64{ name };
-						if (primitive.size == 4) return vm::opargs::GlobalI32{ name };
-						if (primitive.size == 2) return vm::opargs::GlobalI16{ name };
-						if (primitive.size == 1) return vm::opargs::GlobalI8{ name };
+						if (primitive.size == 8) return vm::opargs::Global64{ name };
+						if (primitive.size == 4) return vm::opargs::Global32{ name };
+						if (primitive.size == 2) return vm::opargs::Global16{ name };
+						if (primitive.size == 1) return vm::opargs::Global8{ name };
 					} else {
-						if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
-						if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
-						if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
-						if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
+						if (primitive.size == 8) return vm::opargs::StackLocal64{ name };
+						if (primitive.size == 4) return vm::opargs::StackLocal32{ name };
+						if (primitive.size == 2) return vm::opargs::StackLocal16{ name };
+						if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 					}
 				}
 				variant_case(vm::code::PointerType, pointer) {
@@ -293,7 +294,7 @@ namespace compiler::backend_vm {
 						return vm::opargs::StackLocalPtr(name);
 				}
 
-				INVALID_CASE(vm::code::StaticTableType, "output target");
+				INVALID_CASE(vm::code::FixedSizeTableType, "output target");
 				INVALID_CASE(vm::code::DynamicTableType, "output target");
 				INVALID_CASE(vm::code::DataType, "output target");
 				INVALID_CASE(vm::code::VariantType, "output target");
@@ -569,7 +570,7 @@ namespace compiler::backend_vm {
 					ctx.bytecode_func,
 					{
 						OpKind::mov,
-						vm::opargs::StackLocalI64(base::StrID("ret_val")),
+						vm::opargs::StackLocal64(base::StrID("ret_val")),
 						lirValueToOpArg(ctx, terminator.arguments.at(0)),
 					}
 				);

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <diagnostic/source_position.hpp>
-
 #include <base/optional.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 namespace vm::code {
 	/**

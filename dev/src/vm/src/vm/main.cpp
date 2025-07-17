@@ -65,7 +65,7 @@ clap::Clap getVmClap() {
 				)
 				.setHandler([](const clap::ParsingResult& options) {
 					vm::Supervisor::get();
-					if (auto file = options.getValue<fs::FilePath>("file"))
+					if (auto file = options.getValue<fs::File>("file"))
 						return cli(file.value(), options.isFlag("stdlib"));
 					return cli(options.isFlag("stdlib"));
 				})

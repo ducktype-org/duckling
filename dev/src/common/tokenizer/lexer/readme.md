@@ -21,7 +21,7 @@ Usage
 
         lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
-        fs::FilePath file("path/to/duckling/file");
+        fs::File file("path/to/duckling/file");
         lexer::TokenData td = lexer::tokenizeFile(file);
     }
 ~~~~~
@@ -53,7 +53,7 @@ Initializes resources that are needed to run the lexer.
 Returns a tokenization of a given file or outputs errors to `std::cerr` and throws `base::LogicError`.
 
 ~~~~~cpp
-    TokenData tokenizeFile(fs::FilePath file);
+    TokenData tokenizeFile(fs::File file);
 ~~~~~
 
 token.hpp

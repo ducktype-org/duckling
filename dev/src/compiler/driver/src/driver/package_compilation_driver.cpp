@@ -7,6 +7,7 @@
 #include <driver/hout_to_binary_driver.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
+
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -104,7 +105,7 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	PackageCompilationDriver::PackageCompilationDriver(
-		BackendType backend, fs::FilePath package_location, std::filesystem::path artifact_location
+		BackendType backend, fs::File package_location, std::filesystem::path artifact_location
 	):
 		  backend{ backend },
 		  package_location(std::move(package_location)),
@@ -147,7 +148,7 @@ namespace compiler::driver {
 			base::StrID(base::strConcat("builtin_", backendTypeToStr(backend), ".o").c_str())
 		);
 		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-		mod.compile(builtin_obj_file.FILE, backend_llvm::CompilationOutputType::Object);
+		mod.compile(builtin_obj_file.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
 		return builtin_obj_file;
 	}
 }

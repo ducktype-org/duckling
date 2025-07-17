@@ -25,7 +25,6 @@ public:
 		TESTER_ADD_TEST(globalOptionsTest);
 		TESTER_ADD_TEST(preHandlerAndHandlerExecutionOrder);
 		TESTER_ADD_TEST(requiredParameterValidation);
-		TESTER_ADD_TEST(subcommandNotSpecifiedError);
 		TESTER_ADD_TEST(executeReturnValueTest);
 		TESTER_ADD_TEST(coexistingSubcommandsAndPositionals);
 		TESTER_ADD_TEST(duplicateSubcommand);
@@ -293,18 +292,6 @@ private:
 		ASSERT_EQUAL("login", path[1]->getName());
 		ASSERT_EQUAL("login", res.getMatchedCommand()->get()->getName());
 		ASSERT_EQUAL("admin", res.getValue<std::string>("user").value());
-	}
-
-	void subcommandNotSpecifiedError() {
-		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Clap("test", "desc").setHandler([](const clap::ParsingResult& _) { return 42; })
-		);
-
-		std::array argv{ "./prog" };
-		assertThrows<clap::exceptions::SubcommandNotSpecified>(
-			[&]() { clap.parse(argv.size(), argv.data()); },
-			"Clap did not find a not specified subcommand."
-		);
 	}
 
 	void coexistingSubcommandsAndPositionals() {

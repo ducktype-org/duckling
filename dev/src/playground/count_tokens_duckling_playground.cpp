@@ -6,10 +6,11 @@
  * @note Outputs and returns -1 on error in code;
  */
 
+#include <token_source/source.hpp>
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
-#include <token_source/source.hpp>
 
 #include <iostream>
 
@@ -56,7 +57,7 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	auto path = input.getPositional<fs::FilePath>(0);
+	auto path = input.getPositional<fs::File>(0);
 	auto file = tokenizer::makeTokenSource(path);
 
 	if (!file->tokenize()) {

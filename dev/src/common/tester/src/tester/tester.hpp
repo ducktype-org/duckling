@@ -9,11 +9,11 @@
 
 #include "tester_config.hpp"
 
-#include <init/init.hpp>  // IWYU pragma: export
-#include <printer/stream_printer.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
+
+#include <init/init.hpp>  // IWYU pragma: export
+#include <printer/stream_printer.hpp>
 
 #include <exception>
 #include <string>
@@ -58,8 +58,6 @@ namespace tester {
 	 * @brief Add spaces before capital letters in a string,
 	 * excluding: first letter, capital letters after capital letters.
 	 *
-	 * @todo improve the logic, so that "ABCSome" results in "ABC Some"
-	 *
 	 * @return std::string
 	 */
 	std::string addSpacesBeforeCapital(std::string_view);
@@ -82,6 +80,7 @@ namespace tester {
 		struct TestData final {
 			TestType    test;
 			std::string name;
+			bool        should_fail = false;
 		};
 
 		struct TestResult final {
@@ -114,7 +113,7 @@ namespace tester {
 		}
 
 		TestSuite(TestConfig&& config, std::string_view name);
-		void addTest(TestType test, std::string_view test_name);
+		void addTest(TestType test, std::string_view test_name, bool should_fail);
 
 		void assertTrue(bool v, std::string_view err, bool critical = true);
 		void assertFalse(bool v, std::string_view err, bool critical = true);
@@ -140,7 +139,10 @@ namespace tester {
 
 #define TESTER_CLASS TESTER_CLASS_MUST_BE_DEFINED_BEFORE_ANY_TEST_CLASS
 
-#define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test)
+#define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test, false)
+
+#define TESTER_ADD_SHOULD_FAIL_TEST(test) \
+	addTest(static_cast<TestType>(&TESTER_CLASS::test), #test, true)
 
 #define TESTER_SUITE_NAME tester::addSpacesBeforeCapital(STRINGIFY_2(TESTER_CLASS))
 

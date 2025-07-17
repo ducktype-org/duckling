@@ -3,12 +3,13 @@
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-#include <tester/tester.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/context.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
 
 #include <utility>
 
@@ -37,7 +38,7 @@ private:
 		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {

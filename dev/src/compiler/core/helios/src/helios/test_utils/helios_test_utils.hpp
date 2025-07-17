@@ -1,9 +1,10 @@
 #pragma once
 
-#include <filesystem/file.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
+
+#include <filesystem/file.hpp>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -11,7 +12,7 @@ namespace compiler::helios::test_utils {
 	 * @param path The path to the module directory.
 	 * @return The module's ModuleID and ScopeID.
 	 */
-	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path);
+	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path);
 
 	/**
 	 * Get the SymIDs of all symbols in a chain in a given scope.

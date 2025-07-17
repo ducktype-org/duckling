@@ -1,3 +1,9 @@
+#include <base/anycast.hpp>
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/variant.hpp>
+
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -8,12 +14,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include <base/anycast.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/variant.hpp>
 
 #include <sstream>
 #include <type_traits>
@@ -320,6 +320,45 @@ DECLARE_QUERY(CallEmptyQueryNTimesSideInput, u64, u64);
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
 
+struct NoctrKey {
+	[[nodiscard]]
+	u64 queryUnstablePerfectHash() const noexcept {
+		return value;
+	}
+
+	static NoctrKey keyCreate(u32 value) noexcept { return NoctrKey{ value }; }
+
+	~NoctrKey() noexcept = default;
+
+	u32 value;
+
+private:
+	NoctrKey(u32 value) noexcept: value{ value } {}
+
+	NoctrKey(NoctrKey&&) noexcept                   = default;
+	NoctrKey(const NoctrKey&) noexcept              = default;
+	NoctrKey& operator=(const NoctrKey&) & noexcept = default;
+	NoctrKey& operator=(NoctrKey&&) & noexcept      = default;
+};
+
+DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32);
+
+struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
+	static auto provide(Context& context, const QKey& key) -> PResult {
+		if (key.value == 0)
+			return 0;
+		else if (key.value == 1)
+			return 1;
+		else
+			return context.query<DoNotCopyKeys>(NoctrKey::keyCreate(key.value - 1))
+			     + context.query<DoNotCopyKeys>(NoctrKey::keyCreate(key.value - 2));
+	}
+
+	QUERY_AUTO_CACHE_COPY
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(DoNotCopyKeys);
+
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS QueryTest
@@ -343,6 +382,7 @@ public:
 		TESTER_ADD_TEST(serializeDeserializeGraphTest);
 		TESTER_ADD_TEST(testQueryResultConcept);
 		TESTER_ADD_TEST(testQueryResult);
+		TESTER_ADD_TEST(testNoKeyCopy);
 	}
 
 private:
@@ -660,6 +700,12 @@ private:
 			variant_default CORE_PANIC("Invalid branch");
 		}
 		ASSERT_TRUE(entered2);
+	}
+
+	void testNoKeyCopy() {
+		assertEqual(
+			query::entryPoint<DoNotCopyKeys>(NoctrKey::keyCreate(4)), 3, "Should be fibonacci(4) = 3"
+		);
 	}
 };
 

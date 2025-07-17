@@ -2,16 +2,17 @@
 
 #include "forward.hpp"
 
-#include <diagnostic/location.hpp>
-#include <diagnostic/logger.hpp>
-#include <filesystem/encoding.hpp>
-#include <filesystem/file.hpp>
 #include <lexer/char.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/token.hpp>
 
 #include <base/raw_view.hpp>
+
+#include <diagnostic/location.hpp>
+#include <diagnostic/logger.hpp>
+#include <filesystem/encoding.hpp>
+#include <filesystem/file.hpp>
 
 #include <set>
 
@@ -44,7 +45,7 @@ namespace tokenizer {
 		/**
 		 * @brief Construct a new TokenSource from file.
 		 */
-		explicit TokenSource(const fs::FilePath&);
+		explicit TokenSource(const fs::File&);
 
 		/**
 		 * @brief Construct a new TokenSource as a macro with parent position.
@@ -92,7 +93,7 @@ namespace tokenizer {
 		CRef<dia::Location> getLocation() const;
 		Ref<dia::Logger>    getLogger();
 		[[nodiscard]]
-		fs::FilePath getPath() const;
+		fs::File getPath() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 

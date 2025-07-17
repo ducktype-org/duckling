@@ -12,10 +12,15 @@ namespace tester {
 		result.reserve(str.size());
 		bool was_capital = true;
 
-		for (auto c: str) {
-			bool is_capital = std::isupper(c);
-			if (not was_capital and is_capital) result.push_back(' ');
-
+		for (usize i = 0; i < str.size(); i++) {
+			char c               = str[i];
+			bool is_capital      = std::isupper(c);
+			bool is_next_capital = i + 1 == str.size() or std::isupper(str[i + 1]);
+			bool is_next_space   = i + 1 == str.size() or str[i + 1] == ' ';
+			if (i > 0 and result.back() != ' ' and not is_next_space and is_capital
+			    and not(was_capital and is_next_capital)) {
+				result.push_back(' ');
+			}
 			was_capital = is_capital;
 			result.push_back(c);
 		}
@@ -82,6 +87,7 @@ namespace tester {
 			curr_global_res = &res;
 
 			runTest(t.test);
+			if (t.should_fail) res.success = !res.success;
 			resultHandler(t, res);
 
 			passed += curr_global_res->success;
@@ -96,8 +102,9 @@ namespace tester {
 		return failed == 0 && passed == tests.size();
 	}
 
-	void TestSuite::addTest(TestType test, std::string_view test_name) {
-		tests.push_back(TestData{ .test = test, .name = std::string(test_name) });
+	void TestSuite::addTest(TestType test, std::string_view test_name, bool should_fail) {
+		tests.push_back(TestData{
+			.test = test, .name = std::string(test_name), .should_fail = should_fail });
 	}
 
 	void TestSuite::runTest(TestType test) {

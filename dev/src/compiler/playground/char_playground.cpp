@@ -1,9 +1,10 @@
+#include <lexer/decode.hpp>
+#include <token_source/source.hpp>
+
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
-#include <lexer/decode.hpp>
-#include <token_source/source.hpp>
 
 int main(int argc, char** argv) {
 	init::InitObject _;
@@ -11,8 +12,8 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./char_testing file_name\n";
 		return 1;
 	}
-	fs::FilePath path(argv[1]);
-	auto         file = tokenizer::makeTokenSource(path);
+	fs::File path(argv[1]);
+	auto     file = tokenizer::makeTokenSource(path);
 
 	file->decode<fs::Encoding::UTF8>();
 

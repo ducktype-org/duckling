@@ -9,13 +9,14 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <typesystem/higher/queries/types.hpp>
+
+#include <base/variant.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/queries/types.hpp>
-
-#include <base/variant.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -83,7 +84,7 @@ private:
 	};
 
 	LirModuleResult getLirOfModule(std::string_view module_path) {
-		auto [module, scope] = getModule(fs::FilePath(module_path));
+		auto [module, scope] = getModule(fs::File(module_path));
 		LirModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {

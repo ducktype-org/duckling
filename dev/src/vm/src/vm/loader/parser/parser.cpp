@@ -7,7 +7,7 @@
 
 namespace vm::loader::parser {
 
-	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& path) {
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 		return lexer::tokenizeFile(path);
 	}
@@ -21,8 +21,7 @@ namespace vm::loader::parser {
 		return ParsedFile::parse(state);
 	}
 
-	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::FilePath>& files
-	) {
+	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::File>& files) {
 		// @TODO: Decide on a better position
 		// So that they dont't die
 		static std::vector<Box<tokenizer::TokenSource>> tokenized_files;

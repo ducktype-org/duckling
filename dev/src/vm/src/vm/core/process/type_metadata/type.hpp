@@ -2,12 +2,12 @@
 
 #include "kinds.hpp"
 
-#include <json/json.hpp>
-
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
+
+#include <json/json.hpp>
 
 #include <variant>
 
@@ -26,7 +26,7 @@ namespace vm {
 			None,
 			Primitive,
 			Pointer,
-			StaticTable,
+			FixedSizeTable,
 			DynamicTable,
 			Data,
 			Variant,
@@ -48,7 +48,7 @@ namespace vm {
 			std::monostate,
 			kind::Primitive,
 			kind::Pointer,
-			kind::StaticTable,
+			kind::FixedSizeTable,
 			kind::DynamicTable,
 			kind::Data,
 			kind::Variant,
@@ -65,7 +65,7 @@ namespace vm {
 		// Type definition:
 		void definePrimitive(TypeSize size);
 		void definePointer(TypeCRef inner);
-		void defineStaticTable(TypeRef inner, u64 table_size);
+		void defineFixedSizeTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
 		void defineData(
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
@@ -106,41 +106,20 @@ namespace vm {
 			return kind_type;
 		}
 
-		[[nodiscard]]
-		bool isPrimitive(TypeSize qsize) const {
-			return getKind() == Kind::Primitive and getSize() == qsize;
-		}
-
-		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
-
-
 		// @todo: Interface below may change
 
 		// @TODO: move function below to kind:: structures without `option`
 		// Forward here version with option
 
 		/**
-		 * Get inner type of pointer, static or dynamic table
-		 * @return some(inner type) for pointer, static or dynamic table. none otherwise
+		 * Get inner type of pointer, fixed size or dynamic table
+		 * @return some(inner type) for pointer, fixed size or dynamic table. none otherwise
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
-		// staticTable
-		base::Optional<u64> getStaticTableSize() const;
-
 		// data
 		[[nodiscard]]
-		base::Optional<usize> getFieldCount() const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID field_id) const;
-		[[nodiscard]]
-		base::Optional<Offset> getFieldOffset(kind::Data::FieldID field_id) const;
-		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 		// inheritance
 		[[nodiscard]]
@@ -152,17 +131,9 @@ namespace vm {
 		[[nodiscard]]
 		bool isInstantiable() const;
 
-		// variant
-		[[nodiscard]]
-		base::Optional<u64> getVariantCount() const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getNthVariantType(u64 variant_id) const;
-
 		// function
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
-		[[nodiscard]]
-		base::Optional<base::CRef<std::vector<TypeCRef>>> getParameters() const;
 		[[nodiscard]]
 		base::Optional<u64> getParametersSize() const;
 		[[nodiscard]]

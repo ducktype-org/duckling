@@ -1,7 +1,5 @@
 #include "cli.hpp"
 
-#include <json/json.hpp>
-
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
@@ -9,6 +7,8 @@
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
 #include <vm/api/data/process_info.hpp>
+
+#include <json/json.hpp>
 
 #include <iostream>
 
@@ -27,10 +27,10 @@ int cli(bool load_stdlib) {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
-	return cli(fs::FilePath(filepath), load_stdlib);
+	return cli(fs::File(filepath), load_stdlib);
 }
 
-int cli(const fs::FilePath& filepath, bool load_stdlib) {
+int cli(const fs::File& filepath, bool load_stdlib) {
 	vm::PID pid{};
 
 	std::expected<vm::api::ExitCode, std::string> result

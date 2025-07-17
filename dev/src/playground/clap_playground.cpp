@@ -73,11 +73,10 @@
  *
  * Global flags are an exception and can be types anywhere.
  */
+#include <base/int_conv.hpp>
 
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
-
-#include <base/int_conv.hpp>
 
 #include <iostream>
 #include <string>
@@ -104,7 +103,7 @@ void multiGreeter(const clap::ParsingResult& result) {
 
 	clap::RangeParser::Range range = *result.getValue<clap::RangeParser::Range>("range");
 	auto [begin, end]              = range;
-	i64 n                          = result.getValue<i64>("times").valueOr(1);
+	i64 n                          = result.getValue<i64>("times").copyValueOr(1);
 
 	for (const auto& name: names) {
 		for (i64 i = 0; i < n; i++) {
@@ -119,8 +118,6 @@ void multiGreeter(const clap::ParsingResult& result) {
 
 clap::Clap getClapForPlayground() {
 	return clap::Clap("playground", "A cool cli app to demonstrate Clap.")
-	    .addHelpFlag()  // Automatically add a global help parameter.
-	                    // Default parser for additional arguments.
 	    .setDefaultValueParser(clap::StringParser::make("extra_names"))
 	    .setPreHandler([](const clap::ParsingResult& result) {
 			std::cout << "This is a function which get's invoked before all other handlers. It may "

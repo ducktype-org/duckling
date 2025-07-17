@@ -6,9 +6,10 @@
 
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>
-#include <query_framework/context_fd.hpp>
 
 #include <base/box.hpp>
+
+#include <query_framework/context_fd.hpp>
 
 #include <utility>
 #include <vector>

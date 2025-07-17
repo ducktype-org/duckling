@@ -1,7 +1,8 @@
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <tester/tester.hpp>
 #include <token_source/source.hpp>
+
+#include <filesystem/file.hpp>
+#include <tester/tester.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -13,7 +14,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
-		fs::FilePath file(path("token_code.duck"));
+		fs::File file(path("token_code.duck"));
 		td = lexer::tokenizeFile(file);
 		TESTER_ADD_TEST(testBasicStructure);
 		TESTER_ADD_TEST(testGroup0);

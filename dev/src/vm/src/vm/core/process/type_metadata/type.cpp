@@ -39,12 +39,12 @@ namespace vm {
 		kind      = kind::Pointer{ inner };
 	}
 
-	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
+	void Type::defineFixedSizeTable(TypeRef inner, u64 table_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ .inner_type = inner, .size = table_size };
+		kind_type = Kind::FixedSizeTable;
+		kind      = kind::FixedSizeTable{ .inner_type = inner, .size = table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -112,9 +112,9 @@ namespace vm {
 		defer(state = State::Finalized);
 
 		variant_match(kind) {
-			variant_case(kind::StaticTable, static_table) {
-				static_table.inner_type->finalize();
-				this->size = static_table.inner_type->getSize() * static_table.size;
+			variant_case(kind::FixedSizeTable, fixed_size_table) {
+				fixed_size_table.inner_type->finalize();
+				this->size = fixed_size_table.inner_type->getSize() * fixed_size_table.size;
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
@@ -138,70 +138,15 @@ namespace vm {
 		}
 	}
 
-	/**
-	 * @brief Returns lowest (smallest) type at given position
-	 * inside the type.
-	 * See: https://github.com/ducktype-org/rift-poc-zpp1/issues/91
-	 */
-	base::Optional<TypeCRef> Type::getLowestTypeAtPos(Offset pos) const {
-		variant_match(kind) {
-			variant_case_novalue(kind::Primitive) {
-				if (pos == 0)
-					return TypeCRef(this);
-				else
-					return {};
-			}
-			variant_case_novalue(kind::Pointer) {
-				if (pos == 0)
-					return TypeCRef(this);
-				else
-					return {};
-			}
-			variant_case(kind::StaticTable, static_table) {
-				if (pos >= getSize())
-					return {};
-				else {
-					auto inner_size = static_table.inner_type->getSize();
-					return static_table.inner_type->getLowestTypeAtPos(pos % inner_size);
-				}
-			}
-			variant_case_novalue(kind::DynamicTable) {
-				if (pos == 0)
-					return TypeCRef(this);
-				else
-					return {};
-			}
-			variant_case(kind::Data, data) {
-				throw base::NotYetImplemented("getLowestTypeAtPos data");
-			}
-			variant_case_novalue(kind::Variant) {
-				// @TODO: is pos == 0 then return some special TypeRef to variant index
-				// @TODO: is pos == 1 then return error
-				if (pos == 2)
-					return TypeCRef(this);
-				else
-					return {};
-			}
-			variant_case_novalue(kind::Opaque) {
-				if (pos == 0)
-					return TypeCRef(this);
-				else
-					return {};
-			}
-			variant_default { CORE_PANIC("Unexpected Type kind"); }
-		}
-		CORE_UNREACHABLE();
-	}
-
-	// pointer, staticTable, dynamicTable
+	// pointer, fixedSizeTable, dynamicTable
 	base::Optional<TypeCRef> Type::getInnerType() const {
 		auto get_inner_type = [](auto t) { return t->inner_type; };
 
 		auto pointer_option = get<kind::Pointer>().map(get_inner_type);
 		if (pointer_option.has_value()) return (TypeCRef) pointer_option.value();
 
-		auto static_table_option = get<kind::StaticTable>().map(get_inner_type);
-		if (static_table_option.has_value()) return (TypeCRef) static_table_option.value();
+		auto fixed_size_table_option = get<kind::FixedSizeTable>().map(get_inner_type);
+		if (fixed_size_table_option.has_value()) return (TypeCRef) fixed_size_table_option.value();
 
 		auto dynamic_table_option = get<kind::DynamicTable>().map(get_inner_type);
 		if (dynamic_table_option.has_value()) return (TypeCRef) dynamic_table_option.value();
@@ -209,32 +154,7 @@ namespace vm {
 		return {};
 	}
 
-	// staticTable
-	base::Optional<u64> Type::getStaticTableSize() const {
-		return get<kind::StaticTable>().map([](CRef<kind::StaticTable> table) {
-			return table->size;
-		});
-	}
-
 	// struct
-	base::Optional<usize> Type::getFieldCount() const {
-		return get<kind::Data>().map([](auto data) { return data->fields.size(); });
-	}
-
-	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
-		return get<kind::Data>().flatMap([field_id](CRef<kind::Data> data) {
-			if (field_id >= data->fields.size()) return base::Optional<TypeCRef>();
-			return base::Optional<TypeCRef>(data->fields[field_id].type);
-		});
-	}
-
-	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldID field_id) const {
-		return get<kind::Data>().flatMap([field_id](CRef<kind::Data> data) {
-			if (field_id >= data->fields.size()) return base::Optional<Offset>();
-			return base::Optional<Offset>(Offset(data->fields[field_id].offset));
-		});
-	}
-
 	base::Optional<Offset> Type::getFieldOffsetByName(base::StrID field_name) const {
 		return get<kind::Data>().flatMap(
 			[field_name](CRef<kind::Data> data) -> base::Optional<Offset> {
@@ -318,20 +238,6 @@ namespace vm {
 		return true;
 	}
 
-	// variant
-	base::Optional<u64> Type::getVariantCount() const {
-		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
-			return variant->alternatives.size();
-		});
-	}
-
-	base::Optional<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
-		return get<kind::Variant>().flatMap([variant_id](CRef<kind::Variant> variant) {
-			if (variant_id >= variant->alternatives.size()) return base::Optional<TypeCRef>();
-			return base::Optional<TypeCRef>(variant->alternatives[variant_id]);
-		});
-	}
-
 	// function
 	base::Optional<u64> Type::getParameterCount() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
@@ -358,13 +264,5 @@ namespace vm {
 		return get<kind::Function>().flatMap([](CRef<kind::Function> function) {
 			return base::Optional<TypeCRef>(function->result);
 		});
-	}
-
-	base::Optional<CRef<std::vector<TypeCRef>>> Type::getParameters() const {
-		return get<kind::Function>().map(
-			[](CRef<kind::Function> func) -> CRef<std::vector<TypeCRef>> {
-				return &func->parameters;
-			}
-		);
 	}
 }
