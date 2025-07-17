@@ -63,7 +63,6 @@ clap::Clap getStandardDucklingOptions() {
 			lexer::Lexer::setTokenMessages(options.isFlag("lexer-cerr"));
 			if (options.isFlag("version")) {
 				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
-				throw clap::exceptions::VersionException(options);
 			}
 		});
 }

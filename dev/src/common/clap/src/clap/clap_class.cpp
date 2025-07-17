@@ -4,6 +4,7 @@
  */
 
 #include "clap.hpp"
+#include "clap/exceptions.hpp"
 
 #include <printer/stream_printer.hpp>
 
@@ -49,6 +50,7 @@ namespace clap {
 		  default_value_parser(StringParser::make()),
 		  is_leaf(true),
 		  is_root(true) {
+		// A --help flag is added by default.
 		addHelpFlag();
 	}
 
@@ -125,10 +127,6 @@ namespace clap {
 		return {};
 	}
 
-	bool Clap::isLeaf() const { return is_leaf; }
-
-	bool Clap::isRoot() const { return is_root; }
-
 	ParsingResult Clap::parse(usize argc, const char* const* argv) {
 		CORE_ASSERT(
 			argc > 0,
@@ -165,9 +163,6 @@ namespace clap {
 				}
 
 				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-				// If it's not subcommand (its a positional) and this subcommand is not a
-				// leaf then we throw an error, since the subcommand is not specified.
-				if (!is_leaf) throw exceptions::SubcommandNotSpecified(name);
 
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.
@@ -183,10 +178,7 @@ namespace clap {
 				}
 			}
 		}
-		// The only way we get here is when all arguments where parsed.
-		// This means `this` is the matched subcommand which has to be a leaf.
 		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-		if (!is_leaf) throw exceptions::SubcommandNotSpecified(name);
 	}
 
 	int Clap::execute(usize argc, const char* const* argv) {
@@ -198,6 +190,7 @@ namespace clap {
 			// Get a handler that handles the matched command.
 			const auto& maybe_command = parsing_result.getMatchedCommand();
 			if_opt_some(maybe_command, command) {
+				if (!command->getSubcommands().empty()) throw clap::exceptions::SubcommandNotSpecified(command->getName());
 				const auto& handler = command->getHandler();
 				if (handler)
 					return handler(parsing_result);

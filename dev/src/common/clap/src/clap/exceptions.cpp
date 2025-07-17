@@ -93,10 +93,6 @@ namespace clap::exceptions {
 		  base::LogicError("Help flag was passed, help message should be generated."),
 		  parsing_result(std::move(result)) {}
 
-	VersionException::VersionException(ParsingResult result):
-		  base::LogicError("Version flag was passed, version string should be generated."),
-		  parsing_result(std::move(result)) {}
-
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClapException("File at \"" + absolute(path).string() + "\" does not exist.") {}
 

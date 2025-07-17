@@ -53,11 +53,11 @@ namespace clap {
 
 
 		/**
-		 * @brief Adds a flag/option to the command clap. Ex. --version, --help, --let-it-throw, etc
+		 * @brief Adds a named parameter to the command.
 		 * @param parameter A parameter constructed with clap::ParamBuilder.
 		 * @return A reference to self.
 		 */
-		Clap&& add(Parameter&& param);
+		Clap&& add(Parameter&& parameter);
 
 		/**
 		 * @brief Adds a positional parameter without a name to the Clap.
@@ -96,12 +96,6 @@ namespace clap {
 		 */
 		Clap&& setDefaultValueParser(MBox<ValueParser> parser);
 
-		/**
-		 * @brief Adds a standard help flag functionality.
-		 * If flag is passed raises clap::exceptions::HelpException.
-		 * @return A reference to self.
-		 */
-		Clap&& addHelpFlag();
 
 		/**
 		 * @return The name of the command.
@@ -169,18 +163,6 @@ namespace clap {
 		base::Optional<CRef<Clap>> getSubcommand(const std::string& subcommand_name) const;
 
 		/**
-		 * @return True, if this command is a leaf in the command tree (has no subcommands). False
-		 * otherwise. Needed to determine if it's executable.
-		 */
-		[[nodiscard]] bool isLeaf() const;
-
-		/**
-		 * @return True, if this command is a root in the command tree (is not a subcommand).
-		 * False otherwise.
-		 */
-		[[nodiscard]] bool isRoot() const;
-
-		/**
 		 * @brief Performs the parsing. Returns the parsing result.
 		 *
 		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
@@ -232,6 +214,13 @@ namespace clap {
 		int execute(const std::string& args);
 
 	private:
+		/**
+		 * @brief Adds a standard help flag functionality.
+		 * If flag is passed raises clap::exceptions::HelpException.
+		 * @return A reference to self.
+		 */
+		Clap&& addHelpFlag();
+
 		/**
 		 * @brief Internal and recursive parsing function for parsing subcommands.
 		 * When parsing, if we stumble on a subcommand name we invoke the parse function for the

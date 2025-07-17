@@ -239,29 +239,32 @@ void showVersion() {
 
 clap::Clap getLspDaemonCLI() {
 	return clap::Clap("lsp_deamon", "The Duckling Language Server Protocol daemon.")
-	    .add(clap::ParamBuilder::ofFlag()
-	             .addShortName('v')
-	             .addLongName("version")
-	             .addShortDesc("Show version information and exit")
-	             .build())
+	    .add(
+			clap::ParamBuilder::ofFlag()
+				.addShortName('v')
+				.addLongName("version")
+				.addShortDesc("Show version information and exit")
+				.build()
+		)
 	    .setPreHandler([](const clap::ParsingResult& options) {
-			if (options.isFlag("version")) {
-				showVersion();
-				throw clap::exceptions::VersionException(options);
-			}
+			if (options.isFlag("version")) showVersion();
 		})
-	    .addSubcommand(clap::Clap("start", "Starts the LSP server on a given port")
-	                       .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-	                                .addShortName('p')
-	                                .addLongName("port")
-	                                .addShortDesc("The port for the server to listen on.")
-	                                .required()
-	                                .build())
-	                       .setHandler([](const clap::ParsingResult& options) {
-							   auto port = options.getValue<i64>("port").value();
-							   server(i32(port));
-							   return 0;
-						   }));
+	    .addSubcommand(
+			clap::Clap("start", "Starts the LSP server on a given port")
+				.add(
+					clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+						.addShortName('p')
+						.addLongName("port")
+						.addShortDesc("The port for the server to listen on.")
+						.required()
+						.build()
+				)
+				.setHandler([](const clap::ParsingResult& options) {
+					auto port = options.getValue<i64>("port").value();
+					server(i32(port));
+					return 0;
+				})
+		);
 }
 
 /**
@@ -284,27 +287,25 @@ int main(int argc, const char** argv) {
 	try {
 		// Parse the command-line arguments
 		return clap.execute(base::safeIntConv<usize>(argc), argv);
-	} catch (clap::exceptions::ClapException& e) {
-		// Handle general parsing exceptions and print error message
-		printer::StreamPrinter      console = printer::StreamPrinter();
-		printer::PrinterContentsSeq contents;
-		contents.emplace_back("duckling: ", printer::Color::DEFAULT, printer::Color::DEFAULT);
-		contents.emplace_back("error: ", printer::Color::RED, printer::Color::DEFAULT);
-		contents.emplace_back(e.what(), printer::Color::DEFAULT, printer::Color::DEFAULT);
-		console.printNL(contents);
+	} catch (const base::Exception& e) {
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::RED },
+				{ "Exception was caught with message:\n", printer::Color::DEFAULT },
+				{ e.what(), printer::Color::DEFAULT },
+				{ "\nAborting\n", printer::Color::DEFAULT },
+			}
+		);
 		return 1;
-	} catch (clap::exceptions::HelpException& e) {
-		// Handle help exception and print help message
-		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-		std::cout << help_message << '\n';
-		return 0;
-	} catch (clap::exceptions::VersionException& e) {
-		// Handle version exception and print version message
-		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-		showVersion();
-		return 0;
 	} catch (const std::exception& e) {
-		std::cerr << "An unexpected error occured: " << e.what() << '\n';
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::RED },
+				{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
+				{ e.what(), printer::Color::DEFAULT },
+				{ "\nAborting\n", printer::Color::DEFAULT },
+			}
+		);
 		return 1;
 	}
 }

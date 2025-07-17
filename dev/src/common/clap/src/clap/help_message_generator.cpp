@@ -5,18 +5,8 @@
 
 #include "help_message_generator.hpp"
 
-#include "parameter.hpp"
-#include "parsing_result.hpp"
-
 #include <base/variant.hpp>
-
-#include <iomanip>
-#include <ios>
-#include <iostream>
 #include <ranges>
-#include <sstream>
-#include <string>
-#include <vector>
 
 namespace {
 	std::string getFileName(const std::string& path) {
