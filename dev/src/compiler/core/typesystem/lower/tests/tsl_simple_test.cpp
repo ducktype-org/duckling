@@ -337,7 +337,8 @@ private:
 
 			TypeLayout my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
 			assertTrue(
-				my_class_layout.getSize() == BYTE_SIZE * 32, // (1 + padding 1) + (2 + padding 2) + 8 + 8 + 8
+				// (1 + padding 1) + (2 + padding 2) + 8 + 8 + 8
+				my_class_layout.getSize() == BYTE_SIZE * 32,
 				"Class layout size should account for data alignment."
 			);
 			assertTrue(
