@@ -9,6 +9,7 @@
 #include <helios_private/scopes/scopes.hpp>  // for parent
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/declarations/variable.hpp>
+
 #include <query_framework/context.hpp>
 
 #include <memory>

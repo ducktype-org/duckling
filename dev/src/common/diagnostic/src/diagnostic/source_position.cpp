@@ -6,10 +6,11 @@
 
 #include "location.hpp"
 
-#include <printer/printer_content.hpp>
 #include <token_source/source.hpp>
 
 #include <base/exceptions.hpp>
+
+#include <printer/printer_content.hpp>
 
 #include <string>
 

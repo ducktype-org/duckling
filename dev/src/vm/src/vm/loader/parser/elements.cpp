@@ -2,7 +2,6 @@
 
 #include "errors.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
@@ -13,6 +12,9 @@
 
 #include "vm/bytecode/bytecode.hpp"
 #include "vm/bytecode/validator/errors.hpp"
+
+#include <diagnostic/source_position.hpp>
+
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 

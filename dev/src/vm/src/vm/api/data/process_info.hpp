@@ -1,8 +1,8 @@
 #pragma once
 
-#include <json/json.hpp>
-
 #include <base/ints.hpp>
+
+#include <json/json.hpp>
 
 namespace vm {
 	using PID = u32;

@@ -33,10 +33,10 @@
 namespace vm {
 #ifdef USE_TAIL_CALLS
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		Fix8Instruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
+		MicroInstruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
 #else
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                           \
-		Fix8Instruction {                                                                  \
+		MicroInstruction {                                                                 \
 			.nontc_opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, \
 			.arg1 = ARG_1                                                                  \
 		}
@@ -117,13 +117,13 @@ namespace vm {
 		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
 		                    .expect("Type i64 is expected to exist!");
 
-		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		u64  i64_type_id        = i64_type->getID().asInt();
 		auto funcs              = executing_program->functions;
-		i32  called_function_id = 0;
+		u64  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
+			if (func.name == funcs[i].name) called_function_id = i;
 
-		i32 stack_top = 0;
+		u64 stack_top = 0;
 		// @todo: VM functions should be able to return and take as parameters any VM type.
 		// For now we assume we can only pass and return arguments of i64 type.
 		// This should be changed in:
@@ -133,19 +133,19 @@ namespace vm {
 		// the return value of the function. Void functions always return with the exit_code = 0.
 		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id));
 
-		stack_top += base::safeIntConv<i32>(i64_type->getSize());
+		stack_top += i64_type->getSize();
 
 		for (u64 i = 0; i < func_args.size(); i++) {
-			i32  converted_arg = base::safeIntConv<i32>(func_args[i]);
+			i64  converted_arg = func_args[i];
 			auto arg_type      = called_func_type->getNthParameterType(i).expect(
                 "Wrong number of passed arguments!"
             );
-			i32 arg_type_id = base::safeIntConv<i32>(arg_type->getID().asInt());
+			u64 arg_type_id = arg_type->getID().asInt();
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, stack_top, converted_arg)
-			);
-			stack_top += base::safeIntConv<i32>(arg_type->getSize());
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				mov_l64_imm, stack_top, Memory::interpret<u64>(converted_arg)
+			));
+			stack_top += arg_type->getSize();
 		}
 
 		start_function.bc.insert(
@@ -189,14 +189,14 @@ namespace vm {
 		                    .expect("Type i64 is expected to exist!");
 
 		// TypeIDs to pass to opcodes.
-		i32  func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
-		i32  argv_type_id       = base::safeIntConv<i32>(argv_type->getID().asInt());
-		i32  argv_ptr_type_id   = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
-		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		u64  func_ret_type_id   = called_return_type->getID().asInt();
+		u64  argv_type_id       = argv_type->getID().asInt();
+		u64  argv_ptr_type_id   = argv_ptr_type->getID().asInt();
+		u64  i64_type_id        = i64_type->getID().asInt();
 		auto funcs              = executing_program->functions;
-		i32  called_function_id = 0;
+		u64  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
+			if (func.name == funcs[i].name) called_function_id = i;
 
 		start_function.bc.insert(
 			start_function.bc.end(),
@@ -214,7 +214,7 @@ namespace vm {
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
 			// to ints. This should change after: https://github.com/ducktype-org/duckling/issues/722
-			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
+			u64 converted_arg = static_cast<u64>(std::stoll(arg));
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
@@ -233,7 +233,7 @@ namespace vm {
 					init_lany_type, 40, func_ret_type_id
 				),  // [40, 48) call ret_val
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56] argc
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
 				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),

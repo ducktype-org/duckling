@@ -1,8 +1,9 @@
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>
-#include <query_framework/query_result.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 	struct InvalidCoercion final {};

@@ -1,11 +1,12 @@
 #pragma once
 
 #include <lir/lir_structure/function_forward.hpp>
-#include <query_framework/context_fd.hpp>
 
 #include <base/box.hpp>
 #include <base/ok_bad.hpp>
 #include <base/string_id.hpp>
+
+#include <query_framework/context_fd.hpp>
 
 #include <filesystem>
 
