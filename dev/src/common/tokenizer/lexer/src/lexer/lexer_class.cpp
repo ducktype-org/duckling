@@ -10,7 +10,7 @@ namespace lexer {
 
 	void Lexer::setTokenMessages(bool value) { token_messages = value; }
 
-	using Class = Classifications;
+	using Class = unicode::Classifications;
 
 	class TokenStartError final: public dia::Error {
 	protected:

@@ -6,13 +6,14 @@
 #include "char.hpp"
 
 #include <base/exceptions.hpp>
+#include <unicode_classification/classifications.hpp>
 
 namespace lexer {
 
 	Char::Char(UChar32 value, u8 size, usize index): value(value), size(size), index(index) {
 		if (size == u8{ 0 }) {
 			CORE_ASSERT(
-				value == Classifications::end_of_file_value, "non-EOF Char created with size 0"
+				value == unicode::Classifications::end_of_file_value, "non-EOF Char created with size 0"
 			);
 		} else {
 			CORE_ASSERT(size > u8{ 0 } && size <= u8{ 4 }, "Char constructed with bad size");

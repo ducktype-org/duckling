@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-namespace lexer {
+namespace unicode {
 
 	icu::UnicodeSet Classifications::name_start;
 	icu::UnicodeSet Classifications::name_continue;
