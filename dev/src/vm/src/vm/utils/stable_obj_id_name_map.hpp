@@ -73,9 +73,11 @@ namespace vm {
 			}
 
 			constexpr base::Optional<base::StrID> nameOf(ObjID id) const {
-				return id_to_name.atMaybe(id).map([](auto ref) {
-					return base::StrID(std::move(*ref));
-				});
+				usize index = static_cast<usize>(id);
+				if (index < id_to_name.size())
+					return id_to_name[index];
+				else
+					return {};
 			}
 
 			[[nodiscard]] constexpr base::Optional<ObjID> idOf(base::StrID name) const {
@@ -85,10 +87,8 @@ namespace vm {
 
 			[[nodiscard]]
 			constexpr bool contains(ObjID id) const {
-				return id_to_name.contains(id);
+				return static_cast<usize>(id) < id_to_name.size();
 			}
-
-			constexpr bool contains(ObjID id) { return id_to_name.contains(id); }
 
 			[[nodiscard]] constexpr bool contains(base::StrID name) const {
 				return name_to_id.contains(name);
@@ -119,7 +119,7 @@ namespace vm {
 			/**
 			 * @brief Returns ids of inserted elements.
 			 */
-			constexpr auto ids() const { return id_to_name | std::views::keys; }
+			constexpr auto ids() const { return std::views::iota(size_t(0), id_to_name.size()); }
 
 			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> allData() const {
 				std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> data;
@@ -132,7 +132,7 @@ namespace vm {
 
 		private:
 			constexpr void createLink(ObjID id, base::StrID name) {
-				id_to_name.put(id, name);
+				id_to_name.push_back(name);
 				name_to_id.put(name, id);
 			}
 
@@ -143,7 +143,7 @@ namespace vm {
 			 * * deque does not relocate memory (unlike vector)
 			 */
 			ContainerT                        values{};
-			base::HashMap<ObjID, base::StrID> id_to_name{};
+			std::vector<base::StrID>          id_to_name{};
 			base::HashMap<base::StrID, ObjID> name_to_id{};
 		};
 	}
