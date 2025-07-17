@@ -2,14 +2,13 @@
 
 #include "errors.hpp"
 
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/token_stream.hpp>
-
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/token_stream.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>

@@ -1,8 +1,7 @@
 #include "config.hpp"
 
-#include <lexer/lexer_class.hpp>
-
 #include <diagnostic/logger.hpp>
+#include <lexer/lexer_class.hpp>
 
 namespace config {
 	clap::Clap standardOptions() {

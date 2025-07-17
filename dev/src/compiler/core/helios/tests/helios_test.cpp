@@ -15,7 +15,6 @@
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <lexer/lexer.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <typesystem/higher/all.hpp>
@@ -28,6 +27,7 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>
