@@ -8,10 +8,8 @@
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 
-#include "base/optional.hpp"
 #include <base/variant.hpp>
 
-#include <cstddef>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -35,7 +33,7 @@ namespace {
 	std::string generateUsage(const clap::ParsingResult& result) {
 		auto              command = result.getMatchedCommand();
 		std::stringstream usage;
-		usage << "Usage: " << getFileName(result.getFilePath());
+		usage << "Usage: " << getFileName(result.getFilePath()) << " [GLOBAL OPTIONS]";
 
 		// Add a path to this command.
 		for (const auto& cmd: result.getCommandPath() | std::views::drop(1))
@@ -111,7 +109,7 @@ std::string generateSubcommandsBlock(const std::vector<clap::Clap>& subcommands,
 	if (subcommands.empty()) return "";
 	std::stringstream output;
 
-	output << "\nCommands:\n";
+	output << "\nAvailable Commands:\n";
 	for (const auto& cmd: subcommands) {
 		std::string name = " " + cmd.getName();
 		output << std::setw(padding) << std::left << name;
@@ -127,10 +125,10 @@ namespace clap {
 		auto              program_name = getFileName(result.getFilePath());
 
 		output << generateUsage(result) << '\n';
-		if (command->get() != &clap)
-			output << generateOptionsBlock("Global options:", clap.getParameters());
-		output << generateOptionsBlock("Subcommand options:", command->get()->getParameters());
 		output << generateSubcommandsBlock(command->get()->getSubcommands());
+		output << generateOptionsBlock("Global options:", clap.getParameters());
+		if (command->get() != &clap)
+			output << generateOptionsBlock("Command options:", command.value()->getParameters());
 
 
 		if (not command->get()->getSubcommands().empty()) {

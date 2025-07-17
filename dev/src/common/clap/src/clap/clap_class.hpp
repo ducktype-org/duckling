@@ -13,8 +13,6 @@
 #include "parsing_state.hpp"
 #include "value_parser.hpp"
 
-#include "base/maps.hpp"
-#include "base/string_id.hpp"
 #include <base/ints.hpp>
 
 #include <functional>
@@ -184,6 +182,10 @@ namespace clap {
 
 		/**
 		 * @brief Performs the parsing. Returns the parsing result.
+		 *
+		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
+		 * by this function nd have to be handled by the user.
+		 *
 		 * @param argc Number of elements in argv.
 		 * @param argv A C-string array.
 		 * @return An object containing parsed command-line arguments and the matched command.
@@ -192,6 +194,10 @@ namespace clap {
 
 		/**
 		 * @brief Performs the parsing. Returns the parsing result.
+		 *
+		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
+		 * by this function nd have to be handled by the user.
+		 *
 		 * @param args A string containing the command line arguments.
 		 * @return An object containing parsed command-line arguments and the matched command.
 		 */
@@ -201,6 +207,9 @@ namespace clap {
 		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
 		 * the pre handler function (if specified) and then immediately executes the handler for the
 		 * matched command.
+		 *
+		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
+		 * messages are printed and help messages are generated.
 		 *
 		 * Throws an exception if a handler for the invoked command was not specified.
 		 * @param argc Number of elements in argv.
@@ -213,6 +222,9 @@ namespace clap {
 		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
 		 * the pre handler function (if specified) and then immediately executes the handler for the
 		 * matched command.
+		 *
+		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
+		 * messages are printed and help messages are generated.
 		 *
 		 * @param args A string containing the command line arguments.
 		 * @return A return value of the handler specified for the matched command.

@@ -1,9 +1,4 @@
-#include "clap/parsing_result.hpp"
-#include "clap/value_parser.hpp"
-
 #include <clap/clap.hpp>
-#include <clap/exceptions.hpp>
-#include <clap/param_builder.hpp>
 #include <tester/tester.hpp>
 
 #include <array>
@@ -32,7 +27,6 @@ public:
 		TESTER_ADD_TEST(requiredParameterValidation);
 		TESTER_ADD_TEST(subcommandNotSpecifiedError);
 		TESTER_ADD_TEST(executeReturnValueTest);
-		TESTER_ADD_TEST(noHandlerSpecified);
 		TESTER_ADD_TEST(coexistingSubcommandsAndPositionals);
 		TESTER_ADD_TEST(duplicateSubcommand);
 		TESTER_ADD_TEST(conditionalParameterTest);
@@ -308,7 +302,7 @@ private:
 
 		std::array argv{ "./prog" };
 		assertThrows<clap::exceptions::SubcommandNotSpecified>(
-			[&]() { clap.execute(argv.size(), argv.data()); },
+			[&]() { clap.parse(argv.size(), argv.data()); },
 			"Clap did not find a not specified subcommand."
 		);
 	}
@@ -360,15 +354,6 @@ private:
 		std::array argv{ "./prog", "test" };
 		int        exit_code = clap.execute(argv.size(), argv.data());
 		ASSERT_EQUAL(42, exit_code);
-	}
-
-	void noHandlerSpecified() {
-		auto       clap = clap::Clap("prog").addSubcommand(clap::Clap("test", "desc"));
-		std::array argv{ "./prog", "test" };
-		assertThrows<clap::exceptions::NoHandlerSpecified>(
-			[&]() { clap.execute(argv.size(), argv.data()); },
-			"Clap did not find a unspecified handler."
-		);
 	}
 
 	void conditionalParameterTest() {

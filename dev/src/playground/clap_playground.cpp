@@ -93,6 +93,7 @@ void showConfig(const clap::ParsingResult& result) {
 
 void greet(i64 n, const std::string& name) { std::cout << n << ": Hello, " << name << "!\n"; }
 
+// Just a helper to avoid duplication.
 void multiGreeter(const clap::ParsingResult& result) {
 	if (result.isFlag("verbose")) std::cout << "Verbose mode is on for 'greet'.\n";
 
@@ -130,19 +131,19 @@ clap::Clap getClapForPlayground() {
 			else
 				std::cout << "Hi default user\n";
 		})
-	    .addGlobalParameter(  // Add a global parameter (available in all subcommands).
+	    .add(  // Add a global parameter (visible in all subcommands).
 			clap::ParamBuilder::ofFlag()
 				.addShortName('v')
 				.addLongName("verbose")
 				.addShortDesc("Enable verbose output for all commands.")
 				.build()
 		)
-	    .addGlobalParameter(clap::ParamBuilder::ofValue(clap::StringParser::make())
-	                            .addLongName("user")
-	                            .addShortDesc("Run command as a specific user.")
-	                            .build())
-	    .addSubcommand(                                           // playground greet subcommand.
-			clap::Command("greet", "Greets one or more people.")
+	    .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+	             .addLongName("user")
+	             .addShortDesc("Run command as a specific user.")
+	             .build())
+	    .addSubcommand(                                           // `playground greet` subcommand.
+			clap::Clap("greet", "Greets one or more people.")
 				.addPositional(clap::StringParser::make("name"))  // Positional argument.
 				.add(clap::ParamBuilder::ofValue(clap::RangeParser::make())
 	                     .addShortName('r')
@@ -173,7 +174,7 @@ clap::Clap getClapForPlayground() {
 					return 0;
 				})
 		)
-	    .addSubcommand(clap::Command("config", "Displays the current configuration.")
+	    .addSubcommand(clap::Clap("config", "Displays the current configuration.")
 	                       .setHandler([](const clap::ParsingResult& result) -> int {
 							   showConfig(result);
 							   return 0;

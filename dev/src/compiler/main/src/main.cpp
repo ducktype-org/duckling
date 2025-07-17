@@ -6,11 +6,8 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include "clap/help_message_generator.hpp"
-#include "diagnostic/logger.hpp"
-#include "lexer/lexer_class.hpp"
-
 #include <clap/clap.hpp>
+#include <diagnostic/logger.hpp>
 #include <driver/hout_to_binary_driver.hpp>
 #include <driver/package_compilation_driver.hpp>
 #include <filesystem/file.hpp>
@@ -18,6 +15,7 @@
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
+#include <lexer/lexer_class.hpp>
 #include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -60,7 +58,6 @@ clap::Clap getStandardDucklingOptions() {
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
 	             .build())
-	    .addHelpFlag()
 	    .setPreHandler([](const clap::ParsingResult& options) {
 			dia::Logger::setImmediatelyDump(options.isFlag("logger-cerr"));
 			lexer::Lexer::setTokenMessages(options.isFlag("lexer-cerr"));
@@ -86,8 +83,6 @@ clap::Clap myGetClapForMain() {
 	                     .required()
 	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
-					//   auto options = configureDuckMainWith(clap, command_args); // This is
-		            //   not needed since we it from the top.
 					auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
 					auto token_file = tokenizer::makeTokenSource(file_to_lex);
@@ -124,9 +119,6 @@ clap::Clap myGetClapForMain() {
 	                     .required()
 	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
-					//   auto options = configureDuckMainWith(clap, command_args);
-		            //   not needed since we it from the top.
-
 					auto file_to_parse = options.getValue<fs::FilePath>("file").value();
 
 					auto pst = pst::PST(file_to_parse);
@@ -155,9 +147,6 @@ clap::Clap myGetClapForMain() {
 	                                .required()
 	                                .build())
 	                       .setHandler([](const clap::ParsingResult& options) -> int {
-							   //   auto options = configureDuckMainWith(clap, command_args);
-		                       //   not needed since we it from the top.
-
 							   auto path_to_compile
 								   = options.getValue<fs::FilePath>("module").value();
 
@@ -213,9 +202,6 @@ clap::Clap myGetClapForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
-					// auto options = configureDuckMainWith(clap, command_args);
-		            //   not needed since we it from the top.
-
 					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 
 					// @TODO: error handling
@@ -304,8 +290,7 @@ clap::Clap myGetClapForMain() {
 				})
 		)
 	    .addSubcommand(clap::Clap("throw", "Throws exception (testing command).")
-	                       .setHandler([](const clap::ParsingResult& _) -> int {
-							   //   configureDuckMainWith(clap, command_args);
+	                       .setHandler([](const clap::ParsingResult&) -> int {
 							   throw base::LogicError("Command `throw` thrown successfully!");
 						   }));
 }
@@ -317,18 +302,27 @@ int main(int argc, const char* argv[]) {
 	try {
 		return clap.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
-		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
-		std::cerr << e.what();
-		std::cerr << "\nAborting\n";
+		printer::StreamPrinter::print({
+			{ "[ERROR] ", printer::Color::RED },
+			{ "Compiler Exception was caught with message:\n", printer::Color::DEFAULT },
+			{ e.what(), printer::Color::DEFAULT },
+			{ "\nAborting\n", printer::Color::DEFAULT },
+		});
 		return 1;
 	} catch (const std::exception& e) {
-		std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
-		std::cerr << e.what();
-		std::cerr << "\nAborting\n";
+		printer::StreamPrinter::print({
+			{ "[ERROR] ", printer::Color::RED },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
+			{ e.what(), printer::Color::DEFAULT },
+			{ "\nAborting\n", printer::Color::DEFAULT },
+		});
 		return 1;
 	} catch (...) {
-		std::cerr
-			<< "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
+		printer::StreamPrinter::print({
+			{ "[ERROR] ", printer::Color::RED },
+			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
+		      printer::Color::DEFAULT },
+		});
 		return 1;
 	}
 }

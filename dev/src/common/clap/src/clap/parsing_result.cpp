@@ -5,8 +5,6 @@
 
 #include "parsing_result.hpp"
 
-// #include "base/optional.hpp"
-
 namespace clap {
 	ParsingResult::ParsingResult(std::string file_path, std::string args):
 		  file_path(std::move(file_path)),

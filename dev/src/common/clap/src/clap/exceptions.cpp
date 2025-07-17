@@ -7,7 +7,7 @@
 
 #include "parsing_result.hpp"
 
-#include "base/str_utils.hpp"
+#include <base/str_utils.hpp>
 
 #include <utility>
 
@@ -111,7 +111,7 @@ namespace clap::exceptions {
 		  ClapException(base::strConcat(
 			  "Command \"",
 			  command_name,
-			  "\" cannot be executed on its own. Please specify a subcommand.\n"
+			  "\" cannot be executed on its own. Please specify a subcommand."
 		  )) {}
 
 	DuplicateSubcommand::DuplicateSubcommand(
@@ -122,7 +122,7 @@ namespace clap::exceptions {
 			  duplicate_name,
 			  "\" has already been added to the command \"",
 			  parent_command_name,
-			  "\".\n"
+			  "\"."
 		  )) {}
 
 	CoexistingPositionalAndSubcommand::CoexistingPositionalAndSubcommand(
@@ -131,12 +131,12 @@ namespace clap::exceptions {
 		  ClapException(base::strConcat(
 			  "Positional arguments and subcommands can't coexist in the same command: \"",
 			  command_name,
-			  "\".\n"
+			  "\"."
 		  )) {}
 
 	NoHandlerSpecified::NoHandlerSpecified(const std::string& command_name):
 		  ClapException(base::strConcat(
-			  "No handler specified for the executed command: \"", command_name, "\".\n"
+			  "No handler specified for the executed command: \"", command_name, "\"."
 		  )) {}
 
 }

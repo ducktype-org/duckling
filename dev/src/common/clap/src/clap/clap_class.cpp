@@ -5,8 +5,10 @@
 
 #include "clap.hpp"
 
-#include "base/optional.hpp"
+#include <printer/stream_printer.hpp>
+
 #include <base/box.hpp>
+#include <base/optional.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
@@ -46,7 +48,9 @@ namespace clap {
 		  description(std::move(description)),
 		  default_value_parser(StringParser::make()),
 		  is_leaf(true),
-		  is_root(true) {}
+		  is_root(true) {
+		addHelpFlag();
+	}
 
 	Clap&& Clap::add(Parameter&& param) {
 		parameters.push_back(std::move(param));
@@ -160,11 +164,10 @@ namespace clap {
 					return;
 				}
 
-				if (!is_leaf) {
-					// If it's not subcommand (its a positional) and this subcommand is not a
-					// leaf then we throw an error, since the subcommand is not specified.
-					throw exceptions::SubcommandNotSpecified(name);
-				}
+				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
+				// If it's not subcommand (its a positional) and this subcommand is not a
+				// leaf then we throw an error, since the subcommand is not specified.
+				if (!is_leaf) throw exceptions::SubcommandNotSpecified(name);
 
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.
@@ -182,6 +185,7 @@ namespace clap {
 		}
 		// The only way we get here is when all arguments where parsed.
 		// This means `this` is the matched subcommand which has to be a leaf.
+		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 		if (!is_leaf) throw exceptions::SubcommandNotSpecified(name);
 	}
 
@@ -206,6 +210,16 @@ namespace clap {
 		} catch (const exceptions::HelpException& e) {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
+		} catch (const clap::exceptions::ClapException& e) {
+			printer::StreamPrinter::print({
+				{ "[Clap error]: ", printer::Color::RED },
+				{ e.what(), printer::Color::DEFAULT },
+				{ "\n", printer::Color::DEFAULT },
+				{ "Use \"./", printer::Color::DEFAULT },
+				{ name, printer::Color::DEFAULT },
+				{ " --help\" for available options.\n", printer::Color::DEFAULT },
+			});
+			return 1;
 		}
 	}
 

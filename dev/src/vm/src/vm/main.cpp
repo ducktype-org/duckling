@@ -6,8 +6,6 @@
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
 
-#include "base/int_conv.hpp"
-
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
@@ -21,7 +19,6 @@ void showVersion() {
 
 clap::Clap getVmClap() {
 	return clap::Clap("dvm", "The Duckling Virtual Machine.")
-	    .addHelpFlag()
 	    .add(clap::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
@@ -70,7 +67,7 @@ clap::Clap getVmClap() {
 	    .addSubcommand(clap::Clap("repl", "Start the VM in REPL mode.")
 	                       .addPositional(clap::FileParser::make())
 	                       // TODOP: Maybe REPL should have a file flag as well?
-	                       .setHandler([](const clap::ParsingResult& _) -> int {
+	                       .setHandler([](const clap::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   DuckVMRepl::get().run();
 							   return 0;

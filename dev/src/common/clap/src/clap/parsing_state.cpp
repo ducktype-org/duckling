@@ -1,6 +1,6 @@
 #include "parsing_state.hpp"
 
-#include "clap/exceptions.hpp"
+#include "exceptions.hpp"
 
 /**
  * Basic helper functions.
@@ -90,7 +90,7 @@ namespace clap {
 		} else {
 			for (char c: param_name)
 				if (!findParameterAndParse(params, { c }, name_type))
-					throw clap::exceptions::InvalidParameterName({ c });
+					throw clap::exceptions::InvalidParameterName(param_name);
 		}
 	}
 

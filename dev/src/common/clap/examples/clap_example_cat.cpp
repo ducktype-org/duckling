@@ -41,14 +41,12 @@ int main(int argc, const char** argv) {
 						catFile(result);
 						return 0;
 					})
-	                .add(
-						clap::ParamBuilder::ofValue(clap::IntParser::make())
-							.optional()  // It's the default
-							.addShortName('n')
-							.addLongName("times")
-							.addShortDesc("How many times to print each content")
-							.build()
-					);
+	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+	                         .optional()  // It's the default
+	                         .addShortName('n')
+	                         .addLongName("times")
+	                         .addShortDesc("How many times to print each content")
+	                         .build());
 
 	// .addPositional(FileParser) tells clap to expect at least one file.
 

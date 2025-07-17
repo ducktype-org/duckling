@@ -18,7 +18,7 @@ add_library(Clap
 	src/clap/clap_class.hpp
 )
 
-make_module(Clap USES Base Filesystem)
+make_module(Clap USES Base Printer Filesystem)
 
 duck_add_test(common clap tests/clap_test.cpp USES Clap Base)
 

@@ -3,7 +3,6 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include "clap/exceptions.hpp"
 
 #include <base64.hpp>
 #include <clap/clap.hpp>
@@ -240,7 +239,6 @@ void showVersion() {
 
 clap::Clap getLspDaemonCLI() {
 	return clap::Clap("lsp_deamon", "The Duckling Language Server Protocol daemon.")
-	    .addHelpFlag()
 	    .add(clap::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
