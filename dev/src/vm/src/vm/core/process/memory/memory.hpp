@@ -145,5 +145,12 @@ namespace vm {
 
 		[[nodiscard]]
 		auto requestBlockType(BlockID id) -> TypeCRef;
+
+		// ======================== Utility =========================
+
+		template<typename T, typename U>
+		requires(sizeof(T) <= sizeof(U)) constexpr static T& interpret(U& value) {
+			return *(reinterpret_cast<T*>(&value));
+		}
 	};
 }

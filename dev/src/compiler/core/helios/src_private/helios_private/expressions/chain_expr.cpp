@@ -8,6 +8,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -16,8 +17,6 @@
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -26,31 +25,10 @@
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 
-#include <algorithm>
+#include <query_framework/context.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios::code {
-	struct HoutExprSymbolVisitor final: public HoutExprVisitorEmpty {
-		explicit HoutExprSymbolVisitor(query::Context& ctx): ctx(ctx) {}
-
-		query::Context& ctx;
-
-		base::Optional<SymID> symbol;
-
-		void visitIdentifierExpr(const IdentifierExpr& val) override { symbol = val.symbol; }
-
-		void visitParenthesisExpr(const ParenthesisExpr& val) override {
-			val.inner->acceptVisitor(*this);
-		}
-	};
-
-	/**
-	 * Wrapper around the HoutExprSymbolVisitor to get the symbol ID from an expression.
-	 */
-	base::Optional<SymID> getExpressionSymID(query::Context& ctx, CRef<code::Expr> expr) {
-		HoutExprSymbolVisitor visitor(ctx);
-		expr->acceptVisitor(visitor);
-		return visitor.symbol;
-	}
 
 	/**
 	 * State for the building of the chain expression in HOUT.
@@ -262,7 +240,7 @@ namespace compiler::helios::code {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::QError(errors::Failed());
 			auto hout_expr = std::move(expr).value();
-			auto symbol    = getExpressionSymID(query_ctx, hout_expr.ref());
+			auto symbol    = getIdentifierExprSymID(hout_expr.ref());
 			if (symbol.has_value()) return processNamespaceOrValue(symbol.value());
 			return ChainState::ofExpr(std::move(hout_expr));
 		}
@@ -273,9 +251,48 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
-			(void) current_expr;
-			(void) call_expr;
-			throw base::NotYetImplemented("Helios chain expr: call without access before it");
+			// @TODO write tests for this case when parser will support it
+			// @TODO maybe chose one style of error messages in this file
+
+			std::vector<Box<Expr>> call_arguments;
+			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
+				auto arg_expr
+					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
+				if (arg_expr.hasError()) return query::QError(errors::Failed());
+				call_arguments.emplace_back(std::move(arg_expr.value()));
+			}
+			auto expr_type = current_expr->expression_type.getSymbolType();
+			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
+
+			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+						call_expr->getSourcePosition(), "Invalid number of arguments"
+					)
+				);
+				return query::QError(errors::Failed());
+			}
+
+			std::vector<base::Box<Expr>> coerced_arguments;
+			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+				auto coerced = coerceExpression(
+					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
+				);
+				if (coerced.hasError()) {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+							call_expr->getSourcePosition(), "Invalid argument type"
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+				coerced_arguments.emplace_back(std::move(coerced.value()));
+			}
+
+			auto node = makeBox<CallExpr>(
+				query_ctx, std::move(current_expr), std::move(coerced_arguments)
+			);
+			return ChainState::ofExpr(std::move(node));
 		}
 
 		/**
@@ -433,7 +450,10 @@ namespace compiler::helios::code {
 				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
 
-			auto node = makeBox<CallExpr>(query_ctx, callee, std::move(coerced_arguments));
+			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
+			auto node            = makeBox<CallExpr>(
+                query_ctx, std::move(identifier_expr), std::move(coerced_arguments)
+            );
 			return ChainState::ofExpr(std::move(node));
 		}
 

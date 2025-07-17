@@ -2,13 +2,13 @@
  * @file clap_playground.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
+#include <base/int_conv.hpp>
+
 #include <clap/clap.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/help_message_generator.hpp>
 #include <clap/param_builder.hpp>
 #include <printer/stream_printer.hpp>
-
-#include <base/int_conv.hpp>
 
 #include <iostream>
 
@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
 
 	clap::RangeParser::Range range = *result.getValue<clap::RangeParser::Range>("range");
 	auto [begin, end]              = range;
-	i64 n                          = result.getValue<i64>('n').valueOr(1);
+	i64 n                          = result.getValue<i64>('n').copyValueOr(1);
 
 	for (const auto& name: names) {
 		for (i64 i = 0; i < n; i++) {

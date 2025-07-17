@@ -1,5 +1,6 @@
-#include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
+
+#include <tester/tester.hpp>
 
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS

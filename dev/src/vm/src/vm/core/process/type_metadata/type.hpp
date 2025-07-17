@@ -2,12 +2,12 @@
 
 #include "kinds.hpp"
 
-#include <json/json.hpp>
-
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
+
+#include <json/json.hpp>
 
 #include <variant>
 
@@ -106,14 +106,6 @@ namespace vm {
 			return kind_type;
 		}
 
-		[[nodiscard]]
-		bool isPrimitive(TypeSize qsize) const {
-			return getKind() == Kind::Primitive and getSize() == qsize;
-		}
-
-		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
-
-
 		// @todo: Interface below may change
 
 		// @TODO: move function below to kind:: structures without `option`
@@ -125,22 +117,9 @@ namespace vm {
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
-		// fixedSizeTable
-		base::Optional<u64> getFixedSizeTableSize() const;
-
 		// data
 		[[nodiscard]]
-		base::Optional<usize> getFieldCount() const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID field_id) const;
-		[[nodiscard]]
-		base::Optional<Offset> getFieldOffset(kind::Data::FieldID field_id) const;
-		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 		// inheritance
 		[[nodiscard]]
@@ -152,17 +131,9 @@ namespace vm {
 		[[nodiscard]]
 		bool isInstantiable() const;
 
-		// variant
-		[[nodiscard]]
-		base::Optional<u64> getVariantCount() const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getNthVariantType(u64 variant_id) const;
-
 		// function
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
-		[[nodiscard]]
-		base::Optional<base::CRef<std::vector<TypeCRef>>> getParameters() const;
 		[[nodiscard]]
 		base::Optional<u64> getParametersSize() const;
 		[[nodiscard]]

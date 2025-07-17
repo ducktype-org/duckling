@@ -1,7 +1,8 @@
-#include <clap/clap.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <base/int_conv.hpp>
+
+#include <clap/clap.hpp>
 
 #include <iostream>
 
@@ -49,9 +50,9 @@ int main(int argc, const char* argv[]) {
 	}
 
 	auto fs_tree = fs::FsTree::create(
-		res.getValue<fs::File>('p').valueOr(fs::File(".")),
-		std::regex(res.getValue<std::string>("fileregex").valueOr("\\.*")),
-		std::regex(res.getValue<std::string>("dirregex").valueOr("\\..*"))
+		res.getValue<fs::File>('p').copyValueOr(fs::File(".")),
+		std::regex(res.getValue<std::string>("fileregex").copyValueOr("\\.*")),
+		std::regex(res.getValue<std::string>("dirregex").copyValueOr("\\..*"))
 	);
 	if (!res.isFlag("noprint")) std::cout << fs_tree->prettyPrint();
 	countFiles(*fs_tree);

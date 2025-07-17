@@ -114,7 +114,8 @@ namespace init {
 		CORE_ASSERT(not state->was_init, "InitObject can only be created once");
 		state->was_init = true;
 
-		CORE_ASSERT(not std::atexit(initStateAtexitHandler), "Cannot register atexit handler");
+		auto handler_fail = std::atexit(initStateAtexitHandler);
+		CORE_ASSERT(not handler_fail, "Cannot register atexit handler");
 
 		for (auto& function: state->init_function_list) function();
 	}

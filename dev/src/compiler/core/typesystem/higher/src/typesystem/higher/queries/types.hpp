@@ -3,9 +3,9 @@
 #include "../symbol_type.hpp"
 #include "../types.hpp"
 
-#include <query_framework/query_int.hpp>
-
 #include <base/maps.hpp>
+
+#include <query_framework/query_int.hpp>
 
 namespace tsh {
 	/**

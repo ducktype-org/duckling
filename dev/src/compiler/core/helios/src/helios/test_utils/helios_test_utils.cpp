@@ -14,11 +14,12 @@
 #include <pst_parser/elements/hierarchy/not_statements/fun_param.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <pst_parser/pst_visitor.hpp>
+
+#include <base/anycast.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-
-#include <base/anycast.hpp>
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
