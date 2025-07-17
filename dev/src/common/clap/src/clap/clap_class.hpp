@@ -270,8 +270,5 @@ namespace clap {
 		 * @brief A list of subcommands (sub-claps) for this command.
 		 */
 		std::vector<Clap> subcommands;
-
-		bool is_leaf;  // This command has no subcommands.
-		bool is_root;  // This command is not a subcommand.
 	};
 }  // clap

@@ -4,14 +4,13 @@
  */
 
 #include "clap.hpp"
-#include "clap/exceptions.hpp"
-
-#include <printer/stream_printer.hpp>
 
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
+
+#include <printer/stream_printer.hpp>
 
 #include <iostream>
 #include <utility>
@@ -47,9 +46,7 @@ namespace clap {
 	Clap::Clap(std::string name, std::string description):
 		  name(std::move(name)),
 		  description(std::move(description)),
-		  default_value_parser(StringParser::make()),
-		  is_leaf(true),
-		  is_root(true) {
+		  default_value_parser(StringParser::make()) {
 		// A --help flag is added by default.
 		addHelpFlag();
 	}
@@ -60,7 +57,7 @@ namespace clap {
 	}
 
 	Clap&& Clap::addPositional(Box<ValueParser> parser) {
-		if (!is_leaf) throw clap::exceptions::CoexistingPositionalAndSubcommand(name);
+		if (!subcommands.empty()) throw clap::exceptions::CoexistingPositionalAndSubcommand(name);
 		positional_parameters.push_back(std::move(parser));
 		return std::move(*this);
 	}
@@ -74,8 +71,6 @@ namespace clap {
 			if (subcmd.getName() == sub_command.getName())
 				throw clap::exceptions::DuplicateSubcommand(sub_command.getName(), name);
 
-		sub_command.is_root = false;
-		is_leaf             = false;
 		subcommands.emplace_back(std::move(sub_command));
 		return std::move(*this);
 	}
@@ -96,11 +91,13 @@ namespace clap {
 	}
 
 	Clap&& Clap::addHelpFlag() {
-		return add(ParamBuilder::ofFlag()
-		               .addShortName('h')
-		               .addLongName("help")
-		               .addShortDesc("Display this information.")
-		               .build());
+		return add(
+			ParamBuilder::ofFlag()
+				.addShortName('h')
+				.addLongName("help")
+				.addShortDesc("Display this information.")
+				.build()
+		);
 	}
 
 	const std::string& Clap::getName() const { return name; }
@@ -156,13 +153,12 @@ namespace clap {
 			else {  // Subcommand or positional.
 				auto maybe_subcmd = getSubcommand(token);
 				if_opt_some(maybe_subcmd, subcmd) {
+					if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 					// It's a subcommand, go down the tree.
 					st.consumeToken();
 					subcmd->parse(st);
 					return;
 				}
-
-				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.
@@ -190,7 +186,8 @@ namespace clap {
 			// Get a handler that handles the matched command.
 			const auto& maybe_command = parsing_result.getMatchedCommand();
 			if_opt_some(maybe_command, command) {
-				if (!command->getSubcommands().empty()) throw clap::exceptions::SubcommandNotSpecified(command->getName());
+				if (!command->getSubcommands().empty())
+					throw clap::exceptions::SubcommandNotSpecified(command->getName());
 				const auto& handler = command->getHandler();
 				if (handler)
 					return handler(parsing_result);
@@ -204,14 +201,16 @@ namespace clap {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
 		} catch (const clap::exceptions::ClapException& e) {
-			printer::StreamPrinter::print({
-				{ "[Clap error]: ", printer::Color::RED },
-				{ e.what(), printer::Color::DEFAULT },
-				{ "\n", printer::Color::DEFAULT },
-				{ "Use \"./", printer::Color::DEFAULT },
-				{ name, printer::Color::DEFAULT },
-				{ " --help\" for available options.\n", printer::Color::DEFAULT },
-			});
+			printer::StreamPrinter::print(
+				{
+					{ "[Clap error]: ", printer::Color::RED },
+					{ e.what(), printer::Color::DEFAULT },
+					{ "\n", printer::Color::DEFAULT },
+					{ "Use \"./", printer::Color::DEFAULT },
+					{ name, printer::Color::DEFAULT },
+					{ " --help\" for available options.\n", printer::Color::DEFAULT },
+				}
+			);
 			return 1;
 		}
 	}

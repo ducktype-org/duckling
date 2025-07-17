@@ -6,6 +6,7 @@
 #include "help_message_generator.hpp"
 
 #include <base/variant.hpp>
+
 #include <ranges>
 
 namespace {
@@ -20,40 +21,50 @@ namespace {
 	 * @param result The result of parsing.
 	 * @return A formatted "Usage" string.
 	 */
-	std::string generateUsage(const clap::ParsingResult& result) {
+	std::string generateUsage(const clap::Clap& clap, const clap::ParsingResult& result) {
 		auto              command = result.getMatchedCommand();
 		std::stringstream usage;
-		usage << "Usage: " << getFileName(result.getFilePath()) << " [GLOBAL OPTIONS]";
+		usage << "Usage: " << getFileName(result.getFilePath());
+
+		auto print_required_parameters = [&](const std::vector<clap::Parameter>& parameters) {
+			for (const auto& param: parameters) {
+				variant_match(param.getParameterNecessity()) {
+					variant_case(clap::Required, _) {
+						usage << " ";
+						bool has_long_name = param.getLongName().has_value();
+						// If a long name is available, we prefer it.
+						if (has_long_name)
+							usage << "--" << param.getLongName()->stdString();
+						else if (param.getShortName().has_value())
+							usage << "-" << param.getShortName().value();
+
+						if (param.getValueParser() != nullptr)
+							usage << " <" << param.getValueParser()->getTypeName() << ">";
+					}
+				}
+			}
+		};
+
+		// Print out the required global parameters.
+		print_required_parameters(clap.getParameters());
+		usage << " [GLOBAL OPTIONS]";
 
 		// Add a path to this command.
 		for (const auto& cmd: result.getCommandPath() | std::views::drop(1))
 			usage << " " << cmd->getName();
 
-		if (not command->get()->getSubcommands().empty()) {
+		if (not command.value()->getSubcommands().empty()) {
 			usage << " <COMMAND> [OPTIONS]";
 			return usage.str();
 		}
 
-		for (const auto& param: command->get()->getParameters()) {
-			variant_match(param.getParameterNecessity()) {
-				variant_case(clap::Required, _) {
-					usage << " ";
-					bool has_long_name = param.getLongName().has_value();
-					// If a long name is available, we prefer it.
-					if (has_long_name)
-						usage << "--" << param.getLongName()->stdString();
-					else if (param.getShortName().has_value())
-						usage << "-" << param.getShortName().value();
+		// Print out the required global parameters.
+		print_required_parameters(command.value()->getParameters());
 
-					if (param.getValueParser() != nullptr)
-						usage << " <" << param.getValueParser()->getTypeName() << ">";
-				}
-			}
-		}
-		for (const auto& positional: command->get()->getPositionalParameters())
+		for (const auto& positional: command.value()->getPositionalParameters())
 			usage << " <" << positional->getTypeName() << ">";
 		usage << " [OPTIONS] ";
-		auto default_parser = command->get()->getDefaultValueParser();
+		auto default_parser = command.value()->getDefaultValueParser();
 		if (default_parser != nullptr) usage << "[" + default_parser->getTypeName() + "...]";
 		return usage.str();
 	}
@@ -114,14 +125,14 @@ namespace clap {
 		auto              command      = result.getMatchedCommand();
 		auto              program_name = getFileName(result.getFilePath());
 
-		output << generateUsage(result) << '\n';
-		output << generateSubcommandsBlock(command->get()->getSubcommands());
+		output << generateUsage(clap, result) << '\n';
+		output << generateSubcommandsBlock(command.value()->getSubcommands());
 		output << generateOptionsBlock("Global options:", clap.getParameters());
 		if (command->get() != &clap)
 			output << generateOptionsBlock("Command options:", command.value()->getParameters());
 
 
-		if (not command->get()->getSubcommands().empty()) {
+		if (not command.value()->getSubcommands().empty()) {
 			output << "\nRun '" << program_name
 				   << " <COMMAND> --help for more information on a command.\n";
 		}

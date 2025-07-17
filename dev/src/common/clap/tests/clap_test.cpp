@@ -290,7 +290,7 @@ private:
 		ASSERT_EQUAL(2, path.size());
 		ASSERT_EQUAL("prog", path[0]->getName());
 		ASSERT_EQUAL("login", path[1]->getName());
-		ASSERT_EQUAL("login", res.getMatchedCommand()->get()->getName());
+		ASSERT_EQUAL("login", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL("admin", res.getValue<std::string>("user").value());
 	}
 

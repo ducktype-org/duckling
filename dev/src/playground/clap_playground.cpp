@@ -9,10 +9,8 @@
  * A few examples:
  * The basic structure is:
  *   ./clap_playground [GLOBAL OPTIONS] <COMMAND> [COMMAND-SPECIFIC ARGUMENTS & OPTIONS]
- *   or
- *   ./clap_playground <COMMAND> [GLOBAL OPTIONS] [COMMAND-SPECIFIC ARGUMENTS & OPTIONS]
  *
- * Type `./clap_playground --help` to list all the global parameters ans subcommands.
+ * Type `./clap_playground --help` to list all the global parameters and subcommands.
  * Type `./clap_playground [COMMAND] --help` to list the subcommand specific parameters and global
  * flags
  *
@@ -117,7 +115,7 @@ void multiGreeter(const clap::ParsingResult& result) {
 }
 
 clap::Clap getClapForPlayground() {
-	return clap::Clap("playground", "A cool cli app to demonstrate Clap.")
+	return clap::Clap("clap_playground", "A cool cli app to demonstrate Clap.")
 	    .setDefaultValueParser(clap::StringParser::make("extra_names"))
 	    .setPreHandler([](const clap::ParsingResult& result) {
 			std::cout << "This is a function which get's invoked before all other handlers. It may "
@@ -138,6 +136,7 @@ clap::Clap getClapForPlayground() {
 	    .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
 	             .addLongName("user")
 	             .addShortDesc("Run command as a specific user.")
+				 .required()
 	             .build())
 	    .addSubcommand(                                           // `playground greet` subcommand.
 			clap::Clap("greet", "Greets one or more people.")
