@@ -13,7 +13,6 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -23,6 +22,8 @@
 #include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 #include <functional>
 #include <vector>

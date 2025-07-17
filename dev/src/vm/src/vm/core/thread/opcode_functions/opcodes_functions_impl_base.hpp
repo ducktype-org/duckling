@@ -84,11 +84,14 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
-		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }  \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				= Memory::interpret<const TYPE>(instr->arg1);                             \
+		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
-		{ DEREF_GLOBAL(TYPE, instr->arg0) = static_cast<TYPE>(instr->arg1); }             \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = Memory::interpret<const TYPE>(instr->arg1); } \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
@@ -144,71 +147,75 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	// TODO: when implementing immidiate values for double arg1 is only 32 bits long. Fix this
-	//  implementation when arg1 will be u64 type (remove if, IS_FLOAT and static_cast)
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP, IS_FLOAT)                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {      \
-		{                                                                                     \
-			derefStack<TYPE>(local_stack, instr->arg0)                                        \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                                \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {               \
-		{                                                                                     \
-			if constexpr (IS_FLOAT) {                                                         \
-				derefStack<TYPE>(local_stack, instr->arg0)                                    \
-					OP static_cast<TYPE>(*reinterpret_cast<const float*>(&instr->arg1));      \
-			} else {                                                                          \
-				derefStack<TYPE>(local_stack, instr->arg0) OP static_cast<TYPE>(instr->arg1); \
-			}                                                                                 \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				OP Memory::interpret<const TYPE>(instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
 	}
 
-	DEFINE_ARITHMETIC_OP(add, 64, i64, +=, false)
-	DEFINE_ARITHMETIC_OP(add, 32, i32, +=, false)
-	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=, false)
-	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=, false)
-	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=, false)
-	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=, false)
-	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=, false)
-	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=, false)
-	DEFINE_ARITHMETIC_OP(div, 64, i64, /=, false)
-	DEFINE_ARITHMETIC_OP(div, 32, i32, /=, false)
+	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
+	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
+	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
+	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
+	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
+	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
+	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
+	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
+	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
+	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
 
-	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=, true)
-	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=, true)
-	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=, true)
-	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=, true)
-	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=, true)
-	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=, true)
-	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=, true)
-	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=, true)
+	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
+	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
+	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
+	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
+	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
+	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
+	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
+	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
 
 
-#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                                       \
-			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)                      \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                                  \
-		}                                                                                       \
-		FUNCTION_CONT(1);                                                                       \
-	}                                                                                           \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                 \
-		{                                                                                       \
-			frame->flags.flag                                                                   \
-				= derefStack<TYPE>(local_stack, instr->arg0) OP static_cast<TYPE>(instr->arg1); \
-		}                                                                                       \
-		FUNCTION_CONT(1);                                                                       \
+	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
+	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
+	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
+	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
+	DEFINE_ARITHMETIC_OP(udiv, 64, u64, /=)
+	DEFINE_ARITHMETIC_OP(udiv, 32, u32, /=)
+
+#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)               \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)               \
+				OP Memory::interpret<const TYPE>(instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
 	}
 
 	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
 	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
+	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
 	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
 	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
+	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
+	DEFINE_COMPARISON_OP(ucmpG, 8, std::uint8_t, >)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
@@ -665,7 +672,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
-			auto field_offset = instr[1].arg0;
+			auto field_offset = Memory::interpret<const i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
@@ -686,7 +693,7 @@ namespace vm {
 			auto dst_pointer   = Pointer(dst_block, 0);
 
 			auto src_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
-			auto field_offset = instr[1].arg0;
+			auto field_offset = Memory::interpret<const i64>(instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);

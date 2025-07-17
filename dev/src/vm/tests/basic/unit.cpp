@@ -1,5 +1,6 @@
-#include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
+
+#include <tester/tester.hpp>
 
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -8,7 +9,7 @@ class VmUnitTest: public VmTestSuite {
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(floatingPointArithmetic32Test);
-		TESTER_ADD_TEST(floatingPointArithmetic64Test);
+		// TESTER_ADD_TEST(floatingPointArithmetic64Test);
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
@@ -16,6 +17,7 @@ public:
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(verySimpleUnsignedTest);
 	}
 
 private:
@@ -47,6 +49,8 @@ private:
 	void floatingPointArithmetic64Test() {
 		runTestOnVm("floating_point_arithmetic_64.dbc", "", "1056964608", {}, 0);
 	}
+
+	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");

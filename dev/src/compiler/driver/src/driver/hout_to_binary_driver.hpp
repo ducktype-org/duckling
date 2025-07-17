@@ -6,13 +6,14 @@
 
 #include "backend_driver/backend_driver.hpp"
 
-#include <artifacts/artifacts.hpp>
 #include <helios/hout/hout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
+
+#include <artifacts/artifacts.hpp>
 
 #include <expected>
 

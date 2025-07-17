@@ -13,7 +13,7 @@
 #include <utility>
 
 namespace vm::low {
-	using ByteCode = std::vector<Fix8Instruction>;
+	using ByteCode = std::vector<MicroInstruction>;
 
 	/**
 	 * @brief Function data.
@@ -41,7 +41,7 @@ namespace vm::low {
 			Box<TypeMetadata>                      types,
 			const std::vector<FuncData>&           functions,
 			const std::vector<code::GlobalData>&   global_data,
-			const base::HashMap<i32, base::StrID>& method_name_pool
+			const base::HashMap<u64, base::StrID>& method_name_pool
 		):
 			  types(std::move(types)),
 			  method_name_pool(method_name_pool) {
@@ -55,6 +55,6 @@ namespace vm::low {
 		StableObjIdNameMap<TypeCRef, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
-		base::HashMap<i32, base::StrID> method_name_pool;
+		base::HashMap<u64, base::StrID> method_name_pool;
 	};
 }
