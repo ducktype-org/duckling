@@ -7,9 +7,12 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
+#include "vm/bytecode/validator/errors.hpp"
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
@@ -130,6 +133,8 @@ namespace vm::loader::parser {
 #undef MAKE_LINK
 	}
 
+	std::vector<code::Field> parseFields(F8ParserState& state);
+
 	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
 		using namespace vm::code;
 		auto out = makeBox<GlobalData>(state.getPosition());
@@ -138,6 +143,21 @@ namespace vm::loader::parser {
 
 		state.parse().one(&out->name);
 		state.parse().one(&out->type);
+
+		auto fields = parseFields(state);
+
+		for (auto field: fields) {
+			CORE_ASSERT(
+				field.bytecode_pos.has_value(),
+				"While parsing global variable ",
+				out->name.value,
+				" field.bytecode_pos doesn't exist."
+			);
+			if (field.name.str() == "constructor")
+				out->ctor_name = tpc::Identifier(field.type, field.bytecode_pos.value());
+			else if (field.name.str() == "destructor")
+				out->dtor_name = tpc::Identifier(field.type, field.bytecode_pos.value());
+		}
 
 		auto end_position = state.getPosition().getEnd();
 		out->position     = dia::SourcePosition(
@@ -246,35 +266,33 @@ namespace vm::loader::parser {
 		return out;
 	}
 
-	namespace {
-		std::vector<code::Field> parseFields(F8ParserState& state) {
-			std::vector<code::Field> out;
+	std::vector<code::Field> parseFields(F8ParserState& state) {
+		std::vector<code::Field> out;
 
-			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
-				return {};
-			}
-
-			state.goDown();
-			while (state.notEmpty()) {
-				tpc::Identifier field_name;
-				tpc::Identifier field_type;
-				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				auto& field        = out.emplace_back(field_name.value, field_type.value);
-				field.bytecode_pos = field_name.position;
-
-				if (state.empty()) break;
-				if (state[0].is(lang_def::Special::Comma)) {
-					state.parse().one(lang_def::Special::Comma);
-				} else {
-					state.err->failAndLog(state.getPosition(), "expected comma or }");
-					state.tokens().skip();
-				}
-			}
-			state.goUpAndSkip();
-
-			return out;
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+			return {};
 		}
+
+		state.goDown();
+		while (state.notEmpty()) {
+			tpc::Identifier field_name;
+			tpc::Identifier field_type;
+			state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
+			auto& field        = out.emplace_back(field_name.value, field_type.value);
+			field.bytecode_pos = field_name.position;
+
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.err->failAndLog(state.getPosition(), "expected comma or }");
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
+
+		return out;
 	}
 
 	MBox<Type> Type::parse(F8ParserState& state) {

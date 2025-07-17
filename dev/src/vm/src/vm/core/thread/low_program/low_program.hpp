@@ -58,35 +58,13 @@ namespace vm::low {
 			  method_name_pool(method_name_pool) {
 			std::unordered_map<std::string, code::Identifier> ctor_functions;
 
-			for (const auto& func: functions) {
-				this->functions.insert(func, func.name);
-				std::cerr << "Inserting: " << func.name.strView() << "\n";
-
-				// Detect if it's a global constructor by prefix
-				constexpr std::string_view prefix = "_ctor_GLOBAL_";
-				std::string                fname  = func.name.str();
-				if (fname.starts_with(prefix)) {
-					std::string global_name(fname.substr(prefix.size()));
-					ctor_functions[global_name] = func.name;
-				}
-				// @TODO: Add similar one for destructors
-			}
+			for (const auto& func: functions) this->functions.insert(func, func.name);
 
 			for (const auto& global: global_data) {
 				GlobData data{ .type      = this->types->at(global.type),
 					           .ctor_name = global.ctor_name,
 					           .dtor_name = global.dtor_name };
-
-				std::string gname = global.name.str.str();
-				if (ctor_functions.contains(gname)) {
-					data.ctor_name = ctor_functions[gname];
-					std::cerr << "Linked ctor to global: " << gname << " <- "
-							  << data.ctor_name.value().str.strView() << "\n";
-				}
-				// @TODO: Add similar one for destructors
-
 				this->global_data.insert(data, global.name);
-				std::cerr << "Inserting: " << gname << "\n";
 			}
 		}
 

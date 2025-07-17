@@ -115,6 +115,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 					code_global.name         = global->name;
 					code_global.type         = global->type;
 					code_global.bytecode_pos = global->position;
+					if (global->ctor_name.has_value())
+						code_global.ctor_name = code::Identifier(global->ctor_name.value().value);
+
+					if (global->dtor_name.has_value())
+						code_global.dtor_name = code::Identifier(global->dtor_name.value().value);
 					new_code.global_data.emplace_back(code_global);
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
