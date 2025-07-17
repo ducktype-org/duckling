@@ -89,10 +89,12 @@ namespace clap {
 		void insertExtra(const ParsedValue& value);
 
 		/**
-		 * @brief Adds a command to the command path. Updated the matched command.
-		 * @param cmd The matched command.
+		 * @brief Adds a command (represented by the Clap class) to the matched command list and
+		 * updates the current matched command.
+		 * Invoked when taking a step down the command tree, when a subcommand was invoked.
+		 * @param command The matched command.
 		 */
-		void addToPath(CRef<Clap> cmd);
+		void addToCommandList(CRef<Clap> command);
 
 		/**
 		 * The main way to retrieve a value of a parameter from ParsingResult.
@@ -218,7 +220,7 @@ namespace clap {
 
 	private:
 		/**
-		 * Internally, ParsingResult addresses each parameter with an id.
+		 * @brief Internally, ParsingResult addresses each parameter with an id.
 		 * This method is used to insert and query or just query the id of
 		 * a parameter depending if the parameter has already been inserted
 		 * previously or not.
@@ -228,7 +230,7 @@ namespace clap {
 		usize insertQueryID(const Parameter& parameter);
 
 		/**
-		 * A const accessor to the id of a parameter.
+		 * @brief A const accessor to the id of a parameter.
 		 * @param name the parameter's short name.
 		 * @return Optional holding the id if parameter with
 		 * according name has been inserted before or not.
@@ -236,7 +238,7 @@ namespace clap {
 		base::Optional<usize> getID(char name) const;
 
 		/**
-		 * A const accessor to the id of a parameter.
+		 * @brief A const accessor to the id of a parameter.
 		 * @param name the parameter's long name.
 		 * @return Optional holding the id if parameter with
 		 * according name has been inserted before or not.
@@ -246,10 +248,17 @@ namespace clap {
 		std::string file_path;
 		std::string args;
 
-		// Command which was run.
+		/**
+		 * @brief A command which is matched during parsing.
+		 * Gets changed when stepping down the subcommand tree.
+		 */
 		base::Optional<CRef<Clap>> command{};
-		// A path to the command which was run.
-		std::vector<CRef<Clap>> command_path{};
+
+		/**
+		 * @brief A list of commands created during parsing.
+		 * Represents a path in the command tree leading to the `command`.
+		 */
+		std::vector<CRef<Clap>> command_list{};
 
 		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;

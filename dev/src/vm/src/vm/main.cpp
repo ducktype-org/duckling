@@ -2,6 +2,7 @@
 #include "server.hpp"
 #include "vm_repl.hpp"
 
+#include "clap/value_parser.hpp"
 #include <clap/clap.hpp>
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
@@ -44,13 +45,8 @@ clap::Clap getVmClap() {
 							   server(i32(port));
 							   return 0;
 						   }))
-	    .addSubcommand(clap::Clap("run", "Run a .qbc file.")
-	                       .add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-	                                .addShortName('f')
-	                                .addLongName("file")
-	                                .addShortDesc("Path to the .dbc file to execute.")
-	                                .optional()
-	                                .build())
+	    .addSubcommand(clap::Clap("run", "Run a .dbc file.")
+	                       .addPositional(clap::FileParser::make())
 	                       .setHandler([](const clap::ParsingResult& options) {
 							   vm::Supervisor::get();
 							   if (auto file = options.getValue<fs::File>("file"))

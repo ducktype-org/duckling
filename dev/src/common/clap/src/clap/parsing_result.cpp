@@ -71,9 +71,9 @@ namespace clap {
 
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
 
-	void ParsingResult::addToPath(CRef<Clap> cmd) {
+	void ParsingResult::addToCommandList(CRef<Clap> cmd) {
 		command = cmd;
-		command_path.push_back(cmd);
+		command_list.push_back(cmd);
 	}
 
 	usize ParsingResult::getPositionalParameterCount() const { return positional_values.size(); }
@@ -86,7 +86,7 @@ namespace clap {
 
 	base::Optional<CRef<clap::Clap>> ParsingResult::getMatchedCommand() const { return command; }
 
-	const std::vector<CRef<Clap>>& ParsingResult::getCommandPath() const { return command_path; }
+	const std::vector<CRef<Clap>>& ParsingResult::getCommandPath() const { return command_list; }
 
 	ParsingResult& ParsingResult::operator=(const ParsingResult& other) {
 		file_path         = other.file_path;

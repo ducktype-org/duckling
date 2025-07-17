@@ -4,11 +4,9 @@
 
 #include <string>
 
-namespace {
-	enum class NameType { EmptyName, ShortName, LongName };
-}
-
 namespace clap {
+	enum class NameType { EmptyName, ShortName, LongName };
+
 	/**
 	 * @brief A helper for the method clap::Clap::parse().
 	 * A class containing the parsing state of the command line arguments.

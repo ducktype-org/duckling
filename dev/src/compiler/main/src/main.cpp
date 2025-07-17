@@ -17,6 +17,7 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
+#include "clap/value_parser.hpp"
 #include <clap/clap.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -74,12 +75,7 @@ clap::Clap getClapForMain() {
 	return getStandardDucklingOptions()
 	    .addSubcommand(
 			clap::Clap("lex", "Runs lexer on a single file and prints the result to cout.")
-				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-	                     .addShortName('f')
-	                     .addLongName("file")
-	                     .addShortDesc("File to lex")
-	                     .required()
-	                     .build())
+				.addPositional(clap::FileParser::make())
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					auto file_to_lex = options.getValue<fs::File>("file").value();
 
@@ -110,12 +106,7 @@ clap::Clap getClapForMain() {
 		)
 	    .addSubcommand(
 			clap::Clap("parse", "Runs parser on a single file and prints result in json to cout.")
-				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-	                     .addShortName('f')
-	                     .addLongName("file")
-	                     .addShortDesc("File to parse")
-	                     .required()
-	                     .build())
+				.addPositional(clap::FileParser::make())
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					auto file_to_parse = options.getValue<fs::File>("file").value();
 
@@ -138,12 +129,7 @@ clap::Clap getClapForMain() {
 				})
 		)
 	    .addSubcommand(clap::Clap("get_hout", "Debug prints hout-unit of a module.")
-	                       .add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-	                                .addShortName('m')
-	                                .addLongName("module")
-	                                .addShortDesc("Path to the module")
-	                                .required()
-	                                .build())
+	                       .addPositional(clap::FileParser::make())
 	                       .setHandler([](const clap::ParsingResult& options) -> int {
 							   auto path_to_compile = options.getValue<fs::File>("module").value();
 
@@ -161,12 +147,7 @@ clap::Clap getClapForMain() {
 						   }))
 	    .addSubcommand(
 			clap::Clap("compile_module", "Compile given module into a binary.")
-				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-	                     .addShortName('m')
-	                     .addLongName("module")
-	                     .addShortDesc("Path to the module")
-	                     .required()
-	                     .build())
+				.addPositional(clap::FileParser::make())
 				.add(clap::ParamBuilder::ofFlag()
 	                     .addLongName("dump-llvm-ir")
 	                     .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")

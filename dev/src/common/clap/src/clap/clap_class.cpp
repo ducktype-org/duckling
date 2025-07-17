@@ -139,7 +139,7 @@ namespace clap {
 
 	void Clap::parse(ParsingState& st) const {
 		// Add `this` command to the result path.
-		st.result.addToPath(this);
+		st.result.addToCommandList(this);
 
 		while (st.hasMoreArgs()) {
 			const std::string& token              = st.peekToken();
@@ -194,7 +194,6 @@ namespace clap {
 			}
 
 			throw exceptions::ClapException("None of the commands matched!");
-			return 1;
 		} catch (const exceptions::HelpException& e) {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;

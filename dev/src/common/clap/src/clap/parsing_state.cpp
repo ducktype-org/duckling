@@ -114,7 +114,7 @@ namespace clap {
 	void ParsingState::consumeToken() {
 		if (!hasMoreArgs()) return;
 
-		// Skip whitespace's before the token.
+		// Skip whitespaces before the token.
 		skipWhitespace(parsing_position, args);
 		while (parsing_position < args.size() && !std::isspace(args[parsing_position]))
 			parsing_position++;
