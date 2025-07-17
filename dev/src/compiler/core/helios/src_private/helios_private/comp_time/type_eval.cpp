@@ -116,10 +116,11 @@ namespace compiler::helios {
 				}
 				case code::BuiltinUnary::Box: {
 					output(value.value().withReferenceKind(tsh::ReferenceKind::Box));
+					return;
 				}
 				default:
 					CORE_PANIC(
-						"ShortPathVisitor encountered unsupported unary operation: {}",
+						"ShortPathVisitor encountered unsupported unary operation: ",
 						static_cast<std::uint8_t>(expr.operation)
 					);
 				}

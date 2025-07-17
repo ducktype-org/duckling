@@ -323,10 +323,22 @@ private:
 				}
 				CORE_PANIC("Could not resolve field.");
 			}();
+			const SymID d_field_symbol = [&] {
+				variant_match(my_class_interface.resolve(base::StrID("d"), ctx)) {
+					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
+				}
+				CORE_PANIC("Could not resolve field.");
+			}();
+			const SymID e_field_symbol = [&] {
+				variant_match(my_class_interface.resolve(base::StrID("e"), ctx)) {
+					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
+				}
+				CORE_PANIC("Could not resolve field.");
+			}();
 
 			TypeLayout my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
 			assertTrue(
-				my_class_layout.getSize() == BYTE_SIZE * 16,
+				my_class_layout.getSize() == BYTE_SIZE * 32, // (1 + padding 1) + (2 + padding 2) + 8 + 8 + 8
 				"Class layout size should account for data alignment."
 			);
 			assertTrue(
@@ -339,7 +351,9 @@ private:
 					assertTrue(
 						l.getFieldOffset(a_field_symbol) == Bytes(0)
 							&& l.getFieldOffset(b_field_symbol) == Bytes(2)
-							&& l.getFieldOffset(c_field_symbol) == Bytes(8),
+							&& l.getFieldOffset(c_field_symbol) == Bytes(8)
+							&& l.getFieldOffset(d_field_symbol) == Bytes(16)
+							&& l.getFieldOffset(e_field_symbol) == Bytes(24),
 						"Class layout should align its component layouts."
 					);
 				}
