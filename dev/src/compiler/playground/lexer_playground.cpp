@@ -3,11 +3,12 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#include <filesystem/file.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
 #include <token_source/source.hpp>
+
+#include <filesystem/file.hpp>
+#include <init/init.hpp>
 
 #include <iostream>
 

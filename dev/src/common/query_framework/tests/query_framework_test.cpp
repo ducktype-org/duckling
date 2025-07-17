@@ -1,3 +1,9 @@
+#include <base/anycast.hpp>
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/variant.hpp>
+
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -8,12 +14,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include <base/anycast.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/variant.hpp>
 
 #include <sstream>
 #include <type_traits>

@@ -8,6 +8,8 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
+#include <diagnostic/location.hpp>
+
 namespace tokenizer {
 	/**
 	 * @brief Checks for newline at the beginning of a set of characters.

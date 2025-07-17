@@ -2,13 +2,13 @@
  * @file clap_playground.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
+#include <base/int_conv.hpp>
+
 #include <clap/clap.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/help_message_generator.hpp>
 #include <clap/param_builder.hpp>
 #include <printer/stream_printer.hpp>
-
-#include <base/int_conv.hpp>
 
 #include <iostream>
 

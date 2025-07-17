@@ -1,7 +1,7 @@
+#include <base/exceptions.hpp>
+
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
-
-#include <base/exceptions.hpp>
 
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
