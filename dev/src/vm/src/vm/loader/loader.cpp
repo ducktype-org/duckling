@@ -142,8 +142,18 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));
+					
+					new_code.functions.emplace_back(function);
 
-					new_code.functions.push_back(std::move(function));
+					std::vector<base::StrID> parameters_str;
+					for (const auto& param: function.parameters) {
+						parameters_str.emplace_back(param);
+					}
+					new_code.types.emplace_back(
+						code::FunctionType(
+							function.name, parameters_str, function.result_type
+						)
+					);
 				}
 			}
 

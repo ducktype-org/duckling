@@ -1,5 +1,4 @@
 #include "valid_program.hpp"
-#include <iostream>
 #include "base/maps.hpp"
 
 #include "errors.hpp"
@@ -94,16 +93,6 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Functio
 			type_context.getCurrentTypes(), signatures, *type_metadata, globals_map, func
 		);
 		function_map.insert(validated_function, validated_function.name);
-		std::vector<base::StrID> parameters;
-		for (const auto& param: validated_function.parameters) {
-			parameters.emplace_back(param.str);
-		}
-		FunctionType function_type(
-			validated_function.name.str,
-			parameters,
-			validated_function.result_type.str
-		);
-		type_context.insertType(function_type);
 	}
 }
 
