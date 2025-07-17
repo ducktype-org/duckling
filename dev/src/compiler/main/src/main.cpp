@@ -11,7 +11,6 @@
 #include "lexer/lexer_class.hpp"
 
 #include <clap/clap.hpp>
-#include <config/config.hpp>
 #include <driver/hout_to_binary_driver.hpp>
 #include <driver/package_compilation_driver.hpp>
 #include <filesystem/file.hpp>
@@ -41,36 +40,26 @@ void printContextErrors() {
 
 clap::Clap getStandardDucklingOptions() {
 	return clap::Clap("duck", "The Duckling compiler")
-	    .add(
-			clap::ParamBuilder::ofFlag()
-				.addLongName("logger-cerr")
-				.addShortDesc("If set, Logger class will immediately print its messages to cerr.")
-				.build()
-		)
-	    .add(
-			clap::ParamBuilder::ofFlag()
-				.addLongName("lexer-cerr")
-				.addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
-				.build()
-		)
-	    .add(
-			clap::ParamBuilder::ofFlag()
-				.addLongName("let-it-throw")
-				.addShortDesc("Disables exception handling in main (debug option)")
-				.addLongDesc(
-					"If set, unhandled exceptions will not be caught by main procedure. "
-					"It should be used for debugging only in order to preserve "
-					"stack-trace. It can prevent stack-unwinding from happening."
-				)
-				.build()
-		)
-	    .add(  // TODOP: Add default version flag adding.
-			clap::ParamBuilder::ofFlag()
-				.addShortName('v')
-				.addLongName("version")
-				.addShortDesc("Print version and exit")
-				.build()
-		)
+	    .add(clap::ParamBuilder::ofFlag()
+	             .addLongName("logger-cerr")
+	             .addShortDesc("If set, Logger class will immediately print its messages to cerr.")
+	             .build())
+	    .add(clap::ParamBuilder::ofFlag()
+	             .addLongName("lexer-cerr")
+	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
+	             .build())
+	    .add(clap::ParamBuilder::ofFlag()
+	             .addLongName("let-it-throw")
+	             .addShortDesc("Disables exception handling in main (debug option)")
+	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
+	                          "It should be used for debugging only in order to preserve "
+	                          "stack-trace. It can prevent stack-unwinding from happening.")
+	             .build())
+	    .add(clap::ParamBuilder::ofFlag()
+	             .addShortName('v')
+	             .addLongName("version")
+	             .addShortDesc("Print version and exit")
+	             .build())
 	    .addHelpFlag()
 	    .setPreHandler([](const clap::ParsingResult& options) {
 			dia::Logger::setImmediatelyDump(options.isFlag("logger-cerr"));
@@ -90,14 +79,12 @@ clap::Clap myGetClapForMain() {
 	return getStandardDucklingOptions()
 	    .addSubcommand(
 			clap::Clap("lex", "Runs lexer on a single file and prints the result to cout.")
-				.add(
-					clap::ParamBuilder::ofValue(clap::FileParser::make())
-						.addShortName('f')
-						.addLongName("file")
-						.addShortDesc("File to lex")
-						.required()
-						.build()
-				)
+				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                     .addShortName('f')
+	                     .addLongName("file")
+	                     .addShortDesc("File to lex")
+	                     .required()
+	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					//   auto options = configureDuckMainWith(clap, command_args); // This is
 		            //   not needed since we it from the top.
@@ -130,14 +117,12 @@ clap::Clap myGetClapForMain() {
 		)
 	    .addSubcommand(
 			clap::Clap("parse", "Runs parser on a single file and prints result in json to cout.")
-				.add(
-					clap::ParamBuilder::ofValue(clap::FileParser::make())
-						.addShortName('f')
-						.addLongName("file")
-						.addShortDesc("File to parse")
-						.required()
-						.build()
-				)
+				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                     .addShortName('f')
+	                     .addLongName("file")
+	                     .addShortDesc("File to parse")
+	                     .required()
+	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					//   auto options = configureDuckMainWith(clap, command_args);
 		            //   not needed since we it from the top.
@@ -162,82 +147,71 @@ clap::Clap myGetClapForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(
-			clap::Clap("get_hout", "Debug prints hout-unit of a module.")
-				.add(
-					clap::ParamBuilder::ofValue(clap::FileParser::make())
-						.addShortName('m')
-						.addLongName("module")
-						.addShortDesc("Path to the module")
-						.required()
-						.build()
-				)
-				.setHandler([](const clap::ParsingResult& options) -> int {
-					//   auto options = configureDuckMainWith(clap, command_args);
-		            //   not needed since we it from the top.
+	    .addSubcommand(clap::Clap("get_hout", "Debug prints hout-unit of a module.")
+	                       .add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                                .addShortName('m')
+	                                .addLongName("module")
+	                                .addShortDesc("Path to the module")
+	                                .required()
+	                                .build())
+	                       .setHandler([](const clap::ParsingResult& options) -> int {
+							   //   auto options = configureDuckMainWith(clap, command_args);
+		                       //   not needed since we it from the top.
 
-					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+							   auto path_to_compile
+								   = options.getValue<fs::FilePath>("module").value();
 
-					int exit_code = 0;
+							   int exit_code = 0;
 
-					// @TODO: error handling
-					using namespace compiler;
-					auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-					auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-					std::cout << top_level->debugPrint();
+							   // @TODO: error handling
+							   using namespace compiler;
+							   auto root
+								   = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+							   auto top_level
+								   = query::entryPoint<helios::QueryTopLevelEntities>(root);
+							   std::cout << top_level->debugPrint();
 
-					return exit_code;
-				})
-		)
+							   return exit_code;
+						   }))
 	    .addSubcommand(
 			clap::Clap("compile_module", "Compile given module into a binary.")
-				.add(
-					clap::ParamBuilder::ofValue(clap::FileParser::make())
-						.addShortName('m')
-						.addLongName("module")
-						.addShortDesc("Path to the module")
-						.required()
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addLongName("dump-llvm-ir")
-						.addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addLongName("dvm-backend")
-						.addShortDesc("Compile to DVM bytecode.")
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addLongName("compile-to-assembly")
-						.addShortDesc("Also compiles to assembly file (alongside main compilation).")
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addLongName("add-builtin-library")
-						.addShortDesc("Links builtin library into the final executable.")
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addLongName("dvm-run")
-						.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
-						.conditional(
-							[](const clap::ParsingResult& result) {
-								return not(
-									result.isFlag("dvm-run") && not result.isFlag("dvm-backend")
-								);
-							},
-							"Cannot run the code on the DVM without the --dvm-backend "
-							"option."
-						)
-						.build()
-				)
+				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                     .addShortName('m')
+	                     .addLongName("module")
+	                     .addShortDesc("Path to the module")
+	                     .required()
+	                     .build())
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addLongName("dump-llvm-ir")
+	                     .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
+	                     .build())
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-backend")
+	                     .addShortDesc("Compile to DVM bytecode.")
+	                     .build())
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addLongName("compile-to-assembly")
+	                     .addShortDesc(
+							 "Also compiles to assembly file (alongside main compilation)."
+						 )
+	                     .build())
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addLongName("add-builtin-library")
+	                     .addShortDesc("Links builtin library into the final executable.")
+	                     .build())
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-run")
+	                     .addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
+	                     .conditional(
+							 [](const clap::ParsingResult& result) {
+								 return not(
+									 result.isFlag("dvm-run") && not result.isFlag("dvm-backend")
+								 );
+							 },
+							 "Cannot run the code on the DVM without the --dvm-backend "
+							 "option."
+						 )
+	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					// auto options = configureDuckMainWith(clap, command_args);
 		            //   not needed since we it from the top.
@@ -293,28 +267,22 @@ clap::Clap myGetClapForMain() {
 		)
 	    .addSubcommand(
 			clap::Clap("compile_package", "Compile given package into a binary.")
-				.add(
-					clap::ParamBuilder::ofValue(clap::FileParser::make())
-						.addShortName('m')
-						.addLongName("module")
-						.addShortDesc("Path to the top-level source module of the package")
-						.required()
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofValue(clap::FileParser::make())
-						.addShortName('a')
-						.addLongName("artifact-location")
-						.addShortDesc("Path to the top-level folder with build artifacts")
-						.required()
-						.build()
-				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addLongName("dvm-backend")
-						.addShortDesc("Compile to DVM bytecode instead of exe.")
-						.build()
-				)
+				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                     .addShortName('m')
+	                     .addLongName("module")
+	                     .addShortDesc("Path to the top-level source module of the package")
+	                     .required()
+	                     .build())
+				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .required()
+	                     .build())
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-backend")
+	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
+	                     .build())
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 					auto backend_type    = options.isFlag("dvm-backend")
@@ -335,13 +303,11 @@ clap::Clap myGetClapForMain() {
 					return 0;
 				})
 		)
-	    .addSubcommand(
-			clap::Clap("throw", "Throws exception (testing command).")
-				.setHandler([](const clap::ParsingResult& _) -> int {
-					//   configureDuckMainWith(clap, command_args);
-					throw base::LogicError("Command `throw` thrown successfully!");
-				})
-		);
+	    .addSubcommand(clap::Clap("throw", "Throws exception (testing command).")
+	                       .setHandler([](const clap::ParsingResult& _) -> int {
+							   //   configureDuckMainWith(clap, command_args);
+							   throw base::LogicError("Command `throw` thrown successfully!");
+						   }));
 }
 
 int main(int argc, const char* argv[]) {

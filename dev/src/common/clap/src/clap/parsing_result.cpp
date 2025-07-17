@@ -74,7 +74,7 @@ namespace clap {
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
 
 	void ParsingResult::addToPath(CRef<Clap> cmd) {
-		command      = cmd;
+		command = cmd;
 		command_path.push_back(cmd);
 	}
 
@@ -86,9 +86,7 @@ namespace clap {
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
 
-	base::Optional<CRef<clap::Clap>> ParsingResult::getMatchedCommand() const {
-		return command;
-	}
+	base::Optional<CRef<clap::Clap>> ParsingResult::getMatchedCommand() const { return command; }
 
 	const std::vector<CRef<Clap>>& ParsingResult::getCommandPath() const { return command_path; }
 

@@ -22,11 +22,6 @@
 #include <vector>
 
 namespace clap {
-	struct CLIArgs final {        // TODOP: That my be not needed anymore.
-		usize              argc;  /// Argument count
-		const char* const* argv;  /// Pointer to an array of strings
-	};
-
 	/**
 	 * @brief Command-line Argument Parser.
 	 *
@@ -37,16 +32,18 @@ namespace clap {
 	 * 	* named parameters and flags (built with clap::ParamBuilder)
 	 * 	* positional arguments (Always required, indexed from 0)
 	 * 	* extra arguments, if default value parser is not set to nullptr.
+	 * 	* handlers, functions to be run when a specific command is invoked.
+	 * 	* subcommands, which create a tree like structure.
 	 *
-	 * After specifying the above you can perform parsing with parse() method.
+	 *
+	 * After specifying the above you can perform parsing with parse() method or
+	 * use the execute() function to immediately perform the execution via the handlers.
 	 *
 	 * Refer to the clap docs for more complete example.
 	 */
-	// class ParsingState;  // Forward declaration.
 	class Clap final {
 	public:
-		// TODOP: Signature of a functoin which is run for global configs.
-		using PreHandler = std::function<void(clap::ParsingResult&)>;
+		using PreHandler = std::function<void(const ParsingResult&)>;
 		using Handler    = std::function<int(const ParsingResult&)>;
 
 		// Clap is move-only
@@ -58,49 +55,51 @@ namespace clap {
 
 
 		/**
-		 * Adds a flag/option to the command clap. Ex. --version, --help, --let-it-throw, etc
+		 * @brief Adds a flag/option to the command clap. Ex. --version, --help, --let-it-throw, etc
 		 * @param parameter A parameter constructed with clap::ParamBuilder.
 		 * @return A reference to self.
 		 */
 		Clap&& add(Parameter&& param);
 
 		/**
-		 * Adds a positional parameter without a name to the Clap.
+		 * @brief Adds a positional parameter without a name to the Clap.
 		 * @param parameter value parser created like: clap::StringParser::make().
 		 * @return A reference to self.
 		 */
 		Clap&& addPositional(Box<ValueParser> parser);
 
 		/**
-		 * Adds a subcommand to this command.
+		 * @brief Adds a subcommand to this command.
 		 * @param sub_command A created sub command
 		 * @return A reference to self.
 		 */
 		Clap&& addSubcommand(Clap&& sub_command);
 
-		// Sets a function to be run.
 		/**
-		 * TODOP: Docs
+		 * Sets a handler function to be run when this command is invoked
+		 * @param handler The function to run.
+		 * @return A reference to self.
 		 */
 		Clap&& setHandler(Handler handler);
 
 		/**
-		 * Sets a runner which is run once, before all other handlers.
+		 * @brief Sets a runner which is run once, before all other handlers.
+		 * Can only be set in the root command.
 		 * Usefull when configuring global options like loggers and lexers.
-		 * @param pre_handler A function to run.
+		 * @param pre_handler The function to run.
 		 * @return A reference to self.
 		 */
 		Clap&& setPreHandler(PreHandler pre_handler);
 
 		/**
-		 * Sets the default value parser for the whole Clap. Might be a nullptr.
+		 * @brief Sets the default value parser for the command. Might be a nullptr.
 		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
 		Clap&& setDefaultValueParser(MBox<ValueParser> parser);
 
 		/**
-		 * Adds a standard help flag functionality.
+		 * @brief Adds a standard help flag functionality.
 		 * If flag is passed raises clap::exceptions::HelpException.
 		 * @return A reference to self.
 		 */
@@ -119,15 +118,15 @@ namespace clap {
 		const std::string& getDescription() const;
 
 		/**
-		 * A default value parser is used to parse values, that are not directly specified
-		 * in the Clap's specification.
+		 * @brief Returns a default value parser is used to parse values, that are not directly
+		 * specified in the Clap's specification.
 		 * @return A pointer to the parser. Might be nullptr.
 		 */
 		[[nodiscard]]
 		MCRef<ValueParser> getDefaultValueParser() const;
 
 		/**
-		 * Returns a handler for this subcommand. Which is a function run when
+		 * @brief Returns a handler for this subcommand. Which is a function run when
 		 * this command is being invoked.
 		 * @return Return the handler function for this command.
 		 */
@@ -135,11 +134,8 @@ namespace clap {
 		const Handler& getHandler() const;
 
 		/**
-		 * @return Return the description of the command.
-		 */
-
-		/**
-		 * Returns a prehandler for this CLAP. Can only be invoked in the clap command tree root.
+		 * Returns a prehandler for this command.
+		 * Can only be invoked in the clap command tree root.
 		 * Which is a function run before all other handlers.
 		 * @return Return the prehandler function for this command.
 		 */
@@ -187,29 +183,41 @@ namespace clap {
 		[[nodiscard]] bool isRoot() const;
 
 		/**
-		 * Performs the parsing. Returns the parsing result with the matched command.
+		 * @brief Performs the parsing. Returns the parsing result.
 		 * @param argc Number of elements in argv.
 		 * @param argv A C-string array.
 		 * @return An object containing parsed command-line arguments and the matched command.
 		 */
 		ParsingResult parse(usize argc, const char* const* argv);
-		ParsingResult parse(CLIArgs args);
-		/**
-		 * TODOP: Docs
-		 */
-		// ParsingResult parse(const std::string& args); // TODOP: implement that.
 
 		/**
-		 * Performs the parsing and immediately executes the handler for the matched command.
+		 * @brief Performs the parsing. Returns the parsing result.
+		 * @param args A string containing the command line arguments.
+		 * @return An object containing parsed command-line arguments and the matched command.
+		 */
+		ParsingResult parse(const std::string& args);
+
+		/**
+		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
+		 * the pre handler function (if specified) and then immediately executes the handler for the
+		 * matched command.
+		 *
+		 * Throws an exception if a handler for the invoked command was not specified.
 		 * @param argc Number of elements in argv.
 		 * @param argv A C-string array.
 		 * @return A return value of the handler specified for the matched command.
 		 */
 		int execute(usize argc, const char* const* argv);
+
 		/**
-		 * TODOP: Docs
+		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
+		 * the pre handler function (if specified) and then immediately executes the handler for the
+		 * matched command.
+		 *
+		 * @param args A string containing the command line arguments.
+		 * @return A return value of the handler specified for the matched command.
 		 */
-		// int execute(const std::string& args); // TODOP: Implement that.
+		int execute(const std::string& args);
 
 	private:
 		/**
@@ -229,17 +237,40 @@ namespace clap {
 		void validateParsing(ParsingResult& result) const;
 
 
-		std::string name; // Name of the command.
-		std::string description; // Description of the command
+		std::string name;         // Name of the command.
+		std::string description;  // Description of the command
+
+		/**
+		 * @brief A parser used to parse extra arguments. Set to StringParser by default.
+		 */
 		MBox<ValueParser> default_value_parser;
-		
-		PreHandler        pre_handler{};
-		Handler           handler{};
+
+		/**
+		 * @brief A function ran before all other handlers at the moment of execute().
+		 * It's ran only if the passed arguments are correct.
+		 * Usefull to configure the application state.
+		 * It can only be specified in the command tree root, doing otherwise will result in an
+		 * exception.
+		 */
+		PreHandler pre_handler{};
+
+		/**
+		 * @brief A function which provides the functionality for a command.
+		 * It's being run when the command is invoked.
+		 * Has to be specified in order to use execute() on a command. Not doing so will result in
+		 * an exception.
+		 */
+		Handler handler{};
 
 		std::vector<Parameter>        parameters;
 		std::vector<Box<ValueParser>> positional_parameters;
-		std::vector<Clap>             subcommands;
-		bool              is_leaf;
-		bool              is_root;
+
+		/**
+		 * @brief A list of subcommands (sub-claps) for this command.
+		 */
+		std::vector<Clap> subcommands;
+
+		bool is_leaf;  // This command has no subcommands.
+		bool is_root;  // This command is not a subcommand.
 	};
 }  // clap

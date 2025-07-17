@@ -38,57 +38,15 @@ namespace {
 		}
 		return true;
 	}
-
-	/**
-	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
-	 * contains a white space, then adds quotes around it.
-	 * @note: It skips first parameter, as it is assumed to be the name of the command.
-	 * @param argc Argument count.
-	 * @param argv Argument vector - the array of C-strings.
-	 * @return Merged vector into a single string.
-	 */
-	std::string mergeArgs(usize argc, const char* const* argv) {
-		// Merge args with spaces between.
-		std::string args;
-
-		// if an argv[i] contains a white space, then it must have been added with quotes
-		for (usize i = 1; i < argc; i++) {
-			CORE_ASSERT(argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
-
-			bool has_whitespace = false;
-			auto arg            = std::string(argv[i]);
-			for (auto c: arg)
-				if (std::isspace(c)) has_whitespace = true;
-
-			base::strReplaceAll(arg, "\"", "\\\"");
-
-			if (has_whitespace)
-				args += "\"" + arg + "\" ";
-			else
-				args += arg + " ";
-		}
-		// The last character is space, so we pop it.
-		if (!args.empty()) args.pop_back();
-		return args;
-	}
-
-	/**
-	 * Moves the index in the string until a whitespace under the index.
-	 * @param position A reference to the position's variable.
-	 * @param str A source of chars.
-	 */
-	void skipWhitespace(usize& position, std::string_view str) {
-		while (position < str.size() && std::isspace(str[position])) position++;
-	}
 }
 
 namespace clap {
 	Clap::Clap(std::string name, std::string description):
 		  name(std::move(name)),
 		  description(std::move(description)),
+		  default_value_parser(StringParser::make()),
 		  is_leaf(true),
-		  is_root(true),
-		  default_value_parser(StringParser::make()) {}
+		  is_root(true) {}
 
 	Clap&& Clap::add(Parameter&& param) {
 		parameters.push_back(std::move(param));
@@ -132,13 +90,11 @@ namespace clap {
 	}
 
 	Clap&& Clap::addHelpFlag() {
-		return add(
-			ParamBuilder::ofFlag()
-				.addShortName('h')
-				.addLongName("help")
-				.addShortDesc("Display this information.")
-				.build()
-		);
+		return add(ParamBuilder::ofFlag()
+		               .addShortName('h')
+		               .addLongName("help")
+		               .addShortDesc("Display this information.")
+		               .build());
 	}
 
 	const std::string& Clap::getName() const { return name; }
@@ -169,10 +125,7 @@ namespace clap {
 
 	bool Clap::isRoot() const { return is_root; }
 
-	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
-
 	ParsingResult Clap::parse(usize argc, const char* const* argv) {
-		// TODOP: Remove that.
 		CORE_ASSERT(
 			argc > 0,
 			"clap assumes argc is at least 1, as it is the name of the program from the parameters."
@@ -182,7 +135,6 @@ namespace clap {
 		ParsingState st(argc, argv);
 
 		// Perform the recursive parsing.
-		// TODOP: This root command is not needed as a param I believe.
 		parse(st);
 		validateParsing(st.result);
 		return std::move(st.result);
@@ -235,14 +187,11 @@ namespace clap {
 
 	int Clap::execute(usize argc, const char* const* argv) {
 		try {
-			// Returns a ParsingResult and a command that matched.
 			auto parsing_result = parse(argc, argv);
 
-			// parsing_result.dPrint();
-			// Prehandler executes before every other functions. Sets global flags in modules etc.
 			if (pre_handler) pre_handler(parsing_result);
 
-			// Get a handler that handles that command.
+			// Get a handler that handles the matched command.
 			const auto& maybe_command = parsing_result.getMatchedCommand();
 			if_opt_some(maybe_command, command) {
 				const auto& handler = command->getHandler();
@@ -253,14 +202,9 @@ namespace clap {
 			}
 
 			throw exceptions::ClapException("No of the commands matched!");
-			// TODOP: Maybe print helps if there's a mistake?
-
-			// No handler available, print help.
-			// printHelp();
 			return 1;
 		} catch (const exceptions::HelpException& e) {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
-			// TODOP: Maybe don't catch errors here.
 			return 0;
 		}
 	}
@@ -292,15 +236,14 @@ namespace clap {
 								"\"" + maybe_param_name.value() + "\""
 							);
 					}
-					variant_case(Optional, _) {
-						/* Nothing in this case */ }
-						variant_case(Conditional, c) {
-							if (!c.condition(result)) {
-								throw exceptions::MissingConditionalParameter(
-									maybe_param_name.value(), "reason: " + c.condition_description
-								);
-							}
+					variant_case(Optional, _) { /* Nothing in this case */ }
+					variant_case(Conditional, c) {
+						if (!c.condition(result)) {
+							throw exceptions::MissingConditionalParameter(
+								maybe_param_name.value(), "reason: " + c.condition_description
+							);
 						}
+					}
 				}
 			}
 		};

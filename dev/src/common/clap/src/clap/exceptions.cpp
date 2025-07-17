@@ -42,30 +42,26 @@ namespace clap::exceptions {
 	PositionalParameterExpected::PositionalParameterExpected(
 		usize param_index, const std::string& param_type
 	):
-		  ClapException(
-			  base::strConcat(
-				  "Expected positional parameter at position: ",
-				  param_index,
-				  ", of type: <",
-				  param_type,
-				  ">"
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Expected positional parameter at position: ",
+			  param_index,
+			  ", of type: <",
+			  param_type,
+			  ">"
+		  )) {}
 
 	ValueParsingException::ValueParsingException(
 		base::RawView type, usize start, usize end, std::string_view source, std::string_view reason
 	):
-		  ClapException(
-			  base::strConcat(
-				  "Couldn't parse into <",
-				  type,
-				  "> from: \"",
-				  source.substr(start, end - start + 1),
-				  "\"",
-				  reason.empty() ? "" : ", reason: ",
-				  reason
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Couldn't parse into <",
+			  type,
+			  "> from: \"",
+			  source.substr(start, end - start + 1),
+			  "\"",
+			  reason.empty() ? "" : ", reason: ",
+			  reason
+		  )) {}
 
 	InvalidParameterName::InvalidParameterName(const std::string& name):
 		  ClapException("There is no parameter named \'" + name + '\'') {}
@@ -73,14 +69,14 @@ namespace clap::exceptions {
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type
 	):
-		  ClapException(
-			  base::strConcat("Parameter \"", name, "\" requires a value of type <", value_type, ">")
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Parameter \"", name, "\" requires a value of type <", value_type, ">"
+		  )) {}
 
 	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):
-		  ClapException(
-			  base::strConcat(shorten(at, 20, 20, source), "_<- Here expected parameter identifier.")
-		  ) {}
+		  ClapException(base::strConcat(
+			  shorten(at, 20, 20, source), "_<- Here expected parameter identifier."
+		  )) {}
 
 	MissingRequiredParameter::MissingRequiredParameter(const std::string& name):
 		  ClapException(base::strConcat("Missing parameter: ", name)) {}
@@ -105,52 +101,42 @@ namespace clap::exceptions {
 		  ClapException("File at \"" + absolute(path).string() + "\" does not exist.") {}
 
 	NoDefaultValueParser::NoDefaultValueParser(i32 at, std::string_view values):
-		  ClapException(
-			  base::strConcat(
-				  "Extra values provided, but no default value specified.\nExtra values: \"",
-				  shorten(at, 0, 20, values),
-				  "\""
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Extra values provided, but no default value specified.\nExtra values: \"",
+			  shorten(at, 0, 20, values),
+			  "\""
+		  )) {}
 
 	SubcommandNotSpecified::SubcommandNotSpecified(const std::string& command_name):
-		  ClapException(
-			  base::strConcat(
-				  "Command \"",
-				  command_name,
-				  "\" cannot be executed on its own. Please specify a subcommand.\n"
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Command \"",
+			  command_name,
+			  "\" cannot be executed on its own. Please specify a subcommand.\n"
+		  )) {}
 
 	DuplicateSubcommand::DuplicateSubcommand(
 		const std::string& duplicate_name, const std::string& parent_command_name
 	):
-		  ClapException(
-			  base::strConcat(
-				  "A subcommand with the name \"",
-				  duplicate_name,
-				  "\" has already been added to the command \"",
-				  parent_command_name,
-				  "\".\n"
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "A subcommand with the name \"",
+			  duplicate_name,
+			  "\" has already been added to the command \"",
+			  parent_command_name,
+			  "\".\n"
+		  )) {}
 
 	CoexistingPositionalAndSubcommand::CoexistingPositionalAndSubcommand(
 		const std::string& command_name
 	):
-		  ClapException(
-			  base::strConcat(
-				  "Positional arguments and subcommands can't coexist in the same command: \"",
-				  command_name,
-				  "\".\n"
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Positional arguments and subcommands can't coexist in the same command: \"",
+			  command_name,
+			  "\".\n"
+		  )) {}
 
 	NoHandlerSpecified::NoHandlerSpecified(const std::string& command_name):
-		  ClapException(
-			  base::strConcat(
-				  "No handler specified for the executed command: \"", command_name, "\".\n"
-			  )
-		  ) {}
+		  ClapException(base::strConcat(
+			  "No handler specified for the executed command: \"", command_name, "\".\n"
+		  )) {}
 
 }

@@ -137,23 +137,19 @@ clap::Clap getClapForPlayground() {
 				.addShortDesc("Enable verbose output for all commands.")
 				.build()
 		)
-	    .addGlobalParameter(
-			clap::ParamBuilder::ofValue(clap::StringParser::make())
-				.addLongName("user")
-				.addShortDesc("Run command as a specific user.")
-				.build()
-		)
+	    .addGlobalParameter(clap::ParamBuilder::ofValue(clap::StringParser::make())
+	                            .addLongName("user")
+	                            .addShortDesc("Run command as a specific user.")
+	                            .build())
 	    .addSubcommand(                                           // playground greet subcommand.
 			clap::Command("greet", "Greets one or more people.")
 				.addPositional(clap::StringParser::make("name"))  // Positional argument.
-				.add(
-					clap::ParamBuilder::ofValue(clap::RangeParser::make())
-						.addShortName('r')
-						.addLongName("range")
-						.addShortDesc("Range of values to greet.")
-						.required()
-						.build()
-				)
+				.add(clap::ParamBuilder::ofValue(clap::RangeParser::make())
+	                     .addShortName('r')
+	                     .addLongName("range")
+	                     .addShortDesc("Range of values to greet.")
+	                     .required()
+	                     .build())
 				.add(  // Optional parameter.
 					clap::ParamBuilder::ofValue(clap::IntParser::make())
 						.addShortName('n')
@@ -161,17 +157,15 @@ clap::Clap getClapForPlayground() {
 						.addShortDesc("Number of times to greet.")
 						.build()
 				)
-				.add(
-					clap::ParamBuilder::ofFlag()
-						.addShortName('d')
-						.addLongName("descending")
-						.addShortDesc("Whether or not numbers should be print in a descending order.")
-						.addLongDesc(
-							"This is a multiline,\nlong comment, that should\n"
-							"explain this parameter with more\ndetail..."
-						)
-						.build()
-				)
+				.add(clap::ParamBuilder::ofFlag()
+	                     .addShortName('d')
+	                     .addLongName("descending")
+	                     .addShortDesc(
+							 "Whether or not numbers should be print in a descending order."
+						 )
+	                     .addLongDesc("This is a multiline,\nlong comment, that should\n"
+	                                  "explain this parameter with more\ndetail...")
+	                     .build())
 				// A handler for this subcommand, which will be invoked when
 	            // clap.execute(argc, argv) is executed.
 				.setHandler([](const clap::ParsingResult& result) -> int {
@@ -179,13 +173,11 @@ clap::Clap getClapForPlayground() {
 					return 0;
 				})
 		)
-	    .addSubcommand(
-			clap::Command("config", "Displays the current configuration.")
-				.setHandler([](const clap::ParsingResult& result) -> int {
-					showConfig(result);
-					return 0;
-				})
-		);
+	    .addSubcommand(clap::Command("config", "Displays the current configuration.")
+	                       .setHandler([](const clap::ParsingResult& result) -> int {
+							   showConfig(result);
+							   return 0;
+						   }));
 }
 
 int main(int argc, const char** argv) {
@@ -202,13 +194,11 @@ int main(int argc, const char** argv) {
 	// 	return 0;
 	// }
 	catch (const clap::exceptions::ClapException& e) {
-		printer::StreamPrinter::print(
-			{
-				{ "playground: ", printer::Color::DEFAULT },
-				{ "error: ", printer::Color::RED },
-				{ e.what(), printer::Color::DEFAULT },
-			}
-		);
+		printer::StreamPrinter::print({
+			{ "playground: ", printer::Color::DEFAULT },
+			{ "error: ", printer::Color::RED },
+			{ e.what(), printer::Color::DEFAULT },
+		});
 		return 1;
 	} catch (const std::exception& e) {
 		std::cerr << "An unexpected error occurred: " << e.what() << '\n';
@@ -221,13 +211,11 @@ int main(int argc, const char** argv) {
 	try {
 		result = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
-		printer::StreamPrinter::print(
-			{
-				{ "duckling: ", printer::Color::DEFAULT },
-				{ "error: ", printer::Color::RED },
-				{ e.what(), printer::Color::DEFAULT },
-			}
-		);
+		printer::StreamPrinter::print({
+			{ "duckling: ", printer::Color::DEFAULT },
+			{ "error: ", printer::Color::RED },
+			{ e.what(), printer::Color::DEFAULT },
+		});
 		return 1;
 	} catch (clap::exceptions::HelpException& e) {
 		// If using parse() you need to handle the HelpException yourself.

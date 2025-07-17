@@ -78,14 +78,12 @@ private:
 	void namedTest() {
 		auto par = clap::Clap("prog")
 		               .setDefaultValueParser(clap::IntParser::make())
-		               .add(
-						   clap::ParamBuilder::ofValue(clap::IntParser::make())
-							   .addShortName('n')
-							   .addLongName("nnn")
-							   .addShortDesc("Desc")
-							   .required()
-							   .build()
-					   );
+		               .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		                        .addShortName('n')
+		                        .addLongName("nnn")
+		                        .addShortDesc("Desc")
+		                        .required()
+		                        .build());
 		std::array argv{ "./prog", "-1", "-n", "-20" };
 		auto       res = par.parse(argv.size(), argv.begin());
 
@@ -106,13 +104,11 @@ private:
 	void flagTest() {
 		auto par = clap::Clap("prog")
 		               .setDefaultValueParser(clap::IntParser::make())
-		               .add(
-						   clap::ParamBuilder::ofFlag()
-							   .addShortName('f')
-							   .addLongName("flag")
-							   .addShortDesc("Desc")
-							   .build()
-					   );
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('f')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build());
 		std::array argv{ "./prog" };
 		auto       res = par.parse(argv.size(), argv.begin());
 
@@ -138,18 +134,12 @@ private:
 		auto par
 			= clap::Clap("prog")
 		          .setDefaultValueParser(clap::IntParser::make())
-		          .add(
-					  clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("Desc").build()
-				  )
-		          .add(
-					  clap::ParamBuilder::ofFlag().addShortName('b').addShortDesc("Desc").build()
-				  )
-		          .add(
-					  clap::ParamBuilder::ofValue(clap::IntParser::make())
-						  .addShortName('c')
-						  .addShortDesc("Desc")
-						  .build()
-				  );
+		          .add(clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("Desc").build())
+		          .add(clap::ParamBuilder::ofFlag().addShortName('b').addShortDesc("Desc").build())
+		          .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		                   .addShortName('c')
+		                   .addShortDesc("Desc")
+		                   .build());
 
 		std::array argv{ "./prog", "-abc", "-123" };
 		auto       res = par.parse(argv.size(), argv.begin());
@@ -193,12 +183,10 @@ private:
 	}
 
 	void escapingTest() {
-		auto clap = clap::Clap("prog").add(
-			clap::ParamBuilder::ofValue(clap::StringParser::make())
-				.addShortName('f')
-				.addShortDesc("test")
-				.build()
-		);
+		auto clap = clap::Clap("prog").add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                                       .addShortName('f')
+		                                       .addShortDesc("test")
+		                                       .build());
 
 		std::array argv{ "./prog", "-f", "a \" b" };
 		auto       res = clap.parse(argv.size(), argv.begin());
@@ -227,11 +215,9 @@ private:
 	void subcommandNestedTest() {
 		auto clap = clap::Clap("git").addSubcommand(
 			clap::Clap("remote", "Manage remotes")
-				.addSubcommand(
-					clap::Clap("add", "Add a remote")
-						.addPositional(clap::StringParser::make("name"))
-						.addPositional(clap::StringParser::make("url"))
-				)
+				.addSubcommand(clap::Clap("add", "Add a remote")
+		                           .addPositional(clap::StringParser::make("name"))
+		                           .addPositional(clap::StringParser::make("url")))
 		);
 
 		std::array argv{ "./git", "remote", "add", "origin", "http://git.com" };
@@ -252,13 +238,10 @@ private:
 	void globalOptionsTest() {
 		auto clap
 			= clap::Clap("prog")
-		          .add(
-					  clap::ParamBuilder::ofFlag().addLongName("verbose").addShortDesc("desc").build()
-				  )
-		          .addSubcommand(
-					  clap::Clap("upload", "Upload a file")
-						  .addPositional(clap::StringParser::make("file"))
-				  );
+		          .add(clap::ParamBuilder::ofFlag().addLongName("verbose").addShortDesc("desc").build(
+				  ))
+		          .addSubcommand(clap::Clap("upload", "Upload a file")
+		                             .addPositional(clap::StringParser::make("file")));
 
 		std::array argv{ "./prog", "--verbose", "upload", "data.zip" };
 		auto       res = clap.parse(argv.size(), argv.data());
@@ -275,13 +258,11 @@ private:
 							call_order.emplace_back("pre_handler");
 							return 420;
 						})
-		                .addSubcommand(
-							clap::Clap("cmd", "A command")
-								.setHandler([&](const clap::ParsingResult&) -> int {
-									call_order.emplace_back("handler");
-									return 123;
-								})
-						);
+		                .addSubcommand(clap::Clap("cmd", "A command")
+		                                   .setHandler([&](const clap::ParsingResult&) -> int {
+											   call_order.emplace_back("handler");
+											   return 123;
+										   }));
 
 		std::array argv{ "./prog", "cmd" };
 		int        exit_code = clap.execute(argv.size(), argv.data());
@@ -295,13 +276,11 @@ private:
 	void requiredParameterValidation() {
 		auto clap = clap::Clap("prog").addSubcommand(
 			clap::Clap("login", "Log in")
-				.add(
-					clap::ParamBuilder::ofValue(clap::StringParser::make())
-						.addLongName("user")
-						.addShortDesc("desc")
-						.required()
-						.build()
-				)
+				.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                 .addLongName("user")
+		                 .addShortDesc("desc")
+		                 .required()
+		                 .build())
 		);
 
 		// Missing --user param.
@@ -395,19 +374,15 @@ private:
 	void conditionalParameterTest() {
 		auto clap
 			= clap::Clap("prog")
-		          .add(
-					  clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("desc").build()
-				  )
-		          .add(
-					  clap::ParamBuilder::ofFlag()
-						  .addShortName('b')
-						  .addShortDesc("desc")
-						  .conditional(
-							  [](const clap::ParsingResult& res) { return res.isFlag('a'); },
-							  "Flag -b requires flag -a"
-						  )
-						  .build()
-				  );
+		          .add(clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("desc").build())
+		          .add(clap::ParamBuilder::ofFlag()
+		                   .addShortName('b')
+		                   .addShortDesc("desc")
+		                   .conditional(
+							   [](const clap::ParsingResult& res) { return res.isFlag('a'); },
+							   "Flag -b requires flag -a"
+						   )
+		                   .build());
 		std::array argv1{ "./prog", "-b" };
 		assertThrows<clap::exceptions::MissingConditionalParameter>(
 			[&]() { clap.parse(argv1.size(), argv1.data()); },
@@ -426,22 +401,17 @@ private:
 	}
 
 	void mixedGlobalAndLocalParameters() {
-		auto clap = clap::Clap("prog")
-		                .add(
-							clap::ParamBuilder::ofValue(clap::StringParser::make())
-								.addLongName("global")
-								.addShortDesc("desc")
-								.build()
-						)
-		                .addSubcommand(
-							clap::Clap("cmd", "desc")
-								.add(
-									clap::ParamBuilder::ofValue(clap::StringParser::make())
-										.addLongName("local")
-										.addShortDesc("desc")
-										.build()
-								)
-						);
+		auto clap
+			= clap::Clap("prog")
+		          .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                   .addLongName("global")
+		                   .addShortDesc("desc")
+		                   .build())
+		          .addSubcommand(clap::Clap("cmd", "desc")
+		                             .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                                      .addLongName("local")
+		                                      .addShortDesc("desc")
+		                                      .build()));
 
 		std::array argv{ "./prog", "--global", "g_val", "cmd", "--local", "l_val" };
 		auto       res = clap.parse(argv.size(), argv.data());

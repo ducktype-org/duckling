@@ -40,7 +40,7 @@ namespace {
 		// Add a path to this command.
 		for (const auto& cmd: result.getCommandPath() | std::views::drop(1))
 			usage << " " << cmd->getName();
-		
+
 		if (not command->get()->getSubcommands().empty()) {
 			usage << " <COMMAND> [OPTIONS]";
 			return usage.str();
@@ -81,7 +81,7 @@ std::string generateOptionsBlock(
 	output << '\n' << title << '\n';
 	for (const auto& param: params) {
 		std::stringstream names_stream;
-		bool              has_short_name = false;  // TODOP: This may be not needed.
+		bool              has_short_name = false;
 		names_stream << "  ";
 
 		if_opt_some(param.getShortName(), name) {
@@ -107,9 +107,7 @@ std::string generateOptionsBlock(
 	return output.str();
 }
 
-std::string generateSubcommandsBlock(
-	const std::vector<clap::Clap>& subcommands, int padding = 27
-) {
+std::string generateSubcommandsBlock(const std::vector<clap::Clap>& subcommands, int padding = 27) {
 	if (subcommands.empty()) return "";
 	std::stringstream output;
 
@@ -129,9 +127,8 @@ namespace clap {
 		auto              program_name = getFileName(result.getFilePath());
 
 		output << generateUsage(result) << '\n';
-		if (command->get() != &clap) {
+		if (command->get() != &clap)
 			output << generateOptionsBlock("Global options:", clap.getParameters());
-		}
 		output << generateOptionsBlock("Subcommand options:", command->get()->getParameters());
 		output << generateSubcommandsBlock(command->get()->getSubcommands());
 

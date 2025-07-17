@@ -241,35 +241,29 @@ void showVersion() {
 clap::Clap getLspDaemonCLI() {
 	return clap::Clap("lsp_deamon", "The Duckling Language Server Protocol daemon.")
 	    .addHelpFlag()
-	    .add(
-			clap::ParamBuilder::ofFlag()
-				.addShortName('v')
-				.addLongName("version")
-				.addShortDesc("Show version information and exit")
-				.build()
-		)
+	    .add(clap::ParamBuilder::ofFlag()
+	             .addShortName('v')
+	             .addLongName("version")
+	             .addShortDesc("Show version information and exit")
+	             .build())
 	    .setPreHandler([](const clap::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
 				throw clap::exceptions::VersionException(options);
 			}
 		})
-	    .addSubcommand(
-			clap::Clap("start", "Starts the LSP server on a given port")
-				.add(
-					clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-						.addShortName('p')
-						.addLongName("port")
-						.addShortDesc("The port for the server to listen on.")
-						.required()
-						.build()
-				)
-				.setHandler([](const clap::ParsingResult& options) {
-					auto port = options.getValue<i64>("port").value();
-					server(i32(port));
-					return 0;
-				})
-		);
+	    .addSubcommand(clap::Clap("start", "Starts the LSP server on a given port")
+	                       .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+	                                .addShortName('p')
+	                                .addLongName("port")
+	                                .addShortDesc("The port for the server to listen on.")
+	                                .required()
+	                                .build())
+	                       .setHandler([](const clap::ParsingResult& options) {
+							   auto port = options.getValue<i64>("port").value();
+							   server(i32(port));
+							   return 0;
+						   }));
 }
 
 /**
@@ -311,7 +305,7 @@ int main(int argc, const char** argv) {
 		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
 		showVersion();
 		return 0;
-	} catch(const std::exception& e) {
+	} catch (const std::exception& e) {
 		std::cerr << "An unexpected error occured: " << e.what() << '\n';
 		return 1;
 	}

@@ -1,6 +1,3 @@
-/**
- * Represents the state of command line argument parsing.
- */
 #pragma once
 
 #include "parsing_result.hpp"
@@ -15,7 +12,8 @@ namespace {
 
 namespace clap {
 	/**
-	 * A helper class for the method clap::Command::parse().
+	 * @brief A helper for the method clap::Clap::parse().
+	 * A class containing the parsing state of the command line arguments.
 	 */
 	class ParsingState {
 	public:
@@ -41,7 +39,6 @@ namespace clap {
 		 * @brief Tries to perform parsing of a named parameter. It could be a flag or a value
 		 * parameter.
 		 * @param parameters All the available parameters.
-		 * TODOP: Update that comment.
 		 */
 		void parseParameter(const std::vector<clap::Parameter>& params);
 
