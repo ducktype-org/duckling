@@ -18,11 +18,12 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 #include <utility>
 

@@ -1,12 +1,13 @@
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <query_framework/context.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/context.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>

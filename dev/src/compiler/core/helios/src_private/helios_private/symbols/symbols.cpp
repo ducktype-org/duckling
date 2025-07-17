@@ -13,7 +13,6 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -24,6 +23,9 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <query_framework/query_impl.hpp>
+
+#include <functional>
 #include <vector>
 
 namespace compiler::helios {
@@ -50,6 +52,36 @@ namespace compiler::helios {
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
+
+	bool isGlobalVar(query::Context& ctx, SymID id) {
+		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+
+		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_contex
+			= [&](const pst::Access<pst::LangElement>& el) -> bool {
+			switch (el->getElementKind()) {
+			case pst::ElementKind::TopLevel:
+			case pst::ElementKind::Namespace:
+				return true;
+
+			case pst::ElementKind::Class:
+			case pst::ElementKind::Fun:
+			case pst::ElementKind::If:
+			case pst::ElementKind::While:
+			case pst::ElementKind::For:
+				return false;
+
+			case pst::ElementKind::CodeBlock:
+			case pst::ElementKind::CodeBlockOrStmt:
+			case pst::ElementKind::Variable:
+				if (el->getParent().has_value())
+					return global_variable_pst_contex(el->getParent().value().unlock(ctx));
+			default:
+				CORE_PANIC("Unexpected pst path of variable");
+			}
+		};
+
+		return global_variable_pst_contex(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
+	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 

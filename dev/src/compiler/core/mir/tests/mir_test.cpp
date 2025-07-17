@@ -7,11 +7,12 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <typesystem/higher/queries.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/queries.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;

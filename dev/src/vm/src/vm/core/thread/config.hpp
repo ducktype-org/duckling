@@ -8,7 +8,7 @@
  * - Computed goto
  *
  * They differ in the way they handle the main loop of the `Executor`
- * and they use different type for the "instrucion struct" `Fix8Instruction`.
+ * and they use different type for the "instrucion struct" `MicroInstruction`.
  * More information in the paper
  * ["Nowoczesne metody
  * optymalizacji..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/pondvm-opt-pl.pdf)
