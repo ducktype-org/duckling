@@ -1,7 +1,8 @@
-#include <filesystem/file.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
+
+#include <filesystem/file.hpp>
+#include <init/init.hpp>
 
 #include <iostream>
 

@@ -14,11 +14,12 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
+
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 

@@ -39,7 +39,7 @@ namespace vm {
 		 * @brief  Current instruction in the stack frame.
 		 * It is only updated when the new function is called.
 		 */
-		const struct Fix8Instruction* instr = nullptr;
+		const struct MicroInstruction* instr = nullptr;
 
 		/**
 		 * @brief Memory array where the local variables are stored.

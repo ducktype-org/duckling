@@ -1,11 +1,12 @@
 #include "interface.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <query_framework/context.hpp>
 
 #include <base/variant.hpp>
+
+#include <diagnostic/source_position.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
 

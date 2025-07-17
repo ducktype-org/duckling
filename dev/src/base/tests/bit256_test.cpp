@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/bit256.hpp>
+
+#include <tester/tester.hpp>
 
 class Bit256Test: public tester::TestSuite {
 #undef TESTER_CLASS
