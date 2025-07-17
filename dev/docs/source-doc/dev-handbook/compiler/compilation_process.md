@@ -40,7 +40,7 @@ HIR ("High intermediate representation") is an representation and an algorithm r
 
 **Details:** [HIR details](hir.md).
 
-**Implementation docs:** [HIR implementation](../../../../src/compiler/core/helios/readme.md)`.
+**Implementation docs:** [HIR implementation](../../../../src/compiler/core/helios/readme.md).
 
 
 ### Further compilation
