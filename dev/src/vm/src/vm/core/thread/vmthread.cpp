@@ -143,7 +143,7 @@ namespace vm {
 			u64 arg_type_id = arg_type->getID().asInt();
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				mov_l64_imm, stack_top, *reinterpret_cast<u64*>(&converted_arg)
+				mov_l64_imm, stack_top, Memory::interpret<u64>(converted_arg)
 			));
 			stack_top += arg_type->getSize();
 		}
@@ -214,7 +214,7 @@ namespace vm {
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
 			// to ints. This should change after: https://github.com/ducktype-org/duckling/issues/722
-			u64 converted_arg = base::safeIntConv<u64>(std::stoi(arg));
+			u64 converted_arg = static_cast<u64>(std::stoll(arg));
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
