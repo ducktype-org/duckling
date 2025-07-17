@@ -294,7 +294,6 @@ private:
 	}
 
 	void classTest() {
-		// @TODO: Add reference fields to class layout test #608.
 		using namespace compiler::helios;
 		using namespace test_utils;
 
