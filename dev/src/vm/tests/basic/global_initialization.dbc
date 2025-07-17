@@ -15,7 +15,9 @@ type fun: main { i64, ptr_argv } i64
 type opaque: VTablePtr 8
 type fun: _ctor_GLOBAL__Q_M22globals_initializationG1g { } void
 
-global_data _Q_M22globals_initializationG1g i64;
+global_data _Q_M22globals_initializationG1g i64 {
+    constructor: _ctor_GLOBAL__Q_M22globals_initializationG1g,
+};
 
 function _ctor_GLOBAL__Q_M22globals_initializationG1g {
     label                   label_0;
@@ -31,5 +33,3 @@ function main {
     mov_l64_g64             ret_val,_Q_M22globals_initializationG1g;
     ret;
 }
-
-
