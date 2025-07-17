@@ -50,7 +50,7 @@ namespace vm::low {
 				this->global_data.insert(this->types->at(global.type), global.name);
 		}
 
-		Box<TypeMetadata>                          types;
+		Box<TypeMetadata>                    types;
 		ObjIdNameMap<FuncData, usize>        functions;
 		ObjIdNameMap<TypeCRef, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the

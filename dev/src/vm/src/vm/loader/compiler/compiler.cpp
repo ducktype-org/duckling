@@ -27,14 +27,14 @@ namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
 			const ObjIdNameMap<code::Function>&         func_map;
-			const TypeMetadata&                               type_map;
+			const TypeMetadata&                         type_map;
 			const ObjIdNameMap<TypeCRef, GlobalDataID>& globals;
-			const base::HashMap<i32, base::StrID>&            method_id_to_name;
-			const base::HashMap<base::StrID, i32>&            method_name_to_id;
-			base::Optional<code::Function>                    function{};
-			base::HashMap<base::StrID, usize>                 label_positions{};
-			base::HashMap<base::StrID, usize>                 local_offset_map{};
-			usize                                             local_stack_size{};
+			const base::HashMap<i32, base::StrID>&      method_id_to_name;
+			const base::HashMap<base::StrID, i32>&      method_name_to_id;
+			base::Optional<code::Function>              function{};
+			base::HashMap<base::StrID, usize>           label_positions{};
+			base::HashMap<base::StrID, usize>           local_offset_map{};
+			usize                                       local_stack_size{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -305,7 +305,7 @@ namespace vm::loader::compiler {
 		converted_functions.reserve(program.functions().size());
 
 		ObjIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto                                       ctx = CompilationContext(
+		auto                                 ctx = CompilationContext(
             program.functions(), *types, globals, method_id_to_name, method_name_to_id
         );
 

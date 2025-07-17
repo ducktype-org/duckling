@@ -73,7 +73,7 @@ namespace vm {
 			}
 
 			constexpr base::Optional<base::StrID> nameOf(ObjID id) const {
-				usize index = static_cast<usize>(id);
+				auto index = static_cast<usize>(id);
 				if (index < id_to_name.size())
 					return id_to_name[index];
 				else
