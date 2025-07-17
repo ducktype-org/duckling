@@ -17,6 +17,7 @@ function main {
     cmpEq_l64_imm tmp, 0;
     jmpIfNot_label Finish;
     add_l64_imm tmp, 1;
+    ucmpG_l64_l64 tmp, tmp2;
     ucmpG_l64_imm tmp, 0;
     jmpIfNot_label Finish;
     mov_l64_imm tmp, 2130;

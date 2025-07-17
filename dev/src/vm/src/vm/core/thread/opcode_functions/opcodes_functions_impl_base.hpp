@@ -128,8 +128,6 @@ namespace vm {
 	DEFINE_MOVE_OPS(16, i16)
 	DEFINE_MOVE_OPS(8, std::int8_t)
 
-	// DELIMITER
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
 		{ derefStack<i64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
 		FUNCTION_CONT(1);
@@ -177,6 +175,13 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
 	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
 
+	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
+	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
+	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
+	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
+	DEFINE_ARITHMETIC_OP(udiv, 64, u64, /=)
+	DEFINE_ARITHMETIC_OP(udiv, 32, u32, /=)
+
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
@@ -195,13 +200,12 @@ namespace vm {
 
 	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
 	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
+	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
 	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
 	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
+	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
-
-	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
-	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
 	DEFINE_COMPARISON_OP(ucmpG, 8, std::uint8_t, >)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
