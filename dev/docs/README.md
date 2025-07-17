@@ -1,6 +1,6 @@
 # Duckling source docs
 
-This directory contains documentation for the Duckling project in Doxygen whitch is used to document C++ code.
+This directory contains documentation for the Duckling project in Doxygen which is used to document C++ code.
 It includes helpful guides for developers, such as instructions on writing tests and examples, contributing to the repository, and creating documentation.
 
 ## Building docs
