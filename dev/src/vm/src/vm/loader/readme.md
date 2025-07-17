@@ -1,9 +1,9 @@
 # Code Loading
 
 This file presents a brief overview of the architecture of the process of loading,
-verifying, and compiling bytecode in the system designed by the ZPP 3.2. This file
+verifying, and compiling bytecode in the system designed by ZPP 3.2. This file
 contains just the overview of the verification stage. This process is described in
-detail in the `vm/bytecode/validator/readme.md` file.
+detail in [Bytecode Validation](../bytecode/validator/readme.md).
 
 ## Design Assumptions
 When designing the architecture, we aimed to meet the assumptions we set, which
@@ -59,13 +59,14 @@ The key difference compared to `ParsedFile` is the representation of instruction
 instead of raw strings, a variant (`std::variant`) is used here, which encloses
 all possible instructions in the C++ type system.
 
-The types of arguments passed to instructions are represented in a similar way.
+The types of arguments passed to instructions are represented in a similar way
+(by the `vm::opargs::OpCodeArg` variant).
 
 ### Valid Program (`vm::code::ValidProgram`)
 `ValidProgram` is the main, high-level representation of the program maintained
 within the `Loader` module. Its invariant is the guarantee that the state stored
 in it is always correct. It's state can be expanded with the `insertCode` function.
-For more detailed explanation see `vm/bytecode/validator/readme.md`.
+For more detailed explanation see [Bytecode Validation](../bytecode/validator/readme.md).
 
 ### Low-level machine program (`vm::code::LowVMProgram`)
 After successful validation, `ValidProgram` is passed to the compiler, which
@@ -77,7 +78,7 @@ module:
     previously stored as variants are translated into indices in an
     implementation table or, if the machine is run in tail-call mode, into
     direct pointers to functions implementing the instruction's behavior.
-    This representation is implemented as the `Fix8Instruction` structure.
+    This representation is implemented as the `MicroInstruction` structure.
 -   **Names of local variables**
     are replaced by their offsets on the local stack.
 -   **Names of functions, methods, types, and global variables**
@@ -85,7 +86,7 @@ module:
     tables) that allow access at runtime.
 
 This form is the final product of the loading pipeline, and it is passed to the
-virtual machine's execution module - `VMProcess`.
+virtual machine's execution module — `VMProcess`.
 
 ### Representation of Types
 During loading, the way types are represented in the program also changes.
@@ -94,7 +95,8 @@ Initially, in the `ParsedFile` structure, types are represented by the
 names of base types and subtypes as `string`). The next step is conversion to the
 `TypeOfData` type, which stores types as variants (`std::variant`), similar to
 instructions and argument types. After passing through the validator
-(`TypeValidator`), types are transformed and added to the `TypeMetadata`
+<!-- @todo: This should be changed after #1095 -->
+(`TypeContext`), types are transformed and added to the `TypeMetadata`
 collection, which stores `Type` objects—fully expanded objects, enriched with all
 the information needed at runtime, such as built virtual method tables
 (v-tables), fields inherited from superclasses, and direct references to
@@ -111,7 +113,8 @@ consistent, high-level representation of the same code in the form of a
 The data flow is initiated by an API request to load code - `loadFile`.
 1.  `VMProcess` receives the request and passes it to its `Loader` object.
 2.  The `Loader` processes the file(s), verifies the code through the
-    `TypeValidator` and `FunctionValidator` modules, and tries to inject it into
+<!-- @todo: This should be changed after #1095 -->
+    `TypeContext` and `FunctionValidator` modules, and tries to inject it into
     its internal state (`ValidProgram`).
 3.  If the operation succeeds, the `Loader` updates its state, compiles a new,
     complete version of the program into the `LowVMProgram` form, and passes it
@@ -125,7 +128,7 @@ The data flow is initiated by an API request to load code - `loadFile`.
 
 Basically, executing `loadProgram` tries to "inject" new code to the current
 `VMProcess` state and succeeds only if the whole state (the old state + the
-newly injected code) represents a valid program. Is this fails one of the
+newly injected code) represents a valid program. If this fails, one of the
 errors is thrown and the state is not updated. When `VMProcess` receives an 
 execution request (`run`/`runFunction`), it starts a thread (`VMThread`) on 
 the currently stored `LowVMProgram` object.
@@ -139,12 +142,12 @@ of the key modules involved in the loading process.
 
 `VMProcess` is the main module for managing the loading and execution of code,
 handling `loadProgram` requests coming from the external API which may come either from a user
-or a compiler itself. 
+or the compiler itself. 
 
 -   `VMProcess` keeps the current state of the `LowVMProgram` which is the current
     low level representation (executable on the machine) of the code. It's
     initialized with an empty state.
--   `VMProcess` keeps it's own instance of the `Loader` module which is
+-   `VMProcess` keeps its own instance of the `Loader` module which is
     responsible for loading the code of this process.
 
 If the `loadProgram` request comes from a user, it contains a list of paths to files with
@@ -157,7 +160,7 @@ module which tries to inject the given code into the current state.
 
 ### Loader
 `Loader` is a module that manages high-level code loading and verification. Each
-`Loader` class keeps the high level representation of same code as the one kept
+`Loader` class keeps the high level representation of the same code as the one kept
 in the `LowVMProgram` of the `VMProcess` it belongs to. Each code loading
 request works as follows:
 
@@ -168,8 +171,8 @@ request works as follows:
     and errors are thrown in that case.
 3.  Having `CodeCollection`, it tries to inject the new code into its internal
     `ValidProgram` object. This operation performs the actual static
-    verification of the injected code and is described in detail in the 
-    `vm/bytecode/validator/readme.md`.
+    verification of the injected code and is described in detail in 
+    [Bytecode Validation](../bytecode/validator/readme.md).
 4.  `ValidProgram` may throw an exception if the new code violates correctness
     rules. This error is propagated up to `VMProcess`.
 5.  If the code injection is successful, `Loader` passes the updated, high-level
@@ -185,7 +188,8 @@ translate the high-level, verified program representation into a low-level,
 executable representation of bytecode (`LowVMProgram`). Since it receives a
 program with a guarantee of correctness, the compilation process cannot fail and
 does not need to contain any validation logic, thanks to the guarantees provided
-by `TypeValidator` and `FunctionValidator`. For each function, this process
+<!-- @todo: This should be changed after #1095 -->
+by `TypeContext` and `FunctionValidator`. For each function, this process
 proceeds as follows:
 
 1.  **Function translation:**

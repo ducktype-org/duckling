@@ -130,8 +130,7 @@ namespace vm {
 		i32 stack_top = 0;
 		// @todo: VM functions should be able to return and take as parameters any VM type.
 		// For now we assume we can only pass and return arguments of i64 type.
-		// This should be changed in:
-		// https://github.com/ducktype-org/duckling/issues/721
+		// This should be changed in the issue #721.
 
 		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
@@ -175,7 +174,7 @@ namespace vm {
 	 *
 	 * @note This is done in VMThread, since it depends on the arguments passed during the call
 	 * which may vary from call to call and creating a generic start function using builders in the
-	 * loading phase is not possible. This also results in the need to create the function in it's
+	 * loading phase is not possible. This also results in the need to create the function in its
 	 * low representation.
 	 * @todo This is a mock implementation. Since strings and dynamic arrays don't exist in the VM
 	 * yet, the passed arguments are expected to be strings representing a numerical value and are
@@ -184,9 +183,7 @@ namespace vm {
 	 * complicated, after we start using VmValue or default value constructors which have to be
 	 * invoked before main.
 	 *
-	 * This should change after:
-	 * https://github.com/ducktype-org/duckling/issues/722
-	 * https://github.com/ducktype-org/duckling/issues/724
+	 * This should change after issues #722 and #724.
 	 */
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
@@ -229,7 +226,7 @@ namespace vm {
 
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
-			// to ints. This should change after: https://github.com/ducktype-org/duckling/issues/722
+			// to ints. This should change after #722.
 			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
 			start_function.bc.insert(
 				start_function.bc.end(),
@@ -347,7 +344,7 @@ namespace vm {
 	End:
 #endif
 		// @todo: VM functions should should be able to return any VM type, not just i64.
-		// This should be changed in: https://github.com/ducktype-org/duckling/issues/721
+		// This should be changed in issue #721
 		// @note: The return value is the only block left on the block stack.
 		i64  func_ret_val = derefStack<i64>(local_stack, 0);
 		auto block        = frame->block_stack.back();

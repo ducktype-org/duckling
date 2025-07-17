@@ -1,4 +1,4 @@
-# Bytecode validation
+# Bytecode Validation
 
 Files in this directory implement static verification of bytecode functions
 and types, which gives us more assumptions for runtime, which in turn allows
@@ -34,7 +34,7 @@ working copy. The verification process is as follows:
     Then, each function is individually analyzed by `FunctionValidator` in the full 
     context of the program's types (including the newly injected ones). If the
     verification is successful, the new function is added to the program state.
-    More detailed explanation of `FunctionValidators` functionality is described 
+    More detailed explanation of `FunctionValidator`'s functionality 
     is described below.
 5.  If all the above steps are successful, the internal state is updated, and
     the operation ends with success. Otherwise, the working copy is discarded,
@@ -43,7 +43,7 @@ working copy. The verification process is as follows:
 ## Function Validator
 
 The `function_validator.hpp` file provides the `validateAndExtractReachableCode`
-function which when given a `vm::code::Function` reference returns a new
+function which, when given a `vm::code::Function` reference, returns a new
 `Function` object representing the same function, but with correctness
 guarantees and eliminated dead code. Any errors found during the validation
 process are signalled by throwing a `vm::code::ValidationError` subclass.
@@ -98,8 +98,8 @@ For example, when an instruction expects `p` top be a local pointer,
 we only check that such variable indeed exists and is a pointer,
 not what type of data it points to.
 
-Primitive types have somewhat unusual semantics. Beside the built in ones
-one can define additional ones and end up with many primitive types
+Primitive types have somewhat unusual semantics. Beside the built in ones,
+one can define additional types and end up with many primitive types
 of the same size. Each type however offers the same operations, there are
 no special types, the builtin `i64` type is not any more "inty" than
 a custom-defined `float64` type. The names however do matter, each operation
@@ -115,7 +115,7 @@ branch to make sure new instructions are handled as the machine gets developed.
 
 This is where more detailed checks happen, as an example let's look at the
 `structLea_lptr_lptr` instruction extended by `ext_field`. Let's call
-(now three) the arguments `target`, `src` and `field` respectively.
+the (three) arguments `target`, `src` and `field` respectively.
 This instruction roughly corresponds to the following C code: `target = &src->field`.
 Since this is the third step of verification we already know that variables
 referenced in the first two arguments indeed exist and hold pointers.
@@ -202,7 +202,7 @@ object. This involves translating the high-level, declarative `TypeOfData` into
 the low-level, concrete `vm::Type` representation used in the VM's runtime.
 *   **Type Resolution**:
     All type names are resolved to direct references (`TypeRef` or `TypeCRef`).
-    Previously, types subtypes (fe. types of fields in the data type) where held
+    Previously, component types (e.g. types of fields in a data type) were held
     as a string representing the type name. After this step, all types keep the
     direct reference to the corresponding type object.
 *   **Field Layout**:
