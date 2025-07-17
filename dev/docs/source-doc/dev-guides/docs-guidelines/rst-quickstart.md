@@ -132,10 +132,9 @@ You can easily create cross-references to other parts of the documentation.
 
 General syntax is: 
 
-.. code-block:: rst
-
-    :role:`target`
-
+```rst
+:role:`target`
+```
 
 You may supply an explicit title and reference target, 
 like in reStructuredText direct hyperlinks: 
