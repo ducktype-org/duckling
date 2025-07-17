@@ -2,6 +2,7 @@
 
 #include "errors.hpp"
 
+#include "base/maps.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
@@ -17,6 +18,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <cstdio>
 #include <variant>
 
 using namespace vm;
@@ -167,14 +169,14 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const FunctionType&                   function_type,
+		const Signature&                   signature,
 		const StableObjIdNameMap<TypeOfData>& tod_map,
 		const TypeMetadata&                   type_metadata
 	):
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
-		push(base::StrID("ret_val"), function_type.result);
-		for (auto [idx, param]: std::views::enumerate(function_type.parameters))
+		push(base::StrID("ret_val"), signature.result_type);
+		for (auto [idx, param]: std::views::enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param);
 	}
 
@@ -229,10 +231,11 @@ public:
  */
 class FunctionValidator {
 	const StableObjIdNameMap<TypeOfData>& tod_map;
+	const base::HashMap <base::StrID, Signature>& signatures;
 	const TypeMetadata&                   type_metadata;
 	const StableObjIdNameMap<GlobalData>& globals;
 	const Function&                       function;
-	FunctionType                          function_type;
+	Signature signature;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -245,8 +248,8 @@ class FunctionValidator {
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
 		auto generic_arg   = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto func_type     = std::get<FunctionType>(*tod_map.at(fun_name));
-		bool check_ret_val = func_type.result != base::StrID("void");
+		auto func_type     = signatures.at(fun_name);
+		bool check_ret_val = func_type.result_type != base::StrID("void");
 
 		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
@@ -255,7 +258,7 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result_type)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -285,13 +288,13 @@ class FunctionValidator {
 		impl_name            = inh_meta->virtual_methods[instr.arg1.method_name]->getName();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
-		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
-		bool check_ret_val = func_type.result != base::StrID("void");
+		auto signature     = signatures.at(impl_name);
+		bool check_ret_val = signature.result_type != base::StrID("void");
 
-		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+		if (signature.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
-		for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
+		for (auto param: signature.parameters | std::views::drop(1) | std::views::reverse) {
 			if (code::typeName(*local_stack.back().type) != param)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
@@ -304,32 +307,32 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
 	void validateTailcall(
 		const LocalStack&           local_stack,
 		const Op_ret_tailcall_func& instr,
-		const FunctionType&         current_function_type
+		const Signature&         current_signature
 	) const {
 		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto func_type   = std::get<FunctionType>(*tod_map.at(fun_name));
+		auto signature   = signatures.at(fun_name);
 
-		if (!(func_type.result == current_function_type.result
-		      && func_type.parameters == current_function_type.parameters))
+		if (!(signature.result_type == current_signature.result_type
+		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
-		if (func_type.parameters.size() + 1 != local_stack.size())
+		if (signature.parameters.size() + 1 != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (code::typeName(*local_stack.front().type) != func_type.result)
+		if (code::typeName(*local_stack.front().type) != signature.result_type)
 			throw InvalidTailcallArgumentsError(generic_arg);
 		for (auto [param, stack_elem]: std::views::zip(
-				 func_type.parameters, local_stack.getStackState() | std::views::drop(1)
+				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
 			 ))
 			if (code::typeName(*stack_elem.type) != param)
 				throw InvalidTailcallArgumentsError(generic_arg);
@@ -427,18 +430,16 @@ class FunctionValidator {
 				variant_case(opargs::FunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					auto maybe_func_type
-						= tod_map.atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-					if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+					if (!signatures.contains(fun_name))
 						throw UnknownFunctionError(generic_arg);
+					
 				}
 				variant_case(opargs::BuiltinFunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					auto maybe_func_type
-						= tod_map.atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-					if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+					if (!signatures.contains(fun_name))
 						throw UnknownFunctionError(generic_arg);
+
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;
@@ -897,7 +898,7 @@ class FunctionValidator {
 	}
 
 	void traverseControlFlowGraph() {
-		LocalStack local_stack(function_type, tod_map, type_metadata);
+		LocalStack local_stack(signature, tod_map, type_metadata);
 		visited_instructions.resize(function.body.size());
 		std::vector<std::tuple<usize, LocalStack>> dfs_stack{
 			{ function.body.size(), local_stack }  // sentinel
@@ -974,7 +975,7 @@ class FunctionValidator {
 					index++;
 				}
 				variant_case(Op_ret_tailcall_func, instr) {
-					validateTailcall(local_stack, instr, function_type);
+					validateTailcall(local_stack, instr, signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
@@ -994,21 +995,18 @@ class FunctionValidator {
 public:
 	FunctionValidator(
 		const StableObjIdNameMap<TypeOfData>& tod_map,
+		const base::HashMap <base::StrID, Signature>& signatures,
 		const TypeMetadata&                   type_metadata,
 		const StableObjIdNameMap<GlobalData>& globals,
-		const Function&                       function
+		const Function&                       function,
+		Signature signature
 	):
 		  tod_map(tod_map),
+		  signatures(signatures),
 		  type_metadata(type_metadata),
 		  globals(globals),
 		  function(function),
-		  function_type([&] {
-			  auto maybe_func_type
-				  = tod_map.atMaybe(function.name).expect<MissingFunctionalTypeError>(function.name);
-			  if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-				  throw TypeIsNotFunctionalError(function.name);
-			  return std::get<FunctionType>(*maybe_func_type);
-		  }()) {}
+		  signature(signature) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
 		preprocessLabels();
@@ -1024,16 +1022,22 @@ public:
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
 	const StableObjIdNameMap<TypeOfData>& tod_map,
+	const base::HashMap <base::StrID, Signature>& signatures,
 	const TypeMetadata&                   type_metadata,
 	const StableObjIdNameMap<GlobalData>& globals_map,
 	const Function&                       function
 ) {
-	FunctionValidator validator(tod_map, type_metadata, globals_map, function);
+
+	Signature signature = signatures.at(function.name);
+
+	FunctionValidator validator(tod_map, signatures ,type_metadata, globals_map, function, signature);
 
 	Function new_function;
 	new_function.name         = function.name;
 	new_function.body         = validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
+	new_function.parameters = function.parameters;
+	new_function.result_type = function.result_type;
 
 	return new_function;
 }

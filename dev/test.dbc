@@ -1,3 +1,4 @@
+
 function foo {} -> i32 {
 	init_lany_type		a, i32;
 	init_lany_type		b, i32;

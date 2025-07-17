@@ -120,13 +120,25 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
 
 				for (const auto& func: parsed_file.functions) {
+					code::Function function;
+					function.bytecode_pos = func->position;
+
 					code::Identifier func_name;
 					func_name.str          = func->name.value;
 					func_name.bytecode_pos = func->name.position;
-					code::Function function;
-
 					function.name         = func_name;
-					function.bytecode_pos = func->position;
+
+					code::Identifier result_type;
+					result_type.str          = func->result_type.value;
+					result_type.bytecode_pos = func->result_type.position;
+					function.result_type  = result_type;
+
+					for (const auto& param: func->parameters) {
+						code::Identifier param_id;
+						param_id.str          = param.value;
+						param_id.bytecode_pos = param.position;
+						function.parameters.emplace_back(param_id);
+					}
 
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));

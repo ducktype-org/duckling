@@ -20,7 +20,6 @@ public:
 		TESTER_ADD_TEST(labelNotFound);
 		TESTER_ADD_TEST(unknownType);
 		TESTER_ADD_TEST(unknownFunction);
-		TESTER_ADD_TEST(noFuncType);
 		TESTER_ADD_TEST(invalidFunctionCall);
 		TESTER_ADD_TEST(invalidRetTypeInCall);
 	}
@@ -69,15 +68,6 @@ private:
 			"unknown_function.dbc",
 			{
 				base::strConcat(vm::code::UnknownFunctionError::ERR_MSG, "foo"),
-			}
-		);
-	}
-
-	void noFuncType() {
-		loadInvalidDbc(
-			"no_func_type.dbc",
-			{
-				base::strConcat(vm::code::MissingFunctionalTypeError::ERR_MSG, "foo"),
 			}
 		);
 	}

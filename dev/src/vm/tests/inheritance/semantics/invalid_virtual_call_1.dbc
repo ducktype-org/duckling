@@ -4,9 +4,6 @@ type pointer: pointer_Child Child
 type fun: method_parent_void {pointer_Parent} void
 type fun: method_child_void {pointer_Child} void
 
-type fun: Parent_getAge_impl_type {pointer_Parent} void
-type fun: Child_cry_impl_type {pointer_Child} void
-
 type class: Parent {
     virtual_methods: { 
         getAge: method_parent_void,
@@ -26,14 +23,14 @@ type class: Child {
 }
 
 # ============ METHODS IMPLEMENTATION ============ 
-function Parent_getAge_impl_type {
+function Parent_getAge_impl_type {pointer_Parent} -> void {
     init_lany_type res, i64; mov_l64_imm res, 33; output_l64 res; deinit; ret;
 }
-function Child_cry_impl_type {
+function Child_cry_impl_type {pointer_Child} -> void {
     init_lany_type res, i64; mov_l64_imm res, 55; output_l64 res; deinit; deinit; ret;
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
     init_lany_type actual_child, pointer_Child;
     alloc_lptr_type actual_child, Child;
     setVTable_lptr_type actual_child, Child;

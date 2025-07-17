@@ -52,6 +52,8 @@ namespace vm::code {
 	struct Function final: ElementBase {
 		Identifier name;
 		CodeBlock  body;
+		std::vector<Identifier> parameters;
+		Identifier result_type;
 	};
 
 	/**

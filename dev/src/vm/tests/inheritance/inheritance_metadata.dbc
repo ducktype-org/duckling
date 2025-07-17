@@ -98,6 +98,6 @@ type class: PietMondrian {
 	abstract: true;
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
     ret;
 }

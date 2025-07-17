@@ -1,4 +1,6 @@
 #include "valid_program.hpp"
+#include <iostream>
+#include "base/maps.hpp"
 
 #include "errors.hpp"
 
@@ -48,14 +50,60 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& 
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata();
+
+	base::HashMap<base::StrID, vm::code::Signature> signatures;
+
+	for (const auto& func: new_functions) {
+		Signature signature;
+		signature.result_type = func.result_type.str;
+		signature.parameters.reserve(func.parameters.size());
+		for (const auto& param: func.parameters) {
+			signature.parameters.emplace_back(param.str);
+		}
+		signatures.put(func.name.str, signature);
+	}
+
+	for (const auto& [func_ref, id, name] : function_map.allData()) {
+		Signature signature;
+		signature.result_type = func_ref->result_type.str;
+		signature.parameters.reserve(func_ref->parameters.size());
+		for (const auto& param: func_ref->parameters) {
+			signature.parameters.emplace_back(param.str);
+		}
+		signatures.put(name, signature);
+	}
+
+	for (const auto& type: type_context.getCurrentTypes()) {
+		if (std::holds_alternative<vm::code::FunctionType>(type)) {
+			const auto& function_type = std::get<vm::code::FunctionType>(type);
+			Signature signature;
+			signature.result_type = function_type.result;
+			signature.parameters.reserve(function_type.parameters.size());
+			for (const auto& param: function_type.parameters) {
+				signature.parameters.emplace_back(param);
+			}
+			signatures.put(function_type.name, signature);
+		}
+	}
+
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = validateAndExtractReachableCode(
-			type_context.getCurrentTypes(), *type_metadata, globals_map, func
+			type_context.getCurrentTypes(), signatures, *type_metadata, globals_map, func
 		);
 		function_map.insert(validated_function, validated_function.name);
+		std::vector<base::StrID> parameters;
+		for (const auto& param: validated_function.parameters) {
+			parameters.emplace_back(param.str);
+		}
+		FunctionType function_type(
+			validated_function.name.str,
+			parameters,
+			validated_function.result_type.str
+		);
+		type_context.insertType(function_type);
 	}
 }
 

@@ -158,6 +158,11 @@ namespace vm::builtins {
 					vm::opargs::BuiltinFunctionName(func_type.name)
 				));
 				builtin_function.body.emplace_back(code::instructions::Op_ret{});
+				builtin_function.result_type = func_type.result;
+				builtin_function.parameters.reserve(func_type.parameters.size());
+				for (const auto& param: func_type.parameters) {
+					builtin_function.parameters.emplace_back(param);
+				}
 				code_collection.functions.push_back(builtin_function);
 			}
 			// This is to ensure the produced std library is valid.

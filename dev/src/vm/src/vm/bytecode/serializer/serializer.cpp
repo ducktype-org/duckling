@@ -123,15 +123,14 @@ namespace vm::code {
 			  function(function) {}
 
 		void write() {
-			out << "function " << function.name.str.strView() << " {\n";
-			// Needed by https://github.com/ducktype-org/duckling/issues/699
-			// bool first = true;
-			// for (const auto& param: function.parameter_types) {
-			// 	if (!first) out << ", ";
-			// 	out << param.strView();
-			// 	first = false;
-			// }
-			// out << "} " << function.result_type.strView() << "{\n";
+			out << "function " << function.name.str.strView() << " { ";
+			bool first = true;
+			for (const auto& param: function.parameters) {
+				if (!first) out << ", ";
+				out << param.str.strView();
+				first = false;
+			}
+			out << " } -> " << function.result_type.str.strView() << "{\n";
 
 			indentUp();
 			writeCode();

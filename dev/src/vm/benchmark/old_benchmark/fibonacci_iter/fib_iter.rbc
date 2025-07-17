@@ -1,4 +1,4 @@
-function main {
+function main { i64, ptr_argv } -> i64 {
     arg_size: 0;
 	next_arg_size: 0;
     ret_size: 8;
