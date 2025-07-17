@@ -6,12 +6,9 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
-
-#include "vm/bytecode/bytecode.hpp"
-#include "vm/bytecode/validator/errors.hpp"
 
 #include <diagnostic/source_position.hpp>
 
