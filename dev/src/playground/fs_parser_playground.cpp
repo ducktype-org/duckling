@@ -19,8 +19,7 @@ void countFiles(const fs::FsTree& tree) {
 
 int main(int argc, const char* argv[]) {
 	auto clap
-		= clap::Clap()
-	          .addHelpFlag()
+		= clap::Clap("fs_parser_playground")
 	          .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
 	                   .addShortName('p')
 	                   .addShortDesc("Path to start the search")

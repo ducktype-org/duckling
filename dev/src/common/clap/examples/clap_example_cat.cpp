@@ -28,7 +28,7 @@ void catFile(const clap::ParsingResult& result) {
 
 int main(int argc, const char** argv) {
 	// Create a clap object and set value parsers.
-	auto clap = clap::Clap("prog")
+	auto clap = clap::Clap("clap_example_cat")
 	                .addPositional(clap::FileParser::make())
 	                // "another_file" is an optional name for the parameter's value.
 	                // Displays in i.e. a help message.

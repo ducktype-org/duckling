@@ -5,12 +5,12 @@
 #include <iostream>
 
 int main(int argc, const char* argv[]) {
-	auto clap
-		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
-	                                         .addShortName('p')
-	                                         .addShortDesc("Path to Duckling source root")
-	                                         .required()
-	                                         .build());
+	auto clap = clap::Clap("frontend_playground")
+	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
+	                         .addShortName('p')
+	                         .addShortDesc("Path to Duckling source root")
+	                         .required()
+	                         .build());
 
 	clap::ParsingResult options;
 	try {

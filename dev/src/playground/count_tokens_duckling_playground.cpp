@@ -38,7 +38,8 @@ int count_tokens(const lexer::Tokens& tokens) {
 }
 
 int main(int argc, const char** argv) {
-	auto clap = clap::Clap().addHelpFlag().addPositional(clap::FileParser::make("file"));
+	auto clap = clap::Clap("count_tokens_duckling_playground")
+	                .addPositional(clap::FileParser::make("file"));
 
 	clap::ParsingResult input;
 

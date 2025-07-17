@@ -136,7 +136,7 @@ clap::Clap getClapForPlayground() {
 	    .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
 	             .addLongName("user")
 	             .addShortDesc("Run command as a specific user.")
-				 .required()
+	             .required()
 	             .build())
 	    .addSubcommand(                                           // `playground greet` subcommand.
 			clap::Clap("greet", "Greets one or more people.")

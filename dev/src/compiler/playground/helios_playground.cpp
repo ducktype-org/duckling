@@ -29,12 +29,12 @@ int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
 
 
-	auto clap
-		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
-	                                         .addShortName('p')
-	                                         .addShortDesc("Path to Duckling source root")
-	                                         .required()
-	                                         .build());
+	auto clap = clap::Clap("helios_playground")
+	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
+	                         .addShortName('p')
+	                         .addShortDesc("Path to Duckling source root")
+	                         .required()
+	                         .build());
 
 	clap::ParsingResult options;
 

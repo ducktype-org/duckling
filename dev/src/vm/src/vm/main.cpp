@@ -18,7 +18,7 @@ void showVersion() {
 }
 
 clap::Clap getVmClap() {
-	return clap::Clap("dvm", "The Duckling Virtual Machine.")
+	return clap::Clap("VM", "The Duckling Virtual Machine.")
 	    .add(clap::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
@@ -45,7 +45,6 @@ clap::Clap getVmClap() {
 							   return 0;
 						   }))
 	    .addSubcommand(clap::Clap("run", "Run a .qbc file.")
-	                       .addPositional(clap::FileParser::make())
 	                       .add(clap::ParamBuilder::ofValue(clap::FileParser::make())
 	                                .addShortName('f')
 	                                .addLongName("file")
@@ -59,7 +58,6 @@ clap::Clap getVmClap() {
 							   return cli(options.isFlag("stdlib"));
 						   }))
 	    .addSubcommand(clap::Clap("repl", "Start the VM in REPL mode.")
-	                       .addPositional(clap::FileParser::make())
 	                       .setHandler([](const clap::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   DuckVMRepl::get().run();
