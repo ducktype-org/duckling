@@ -1,7 +1,8 @@
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <tester/tester.hpp>
 #include <token_source/source.hpp>
+
+#include <filesystem/file.hpp>
+#include <tester/tester.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS

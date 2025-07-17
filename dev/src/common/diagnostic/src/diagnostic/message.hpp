@@ -81,9 +81,9 @@
 
 #include "source_position.hpp"
 
-#include <printer/printer_content.hpp>
-
 #include <base/box.hpp>
+
+#include <printer/printer_content.hpp>
 
 #include <concepts>
 

@@ -3,14 +3,14 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <diagnostic/logger.hpp>
-#include <diagnostic/source_position.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
+
+#include <diagnostic/logger.hpp>
+#include <diagnostic/source_position.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
