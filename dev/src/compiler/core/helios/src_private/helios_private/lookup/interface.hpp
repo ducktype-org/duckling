@@ -2,10 +2,11 @@
 
 #include "lookup_result.hpp"
 
-#include <query_framework/query_result.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
 #include <base/box.hpp>
+
+#include <query_framework/query_result.hpp>
 
 #include <variant>
 

@@ -605,6 +605,26 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
+			variant_case_novalue(Op_umul_l64_l64) {}
+			variant_case_novalue(Op_umul_l64_imm) {}
+			variant_case_novalue(Op_umul_l32_l32) {}
+			variant_case_novalue(Op_umul_l32_imm) {}
+			variant_case_novalue(Op_umod_l64_l64) {}
+			variant_case_novalue(Op_umod_l64_imm) {}
+			variant_case_novalue(Op_umod_l32_l32) {}
+			variant_case_novalue(Op_umod_l32_imm) {}
+			variant_case_novalue(Op_udiv_l64_l64) {}
+			variant_case_novalue(Op_udiv_l64_imm) {}
+			variant_case_novalue(Op_udiv_l32_l32) {}
+			variant_case_novalue(Op_udiv_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l64_l64) {}
+			variant_case_novalue(Op_ucmpG_l64_imm) {}
+			variant_case_novalue(Op_ucmpG_l32_l32) {}
+			variant_case_novalue(Op_ucmpG_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l8_l8) {}
+			variant_case_novalue(Op_ucmpG_l8_imm) {}
+
+
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type
 					= std::get<VariantType>(*current_stack.at(instr.arg0.var_name));
