@@ -9,7 +9,7 @@ It also contains old `guidelines` from `duckling` repo.
 ## Contents
 
 - [github-repos](github-repos.md)
-- [hot-to-commit](how-to-commit.md)
+- [how-to-commit](how-to-commit.md)
 - [work-organization](work-organization.md)
 - [build-guidelines](build-guidelines/index.md)
 - [docs-guidelines](docs-guidelines/index.md)
