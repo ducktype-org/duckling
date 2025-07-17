@@ -1,15 +1,16 @@
 #include <backends/llvm/llvm_backend.hpp>
-#include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/variant.hpp>
+
+#include <clap/clap.hpp>
+#include <init/init.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
@@ -35,7 +36,7 @@ int main(int argc, const char* argv[]) {
 		return 1;
 	}
 
-	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
+	auto path_to_compile = options.getValue<fs::File>('p').value();
 
 	using namespace compiler;
 

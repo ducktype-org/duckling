@@ -10,9 +10,9 @@
 
 #include "kind.hpp"
 
-#include <query_framework/context_fd.hpp>
-
 #include <base/ints.hpp>
+
+#include <query_framework/context_fd.hpp>
 
 #include <string>
 

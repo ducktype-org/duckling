@@ -1,7 +1,7 @@
-#include <tester/tester.hpp>
-
 #include <base/str_utils.hpp>
 #include <base/stringifyable_enum.hpp>
+
+#include <tester/tester.hpp>
 
 // Create a test enum for testing enum stringification
 MAKE_STRINGIFYABLE_ENUM(test, u32, TestOperation,

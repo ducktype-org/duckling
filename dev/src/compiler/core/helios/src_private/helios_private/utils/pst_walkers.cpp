@@ -11,7 +11,7 @@ namespace compiler::helios {
 
 	// @TODO: in the future: make some base for all elements that can be used here
 
-	namespace detail {
+	namespace internal {
 		void visitClassStmts(
 			query::Context&                   ctx,
 			StmtList<pst::ClassStmt>&         out,
@@ -35,7 +35,7 @@ namespace compiler::helios {
 		) {
 			if (auto class_block = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
 				StmtList<pst::ClassStmt> out;
-				for (auto&& e: *class_block.value()) detail::visitClassStmts(ctx, out, e);
+				for (auto&& e: *class_block.value()) internal::visitClassStmts(ctx, out, e);
 				return out;
 			} else {
 				const auto& element = *elem.unlock(ctx);
@@ -67,7 +67,7 @@ namespace compiler::helios {
 			return out;
 		}
 		if (elem.dynamicCast<pst::ClassBlock>()) {
-			auto       elements = detail::getChildStmtsOfClassBlock(ctx, elem);
+			auto       elements = internal::getChildStmtsOfClassBlock(ctx, elem);
 			StmtList<> out;
 			for (auto e: elements) out.emplace_back(e);
 			return out;

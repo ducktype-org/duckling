@@ -48,10 +48,10 @@ namespace vm::opargs {
 		}
 	};
 
-	DEFINE_STACK_LOCAL(I8, "l8");
-	DEFINE_STACK_LOCAL(I16, "l16");
-	DEFINE_STACK_LOCAL(I32, "l32");
-	DEFINE_STACK_LOCAL(I64, "l64");
+	DEFINE_STACK_LOCAL(8, "l8");
+	DEFINE_STACK_LOCAL(16, "l16");
+	DEFINE_STACK_LOCAL(32, "l32");
+	DEFINE_STACK_LOCAL(64, "l64");
 	DEFINE_STACK_LOCAL(Any, "lany");
 	DEFINE_STACK_LOCAL(Ptr, "lptr");
 
@@ -60,20 +60,20 @@ namespace vm::opargs {
 	 */
 	DEFINE_STACK_LOCAL(Vnt, "lvnt");
 
-#define VM_OPARG_LOCAL_TYPES                                                                 \
-	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \
+#define VM_OPARG_LOCAL_TYPES                                                             \
+	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalAny, StackLocalPtr, \
 		StackLocalVnt
 
-	DEFINE_GLOBAL(I8, "g8");
-	DEFINE_GLOBAL(I16, "g16");
-	DEFINE_GLOBAL(I32, "g32");
-	DEFINE_GLOBAL(I64, "g64");
+	DEFINE_GLOBAL(8, "g8");
+	DEFINE_GLOBAL(16, "g16");
+	DEFINE_GLOBAL(32, "g32");
+	DEFINE_GLOBAL(64, "g64");
 	DEFINE_GLOBAL(Ptr, "gptr");
 
 	/**
 	 * @brief List of all argument types that target global data.
 	 */
-#define VM_OPARG_GLOBAL_TYPES GlobalI64, GlobalI32, GlobalI16, GlobalI8, GlobalPtr
+#define VM_OPARG_GLOBAL_TYPES Global64, Global32, Global16, Global8, GlobalPtr
 
 	/**
 	 * @brief Represents type name argument.
@@ -187,10 +187,9 @@ namespace vm::opargs {
 		BuiltinFunctionName,
 		MethodName,
 		Label>;
-	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
-	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
-	using OpCodePrimitiveArg
-		= std::variant<StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64>;
+	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
+	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName>;
+	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
 }
 
 #undef DEFINE_STR_ARG_TYPE

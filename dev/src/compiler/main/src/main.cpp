@@ -6,22 +6,23 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <clap/clap.hpp>
 #include <config/config.hpp>
 #include <driver/hout_to_binary_driver.hpp>
 #include <driver/package_compilation_driver.hpp>
-#include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
+
+#include <clap/clap.hpp>
+#include <filesystem/file.hpp>
+#include <init/init.hpp>
+#include <printer/stream_printer.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
@@ -193,7 +194,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
+		auto file_to_lex = options.getValue<fs::File>("file").value();
 
 		auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
@@ -230,7 +231,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
+		auto file_to_parse = options.getValue<fs::File>("file").value();
 
 		auto pst = pst::PST(file_to_parse);
 
@@ -260,7 +261,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile = options.getValue<fs::File>("module").value();
 
 		int exit_code = 0;
 
@@ -312,7 +313,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile = options.getValue<fs::File>("module").value();
 
 		// @TODO: error handling
 		using namespace compiler;
@@ -380,17 +381,17 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto options = configureDuckMainWith(clap, command_args);
 
-		auto path_to_compile   = options.getValue<fs::FilePath>("module").value();
+		auto path_to_compile   = options.getValue<fs::File>("module").value();
 		auto backend_type      = options.isFlag("dvm-backend") ? compiler::driver::BackendType::DVM
 		                                                       : compiler::driver::BackendType::LLVM;
-		auto artifact_location = options.getValue<fs::FilePath>("artifact-location").value();
+		auto artifact_location = options.getValue<fs::File>("artifact-location").value();
 
 		defer(printContextErrors());
 
 		compiler::driver::PackageCompilationDriver driver{
 			backend_type,
 			path_to_compile,
-			artifact_location.absolutePath(),
+			artifact_location.nativePath(),
 		};
 		driver.compilerEntirePackageIntoBinary();
 

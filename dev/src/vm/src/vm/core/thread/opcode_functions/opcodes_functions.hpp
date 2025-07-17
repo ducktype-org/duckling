@@ -89,11 +89,11 @@ namespace vm {
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
 		static __attribute__((always_inline)) void performFunctionCall(
-			const Fix8Instruction*& instr,
-			std::byte*&             local_stack,
-			Frame*&                 frame,
-			VMThread&               thread,
-			usize                   function_id
+			const MicroInstruction*& instr,
+			std::byte*&              local_stack,
+			Frame*&                  frame,
+			VMThread&                thread,
+			usize                    function_id
 		) {
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.executing_program->functions[function_id];

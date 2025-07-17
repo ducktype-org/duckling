@@ -11,7 +11,7 @@
 namespace hashing {
 
 
-	namespace detail {
+	namespace internal {
 
 		/**
 		 * Returns a unique ID on each call
@@ -34,7 +34,7 @@ namespace hashing {
 			return TypeCode<I, true>{ id };
 		}
 
-	}  // namespace detail
+	}  // namespace internal
 
 	/**
 	 * Returns a unique hash code of a given length for the type
@@ -43,7 +43,7 @@ namespace hashing {
 	 * @tparam I - type of the value of the type code
 	 */
 	template<typename T, std::integral I = u32>
-	static const TypeCode<I, true> TYPE_UNIQUE_CODE = detail::getUniqueID<T, I>();
+	static const TypeCode<I, true> TYPE_UNIQUE_CODE = internal::getUniqueID<T, I>();
 
 
 }  // namespace hashing

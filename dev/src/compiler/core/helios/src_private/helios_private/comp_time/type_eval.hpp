@@ -3,9 +3,10 @@
 #include <helios/helios_errors.hpp>
 #include <pst_parser/elements/elements_list.hpp>
 #include <pst_parser/generic_query_key.hpp>
+#include <typesystem/higher/symbol_type.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {
 

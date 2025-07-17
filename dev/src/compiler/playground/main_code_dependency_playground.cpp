@@ -1,15 +1,16 @@
-#include <clap/clap.hpp>
-#include <diagnostic/highlight_positions.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
 
 #include <base/defer.hpp>
+
+#include <clap/clap.hpp>
+#include <diagnostic/highlight_positions.hpp>
+#include <init/init.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
 
 #include <iostream>
 
@@ -20,7 +21,7 @@ void printContextErrors() {
 	}
 }
 
-void printQueryDeps(const std::vector<query::detail::NodeID>& deps) {
+void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {
 	std::cerr << "Dependencies:\n";
 	for (auto& i: deps)
 		std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val << "\n";
@@ -49,7 +50,7 @@ int notMain(int argc, const char* const* argv) {
 		return 1;
 	}
 
-	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
+	auto path_to_compile = options.getValue<fs::File>('p').value();
 
 	using namespace compiler;
 

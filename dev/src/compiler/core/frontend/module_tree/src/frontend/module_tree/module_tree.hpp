@@ -9,43 +9,19 @@
 
 #include "file_id.hpp"
 #include "module_id.hpp"
+#include "source_file.hpp"
 
-#include <filesystem/file.hpp>
-#include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/ints.hpp>
 #include <base/maps.hpp>
 
+#include <filesystem/file.hpp>
+#include <filesystem/fs_tree.hpp>
+
 #include <string>
 
 namespace compiler::frontend {
-
-
-	/**
-	 * @brief Structure holding SourceFile within Module Tree
-	 */
-	struct SourceFile final {
-		fs::FilePath               path;
-		base::StrID                lang_file_name;
-		FileID                     id;
-		base::Optional<pst::PST<>> parse_tree;
-
-		/**
-		 * @brief Module the file belongs to
-		 * @note: in the future there might be module-less files
-		 */
-		ModuleID linked_module;
-
-		SourceFile(fs::FilePath, ModuleID linked_module);
-
-		/**
-		 * @brief Lazily parses the source file and returns PST
-		 * @return CRef<pst::PST>
-		 */
-		CRef<pst::PST<>> getPST();
-	};
-
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
@@ -84,7 +60,7 @@ namespace compiler::frontend {
 	public:
 		/**
 		 * The main factory to construct `ModuleTree`s.
-		 * @param root (std::string/fs::FilePath/std::filesystem::path...) - anything,
+		 * @param root (std::string/fs::File/std::filesystem::path...) - anything,
 		 * that can be used to construct fs::FsTree.
 		 * @param reject_file_regex A regex to check against whether
 		 * a file should be omitted.
@@ -153,7 +129,7 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, std::vector<fs::FilePath>>& getOtherFiles() const;
+		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
@@ -195,7 +171,7 @@ namespace compiler::frontend {
 		 * @param module_root A pointer to ModuleTree, where the file should be inserted.
 		 */
 		static void handleNewFile(
-			const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
+			const std::shared_ptr<ModuleTree>& module_root, const fs::File& filepath
 		);
 
 		/**
@@ -217,7 +193,7 @@ namespace compiler::frontend {
 		/**
 		 * A link to the main source file.
 		 *
-		 * Has to be a container (like base::Optional), because fs::FilePath does
+		 * Has to be a container (like base::Optional), because fs::File does
 		 * not have a default constructor.
 		 */
 		base::Optional<SourceFile> m_main_source_file;
@@ -233,7 +209,7 @@ namespace compiler::frontend {
 		/**
 		 * All other files inside this module. Indexed by their extension.
 		 */
-		base::HashMap<base::StrID, std::vector<fs::FilePath>> m_other_files;
+		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 	};
 }
 

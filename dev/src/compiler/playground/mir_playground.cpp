@@ -1,9 +1,10 @@
-#include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+
+#include <clap/clap.hpp>
+#include <init/init.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -38,7 +39,7 @@ int notMain(int argc, const char* const* argv) {
 
 	defer(printContextErrors());
 
-	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
+	auto path_to_compile = options.getValue<fs::File>('p').value();
 
 	using namespace compiler;
 

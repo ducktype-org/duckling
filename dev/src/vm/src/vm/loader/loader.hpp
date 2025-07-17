@@ -10,7 +10,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/parser/elements.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <expected>
 #include <vector>
@@ -26,8 +26,7 @@ namespace vm::loader {
 		 * @brief Parses a list of files, returns an intermediate loader-only program
 		 * representation.
 		 */
-		std::expected<code::CodeCollection, LoaderLogger> loadFiles(
-			const std::vector<fs::FilePath>& files
+		std::expected<code::CodeCollection, LoaderLogger> loadFiles(const std::vector<fs::File>& files
 		);
 
 	public:
@@ -38,7 +37,7 @@ namespace vm::loader {
 		 * returns a low-level program representation of the current loader state.
 		 */
 		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
-			const std::vector<fs::FilePath>& file_path
+			const std::vector<fs::File>& file_path
 		);
 
 		/**

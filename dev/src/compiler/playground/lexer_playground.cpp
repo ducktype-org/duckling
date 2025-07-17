@@ -3,11 +3,12 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#include <filesystem/file.hpp>
-#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
 #include <token_source/source.hpp>
+
+#include <filesystem/file.hpp>
+#include <init/init.hpp>
 
 #include <iostream>
 
@@ -22,8 +23,8 @@ int main(int argc, char** argv) {
 
 	lexer::Lexer::setTokenMessages(true);
 
-	FilePath path(argv[1]);
-	auto     source = tokenizer::makeTokenSource(path);
+	File path(argv[1]);
+	auto source = tokenizer::makeTokenSource(path);
 	source->tokenize();
 	if (source->getLogger()->bad()) source->getLogger()->dumpLog(true);
 }

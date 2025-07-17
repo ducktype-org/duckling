@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/variant.hpp>
+
+#include <tester/tester.hpp>
 
 class T {
 	i32 data;

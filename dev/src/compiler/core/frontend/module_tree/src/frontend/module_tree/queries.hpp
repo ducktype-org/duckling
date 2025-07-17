@@ -3,12 +3,13 @@
 #include "file_id.hpp"
 #include "module_id.hpp"
 
-#include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
-#include <query_framework/query_int.hpp>
 
 #include <base/maps.hpp>
 #include <base/ref.hpp>
+
+#include <filesystem/file.hpp>
+#include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {
 
@@ -19,7 +20,7 @@ namespace compiler::frontend {
 	 * @brief Query entire module tree build from given path.
 	 * @return module id of root-module.
 	 */
-	DECLARE_QUERY(QueryModuleTree, fs::FilePath, ModuleID)
+	DECLARE_QUERY(QueryModuleTree, fs::File, ModuleID)
 
 	/**
 	 * @brief Query parent of a module.
@@ -56,7 +57,7 @@ namespace compiler::frontend {
 	 * path pointing to. It was added for go-to definition and simillar features.
 	 * @TODO: make it better during frontend queryfication #731.
 	 */
-	CRef<pst::PST<>> queryPSTFromFilePath(query::Context&, const fs::FilePath& file_path);
+	CRef<pst::PST<>> queryPSTFromFilePath(query::Context&, const fs::File& file_path);
 
 	/**
 	 * @brief Returns ModuleID

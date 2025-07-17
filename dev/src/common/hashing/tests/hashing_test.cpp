@@ -1,3 +1,5 @@
+#include <base/ints.hpp>
+
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
@@ -6,8 +8,6 @@
 #include <hashing/type_hash_code.hpp>
 #include <hashing/type_unique_code.hpp>
 #include <tester/tester.hpp>
-
-#include <base/ints.hpp>
 
 #include <unordered_map>
 
@@ -76,7 +76,7 @@ namespace my_map {
 }
 
 template<typename T>
-concept check_hashRangeAsBytes = requires(T t) { detail::hashRangeAsBytes(Fnv1a_32{}, t); };
+concept check_hashRangeAsBytes = requires(T t) { internal::hashRangeAsBytes(Fnv1a_32{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}

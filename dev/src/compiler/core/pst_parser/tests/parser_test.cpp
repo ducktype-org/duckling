@@ -1,5 +1,4 @@
-﻿#include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
+﻿#include <lexer/lexer.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
@@ -7,6 +6,8 @@
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
+
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
@@ -80,7 +81,7 @@ public:
 	}
 
 private:
-	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
+	pst::PST<> prepare(const std::string& filename) { return { fs::File(filename) }; }
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst = prepare(path(filename));
@@ -128,7 +129,7 @@ private:
 		std::stringstream ss;
 		pst.dprint(ss);
 
-		auto             correct_content = fs::getSimpleFileContent(json_file);
+		auto             correct_content = fs::File(json_file).getContent();
 		std::string_view correct_string  = correct_content.view().stringView();
 
 		if (no_errors) {

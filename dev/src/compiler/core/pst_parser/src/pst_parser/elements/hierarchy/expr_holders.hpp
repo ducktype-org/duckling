@@ -3,13 +3,14 @@
 #include "../lang_state_unmethods.hpp"
 #include "meta.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
 #include <base/string_id.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 namespace pst {
 	/**
@@ -18,7 +19,7 @@ namespace pst {
 	class ExprHolder: public NotStmt {
 	protected:
 		AccessInternal<ExprElement> expr;
-		friend void detail::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
+		friend void internal::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
@@ -70,10 +71,10 @@ namespace pst {
 		using ExprHolder::ExprHolder;
 
 		static MBox<Self> parse(LangParserState& state) {
-			auto position = detail::getPosition(state);
+			auto position = internal::getPosition(state);
 			auto out      = makeBox<Self>(position);
 
-			detail::parseExprIntoHolder(state, out.refMut(), parseFun);
+			internal::parseExprIntoHolder(state, out.refMut(), parseFun);
 			return out;
 		}
 

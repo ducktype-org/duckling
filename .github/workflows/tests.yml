@@ -20,6 +20,8 @@ env:
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
+  BUILD_SYSTEM: Ninja
+#  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners. See #1021
 
 jobs:
   determine-runners:
@@ -46,6 +48,7 @@ jobs:
       # According to: https://github.com/orgs/community/discussions/38088
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
+      todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
     timeout-minutes: 20  # (Per matrix run)
     runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
@@ -84,9 +87,12 @@ jobs:
           rm -rf ${{ github.workspace }}
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
-      
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Update apt
+        run: sudo apt update
 
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
@@ -95,7 +101,7 @@ jobs:
       - name: Install fastcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo pip install fastcov --break-system-packages --no-input
-      
+
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev
@@ -103,10 +109,14 @@ jobs:
       - name: Install LLVM
         run: sudo apt -y install llvm-19 llvm-19-dev
 
+      - name: Install mold
+        run: sudo apt -y install mold
+
       - name: Install GCC 14 and gcov-14
-        run: |
-          sudo apt update
-          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+        run: sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+
+      - name: Install Ninja
+        run: sudo apt -y install ninja-build
 
       - name: Check installations
         run: |
@@ -167,13 +177,18 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
+              -G ${{ env.BUILD_SYSTEM }} \
               -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
               -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
+              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
+#              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
+#              Temporarily disabled due to disk space issues on GH runners. See #1021
+#              When enabling, move this line upwards, so that it is before the cmake-flags value.
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
@@ -237,11 +252,22 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+      - name: Integration Tests
+        id: integration-tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+
+      - name: Test TODO Count
+        id: todo-counter
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          echo todo-count=$(python3 toolbox.py todo-counter -c -p TODO) > $GITHUB_OUTPUT
+
       - name: Fail if deployables failed to build
         if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
         run: exit 1
 
-  coverage:
+  code-statistics:
     needs: [build]
 
     runs-on: ubuntu-24.04
@@ -257,9 +283,29 @@ jobs:
           value: ${{ needs.build.outputs.coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
+      - name: Save main TODO count
+        uses: action-pack/set-variable@v1
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        with:
+          name: 'MAIN_TODO_COUNT'
+          value: ${{ needs.build.outputs.todo-count }}
+          token: ${{ secrets.QUACKER_PAT }}
+
       - name: Read main coverage percentage
         id: read-main-coverage
         run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
+
+      - name: Read main TODO count
+        id: read-main-todo-count
+        run: echo value=${{ vars.MAIN_TODO_COUNT }} > $GITHUB_OUTPUT
+
+      - name: Calculate TODO difference
+        id: calc-todo-diff
+        run: "echo value=$((${{ needs.build.outputs.todo-count }} - ${{ steps.read-main-todo-count.outputs.value }})) > $GITHUB_OUTPUT"
+
+      - name: Calculate TODO negated
+        id: calc-todo-diff-neg
+        run: "echo value=$((-${{ steps.calc-todo-diff.outputs.value }})) > $GITHUB_OUTPUT"
 
       - name: Check coverage status
         id: check-coverage-status
@@ -272,23 +318,34 @@ jobs:
           token: ${{ secrets.QUACKER_PAT }}
           authors: quacker-bot
 
-      - name: Post coverage status as github comment
+      - name: Post code statistics as github comment
         uses: actions/github-script@v7
         if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
-          FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
-          SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
+          COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
+          COV_SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
+          TODO_FAIL_MSG: '🙈🙈🙈 - You have **added ${{ steps.calc-todo-diff.outputs.value }}** TODO(s) to the repo! 🥴❌🥴'
+          TODO_SINGLE_GOOD_MSG: '👍👍👍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODO!'
+          TODO_MULTIPLE_AMAZED_MSG: '😍🤯🤯🤯😍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🤩🥳🥳🥳🤩'
+
         with:
           github-token: ${{ secrets.QUACKER_PAT }}
+          # Lines start, not end with `\n` because otherwise there are many spaces inserted
+          # and the created markdown does not parse well.
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🎉 Tests and coverage ran successfully! 🎉\n \
-                     ⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \n \
-                     ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
-                     ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
+              body: '## Coverage \
+                    \n🎉 Tests and coverage ran successfully! 🎉 \
+                    \n⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \
+                    \n⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \
+                    \n${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
+                    \n## TODOs \
+                    \n⭐ Current TODO count: **${{ needs.build.outputs.todo-count }}** \
+                    \n${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }} \
+                    '
             })
 
       - name: Fail if insufficient coverage

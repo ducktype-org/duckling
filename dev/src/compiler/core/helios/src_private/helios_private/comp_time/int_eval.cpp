@@ -6,6 +6,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
+
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
@@ -147,8 +148,14 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 			}
 
-			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {
-				result = ctx.query<QueryConstValueOf>(expr.symbols.back());
+			void visitAccessExpr(const code::AccessExpr&) final {
+				throw base::NotYetImplemented(
+					"Evaluation of access expressions is not implemented yet"
+				);
+			}
+
+			void visitSequenceExpr(const code::SequenceExpr& seq) final {
+				result = evaluateExpr(ctx, *seq.expressions.back());
 			}
 		};
 

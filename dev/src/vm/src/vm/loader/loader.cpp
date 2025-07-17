@@ -3,14 +3,14 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <diagnostic/logger.hpp>
-#include <diagnostic/source_position.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
+
+#include <diagnostic/logger.hpp>
+#include <diagnostic/source_position.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
@@ -102,7 +102,7 @@ namespace {
 }
 
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
-	const std::vector<fs::FilePath>& files
+	const std::vector<fs::File>& files
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
@@ -184,7 +184,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<fs::FilePath>& file_paths
+	const std::vector<fs::File>& file_paths
 ) {
 	auto opt_code_collection = loadFiles(file_paths);
 	if (opt_code_collection.has_value()) return getProgram({ *std::move(opt_code_collection) });

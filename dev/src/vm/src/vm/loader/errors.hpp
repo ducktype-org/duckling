@@ -1,6 +1,6 @@
-#include <diagnostic/message.hpp>
-
 #include <base/string_id.hpp>
+
+#include <diagnostic/message.hpp>
 
 #include <string_view>
 
