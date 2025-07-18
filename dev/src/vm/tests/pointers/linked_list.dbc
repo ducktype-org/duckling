@@ -32,7 +32,7 @@ function tail {} -> LinkedList {
     ret;
 }
 
-function print_list -> print_list {LinkedList} void {
+function print_list {LinkedList} -> void {
     # arg0: LinkedList
 
     cmpNull_lptr arg0;
