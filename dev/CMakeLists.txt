@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
-include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureBuildTypes.cmake)
-
 project(Duckling)
+
 
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
@@ -32,6 +31,7 @@ set(PLAYGROUND_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/playgrounds)
 
 set(SRC_PATH ${CMAKE_CURRENT_LIST_DIR})
 
+include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureBuildTypes.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureCCache.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureCompileOptions.cmake)
 

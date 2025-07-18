@@ -87,33 +87,7 @@ namespace base {
 		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
 	)
 
-#if defined(DEBUG) || defined(DEVRELEASE)
-	/**
-     * @brief Assumption about the code after this line. Usually made after CORE_ASSERT
-     * */
-	#define CORE_ASSUME(expression) [[assume(expression)]]
-#else
-	/**
-     * @brief Assumption about the code after this line. Usually made after CORE_ASSERT
-     * */
-	#define CORE_ASSUME(expression) \
-		do {                        \
-		} while (0)
-#endif
-
-#if defined(DEBUG) || defined(DEVRELEASE)
-	/**
-     * @brief Function will not throw in Release build
-     * */
-	#define NOEXCEPT noexcept(false)
-#else
-	/**
-     * @brief Function will not throw in Release build
-     * */
-	#define NOEXCEPT noexcept(true)
-#endif
-
-#if defined(DEBUG) || defined(DEVRELEASE)
+#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
@@ -128,7 +102,6 @@ namespace base {
 		do {                             \
 		} while (0)
 #endif
-
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
@@ -147,6 +120,12 @@ namespace base {
  * * `if (cond) CORE_PANIC("error description")`,
  * * `default: CORE_PANIC("unhandled case")`.
  */
-#define CORE_UNREACHABLE()                                      \
-	DETAIL_THROW_PANIC("    Unreachable code reached! Panic."); \
-	std::unreachable()
+
+
+#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
+	#define CORE_UNREACHABLE()                                      \
+		DETAIL_THROW_PANIC("    Unreachable code reached! Panic."); \
+		std::unreachable()
+#else
+	#define CORE_UNREACHABLE() std::unreachable()
+#endif
