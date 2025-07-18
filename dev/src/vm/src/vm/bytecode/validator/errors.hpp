@@ -71,11 +71,16 @@ namespace vm::code {
 	 */
 	class MissingGlobalCtorDtorError: public ValidationError {
 	public:
-		constexpr const static std::string_view ERR_MSG = " function declaration missing for: ";
+		constexpr const static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
 			  ValidationError(base::strConcat(
-				  is_ctor ? "Constructor " : "Destructor ", func_name, ERR_MSG, global_name
+				  ERR_MSG,
+				  is_ctor ? "constructor '" : "destructor '",
+				  func_name,
+				  "' of global variable '",
+				  global_name,
+				  "'"
 			  )) {}
 	};
 
