@@ -593,7 +593,7 @@ namespace compiler::backend_vm {
 		  module_id(module_id),
 		  valid_program(ValidProgram::withBuiltins()) {
 		CodeCollection                   compiled_types;
-		CodeCollection                   global_data;
+		CodeCollection                   compiled_collection;
 		std::vector<CRef<lir::Function>> ctors;
 		std::vector<CRef<lir::Function>> dtors;
 
@@ -626,20 +626,15 @@ namespace compiler::backend_vm {
 			if (dtor_name.has_value()) dtor_name_identifier = Identifier(dtor_name.value());
 
 			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
-			global_data.global_data.push_back(GlobalData{ {},
-			                                              global.lir_global.mangled_name,
-			                                              typeName(global_type),
-			                                              ctor_name_identifier,
-			                                              dtor_name_identifier });
+			compiled_collection.global_data.push_back(GlobalData{ {},
+			                                                      global.lir_global.mangled_name,
+			                                                      typeName(global_type),
+			                                                      ctor_name_identifier,
+			                                                      dtor_name_identifier });
 		}
 
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);
-
-		// Insert and validate global data:
-		valid_program.insertCode(global_data);
-
-		CodeCollection compiled_functions;
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
@@ -656,8 +651,7 @@ namespace compiler::backend_vm {
 
 				addTerminator(ctx, lir_block);
 			}
-
-			compiled_functions.functions.emplace_back(std::move(ctx.bytecode_func));
+			compiled_collection.functions.emplace_back(std::move(ctx.bytecode_func));
 		};
 
 		for (const auto& ctor: ctors) process_function(ctor);
@@ -665,8 +659,8 @@ namespace compiler::backend_vm {
 		//@TODO: add dtors when implemented
 
 		for (const auto& lir_function: functions) process_function(lir_function);
-		// Insert and validate functions:
-		valid_program.insertCode(compiled_functions);
+		// Insert and validate types, global data and functions:
+		valid_program.insertCode(compiled_collection);
 	}
 
 	vm::code::CodeCollection Module::build() const {
