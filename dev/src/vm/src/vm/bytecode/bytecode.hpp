@@ -50,10 +50,10 @@ namespace vm::code {
 	 * information to tell if it is correct/valid or not.
 	 */
 	struct Function final: ElementBase {
-		Identifier name;
-		CodeBlock  body;
+		Identifier              name;
+		CodeBlock               body;
 		std::vector<Identifier> parameters;
-		Identifier result_type;
+		Identifier              result_type;
 	};
 
 	/**

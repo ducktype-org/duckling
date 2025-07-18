@@ -2,7 +2,6 @@
 
 #include "errors.hpp"
 
-#include "base/maps.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
@@ -168,7 +167,7 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const Signature&                   signature,
+		const Signature&                      signature,
 		const StableObjIdNameMap<TypeOfData>& tod_map,
 		const TypeMetadata&                   type_metadata
 	):
@@ -229,12 +228,12 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const StableObjIdNameMap<TypeOfData>& tod_map;
-	const base::HashMap <base::StrID, Signature>& signatures;
-	const TypeMetadata&                   type_metadata;
-	const StableObjIdNameMap<GlobalData>& globals;
-	const Function&                       function;
-	Signature signature;
+	const StableObjIdNameMap<TypeOfData>&        tod_map;
+	const base::HashMap<base::StrID, Signature>& signatures;
+	const TypeMetadata&                          type_metadata;
+	const StableObjIdNameMap<GlobalData>&        globals;
+	const Function&                              function;
+	Signature                                    signature;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -313,7 +312,7 @@ class FunctionValidator {
 	void validateTailcall(
 		const LocalStack&           local_stack,
 		const Op_ret_tailcall_func& instr,
-		const Signature&         current_signature
+		const Signature&            current_signature
 	) const {
 		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
@@ -429,16 +428,12 @@ class FunctionValidator {
 				variant_case(opargs::FunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					if (!signatures.contains(fun_name))
-						throw UnknownFunctionError(generic_arg);
-					
+					if (!signatures.contains(fun_name)) throw UnknownFunctionError(generic_arg);
 				}
 				variant_case(opargs::BuiltinFunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					if (!signatures.contains(fun_name))
-						throw UnknownFunctionError(generic_arg);
-
+					if (!signatures.contains(fun_name)) throw UnknownFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;
@@ -1013,19 +1008,19 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		const base::HashMap <base::StrID, Signature>& signatures,
-		const TypeMetadata&                   type_metadata,
-		const StableObjIdNameMap<GlobalData>& globals,
-		const Function&                       function,
-		Signature signature
+		const StableObjIdNameMap<TypeOfData>&        tod_map,
+		const base::HashMap<base::StrID, Signature>& signatures,
+		const TypeMetadata&                          type_metadata,
+		const StableObjIdNameMap<GlobalData>&        globals,
+		const Function&                              function,
+		Signature                                    signature
 	):
 		  tod_map(tod_map),
 		  signatures(signatures),
 		  type_metadata(type_metadata),
 		  globals(globals),
 		  function(function),
-		  signature(signature) {}
+		  signature(std::move(signature)) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
 		preprocessLabels();
@@ -1040,23 +1035,24 @@ public:
 };
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
-	const StableObjIdNameMap<TypeOfData>& tod_map,
-	const base::HashMap <base::StrID, Signature>& signatures,
-	const TypeMetadata&                   type_metadata,
-	const StableObjIdNameMap<GlobalData>& globals_map,
-	const Function&                       function
+	const StableObjIdNameMap<TypeOfData>&        tod_map,
+	const base::HashMap<base::StrID, Signature>& signatures,
+	const TypeMetadata&                          type_metadata,
+	const StableObjIdNameMap<GlobalData>&        globals_map,
+	const Function&                              function
 ) {
-
 	Signature signature = signatures.at(function.name);
 
-	FunctionValidator validator(tod_map, signatures ,type_metadata, globals_map, function, signature);
+	FunctionValidator validator(
+		tod_map, signatures, type_metadata, globals_map, function, signature
+	);
 
 	Function new_function;
 	new_function.name         = function.name;
 	new_function.body         = validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
-	new_function.parameters = function.parameters;
-	new_function.result_type = function.result_type;
+	new_function.parameters   = function.parameters;
+	new_function.result_type  = function.result_type;
 
 	return new_function;
 }

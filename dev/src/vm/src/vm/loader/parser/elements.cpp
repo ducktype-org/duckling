@@ -215,33 +215,33 @@ namespace vm::loader::parser {
 		}
 
 		state.goDown();
-	    while (state.notEmpty()) {
-	        tpc::Identifier field_type;
-		    state.parse().one(&field_type);
-		    out->parameters.emplace_back(field_type);
+		while (state.notEmpty()) {
+			tpc::Identifier field_type;
+			state.parse().one(&field_type);
+			out->parameters.emplace_back(field_type);
 
-		    if (state.empty()) break;
-		    if (state[0].is(lang_def::Special::Comma)) {
-		        state.parse().one(lang_def::Special::Comma);
-	        } else {
-	            state.err->failAndLog(state.getPosition(), "expected comma or }");
-		        state.tokens().skip();
-		    }
-	    }
-	    state.goUpAndSkip();
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.err->failAndLog(state.getPosition(), "expected comma or }");
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
 
 		if (state[0].is(lang_def::NamedOperator::SingleArrow)) {
-	        state.parse().one(lang_def::NamedOperator::SingleArrow);
-	    } else {
-	        state.err->failAndLog(state.getPosition(-1), "expected `->` after function parameters");
-	        return nullptr;
-	    }
+			state.parse().one(lang_def::NamedOperator::SingleArrow);
+		} else {
+			state.err->failAndLog(state.getPosition(-1), "expected `->` after function parameters");
+			return nullptr;
+		}
 
 		state.parse().one(&out->result_type);
 
-	    if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-	        state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
-	        return nullptr;
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+			return nullptr;
 		}
 
 		state.goDown();

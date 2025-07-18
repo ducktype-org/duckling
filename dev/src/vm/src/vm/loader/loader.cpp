@@ -126,12 +126,12 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 					code::Identifier func_name;
 					func_name.str          = func->name.value;
 					func_name.bytecode_pos = func->name.position;
-					function.name         = func_name;
+					function.name          = func_name;
 
 					code::Identifier result_type;
 					result_type.str          = func->result_type.value;
 					result_type.bytecode_pos = func->result_type.position;
-					function.result_type  = result_type;
+					function.result_type     = result_type;
 
 					for (const auto& param: func->parameters) {
 						code::Identifier param_id;
@@ -142,17 +142,14 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));
-					
+
 					new_code.functions.emplace_back(function);
 
 					std::vector<base::StrID> parameters_str;
-					for (const auto& param: function.parameters) {
-						parameters_str.emplace_back(param);
-					}
+					parameters_str.reserve(function.parameters.size());
+					for (const auto& param: function.parameters) parameters_str.emplace_back(param);
 					new_code.types.emplace_back(
-						code::FunctionType(
-							function.name, parameters_str, function.result_type
-						)
+						code::FunctionType(function.name, parameters_str, function.result_type)
 					);
 				}
 			}

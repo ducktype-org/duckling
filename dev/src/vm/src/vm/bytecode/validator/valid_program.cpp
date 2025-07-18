@@ -1,5 +1,4 @@
 #include "valid_program.hpp"
-#include "base/maps.hpp"
 
 #include "errors.hpp"
 
@@ -56,31 +55,26 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Functio
 		Signature signature;
 		signature.result_type = func.result_type.str;
 		signature.parameters.reserve(func.parameters.size());
-		for (const auto& param: func.parameters) {
-			signature.parameters.emplace_back(param.str);
-		}
+		for (const auto& param: func.parameters) signature.parameters.emplace_back(param.str);
 		signatures.put(func.name.str, signature);
 	}
 
-	for (const auto& [func_ref, id, name] : function_map.allData()) {
+	for (const auto& [func_ref, id, name]: function_map.allData()) {
 		Signature signature;
 		signature.result_type = func_ref->result_type.str;
 		signature.parameters.reserve(func_ref->parameters.size());
-		for (const auto& param: func_ref->parameters) {
-			signature.parameters.emplace_back(param.str);
-		}
+		for (const auto& param: func_ref->parameters) signature.parameters.emplace_back(param.str);
 		signatures.put(name, signature);
 	}
 
 	for (const auto& type: type_context.getCurrentTypes()) {
 		if (std::holds_alternative<vm::code::FunctionType>(type)) {
 			const auto& function_type = std::get<vm::code::FunctionType>(type);
-			Signature signature;
+			Signature   signature;
 			signature.result_type = function_type.result;
 			signature.parameters.reserve(function_type.parameters.size());
-			for (const auto& param: function_type.parameters) {
+			for (const auto& param: function_type.parameters)
 				signature.parameters.emplace_back(param);
-			}
 			signatures.put(function_type.name, signature);
 		}
 	}
