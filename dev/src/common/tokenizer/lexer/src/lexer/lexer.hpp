@@ -7,10 +7,11 @@
 
 #include "token.hpp"
 
-#include <filesystem/file.hpp>
 #include <token_source/forward.hpp>
 
 #include <base/box.hpp>
+
+#include <filesystem/file.hpp>
 
 namespace lexer {
 	/**

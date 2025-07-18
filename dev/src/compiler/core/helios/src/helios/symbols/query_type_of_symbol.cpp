@@ -1,6 +1,7 @@
 #include "query_type_of_symbol.hpp"
 
 #include <helios_private/comp_time/type_eval.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -8,8 +9,11 @@
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_impl.hpp>
+
+#include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -47,13 +51,49 @@ namespace compiler::helios {
 			base::Optional<tsh::SymbolType<>> symbol_type;
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
-				// @TODO: handle potential lack of type
-				setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				if (stmt->getType().has_value()) {
+					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				} else if (stmt->getValue().has_value()) {
+					auto parsed = (ctx.query<QueryHoutOfExpr>(
+						{ stmt->getValue().value().unlock(ctx)->getExpr() }
+					));
+					if (parsed.hasValue()) {
+						const auto& expr_type = parsed.value()->expression_type;
+						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+					} else
+						throw base::NotYetImplemented(
+							"Const declaration with value that does not evaluate to a type. This "
+							"should be a compilation error"
+						);
+				} else {
+					CORE_PANIC(
+						"Variable declaration without type or value, this should not parse in the "
+						"parser."
+					);
+				}
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) final {
-				// @TODO: handle potential lack of type
-				setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				if (stmt->getType().has_value()) {
+					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				} else if (stmt->getValue().has_value()) {
+					auto parsed = (ctx.query<QueryHoutOfExpr>(
+						{ stmt->getValue().value().unlock(ctx)->getExpr() }
+					));
+					if (parsed.hasValue()) {
+						const auto& expr_type = parsed.value()->expression_type;
+						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+					} else
+						throw base::NotYetImplemented(
+							"Const declaration with value that does not evaluate to a type. This "
+							"should be a compilation error"
+						);
+				} else {
+					CORE_PANIC(
+						"Variable declaration without type or value, this should not parse in the "
+						"parser."
+					);
+				}
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {

@@ -1,5 +1,6 @@
-#include <clap/exceptions.hpp>
 #include <config/config.hpp>
+
+#include <clap/exceptions.hpp>
 #include <tester/tester.hpp>
 
 class ConfigTests: public tester::TestSuite {

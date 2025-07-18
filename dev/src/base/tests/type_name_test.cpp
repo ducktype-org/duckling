@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/type_traits.hpp>
+
+#include <tester/tester.hpp>
 
 class T {};
 
