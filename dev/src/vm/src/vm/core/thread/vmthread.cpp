@@ -487,7 +487,6 @@ namespace vm {
 	/**
 	 * @brief Function to be called when the VMProcess is destroyed.
 	 */
-	// @TODO: Verify once destructors are implemented
 	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
 		executing_program = program;
 		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
