@@ -1,7 +1,6 @@
 from pathlib import Path
-from .test_loader import Case, Test, TestNode, load_tests
-from click import option, command
 
+from .test_loader import Case, Test, TestNode, load_tests
 from .utils import (
     dit_exec_command,
     log_info_if_needed,
@@ -14,13 +13,13 @@ from .utils import (
     Failure,
     Disabled,
 )
-
 from ..helpers import (
     BashCommandError,
     exit_with_error,
     get_input,
     log_info,
     log_warning,
+    get_dev_directory,
 )
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
@@ -53,7 +52,7 @@ def tester_impl(
 
     user_values = {
         "build_dir": str(Path(build_dir).absolute()),
-        "dev_dir": str(Path.cwd().absolute()),
+        "dev_dir": str(get_dev_directory()),
     }
 
     test_set = load_tests("integration_tests", user_values=user_values)

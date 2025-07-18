@@ -3,9 +3,9 @@
 #include "empty_struct.hpp"
 #include "type_parse.hpp"
 
-#include <nlohmann/json.hpp>
-
 #include <base/exceptions.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <type_traits>
 #include <variant>

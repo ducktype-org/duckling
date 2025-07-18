@@ -6,6 +6,7 @@
 #include "token.hpp"
 
 #include <lang_definitions/key_spec_op.hpp>
+
 #include <unicode/uchar.h>
 
 #include <algorithm>

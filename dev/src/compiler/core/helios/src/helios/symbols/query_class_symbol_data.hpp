@@ -2,11 +2,12 @@
 
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <query_framework/query_int.hpp>
-#include <query_framework/query_result.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
 #include <base/string_id.hpp>
+
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 

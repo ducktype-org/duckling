@@ -17,14 +17,15 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_result.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <stack>
 #include <unordered_set>

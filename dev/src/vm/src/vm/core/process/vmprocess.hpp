@@ -1,8 +1,8 @@
 #pragma once
 
-#include <listener/listener.hpp>
-
 #include <base/optional.hpp>
+
+#include <listener/listener.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>

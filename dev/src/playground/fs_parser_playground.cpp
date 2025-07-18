@@ -1,7 +1,8 @@
-#include <clap/clap.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <base/int_conv.hpp>
+
+#include <clap/clap.hpp>
 
 #include <iostream>
 
