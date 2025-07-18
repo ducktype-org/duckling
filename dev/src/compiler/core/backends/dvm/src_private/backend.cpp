@@ -124,12 +124,25 @@ namespace compiler::backend_vm {
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
-				  bytecode_func(Function({}, lir_function->mangled_name, {})),
+				  bytecode_func(Function({}, lir_function->mangled_name, {}, {}, {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
 				  }()) {
+				if (lir_function->mangled_name == "main") {
+					bytecode_func.parameters.emplace_back(base::StrID("i64"));
+					bytecode_func.parameters.emplace_back(base::StrID("ptr_argv"));
+					bytecode_func.result_type = Identifier(base::StrID("i64"));
+				} else {
+					bytecode_func.parameters.reserve(lir_function->parameter_layouts.size());
+					for (const auto& layout: lir_function->parameter_layouts) {
+						auto type = getTypeFromLayout(layout);
+						bytecode_func.parameters.emplace_back(typeName(type));
+					}
+					bytecode_func.result_type
+						= Identifier(typeName(getTypeFromLayout(lir_function->return_type_layout)));
+				}
 				variable_to_id = lir_function->getLocalVariableIDs();
 				block_to_id    = lir_function->getBlockIDs();
 			}
@@ -204,6 +217,12 @@ namespace compiler::backend_vm {
 					lir_function->mangled_name,
 					lir_function->parameter_layouts,
 					lir_function->return_type_layout
+				));
+			} else {
+				types.emplace_back(FunctionType(
+					base::StrID("main"),
+					{ base::StrID("i64"), base::StrID("ptr_argv") },
+					base::StrID("i64")
 				));
 			}
 		}
@@ -629,6 +648,7 @@ namespace compiler::backend_vm {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
 
 			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types());
+
 			initLocals(ctx);
 
 			for (auto&& lir_block: lir_function->block_order) registerBlock(ctx, lir_block);
