@@ -56,8 +56,6 @@ namespace vm::low {
 		):
 			  types(std::move(types)),
 			  method_name_pool(method_name_pool) {
-			std::unordered_map<std::string, code::Identifier> ctor_functions;
-
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 
 			for (const auto& global: global_data) {

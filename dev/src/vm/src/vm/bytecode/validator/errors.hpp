@@ -69,6 +69,20 @@ namespace vm::code {
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.
 	 */
+	class MissingGlobalCtorDtorError: public ValidationError {
+	public:
+		constexpr const static std::string_view ERR_MSG = " function declaration missing for: ";
+
+		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
+			  ValidationError(base::strConcat(
+				  is_ctor ? "Constructor " : "Destructor ", func_name, ERR_MSG, global_name
+			  )) {}
+	};
+
+	/**
+	 * @brief position-less error for function definitions.
+	 * For function name arguments, like in call instructions, use UnknownFunctionError.
+	 */
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";

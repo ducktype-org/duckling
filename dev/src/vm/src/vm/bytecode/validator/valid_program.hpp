@@ -9,6 +9,8 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <unordered_set>
+
 namespace vm::code {
 	/**
 	 * @brief State of the object represents a valid bytecode class.
@@ -81,8 +83,12 @@ namespace vm::code {
 		/**
 		 * @brief Inserts globals. May invalidate state.
 		 * Cannot insert the same global data multiple times.
+		 * We use function_names to verify the presence of constructors and destructors.
 		 */
-		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
+		void insertGlobals(
+			const std::vector<code::GlobalData>& new_globals,
+			std::unordered_set<base::StrID>&     function_names
+		);
 
 		/**
 		 * @brief Inserts a function. May invalidate state.
