@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(globalDestructorTest);
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
+		TESTER_ADD_TEST(verySimpleUnsignedTest);
 	}
 
 private:
@@ -46,6 +47,7 @@ private:
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 
+
 	void globalInitializationTest() { runTestOnVm("global_initialization.dbc", {}, {}, {}, 5); }
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
@@ -69,6 +71,8 @@ private:
 			}
 		);
 	}
+
+	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
