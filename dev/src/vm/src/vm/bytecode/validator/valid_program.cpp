@@ -46,8 +46,7 @@ void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& ne
 	for (const auto& type: new_types) type_context.insertType(type);
 }
 
-void vm::code::ValidProgram::insertGlobals(
-	const std::vector<code::GlobalData>& new_globals) {
+void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));

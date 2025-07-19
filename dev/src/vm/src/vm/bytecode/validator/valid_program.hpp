@@ -85,9 +85,7 @@ namespace vm::code {
 		 * Cannot insert the same global data multiple times.
 		 * We use function_names to verify the presence of constructors and destructors.
 		 */
-		void insertGlobals(
-			const std::vector<code::GlobalData>& new_globals
-		);
+		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
 
 		/**
 		 * @brief Inserts a function. May invalidate state.
@@ -99,7 +97,7 @@ namespace vm::code {
 
 		StableObjIdNameMap<code::Function>   function_map;
 		StableObjIdNameMap<code::GlobalData> globals_map;
-		
+
 		// Useful when verifying the presence of constructors and destructors while inserting globals.
 		std::unordered_set<base::StrID> available_functions;
 
