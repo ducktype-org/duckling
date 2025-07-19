@@ -126,6 +126,8 @@ namespace lang_def {
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
 			{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
+			{ Keyword::BCGlobalConstructor, "constructor", KeywordFlags() },
+			{ Keyword::BCGlobalDestructor, "destructor", KeywordFlags() },
 			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },

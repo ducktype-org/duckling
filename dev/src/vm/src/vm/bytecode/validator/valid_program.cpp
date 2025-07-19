@@ -34,12 +34,9 @@ void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) 
 	valid = false;
 	insertTypes(collection.types);
 
-	std::unordered_set<base::StrID> function_names;
-	for (auto& func: function_map) function_names.insert(func.name);
+	for (auto& func: collection.functions) available_functions.insert(func.name);
 
-	for (auto& func: collection.functions) function_names.insert(func.name);
-
-	insertGlobals(collection.global_data, function_names);
+	insertGlobals(collection.global_data);
 
 	insertFunctions(collection.functions);
 	valid = true;
@@ -49,15 +46,13 @@ void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& ne
 	for (const auto& type: new_types) type_context.insertType(type);
 }
 
-void vm::code::ValidProgram::insertGlobals(
-	const std::vector<code::GlobalData>& new_globals, std::unordered_set<base::StrID>& function_names
-) {
+void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
-		if (global.ctor_name.has_value() && !function_names.contains(global.ctor_name.value()))
+		if (global.ctor_name.has_value() && !available_functions.contains(global.ctor_name.value()))
 			throw MissingGlobalCtorDtorError(true, global.ctor_name.value(), global.name);
-		if (global.dtor_name.has_value() && !function_names.contains(global.dtor_name.value()))
+		if (global.dtor_name.has_value() && !available_functions.contains(global.dtor_name.value()))
 			throw MissingGlobalCtorDtorError(false, global.dtor_name.value(), global.name);
 		globals_map.insert(global, global.name);
 	}

@@ -42,7 +42,6 @@ private:
 		base::StrID                                         module_name;
 		vm::code::CodeCollection                            code;
 
-		//@TODO: add ctors to DVM ctors when implemented
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
 			module_name    = moduleName(module);
