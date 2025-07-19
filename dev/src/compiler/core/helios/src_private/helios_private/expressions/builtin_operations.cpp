@@ -109,7 +109,7 @@ namespace compiler::helios::code {
 		// Not found → error
 		CORE_PANIC(
 			"findUnaryBuiltin called with unsupported op='{}' on kind={}", 
-			op, kind
+			op.str(), kind
 		);
 	}
 }
