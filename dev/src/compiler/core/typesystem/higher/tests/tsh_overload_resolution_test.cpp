@@ -1,12 +1,13 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <typesystem/higher/all.hpp>
+
+#include <base/variant.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/all.hpp>
-
-#include <base/variant.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;

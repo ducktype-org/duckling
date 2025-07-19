@@ -18,7 +18,6 @@ The key design principle is that `File` provides the same operations regardless 
 ### File Class
 The `File` class can represent both **files** and **directories**. It provides:
 - Unified access to content via `base::SharedView` objects
-- Path manipulation and metadata access
 - Content reading/writing operations
 - Directory listing capabilities
 
@@ -28,6 +27,33 @@ The `FileManager` provides static factory methods and utilities for:
 - Path conversions between virtual and physical paths
 - File existence checks and deletion operations
 - Managing file operations across different filesystem types
+
+### FilePath Class
+The `FilePath` class provides a safe wrapper around `std::filesystem::path` with enhanced functionality for different filesystem types:
+- **Type-aware paths**: Automatically detects and tracks whether a path is Physical, Virtual, or Temporary
+- **Safe path operations**: Provides path manipulation without dangerous canonicalization
+- **Cross-filesystem conversion**: Convert between virtual and physical path representations
+- **Unified interface**: Same API regardless of the underlying path type
+
+```cpp
+#include <filesystem/file_path.hpp>
+
+// Create different types of paths
+fs::FilePath physical_path("/home/user/file.txt");
+fs::FilePath virtual_path("vfs:/project/source.cpp");
+
+// Convert between path types
+auto vfs_path = physical_path.toVirtualPath();
+auto real_path = virtual_path.toPhysicalPath();
+auto joined = physical_path.join("subfolder/file.txt");
+
+// Type checking
+if (path.isVirtual()) {
+    // Handle virtual path
+} else if (path.isPhysical()) {
+    // Handle physical path
+}
+```
 
 ## Virtual Filesystem Usage
 

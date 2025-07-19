@@ -2,16 +2,17 @@
 
 #include "forward.hpp"
 
-#include <diagnostic/location.hpp>
-#include <diagnostic/logger.hpp>
-#include <filesystem/encoding.hpp>
-#include <filesystem/file.hpp>
 #include <lexer/char.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/token.hpp>
 
 #include <base/raw_view.hpp>
+
+#include <diagnostic/location.hpp>
+#include <diagnostic/logger.hpp>
+#include <filesystem/encoding.hpp>
+#include <filesystem/file.hpp>
 
 #include <set>
 
@@ -92,7 +93,7 @@ namespace tokenizer {
 		CRef<dia::Location> getLocation() const;
 		Ref<dia::Logger>    getLogger();
 		[[nodiscard]]
-		fs::File getPath() const;
+		fs::File getFile() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 

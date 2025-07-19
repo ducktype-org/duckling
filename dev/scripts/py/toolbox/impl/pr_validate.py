@@ -8,10 +8,16 @@ from .issue_checker import issue_checker_impl
 from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 
 
-def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build_dir: str):
-    
+def pr_validate_impl(
+        clang_tidy_path: str,
+        clang_format_path: str,
+        build_dir: str,
+        thread_count: int
+):
     # Step 1 - build
-    bash_command(f"cmake --build {build_dir} -- all build_all_tests build_all_playgrounds")
+    bash_command(
+        f"cmake --build {build_dir} -- -j {thread_count} all build_all_tests build_all_playgrounds"
+    )
 
     # Step 2 - test
     bash_command(f"cmake --build {build_dir} -- test")
@@ -35,12 +41,13 @@ def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build_dir: st
         clang_tidy_path=clang_tidy_path,
         clang_format_path=clang_format_path,
         build_dir=build_dir,
+        thread_count=thread_count,
     )
 
     # Step 6 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
-    
+
     if clang_tidy_failed or clang_format_failed:
         exit_with_error(
             f"CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}"

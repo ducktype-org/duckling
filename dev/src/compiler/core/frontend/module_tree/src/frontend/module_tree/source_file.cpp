@@ -1,8 +1,8 @@
 #include "source_file.hpp"
 
-#include <filesystem/file.hpp>
-
 #include <base/exceptions.hpp>
+
+#include <filesystem/file.hpp>
 
 namespace {
 	using ContentMap

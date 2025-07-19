@@ -2,12 +2,13 @@
 
 #include "classifications.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <token_source/forward.hpp>
 #include <token_source/source.hpp>
 
 #include <base/convert.hpp>
 #include <base/int_conv.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 namespace lexer {
 
@@ -16,7 +17,7 @@ namespace lexer {
 			Ref<tokenizer::TokenSource> file, usize byte, const std::string& reason
 		) {
 			std::stringstream res;
-			res << "In file: " << file->getPath().getFilePath().strView() << "\nAt byte " << byte
+			res << "In file: " << file->getFile().getFilePath().strView() << "\nAt byte " << byte
 				<< ": " << reason;
 			return res.str();
 		}

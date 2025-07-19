@@ -10,11 +10,12 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/lang_parser_element.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
+
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <format>
 #include <string>
@@ -46,7 +47,7 @@ namespace lsp {
 
 	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
-		this->uri            = source_position.getSource()->getPath().getFilePath().uri();
+		this->uri            = source_position.getSource()->getFile().getFilePath().uri();
 		this->start          = source_position.getStartLineColumn();
 		this->end            = source_position.getEndLineColumn();
 	}

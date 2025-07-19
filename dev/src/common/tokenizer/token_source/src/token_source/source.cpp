@@ -1,12 +1,13 @@
 #include "source.hpp"
 
-#include <diagnostic/location.hpp>
 #include <lexer/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
+
+#include <diagnostic/location.hpp>
 
 namespace tokenizer {
 	/**
@@ -33,7 +34,7 @@ namespace tokenizer {
 
 	TokenSource::TokenSource(dia::SourcePosition parent, const std::string_view contents):
 		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenSource>(this))) {
-		content.emplace(base::SharedView(contents.data()));
+		content.emplace(base::SharedView::copy(contents.data()));
 	}
 
 	void TokenSource::countLines() {
@@ -112,7 +113,7 @@ namespace tokenizer {
 		return token_data.value();
 	}
 
-	fs::File TokenSource::getPath() const { return location->getSourceFile(); }
+	fs::File TokenSource::getFile() const { return location->getSourceFile(); }
 
 	CRef<dia::Location> TokenSource::getLocation() const { return location.ref(); }
 }

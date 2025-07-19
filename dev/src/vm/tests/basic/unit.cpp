@@ -1,5 +1,6 @@
-#include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
+
+#include <tester/tester.hpp>
 
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -14,6 +15,7 @@ public:
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(verySimpleUnsignedTest);
 	}
 
 private:
@@ -37,6 +39,8 @@ private:
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
+
+	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");

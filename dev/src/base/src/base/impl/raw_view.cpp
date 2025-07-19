@@ -1,5 +1,7 @@
 #include "../raw_view.hpp"
 
+#include <base/exceptions.hpp>
+
 #include <cstring>
 
 namespace base {
@@ -34,4 +36,9 @@ namespace base {
 	byte RawView::operator[](usize index) const { return begin[index]; }
 
 	RawArray RawView::getBegin() const { return begin; }
+
+	const RawView SharedView::view() const {
+		CORE_ASSERT(content, "SharedView is empty");
+		return content->view();
+	}
 }
