@@ -128,6 +128,7 @@ namespace lang_def {
 			{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
 			{ Keyword::BCGlobalConstructor, "constructor", KeywordFlags() },
 			{ Keyword::BCGlobalDestructor, "destructor", KeywordFlags() },
+			{ Keyword::BCGlobalInitialValue, "initial_value", KeywordFlags() },
 			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },

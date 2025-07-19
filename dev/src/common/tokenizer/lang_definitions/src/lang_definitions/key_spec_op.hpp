@@ -161,6 +161,7 @@ namespace lang_def {
 		BCGlobalData,
 		BCGlobalConstructor,
 		BCGlobalDestructor,
+		BCGlobalInitialValue,
 		BCOpaque,
 		BCClass,
 		BCAbstract,

@@ -160,9 +160,9 @@ namespace vm::loader::parser {
 					lang_def::Keyword::BCGlobalDestructor, lang_def::NamedOperator::Colon, &value
 				);
 				out->dtor_name = value;
-				// } else if (key.value.str() == "initial_value") {
-				// 	// @TODO more general than unsigned long
-				// 	out->initial_value = opargs_parsers::parseInt<i64, int>(state);
+				} else if (state[0].is(lang_def::Keyword::BCGlobalInitialValue)) {
+					// @TODO more general than unsigned long
+					out->initial_value = opargs_parsers::parseInt<i64, int>(state);
 			}
 
 			if (state.empty()) break;
