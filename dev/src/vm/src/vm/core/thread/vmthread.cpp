@@ -33,10 +33,10 @@
 namespace vm {
 #ifdef USE_TAIL_CALLS
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		Fix8Instruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
+		MicroInstruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
 #else
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                           \
-		Fix8Instruction {                                                                  \
+		MicroInstruction {                                                                 \
 			.nontc_opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, \
 			.arg1 = ARG_1                                                                  \
 		}
@@ -103,6 +103,12 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
+	/**
+	 * @brief Creates a dynamically generated (meaning it's generated at the moment of a program
+	 * invocation) start function for a specified function. For now, mainly used by the REPL mode.
+	 *
+	 * @note For more detailed explanation go to `createProgramStartFunction`.
+	 */
 	low::FuncData VMThread::createStartFunctionFor(
 		const low::FuncData& func, const FunctionRunArguments& func_args
 	) {
@@ -111,41 +117,38 @@ namespace vm {
 		start_function.arg_size = 0;
 		start_function.ret_size = 0;
 
-		auto called_func_type = executing_program->types->atMaybe(func.name).expect(
-			"Expected the called function to exist!"
-		);
-		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
-		                    .expect("Type i64 is expected to exist!");
+		// @note All the following are guaranteed to exist or their existence was checked earlier.
+		auto called_func_type = executing_program->types->at(func.name);
+		auto i64_type         = executing_program->types->at(base::StrID("i64"));
 
-		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		u64  i64_type_id        = i64_type->getID().asInt();
 		auto funcs              = executing_program->functions;
-		i32  called_function_id = 0;
+		u64  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
+			if (func.name == funcs[i].name) called_function_id = i;
 
-		i32 stack_top = 0;
+		u64 stack_top = 0;
 		// @todo: VM functions should be able to return and take as parameters any VM type.
 		// For now we assume we can only pass and return arguments of i64 type.
-		// This should be changed in:
-		// https://github.com/ducktype-org/duckling/issues/721
+		// This should be changed in the issue #721.
 
 		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
 		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id));
 
-		stack_top += base::safeIntConv<i32>(i64_type->getSize());
+		stack_top += i64_type->getSize();
 
 		for (u64 i = 0; i < func_args.size(); i++) {
-			i32  converted_arg = base::safeIntConv<i32>(func_args[i]);
+			i64  converted_arg = func_args[i];
 			auto arg_type      = called_func_type->getNthParameterType(i).expect(
                 "Wrong number of passed arguments!"
             );
-			i32 arg_type_id = base::safeIntConv<i32>(arg_type->getID().asInt());
+			u64 arg_type_id = arg_type->getID().asInt();
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, stack_top, converted_arg)
-			);
-			stack_top += base::safeIntConv<i32>(arg_type->getSize());
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				mov_l64_imm, stack_top, Memory::interpret<u64>(converted_arg)
+			));
+			stack_top += arg_type->getSize();
 		}
 
 		start_function.bc.insert(
@@ -161,42 +164,52 @@ namespace vm {
 		return start_function;
 	}
 
+	/**
+	 * @brief Creates a dynamically generated (meaning it's generated at the moment of a program
+	 * invocation) start function for a program.
+	 *
+	 * Just like in libc, the start function pushes the program arguments on to the stack and
+	 * performs the call to main. After the main returns, it deinitializes the argv memory and
+	 * exits, leaving one block on the block stack, which contains the return value of the program.
+	 *
+	 * @note This is done in VMThread, since it depends on the arguments passed during the call
+	 * which may vary from call to call and creating a generic start function using builders in the
+	 * loading phase is not possible. This also results in the need to create the function in its
+	 * low representation.
+	 * @todo This is a mock implementation. Since strings and dynamic arrays don't exist in the VM
+	 * yet, the passed arguments are expected to be strings representing a numerical value and are
+	 * passed as `i64` to the main function. Additionally, in the future, we might want to add a
+	 * separate start function builder because the start function creation will get a lot more
+	 * complicated, after we start using VmValue or default value constructors which have to be
+	 * invoked before main.
+	 *
+	 * This should change after issues #722 and #724.
+	 */
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
 	) {
-		// Just like in libc, the start function pushes the program arguments on to the stack and
-		// performs the call to the actual function. After the called function returns, it
-		// deinitializes the argv memory and exits, leaving one block on the block stack, which
-		// contains the return value of the program.
-
 		low::FuncData start_function;
 		start_function.name     = base::StrID("vm_start_function");
 		start_function.arg_size = 0;
 		start_function.ret_size = 0;
 
 		// Types
-		auto called_func_type = executing_program->types->atMaybe(func.name).expect(
-			"Expected the called function to exist!"
-		);
-		auto called_return_type
-			= called_func_type->getResultType().expect("Expected main to have a return value!");
-		auto argv_type = executing_program->types->atMaybe(base::StrID("argv"))
-		                     .expect("All programs are expected to have an existing argv type!");
-		auto argv_ptr_type
-			= executing_program->types->atMaybe(base::StrID("ptr_argv"))
-		          .expect("All programs are expected to have an existing argv pointer type!");
-		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
-		                    .expect("Type i64 is expected to exist!");
+		// @note All the following are guaranteed to exist or their existence was checked earlier.
+		auto called_func_type   = executing_program->types->at(func.name);
+		auto called_return_type = called_func_type->getResultType().value();
+		auto argv_type          = executing_program->types->at(base::StrID("argv"));
+		auto argv_ptr_type      = executing_program->types->at(base::StrID("ptr_argv"));
+		auto i64_type           = executing_program->types->at(base::StrID("i64"));
 
 		// TypeIDs to pass to opcodes.
-		i32  func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
-		i32  argv_type_id       = base::safeIntConv<i32>(argv_type->getID().asInt());
-		i32  argv_ptr_type_id   = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
-		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		u64  func_ret_type_id   = called_return_type->getID().asInt();
+		u64  argv_type_id       = argv_type->getID().asInt();
+		u64  argv_ptr_type_id   = argv_ptr_type->getID().asInt();
+		u64  i64_type_id        = i64_type->getID().asInt();
 		auto funcs              = executing_program->functions;
-		i32  called_function_id = 0;
+		u64  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
-			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
+			if (func.name == funcs[i].name) called_function_id = i;
 
 		start_function.bc.insert(
 			start_function.bc.end(),
@@ -213,8 +226,8 @@ namespace vm {
 
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
-			// to ints. This should change after: https://github.com/ducktype-org/duckling/issues/722
-			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
+			// to ints. This should change after #722
+			u64 converted_arg = static_cast<u64>(std::stoll(arg));
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
@@ -233,7 +246,7 @@ namespace vm {
 					init_lany_type, 40, func_ret_type_id
 				),  // [40, 48) call ret_val
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56] argc
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
 				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
@@ -331,7 +344,7 @@ namespace vm {
 	End:
 #endif
 		// @todo: VM functions should should be able to return any VM type, not just i64.
-		// This should be changed in: https://github.com/ducktype-org/duckling/issues/721
+		// This should be changed in issue #721
 		// @note: The return value is the only block left on the block stack.
 		i64  func_ret_val = derefStack<i64>(local_stack, 0);
 		auto block        = frame->block_stack.back();

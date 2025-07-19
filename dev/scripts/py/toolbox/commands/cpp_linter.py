@@ -1,4 +1,5 @@
-from ..impl.cpp_linter import cpp_linter_impl
+from click import command
+
 from .helpers import (
     all_flag,
     branch,
@@ -8,11 +9,11 @@ from .helpers import (
     no_merge_base,
     thread_count,
 )
+from ..impl.cpp_linter import cpp_linter_impl
 from ..impl.helpers import (
     exit_with_error,
 )
-from click import command
-import os
+
 
 @command()
 @all_flag(
@@ -36,9 +37,7 @@ import os
         "This feature allows to run the checker on a shallow clone.",
 )
 @thread_count(
-    help="On how many threads can linter use. Defaults to os.cpu_count()",
-    default=os.cpu_count() or 1,
-    type=int
+    help="Number of threads used when linting. Defaults to the number of available threads.",
 )
 def cpp_linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.

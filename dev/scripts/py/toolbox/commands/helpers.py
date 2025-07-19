@@ -1,4 +1,7 @@
+import os
+
 from click import option, Choice
+
 
 def create_option(*def_arg, **def_kwargs):
     """
@@ -10,7 +13,7 @@ def create_option(*def_arg, **def_kwargs):
             *(arg or def_arg),
             **{**def_kwargs, **kwargs}
         )
-    
+
     return specialize_option
 
 # HERE DEFINE REPEATING FLAGS
@@ -39,7 +42,7 @@ def build_dir(*args, **kwargs):
         "-b",
         "--build-dir",
         "build_dir",
-        prompt="build directory",
+        prompt="Build directory",
         type=str,
         default="build",
     )(*args, **kwargs)
@@ -52,14 +55,6 @@ def build_system(*args, **kwargs):
         prompt="Build system",
         default="Ninja",
         type=Choice(["Ninja", "Unix Makefiles"], case_sensitive=False),
-    )(*args, **kwargs)
-
-def cc_compiler(*args, **kwargs):
-    return create_option(
-        "-c",
-        "--cc-compiler",
-        "cc_compiler",
-        prompt="C compiler path",
     )(*args, **kwargs)
 
 def clang_format(*args, **kwargs):
@@ -90,6 +85,20 @@ def cxx_compiler(*args, **kwargs):
         prompt="C++ compiler path",
     )(*args, **kwargs)
 
+def cc_compiler(*args, **kwargs):
+    return create_option(
+        "-c",
+        "--cc-compiler",
+        "cc_compiler",
+        prompt="C compiler path",
+    )(*args, **kwargs)
+
+
+def get_cpu_count() -> int:
+    # cpu_count might return None
+    return os.cpu_count() or 1
+
+
 def llvm_version(*args, **kwargs):
     return create_option(
         "-v",
@@ -114,6 +123,9 @@ def thread_count(*args, **kwargs):
         "--thread-count",
         "thread_count",
         prompt="Number of threads to use",
+        help="Number of threads used when linting. Defaults to the number of available threads.",
+        default=get_cpu_count(),
+        type=int,
     )(*args, **kwargs)
 
 def verbose(*args, **kwargs):

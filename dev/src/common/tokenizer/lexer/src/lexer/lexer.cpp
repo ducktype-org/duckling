@@ -5,10 +5,11 @@
 
 #include "lexer.hpp"
 
-#include <diagnostic/logger.hpp>
 #include <token_source/source.hpp>
 
 #include <base/exceptions.hpp>
+
+#include <diagnostic/logger.hpp>
 
 namespace lexer {
 	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {

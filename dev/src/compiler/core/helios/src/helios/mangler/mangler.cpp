@@ -11,6 +11,7 @@
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>

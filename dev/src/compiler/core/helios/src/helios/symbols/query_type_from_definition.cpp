@@ -3,8 +3,9 @@
 
 #include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 

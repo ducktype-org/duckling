@@ -3,12 +3,13 @@
 #include "file_id.hpp"
 #include "module_id.hpp"
 
-#include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
-#include <query_framework/query_int.hpp>
 
 #include <base/maps.hpp>
 #include <base/ref.hpp>
+
+#include <filesystem/file.hpp>
+#include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {
 

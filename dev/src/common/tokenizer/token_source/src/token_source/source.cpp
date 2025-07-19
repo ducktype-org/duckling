@@ -1,12 +1,13 @@
 #include "source.hpp"
 
-#include <diagnostic/location.hpp>
 #include <lexer/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
+
+#include <diagnostic/location.hpp>
 
 namespace tokenizer {
 	/**

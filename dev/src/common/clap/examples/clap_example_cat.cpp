@@ -2,10 +2,10 @@
 // Usage:   cat <file> [file...]
 // Example: cat foo.txt -n 5
 
+#include <base/int_conv.hpp>
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
-
-#include <base/int_conv.hpp>
 
 #include <iostream>
 

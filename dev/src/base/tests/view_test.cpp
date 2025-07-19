@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/raw_view.hpp>
+
+#include <tester/tester.hpp>
 
 class ViewTest: public tester::TestSuite {
 #undef TESTER_CLASS

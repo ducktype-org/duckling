@@ -2,12 +2,13 @@
 
 #include "classifications.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <token_source/forward.hpp>
 #include <token_source/source.hpp>
 
 #include <base/convert.hpp>
 #include <base/int_conv.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 namespace lexer {
 
