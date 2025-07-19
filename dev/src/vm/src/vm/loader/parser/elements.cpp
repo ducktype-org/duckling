@@ -163,9 +163,6 @@ namespace vm::loader::parser {
 			} else if (state[0].is(lang_def::Keyword::BCGlobalInitialValue)) {
 				// @TODO more general than unsigned long
 				out->initial_value = opargs_parsers::parseInt<i64, int>(state);
-			} else if (state[0].is(lang_def::Keyword::BCGlobalInitialValue)) {
-				// @TODO more general than unsigned long
-				out->initial_value = opargs_parsers::parseInt<i64, int>(state);
 			}
 
 			if (state.empty()) break;
