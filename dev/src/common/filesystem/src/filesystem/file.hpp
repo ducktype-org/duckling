@@ -150,7 +150,7 @@ namespace fs {
 		/**
 		 * @brief Writes content to the file.
 		 *
-		 * This method works for both physical and virtual files.
+		 * This method works for all file types (physical, virtual, temporary).
 		 *
 		 * @param new_content The content to write to the file.
 		 * @param append If true, appends to the file; if false, overwrites the file.
@@ -170,7 +170,7 @@ namespace fs {
 		/**
 		 * @brief Creates a subdirectory inside this directory.
 		 *
-		 * This method works for virtual and temporary directories.
+		 * This method works for all file types (physical, virtual, temporary).
 		 *
 		 * @param custom_name A custom name. If left default then creates a new random name.
 		 * @return A File representing the newly created subdirectory.

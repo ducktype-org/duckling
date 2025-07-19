@@ -32,7 +32,7 @@ private:
 	 */
 	Box<artifacts::ArtifactCollection> createMockCollection() {
 		return base::makeBox<artifacts::ArtifactCollection>(
-			fs::FileManager::createRandomTempDirectory().getFilePath().native()
+			fs::FileManager::createRandomTempDirectory().getFilePath()
 		);
 	}
 

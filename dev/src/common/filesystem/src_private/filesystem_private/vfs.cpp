@@ -146,9 +146,7 @@ namespace fs {
 		if (path.empty()) return false;
 
 		// Check if path starts with "vfs:"
-		if (*path.begin() != "vfs:") return false;
-
-		return true;
+		return *path.begin() == "vfs:";
 	}
 
 	Ref<VFS> VFS::getInstance() {

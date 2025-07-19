@@ -32,7 +32,7 @@ namespace dia {
 	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> source):
 		  parent(parent),
 		  source(source),
-		  path(parent.getSource()->getPath()) {}
+		  path(parent.getSource()->getFile()) {}
 
 	Ref<tokenizer::TokenSource> MacroLocation::getSource() const { return source; }
 

@@ -212,13 +212,19 @@ namespace fs {
 		[[nodiscard]] static FilePath getDefaultVirtualDirectoryPath();
 
 		// Comparison operators
-		auto operator<=>(const FilePath& other) const { return path <=> other.path; }
+		auto operator<=>(const FilePath& other) const {
+			CORE_ASSERT(
+				(other.type == type) == (path == other.path),
+				"FilePath differ in exactly one of type/path, this should never happen"
+			);
+			return path <=> other.path;
+		}
 
 		auto operator==(const FilePath& other) const {
-			if (path == other.path)
-				CORE_ASSERT(
-					other.type == type, "FilePath has different types, this should never happen"
-				);
+			CORE_ASSERT(
+				(other.type == type) == (path == other.path),
+				"FilePath differ in exactly one of type/path, this should never happen"
+			);
 			return path == other.path;
 		}
 
