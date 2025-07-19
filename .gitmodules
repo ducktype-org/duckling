@@ -1,3 +1,9 @@
 [submodule "dev/docs/doxygen-awesome-css"]
 	path = dev/docs/doxygen-awesome-css
 	url = https://github.com/jothepro/doxygen-awesome-css.git
+[submodule "dev/docs/config/dev/docs/config/doxygen-awesome-css"]
+	path = dev/docs/config/dev/docs/config/doxygen-awesome-css
+	url = https://github.com/jothepro/doxygen-awesome-css
+[submodule "dev/docs/config/doxygen-awesome-css"]
+	path = dev/docs/config/doxygen-awesome-css
+	url = https://github.com/jothepro/doxygen-awesome-css
