@@ -38,6 +38,8 @@ def update_markdown_file(file_path: str, base_dir: str, links: str) -> Tuple[boo
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        if not extract_first_header(content):
+            print(f"Warning: No header found in {file_path}.")
         # Check if this is the main Index.md file
         filename = os.path.basename(file_path)
         is_index_file = filename.lower() == 'index.md' and os.path.dirname(file_path) == base_dir
@@ -50,32 +52,26 @@ def update_markdown_file(file_path: str, base_dir: str, links: str) -> Tuple[boo
         
         # Find existing page directive or first header
         page_directive_line = -1
-        mainpage_line = -1
         first_header_line = -1
         
         for i, line in enumerate(lines):
-            if line.strip().startswith('\\mainpage'):
-                mainpage_line = i
-            elif line.strip().startswith('\\page') or line.strip().startswith('@page'):
+            if line.strip().startswith('\\page') or line.strip().startswith('@page') or line.strip().startswith('\\mainpage'):
                 page_directive_line = i
+                break
             elif line.strip().startswith('#') and first_header_line == -1:
                 first_header_line = i
+                break
         
-        # Update or insert page directive
-        if mainpage_line != -1:
-            lines = lines[mainpage_line:]
-        elif page_directive_line != -1:
+        if page_directive_line != -1:
             lines = lines[page_directive_line:]
         elif first_header_line != -1:
-            lines = ["", ""] + lines[first_header_line:]
+            lines = lines[first_header_line:]
         else:
-            # Insert at the beginning
             lines = ["", ""] + lines
         
         if is_index_file:
             lines[0] = page_directive
-        else:
-            lines = lines[2:]
+        
         
         
         if links:
@@ -94,7 +90,7 @@ def update_markdown_file(file_path: str, base_dir: str, links: str) -> Tuple[boo
             subpage_end = -1
             
             for i, line in enumerate(lines):
-                if line.strip().startswith('- ['):
+                if line.strip().startswith('- [') or '\\subpage' in line:
                     if subpage_start == -1:
                         subpage_start = i
                     subpage_end = i
