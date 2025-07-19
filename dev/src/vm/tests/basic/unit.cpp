@@ -47,12 +47,11 @@ private:
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 
-
 	void globalInitializationTest() { runTestOnVm("global_initialization.dbc", {}, {}, {}, 5); }
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
 
-	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5, true); }
+	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5); }
 
 	void globalNoConstructorTest() {
 		loadInvalidDbc(
@@ -71,6 +70,8 @@ private:
 			}
 		);
 	}
+
+	void globalInitialValueTest() { runTestOnVm("global_initial_value.dbc", {}, {}, {}, 5); }
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 };
