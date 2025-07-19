@@ -449,7 +449,7 @@ namespace vm {
 				try {
 					const auto& func
 						= *executing_program->functions
-					           .atMaybe(base::StrID(global->ctor_name.value().str.str().data()))
+					           .atMaybe(base::StrID(global->ctor_name.value()))
 					           .expect(
 								   "Called function does not exist: "
 								   + global->ctor_name.value().str.str()
@@ -494,7 +494,7 @@ namespace vm {
 				try {
 					const auto& func
 						= *executing_program->functions
-					           .atMaybe(base::StrID(global->dtor_name.value().str.str().data()))
+					           .atMaybe(base::StrID(global->dtor_name.value()))
 					           .expect(
 								   "Called function does not exist: "
 								   + global->dtor_name.value().str.str()

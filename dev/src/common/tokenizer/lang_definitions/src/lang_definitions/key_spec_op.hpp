@@ -144,6 +144,10 @@ namespace lang_def {
 		Extends,
 		Implements,
 
+		// Global data keywords:
+		Constructor,
+		Destructor,
+
 		// Misc:
 
 		// Duckling Test:

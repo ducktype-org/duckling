@@ -112,6 +112,8 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
+			{ Keyword::Constructor, "constructor", KeywordFlags() },
+			{ Keyword::Destructor, "destructor", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY
