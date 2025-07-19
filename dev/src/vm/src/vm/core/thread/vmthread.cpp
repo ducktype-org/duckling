@@ -447,13 +447,12 @@ namespace vm {
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func
-						= *executing_program->functions
-					           .atMaybe(base::StrID(global->ctor_name.value()))
-					           .expect(
-								   "Called function does not exist: "
-								   + global->ctor_name.value().str.str()
-							   );
+					const auto& func = *executing_program->functions
+					                        .atMaybe(base::StrID(global->ctor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->ctor_name.value().str.str()
+											);
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
 					i64 exit_code  = executeFunction(start_function, func);
@@ -492,13 +491,12 @@ namespace vm {
 		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func
-						= *executing_program->functions
-					           .atMaybe(base::StrID(global->dtor_name.value()))
-					           .expect(
-								   "Called function does not exist: "
-								   + global->dtor_name.value().str.str()
-							   );
+					const auto& func = *executing_program->functions
+					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->dtor_name.value().str.str()
+											);
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
 					i64 exit_code  = executeFunction(start_function, func);
