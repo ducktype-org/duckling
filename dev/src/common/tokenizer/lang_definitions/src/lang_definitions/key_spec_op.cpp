@@ -112,8 +112,6 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
-			{ Keyword::Constructor, "constructor", KeywordFlags() },
-			{ Keyword::Destructor, "destructor", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY
@@ -128,6 +126,8 @@ namespace lang_def {
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
 			{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
+			{ Keyword::BCGlobalConstructor, "constructor", KeywordFlags() },
+			{ Keyword::BCGlobalDestructor, "destructor", KeywordFlags() },
 			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },

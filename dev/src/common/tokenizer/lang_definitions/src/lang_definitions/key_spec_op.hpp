@@ -144,10 +144,6 @@ namespace lang_def {
 		Extends,
 		Implements,
 
-		// Global data keywords:
-		Constructor,
-		Destructor,
-
 		// Misc:
 
 		// Duckling Test:
@@ -163,6 +159,8 @@ namespace lang_def {
 		BCVariant,
 		BCFunType,
 		BCGlobalData,
+		BCGlobalConstructor,
+		BCGlobalDestructor,
 		BCOpaque,
 		BCClass,
 		BCAbstract,
