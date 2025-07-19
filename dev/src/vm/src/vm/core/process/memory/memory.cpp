@@ -2,8 +2,8 @@
 
 #include "block.hpp"
 
-#include <base/optional.hpp>
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/raw_view.hpp>
 
 #include <mutex>
