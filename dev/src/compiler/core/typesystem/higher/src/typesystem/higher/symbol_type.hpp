@@ -161,9 +161,7 @@ namespace tsh {
 
 		[[nodiscard]]
 		SymbolType withReferenceKind(const ReferenceKind new_reference_kind) const {
-			return SymbolType(
-				abstract_type, new_reference_kind, mutability, leakage, uniqueness
-			);
+			return SymbolType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
 		}
 
 		/**

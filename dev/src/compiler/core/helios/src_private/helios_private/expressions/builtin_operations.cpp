@@ -57,32 +57,6 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	// base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr) {
-	// 	auto expr_type = expr->expression_type;
-
-	// 	switch (expr_type.getType().getKind()) {
-	// 	case tsh::Kind::Integral:
-	// 		if (op == base::StrID("-")) return BuiltinUnary::IntegerNegation;
-	// 		break;
-	// 	case tsh::Kind::Bool:
-	// 		if (op == keywordToStr(lang_def::Keyword::Not)) return BuiltinUnary::BooleanNot;
-	// 		break;
-	// 	case tsh::Kind::Meta:
-	// 		if (op == keywordToStr(lang_def::Keyword::Ref)) {
-	// 			return BuiltinUnary::Ref;
-	// 		} else if (op == keywordToStr(lang_def::Keyword::Box)) {
-	// 			return BuiltinUnary::Box;
-	// 		}  // No builtins for meta types other than ref and box for now.
-	// 		break;
-	// 	default:
-	// 		CORE_PANIC(
-	// 			"findUnaryBuiltin called with unsupported type: {}", expr_type.getType().getKind()
-	// 		);
-	// 	}
-
-	// 	CORE_UNREACHABLE();
-	// }
-
 	// Aliases to keep things concise
 	using OpKindPair = std::pair<lexer::Operator, tsh::Kind>;
 	using LookupMap  = std::map<OpKindPair, BuiltinUnary>;
@@ -90,26 +64,22 @@ namespace compiler::helios::code {
 	base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr) {
 		auto kind = expr->expression_type.getType().getKind();
 
-		// Initialize once on first call
+		// Initialize once
 		static const LookupMap lookup = {
 			// Integral
-			{ { base::StrID("-"),                tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
+			{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
 			// Boolean
-			{ { keywordToStr(lang_def::Keyword::Not), tsh::Kind::Bool     }, BuiltinUnary::BooleanNot     },
+			{ { keywordToStr(lang_def::Keyword::Not), tsh::Kind::Bool }, BuiltinUnary::BooleanNot },
 			// Meta
-			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta     }, BuiltinUnary::Ref            },
-			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta     }, BuiltinUnary::Box            },
+			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
+			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
 		};
 
 		// Single lookup
 		auto it = lookup.find({ op, kind });
-		if (it != lookup.end())
-			return it->second;
+		if (it != lookup.end()) return it->second;
 
-		// Not found → error
-		CORE_PANIC(
-			"findUnaryBuiltin called with unsupported op='{}' on kind={}", 
-			op.str(), kind
-		);
+		// Not found -> error
+		CORE_PANIC("findUnaryBuiltin called with unsupported op='{}' on kind={}", op.str(), kind);
 	}
 }
