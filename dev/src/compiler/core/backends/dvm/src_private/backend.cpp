@@ -630,7 +630,8 @@ namespace compiler::backend_vm {
 			                                                      global.lir_global.mangled_name,
 			                                                      typeName(global_type),
 			                                                      ctor_name_identifier,
-			                                                      dtor_name_identifier });
+			                                                      dtor_name_identifier,
+			                                                      global.lir_global.inital_value });
 		}
 
 		// Insert and validate types:

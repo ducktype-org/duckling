@@ -4,6 +4,7 @@
 
 #include <token_parser_core/common_elements.hpp>
 
+#include <base/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
@@ -45,6 +46,9 @@ namespace vm::code {
 
 		base::Optional<Identifier> ctor_name;
 		base::Optional<Identifier> dtor_name;
+
+		//@TODO: change it to CTV
+		base::Optional<u64> initial_value;
 	};
 
 	/**

@@ -83,7 +83,8 @@ namespace vm {
 		 * @return true if the global data was inserted successfully (i.e., it did not already
 		 * exist); false otherwise.
 		 */
-		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
+		template<typename T>
+		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type, base::Optional<T> initial_value);
 
 		/**
 		 * @brief Returns a view of global data by the id.

@@ -5,6 +5,8 @@
 
 #include "instruction.hpp"
 
+#include <base/optional.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -35,6 +37,8 @@ namespace vm::low {
 		TypeCRef                         type;
 		base::Optional<code::Identifier> ctor_name;
 		base::Optional<code::Identifier> dtor_name;
+		//@TODO: change it to CTV
+		base::Optional<u64> initial_value;
 	};
 
 	/**
@@ -59,9 +63,10 @@ namespace vm::low {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 
 			for (const auto& global: global_data) {
-				GlobData data{ .type      = this->types->at(global.type),
-					           .ctor_name = global.ctor_name,
-					           .dtor_name = global.dtor_name };
+				GlobData data{ .type          = this->types->at(global.type),
+					           .ctor_name     = global.ctor_name,
+					           .dtor_name     = global.dtor_name,
+					           .initial_value = global.initial_value };
 				this->global_data.insert(data, global.name);
 			}
 		}

@@ -120,6 +120,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 
 					if (global->dtor_name.has_value())
 						code_global.dtor_name = code::Identifier(global->dtor_name.value().value);
+					code_global.initial_value = global->initial_value;
 					new_code.global_data.emplace_back(code_global);
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);

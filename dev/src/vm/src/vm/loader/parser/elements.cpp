@@ -143,20 +143,38 @@ namespace vm::loader::parser {
 		state.parse().one(&out->name);
 		state.parse().one(&out->type);
 
-		auto fields = parseFields(state);
-
-		for (auto field: fields) {
-			CORE_ASSERT(
-				field.bytecode_pos.has_value(),
-				"While parsing global variable ",
-				out->name.value,
-				" field.bytecode_pos doesn't exist."
-			);
-			if (field.name.str() == "constructor")
-				out->ctor_name = tpc::Identifier(field.type, field.bytecode_pos.value());
-			else if (field.name.str() == "destructor")
-				out->dtor_name = tpc::Identifier(field.type, field.bytecode_pos.value());
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+			return out;
 		}
+
+		state.goDown();
+		while (state.notEmpty()) {
+			tpc::Identifier key;
+			tpc::Identifier value;
+			state.parse().all(&key, lang_def::NamedOperator::Colon);
+			if (key.value.str() == "constructor") {
+				state.parse().one(&value);
+				out->ctor_name = value;
+			} else if (key.value.str() == "destructor") {
+				state.parse().one(&value);
+				out->dtor_name = value;
+			} else if (key.value.str() == "initial_value") {
+				// @TODO more general than unsigned long
+				out->initial_value = opargs_parsers::parseInt<i64, int>(state);
+			} else {
+				// @TODO error that not known parameter in global
+			}
+
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.err->failAndLog(state.getPosition(), "expected comma or }");
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
 
 		auto end_position = state.getPosition().getEnd();
 		out->position     = dia::SourcePosition(

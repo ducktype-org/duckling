@@ -10,6 +10,7 @@
 #include <base/box.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/maps.hpp>
+#include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
@@ -54,6 +55,8 @@ namespace vm::loader::parser {
 		tpc::Identifier                 type;
 		base::Optional<tpc::Identifier> ctor_name;
 		base::Optional<tpc::Identifier> dtor_name;
+		//@TODO: change it to CTV
+		base::Optional<u64> initial_value;
 
 		static Box<GlobalData> parse(F8ParserState& state);
 
