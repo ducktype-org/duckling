@@ -1,8 +1,8 @@
 #include "elements.hpp"
 
 #include "errors.hpp"
-#include "lang_definitions/key_spec_op.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
