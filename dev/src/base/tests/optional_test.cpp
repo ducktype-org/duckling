@@ -3,10 +3,10 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include <tester/tester.hpp>
-
 #include <base/optional.hpp>
 #include <base/ref.hpp>
+
+#include <tester/tester.hpp>
 
 #include <expected>
 #include <sstream>

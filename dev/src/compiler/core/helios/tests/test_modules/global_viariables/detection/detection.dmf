@@ -1,0 +1,20 @@
+var A: i64 = 1;
+
+namespace n1{
+    var B: i64 = 3;  
+
+    namespace n2{
+        var C: i64 = 5;
+
+        fun foo0(a: i32) -> i32 = {
+            var i: i64 = 7;
+            return a;
+        }
+    }
+}
+
+fun foo1(a: i32) -> i32 = {
+    var h: i64 = 9;
+    var i: i32 = 3;
+    return a;
+}

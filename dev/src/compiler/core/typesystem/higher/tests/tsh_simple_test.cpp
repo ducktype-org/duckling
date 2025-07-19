@@ -1,7 +1,8 @@
+#include <typesystem/higher/all.hpp>
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/all.hpp>
 
 using namespace tsh;
 
