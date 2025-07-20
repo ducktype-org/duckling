@@ -26,7 +26,7 @@ namespace tokenizer {
 	private:
 		dia::Logger                            log;
 		base::Box<dia::Location>               location;
-		base::Optional<const fs::FileContent>  content;
+		base::Optional<const base::SharedView> content;
 		base::Optional<const lexer::CharArray> decoded;
 		base::Optional<const lexer::TokenData> token_data;
 
@@ -84,7 +84,7 @@ namespace tokenizer {
 		std::vector<std::pair<usize, base::RawView>> viewSplitRange(usize begin_char, usize end_char);
 
 		[[nodiscard]]
-		const fs::FileContent getContent() const;
+		const base::SharedView getContent() const;
 		[[nodiscard]]
 		const lexer::CharArray& getChars() const;
 		[[nodiscard]]
@@ -93,7 +93,7 @@ namespace tokenizer {
 		CRef<dia::Location> getLocation() const;
 		Ref<dia::Logger>    getLogger();
 		[[nodiscard]]
-		fs::File getPath() const;
+		fs::File getFile() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 
