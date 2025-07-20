@@ -50,15 +50,19 @@ namespace {
 }
 
 namespace clap {
+	ParsingState::ParsingState(const std::string& args): args(args), result("", args) {
+		skipWhitespace(parsing_position, args);
+	}
+
 	ParsingState::ParsingState(usize argc, const char* const* argv) {
 		args = mergeArgs(argc, argv);
 		skipWhitespace(parsing_position, args);
 
-		// Check if program is invoked using "./" or by name. This is potentially unsafe.
-		usize path_offset = 0;
-		if (argv[0][0] == '.' && argv[0][1] == '/') path_offset = 2;
+		// Check if program is invoked using "./" or by name.
+		std::string program_name = argv[0];
+		if (program_name.starts_with("./")) program_name = program_name.substr(2);
 
-		result = clap::ParsingResult(argv[0] + path_offset, args);
+		result = clap::ParsingResult(program_name, args);
 	}
 
 	void ParsingState::parsePositional(const clap::ValueParser& parser) {

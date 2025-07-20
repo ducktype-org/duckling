@@ -43,6 +43,12 @@ namespace {
 }
 
 namespace clap {
+
+	Clap::Clap(): name(""), description(""), default_value_parser(StringParser::make()) {
+		// A --help flag is added by default.
+		addHelpFlag();
+	}
+
 	Clap::Clap(std::string name, std::string description):
 		  name(std::move(name)),
 		  description(std::move(description)),
@@ -65,6 +71,7 @@ namespace clap {
 	Clap&& Clap::addSubcommand(Clap&& sub_command) {
 		if (!positional_parameters.empty())
 			throw clap::exceptions::CoexistingPositionalAndSubcommand(name);
+		if (sub_command.getName() == "") throw clap::exceptions::UnnamedSubcommand(name);
 
 		// Check for duplicates.
 		for (const auto& subcmd: subcommands)
@@ -91,11 +98,13 @@ namespace clap {
 	}
 
 	Clap&& Clap::addHelpFlag() {
-		return add(ParamBuilder::ofFlag()
-		               .addShortName('h')
-		               .addLongName("help")
-		               .addShortDesc("Display this information.")
-		               .build());
+		return add(
+			ParamBuilder::ofFlag()
+				.addShortName('h')
+				.addLongName("help")
+				.addShortDesc("Display this information.")
+				.build()
+		);
 	}
 
 	const std::string& Clap::getName() const { return name; }
@@ -132,6 +141,13 @@ namespace clap {
 		ParsingState st(argc, argv);
 
 		// Perform the recursive parsing.
+		parse(st);
+		validateParsing(st.result);
+		return std::move(st.result);
+	}
+
+	ParsingResult Clap::parseArgs(const std::string& args) {
+		ParsingState st(args);
 		parse(st);
 		validateParsing(st.result);
 		return std::move(st.result);
@@ -198,14 +214,16 @@ namespace clap {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
 		} catch (const clap::exceptions::ClapException& e) {
-			printer::StreamPrinter::print({
-				{ "[Clap error]: ", printer::Color::RED },
-				{ e.what(), printer::Color::DEFAULT },
-				{ "\n", printer::Color::DEFAULT },
-				{ "Use \"", printer::Color::DEFAULT },
-				{ argv[0], printer::Color::DEFAULT },
-				{ " --help\" for available options.\n", printer::Color::DEFAULT },
-			});
+			printer::StreamPrinter::print(
+				{
+					{ "[Clap error]: ", printer::Color::RED },
+					{ e.what(), printer::Color::DEFAULT },
+					{ "\n", printer::Color::DEFAULT },
+					{ "Use \"", printer::Color::DEFAULT },
+					{ argv[0], printer::Color::DEFAULT },
+					{ " --help\" for available options.\n", printer::Color::DEFAULT },
+				}
+			);
 			return 1;
 		}
 	}
@@ -251,8 +269,8 @@ namespace clap {
 
 		// Validate this command params.
 		validate_parameters(command->getParameters());
-		// Validate global params. This function is invoked from the root command, thus we compare
-		// it with this.
+		// Validate global params. This function is invoked from the root command, thus we
+		// compare it with this.
 		if (command.get() != this) validate_parameters(getParameters());
 	}
 }  // clap

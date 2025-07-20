@@ -44,8 +44,11 @@ namespace clap {
 		using PreHandler = std::function<void(const ParsingResult&)>;
 		using Handler    = std::function<int(const ParsingResult&)>;
 
-		// Clap is move-only
+
+		Clap();
 		Clap(std::string name, std::string description = "");
+
+		// Clap is move-only
 		Clap(Clap& other)                      = delete;
 		Clap& operator=(Clap& other) noexcept  = delete;
 		Clap(Clap&& other) noexcept            = default;
@@ -165,6 +168,7 @@ namespace clap {
 		/**
 		 * @brief Performs the parsing. Returns the parsing result.
 		 *
+		 * @note It's assumed that the first argv argument is the program name.
 		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
 		 * by this function nd have to be handled by the user.
 		 *
@@ -175,7 +179,8 @@ namespace clap {
 		ParsingResult parse(usize argc, const char* const* argv);
 
 		/**
-		 * @brief Performs the parsing. Returns the parsing result.
+		 * @brief Performs the parsing on a string of arguments. Program name is expected to NOT
+		 * exist. Usefull when using CLAP for other things than command line argument parsing.j
 		 *
 		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
 		 * by this function nd have to be handled by the user.
@@ -183,13 +188,14 @@ namespace clap {
 		 * @param args A string containing the command line arguments.
 		 * @return An object containing parsed command-line arguments and the matched command.
 		 */
-		ParsingResult parse(const std::string& args);
+		ParsingResult parseArgs(const std::string& args);
 
 		/**
 		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
 		 * the pre handler function (if specified) and then immediately executes the handler for the
 		 * matched command.
 		 *
+		 * @note It's assumed that the first argv argument is the program name.
 		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
 		 * messages are printed and help messages are generated.
 		 *
@@ -199,19 +205,6 @@ namespace clap {
 		 * @return A return value of the handler specified for the matched command.
 		 */
 		int execute(usize argc, const char* const* argv);
-
-		/**
-		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
-		 * the pre handler function (if specified) and then immediately executes the handler for the
-		 * matched command.
-		 *
-		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
-		 * messages are printed and help messages are generated.
-		 *
-		 * @param args A string containing the command line arguments.
-		 * @return A return value of the handler specified for the matched command.
-		 */
-		int execute(const std::string& args);
 
 	private:
 		/**

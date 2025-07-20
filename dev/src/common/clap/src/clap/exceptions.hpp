@@ -134,6 +134,14 @@ namespace clap::exceptions {
 	};
 
 	/**
+	 * @brief Raised when adding a subcommand with no name.
+	 * Detected at the time of definition, not parsing.
+	 */
+	struct UnnamedSubcommand: public ClapException {
+		explicit UnnamedSubcommand(const std::string& super_command_name);
+	};
+
+	/**
 	 * @brief Raised when performing execute and the matched command lacks definition of the handler
 	 * function.
 	 */

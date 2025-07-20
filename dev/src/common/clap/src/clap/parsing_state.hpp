@@ -17,6 +17,17 @@ namespace clap {
 		std::string   args;                  /// Merged arguments.
 		ParsingResult result;                /// The result of the parsing.
 
+		/**
+		 * @brief Construct a ParsingState object from an argument string
+		 * @param args Arguments to parse. Assumes the string contains only the arguments. The
+		 * string should not begin with the program name.
+		 */
+		ParsingState(const std::string& args);
+
+		/**
+		 * @brief Construct a ParsingState object from command line arguments.
+		 * Assumes argv contains the program name at the 0 index.
+		 */
 		ParsingState(usize argc, const char* const* argv);
 
 		/**

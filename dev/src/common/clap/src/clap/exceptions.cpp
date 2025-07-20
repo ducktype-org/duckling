@@ -120,6 +120,15 @@ namespace clap::exceptions {
 			  parent_command_name,
 			  "\"."
 		  )) {}
+	
+	UnnamedSubcommand::UnnamedSubcommand(
+		const std::string& super_command_name 
+	):
+		  ClapException(base::strConcat(
+			  "Tried to add a subcommand with no name to command:\"",
+			  super_command_name,
+			  "\"."
+		  )) {}
 
 	CoexistingPositionalAndSubcommand::CoexistingPositionalAndSubcommand(
 		const std::string& command_name
