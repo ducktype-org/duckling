@@ -23,6 +23,9 @@ private:
 
 	void upcast() {
 		runTestOnVm("semantics/valid_upcast.dbc", {}, {}, {}, 0);
+		loadInvalidDbc(
+			"semantics/invalid_upcast_primary.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
+		);
 		loadInvalidDbc("semantics/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG });
 	}
 
