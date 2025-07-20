@@ -1,6 +1,4 @@
-# VM module
-
-Strona na której można przyjemnie edytować swaggera: https://editor-next.swagger.io/
+# Duckling Virtual Machine
 
 - [benchmark](./benchmark/readme.md)
 - [src/vm/api](./src/vm/api/readme.md)
