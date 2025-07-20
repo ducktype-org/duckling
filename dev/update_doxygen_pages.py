@@ -48,25 +48,28 @@ def update_markdown_file(
     links: List of direct descendant readme absolute paths
     """
     try:
+        current_dir = os.path.dirname(file_path)
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # Check if this is the main Index.md file
         filename = os.path.basename(file_path)
         is_index_file = (
-            filename.lower() == "index.md" and os.path.dirname(file_path) == base_dir
+            filename.lower() == "index.md" and current_dir == base_dir
         )
 
         if is_index_file:
             # For Index.md, use \mainpage
             page_directive = "\\mainpage"
+            name = None
         else:
-            name = extract_first_header(content)
-            if not name:
-                print(f"Warning: No header found in {file_path}.")
-                name = extract_page_name_from_page_directive(content)
-                if name:
-                    print(f"  Using page name from directive: {name}")
+            name = extract_page_name_from_page_directive(content)
+            if name:
+                print(f"  Using page name from directive: {name}")
+            else:
+                name = extract_first_header(content)
+                if not name:
+                    print(f"Warning: No header found in {file_path}.")
 
         lines = content.split("\n")
 
@@ -90,13 +93,13 @@ def update_markdown_file(
 
         # if page_directive_line != -1:
         #     lines = lines[page_directive_line:]
-        if first_header_line != -1:
-            lines = lines[first_header_line:]
-        elif page_directive_line != -1:
+        if page_directive_line != -1:
             lines = lines[page_directive_line:]
             if name:
                 lines[0] = "#" + " " + name
-
+        elif first_header_line != -1:
+            lines = lines[first_header_line:]
+        
         if is_index_file:
             lines[0] = page_directive
 
@@ -104,7 +107,7 @@ def update_markdown_file(
             subpage_lines = []
             for absolute_readme_path in links:
                 relative_readme_path = os.path.relpath(
-                    absolute_readme_path, os.path.dirname(file_path)
+                    absolute_readme_path, current_dir
                 )
                 if os.path.basename(relative_readme_path).lower() == "readme.md":
                     desc = os.path.dirname(relative_readme_path)
@@ -139,6 +142,56 @@ def update_markdown_file(
                     break
 
             lines.append("")  # Ensure there's a trailing newline
+
+        # search for div with section buttons
+        section_buttons_start = -1
+        section_buttons_end = -1
+        for i, line in enumerate(lines):
+            if line.strip().startswith("<div class=\"section_buttons\">"):
+                section_buttons_start = i
+            elif line.strip().startswith("</div>") and section_buttons_start != -1:
+                section_buttons_end = i
+                break
+
+        section_buttons_lines = []    
+        if dirs[0] or dirs[1]:
+            """
+            <div class="section_buttons">
+ 
+            | Previous          |                              Next |
+            |:------------------|----------------------------------:|
+            | [Home](README.md) | [Customization](customization.md) |
+            
+            </div>
+            """
+            section_buttons_lines.append("<div class=\"section_buttons\">")
+            section_buttons_lines.append("")
+            if dirs[0]:
+                prev_rel_path = os.path.relpath(dirs[0], current_dir)
+                section_buttons_lines.append(
+                    f"| [Previous]({prev_rel_path}) |"
+                )
+            else:
+                section_buttons_lines.append("| Previous |")
+            if dirs[1]:
+                next_rel_path = os.path.relpath(dirs[1], current_dir)
+                section_buttons_lines.append(
+                    f"| [Next]({next_rel_path}) |"
+                )
+            else:
+                section_buttons_lines.append("| Next |")
+            section_buttons_lines.append("")
+            section_buttons_lines.append("</div>")
+            section_buttons_lines.append("")
+
+            if section_buttons_start != -1 and section_buttons_end != -1:
+                # Replace existing section buttons
+                lines[section_buttons_start : section_buttons_end + 1] = section_buttons_lines
+            else:
+                # Add section buttons at the end
+                if lines and lines[-1].strip():
+                    lines.append("")
+                lines.extend(section_buttons_lines)
 
         # Write back to file
         with open(file_path, "w", encoding="utf-8") as f:
@@ -231,10 +284,15 @@ def main():
     successful_updates = []
     files_without_headers = []
 
-    for file_path in sorted(readme_files):
+    readme_files = sorted(readme_files)
+    for i, file_path in enumerate(readme_files):
         print(f"Processing: {os.path.relpath(file_path, base_dir)}")
         links = get_direct_descendants(file_path, readme_files)
-        success, error_msg = update_markdown_file(file_path, base_dir, links)
+        prev_file = readme_files[i - 1] if i > 0 else None
+        next_file = readme_files[i + 1] if i < len(readme_files) - 1 else None
+        success, error_msg = update_markdown_file(
+            file_path, base_dir, links, (None, None)
+        )
 
         if success:
             successful_updates.append(file_path)
