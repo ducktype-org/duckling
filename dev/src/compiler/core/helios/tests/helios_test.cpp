@@ -452,6 +452,16 @@ private:
 		Ref  expr_str_casted
 			= dynamic_cast<const compiler::helios::code::LiteralStringExpr*>(&*expr_str);
 		ASSERT_EQUAL("quack", expr_str_casted->value.str());
+
+		auto              sym_vref  = getChain("VREF", root_scope).back();
+		auto              tree_vref = getExprOfConst(sym_vref);
+		std::stringstream out_vref;
+		tree_vref->debugPrint(out_vref);
+
+		auto              sym_vbox  = getChain("VBOX", root_scope).back();
+		auto              tree_vbox = getExprOfConst(sym_vbox);
+		std::stringstream out_vbox;
+		tree_vbox->debugPrint(out_vbox);
 	}
 
 	void testError() {

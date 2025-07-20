@@ -111,14 +111,12 @@ namespace compiler::helios {
 				}
 
 				switch (expr.operation) {
-				case code::BuiltinUnary::Ref: {
+				case code::BuiltinUnary::Ref:
 					output(value.value().withReferenceKind(tsh::ReferenceKind::Ref));
 					return;
-				}
-				case code::BuiltinUnary::Box: {
+				case code::BuiltinUnary::Box:
 					output(value.value().withReferenceKind(tsh::ReferenceKind::Box));
 					return;
-				}
 				default:
 					CORE_PANIC(
 						"ShortPathVisitor encountered unsupported unary operation: ",
