@@ -245,7 +245,10 @@ clap::Clap getLspDaemonCLI() {
 	             .addShortDesc("Show version information and exit")
 	             .build())
 	    .setPreHandler([](const clap::ParsingResult& options) {
-			if (options.isFlag("version")) showVersion();
+			if (options.isFlag("version")) {
+				showVersion();
+				throw clap::exceptions::SuccessExitException(options);
+			}
 		})
 	    .addSubcommand(clap::Clap("start", "Starts the LSP server on a given port")
 	                       .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))

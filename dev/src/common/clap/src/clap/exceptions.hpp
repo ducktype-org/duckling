@@ -31,6 +31,17 @@ namespace clap::exceptions {
 	};
 
 	/**
+	 * @brief Raised when we want to cleanly exit the program early (ex. Receiving a version flag
+	 * and exiting after printing version).
+	 * It is not an exception per se.
+	 */
+	struct SuccessExitException: public base::LogicError {
+		ParsingResult parsing_result;
+
+		explicit SuccessExitException(ParsingResult result);
+	};
+
+	/**
 	 * @brief Raised by value parsers when input is malformed.
 	 */
 	struct ValueParsingException: public ClapException {

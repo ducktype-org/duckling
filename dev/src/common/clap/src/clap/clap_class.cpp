@@ -98,13 +98,11 @@ namespace clap {
 	}
 
 	Clap&& Clap::addHelpFlag() {
-		return add(
-			ParamBuilder::ofFlag()
-				.addShortName('h')
-				.addLongName("help")
-				.addShortDesc("Display this information.")
-				.build()
-		);
+		return add(ParamBuilder::ofFlag()
+		               .addShortName('h')
+		               .addLongName("help")
+		               .addShortDesc("Display this information.")
+		               .build());
 	}
 
 	const std::string& Clap::getName() const { return name; }
@@ -213,17 +211,17 @@ namespace clap {
 		} catch (const exceptions::HelpException& e) {
 			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
+		} catch (const exceptions::SuccessExitException& e) {
+			return 0;
 		} catch (const clap::exceptions::ClapException& e) {
-			printer::StreamPrinter::print(
-				{
-					{ "[Clap error]: ", printer::Color::RED },
-					{ e.what(), printer::Color::DEFAULT },
-					{ "\n", printer::Color::DEFAULT },
-					{ "Use \"", printer::Color::DEFAULT },
-					{ argv[0], printer::Color::DEFAULT },
-					{ " --help\" for available options.\n", printer::Color::DEFAULT },
-				}
-			);
+			printer::StreamPrinter::print({
+				{ "[Clap error]: ", printer::Color::RED },
+				{ e.what(), printer::Color::DEFAULT },
+				{ "\n", printer::Color::DEFAULT },
+				{ "Use \"", printer::Color::DEFAULT },
+				{ argv[0], printer::Color::DEFAULT },
+				{ " --help\" for available options.\n", printer::Color::DEFAULT },
+			});
 			return 1;
 		}
 	}

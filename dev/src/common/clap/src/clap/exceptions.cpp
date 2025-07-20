@@ -93,6 +93,10 @@ namespace clap::exceptions {
 		  base::LogicError("Help flag was passed, help message should be generated."),
 		  parsing_result(std::move(result)) {}
 
+	SuccessExitException::SuccessExitException(ParsingResult result):
+		  base::LogicError("Clean exit requested."),
+		  parsing_result(std::move(result)) {}
+
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClapException("File at \"" + absolute(path).string() + "\" does not exist.") {}
 
@@ -120,14 +124,10 @@ namespace clap::exceptions {
 			  parent_command_name,
 			  "\"."
 		  )) {}
-	
-	UnnamedSubcommand::UnnamedSubcommand(
-		const std::string& super_command_name 
-	):
+
+	UnnamedSubcommand::UnnamedSubcommand(const std::string& super_command_name):
 		  ClapException(base::strConcat(
-			  "Tried to add a subcommand with no name to command:\"",
-			  super_command_name,
-			  "\"."
+			  "Tried to add a subcommand with no name to command:\"", super_command_name, "\"."
 		  )) {}
 
 	CoexistingPositionalAndSubcommand::CoexistingPositionalAndSubcommand(

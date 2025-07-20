@@ -17,7 +17,6 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
-#include "clap/value_parser.hpp"
 #include <clap/clap.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -63,7 +62,10 @@ clap::Clap getStandardDucklingOptions() {
 	    .setPreHandler([](const clap::ParsingResult& options) {
 			dia::Logger::setImmediatelyDump(options.isFlag("logger-cerr"));
 			lexer::Lexer::setTokenMessages(options.isFlag("lexer-cerr"));
-			if (options.isFlag("version")) std::cout << "Duckling version: 0.0.1 pre-alpha\n";
+			if (options.isFlag("version")) {
+				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
+				throw clap::exceptions::SuccessExitException(options);
+			}
 		});
 }
 
@@ -91,7 +93,7 @@ clap::Clap getClapForMain() {
 					} else {
 						auto& tokens = token_file->getTokenData();
 						for (auto& token: tokens.tokens) {
-							// @TODO: more detailed printing:
+							// @TODO: more detailed printing. This should change in #1111.
 							printer::StreamPrinter::printNL(
 								{
 									"Token: ",
@@ -182,7 +184,7 @@ clap::Clap getClapForMain() {
 				.setHandler([](const clap::ParsingResult& options) -> int {
 					auto path_to_compile = options.getValue<fs::File>("module").value();
 
-					// @TODO: error handling
+					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 					auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
@@ -201,7 +203,8 @@ clap::Clap getClapForMain() {
 						},
 					};
 
-					// mock collection for purpose of compilation of single module:
+					// @TODO: Mock collection for purpose of compilation of single module. This
+		            // should change in #1113.
 					artifacts::ArtifactCollection base_artifact_collection{
 						"./duck_build/",
 					};

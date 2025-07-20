@@ -2,7 +2,6 @@
 #include "server.hpp"
 #include "vm_repl.hpp"
 
-#include "clap/value_parser.hpp"
 #include <clap/clap.hpp>
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
@@ -30,7 +29,10 @@ clap::Clap getVmClap() {
 	             .addShortDesc("When passed, loads standard library")
 	             .build())
 	    .setPreHandler([](const clap::ParsingResult& options) {
-			if (options.isFlag("version")) showVersion();
+			if (options.isFlag("version")) {
+				showVersion();
+				throw clap::exceptions::SuccessExitException(options);
+			}
 		})
 	    .addSubcommand(clap::Clap("server", "Launch DVM as a http server.")
 	                       .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
