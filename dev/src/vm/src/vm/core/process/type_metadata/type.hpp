@@ -43,6 +43,7 @@ namespace vm {
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
+		bool        am_i_instantiable = true;
 
 		std::variant<
 			std::monostate,
@@ -57,6 +58,10 @@ namespace vm {
 			kind;
 
 		Type() = default;
+
+		void processIsInstantiable(kind::Data&);
+		void processIsInstantiable(kind::Variant&);
+		void processInheritsFrom(InheritanceMetadata&);
 
 	public:
 		// Type declaration:

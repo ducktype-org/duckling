@@ -13,6 +13,53 @@
 #include <utility>
 
 namespace vm {
+	void Type::processIsInstantiable(kind::Data& data) {
+		auto is_concrete_class = [](const InheritanceMetadata& imd) {
+			variant_match(imd.kind) {
+				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
+			}
+			return false;
+		};
+		if_opt_some(data.inheritance_metadata, imd) {
+			if (!is_concrete_class(imd)) {
+				am_i_instantiable = false;
+				return;
+			}
+		}
+
+		for (auto& field: data.fields)
+			if (!field.type->isInstantiable()) {
+				am_i_instantiable = false;
+				return;
+			}
+
+		return;
+	}
+
+	void Type::processIsInstantiable(kind::Variant& variant) {
+		for (auto& alt: variant.alternatives) {
+			if (!alt->isInstantiable()) {
+				am_i_instantiable = false;
+				return;
+			}
+		}
+	}
+
+	void Type::processInheritsFrom(InheritanceMetadata& imd) {
+		imd.inherits_from.insert(getID());
+		auto get_all_super = [](TypeCRef type) {
+			return type->getInheritanceMetadata()
+			    .expect("Deriving from type with no metadata")
+			    ->inherits_from;
+		};
+
+		auto insert_all
+			= [](auto& set, const auto& range) { set.insert(range.begin(), range.end()); };
+
+		if_opt_some(getSuperClass(), super) insert_all(imd.inherits_from, get_all_super(super));
+		for (auto i: imd.implements) insert_all(imd.inherits_from, get_all_super(i));
+	}
+
 	// Type declaration:
 	Type Type::declareType(base::StrID name) {
 		Type type{};
@@ -125,6 +172,8 @@ namespace vm {
 					offset += field.type->getSize();
 				}
 				this->size = offset;
+				if_opt_some(data.inheritance_metadata, imd) { processInheritsFrom(imd); }
+				processIsInstantiable(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
@@ -134,6 +183,7 @@ namespace vm {
 					data_size = std::max(data_size, alternative->getSize());
 				}
 				this->size = 16 + data_size;
+				processIsInstantiable(variant);
 			}
 		}
 	}
@@ -193,50 +243,14 @@ namespace vm {
 	}
 
 	bool Type::inheritsFrom(TypeCRef other) const {
-		std::vector<TypeCRef> stack{ this };
-		while (!stack.empty()) {
-			auto t = stack.back();
-			stack.pop_back();
-			if (t == other) return true;
-
-			if_opt_some(t->getInheritanceMetadata(), imd) {
-				variant_match(imd->kind) {
-					variant_case(InheritanceMetadata::Class, clazz) {
-						if_opt_some(clazz.extends, super) stack.emplace_back(super);
-					}
-				}
-				for (auto i: imd->implements) stack.emplace_back(i);
-			}
+		match_optional(getInheritanceMetadata()) {
+			opt_some(imd) { return imd->inherits_from.contains(other->getID()); }
+			opt_none { return false; }
 		}
-		return false;
+		std::unreachable();
 	}
 
-	bool Type::isInstantiable() const {
-		auto is_concrete_class = [](const InheritanceMetadata& imd) {
-			variant_match(imd.kind) {
-				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
-			}
-			return false;
-		};
-
-		// This recursion follows only data and variants (not pointers),
-		// so its depth is bounded by type size, there cannot be a cycle.
-		variant_match(kind) {
-			variant_case(kind::Data, data) {
-				if_opt_some(data.inheritance_metadata, imd) {
-					if (!is_concrete_class(imd)) return false;
-				}
-
-				for (auto& field: data.fields)
-					if (!field.type->isInstantiable()) return false;
-			}
-			variant_case(kind::Variant, variant) {
-				for (auto& alt: variant.alternatives)
-					if (!alt->isInstantiable()) return false;
-			}
-		}
-		return true;
-	}
+	bool Type::isInstantiable() const { return am_i_instantiable; }
 
 	// function
 	base::Optional<u64> Type::getParameterCount() const {
