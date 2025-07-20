@@ -67,7 +67,7 @@ The result of lexing. It contains:
  
 1. `Tokens tokens` - List of top level tokens.
 2. `Token eof_sentinel` - Token that can be used as EOF.
-3. `fs::FileContent file_content` - Pointer to the contents of the source file.
+3. `base::SharedView file_content` - Pointer to the contents of the source file.
 
 ### Token
 
