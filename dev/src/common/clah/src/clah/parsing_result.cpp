@@ -5,7 +5,7 @@
 
 #include "parsing_result.hpp"
 
-namespace clap {
+namespace clah {
 	ParsingResult::ParsingResult(std::string file_path, std::string args):
 		  file_path(std::move(file_path)),
 		  args(std::move(args)) {}
@@ -71,7 +71,7 @@ namespace clap {
 
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
 
-	void ParsingResult::addToCommandList(CRef<Clap> cmd) {
+	void ParsingResult::addToCommandList(CRef<Clah> cmd) {
 		command = cmd;
 		command_list.push_back(cmd);
 	}
@@ -84,9 +84,9 @@ namespace clap {
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
 
-	base::Optional<CRef<clap::Clap>> ParsingResult::getMatchedCommand() const { return command; }
+	base::Optional<CRef<clah::Clah>> ParsingResult::getMatchedCommand() const { return command; }
 
-	const std::vector<CRef<Clap>>& ParsingResult::getCommandPath() const { return command_list; }
+	const std::vector<CRef<Clah>>& ParsingResult::getCommandPath() const { return command_list; }
 
 	ParsingResult& ParsingResult::operator=(const ParsingResult& other) {
 		file_path         = other.file_path;

@@ -21,15 +21,15 @@ namespace {
 	 * @param result The result of parsing.
 	 * @return A formatted "Usage" string.
 	 */
-	std::string generateUsage(const clap::Clap& clap, const clap::ParsingResult& result) {
+	std::string generateUsage(const clah::Clah& clah, const clah::ParsingResult& result) {
 		auto              command = result.getMatchedCommand();
 		std::stringstream usage;
 		usage << "Usage: " << getFileName(result.getFilePath());
 
-		auto print_required_parameters = [&](const std::vector<clap::Parameter>& parameters) {
+		auto print_required_parameters = [&](const std::vector<clah::Parameter>& parameters) {
 			for (const auto& param: parameters) {
 				variant_match(param.getParameterNecessity()) {
-					variant_case(clap::Required, _) {
+					variant_case(clah::Required, _) {
 						usage << " ";
 						bool has_long_name = param.getLongName().has_value();
 						// If a long name is available, we prefer it.
@@ -46,7 +46,7 @@ namespace {
 		};
 
 		// Print out the required global parameters.
-		print_required_parameters(clap.getParameters());
+		print_required_parameters(clah.getParameters());
 		usage << " [GLOBAL OPTIONS]";
 
 		// Add a path to this command.
@@ -72,7 +72,7 @@ namespace {
 }
 
 std::string generateOptionsBlock(
-	const std::string& title, const std::vector<clap::Parameter>& params, int padding = 27
+	const std::string& title, const std::vector<clah::Parameter>& params, int padding = 27
 ) {
 	if (params.empty()) return "";
 
@@ -106,7 +106,7 @@ std::string generateOptionsBlock(
 	return output.str();
 }
 
-std::string generateSubcommandsBlock(const std::vector<clap::Clap>& subcommands, int padding = 27) {
+std::string generateSubcommandsBlock(const std::vector<clah::Clah>& subcommands, int padding = 27) {
 	if (subcommands.empty()) return "";
 	std::stringstream output;
 
@@ -119,16 +119,16 @@ std::string generateSubcommandsBlock(const std::vector<clap::Clap>& subcommands,
 	return output.str();
 }
 
-namespace clap {
-	std::string HelpMessageGenerator::generate(const Clap& clap, const ParsingResult& result) {
+namespace clah {
+	std::string HelpMessageGenerator::generate(const Clah& clah, const ParsingResult& result) {
 		std::stringstream output;
 		auto              command      = result.getMatchedCommand();
 		auto              program_name = getFileName(result.getFilePath());
 
-		output << generateUsage(clap, result) << '\n';
+		output << generateUsage(clah, result) << '\n';
 		output << generateSubcommandsBlock(command.value()->getSubcommands());
-		output << generateOptionsBlock("Global options:", clap.getParameters());
-		if (command->get() != &clap)
+		output << generateOptionsBlock("Global options:", clah.getParameters());
+		if (command->get() != &clah)
 			output << generateOptionsBlock("Command options:", command.value()->getParameters());
 
 
@@ -138,4 +138,4 @@ namespace clap {
 		}
 		return output.str();
 	}
-}  // clap
+}  // clah

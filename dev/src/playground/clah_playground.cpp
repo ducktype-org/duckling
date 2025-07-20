@@ -1,17 +1,17 @@
 /**
- * @file clap_playground.cpp
+ * @file clah_playground.cpp
  * @author Piotr Oleszczuk (poleszczuk3@gmail.com)
- * @brief Quick demonstration of `Clap`.
+ * @brief Quick demonstration of `Clah`.
  *
- * This file showcases the capabilities of the `Clap` library by building a sample
+ * This file showcases the capabilities of the `Clah` library by building a sample
  * command-line application with subcommands, global options, and various parameter types.
  *
  * A few examples:
  * The basic structure is:
- *   ./clap_playground [GLOBAL OPTIONS] <COMMAND> [COMMAND-SPECIFIC ARGUMENTS & OPTIONS]
+ *   ./clah_playground [GLOBAL OPTIONS] <COMMAND> [COMMAND-SPECIFIC ARGUMENTS & OPTIONS]
  *
- * Type `./clap_playground --help` to list all the global parameters and subcommands.
- * Type `./clap_playground [COMMAND] --help` to list the subcommand specific parameters and global
+ * Type `./clah_playground --help` to list all the global parameters and subcommands.
+ * Type `./clah_playground [COMMAND] --help` to list the subcommand specific parameters and global
  * flags
  *
  * === Global Options ===
@@ -22,13 +22,13 @@
  * === Subcommand: `greet` ===
  * This command greets one or more people, with several customization options.
  * 1.  Minimal required usage:
- *     $ ./clap_playground --user Alice greet --range 1..3 "Bob"
+ *     $ ./clah_playground --user Alice greet --range 1..3 "Bob"
  *     > Running as user: Alice
  *     > 1: Hello, Bob!
  *     > 2: Hello, Bob!
  *
  * 2.  Using optional parameters (`--times` and `--descending`):
- *     $ ./clap_playground --user Bob greet --range 5..8 --times 2 --descending World
+ *     $ ./clah_playground --user Bob greet --range 5..8 --times 2 --descending World
  *     > Running as user: Bob
  *     > 7: Hello, World!
  *     > 6: Hello, World!
@@ -39,7 +39,7 @@
  * 3.  Providing multiple names (positional and extra arguments):
  *     The first name is a required positional argument. Subsequent names are captured
  *     as extra arguments.
- *     $ ./clap_playground --user David greet --range 0..1 Alice Bob Charlie
+ *     $ ./clah_playground --user David greet --range 0..1 Alice Bob Charlie
  *     > Running as user: David
  *     > 0: Hello, Alice!
  *     > 0: Hello, Bob!
@@ -50,14 +50,14 @@
  * This command demonstrates how global options affect different parts of the application.
  *
  * 1.  Basic usage:
- *     $ ./clap_playground --user Eve config
+ *     $ ./clah_playground --user Eve config
  *     > Hi user: Eve
  *     > Configuration:
  *     >   Verbose mode: false
  *     >   Running as user: Eve
  *
  * 2.  With the global `--verbose` flag:
- *     $ ./clap_playground --user Frank --verbose config
+ *     $ ./clah_playground --user Frank --verbose config
  *     > Hi user: Frank
  *     > Configuration:
  *     >   Verbose mode: true
@@ -65,21 +65,21 @@
  *
  * @note: The flags are binding to last typed subcommand, which means:
  * The line below is correct:
- * $ ./clap_playground --user Alice greet --range 1..3 "Bob"
+ * $ ./clah_playground --user Alice greet --range 1..3 "Bob"
  * The line below is incorrect:
- * $ ./clap_playground --user Alice --range 1..3 greet "Bob"
+ * $ ./clah_playground --user Alice --range 1..3 greet "Bob"
  *
  * Global flags are an exception and can be types anywhere.
  */
 #include <base/int_conv.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <printer/stream_printer.hpp>
 
 #include <iostream>
 #include <string>
 
-void showConfig(const clap::ParsingResult& result) {
+void showConfig(const clah::ParsingResult& result) {
 	std::cout << "Configuration:\n";
 	std::cout << "  Verbose mode: " << std::boolalpha << result.isFlag("verbose") << "\n";
 	if (auto user = result.getValue<std::string>("user"))
@@ -91,7 +91,7 @@ void showConfig(const clap::ParsingResult& result) {
 void greet(i64 n, const std::string& name) { std::cout << n << ": Hello, " << name << "!\n"; }
 
 // Just a helper to avoid duplication.
-void multiGreeter(const clap::ParsingResult& result) {
+void multiGreeter(const clah::ParsingResult& result) {
 	if (result.isFlag("verbose")) std::cout << "Verbose mode is on for 'greet'.\n";
 
 	std::vector<std::string> names;
@@ -99,7 +99,7 @@ void multiGreeter(const clap::ParsingResult& result) {
 	for (usize i = 0; i < result.getExtraParameterCount(); ++i)
 		names.push_back(result.getExtra<std::string>(i).value());
 
-	clap::RangeParser::Range range = *result.getValue<clap::RangeParser::Range>("range");
+	clah::RangeParser::Range range = *result.getValue<clah::RangeParser::Range>("range");
 	auto [begin, end]              = range;
 	i64 n                          = result.getValue<i64>("times").copyValueOr(1);
 
@@ -114,10 +114,10 @@ void multiGreeter(const clap::ParsingResult& result) {
 	std::cout << '\n';
 }
 
-clap::Clap getClapForPlayground() {
-	return clap::Clap("clap_playground", "A cool cli app to demonstrate Clap.")
-	    .setDefaultValueParser(clap::StringParser::make("extra_names"))
-	    .setPreHandler([](const clap::ParsingResult& result) {
+clah::Clah getClahForPlayground() {
+	return clah::Clah("clah_playground", "A cool cli app to demonstrate Clah.")
+	    .setDefaultValueParser(clah::StringParser::make("extra_names"))
+	    .setPreHandler([](const clah::ParsingResult& result) {
 			std::cout << "This is a function which get's invoked before all other handlers. It may "
 						 "be usefull to configure some global state like lexer options.\n";
 			if (result.getValue<std::string>("user").has_value())
@@ -127,34 +127,34 @@ clap::Clap getClapForPlayground() {
 				std::cout << "Hi default user\n";
 		})
 	    .add(  // Add a global parameter (visible in all subcommands).
-			clap::ParamBuilder::ofFlag()
+			clah::ParamBuilder::ofFlag()
 				.addShortName('v')
 				.addLongName("verbose")
 				.addShortDesc("Enable verbose output for all commands.")
 				.build()
 		)
-	    .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+	    .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 	             .addLongName("user")
 	             .addShortDesc("Run command as a specific user.")
 	             .required()
 	             .build())
 	    .addSubcommand(                                           // `playground greet` subcommand.
-			clap::Clap("greet", "Greets one or more people.")
-				.addPositional(clap::StringParser::make("name"))  // Positional argument.
-				.add(clap::ParamBuilder::ofValue(clap::RangeParser::make())
+			clah::Clah("greet", "Greets one or more people.")
+				.addPositional(clah::StringParser::make("name"))  // Positional argument.
+				.add(clah::ParamBuilder::ofValue(clah::RangeParser::make())
 	                     .addShortName('r')
 	                     .addLongName("range")
 	                     .addShortDesc("Range of values to greet.")
 	                     .required()
 	                     .build())
 				.add(  // Optional parameter.
-					clap::ParamBuilder::ofValue(clap::IntParser::make())
+					clah::ParamBuilder::ofValue(clah::IntParser::make())
 						.addShortName('n')
 						.addLongName("times")
 						.addShortDesc("Number of times to greet.")
 						.build()
 				)
-				.add(clap::ParamBuilder::ofFlag()
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addShortName('d')
 	                     .addLongName("descending")
 	                     .addShortDesc(
@@ -164,33 +164,33 @@ clap::Clap getClapForPlayground() {
 	                                  "explain this parameter with more\ndetail...")
 	                     .build())
 				// A handler for this subcommand, which will be invoked when
-	            // clap.execute(argc, argv) is executed.
-				.setHandler([](const clap::ParsingResult& result) -> int {
+	            // clah.execute(argc, argv) is executed.
+				.setHandler([](const clah::ParsingResult& result) -> int {
 					multiGreeter(result);
 					return 0;
 				})
 		)
-	    .addSubcommand(clap::Clap("config", "Displays the current configuration.")
-	                       .setHandler([](const clap::ParsingResult& result) -> int {
+	    .addSubcommand(clah::Clah("config", "Displays the current configuration.")
+	                       .setHandler([](const clah::ParsingResult& result) -> int {
 							   showConfig(result);
 							   return 0;
 						   }));
 }
 
 int main(int argc, const char** argv) {
-	auto clap = getClapForPlayground();
+	auto clah = getClahForPlayground();
 
 	std::cout << "------- USING CLAP VIA THE EXECUTE() FUNCTION ---------\n";
 	try {
 		// This parses the arguments and invokes the handlers of matched subcommands.
-		clap.execute(base::safeIntConv<usize>(argc), argv);
+		clah.execute(base::safeIntConv<usize>(argc), argv);
 	}
 	// The HelpException is caught in the execute function, so it's CLAPs role to print the help.
-	// catch (const clap::exceptions::HelpException& e) {
-	// 	std::cout << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
+	// catch (const clah::exceptions::HelpException& e) {
+	// 	std::cout << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 	// 	return 0;
 	// }
-	catch (const clap::exceptions::ClapException& e) {
+	catch (const clah::exceptions::ClahException& e) {
 		printer::StreamPrinter::print({
 			{ "playground: ", printer::Color::DEFAULT },
 			{ "error: ", printer::Color::RED },
@@ -204,19 +204,19 @@ int main(int argc, const char** argv) {
 
 	// Besides the execute function you can still use the old parse function.
 	std::cout << "\n------- USING CLAP VIA THE PARSE() FUNCTION LIKE SAME AS BEFORE ---------\n";
-	clap::ParsingResult result;
+	clah::ParsingResult result;
 	try {
-		result = clap.parse(base::safeIntConv<usize>(argc), argv);
-	} catch (clap::exceptions::ClapException& e) {
+		result = clah.parse(base::safeIntConv<usize>(argc), argv);
+	} catch (clah::exceptions::ClahException& e) {
 		printer::StreamPrinter::print({
 			{ "duckling: ", printer::Color::DEFAULT },
 			{ "error: ", printer::Color::RED },
 			{ e.what(), printer::Color::DEFAULT },
 		});
 		return 1;
-	} catch (clap::exceptions::HelpException& e) {
+	} catch (clah::exceptions::HelpException& e) {
 		// If using parse() you need to handle the HelpException yourself.
-		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		std::string help_message = clah::HelpMessageGenerator::generate(clah, e.parsing_result);
 		std::cout << help_message << '\n';
 		return 0;
 	}

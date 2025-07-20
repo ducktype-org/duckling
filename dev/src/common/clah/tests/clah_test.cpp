@@ -1,11 +1,11 @@
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <tester/tester.hpp>
 
 #include <array>
 
-class ClapTester: public tester::TestSuite {
+class ClahTester: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS ClapTester
+#define TESTER_CLASS ClahTester
 
 
 public:
@@ -35,7 +35,7 @@ public:
 
 private:
 	void simpleTest() {
-		auto       par = clap::Clap("prog");
+		auto       par = clah::Clah("prog");
 		std::array argv{ "./prog", "1", "test", "3" };
 		auto       res = par.parse(argv.size(), argv.begin());
 
@@ -52,9 +52,9 @@ private:
 	}
 
 	void positionalTest() {
-		auto par = clap::Clap("prog")
-		               .addPositional(clap::StringParser::make())
-		               .addPositional(clap::IntParser::make());
+		auto par = clah::Clah("prog")
+		               .addPositional(clah::StringParser::make())
+		               .addPositional(clah::IntParser::make());
 
 		std::array argv{ "prog", "test", "2" };
 		auto       res = par.parse(argv.size(), argv.begin());
@@ -70,9 +70,9 @@ private:
 	}
 
 	void namedTest() {
-		auto par = clap::Clap("prog")
-		               .setDefaultValueParser(clap::IntParser::make())
-		               .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		auto par = clah::Clah("prog")
+		               .setDefaultValueParser(clah::IntParser::make())
+		               .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 		                        .addShortName('n')
 		                        .addLongName("nnn")
 		                        .addShortDesc("Desc")
@@ -96,9 +96,9 @@ private:
 	}
 
 	void flagTest() {
-		auto par = clap::Clap("prog")
-		               .setDefaultValueParser(clap::IntParser::make())
-		               .add(clap::ParamBuilder::ofFlag()
+		auto par = clah::Clah("prog")
+		               .setDefaultValueParser(clah::IntParser::make())
+		               .add(clah::ParamBuilder::ofFlag()
 		                        .addShortName('f')
 		                        .addLongName("flag")
 		                        .addShortDesc("Desc")
@@ -126,11 +126,11 @@ private:
 
 	void multipleFlagsTest() {
 		auto par
-			= clap::Clap("prog")
-		          .setDefaultValueParser(clap::IntParser::make())
-		          .add(clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("Desc").build())
-		          .add(clap::ParamBuilder::ofFlag().addShortName('b').addShortDesc("Desc").build())
-		          .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+			= clah::Clah("prog")
+		          .setDefaultValueParser(clah::IntParser::make())
+		          .add(clah::ParamBuilder::ofFlag().addShortName('a').addShortDesc("Desc").build())
+		          .add(clah::ParamBuilder::ofFlag().addShortName('b').addShortDesc("Desc").build())
+		          .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 		                   .addShortName('c')
 		                   .addShortDesc("Desc")
 		                   .build());
@@ -147,54 +147,54 @@ private:
 	}
 
 	void weirdCases() {
-		auto       par = clap::Clap("prog");
+		auto       par = clah::Clah("prog");
 		std::array argv{ "./prog", "--" };
 
-		assertThrows<clap::exceptions::ExpectedParameterIdentifier>(
+		assertThrows<clah::exceptions::ExpectedParameterIdentifier>(
 			[&]() { par.parse(argv.size(), argv.data()); },
 			"Should throw ExpectedParameterIdentifier exception."
 		);
 	}
 
 	void noDefaultValueParser() {
-		auto clap = clap::Clap("prog")
-		                .addPositional(clap::IntParser::make())
+		auto clah = clah::Clah("prog")
+		                .addPositional(clah::IntParser::make())
 		                .setDefaultValueParser(nullptr);
-		ASSERT_EQUAL(true, nullptr == clap.getDefaultValueParser());  // Sketchy
+		ASSERT_EQUAL(true, nullptr == clah.getDefaultValueParser());  // Sketchy
 
 		std::array argv{ "./prog", "-123" };
-		auto       res = clap.parse(argv.size(), argv.begin());
+		auto       res = clah.parse(argv.size(), argv.begin());
 
 		ASSERT_EQUAL(0, res.getExtraParameterCount());
 		ASSERT_EQUAL(1, res.getPositionalParameterCount());
 		ASSERT_EQUAL(-123, res.getPositional<i64>(0));
 
 		std::array argv2{ "./prog", "-123", "1231", "test" };
-		assertThrows<clap::exceptions::NoDefaultValueParser>(
-			[&]() { clap.parse(argv2.size(), argv2.begin()); },
+		assertThrows<clah::exceptions::NoDefaultValueParser>(
+			[&]() { clah.parse(argv2.size(), argv2.begin()); },
 			"Should throw NoDefaultValueParser exception."
 		);
 	}
 
 	void escapingTest() {
-		auto clap = clap::Clap("prog").add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		auto clah = clah::Clah("prog").add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 		                                       .addShortName('f')
 		                                       .addShortDesc("test")
 		                                       .build());
 
 		std::array argv{ "./prog", "-f", "a \" b" };
-		auto       res = clap.parse(argv.size(), argv.begin());
+		auto       res = clah.parse(argv.size(), argv.begin());
 		ASSERT_EQUAL("a \" b", *res.getValue<std::string>('f'));
 	}
 
 	void subcommandBasicTest() {
-		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Clap("test", "A test command")
-				.add(clap::ParamBuilder::ofFlag().addShortName('f').addShortDesc("desc").build())
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("test", "A test command")
+				.add(clah::ParamBuilder::ofFlag().addShortName('f').addShortDesc("desc").build())
 		);
 
 		std::array argv{ "./prog", "test", "-f" };
-		auto       res = clap.parse(argv.size(), argv.data());
+		auto       res = clah.parse(argv.size(), argv.data());
 
 		ASSERT_EQUAL("test", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL("A test command", res.getMatchedCommand().value()->getDescription());
@@ -207,15 +207,15 @@ private:
 	}
 
 	void subcommandNestedTest() {
-		auto clap = clap::Clap("git").addSubcommand(
-			clap::Clap("remote", "Manage remotes")
-				.addSubcommand(clap::Clap("add", "Add a remote")
-		                           .addPositional(clap::StringParser::make("name"))
-		                           .addPositional(clap::StringParser::make("url")))
+		auto clah = clah::Clah("git").addSubcommand(
+			clah::Clah("remote", "Manage remotes")
+				.addSubcommand(clah::Clah("add", "Add a remote")
+		                           .addPositional(clah::StringParser::make("name"))
+		                           .addPositional(clah::StringParser::make("url")))
 		);
 
 		std::array argv{ "./git", "remote", "add", "origin", "http://git.com" };
-		auto       res = clap.parse(argv.size(), argv.data());
+		auto       res = clah.parse(argv.size(), argv.data());
 
 		ASSERT_EQUAL("add", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL(2, res.getPositionalParameterCount());
@@ -230,15 +230,15 @@ private:
 	}
 
 	void globalOptionsTest() {
-		auto clap
-			= clap::Clap("prog")
-		          .add(clap::ParamBuilder::ofFlag().addLongName("verbose").addShortDesc("desc").build(
+		auto clah
+			= clah::Clah("prog")
+		          .add(clah::ParamBuilder::ofFlag().addLongName("verbose").addShortDesc("desc").build(
 				  ))
-		          .addSubcommand(clap::Clap("upload", "Upload a file")
-		                             .addPositional(clap::StringParser::make("file")));
+		          .addSubcommand(clah::Clah("upload", "Upload a file")
+		                             .addPositional(clah::StringParser::make("file")));
 
 		std::array argv{ "./prog", "--verbose", "upload", "data.zip" };
-		auto       res = clap.parse(argv.size(), argv.data());
+		auto       res = clah.parse(argv.size(), argv.data());
 
 		ASSERT_EQUAL("upload", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL(true, res.isFlag("verbose"));
@@ -247,19 +247,19 @@ private:
 
 	void preHandlerAndHandlerExecutionOrder() {
 		std::vector<std::string> call_order;
-		auto                     clap = clap::Clap("prog")
-		                .setPreHandler([&](const clap::ParsingResult&) -> int {
+		auto                     clah = clah::Clah("prog")
+		                .setPreHandler([&](const clah::ParsingResult&) -> int {
 							call_order.emplace_back("pre_handler");
 							return 420;
 						})
-		                .addSubcommand(clap::Clap("cmd", "A command")
-		                                   .setHandler([&](const clap::ParsingResult&) -> int {
+		                .addSubcommand(clah::Clah("cmd", "A command")
+		                                   .setHandler([&](const clah::ParsingResult&) -> int {
 											   call_order.emplace_back("handler");
 											   return 123;
 										   }));
 
 		std::array argv{ "./prog", "cmd" };
-		int        exit_code = clap.execute(argv.size(), argv.data());
+		int        exit_code = clah.execute(argv.size(), argv.data());
 
 		ASSERT_EQUAL(123, exit_code);
 		ASSERT_EQUAL(2, call_order.size());
@@ -268,9 +268,9 @@ private:
 	}
 
 	void requiredParameterValidation() {
-		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Clap("login", "Log in")
-				.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("login", "Log in")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 		                 .addLongName("user")
 		                 .addShortDesc("desc")
 		                 .required()
@@ -279,13 +279,13 @@ private:
 
 		// Missing --user param.
 		std::array argv_bad{ "./prog", "login" };
-		assertThrows<clap::exceptions::MissingRequiredParameter>(
-			[&]() { clap.parse(argv_bad.size(), argv_bad.data()); },
-			"Clap did not find a missing required parameter."
+		assertThrows<clah::exceptions::MissingRequiredParameter>(
+			[&]() { clah.parse(argv_bad.size(), argv_bad.data()); },
+			"Clah did not find a missing required parameter."
 		);
 
 		std::array argv_ok{ "./prog", "login", "--user", "admin" };
-		auto       res = clap.parse(argv_ok.size(), argv_ok.data());
+		auto       res = clah.parse(argv_ok.size(), argv_ok.data());
 
 		const auto& path = res.getCommandPath();
 		ASSERT_EQUAL(2, path.size());
@@ -296,75 +296,75 @@ private:
 	}
 
 	void coexistingSubcommandsAndPositionals() {
-		assertThrows<clap::exceptions::CoexistingPositionalAndSubcommand>(
+		assertThrows<clah::exceptions::CoexistingPositionalAndSubcommand>(
 			[&]() {
-				auto clap = clap::Clap("prog").addSubcommand(
-					clap::Clap("test", "desc")
-						.addPositional(clap::IntParser::make())
-						.addSubcommand(clap::Clap("tests", "desc"))
+				auto clah = clah::Clah("prog").addSubcommand(
+					clah::Clah("test", "desc")
+						.addPositional(clah::IntParser::make())
+						.addSubcommand(clah::Clah("tests", "desc"))
 				);
 			},
-			"Clap did not find a coexisting subcommand and positional argument."
+			"Clah did not find a coexisting subcommand and positional argument."
 		);
 
-		assertThrows<clap::exceptions::CoexistingPositionalAndSubcommand>(
+		assertThrows<clah::exceptions::CoexistingPositionalAndSubcommand>(
 			[&]() {
-				auto clap = clap::Clap("prog").addSubcommand(
-					clap::Clap("test", "desc")
-						.addSubcommand(clap::Clap("tests", "desc"))
-						.addPositional(clap::IntParser::make())
+				auto clah = clah::Clah("prog").addSubcommand(
+					clah::Clah("test", "desc")
+						.addSubcommand(clah::Clah("tests", "desc"))
+						.addPositional(clah::IntParser::make())
 				);
 			},
-			"Clap did not find a coexisting subcommand and positional argument."
+			"Clah did not find a coexisting subcommand and positional argument."
 		);
 	}
 
 	void duplicateSubcommand() {
-		assertThrows<clap::exceptions::DuplicateSubcommand>(
+		assertThrows<clah::exceptions::DuplicateSubcommand>(
 			[&]() {
-				auto clap
-					= clap::Clap("prog")
+				auto clah
+					= clah::Clah("prog")
 			              .addSubcommand(
-							  clap::Clap("test", "desc").addPositional(clap::IntParser::make())
+							  clah::Clah("test", "desc").addPositional(clah::IntParser::make())
 						  )
 			              .addSubcommand(
-							  clap::Clap("test", "desc").addPositional(clap::IntParser::make())
+							  clah::Clah("test", "desc").addPositional(clah::IntParser::make())
 						  );
 			},
-			"Clap did not find a coexisting subcommand and positional argument."
+			"Clah did not find a coexisting subcommand and positional argument."
 		);
 	}
 
 	void executeReturnValueTest() {
-		auto clap = clap::Clap("prog").addSubcommand(
-			clap::Clap("test", "desc").setHandler([](const clap::ParsingResult&) { return 42; })
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("test", "desc").setHandler([](const clah::ParsingResult&) { return 42; })
 		);
 		std::array argv{ "./prog", "test" };
-		int        exit_code = clap.execute(argv.size(), argv.data());
+		int        exit_code = clah.execute(argv.size(), argv.data());
 		ASSERT_EQUAL(42, exit_code);
 	}
 
 	void conditionalParameterTest() {
-		auto clap
-			= clap::Clap("prog")
-		          .add(clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("desc").build())
-		          .add(clap::ParamBuilder::ofFlag()
+		auto clah
+			= clah::Clah("prog")
+		          .add(clah::ParamBuilder::ofFlag().addShortName('a').addShortDesc("desc").build())
+		          .add(clah::ParamBuilder::ofFlag()
 		                   .addShortName('b')
 		                   .addShortDesc("desc")
 		                   .conditional(
-							   [](const clap::ParsingResult& res) { return res.isFlag('a'); },
+							   [](const clah::ParsingResult& res) { return res.isFlag('a'); },
 							   "Flag -b requires flag -a"
 						   )
 		                   .build());
 		std::array argv1{ "./prog", "-b" };
-		assertThrows<clap::exceptions::MissingConditionalParameter>(
-			[&]() { clap.parse(argv1.size(), argv1.data()); },
-			"Clap did not find a missing conditional parameter."
+		assertThrows<clah::exceptions::MissingConditionalParameter>(
+			[&]() { clah.parse(argv1.size(), argv1.data()); },
+			"Clah did not find a missing conditional parameter."
 		);
 
 		std::array argv2{ "./prog", "-a", "-b" };
 
-		auto        res  = clap.parse(argv2.size(), argv2.data());
+		auto        res  = clah.parse(argv2.size(), argv2.data());
 		const auto& path = res.getCommandPath();
 		ASSERT_EQUAL(1, path.size());
 		ASSERT_EQUAL("prog", path[0]->getName());
@@ -374,47 +374,47 @@ private:
 	}
 
 	void mixedGlobalAndLocalParameters() {
-		auto clap
-			= clap::Clap("prog")
-		          .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		auto clah
+			= clah::Clah("prog")
+		          .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 		                   .addLongName("global")
 		                   .addShortDesc("desc")
 		                   .build())
-		          .addSubcommand(clap::Clap("cmd", "desc")
-		                             .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		          .addSubcommand(clah::Clah("cmd", "desc")
+		                             .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 		                                      .addLongName("local")
 		                                      .addShortDesc("desc")
 		                                      .build()));
 
 		std::array argv{ "./prog", "--global", "g_val", "cmd", "--local", "l_val" };
-		auto       res = clap.parse(argv.size(), argv.data());
+		auto       res = clah.parse(argv.size(), argv.data());
 
 		ASSERT_EQUAL("g_val", res.getValue<std::string>("global").value());
 		ASSERT_EQUAL("l_val", res.getValue<std::string>("local").value());
 
 		// Wrong order `--global` is not visible for the cmd subcommand.
 		std::array argv2{ "./prog", "cmd", "--global", "g_val", "--local", "l_val" };
-		assertThrows<clap::exceptions::InvalidParameterName>(
-			[&]() { clap.parse(argv2.size(), argv2.data()); },
-			"Clap did not find an invalid parameter name."
+		assertThrows<clah::exceptions::InvalidParameterName>(
+			[&]() { clah.parse(argv2.size(), argv2.data()); },
+			"Clah did not find an invalid parameter name."
 		);
 	}
 
 	void argumentParsingTest() {
-		auto clap1 = clap::Clap()
-		                 .add(clap::ParamBuilder::ofFlag()
+		auto clah1 = clah::Clah()
+		                 .add(clah::ParamBuilder::ofFlag()
 		                          .addShortName('v')
 		                          .addLongName("verbose")
 		                          .addShortDesc("desc")
 		                          .build())
-		                 .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                 .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 		                          .addLongName("config")
 		                          .addShortDesc("desc")
 		                          .required()
 		                          .build());
 
 		std::string args1 = "-v --config ~/.config/nvim/init.lua";
-		auto        res1  = clap1.parseArgs(args1);
+		auto        res1  = clah1.parseArgs(args1);
 
 		ASSERT_EQUAL("", res1.getFilePath());
 		ASSERT_EQUAL(args1, res1.getArgs());
@@ -423,18 +423,18 @@ private:
 		ASSERT_EQUAL("~/.config/nvim/init.lua", *res1.getValue<std::string>("config"));
 		ASSERT_EQUAL(0, res1.getExtraParameterCount());
 
-		auto clap2
-			= clap::Clap()
-		          .add(clap::ParamBuilder::ofFlag().addLongName("version").addShortDesc("").build())
+		auto clah2
+			= clah::Clah()
+		          .add(clah::ParamBuilder::ofFlag().addLongName("version").addShortDesc("").build())
 		          .addSubcommand(
-					  clap::Clap("remote", "Manage remotes")
-						  .add(clap::ParamBuilder::ofFlag().addShortName('v').addShortDesc("").build(
+					  clah::Clah("remote", "Manage remotes")
+						  .add(clah::ParamBuilder::ofFlag().addShortName('v').addShortDesc("").build(
 						  ))
-						  .addPositional(clap::StringParser::make("name"))
+						  .addPositional(clah::StringParser::make("name"))
 				  );
 
 		std::string args2 = "remote -v my-origin";
-		auto        res2  = clap2.parseArgs(args2);
+		auto        res2  = clah2.parseArgs(args2);
 		ASSERT_EQUAL("remote", res2.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL(true, res2.isFlag('v'));
 		ASSERT_EQUAL(false, res2.isFlag("version"));
@@ -442,4 +442,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/src/common/clap/tests/");
+TESTER_COMMON_MAIN("/src/common/clah/tests/");

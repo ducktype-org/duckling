@@ -7,7 +7,7 @@
 
 #include <base/variant.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <init/init.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
@@ -17,21 +17,21 @@
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
 
-	auto clap = clap::Clap("llvm_playground")
-	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
+	auto clah = clah::Clah("llvm_playground")
+	                .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
 	                         .addShortName('p')
 	                         .addShortDesc("Path to Duckling source root")
 	                         .required()
 	                         .build());
 
-	clap::ParsingResult options;
+	clah::ParsingResult options;
 
 	try {
-		options = clap.parse(usize(argc), argv);
-	} catch (clap::exceptions::HelpException& e) {
-		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
+		options = clah.parse(usize(argc), argv);
+	} catch (clah::exceptions::HelpException& e) {
+		std::cerr << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 		return 1;
-	} catch (clap::exceptions::ClapException& e) {
+	} catch (clah::exceptions::ClahException& e) {
 		std::cerr << e.what() << '\n';
 		return 1;
 	}

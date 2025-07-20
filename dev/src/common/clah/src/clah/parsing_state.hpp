@@ -4,11 +4,11 @@
 
 #include <string>
 
-namespace clap {
+namespace clah {
 	enum class NameType { EmptyName, ShortName, LongName };
 
 	/**
-	 * @brief A helper for the method clap::Clap::parse().
+	 * @brief A helper for the method clah::Clah::parse().
 	 * A class containing the parsing state of the command line arguments.
 	 */
 	class ParsingState {
@@ -34,20 +34,20 @@ namespace clap {
 		 * @brief Tries to perform parsing of a positional argument with a parser.
 		 * @param parser The parser to be used.
 		 */
-		void parsePositional(const clap::ValueParser& parser);
+		void parsePositional(const clah::ValueParser& parser);
 
 		/**
 		 * @brief Tires to perform parsing of an extra argument with a parser.
 		 * @param parser The parser to be used.
 		 */
-		void parseExtra(const clap::ValueParser& parser);
+		void parseExtra(const clah::ValueParser& parser);
 
 		/**
 		 * @brief Tries to perform parsing of a named parameter. It could be a flag or a value
 		 * parameter.
 		 * @param parameters All the available parameters.
 		 */
-		void parseParameter(const std::vector<clap::Parameter>& params);
+		void parseParameter(const std::vector<clah::Parameter>& params);
 
 		/**
 		 * @brief Peeks at the token starting from `parsing_position` to the first space and returns
@@ -82,7 +82,7 @@ namespace clap {
 		 * @param name_type Type of the parsed name.
 		 */
 		bool findParameterAndParse(
-			const std::vector<clap::Parameter>& parameters,
+			const std::vector<clah::Parameter>& parameters,
 			const std::string&                  param_name,
 			NameType                            name_type
 		);
@@ -92,7 +92,7 @@ namespace clap {
 		 * @param parameter The parameter with mathing name.
 		 * @param name The name of the parameter.
 		 */
-		void parseWithParameter(const clap::Parameter& parameter, const std::string& name);
+		void parseWithParameter(const clah::Parameter& parameter, const std::string& name);
 
 		/**
 		 * @brief Tries to perform parsing with a value parser. Returns an empty optional if no more
@@ -100,6 +100,6 @@ namespace clap {
 		 * @param parser The parser to be used.
 		 * @return An optionally parsed value.
 		 */
-		base::Optional<clap::ParsedValue> parseValueWithParser(const clap::ValueParser& parser);
+		base::Optional<clah::ParsedValue> parseValueWithParser(const clah::ValueParser& parser);
 	};
 }

@@ -17,8 +17,8 @@
 #include <unordered_set>
 #include <vector>
 
-namespace clap {
-	class Clap;  // Forward declaration.
+namespace clah {
+	class Clah;  // Forward declaration.
 
 	struct ParsedValue final {
 		std::any    value;
@@ -26,11 +26,11 @@ namespace clap {
 	};
 
 	/**
-	 * This class contains data parsed by clap::Clap. If obtained via Clap::parse() it holds valid
-	 * and correct data in terms of clap::Clap specification. It is also possible to obtain it
+	 * This class contains data parsed by clah::Clah. If obtained via Clah::parse() it holds valid
+	 * and correct data in terms of clah::Clah specification. It is also possible to obtain it
 	 * through some exceptions, like the HelpException, to gain some context during help message
 	 * generation. In this case, you can normally access its data, but you cannot depend on
-	 * clap::Clap's specification - user could have passed anything and a help flag.
+	 * clah::Clah's specification - user could have passed anything and a help flag.
 	 *
 	 * Throughout the docs, "X was passed" is meant to suggest the user has typed "X" into the
 	 * command-line arguments of the program.
@@ -65,13 +65,13 @@ namespace clap {
 
 		/**
 		 * Inserts a flag to a collection of flags.
-		 * @param parameter clap::Parameter flag object that should be inserted.
+		 * @param parameter clah::Parameter flag object that should be inserted.
 		 */
 		void insertFlag(const Parameter& parameter);
 
 		/**
 		 * Inserts a value linked to the parameter.
-		 * @param parameter clap::Parameter object identifying the value.
+		 * @param parameter clah::Parameter object identifying the value.
 		 * @param value A value parsed by the parser.
 		 */
 		void insertParameterValue(const Parameter& parameter, const ParsedValue& value);
@@ -89,12 +89,12 @@ namespace clap {
 		void insertExtra(const ParsedValue& value);
 
 		/**
-		 * @brief Adds a command (represented by the Clap class) to the matched command list and
+		 * @brief Adds a command (represented by the Clah class) to the matched command list and
 		 * updates the current matched command.
 		 * Invoked when taking a step down the command tree, when a subcommand was invoked.
 		 * @param command The matched command.
 		 */
-		void addToCommandList(CRef<Clap> command);
+		void addToCommandList(CRef<Clah> command);
 
 		/**
 		 * The main way to retrieve a value of a parameter from ParsingResult.
@@ -124,7 +124,7 @@ namespace clap {
 
 		/**
 		 * An accessor the the positional value at a position. Since positional values are required,
-		 * this method never fails so long the position is compliant with the clap::Clap
+		 * this method never fails so long the position is compliant with the clah::Clah
 		 * specification used to create this object.
 		 * @tparam T Type of the value.
 		 * @param position Index of the positional value.
@@ -209,14 +209,14 @@ namespace clap {
 		 * @return Command which was run.
 		 */
 		[[nodiscard]]
-		base::Optional<CRef<Clap>> getMatchedCommand() const;
+		base::Optional<CRef<Clah>> getMatchedCommand() const;
 
 		/**
 		 * Returns the full path of commands which lead to the matched commands.
 		 * @return A vector of commands on the path.
 		 */
 		[[nodiscard]]
-		const std::vector<CRef<Clap>>& getCommandPath() const;
+		const std::vector<CRef<Clah>>& getCommandPath() const;
 
 	private:
 		/**
@@ -252,13 +252,13 @@ namespace clap {
 		 * @brief A command which is matched during parsing.
 		 * Gets changed when stepping down the subcommand tree.
 		 */
-		base::Optional<CRef<Clap>> command{};
+		base::Optional<CRef<Clah>> command{};
 
 		/**
 		 * @brief A list of commands created during parsing.
 		 * Represents a path in the command tree leading to the `command`.
 		 */
-		std::vector<CRef<Clap>> command_list{};
+		std::vector<CRef<Clah>> command_list{};
 
 		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;

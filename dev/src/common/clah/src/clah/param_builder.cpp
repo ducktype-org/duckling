@@ -9,7 +9,7 @@
 
 #include <base/variant.hpp>
 
-namespace clap {
+namespace clah {
 
 	ParamBuilder ParamBuilder::ofValue(Box<ValueParser> value_parser) {
 		ParamBuilder builder;
@@ -26,7 +26,7 @@ namespace clap {
 
 	ParamBuilder& ParamBuilder::addLongName(base::RawView new_long_name) {
 		if (new_long_name.size() <= 1)
-			throw exceptions::ClapException(base::strConcat(
+			throw exceptions::ClahException(base::strConcat(
 				"Name should be longer than 1 character, but received \"", new_long_name, "\"."
 			));
 

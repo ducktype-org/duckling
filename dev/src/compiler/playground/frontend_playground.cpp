@@ -1,24 +1,24 @@
 #include <frontend/module_tree/module_tree.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 
 #include <iostream>
 
 int main(int argc, const char* argv[]) {
-	auto clap = clap::Clap("frontend_playground")
-	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
+	auto clah = clah::Clah("frontend_playground")
+	                .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
 	                         .addShortName('p')
 	                         .addShortDesc("Path to Duckling source root")
 	                         .required()
 	                         .build());
 
-	clap::ParsingResult options;
+	clah::ParsingResult options;
 	try {
-		options = clap.parse(static_cast<usize>(argc), argv);
-	} catch (clap::exceptions::HelpException& e) {
-		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
+		options = clah.parse(static_cast<usize>(argc), argv);
+	} catch (clah::exceptions::HelpException& e) {
+		std::cerr << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 		return 1;
-	} catch (clap::exceptions::ClapException& e) {
+	} catch (clah::exceptions::ClahException& e) {
 		std::cerr << e.what() << '\n';
 		return 1;
 	}

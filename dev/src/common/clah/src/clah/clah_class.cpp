@@ -1,9 +1,9 @@
 /**
- * @file clap_class.cpp
+ * @file clah_class.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include "clap.hpp"
+#include "clah.hpp"
 
 #include <base/box.hpp>
 #include <base/optional.hpp>
@@ -42,14 +42,14 @@ namespace {
 	}
 }
 
-namespace clap {
+namespace clah {
 
-	Clap::Clap(): name(""), description(""), default_value_parser(StringParser::make()) {
+	Clah::Clah(): name(""), description(""), default_value_parser(StringParser::make()) {
 		// A --help flag is added by default.
 		addHelpFlag();
 	}
 
-	Clap::Clap(std::string name, std::string description):
+	Clah::Clah(std::string name, std::string description):
 		  name(std::move(name)),
 		  description(std::move(description)),
 		  default_value_parser(StringParser::make()) {
@@ -57,47 +57,47 @@ namespace clap {
 		addHelpFlag();
 	}
 
-	Clap&& Clap::add(Parameter&& param) {
+	Clah&& Clah::add(Parameter&& param) {
 		parameters.push_back(std::move(param));
 		return std::move(*this);
 	}
 
-	Clap&& Clap::addPositional(Box<ValueParser> parser) {
-		if (!subcommands.empty()) throw clap::exceptions::CoexistingPositionalAndSubcommand(name);
+	Clah&& Clah::addPositional(Box<ValueParser> parser) {
+		if (!subcommands.empty()) throw clah::exceptions::CoexistingPositionalAndSubcommand(name);
 		positional_parameters.push_back(std::move(parser));
 		return std::move(*this);
 	}
 
-	Clap&& Clap::addSubcommand(Clap&& sub_command) {
+	Clah&& Clah::addSubcommand(Clah&& sub_command) {
 		if (!positional_parameters.empty())
-			throw clap::exceptions::CoexistingPositionalAndSubcommand(name);
-		if (sub_command.getName() == "") throw clap::exceptions::UnnamedSubcommand(name);
+			throw clah::exceptions::CoexistingPositionalAndSubcommand(name);
+		if (sub_command.getName() == "") throw clah::exceptions::UnnamedSubcommand(name);
 
 		// Check for duplicates.
 		for (const auto& subcmd: subcommands)
 			if (subcmd.getName() == sub_command.getName())
-				throw clap::exceptions::DuplicateSubcommand(sub_command.getName(), name);
+				throw clah::exceptions::DuplicateSubcommand(sub_command.getName(), name);
 
 		subcommands.emplace_back(std::move(sub_command));
 		return std::move(*this);
 	}
 
-	Clap&& Clap::setHandler(Handler handl) {
+	Clah&& Clah::setHandler(Handler handl) {
 		handler = std::move(handl);
 		return std::move(*this);
 	}
 
-	Clap&& Clap::setPreHandler(PreHandler handler) {
+	Clah&& Clah::setPreHandler(PreHandler handler) {
 		pre_handler = std::move(handler);
 		return std::move(*this);
 	}
 
-	Clap&& Clap::setDefaultValueParser(MBox<ValueParser> parser) {
+	Clah&& Clah::setDefaultValueParser(MBox<ValueParser> parser) {
 		default_value_parser = std::move(parser);
 		return std::move(*this);
 	}
 
-	Clap&& Clap::addHelpFlag() {
+	Clah&& Clah::addHelpFlag() {
 		return add(ParamBuilder::ofFlag()
 		               .addShortName('h')
 		               .addLongName("help")
@@ -105,34 +105,34 @@ namespace clap {
 		               .build());
 	}
 
-	const std::string& Clap::getName() const { return name; }
+	const std::string& Clah::getName() const { return name; }
 
-	const std::string& Clap::getDescription() const { return description; }
+	const std::string& Clah::getDescription() const { return description; }
 
-	MCRef<ValueParser> Clap::getDefaultValueParser() const { return default_value_parser.ref(); }
+	MCRef<ValueParser> Clah::getDefaultValueParser() const { return default_value_parser.ref(); }
 
-	const Clap::PreHandler& Clap::getPreHandler() const { return pre_handler; }
+	const Clah::PreHandler& Clah::getPreHandler() const { return pre_handler; }
 
-	const Clap::Handler& Clap::getHandler() const { return handler; }
+	const Clah::Handler& Clah::getHandler() const { return handler; }
 
-	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
+	const std::vector<Parameter>& Clah::getParameters() const { return parameters; }
 
-	const std::vector<Box<ValueParser>>& Clap::getPositionalParameters() const {
+	const std::vector<Box<ValueParser>>& Clah::getPositionalParameters() const {
 		return positional_parameters;
 	}
 
-	const std::vector<Clap>& Clap::getSubcommands() const { return subcommands; }
+	const std::vector<Clah>& Clah::getSubcommands() const { return subcommands; }
 
-	base::Optional<CRef<Clap>> Clap::getSubcommand(const std::string& subcommand_name) const {
+	base::Optional<CRef<Clah>> Clah::getSubcommand(const std::string& subcommand_name) const {
 		for (const auto& cmd: subcommands)
 			if (cmd.getName() == subcommand_name) return &cmd;
 		return {};
 	}
 
-	ParsingResult Clap::parse(usize argc, const char* const* argv) {
+	ParsingResult Clah::parse(usize argc, const char* const* argv) {
 		CORE_ASSERT(
 			argc > 0,
-			"clap assumes argc is at least 1, as it is the name of the program from the parameters."
+			"clah assumes argc is at least 1, as it is the name of the program from the parameters."
 		);
 
 		// Initialize the parsing state.
@@ -144,14 +144,14 @@ namespace clap {
 		return std::move(st.result);
 	}
 
-	ParsingResult Clap::parseArgs(const std::string& args) {
+	ParsingResult Clah::parseArgs(const std::string& args) {
 		ParsingState st(args);
 		parse(st);
 		validateParsing(st.result);
 		return std::move(st.result);
 	}
 
-	void Clap::parse(ParsingState& st) const {
+	void Clah::parse(ParsingState& st) const {
 		// Add `this` command to the result path.
 		st.result.addToCommandList(this);
 
@@ -189,7 +189,7 @@ namespace clap {
 		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 	}
 
-	int Clap::execute(usize argc, const char* const* argv) {
+	int Clah::execute(usize argc, const char* const* argv) {
 		try {
 			auto parsing_result = parse(argc, argv);
 
@@ -199,7 +199,7 @@ namespace clap {
 			const auto& maybe_command = parsing_result.getMatchedCommand();
 			if_opt_some(maybe_command, command) {
 				if (!command->getSubcommands().empty())
-					throw clap::exceptions::SubcommandNotSpecified(command->getName());
+					throw clah::exceptions::SubcommandNotSpecified(command->getName());
 				const auto& handler = command->getHandler();
 				if (handler)
 					return handler(parsing_result);
@@ -207,15 +207,15 @@ namespace clap {
 					throw exceptions::NoHandlerSpecified(command->getName());
 			}
 
-			throw exceptions::ClapException("None of the commands matched!");
+			throw exceptions::ClahException("None of the commands matched!");
 		} catch (const exceptions::HelpException& e) {
-			std::cout << clap::HelpMessageGenerator::generate(*this, e.parsing_result);
+			std::cout << clah::HelpMessageGenerator::generate(*this, e.parsing_result);
 			return 0;
 		} catch (const exceptions::SuccessExitException& e) {
 			return 0;
-		} catch (const clap::exceptions::ClapException& e) {
+		} catch (const clah::exceptions::ClahException& e) {
 			printer::StreamPrinter::print({
-				{ "[Clap error]: ", printer::Color::RED },
+				{ "[Clah error]: ", printer::Color::RED },
 				{ e.what(), printer::Color::DEFAULT },
 				{ "\n", printer::Color::DEFAULT },
 				{ "Use \"", printer::Color::DEFAULT },
@@ -226,11 +226,11 @@ namespace clap {
 		}
 	}
 
-	void Clap::validateParsing(ParsingResult& result) const {
+	void Clah::validateParsing(ParsingResult& result) const {
 		usize num_positional_args = result.getPositionalParameterCount();
 		auto  maybe_command       = result.getMatchedCommand();
 		if (!maybe_command.has_value())
-			throw clap::exceptions::ClapException("No command matched!");
+			throw clah::exceptions::ClahException("No command matched!");
 		auto command = maybe_command.value();
 
 		if (num_positional_args < command->getPositionalParameters().size()) {
@@ -244,7 +244,7 @@ namespace clap {
 			for (auto& param: params) {
 				auto maybe_param_name = param.getParameterName();
 				if (!maybe_param_name.has_value())
-					throw clap::exceptions::ClapException("Parameter has no name!");
+					throw clah::exceptions::ClahException("Parameter has no name!");
 
 				variant_match(param.getParameterNecessity()) {
 					variant_case(Required, _) {
@@ -271,4 +271,4 @@ namespace clap {
 		// compare it with this.
 		if (command.get() != this) validate_parameters(getParameters());
 	}
-}  // clap
+}  // clah

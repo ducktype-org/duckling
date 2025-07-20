@@ -1,9 +1,9 @@
 /**
- * @file clap_class.hpp
+ * @file clah_class.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
- * @brief This is a declaration of a class clap::Clap
+ * @brief This is a declaration of a class clah::Clah
  * with some template definitions.
- * @example clap_example_cat.cpp
+ * @example clah_example_cat.cpp
  */
 
 #pragma once
@@ -19,15 +19,15 @@
 #include <string>
 #include <vector>
 
-namespace clap {
+namespace clah {
 	/**
-	 * @brief Command-line Argument Parser.
+	 * @brief Command-line Argument Handler.
 	 *
-	 * Use clap::ParamBuilder to construct clap::Parameter.
+	 * Use clah::ParamBuilder to construct clah::Parameter.
 	 *
-	 * This class is the place to specify the command-line input for your program. Clap's
+	 * This class is the place to specify the command-line input for your program. Clah's
 	 * specification consists of:
-	 * 	* named parameters and flags (built with clap::ParamBuilder)
+	 * 	* named parameters and flags (built with clah::ParamBuilder)
 	 * 	* positional arguments (Always required, indexed from 0)
 	 * 	* extra arguments, if default value parser is not set to nullptr.
 	 * 	* handlers, functions to be run when a specific command is invoked.
@@ -37,51 +37,51 @@ namespace clap {
 	 * After specifying the above you can perform parsing with parse() method or
 	 * use the execute() function to immediately perform the execution via the handlers.
 	 *
-	 * Refer to the clap docs for more complete example.
+	 * Refer to the clah docs and clah playground for more complete example.
 	 */
-	class Clap final {
+	class Clah final {
 	public:
 		using PreHandler = std::function<void(const ParsingResult&)>;
 		using Handler    = std::function<int(const ParsingResult&)>;
 
 
-		Clap();
-		Clap(std::string name, std::string description = "");
+		Clah();
+		Clah(std::string name, std::string description = "");
 
-		// Clap is move-only
-		Clap(Clap& other)                      = delete;
-		Clap& operator=(Clap& other) noexcept  = delete;
-		Clap(Clap&& other) noexcept            = default;
-		Clap& operator=(Clap&& other) noexcept = default;
+		// Clah is move-only
+		Clah(Clah& other)                      = delete;
+		Clah& operator=(Clah& other) noexcept  = delete;
+		Clah(Clah&& other) noexcept            = default;
+		Clah& operator=(Clah&& other) noexcept = default;
 
 
 		/**
 		 * @brief Adds a named parameter to the command.
-		 * @param parameter A parameter constructed with clap::ParamBuilder.
+		 * @param parameter A parameter constructed with clah::ParamBuilder.
 		 * @return A reference to self.
 		 */
-		Clap&& add(Parameter&& parameter);
+		Clah&& add(Parameter&& parameter);
 
 		/**
-		 * @brief Adds a positional parameter without a name to the Clap.
-		 * @param parameter value parser created like: clap::StringParser::make().
+		 * @brief Adds a positional parameter without a name to the Clah.
+		 * @param parameter value parser created like: clah::StringParser::make().
 		 * @return A reference to self.
 		 */
-		Clap&& addPositional(Box<ValueParser> parser);
+		Clah&& addPositional(Box<ValueParser> parser);
 
 		/**
 		 * @brief Adds a subcommand to this command.
 		 * @param sub_command A created sub command
 		 * @return A reference to self.
 		 */
-		Clap&& addSubcommand(Clap&& sub_command);
+		Clah&& addSubcommand(Clah&& sub_command);
 
 		/**
 		 * Sets a handler function to be run when this command is invoked
 		 * @param handler The function to run.
 		 * @return A reference to self.
 		 */
-		Clap&& setHandler(Handler handler);
+		Clah&& setHandler(Handler handler);
 
 		/**
 		 * @brief Sets a runner which is run once, before all other handlers.
@@ -90,14 +90,14 @@ namespace clap {
 		 * @param pre_handler The function to run.
 		 * @return A reference to self.
 		 */
-		Clap&& setPreHandler(PreHandler pre_handler);
+		Clah&& setPreHandler(PreHandler pre_handler);
 
 		/**
 		 * @brief Sets the default value parser for the command. Might be a nullptr.
 		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
-		Clap&& setDefaultValueParser(MBox<ValueParser> parser);
+		Clah&& setDefaultValueParser(MBox<ValueParser> parser);
 
 
 		/**
@@ -114,7 +114,7 @@ namespace clap {
 
 		/**
 		 * @brief Returns a default value parser is used to parse values, that are not directly
-		 * specified in the Clap's specification.
+		 * specified in the Clah's specification.
 		 * @return A pointer to the parser. Might be nullptr.
 		 */
 		[[nodiscard]]
@@ -130,7 +130,7 @@ namespace clap {
 
 		/**
 		 * Returns a prehandler for this command.
-		 * Can only be invoked in the clap command tree root.
+		 * Can only be invoked in the clah command tree root.
 		 * Which is a function run before all other handlers.
 		 * @return Return the prehandler function for this command.
 		 */
@@ -138,7 +138,7 @@ namespace clap {
 		const PreHandler& getPreHandler() const;
 
 		/**
-		 * Named parameters are built with clap::ParamBuilder. They are addressed with
+		 * Named parameters are built with clah::ParamBuilder. They are addressed with
 		 * ``-${SHORT_NAME}`` or ``--${LONG_NAME}``.
 		 * @return A list of named parameters.
 		 */
@@ -156,14 +156,14 @@ namespace clap {
 		 * @return A list of subcommands for this command.
 		 */
 		[[nodiscard]]
-		const std::vector<Clap>& getSubcommands() const;
+		const std::vector<Clah>& getSubcommands() const;
 
 		/**
 		 * @return A subcommand with the specified name or and empty optional if the command doesn't
 		 * exist.
 		 */
 		[[nodiscard]]
-		base::Optional<CRef<Clap>> getSubcommand(const std::string& subcommand_name) const;
+		base::Optional<CRef<Clah>> getSubcommand(const std::string& subcommand_name) const;
 
 		/**
 		 * @brief Performs the parsing. Returns the parsing result.
@@ -181,7 +181,7 @@ namespace clap {
 		/**
 		 * @brief Performs the parsing on a string of arguments. Program name is expected to NOT
 		 * exist. Usefull when using CLAP for other things than command line argument parsing.
-		 * For example usage see the `argumentParsingTest()` in `clap_test.hpp`.
+		 * For example usage see the `argumentParsingTest()` in `clah_test.hpp`.
 		 *
 		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
 		 * by this function nd have to be handled by the user.
@@ -210,10 +210,10 @@ namespace clap {
 	private:
 		/**
 		 * @brief Adds a standard help flag functionality.
-		 * If flag is passed raises clap::exceptions::HelpException.
+		 * If flag is passed raises clah::exceptions::HelpException.
 		 * @return A reference to self.
 		 */
-		Clap&& addHelpFlag();
+		Clah&& addHelpFlag();
 
 		/**
 		 * @brief Internal and recursive parsing function for parsing subcommands.
@@ -225,7 +225,7 @@ namespace clap {
 		void parse(ParsingState& state) const;
 
 		/**
-		 * Validates the result accordingly to the Clap's specification, invokes
+		 * Validates the result accordingly to the Clah's specification, invokes
 		 * conditionals' conditions, etc.
 		 * @param result ParsingResult which holds the parsed data.
 		 */
@@ -261,8 +261,8 @@ namespace clap {
 		std::vector<Box<ValueParser>> positional_parameters;
 
 		/**
-		 * @brief A list of subcommands (sub-claps) for this command.
+		 * @brief A list of subcommands (sub-clahs) for this command.
 		 */
-		std::vector<Clap> subcommands;
+		std::vector<Clah> subcommands;
 	};
-}  // clap
+}  // clah

@@ -3,7 +3,7 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 
 #include <base64.hpp>
 
@@ -237,27 +237,27 @@ void showVersion() {
 	std::cout << "DucklingLS daemon version 0.0.\n";
 }
 
-clap::Clap getLspDaemonCLI() {
-	return clap::Clap("lsp_daemon", "The Duckling Language Server Protocol daemon.")
-	    .add(clap::ParamBuilder::ofFlag()
+clah::Clah getLspDaemonCLI() {
+	return clah::Clah("lsp_daemon", "The Duckling Language Server Protocol daemon.")
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Show version information and exit")
 	             .build())
-	    .setPreHandler([](const clap::ParsingResult& options) {
+	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
-				throw clap::exceptions::SuccessExitException(options);
+				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
-	    .addSubcommand(clap::Clap("start", "Starts the LSP server on a given port")
-	                       .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+	    .addSubcommand(clah::Clah("start", "Starts the LSP server on a given port")
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("port"))
 	                                .addShortName('p')
 	                                .addLongName("port")
 	                                .addShortDesc("The port for the server to listen on.")
 	                                .required()
 	                                .build())
-	                       .setHandler([](const clap::ParsingResult& options) {
+	                       .setHandler([](const clah::ParsingResult& options) {
 							   auto port = options.getValue<i64>("port").value();
 							   server(i32(port));
 							   return 0;
@@ -279,11 +279,11 @@ clap::Clap getLspDaemonCLI() {
  */
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
-	auto clap = getLspDaemonCLI();
+	auto clah = getLspDaemonCLI();
 
 	try {
 		// Parse the command-line arguments
-		return clap.execute(base::safeIntConv<usize>(argc), argv);
+		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::RED },

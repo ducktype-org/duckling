@@ -20,7 +20,7 @@ namespace {
 
 		// if an argv[i] contains a white space, then it must have been added with quotes
 		for (usize i = 1; i < argc; i++) {
-			CORE_ASSERT(argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
+			CORE_ASSERT(argv[i] != nullptr, "Clah received null pointer as one of argv arguments.");
 
 			bool has_whitespace = false;
 			auto arg            = std::string(argv[i]);
@@ -49,7 +49,7 @@ namespace {
 	}
 }
 
-namespace clap {
+namespace clah {
 	ParsingState::ParsingState(const std::string& args): args(args), result("", args) {
 		skipWhitespace(parsing_position, args);
 	}
@@ -62,45 +62,45 @@ namespace clap {
 		std::string program_name = argv[0];
 		if (program_name.starts_with("./")) program_name = program_name.substr(2);
 
-		result = clap::ParsingResult(program_name, args);
+		result = clah::ParsingResult(program_name, args);
 	}
 
-	void ParsingState::parsePositional(const clap::ValueParser& parser) {
+	void ParsingState::parsePositional(const clah::ValueParser& parser) {
 		match_optional(parseValueWithParser(parser)) {
 			opt_some(value) result.insertPositional(value);
-			opt_none throw clap::exceptions::ClapException(
+			opt_none throw clah::exceptions::ClahException(
 				"Cannot continue parsing... Please report this incident."
 			);
 		}
 	}
 
-	void ParsingState::parseExtra(const clap::ValueParser& parser) {
+	void ParsingState::parseExtra(const clah::ValueParser& parser) {
 		match_optional(parseValueWithParser(parser)) {
 			opt_some(value) result.insertExtra(value);
-			opt_none throw clap::exceptions::ClapException(
+			opt_none throw clah::exceptions::ClahException(
 				"Cannot continue parsing... Please report this incident."
 			);
 		}
 	}
 
-	void ParsingState::parseParameter(const std::vector<clap::Parameter>& params) {
+	void ParsingState::parseParameter(const std::vector<clah::Parameter>& params) {
 		auto [param_name, name_type] = parseName();
 		if (name_type == NameType::EmptyName)
-			throw clap::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
+			throw clah::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
 
 		if (name_type == NameType::LongName) {
 			if (!findParameterAndParse(params, param_name, name_type))
-				throw clap::exceptions::InvalidParameterName(param_name);
+				throw clah::exceptions::InvalidParameterName(param_name);
 		} else {
 			for (char c: param_name)
 				if (!findParameterAndParse(params, { c }, name_type))
-					throw clap::exceptions::InvalidParameterName(param_name);
+					throw clah::exceptions::InvalidParameterName(param_name);
 		}
 	}
 
 	std::string ParsingState::peekToken() {
 		if (!hasMoreArgs()) {
-			throw exceptions::ClapException(
+			throw exceptions::ClahException(
 				"Parser error: peekToken() called with no more arguments"
 			);
 		}
@@ -147,7 +147,7 @@ namespace clap {
 	}
 
 	bool ParsingState::findParameterAndParse(
-		const std::vector<clap::Parameter>& parameters,
+		const std::vector<clah::Parameter>& parameters,
 		const std::string&                  param_name,
 		NameType                            name_type
 	) {
@@ -170,27 +170,27 @@ namespace clap {
 		return false;
 	}
 
-	void ParsingState::parseWithParameter(const clap::Parameter& parameter, const std::string& name) {
+	void ParsingState::parseWithParameter(const clah::Parameter& parameter, const std::string& name) {
 		if (parameter.getValueParser() == nullptr) {
 			// then it's a flag
 			result.insertFlag(parameter);
 		} else {
 			// Throw if duplicated
-			if (result.hasParam(parameter)) throw clap::exceptions::DuplicatedParameter(name);
+			if (result.hasParam(parameter)) throw clah::exceptions::DuplicatedParameter(name);
 
 			match_optional(parseValueWithParser(*parameter.getValueParser())) {
 				opt_some(parsed) result.insertParameterValue(parameter, parsed);
-				opt_none throw clap::exceptions::ParameterRequiresValue(
+				opt_none throw clah::exceptions::ParameterRequiresValue(
 					name, parameter.getValueParser()->getTypeName()
 				);
 			}
 		}
 	}
 
-	base::Optional<clap::ParsedValue> ParsingState::parseValueWithParser(
-		const clap::ValueParser& parser
+	base::Optional<clah::ParsedValue> ParsingState::parseValueWithParser(
+		const clah::ValueParser& parser
 	) {
-		clap::ValueParsingResult parsed = parser.parse(parsing_position, args);
+		clah::ValueParsingResult parsed = parser.parse(parsing_position, args);
 		if (parsed.position > parsing_position) {
 			parsing_position = parsed.position;
 			skipWhitespace(parsing_position, args);

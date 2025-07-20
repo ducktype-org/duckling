@@ -11,13 +11,13 @@
 
 #include <filesystem>
 
-namespace clap::exceptions {
+namespace clah::exceptions {
 
 	/**
 	 * @brief Base struct for all the parsing-related exceptions.
 	 */
-	struct ClapException: public base::LogicError {
-		explicit ClapException(const std::string& message);
+	struct ClahException: public base::LogicError {
+		explicit ClahException(const std::string& message);
 	};
 
 	/**
@@ -44,7 +44,7 @@ namespace clap::exceptions {
 	/**
 	 * @brief Raised by value parsers when input is malformed.
 	 */
-	struct ValueParsingException: public ClapException {
+	struct ValueParsingException: public ClahException {
 		ValueParsingException(
 			base::RawView    type,
 			usize            start,
@@ -55,66 +55,66 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * @brief Raised by value parser clap::FileParser when a passed file does not exist.
+	 * @brief Raised by value parser clah::FileParser when a passed file does not exist.
 	 */
-	struct FileDoesNotExist: public ClapException {
+	struct FileDoesNotExist: public ClahException {
 		explicit FileDoesNotExist(const std::filesystem::path& path);
 	};
 
 	/**
 	 * @brief Raised when user did not pass a necessary positional argument.
 	 */
-	struct PositionalParameterExpected: public ClapException {
+	struct PositionalParameterExpected: public ClahException {
 		PositionalParameterExpected(usize param_index, const std::string& param_type);
 	};
 
 	/**
 	 * @brief Raised when user passes an unknown parameter.
 	 */
-	struct InvalidParameterName: public ClapException {
+	struct InvalidParameterName: public ClahException {
 		explicit InvalidParameterName(const std::string& name);
 	};
 
 	/**
 	 * @brief Raised when parameter was passed twice.
 	 */
-	struct DuplicatedParameter: public ClapException {
+	struct DuplicatedParameter: public ClahException {
 		explicit DuplicatedParameter(const std::string& name);
 	};
 
 	/**
 	 * @brief Raised when user does not pass a value to a parameter.
 	 */
-	struct ParameterRequiresValue: public ClapException {
+	struct ParameterRequiresValue: public ClahException {
 		ParameterRequiresValue(const std::string& name, const std::string& value_type);
 	};
 
 	/**
 	 * @brief Raised when user does not pass a parameter name after ``-`` or ``--``.
 	 */
-	struct ExpectedParameterIdentifier: public ClapException {
+	struct ExpectedParameterIdentifier: public ClahException {
 		ExpectedParameterIdentifier(i32 at, std::string_view source);
 	};
 
 	/**
 	 * @brief Raised when user does not pass a required parameter.
 	 */
-	struct MissingRequiredParameter: public ClapException {
+	struct MissingRequiredParameter: public ClahException {
 		explicit MissingRequiredParameter(const std::string& name);
 	};
 
 	/**
 	 * @brief Raised when conditional parameter's condition is not met.
 	 */
-	struct MissingConditionalParameter: public ClapException {
+	struct MissingConditionalParameter: public ClahException {
 		explicit MissingConditionalParameter(const std::string& name, std::string_view why = "");
 	};
 
 	/**
-	 * @brief Raised when user has specified extra arguments, but Clap has
-	 * Clap::default_value_parser set to nullptr.
+	 * @brief Raised when user has specified extra arguments, but Clah has
+	 * Clah::default_value_parser set to nullptr.
 	 */
-	struct NoDefaultValueParser: public ClapException {
+	struct NoDefaultValueParser: public ClahException {
 		explicit NoDefaultValueParser(i32 at, std::string_view values);
 	};
 
@@ -122,7 +122,7 @@ namespace clap::exceptions {
 	 * @brief Raised when the subcommand is not specified.
 	 * Fe. we finish parsing in a command which has a non-empty subcommand list.
 	 */
-	struct SubcommandNotSpecified: public ClapException {
+	struct SubcommandNotSpecified: public ClahException {
 		explicit SubcommandNotSpecified(const std::string& command_name);
 	};
 
@@ -130,7 +130,7 @@ namespace clap::exceptions {
 	 * @brief Raised when a subcommand with a duplicate name is added to a command.
 	 * Detected at the time of definition, not parsing.
 	 */
-	struct DuplicateSubcommand: public ClapException {
+	struct DuplicateSubcommand: public ClahException {
 		explicit DuplicateSubcommand(
 			const std::string& duplicate_name, const std::string& parent_command_name
 		);
@@ -140,7 +140,7 @@ namespace clap::exceptions {
 	 * @brief Raised when trying to declare positional arguments and subcommands in the same
 	 * command. Detected at the time of definition, not parsing.
 	 */
-	struct CoexistingPositionalAndSubcommand: public ClapException {
+	struct CoexistingPositionalAndSubcommand: public ClahException {
 		explicit CoexistingPositionalAndSubcommand(const std::string& command_name);
 	};
 
@@ -148,7 +148,7 @@ namespace clap::exceptions {
 	 * @brief Raised when adding a subcommand with no name.
 	 * Detected at the time of definition, not parsing.
 	 */
-	struct UnnamedSubcommand: public ClapException {
+	struct UnnamedSubcommand: public ClahException {
 		explicit UnnamedSubcommand(const std::string& super_command_name);
 	};
 
@@ -156,7 +156,7 @@ namespace clap::exceptions {
 	 * @brief Raised when performing execute and the matched command lacks definition of the handler
 	 * function.
 	 */
-	struct NoHandlerSpecified: public ClapException {
+	struct NoHandlerSpecified: public ClahException {
 		explicit NoHandlerSpecified(const std::string& command_name);
 	};
 }

@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace clap {
+namespace clah {
 
 	const base::Optional<char>& Parameter::getShortName() const { return short_name; }
 

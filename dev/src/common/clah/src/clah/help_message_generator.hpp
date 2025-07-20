@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 
 #include <string>
 
-namespace clap {
+namespace clah {
 
 	// Class serving as a namespace for generating help messages.
 	class HelpMessageGenerator {
@@ -19,11 +19,11 @@ namespace clap {
 
 		/**
 		 * Generates a generic help message.
-		 * @param clap The clap object used for parsing.
+		 * @param clah The clah object used for parsing.
 		 * @param parsing_result Parsing result from help exception.
 		 * @return A nicely formatted string with a help message.
 		 */
-		static std::string generate(const Clap& clap, const ParsingResult& result);
+		static std::string generate(const Clah& clah, const ParsingResult& result);
 	};
 
-}  // clap
+}  // clah

@@ -2,7 +2,7 @@
 #include "server.hpp"
 #include "vm_repl.hpp"
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
 
@@ -17,46 +17,46 @@ void showVersion() {
 	std::cout << vm::getInstructionConfig() << '\n';
 }
 
-clap::Clap getVmClap() {
-	return clap::Clap("VM", "The Duckling Virtual Machine.")
-	    .add(clap::ParamBuilder::ofFlag()
+clah::Clah getVmClah() {
+	return clah::Clah("VM", "The Duckling Virtual Machine.")
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Shows version and config")
 	             .build())
-	    .add(clap::ParamBuilder::ofFlag()
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addLongName("stdlib")
 	             .addShortDesc("When passed, loads standard library")
 	             .build())
-	    .setPreHandler([](const clap::ParsingResult& options) {
+	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
-				throw clap::exceptions::SuccessExitException(options);
+				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
-	    .addSubcommand(clap::Clap("server", "Launch DVM as a http server.")
-	                       .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 	                                .addShortName('p')
 	                                .addLongName("port")
 	                                .addShortDesc("Port to listen on.")
 	                                .required()
 	                                .build())
-	                       .setHandler([](const clap::ParsingResult& options) -> int {
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   vm::Supervisor::get();
 							   auto port = options.getValue<i64>("port").value();
 							   server(i32(port));
 							   return 0;
 						   }))
-	    .addSubcommand(clap::Clap("run", "Run a .dbc file.")
-	                       .addPositional(clap::FileParser::make())
-	                       .setHandler([](const clap::ParsingResult& options) {
+	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
+	                       .addPositional(clah::FileParser::make())
+	                       .setHandler([](const clah::ParsingResult& options) {
 							   vm::Supervisor::get();
 							   if (auto file = options.getValue<fs::File>("file"))
 								   return cli(file.value(), options.isFlag("stdlib"));
 							   return cli(options.isFlag("stdlib"));
 						   }))
-	    .addSubcommand(clap::Clap("repl", "Start the VM in REPL mode.")
-	                       .setHandler([](const clap::ParsingResult&) -> int {
+	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
+	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   DuckVMRepl::get().run();
 							   return 0;
@@ -65,10 +65,10 @@ clap::Clap getVmClap() {
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
-	auto             clap = getVmClap();
+	auto             clah = getVmClah();
 
 	try {
-		return clap.execute(base::safeIntConv<usize>(argc), argv);
+		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::RED },

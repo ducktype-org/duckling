@@ -13,7 +13,7 @@
 
 #include <variant>
 
-namespace clap {
+namespace clah {
 
 	// Forward declaration
 	class ParsingResult;
@@ -32,7 +32,7 @@ namespace clap {
 
 	/**
 	 * Parameter class is used to store all the information about the parameter/flag inside
-	 * clap::Clap.
+	 * clah::Clah.
 	 */
 	class Parameter {
 		friend class ParamBuilder;

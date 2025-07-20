@@ -17,7 +17,7 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
@@ -37,48 +37,48 @@ void printContextErrors() {
 	}
 }
 
-clap::Clap getStandardDucklingOptions() {
-	return clap::Clap("duck", "The Duckling compiler")
-	    .add(clap::ParamBuilder::ofFlag()
+clah::Clah getStandardDucklingOptions() {
+	return clah::Clah("duck", "The Duckling compiler")
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addLongName("logger-cerr")
 	             .addShortDesc("If set, Logger class will immediately print its messages to cerr.")
 	             .build())
-	    .add(clap::ParamBuilder::ofFlag()
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addLongName("lexer-cerr")
 	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
 	             .build())
-	    .add(clap::ParamBuilder::ofFlag()
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addLongName("let-it-throw")
 	             .addShortDesc("Disables exception handling in main (debug option)")
 	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
 	                          "It should be used for debugging only in order to preserve "
 	                          "stack-trace. It can prevent stack-unwinding from happening.")
 	             .build())
-	    .add(clap::ParamBuilder::ofFlag()
+	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
 	             .build())
-	    .setPreHandler([](const clap::ParsingResult& options) {
+	    .setPreHandler([](const clah::ParsingResult& options) {
 			dia::Logger::setImmediatelyDump(options.isFlag("logger-cerr"));
 			lexer::Lexer::setTokenMessages(options.isFlag("lexer-cerr"));
 			if (options.isFlag("version")) {
 				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
-				throw clap::exceptions::SuccessExitException(options);
+				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
 }
 
 /**
- * @brief Generate Clap instance with all standard "main" parameters.
- * @return clap::Clap
+ * @brief Generate Clah instance with all standard "main" parameters.
+ * @return clah::Clah
  */
-clap::Clap getClapForMain() {
+clah::Clah getClahForMain() {
 	return getStandardDucklingOptions()
 	    .addSubcommand(
-			clap::Clap("lex", "Runs lexer on a single file and prints the result to cout.")
-				.addPositional(clap::FileParser::make())
-				.setHandler([](const clap::ParsingResult& options) -> int {
+			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")
+				.addPositional(clah::FileParser::make())
+				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto file_to_lex = options.getValue<fs::File>("file").value();
 
 					auto token_file = tokenizer::makeTokenSource(file_to_lex);
@@ -107,9 +107,9 @@ clap::Clap getClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Clap("parse", "Runs parser on a single file and prints result in json to cout.")
-				.addPositional(clap::FileParser::make())
-				.setHandler([](const clap::ParsingResult& options) -> int {
+			clah::Clah("parse", "Runs parser on a single file and prints result in json to cout.")
+				.addPositional(clah::FileParser::make())
+				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto file_to_parse = options.getValue<fs::File>("file").value();
 
 					auto pst = pst::PST(file_to_parse);
@@ -130,9 +130,9 @@ clap::Clap getClapForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(clap::Clap("get_hout", "Debug prints hout-unit of a module.")
-	                       .addPositional(clap::FileParser::make())
-	                       .setHandler([](const clap::ParsingResult& options) -> int {
+	    .addSubcommand(clah::Clah("get_hout", "Debug prints hout-unit of a module.")
+	                       .addPositional(clah::FileParser::make())
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   auto path_to_compile = options.getValue<fs::File>("module").value();
 
 							   int exit_code = 0;
@@ -148,31 +148,31 @@ clap::Clap getClapForMain() {
 							   return exit_code;
 						   }))
 	    .addSubcommand(
-			clap::Clap("compile_module", "Compile given module into a binary.")
-				.addPositional(clap::FileParser::make())
-				.add(clap::ParamBuilder::ofFlag()
+			clah::Clah("compile_module", "Compile given module into a binary.")
+				.addPositional(clah::FileParser::make())
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dump-llvm-ir")
 	                     .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
 	                     .build())
-				.add(clap::ParamBuilder::ofFlag()
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
-				.add(clap::ParamBuilder::ofFlag()
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("compile-to-assembly")
 	                     .addShortDesc(
 							 "Also compiles to assembly file (alongside main compilation)."
 						 )
 	                     .build())
-				.add(clap::ParamBuilder::ofFlag()
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("add-builtin-library")
 	                     .addShortDesc("Links builtin library into the final executable.")
 	                     .build())
-				.add(clap::ParamBuilder::ofFlag()
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-run")
 	                     .addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
 	                     .conditional(
-							 [](const clap::ParsingResult& result) {
+							 [](const clah::ParsingResult& result) {
 								 return not(
 									 result.isFlag("dvm-run") && not result.isFlag("dvm-backend")
 								 );
@@ -181,7 +181,7 @@ clap::Clap getClapForMain() {
 							 "option."
 						 )
 	                     .build())
-				.setHandler([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getValue<fs::File>("module").value();
 
 					// @TODO: error handling. This should change in #1112.
@@ -233,24 +233,24 @@ clap::Clap getClapForMain() {
 				})
 		)
 	    .addSubcommand(
-			clap::Clap("compile_package", "Compile given package into a binary.")
-				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+			clah::Clah("compile_package", "Compile given package into a binary.")
+				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
 	                     .addShortName('m')
 	                     .addLongName("module")
 	                     .addShortDesc("Path to the top-level source module of the package")
 	                     .required()
 	                     .build())
-				.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
 	                     .required()
 	                     .build())
-				.add(clap::ParamBuilder::ofFlag()
+				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
-				.setHandler([](const clap::ParsingResult& options) -> int {
+				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getValue<fs::File>("module").value();
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
@@ -270,18 +270,18 @@ clap::Clap getClapForMain() {
 					return 0;
 				})
 		)
-	    .addSubcommand(clap::Clap("throw", "Throws exception (testing command).")
-	                       .setHandler([](const clap::ParsingResult&) -> int {
+	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
+	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   throw base::LogicError("Command `throw` thrown successfully!");
 						   }));
 }
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-	auto             clap = getClapForMain();
+	auto             clah = getClahForMain();
 
 	try {
-		return clap.execute(base::safeIntConv<usize>(argc), argv);
+		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::RED },
