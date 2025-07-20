@@ -79,7 +79,6 @@ namespace compiler::helios::code {
 		auto it = lookup.find({ op, kind });
 		if (it != lookup.end()) return it->second;
 
-		// Not found -> error
-		CORE_PANIC("findUnaryBuiltin called with unsupported op='{}' on kind={}", op.str(), kind);
+		return {};  // Not found
 	}
 }
