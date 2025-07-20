@@ -1,4 +1,4 @@
-\page helios-scopes HELIOS Scopes
+# HELIOS Scopes
 
 # HELIOS Scopes API
 

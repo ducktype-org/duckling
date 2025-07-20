@@ -1,12 +1,10 @@
-\page tokenizer-module Tokenizer
+# Tokenizer
 
 Tokenizer is a subset of Common modules that together transform source code into a stream of tokens
 
 
-\subpage lexer-module
-
-\subpage lang_definitions-module
-
-\subpage token_file-module
-
-\subpage token-parser-core-module
+- [lang_definitions](./lang_definitions/readme.md)
+- [lexer](./lexer/readme.md)
+- [token_parser_core](./token_parser_core/readme.md)
+- [token_stream_requirements](./token_parser_core/token_stream_requirements.md)
+- [token_source](./token_source/readme.md)

@@ -1,4 +1,4 @@
-\page typesystem-module Type System
+# Type System
 
 The Type System is broadly responsible for handling information about types. It is divided into two parts, the Higher Type System, and the Lower Type System.
 

@@ -1,6 +1,6 @@
-\page vm-tests VM Tests
+# VM Tests
 
-\subpage vm-performance-tests 
+- [performance](./performance/readme.md)
 
 ## Unit tests
 
@@ -23,4 +23,3 @@ Alternatively, you can run the tests from the `dev` directory:
 ```
 ./build/bin/vm_micro_test
 ```
-

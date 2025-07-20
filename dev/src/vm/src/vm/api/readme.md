@@ -1,4 +1,4 @@
-\page vm-api VM API
+# VM API
 
 # API internal documentation
 Any client (HTTP server, terminal client) can only communicate with the VM using an API defined in a `vm.hpp`.

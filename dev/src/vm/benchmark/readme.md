@@ -1,4 +1,4 @@
-\page vm-benchmark Duckling VM Benchmarks
+# Duckling VM Benchmarks
 
 # Benchmark VM versions
 
@@ -14,7 +14,8 @@ Folder structure:
 
 `old_benchmark` is a directory with the bash script used to benchmark different virtual machines: VM, Java, Python NodeJS, C++. Written as a part of the 2023 VM paper.
 
-\subpage vm-benchmark-old
+- [out_files_structure](./old_benchmark/out_files_structure.md)
+- [old_benchmark](./old_benchmark/readme.md)
 
 ## Python script for comparing VM versinons
 

@@ -1,3 +1,3 @@
-@page config-module Config
+# Config
 
 @TODO

@@ -1,4 +1,4 @@
-\page vm-old-out-files-structure File Structure
+# File Structure
 
 # Struktura plików out
 

@@ -1,13 +1,11 @@
 \mainpage
 
-- \subpage dev-readme
-- \subpage modules
-- \subpage dependencies-readme
-- \subpage scripts-readme
-
-\page modules Modules
-
-- \subpage base-readme
-- \subpage common-readme
-- \subpage compiler-readme
-- \subpage vm-readme
+- [dependencies](./dependencies/readme.md)
+- [docs](./docs/readme.md)
+- [integration_tests](./integration_tests/README.md)
+- [scripts](./scripts/readme.md)
+- [src/DucklingLS](./src/DucklingLS/README.md)
+- [src/base](./src/base/readme.md)
+- [src/common](./src/common/readme.md)
+- [src/compiler](./src/compiler/readme.md)
+- [src/vm](./src/vm/readme.md)

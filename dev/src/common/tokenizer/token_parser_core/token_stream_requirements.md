@@ -1,4 +1,4 @@
-\page tpc-requirements Token Stream Requirements
+# Token Stream Requirements
 
 # class Token stream:
 

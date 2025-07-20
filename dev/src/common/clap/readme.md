@@ -1,4 +1,4 @@
-@page clap-module Clap
+# Clap
 
 Command-Line Argument Parser is our library for parsing user input passed through command line arguments.
 

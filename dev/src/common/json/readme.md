@@ -1,4 +1,4 @@
-\page json-module JSON Module
+# JSON Module
 
 # JSON module documentation
 
