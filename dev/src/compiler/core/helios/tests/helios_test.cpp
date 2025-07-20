@@ -457,11 +457,19 @@ private:
 		auto              tree_vref = getExprOfConst(sym_vref);
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
+		const auto int32_type    = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		const auto int32ref_type = st(int32_type).withReferenceKind(tsh::ReferenceKind::Ref);
+		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
+		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
 		auto              sym_vbox  = getChain("VBOX", root_scope).back();
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
+		const auto f16_type    = query::entryPoint<tsh::QueryFloatType>(16);
+		const auto f16box_type = st(f16_type).withReferenceKind(tsh::ReferenceKind::Box);
+		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
+		ASSERT_EQUAL(f16box_type, vbox_type->valueOrThrow());
 	}
 
 	void testError() {
