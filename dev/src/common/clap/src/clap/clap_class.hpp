@@ -180,7 +180,8 @@ namespace clap {
 
 		/**
 		 * @brief Performs the parsing on a string of arguments. Program name is expected to NOT
-		 * exist. Usefull when using CLAP for other things than command line argument parsing.j
+		 * exist. Usefull when using CLAP for other things than command line argument parsing.
+		 * For example usage see the `argumentParsingTest()` in `clap_test.hpp`.
 		 *
 		 * @note Various exceptions like HelpException and invalid arguments exceptions are thrown
 		 * by this function nd have to be handled by the user.
