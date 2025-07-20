@@ -260,6 +260,11 @@ namespace vm::code {
 					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
 					<< ": " << global_data.dtor_name.value().str.strView() << ",\n";
 			}
+			if (global_data.initial_value.has_value()) {
+				out << "\n    "
+					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalInitialValue).strView()
+					<< ": " << global_data.initial_value.value() << ",\n";
+			}
 			out << '}' << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
 		}
 	};
