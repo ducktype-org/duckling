@@ -260,7 +260,7 @@ clap::Clap getClapForMain() {
 					compiler::driver::PackageCompilationDriver driver{
 						backend_type,
 						path_to_compile,
-						artifact_location.nativePath(),
+						artifact_location.getFilePath().native(),
 					};
 					driver.compilerEntirePackageIntoBinary();
 
