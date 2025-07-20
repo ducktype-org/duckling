@@ -80,11 +80,16 @@ namespace vm {
 		 *
 		 * @param id The unique identifier for the global data.
 		 * @param type The type reference to associate with the global data.
+		 * @param initial_value The optional for initial value of the global data.
 		 * @return true if the global data was inserted successfully (i.e., it did not already
 		 * exist); false otherwise.
 		 */
-		template<typename T>
-		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type, base::Optional<T> initial_value);
+		bool tryInsertGlobalData(
+			GlobalDataID id,
+			TypeCRef     type,
+			//@TODO: change it to CTV
+			base::Optional<u64> initial_value
+		);
 
 		/**
 		 * @brief Returns a view of global data by the id.

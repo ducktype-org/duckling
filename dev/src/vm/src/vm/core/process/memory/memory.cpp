@@ -89,34 +89,25 @@ namespace vm {
 		return getBlock(id)->data.element_type;
 	}
 
-	template<typename T>
-	byte* allocateAndInitialize(const T& value) {
-		static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-
-		size_t size = sizeof(T);
-		byte*  raw  = new byte[size];
-		std::memcpy(raw, &value, size);
-		return raw;
-	}
-
-	template<typename T>
 	bool Memory::tryInsertGlobalData(
-		GlobalDataID id, TypeCRef type, base::Optional<T> initial_value
+		GlobalDataID id, TypeCRef type, base::Optional<u64> initial_value
 	) {
 		std::lock_guard lock(mutex);
 		if (!global_data.contains(id)) {
-			auto  type_size = type->getSize();
-			byte* raw
-				= allocateAndInitialize(initial_value.has_value() ? initial_value.value() : 0);
+			size_t type_size = type->getSize();
+			byte*  raw       = new byte[type_size];
+
+			if (initial_value.has_value())
+				std::memcpy(raw, &initial_value.value(), type_size);
+			else
+				std::memset(raw, 0, type_size);  // Zero-initialize if no value provided
+
 			base::OwningView storage(raw, type_size);
 			global_data.put(id, std::move(storage));
 			return true;
 		}
 		return false;
 	}
-
-	template bool Memory::tryInsertGlobalData<
-		unsigned long>(GlobalDataID id, TypeCRef type, base::Optional<unsigned long>);
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
 		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
