@@ -25,97 +25,12 @@ namespace base {
 
 			BaseStableVector(const ContainerT& data): data(std::move(data)) {}
 
-			template<class T>
-			friend class BaseStableVector;
-
-			template<class BaseType, class ReferenceType, class ValueType>
-			class IteratorBase {
-				BaseType base;
-				friend class BaseStableVector;
-
-				explicit IteratorBase(BaseType&& other_base): base{ std::move(other_base) } {}
-
-				explicit IteratorBase(const BaseType& other_base): base{ other_base } {}
-
-			public:
-				using value_type      = ValueType;
-				using reference       = ReferenceType;
-				using pointer         = ValueType*;
-				using difference_type = std::iter_difference_t<BaseType>;
-
-				IteratorBase()                    = default;
-				IteratorBase(const IteratorBase&) = default;
-				IteratorBase(IteratorBase&&)      = default;
-
-				IteratorBase& operator=(IteratorBase&&)      = default;
-				IteratorBase& operator=(const IteratorBase&) = default;
-
-				ReferenceType operator*() const { return ReferenceType{ &*base }; }
-
-				ReferenceType operator[](difference_type diff) const {
-					return ReferenceType{ &base[diff] };
-				}
-
-				pointer operator->() const { return operator->(base); }
-
-				IteratorBase& operator++() {
-					++base;
-					return *this;
-				}
-
-				IteratorBase operator++(int) { return Iterator{ base++ }; }
-
-				IteratorBase& operator--() {
-					--base;
-					return *this;
-				}
-
-				IteratorBase operator--(int) { return Iterator{ base-- }; }
-
-				IteratorBase operator-(difference_type diff) const {
-					return Iterator{ base - diff };
-				}
-
-				difference_type operator-(const IteratorBase& other) const {
-					return base - other.base;
-				}
-
-				IteratorBase& operator-=(difference_type diff) {
-					base -= diff;
-					return *this;
-				}
-
-				IteratorBase operator+(difference_type diff) const {
-					return Iterator{ base + diff };
-				}
-
-				IteratorBase& operator+=(difference_type diff) {
-					base += diff;
-					return *this;
-				}
-
-				auto operator<=>(const IteratorBase&) const = default;
-			};
-
-			template<class... Args>
-			friend IteratorBase<Args...> operator+(
-				IteratorBase<Args...>::difference_type diff, const IteratorBase<Args...>& self
-			) {
-				return self + diff;
-			}
-
 		public:
 			using RefT  = Ref<Data>;
 			using CRefT = CRef<Data>;
 
-			using Iterator = IteratorBase<typename ContainerT::iterator, RefT, Data>;
-			using ConstIterator
-				= IteratorBase<typename ContainerT::const_iterator, CRefT, const Data>;
-			static_assert(std::same_as<typename ConstIterator::reference, CRefT>);
-			static_assert(std::same_as<
-						  typename ConstIterator::reference,
-						  std::iter_reference_t<ConstIterator>>);
-			static_assert(std::same_as<std::iter_reference_t<ConstIterator>, CRefT>);
+			using Iterator      = ContainerT::iterator;
+			using ConstIterator = ContainerT::const_iterator;
 
 			BaseStableVector()                   = default;
 			BaseStableVector(BaseStableVector&&) = default;

@@ -1,6 +1,7 @@
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/strongly_typed_int.hpp>
+
 #include <tester/tester.hpp>
 
 #include <functional>
@@ -94,7 +95,7 @@ private:
 
 		staticAssertIterator<typename Vector::Iterator>();
 		staticAssertIterator<typename Vector::ConstIterator>();
-		static_assert(std::same_as<std::ranges::range_reference_t<Vector>, ::base::Ref<Data>>);
+		static_assert(std::same_as<std::ranges::range_reference_t<Vector>, Data&>);
 	}
 
 	void stableVectorTestRanges() {
@@ -105,7 +106,7 @@ private:
 		StableVector<int> vector;
 		vector.pushBack(5);
 		vector.pushBack(1);
-		auto new_range = vector | std::views::transform([](const CRef<int>& x) { return 2 * *x; })
+		auto new_range = vector | std::views::transform([](int& x) { return 2 * x; })
 		               | std::views::filter([](const int& x) { return x >= 5; });
 		assertEqual(10, *new_range.begin(), "Transformed and filtered");
 	}

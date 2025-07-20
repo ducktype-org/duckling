@@ -347,8 +347,8 @@ namespace compiler::mir {
 					block_order.emplace_back(block.id);
 			}
 			// we sanity check here, that all local variable have a lifetime scope,
-			for (const auto& local: local_list)
-				CORE_ASSERT(local->scope.has_value(), "Local variable without lifetime scope");
+			for (auto& local: local_list)
+				CORE_ASSERT(local.scope.has_value(), "Local variable without lifetime scope");
 
 			return Function{
 				name.value(),
@@ -441,8 +441,8 @@ namespace compiler::mir {
 		[[nodiscard]]
 		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id) const {
 			// @TODO: Optimize into a hashmap.
-			for (const auto& local: local_list)
-				if (local->helios_id == helios_id) return local;
+			for (auto& local: local_list)
+				if (local.helios_id == helios_id) return Ref{ &local };
 			return {};
 		}
 

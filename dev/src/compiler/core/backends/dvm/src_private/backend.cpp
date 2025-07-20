@@ -154,13 +154,13 @@ namespace compiler::backend_vm {
 				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
 
 			// Save locals offset
-			for (const auto& var: ctx.lir_func->local_list) {
+			for (auto& var: ctx.lir_func->local_list) {
 				// This is most likely redundant
-				CORE_ASSERT(!ctx.lir_local_to_name.contains(var), "Duplicated lir local");
+				CORE_ASSERT(!ctx.lir_local_to_name.contains(&var), "Duplicated lir local");
 
-				auto vm_type = getTypeFromLayout(var->layout);
-				ctx.lir_local_types.put(var, vm_type);
-				match_optional(var->parameter_index) {
+				auto vm_type = getTypeFromLayout(var.layout);
+				ctx.lir_local_types.put(&var, vm_type);
+				match_optional(var.parameter_index) {
 					opt_some(param_idx) {
 						// In this case we are handling a parameter
 						CORE_ASSERT(
@@ -169,15 +169,15 @@ namespace compiler::backend_vm {
 						);
 
 						auto name = base::StrID(base::strConcat("arg", param_idx).c_str());
-						ctx.lir_local_to_name.put(var, name);
+						ctx.lir_local_to_name.put(&var, name);
 					}
 					opt_none {
 						// In this case we are handling a regular variable
 						auto tp_name = typeName(vm_type);
 						auto var_name
-							= base::StrID(base::strConcat("var", ctx.variable_to_id[var]).c_str());
+							= base::StrID(base::strConcat("var", ctx.variable_to_id[&var]).c_str());
 						initType(ctx, var_name, tp_name);
-						ctx.lir_local_to_name.put(var, var_name);
+						ctx.lir_local_to_name.put(&var, var_name);
 					}
 				}
 			}
@@ -213,9 +213,8 @@ namespace compiler::backend_vm {
 		void insertFunctionLocalTypes(
 			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
-			auto local_layouts
-				= lir_function->local_list
-			    | std::views::transform([](const auto& local) { return local->layout; });
+			auto local_layouts = lir_function->local_list
+			                   | std::views::transform([](auto& local) { return local.layout; });
 
 			for (const auto& layout: local_layouts) types.push_back(getTypeFromLayout(layout));
 		}

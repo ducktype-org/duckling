@@ -92,9 +92,9 @@ namespace compiler::mir {
 		output << ")";
 		output << " -> " << this->return_type.toString() << "\n";
 
-		for (auto local: this->local_list) {
+		for (auto& local: this->local_list) {
 			output << "    ";
-			local->debugPrint(output, true);
+			local.debugPrint(output, true);
 			output << "\n";
 		}
 		output << "No Lifetime Scope: " << no_lifetime_scope->id << "\n";

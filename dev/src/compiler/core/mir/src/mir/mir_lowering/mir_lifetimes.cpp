@@ -60,9 +60,9 @@ namespace compiler::mir {
 		// preserving block order is important, because of how MIR BlockIDs works
 
 		std::map<ScopeRef, std::vector<LocalRef>> locals_by_scope;
-		for (const auto& local: function.local_list)
-			if (local->scope.value() != function.no_lifetime_scope)
-				locals_by_scope[local->scope.value()].emplace_back(local);
+		for (auto& local: function.local_list)
+			if (local.scope.value() != function.no_lifetime_scope)
+				locals_by_scope[local.scope.value()].emplace_back(&local);
 
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.

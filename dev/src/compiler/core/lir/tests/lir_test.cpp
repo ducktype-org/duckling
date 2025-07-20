@@ -139,18 +139,18 @@ private:
 			// this might change in the future:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
-			for (const auto& local: foo_lir->local_list) {
-				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "a") {
+			for (auto& local: foo_lir->local_list) {
+				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
-						local->layout.getSourceType(),
+						local.layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>(
 							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
-				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "b") {
+				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
-						local->layout.getSourceType(),
+						local.layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>(
 							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
 						)
@@ -205,22 +205,22 @@ private:
 		bool was_z = false;
 
 		for (const auto& local: foo_lir->local_list) {
-			if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "x") {
+			if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "x") {
 				ASSERT_TRUE(not was_x);
-				ASSERT_EQUAL(local->parameter_index.value(), 0);
+				ASSERT_EQUAL(local.parameter_index.value(), 0);
 				was_x = true;
-			} else if (local->helios_id.has_value()
-			           and helios::name(local->helios_id.value()) == "y") {
+			} else if (local.helios_id.has_value()
+			           and helios::name(local.helios_id.value()) == "y") {
 				ASSERT_TRUE(not was_y);
-				ASSERT_EQUAL(local->parameter_index.value(), 1);
+				ASSERT_EQUAL(local.parameter_index.value(), 1);
 				was_y = true;
-			} else if (local->helios_id.has_value()
-			           and helios::name(local->helios_id.value()) == "z") {
+			} else if (local.helios_id.has_value()
+			           and helios::name(local.helios_id.value()) == "z") {
 				ASSERT_TRUE(not was_z);
-				ASSERT_EQUAL(local->parameter_index.value(), 2);
+				ASSERT_EQUAL(local.parameter_index.value(), 2);
 				was_z = true;
 			} else {
-				ASSERT_TRUE(local->parameter_index.empty());
+				ASSERT_TRUE(local.parameter_index.empty());
 			}
 		}
 
@@ -258,10 +258,10 @@ private:
 			// Check local variable 'a'
 			bool found_a = false;
 			for (const auto& local: foo_lir->local_list) {
-				if (local->helios_id.has_value() && helios::name(local->helios_id.value()) == "a") {
+				if (local.helios_id.has_value() && helios::name(local.helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(
-						local->layout.getSourceType(),
+						local.layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>(
 							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
 						)
@@ -273,7 +273,7 @@ private:
 			// Check that there is an assignment to a LirGlobal in the instructions in foo_lir
 			bool found_global_assign = false;
 			for (const auto& block: foo_lir->blocks) {
-				for (const auto& instr: block->instructions) {
+				for (const auto& instr: block.instructions) {
 					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
 						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
 							found_global_assign = true;
@@ -285,7 +285,7 @@ private:
 			// Check that there is an assignment to a LirGlobal in the instructions in g_ctor
 			bool found_global_assign_ctor = false;
 			for (const auto& block: g_ctor->blocks) {
-				for (const auto& instr: block->instructions) {
+				for (const auto& instr: block.instructions) {
 					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
 						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
 							found_global_assign_ctor = true;
