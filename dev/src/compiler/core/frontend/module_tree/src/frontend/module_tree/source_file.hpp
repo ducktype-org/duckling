@@ -42,9 +42,9 @@ namespace compiler::frontend {
 		/**
 		 * @brief Returns cached content for this SourceFile
 		 * @note Content is cached during SourceFile construction
-		 * @return Cached FileContent for this SourceFile
+		 * @return Cached base::SharedView for this SourceFile
 		 */
-		[[nodiscard]] fs::FileContent getCachedContent() const;
+		[[nodiscard]] base::SharedView getCachedContent() const;
 
 		/**
 		 * @brief Returns an unstable perfect hash for this SourceFile.

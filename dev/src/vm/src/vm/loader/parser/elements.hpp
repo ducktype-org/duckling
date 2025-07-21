@@ -1,12 +1,5 @@
 #pragma once
 
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/base_element.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/token_stream.hpp>
-#include <token_source/source.hpp>
-
 #include <base/box.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/maps.hpp>
@@ -15,6 +8,12 @@
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/parser_state.hpp>
+#include <token_parser_core/token_stream.hpp>
+#include <token_source/source.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -50,8 +49,10 @@ namespace vm::loader::parser {
 	struct GlobalData final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier name;
-		tpc::Identifier type;
+		tpc::Identifier                 name;
+		tpc::Identifier                 type;
+		base::Optional<tpc::Identifier> ctor_name;
+		base::Optional<tpc::Identifier> dtor_name;
 
 		static Box<GlobalData> parse(F8ParserState& state);
 

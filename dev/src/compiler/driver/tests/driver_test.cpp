@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(builtinCompiles);
 		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(globalsInitializationTest);
 	}
 
 private:
@@ -33,7 +34,7 @@ private:
 	 */
 	Box<artifacts::ArtifactCollection> createMockCollection() {
 		return base::makeBox<artifacts::ArtifactCollection>(
-			fs::FileManager::createRandomTempDirectory().nativePath()
+			fs::FileManager::createRandomTempDirectory().getFilePath()
 		);
 	}
 
@@ -60,11 +61,17 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(
+				std::filesystem::exists(exe.FILE.getFilePath().getPath()),
+				"Output file does not exist"
+			);
+			assertTrue(
+				std::filesystem::exists(obj.FILE.getFilePath().getPath()),
+				"Object file does not exist"
+			);
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE.getFilePath().getPath());
+			std::filesystem::remove(obj.FILE.getFilePath().getPath());
 		});
 	}
 
@@ -115,8 +122,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
-			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+			auto dbc_obj    = collection->fileArtifactNew(base::StrID("test_module.dbc"));
+			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), dbc_obj);
 
 			auto run_result = driver.run();
 			ASSERT_TRUE(run_result.has_value());
@@ -146,11 +153,17 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(
+				std::filesystem::exists(exe.FILE.getFilePath().getPath()),
+				"Output file does not exist"
+			);
+			assertTrue(
+				std::filesystem::exists(obj.FILE.getFilePath().getPath()),
+				"Object file does not exist"
+			);
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE.getFilePath().getPath());
+			std::filesystem::remove(obj.FILE.getFilePath().getPath());
 		});
 	}
 
@@ -178,11 +191,17 @@ private:
 			llvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(
+				std::filesystem::exists(exe.FILE.getFilePath().getPath()),
+				"Output file does not exist"
+			);
+			assertTrue(
+				std::filesystem::exists(obj.FILE.getFilePath().getPath()),
+				"Object file does not exist"
+			);
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE.getFilePath().getPath());
+			std::filesystem::remove(obj.FILE.getFilePath().getPath());
 		});
 
 		// Test with DVM backend
@@ -196,12 +215,39 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto collection = createMockCollection();
-			auto qbc_obj    = collection->fileArtifactNew(base::StrID("test_module.qbc"));
-			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), qbc_obj);
+			auto dbc_obj    = collection->fileArtifactNew(base::StrID("test_module.dbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), dbc_obj);
 
 			auto run_result = dvm_driver.run();
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
+		});
+	}
+
+	void globalsInitializationTest() {
+		using namespace compiler;
+		auto module = query::entryPoint<frontend::QueryModuleTree>(
+			fs::File(path("modules/globals_initialization"))
+		);
+		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
+
+		// Test with DVM backend
+		driver::HoutToBinaryDriver dvm_driver({
+			.backend_type         = driver::BackendType::DVM,
+			.compile_to_assembly  = false,
+			.dump_llvm_ir         = false,
+			.dvm_code_only_memory = false,
+			.add_builtin_library  = false,
+		});
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto collection = createMockCollection();
+			auto dbc_obj    = collection->fileArtifactNew(base::StrID("test_module.dbc"));
+			dvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), dbc_obj);
+
+			auto run_result = dvm_driver.run();
+			ASSERT_TRUE(run_result.has_value());
+			ASSERT_EQUAL_PRINT(5, run_result.value().exit_code);
 		});
 	}
 };

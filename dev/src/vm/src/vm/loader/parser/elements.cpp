@@ -2,14 +2,19 @@
 
 #include "errors.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
+#include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/token_stream.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -139,6 +144,39 @@ namespace vm::loader::parser {
 
 		state.parse().one(&out->name);
 		state.parse().one(&out->type);
+
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+			return out;
+		}
+
+		state.goDown();
+		while (state.notEmpty()) {
+			tpc::Identifier value;
+			if (state[0].is(lang_def::Keyword::BCGlobalConstructor)) {
+				state.parse().all(
+					lang_def::Keyword::BCGlobalConstructor, lang_def::NamedOperator::Colon, &value
+				);
+				out->ctor_name = value;
+			} else if (state[0].is(lang_def::Keyword::BCGlobalDestructor)) {
+				state.parse().all(
+					lang_def::Keyword::BCGlobalDestructor, lang_def::NamedOperator::Colon, &value
+				);
+				out->dtor_name = value;
+				// } else if (key.value.str() == "initial_value") {
+				// 	// @TODO more general than unsigned long
+				// 	out->initial_value = opargs_parsers::parseInt<i64, int>(state);
+			}
+
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.err->failAndLog(state.getPosition(), "expected comma or }");
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
 
 		auto end_position = state.getPosition().getEnd();
 		out->position     = dia::SourcePosition(
@@ -558,7 +596,7 @@ namespace vm::loader::parser {
 	}
 
 	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
-		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getPath());
+		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getFile());
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
