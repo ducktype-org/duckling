@@ -22,6 +22,11 @@ namespace pst {
 
 	class PstVisitor;
 
+	struct ElementPath final {
+		// Add source information
+		std::vector<std::string>
+	};
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
@@ -177,6 +182,7 @@ namespace pst {
 	protected:
 		dia::SourcePosition                       source_position;
 		std::vector<SubElement>                   sub_elements;
+		base::Optional<AccessLocked<LangElement>> parent;
 		base::Optional<AccessLocked<LangElement>> parent;
 
 		/**
