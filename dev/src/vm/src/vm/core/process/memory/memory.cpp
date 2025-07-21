@@ -184,6 +184,4 @@ namespace vm {
 		std::lock_guard lock(*block->mutex_ref);
 		return block->data.element_type;
 	}
-
-	auto Memory::getBlockRefcount(Ref<Block> block) -> u64 { return block->refcount; }
 }

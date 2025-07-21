@@ -164,7 +164,5 @@ namespace vm {
 		requires(sizeof(T) <= sizeof(U)) constexpr static T& interpret(U& value) {
 			return *(reinterpret_cast<T*>(&value));
 		}
-
-		auto getBlockRefcount(Ref<Block>) -> u64;
 	};
 }
