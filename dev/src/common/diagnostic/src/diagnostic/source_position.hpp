@@ -19,14 +19,13 @@ int main() {
 
 #include "location_types.hpp"
 
-#include <token_source/forward.hpp>
-
 #include <base/box.hpp>
 #include <base/ref.hpp>
 
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 #include <printer/printer_ostream.hpp>
+#include <token_source/forward.hpp>
 
 #include <string>
 
