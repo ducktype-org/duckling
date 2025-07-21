@@ -451,7 +451,7 @@ namespace vm {
 					                        .atMaybe(base::StrID(global->ctor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
-												+ global->ctor_name.value().str.str()
+												+ global->ctor_name.value().str()
 											);
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
@@ -495,7 +495,7 @@ namespace vm {
 					                        .atMaybe(base::StrID(global->dtor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
-												+ global->dtor_name.value().str.str()
+												+ global->dtor_name.value().str()
 											);
 					low::FuncData start_function;
 					start_function = createStartFunctionFor(func, {});
