@@ -1,6 +1,6 @@
 # VM Tests
 
-- [performance](./performance/readme.md)
+* [performance](./performance/readme.md)
 
 ## Unit tests
 

@@ -112,7 +112,7 @@ def update_markdown_file(
                 else:
                     desc = os.path.basename(relative_readme_path)[:-3]
 
-                subpage_lines.append(f"- [{desc}](./{relative_readme_path})")
+                subpage_lines.append(f"* [{desc}](./{relative_readme_path})")
 
             # Find existing subpages section
             subpage_start = -1

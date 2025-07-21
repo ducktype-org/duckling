@@ -1,7 +1,7 @@
 # Helios
 
-- [mangling-scheme](./src/helios/mangler/mangling-scheme.md)
-- [src_private/helios_private/scopes](./src_private/helios_private/scopes/readme.md)
+* [mangling-scheme](./src/helios/mangler/mangling-scheme.md)
+* [src_private/helios_private/scopes](./src_private/helios_private/scopes/readme.md)
 
 
 @attention
