@@ -47,7 +47,7 @@ namespace lsp {
 
 	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
-		this->uri            = source_position.getSource()->getPath().uri();
+		this->uri            = source_position.getSource()->getFile().getFilePath().uri();
 		this->start          = source_position.getStartLineColumn();
 		this->end            = source_position.getEndLineColumn();
 	}

@@ -22,7 +22,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_GNU_FLAGS}")
 	
 	# Debug version uses O0.
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
@@ -42,9 +41,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
 
-	# Debug version uses O0.
-	# For some reason -Og does not work in clang
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
@@ -53,5 +49,9 @@ if (USE_MARCH_NATIVE)
 	add_compile_options(-march=native)
 endif (USE_MARCH_NATIVE)
 
-# Release version uses O2, not O3. It might change.
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+# Debug uses -g by default, but we want to also ensure -O0 is used
+# std can use NDEBUG for internal assert purposes, so we should define it here
+# Release uses -O3 by default, but we want to use -O2 for now
+set(CMAKE_CXX_FLAGS_DEBUG      "-g -O0 -DBUILD_TYPE_DEBUG")
+set(CMAKE_CXX_FLAGS_DEVRELEASE "-O2 -DBUILD_TYPE_DEV_RELEASE")
+set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
