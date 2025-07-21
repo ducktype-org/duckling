@@ -32,11 +32,6 @@ namespace vm::code {
 			// implemented. https://github.com/ducktype-org/duckling/issues/725
 			TypeOfData(FixedSizeTableType(base::StrID("argv"), base::StrID("i64"), 10)),
 			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))),
-			// TypeOfData(FunctionType(
-			// 	base::StrID("main"),
-			// 	{ base::StrID("i64"), base::StrID("ptr_argv") },
-			// 	base::StrID("i64")
-			// )),
 
 			SpecialTypes::get().vtable_ptr,
 		};

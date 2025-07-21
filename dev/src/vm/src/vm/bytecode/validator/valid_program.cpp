@@ -49,28 +49,17 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata();
 
-	base::HashMap<base::StrID, vm::code::Signature> signatures;
+	base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
 
-	for (const auto& func: new_functions) {
-		Signature signature;
-		signature.result_type = func.result_type.str;
-		signature.parameters.reserve(func.parameters.size());
-		for (const auto& param: func.parameters) signature.parameters.emplace_back(param.str);
-		signatures.put(func.name.str, signature);
-	}
+	for (const auto& func: new_functions) signatures.put(func.name, func.signature);
 
-	for (const auto& [func_ref, id, name]: function_map.allData()) {
-		Signature signature;
-		signature.result_type = func_ref->result_type.str;
-		signature.parameters.reserve(func_ref->parameters.size());
-		for (const auto& param: func_ref->parameters) signature.parameters.emplace_back(param.str);
-		signatures.put(name, signature);
-	}
+	for (const auto& [func_ref, id, name]: function_map.allData())
+		signatures.put(name, func_ref->signature);
 
 	for (const auto& type: type_context.getCurrentTypes()) {
 		if (std::holds_alternative<vm::code::FunctionType>(type)) {
-			const auto& function_type = std::get<vm::code::FunctionType>(type);
-			Signature   signature;
+			const auto&   function_type = std::get<vm::code::FunctionType>(type);
+			FuncSignature signature;
 			signature.result_type = function_type.result;
 			signature.parameters.reserve(function_type.parameters.size());
 			for (const auto& param: function_type.parameters)

@@ -44,16 +44,24 @@ namespace vm::code {
 		Identifier type;
 	};
 
+	struct FuncSignature final {
+		Identifier              result_type;
+		std::vector<Identifier> parameters;
+
+		bool operator==(const FuncSignature& other) const noexcept {
+			return result_type == other.result_type && parameters == other.parameters;
+		}
+	};
+
 	/**
 	 * @brief Represents bytecode a function.
 	 * @note A function on its own (without type context or globals) does not contain enough
 	 * information to tell if it is correct/valid or not.
 	 */
 	struct Function final: ElementBase {
-		Identifier              name;
-		CodeBlock               body;
-		std::vector<Identifier> parameters;
-		Identifier              result_type;
+		Identifier    name;
+		CodeBlock     body;
+		FuncSignature signature;
 	};
 
 	/**

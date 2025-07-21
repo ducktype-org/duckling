@@ -125,12 +125,12 @@ namespace vm::code {
 		void write() {
 			out << "function " << function.name.str.strView() << " { ";
 			bool first = true;
-			for (const auto& param: function.parameters) {
+			for (const auto& param: function.signature.parameters) {
 				if (!first) out << ", ";
 				out << param.str.strView();
 				first = false;
 			}
-			out << " } -> " << function.result_type.str.strView() << "{\n";
+			out << " } -> " << function.signature.result_type.str.strView() << "{\n";
 
 			indentUp();
 			writeCode();

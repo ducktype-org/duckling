@@ -129,15 +129,15 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 					function.name          = func_name;
 
 					code::Identifier result_type;
-					result_type.str          = func->result_type.value;
-					result_type.bytecode_pos = func->result_type.position;
-					function.result_type     = result_type;
+					result_type.str                = func->result_type.value;
+					result_type.bytecode_pos       = func->result_type.position;
+					function.signature.result_type = result_type;
 
 					for (const auto& param: func->parameters) {
 						code::Identifier param_id;
 						param_id.str          = param.value;
 						param_id.bytecode_pos = param.position;
-						function.parameters.emplace_back(param_id);
+						function.signature.parameters.emplace_back(param_id);
 					}
 
 					for (const auto& instr: func->code->opcodes)
@@ -146,11 +146,12 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 					new_code.functions.emplace_back(function);
 
 					std::vector<base::StrID> parameters_str;
-					parameters_str.reserve(function.parameters.size());
-					for (const auto& param: function.parameters) parameters_str.emplace_back(param);
-					new_code.types.emplace_back(
-						code::FunctionType(function.name, parameters_str, function.result_type)
-					);
+					parameters_str.reserve(function.signature.parameters.size());
+					for (const auto& param: function.signature.parameters)
+						parameters_str.emplace_back(param);
+					new_code.types.emplace_back(code::FunctionType(
+						function.name, parameters_str, function.signature.result_type
+					));
 				}
 			}
 

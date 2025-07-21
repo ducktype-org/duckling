@@ -124,23 +124,24 @@ namespace compiler::backend_vm {
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
-				  bytecode_func(Function({}, lir_function->mangled_name, {}, {}, {})),
+				  bytecode_func(Function({}, lir_function->mangled_name, {}, {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
 				  }()) {
 				if (lir_function->mangled_name == "main") {
-					bytecode_func.parameters.emplace_back(base::StrID("i64"));
-					bytecode_func.parameters.emplace_back(base::StrID("ptr_argv"));
-					bytecode_func.result_type = Identifier(base::StrID("i64"));
+					bytecode_func.signature.parameters.emplace_back(base::StrID("i64"));
+					bytecode_func.signature.parameters.emplace_back(base::StrID("ptr_argv"));
+					bytecode_func.signature.result_type = Identifier(base::StrID("i64"));
 				} else {
-					bytecode_func.parameters.reserve(lir_function->parameter_layouts.size());
+					bytecode_func.signature.parameters.reserve(lir_function->parameter_layouts.size(
+					));
 					for (const auto& layout: lir_function->parameter_layouts) {
 						auto type = getTypeFromLayout(layout);
-						bytecode_func.parameters.emplace_back(typeName(type));
+						bytecode_func.signature.parameters.emplace_back(typeName(type));
 					}
-					bytecode_func.result_type
+					bytecode_func.signature.result_type
 						= Identifier(typeName(getTypeFromLayout(lir_function->return_type_layout)));
 				}
 				variable_to_id = lir_function->getLocalVariableIDs();
