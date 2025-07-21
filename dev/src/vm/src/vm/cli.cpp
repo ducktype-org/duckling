@@ -27,6 +27,7 @@ int cli(bool load_stdlib) {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
+
 	return cli(fs::File(filepath), load_stdlib);
 }
 

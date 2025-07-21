@@ -1,9 +1,8 @@
-#include <lexer/lexer.hpp>
-#include <token_source/source.hpp>
-
 #include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+#include <token_source/source.hpp>
 
 #include <fstream>
 #include <iostream>
