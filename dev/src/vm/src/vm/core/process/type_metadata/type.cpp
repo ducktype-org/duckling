@@ -13,7 +13,7 @@
 #include <utility>
 
 namespace vm {
-	void Type::processIsInstantiable(kind::Data& data) {
+	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
 			variant_match(imd.kind) {
 				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
@@ -36,7 +36,7 @@ namespace vm {
 		return;
 	}
 
-	void Type::processIsInstantiable(kind::Variant& variant) {
+	void Type::isInstantiableImpl(kind::Variant& variant) {
 		for (auto& alt: variant.alternatives) {
 			if (!alt->isInstantiable()) {
 				am_i_instantiable = false;
@@ -45,7 +45,7 @@ namespace vm {
 		}
 	}
 
-	void Type::processInheritsFrom(InheritanceMetadata& imd) {
+	void Type::inheritsFromImpl(InheritanceMetadata& imd) {
 		imd.inherits_from.insert(getID());
 		auto get_all_super = [](TypeCRef type) {
 			return type->getInheritanceMetadata()
@@ -172,8 +172,8 @@ namespace vm {
 					offset += field.type->getSize();
 				}
 				this->size = offset;
-				if_opt_some(data.inheritance_metadata, imd) { processInheritsFrom(imd); }
-				processIsInstantiable(data);
+				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
+				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
@@ -183,7 +183,7 @@ namespace vm {
 					data_size = std::max(data_size, alternative->getSize());
 				}
 				this->size = 16 + data_size;
-				processIsInstantiable(variant);
+				isInstantiableImpl(variant);
 			}
 		}
 	}

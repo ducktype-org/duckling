@@ -59,9 +59,23 @@ namespace vm {
 
 		Type() = default;
 
-		void processIsInstantiable(kind::Data&);
-		void processIsInstantiable(kind::Variant&);
-		void processInheritsFrom(InheritanceMetadata&);
+		/**
+		 * @brief Finds out if the type is instantiable knowing it is of kind::Data.
+		 * @param data The stored kind.
+		 */
+		void isInstantiableImpl(kind::Data& data);
+
+		/**
+		 * @brief Finds out if the type is instantiable knowing it is of kind::Variant.
+		 * @param data The stored kind.
+		 */
+		void isInstantiableImpl(kind::Variant& variant);
+
+		/**
+		 * @brief Finds out if the type is instantiable knowing it has inheritance.
+		 * @param inheritanceMetadata InheritanceMetadata of the stored class/interface.
+		 */
+		void inheritsFromImpl(InheritanceMetadata& inheritance_metadata);
 
 	public:
 		// Type declaration:
