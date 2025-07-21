@@ -125,7 +125,7 @@ namespace vm {
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
-		CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
+		if (dst.isNull() || src.isNull()) CORE_PANIC("Copying to/from null pointer");
 
 		std::lock_guard lock_dst(*dst.block->mutex_ref);
 		std::lock_guard lock_src(*src.block->mutex_ref);
