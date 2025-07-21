@@ -39,7 +39,7 @@ function fib {
     }
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main {
     arg_size: 0;
 	next_arg_size: 8;
     ret_size: 8;

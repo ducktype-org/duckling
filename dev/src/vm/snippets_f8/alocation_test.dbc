@@ -18,7 +18,7 @@ function modify_pointer {
 }
 
 
-function main { i64, ptr_argv } -> i64 {
+function main {
 	arg_size: 0;
 	local_size: 100;
 	ret_size: 0;
