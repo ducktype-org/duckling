@@ -12,7 +12,7 @@ function(duck_add_vm_tests suffix)
         set(libvm "LibVM_${suffix}")
 
         set(vmtester "VmTester_${suffix}")
-        add_library(${vmtester} STATIC
+        add_library(${vmtester}
                 utils/vm_tester_utils.cpp)
         target_include_directories(${vmtester}
                 PUBLIC

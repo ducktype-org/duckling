@@ -4,12 +4,12 @@
 #include "element_kind.hpp"
 #include "pst_id.hpp"
 
+#include <base/box.hpp>
+#include <base/ref.hpp>
+
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
-
-#include <base/box.hpp>
-#include <base/ref.hpp>
 
 #include <ranges>
 #include <variant>

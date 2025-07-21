@@ -1,8 +1,9 @@
 
 #include "builtin_operations.hpp"
 
-#include <lang_definitions/key_spec_op.hpp>
 #include <typesystem/higher/queries.hpp>
+
+#include <lang_definitions/key_spec_op.hpp>
 
 namespace compiler::helios::code {
 
