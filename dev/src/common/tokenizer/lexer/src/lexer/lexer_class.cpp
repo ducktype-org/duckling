@@ -1,16 +1,15 @@
 #include "lexer_class.hpp"
 
-#include "classifications.hpp"
-
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
+#include <unicode_classification/classifications.hpp>
 
 namespace lexer {
 	bool Lexer::token_messages = false;
 
 	void Lexer::setTokenMessages(bool value) { token_messages = value; }
 
-	using Class = Classifications;
+	using Class = unicode::Classifications;
 
 	class TokenStartError final: public dia::Error {
 	protected:

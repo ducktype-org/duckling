@@ -1,8 +1,8 @@
 #pragma once
 
-#include "classifications.hpp"
-
 #include <base/raw_view.hpp>
+
+#include <unicode_classification/classifications.hpp>
 
 #include <string>
 #include <vector>
