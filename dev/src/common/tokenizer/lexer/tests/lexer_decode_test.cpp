@@ -1,9 +1,8 @@
+#include <filesystem/file.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
-#include <token_source/source.hpp>
-
-#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
+#include <token_source/source.hpp>
 
 std::byte operator""_BT(unsigned long long x) {
 	CORE_ASSERT(x < 256, "bad std::byte literal operator");

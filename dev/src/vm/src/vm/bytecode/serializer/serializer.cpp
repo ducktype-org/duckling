@@ -1,9 +1,9 @@
 #include "serializer.hpp"
 
-#include <lang_definitions/key_spec_op.hpp>
-
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
+
+#include <lang_definitions/key_spec_op.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>

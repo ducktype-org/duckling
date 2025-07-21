@@ -2,14 +2,13 @@
 
 #include "errors.hpp"
 
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/token_stream.hpp>
-
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/token_stream.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -562,7 +561,7 @@ namespace vm::loader::parser {
 	}
 
 	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
-		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getPath());
+		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getFile());
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
