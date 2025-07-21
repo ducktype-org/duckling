@@ -1,5 +1,3 @@
-#include <diagnostic/highlight_positions.hpp>
-#include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
@@ -20,11 +18,6 @@
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_result.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-#include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 #include <typesystem/higher/internal/queries.hpp>
 
@@ -32,6 +25,14 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
+
+#include <diagnostic/highlight_positions.hpp>
+#include <filesystem/file.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_result.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
 
 using namespace compiler::helios::test_utils;
 
@@ -61,6 +62,8 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
+
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1019,6 +1022,33 @@ private:
 				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 			});
 		}
+	}
+
+	/**
+	 * This checks if all consts and vars in the module have proper types.
+	 */
+	void testTypeOfConstAndVar() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/type_deduction")));
+
+		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
+
+		auto foo            = getChain("foo", root_scope).back();
+		auto foo_body_scope = getFunctionBodyScope(foo);
+
+		// @TODO: #925 fix how floats are deduced
+		// @TODO: #925 fix how tuples are deduced
+
+		// Vars
+		ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
+
+		// Consts
+		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
 	}
 };
 

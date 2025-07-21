@@ -28,9 +28,10 @@
 #include "base_element.hpp"
 #include "common_elements.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
-#include <lang_definitions/key_spec_op.hpp>
 
 #include <concepts>
 

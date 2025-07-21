@@ -1,8 +1,8 @@
 #pragma once
 
-#include <diagnostic/logger.hpp>
-
 #include <base/variant.hpp>
+
+#include <diagnostic/logger.hpp>
 
 #include <vm/bytecode/element_base.hpp>
 

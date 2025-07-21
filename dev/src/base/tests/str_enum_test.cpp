@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/stringifyable_enum.hpp>
+
+#include <tester/tester.hpp>
 
 MAKE_STRINGIFYABLE_ENUM(n, u64, ZeroElements);
 MAKE_STRINGIFYABLE_ENUM(n, u64, OneElement, A);
