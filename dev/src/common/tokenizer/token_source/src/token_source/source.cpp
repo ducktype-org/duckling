@@ -1,12 +1,12 @@
 #include "source.hpp"
 
-#include <diagnostic/location.hpp>
-#include <lexer/classifications.hpp>
-#include <lexer/decode.hpp>
-#include <lexer/lexer_class.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
+
+#include <diagnostic/location.hpp>
+#include <lexer/decode.hpp>
+#include <lexer/lexer_class.hpp>
+#include <unicode_classification/classifications.hpp>
 
 namespace tokenizer {
 	/**
@@ -18,7 +18,7 @@ namespace tokenizer {
 	 * newline
 	 */
 	usize isNewLine(const std::span<const lexer::Char> where) {
-		auto& newline = lexer::Classifications::newline;
+		auto& newline = unicode::Classifications::newline;
 		if (where.size() > 0 && where[0].is(newline)) {
 			if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;
 			return 1;
@@ -33,7 +33,7 @@ namespace tokenizer {
 
 	TokenSource::TokenSource(dia::SourcePosition parent, const std::string_view contents):
 		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenSource>(this))) {
-		content.emplace(fs::FileContent::fromString(contents));
+		content.emplace(base::SharedView::copy(contents.data()));
 	}
 
 	void TokenSource::countLines() {
@@ -99,7 +99,7 @@ namespace tokenizer {
 		token_data.emplace(lexer.tokenize());
 	}
 
-	const fs::FileContent TokenSource::getContent() const { return content.value(); }
+	const base::SharedView TokenSource::getContent() const { return content.value(); }
 
 	const lexer::CharArray& TokenSource::getChars() const {
 		if (!decoded) CORE_PANIC("Tried to access nonexistant Character data.");
@@ -112,7 +112,7 @@ namespace tokenizer {
 		return token_data.value();
 	}
 
-	fs::File TokenSource::getPath() const { return location->getSourceFile(); }
+	fs::File TokenSource::getFile() const { return location->getSourceFile(); }
 
 	CRef<dia::Location> TokenSource::getLocation() const { return location.ref(); }
 }

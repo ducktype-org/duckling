@@ -1,3 +1,9 @@
+#include <base/anycast.hpp>
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/variant.hpp>
+
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -8,12 +14,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include <base/anycast.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/variant.hpp>
 
 #include <sstream>
 #include <type_traits>
@@ -406,6 +406,7 @@ private:
 	}
 
 	void testDeps() {
+#if defined(DEBUG) || defined(DEVRELEASE)
 		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
@@ -439,6 +440,7 @@ private:
 				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
+#endif
 	}
 
 	void testSideInput() {
@@ -453,10 +455,12 @@ private:
 	}
 
 	void entryPointSanityTest() {
+#if defined(DEBUG) || defined(DEVRELEASE)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CallingEntryPoint>(1); },
 			"Calling entry point from query did not panicked."
 		);
+#endif
 	}
 
 	template<class Query>
@@ -546,6 +550,7 @@ private:
 	}
 
 	void testContextSanityCheck() {
+#if defined(DEBUG) || defined(DEVRELEASE)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<context_leak::LeakQuery>(1); },
 			"Bad context usage not detected"
@@ -554,6 +559,7 @@ private:
 			context_leak::use_leaked_query_happened,
 			"Something else happened, the test is inconclusive"
 		);
+#endif
 	}
 
 	void serializeDeserializeGraphTest() {

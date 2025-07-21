@@ -7,10 +7,11 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
-#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -27,7 +28,6 @@ namespace compiler::helios {
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
 		 * @note It might be changed to virtual function on expr in the future for performance.
 		 * For now it is kept as a visitor for code simplicity.
-		 * @todo Handle reference specification. #608
 		 */
 		struct ShortPathVisitor: code::HoutExprVisitorPanicky {
 			query::Context& ctx;
@@ -101,6 +101,28 @@ namespace compiler::helios {
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
 				expr.inner->acceptVisitor(*this);
+			}
+
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+				auto value = evalHoutExprToType(ctx, expr.expr.ref());
+				if (value.hasError()) {
+					failed = true;
+					return;
+				}
+
+				switch (expr.operation) {
+				case code::BuiltinUnary::Ref:
+					output(value.value().withReferenceKind(tsh::ReferenceKind::Ref));
+					return;
+				case code::BuiltinUnary::Box:
+					output(value.value().withReferenceKind(tsh::ReferenceKind::Box));
+					return;
+				default:
+					CORE_PANIC(
+						"ShortPathVisitor encountered unsupported unary operation: ",
+						static_cast<std::uint8_t>(expr.operation)
+					);
+				}
 			}
 		};
 

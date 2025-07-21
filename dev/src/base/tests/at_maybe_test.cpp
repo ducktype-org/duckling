@@ -1,7 +1,7 @@
-#include <tester/tester.hpp>
-
 #include <base/maps.hpp>
 #include <base/ref.hpp>
+
+#include <tester/tester.hpp>
 
 class AtMaybeTest final: public tester::TestSuite {
 #undef TESTER_CLASS

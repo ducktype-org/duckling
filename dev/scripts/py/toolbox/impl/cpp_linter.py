@@ -19,7 +19,7 @@ def cpp_linter_impl(
     clang_tidy_path: str,
     clang_format_path: str,
     build_dir: str,
-    thread_count: int = cpu_count() or 1,
+    thread_count: int,
     branch: str = "origin/main",
     all: bool = False,
     no_merge_base: bool = False,
@@ -27,7 +27,7 @@ def cpp_linter_impl(
     build_folder = Path(build_dir)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
-    
+
     file_diffs = get_files_for_linter(all, branch, no_merge_base)
     log_info(f"Found {file_diffs=}")
 

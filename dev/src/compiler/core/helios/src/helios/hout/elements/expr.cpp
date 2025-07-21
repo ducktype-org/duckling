@@ -10,8 +10,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <query_framework/context.hpp>
 #include <typesystem/higher/queries.hpp>
+
+#include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
 
@@ -289,6 +290,16 @@ namespace compiler::helios::code {
 			out << "not ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::Ref:
+			out << "ref ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Box:
+			out << "box ";
+			expr->debugPrint(out);
+			break;
+		default:
+			CORE_PANIC("unsupported unary operation");
 		}
 	}
 

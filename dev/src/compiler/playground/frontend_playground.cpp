@@ -1,5 +1,6 @@
-#include <clap/clap.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+
+#include <clap/clap.hpp>
 
 #include <iostream>
 
@@ -25,7 +26,7 @@ int main(int argc, const char* argv[]) {
 
 	auto path_to_compile = options.getValue<fs::File>('p').value();
 
-	std::cerr << "path_to_compile: " << path_to_compile.strView() << "\n";
+	std::cerr << "path_to_compile: " << path_to_compile.getFilePath().strView() << "\n";
 
 
 	using compiler::frontend::ModuleTree;

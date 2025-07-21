@@ -9,13 +9,14 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/generic_query_key.hpp>
-#include <query_framework/query_int.hpp>
-#include <query_framework/query_result.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <base/bit256.hpp>
 #include <base/string_id.hpp>
+
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 

@@ -6,22 +6,23 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <clap/clap.hpp>
 #include <config/config.hpp>
 #include <driver/hout_to_binary_driver.hpp>
 #include <driver/package_compilation_driver.hpp>
-#include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <init/init.hpp>
-#include <lexer/lexer.hpp>
-#include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
+
+#include <clap/clap.hpp>
+#include <filesystem/file.hpp>
+#include <init/init.hpp>
+#include <lexer/lexer.hpp>
+#include <printer/stream_printer.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
@@ -390,7 +391,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		compiler::driver::PackageCompilationDriver driver{
 			backend_type,
 			path_to_compile,
-			artifact_location.nativePath(),
+			artifact_location.getFilePath().native(),
 		};
 		driver.compilerEntirePackageIntoBinary();
 

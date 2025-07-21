@@ -18,14 +18,14 @@
  * In switch case we call the OpFuns directly from the cases, so to see the changes in pointers
  * in the main switch function we need to pass the pointers by reference.
  */
-#define OPFUN_TC_ARGS                                                                       \
-	const Fix8Instruction *instr [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
+#define OPFUN_TC_ARGS                                                                        \
+	const MicroInstruction *instr [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
 		Frame *frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
 
-#define OPFUN_REF_ARGS                                                                        \
-	const Fix8Instruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
-		Frame *&frame [[maybe_unused]]                                                        \
-		,                                                                                     \
+#define OPFUN_REF_ARGS                                                                         \
+	const MicroInstruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
+		Frame *&frame [[maybe_unused]]                                                         \
+		,                                                                                      \
 		VMThread &thread [[maybe_unused]]
 
 
@@ -58,7 +58,7 @@ namespace vm {
 	 *
 	 * Depends on the @ref VM/src/config.hpp configuration.
 	 */
-	struct Fix8Instruction;
+	struct MicroInstruction;
 
 	using OpFunTC = void(OPFUN_TC_ARGS);
 
@@ -67,7 +67,7 @@ namespace vm {
 	// (CG, executor.cpp)
 	constexpr u16 OP_CASES_COUNT = countOpCases();
 
-	struct Fix8Instruction {
+	struct MicroInstruction {
 		union {
 			/**
 			 * @brief Index indicating which opcode it is.
@@ -82,17 +82,17 @@ namespace vm {
 			OpFunTC* tc_opfun;
 		};
 
-		i32 arg0;
-		i32 arg1;
+		u64 arg0;
+		u64 arg1;
 	};
 
-	static_assert(sizeof(Fix8Instruction) == 16, "Fix8Instruction size is not 16 bytes");
+	static_assert(sizeof(MicroInstruction) == 24, "MicroInstruction size is not 24 bytes");
 
 	/**
 	 * @brief Creates a low-level instruction with correct "union" type depending on the config.
-	 * @return Fix8Instruction
+	 * @return MicroInstruction
 	 */
-	Fix8Instruction makeLowInstruction(u64 opcode, i32 arg0 = 0, i32 arg1 = 0);
+	MicroInstruction makeLowInstruction(u64 opcode, u64 arg0 = 0, u64 arg1 = 0);
 
 	/**
 	 * @brief For main purposes only.

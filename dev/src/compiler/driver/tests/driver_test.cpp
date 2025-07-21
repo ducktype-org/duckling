@@ -1,14 +1,15 @@
-#include <artifacts/artifacts.hpp>
 #include <driver/hout_to_binary_driver.hpp>
 #include <driver/link.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
+
+#include <base/string_id.hpp>
+
+#include <artifacts/artifacts.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include <base/string_id.hpp>
 
 #include <filesystem>
 
@@ -32,7 +33,7 @@ private:
 	 */
 	Box<artifacts::ArtifactCollection> createMockCollection() {
 		return base::makeBox<artifacts::ArtifactCollection>(
-			fs::FileManager::createRandomTempDirectory().nativePath()
+			fs::FileManager::createRandomTempDirectory().getFilePath()
 		);
 	}
 
@@ -59,11 +60,17 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(
+				std::filesystem::exists(exe.FILE.getFilePath().getPath()),
+				"Output file does not exist"
+			);
+			assertTrue(
+				std::filesystem::exists(obj.FILE.getFilePath().getPath()),
+				"Object file does not exist"
+			);
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE.getFilePath().getPath());
+			std::filesystem::remove(obj.FILE.getFilePath().getPath());
 		});
 	}
 
@@ -145,11 +152,17 @@ private:
 			driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(
+				std::filesystem::exists(exe.FILE.getFilePath().getPath()),
+				"Output file does not exist"
+			);
+			assertTrue(
+				std::filesystem::exists(obj.FILE.getFilePath().getPath()),
+				"Object file does not exist"
+			);
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE.getFilePath().getPath());
+			std::filesystem::remove(obj.FILE.getFilePath().getPath());
 		});
 	}
 
@@ -177,11 +190,17 @@ private:
 			llvm_driver.compileHOUTUnit(ctx, top_level, base::StrID("test_module"), obj);
 			driver::link(exe, { obj }, {});
 
-			assertTrue(std::filesystem::exists(exe.FILE.getPath()), "Output file does not exist");
-			assertTrue(std::filesystem::exists(obj.FILE.getPath()), "Object file does not exist");
+			assertTrue(
+				std::filesystem::exists(exe.FILE.getFilePath().getPath()),
+				"Output file does not exist"
+			);
+			assertTrue(
+				std::filesystem::exists(obj.FILE.getFilePath().getPath()),
+				"Object file does not exist"
+			);
 
-			std::filesystem::remove(exe.FILE.getPath());
-			std::filesystem::remove(obj.FILE.getPath());
+			std::filesystem::remove(exe.FILE.getFilePath().getPath());
+			std::filesystem::remove(obj.FILE.getFilePath().getPath());
 		});
 
 		// Test with DVM backend

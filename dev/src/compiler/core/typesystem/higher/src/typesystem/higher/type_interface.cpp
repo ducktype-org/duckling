@@ -3,9 +3,10 @@
 #include "queries.hpp"
 
 #include <helios/symbols/simple.hpp>
-#include <query_framework/context.hpp>
 
 #include <base/optional.hpp>
+
+#include <query_framework/context.hpp>
 
 namespace tsh {
 	namespace {

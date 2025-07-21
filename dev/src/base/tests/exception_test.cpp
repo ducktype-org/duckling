@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-
 #include <base/str_utils.hpp>
+
+#include <tester/tester.hpp>
 
 #include <cstring>
 #include <version>
@@ -62,13 +62,20 @@ public:
 		try {
 			throwPanic3();
 		} catch (base::Panic& panic) {
+#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
 			assertTrue(
 				containsCstr(panic.what(), "    Assertion failed: `false`\n    panic test 3"),
 				"Bad panic reason"
 			);
 			return;
+#else
+			fail("Assert should now throw error in Release");
+#endif
 		}
-		fail("Panic what not caught");
+
+#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
+		fail("Panic was not caught");
+#endif
 	}
 
 	void testPanic4() {
@@ -78,7 +85,9 @@ public:
 			assertTrue(containsCstr(panic.what(), "Unreachable"), "Bad panic reason");
 			return;
 		}
-		fail("Panic what not caught");
+#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
+		fail("Panic was not caught.");
+#endif
 	}
 
 	void testNotYetImplemented() {

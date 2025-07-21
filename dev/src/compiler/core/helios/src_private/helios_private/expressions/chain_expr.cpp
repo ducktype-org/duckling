@@ -17,15 +17,16 @@
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_result.hpp>
-#include <token_parser_core/common_elements.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
+
+#include <query_framework/context.hpp>
+#include <query_framework/query_result.hpp>
+#include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios::code {
 

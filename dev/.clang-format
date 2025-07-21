@@ -193,11 +193,11 @@ IncludeCategories:
   - Regex:           '^("|<)(llvm|llvm-c|clang|clang-c)/'
     Priority:        1
     SortPriority:    6
-  # External libs such as icu(unicode/uniset.h)/crow/asio/json:
-  # - Regex:           '^("|<)(unicode/uniset.h|crow/|asio/|json/)'
-  #   Priority:        2
-  #   SortPriority:    7
-  # std, headers without extension:
+  # External libs such as unicode, json, graphviz:
+  - Regex:           '^("|<)(unicode/|crow/|json/|nlohmann/|graphviz/|tree_sitter/|tree-sitter-cpp.h|graphviz/|base64)'
+    Priority:        2
+    SortPriority:    7
+   # std, headers without extension:
   - Regex:           '^("|<)([A-Za-z0-9\Q/-_\E])+("|>)$'
     Priority:        3
     SortPriority:    8
@@ -206,10 +206,9 @@ IncludeCategories:
     Priority:        4
     SortPriority:    3
   # our common, add here new libraries:
-  # - Regex:           [tu będzie regexp na common]
-  # '^("|<)(clap|diagnostic|filesystem|hashing|init|json|listener|llvm|printer|query_framework|system_command|tester|tokenizer)("|>)$'
-    # Priority:        5
-    # SortPriority:    4
+  - Regex:          '^("|<)(artifacts/|clap/|diagnostic/|filesystem/|hashing/|init/|json/|listener/|llvm/|printer/|query_framework/|system_command/|tester/|tokenizer/|lang_definitions/|lexer/|token_parser_core/|token_source/|unicode_classification/)'
+    Priority:        5
+    SortPriority:    4
   # VM:
   - Regex:           '^("|<)(vm/.*)("|>)$'
     Priority:        6

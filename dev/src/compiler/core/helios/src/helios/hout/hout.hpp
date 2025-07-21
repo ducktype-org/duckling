@@ -9,11 +9,12 @@
 #include "../scope_symbol_id.hpp"
 #include "elements/expr.hpp"  // IWYU pragma: export
 
-#include <query_framework/query_int.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
 #include <base/string_id.hpp>
+
+#include <query_framework/query_int.hpp>
 
 #include <memory>
 #include <variant>

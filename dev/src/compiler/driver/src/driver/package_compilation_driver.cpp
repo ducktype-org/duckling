@@ -7,6 +7,7 @@
 #include <driver/hout_to_binary_driver.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
+
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -147,7 +148,10 @@ namespace compiler::driver {
 			base::StrID(base::strConcat("builtin_", backendTypeToStr(backend), ".o").c_str())
 		);
 		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-		mod.compile(builtin_obj_file.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+		mod.compile(
+			builtin_obj_file.FILE.getFilePath().getPath(),
+			backend_llvm::CompilationOutputType::Object
+		);
 		return builtin_obj_file;
 	}
 }

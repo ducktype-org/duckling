@@ -121,7 +121,7 @@ namespace base {
 			return !id.isBad();
 		}
 
-		std::strong_ordering operator<=>(const StrID& oth) const = default;
+		auto operator<=>(const StrID& oth) const = default;
 
 		/**
 		 * Due to the operator==(RawView) definition, implicit operator==(StrID) is deleted.
