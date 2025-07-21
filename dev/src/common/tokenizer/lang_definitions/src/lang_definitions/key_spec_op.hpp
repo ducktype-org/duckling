@@ -131,6 +131,7 @@ namespace lang_def {
 
 		// General text prefix operators (Not doesn't count)
 		Ref,
+		Box,
 		Copy,
 		Move,
 		Refof,
