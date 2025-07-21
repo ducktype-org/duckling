@@ -37,6 +37,7 @@ namespace vm {
 		std::deque<ThreadStack> threads_frame_stacks;
 
 		base::HashMap<GlobalDataID, base::OwningView> global_data;
+		base::HashMap<GlobalDataID, Ref<Block>>       global_blocks;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -80,10 +81,21 @@ namespace vm {
 		/**
 		 * @brief Returns a view of global data by the id.
 		 */
-		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
-			-> base::ModRawView {
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
+			GlobalDataID id
+		) -> base::ModRawView {
 			std::lock_guard lock(mutex);
 			return global_data.atMaybe(id).expect("Id not stored!")->modView();
+		}
+
+		/**
+		 * @brief Returns a reference to the block appropriate for the global data by id.
+		 * @note This should be the preferred method of accessing global data, if applicable.
+		 */
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
+			-> Ref<Block> {
+			std::lock_guard lock(mutex);
+			return *global_blocks.atMaybe(id).expect("Id not stored!");
 		}
 
 		// =================== Variant operations ===================
@@ -152,5 +164,7 @@ namespace vm {
 		requires(sizeof(T) <= sizeof(U)) constexpr static T& interpret(U& value) {
 			return *(reinterpret_cast<T*>(&value));
 		}
+
+		auto getBlockRefcount(Ref<Block>) -> u64;
 	};
 }
