@@ -13,8 +13,7 @@
 
 namespace vm {
 
-	// @TODO: change to STRONG_TYPEDEF_IT when available
-	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockID, u64);
+	STRONG_TYPEDEF_INT(BlockID, u64);
 
 	/**
 	 * @brief Main block data structure.
