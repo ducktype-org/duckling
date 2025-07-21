@@ -19,13 +19,13 @@ namespace compiler::driver {
 		system_command::SystemCommand command("gcc");
 
 		for (const auto& object_file_path: inputs)
-			command.addArg(object_file_path.FILE.nativePath());
+			command.addArg(object_file_path.FILE.getFilePath().native());
 
 
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");
-		command.addArg(output.FILE.nativePath());
+		command.addArg(output.FILE.getFilePath().native());
 		command.execute();
 	}
 }

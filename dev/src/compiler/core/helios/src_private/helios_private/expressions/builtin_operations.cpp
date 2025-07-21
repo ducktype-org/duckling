@@ -58,26 +58,28 @@ namespace compiler::helios::code {
 		return {};
 	}
 
+	// Aliases to keep things concise
+	using OpKindPair = std::pair<lexer::Operator, tsh::Kind>;
+	using LookupMap  = std::map<OpKindPair, BuiltinUnary>;
+
 	base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr) {
-		// note: this is mock that works only for very simple int, bool operations.
-		// when refactoring it remember about binaryBuiltin
+		auto kind = expr->expression_type.getType().getKind();
 
-		auto expr_type = expr->expression_type;
-
-		if (expr_type.getType().getKind() != tsh::Kind::Integral
-		    and expr_type.getType().getKind() != tsh::Kind::Bool) {
-			// No builtins for this case for types other than ints and bools for now.
-			return {};
-		}
-
-		// @TODO: change to base::map when possible
-		const static std::map<base::StrID, BuiltinUnary> operators = {
-			{ base::StrID("-"), BuiltinUnary::IntegerNegation },
-			{ keywordToStr(lang_def::Keyword::Not), BuiltinUnary::BooleanNot },
+		// Initialize once
+		static const LookupMap lookup = {
+			// Integral
+			{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
+			// Boolean
+			{ { keywordToStr(lang_def::Keyword::Not), tsh::Kind::Bool }, BuiltinUnary::BooleanNot },
+			// Meta
+			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
+			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
 		};
 
-		if (operators.contains(op)) return operators.at(op);
+		// Single lookup
+		auto it = lookup.find({ op, kind });
+		if (it != lookup.end()) return it->second;
 
-		return {};
+		return {};  // Not found
 	}
 }

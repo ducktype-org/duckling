@@ -145,7 +145,7 @@ namespace dia {
 			else
 				nl = true;
 
-			auto file = chunk.back().getSource()->getPath();
+			auto file = chunk.back().getSource()->getFile();
 
 			// Calculate the bounds [first_line, last_line] of printing in this chunk
 			auto first_line = safeMinus(chunk.front().getStartLineColumn().first, neighborhood);
@@ -154,7 +154,7 @@ namespace dia {
                 chunk.back().getSource()->getLines().size()
             );
 
-			out << "File: " << file.nativePath() << "\n";
+			out << "File: " << file.getFilePath().native() << "\n";
 			out << std::format("Lines: {}-{}\n", first_line, last_line);
 
 			std::vector<SourcePosition> sub_positions;
