@@ -1,13 +1,8 @@
-/**
- * @file module_tree2.cpp
- * @author Mateusz Kołpa (matihopemine@gmail.com)
- */
-
 #include "module_tree2.hpp"
 
 #include <base/maps.hpp>
-#include <base/str_id.hpp>
-#include <base/logic_error.hpp>
+#include <base/string_id.hpp>
+#include <query_framework/query_impl.hpp>
 
 #include <sstream>
 #include <functional>
@@ -139,7 +134,7 @@ ModuleID ModuleTree2::getID() const {
     return m_id;
 }
 
-u64 ModuleTree2::getHash() const {
+u64 ModuleTree2::getUnstableHash() const {
     if (m_modified) {
         const_cast<ModuleTree2*>(this)->updateHash();
     }

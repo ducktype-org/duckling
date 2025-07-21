@@ -17,6 +17,18 @@
 #include <memory>
 
 namespace compiler::frontend {
+	/**
+	 * If a file's extension is equal to this constant, then it is assumed
+	 * it is a source file of the module.
+	 */
+	constexpr std::string_view LANG_SOURCE_FILE = ".duck";
+
+	/**
+	 * If a file's extension is equal to this constant, then it is assumed
+	 * it is a single file module.
+	 */
+	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
+
     class ModuleTreeBuilder;
     
     /**
@@ -84,7 +96,7 @@ namespace compiler::frontend {
         [[nodiscard]]
         const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
         
-        /**
+        /**W
          * Parses the name of the module.
          * @return base::StrID with the name. `A.dmf -> A`, `/.../module/ -> module`.
          */
@@ -110,7 +122,7 @@ namespace compiler::frontend {
          * @return Hash value representing current state.
          */
         [[nodiscard]]
-        u64 getHash() const;
+        u64 getUnstableHash() const;
         
         /**
          * Checks if the module tree has been modified since last hash calculation.
@@ -125,13 +137,13 @@ namespace compiler::frontend {
         /**
          * Modification operations - private to ensure controlled access.
          */
-        void addSourceFile(const SourceFile& file);
-        void removeSourceFile(FileID file_id);
-        void setMainSourceFile(const SourceFile& file);
-        void addSubmodule(base::StrID name, std::shared_ptr<ModuleTree2> submodule);
-        void removeSubmodule(base::StrID name);
-        void addOtherFile(const fs::File& file);
-        void removeOtherFile(const fs::File& file);
+        void addSourceFile(query::Context& ctx, const SourceFile& file);
+        void removeSourceFile(query::Context& ctx, FileID file_id);
+        void setMainSourceFile(query::Context& ctx, const SourceFile& file);
+        void addSubmodule(query::Context& ctx, base::StrID name, std::shared_ptr<ModuleTree2> submodule);
+        void removeSubmodule(query::Context& ctx, base::StrID name);
+        void addOtherFile(query::Context& ctx, const fs::File& file);
+        void removeOtherFile(query::Context& ctx, const fs::File& file);
         
         /**
          * Updates the hash after modifications.
