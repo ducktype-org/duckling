@@ -20,7 +20,6 @@ POP_DIAGNOSTIC;
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 
-#include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/int_conv.hpp>
@@ -28,6 +27,7 @@ POP_DIAGNOSTIC;
 #include <base/variant.hpp>
 
 #include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
 
 #include <vm/cli.hpp>
 #include <vm/server.hpp>

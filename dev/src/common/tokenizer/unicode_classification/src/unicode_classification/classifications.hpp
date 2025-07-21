@@ -4,12 +4,10 @@
 
 #include <array>
 
-namespace lexer {
+namespace unicode {
 
 	/**
 	 * @brief Sets of characters used to decide what a certain character means in source code
-	 *
-	 * @note Maybe it should be separated from lexer
 	 *
 	 * @note There are currently two codepoints that belong in both `name_start` and
 	 * `operator_continue`. They are U+1885 and U+1886. For now they will be treated as a

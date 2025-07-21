@@ -1,12 +1,12 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <lexer/lexer.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
 
 #include <base/defer.hpp>
 
 #include <clap/clap.hpp>
 #include <init/init.hpp>
+#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 

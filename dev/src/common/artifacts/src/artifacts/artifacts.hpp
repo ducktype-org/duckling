@@ -201,6 +201,6 @@ namespace artifacts {
 		 * @brief Return path to a `.artc` file with blob content.
 		 * .artc file is the file which stores blob data.
 		 */
-		std::filesystem::path getArtcFile() const;
+		fs::FilePath getArtcFile() const;
 	};
 }

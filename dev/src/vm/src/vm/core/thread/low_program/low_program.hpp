@@ -32,9 +32,9 @@ namespace vm::low {
 	 * @brief Global data.
 	 */
 	struct GlobData {
-		TypeCRef                         type;
-		base::Optional<code::Identifier> ctor_name;
-		base::Optional<code::Identifier> dtor_name;
+		TypeCRef                    type;
+		base::Optional<base::StrID> ctor_name;
+		base::Optional<base::StrID> dtor_name;
 		//@TODO: change it to CTV
 		base::Optional<u64> initial_value;
 	};
@@ -61,9 +61,15 @@ namespace vm::low {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 
 			for (const auto& global: global_data) {
+				base::Optional<base::StrID> ctor_name;
+				base::Optional<base::StrID> dtor_name;
+
+				if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
+				if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
+
 				GlobData data{ .type          = this->types->at(global.type),
-					           .ctor_name     = global.ctor_name,
-					           .dtor_name     = global.dtor_name,
+					           .ctor_name     = ctor_name,
+					           .dtor_name     = dtor_name,
 					           .initial_value = global.initial_value };
 				this->global_data.insert(data, global.name);
 			}
