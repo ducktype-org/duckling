@@ -442,8 +442,26 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		executing_program = program;
-		for (const auto& [type, id, name]: program->global_data.allData())
-			process_memory.insertGlobalData(id, *type);
+		for (const auto& [global, id, name]: program->global_data.allData()) {
+			// Insert the global data if it hasn't been initialized; then run constructor if present
+			if (process_memory.tryInsertGlobalData(id, global->type)
+			    && global->ctor_name.has_value()) {
+				try {
+					const auto& func = *executing_program->functions
+					                        .atMaybe(base::StrID(global->ctor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->ctor_name.value().str()
+											);
+					low::FuncData start_function;
+					start_function = createStartFunctionFor(func, {});
+					i64 exit_code  = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+				} catch (const KillProcessException& e) {
+					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+				}
+			}
+		}
 
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
@@ -462,6 +480,31 @@ namespace vm {
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		}
+	}
+
+	/**
+	 * @brief Function to be called when the VMProcess is destroyed.
+	 */
+	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
+		executing_program = program;
+		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
+			if (global->dtor_name.has_value()) {
+				try {
+					const auto& func = *executing_program->functions
+					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->dtor_name.value().str()
+											);
+					low::FuncData start_function;
+					start_function = createStartFunctionFor(func, {});
+					i64 exit_code  = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+				} catch (const KillProcessException& e) {
+					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+				}
+			}
 		}
 	}
 
