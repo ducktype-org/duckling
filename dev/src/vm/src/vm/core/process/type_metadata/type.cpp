@@ -247,7 +247,7 @@ namespace vm {
 			opt_some(imd) { return imd->inherits_from.contains(other->getID()); }
 			opt_none { return false; }
 		}
-		std::unreachable();
+		CORE_UNREACHABLE();
 	}
 
 	bool Type::isInstantiable() const { return am_i_instantiable; }
