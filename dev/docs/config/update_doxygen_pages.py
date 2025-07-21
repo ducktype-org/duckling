@@ -54,9 +54,7 @@ def update_markdown_file(
 
         # Check if this is the main Index.md file
         filename = os.path.basename(file_path)
-        is_index_file = (
-            filename.lower() == "index.md" and current_dir == base_dir
-        )
+        is_index_file = filename.lower() == "index.md" and current_dir == base_dir
 
         if is_index_file:
             # For Index.md, use \mainpage
@@ -99,7 +97,7 @@ def update_markdown_file(
                 lines[0] = "#" + " " + name
         elif first_header_line != -1:
             lines = lines[first_header_line:]
-        
+
         if is_index_file:
             lines[0] = page_directive
 
@@ -121,7 +119,9 @@ def update_markdown_file(
             subpage_end = -1
 
             for i, line in enumerate(lines):
-                if line.strip().startswith("- [") or "\\subpage" in line:
+                if re.match(r'^[\*\-]\s+\[.*?\]\(.*?\.md\)$', line)\
+                    or "\\subpage" in line\
+                    or "@subpage" in line:
                     if subpage_start == -1:
                         subpage_start = i
                     subpage_end = i
@@ -147,37 +147,33 @@ def update_markdown_file(
         section_buttons_start = -1
         section_buttons_end = -1
         for i, line in enumerate(lines):
-            if line.strip().startswith("<div class=\"section_buttons\">"):
+            if line.strip().startswith('<div class="section_buttons">'):
                 section_buttons_start = i
             elif line.strip().startswith("</div>") and section_buttons_start != -1:
                 section_buttons_end = i
                 break
 
-        section_buttons_lines = []    
+        section_buttons_lines = []
         if dirs[0] or dirs[1]:
             """
             <div class="section_buttons">
- 
+
             | Previous          |                              Next |
             |:------------------|----------------------------------:|
             | [Home](README.md) | [Customization](customization.md) |
-            
+
             </div>
             """
-            section_buttons_lines.append("<div class=\"section_buttons\">")
+            section_buttons_lines.append('<div class="section_buttons">')
             section_buttons_lines.append("")
             if dirs[0]:
                 prev_rel_path = os.path.relpath(dirs[0], current_dir)
-                section_buttons_lines.append(
-                    f"| [Previous]({prev_rel_path}) |"
-                )
+                section_buttons_lines.append(f"| [Previous]({prev_rel_path}) |")
             else:
                 section_buttons_lines.append("| Previous |")
             if dirs[1]:
                 next_rel_path = os.path.relpath(dirs[1], current_dir)
-                section_buttons_lines.append(
-                    f"| [Next]({next_rel_path}) |"
-                )
+                section_buttons_lines.append(f"| [Next]({next_rel_path}) |")
             else:
                 section_buttons_lines.append("| Next |")
             section_buttons_lines.append("")
@@ -186,7 +182,9 @@ def update_markdown_file(
 
             if section_buttons_start != -1 and section_buttons_end != -1:
                 # Replace existing section buttons
-                lines[section_buttons_start : section_buttons_end + 1] = section_buttons_lines
+                lines[section_buttons_start : section_buttons_end + 1] = (
+                    section_buttons_lines
+                )
             else:
                 # Add section buttons at the end
                 if lines and lines[-1].strip():
