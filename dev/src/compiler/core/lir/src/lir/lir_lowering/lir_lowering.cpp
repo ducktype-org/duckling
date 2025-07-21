@@ -235,7 +235,7 @@ namespace compiler::lir {
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
-				for (auto& mir_local: key.function->local_list) {
+				for (const auto& mir_local: key.function->local_list) {
 					auto lir_local     = LirLocal::fromMIR(ctx, &mir_local);
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 

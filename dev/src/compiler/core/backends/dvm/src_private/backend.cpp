@@ -154,7 +154,7 @@ namespace compiler::backend_vm {
 				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
 
 			// Save locals offset
-			for (auto& var: ctx.lir_func->local_list) {
+			for (const auto& var: ctx.lir_func->local_list) {
 				// This is most likely redundant
 				CORE_ASSERT(!ctx.lir_local_to_name.contains(&var), "Duplicated lir local");
 
