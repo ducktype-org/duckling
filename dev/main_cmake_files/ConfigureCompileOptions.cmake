@@ -49,7 +49,9 @@ if (USE_MARCH_NATIVE)
 	add_compile_options(-march=native)
 endif (USE_MARCH_NATIVE)
 
-# Debug usees -O0, DevRelease and Release use -O2.
-set(CMAKE_CXX_FLAGS_DEBUG      "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -DBUILD_TYPE_DEBUG")
-set(CMAKE_CXX_FLAGS_DEVRELEASE "${CMAKE_CXX_FLAGS_DEVRELEASE} -O2 -DBUILD_TYPE_DEV_RELEASE")
-set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE")
+# Debug uses -g by default, but we want to also ensure -O0 is used
+# std can use NDEBUG for internal assert purposes, so we should define it here
+# Release uses -O3 by default, but we want to use -O2 for now
+set(CMAKE_CXX_FLAGS_DEBUG      "-g -O0 -DBUILD_TYPE_DEBUG")
+set(CMAKE_CXX_FLAGS_DEVRELEASE "-O2 -DBUILD_TYPE_DEV_RELEASE")
+set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")

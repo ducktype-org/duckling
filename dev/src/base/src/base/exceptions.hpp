@@ -123,9 +123,7 @@ namespace base {
 
 
 #if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
-	#define CORE_UNREACHABLE()                                      \
-		DETAIL_THROW_PANIC("    Unreachable code reached! Panic."); \
-		std::unreachable()
+	#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");
 #else
-	#define CORE_UNREACHABLE() std::unreachable()
+	#define CORE_UNREACHABLE() std::unreachable();
 #endif
