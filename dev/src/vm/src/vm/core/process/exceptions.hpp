@@ -35,12 +35,12 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(
 		VMUnreferencedBlockDeletionException, "Unreferenced block deletion exception"
 	);
-	// Do the same for field type_field type_l64
 	VM_RUNTIME_EXCEPTION(VMExtL64NotConsumedException, "ext_l64 not consumed exception");
 	VM_RUNTIME_EXCEPTION(VMExtTypeNotConsumedException, "ext_type not consumed exception");
 	VM_RUNTIME_EXCEPTION(VMExtFieldNotConsumedException, "ext_field not consumed exception");
 	VM_RUNTIME_EXCEPTION(VMExtTypeFieldNotConsumedException, "ext_type_field not found exception");
 	VM_RUNTIME_EXCEPTION(VMExtTypeL64NotConsumedException, "ext_type_l64 not consumed exception");
+	VM_RUNTIME_EXCEPTION(VMExcutingLabelException, "Handling label should not be possible");
 
 
 }

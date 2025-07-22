@@ -5,6 +5,8 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
+#include <vm/core/process/exceptions.hpp>
+
 #include <mutex>
 
 namespace vm {
@@ -30,13 +32,13 @@ namespace vm {
 	}
 
 	void Memory::destroyReference(Ref<Block> block) {
-		if (block->refcount == 0) CORE_PANIC("Tried deleting a reference to an unreferenced block");
+		if (block->refcount == 0) throw exceptions::VMUnreferencedBlockDeletionException();
 		if (--block->refcount == 0) deleteBlock(block);
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		if (static_cast<u64>(id) >= blocks.size()) CORE_PANIC("Accessing block out of bounds");
-		if (!blocks[usize(id)].used) CORE_PANIC("Accessing freed block");
+		if (static_cast<u64>(id) >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
+		if (!blocks[usize(id)].used) exceptions::VMUseAfterFreeException();
 		return &blocks[static_cast<u64>(id)];
 	}
 
@@ -127,7 +129,7 @@ namespace vm {
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
-		if (dst.isNull() || src.isNull()) CORE_PANIC("Copying to/from null pointer");
+		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst(*dst.block->mutex_ref);
 		std::lock_guard lock_src(*src.block->mutex_ref);

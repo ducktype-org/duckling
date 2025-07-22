@@ -35,6 +35,7 @@
 #include <base/variant.hpp>
 
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
@@ -330,7 +331,7 @@ namespace vm {
 			instr             = function.bc.data();
 
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
+				throw exceptions::VMStackOverflowException();
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
@@ -441,23 +442,23 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_l64 not consumed by previous instruction");
+		throw exceptions::VMExtL64NotConsumedException();
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_type not consumed by previous instruction");
+		throw exceptions::VMExtTypeNotConsumedException();
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_field)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_field not consumed by previous instruction");
+		throw exceptions::VMExtFieldNotConsumedException();
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_type_field not consumed by previous instruction");
+		throw exceptions::VMExtTypeFieldNotConsumedException();
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_l64)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
+		throw exceptions::VMExtTypeL64NotConsumedException();
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
@@ -758,7 +759,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(label)(FUNCTION_ARGS) {
-		CORE_PANIC("Handling label should not be possible.");
+		throw exceptions::VMExcutingLabelException();
 	}
 }
 
