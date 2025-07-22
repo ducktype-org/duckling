@@ -34,6 +34,7 @@ function main { i64, ptr_argv } -> i64 {
     # *ptr = value;
     store_lptr_lany ptr, value;
 
+    # v0.setType<i64>();
     variantSetInner_lvnt_type v0, i64;
 
     # let read_val: i64 = *ptr;

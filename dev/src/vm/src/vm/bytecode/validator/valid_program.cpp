@@ -3,9 +3,13 @@
 
 #include "errors.hpp"
 
+#include <base/string_id.hpp>
+
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
+
+#include <unordered_set>
 
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
@@ -34,7 +38,11 @@ void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) 
 	for (const auto& [func_ref, id, name]: function_map.allData())
 		type_context.signatures.put(name, func_ref->signature);
 	insertTypes(collection.types);
+
+	for (auto& func: collection.functions) available_functions.insert(func.name);
+
 	insertGlobals(collection.global_data);
+
 	insertFunctions(collection.functions);
 	valid = true;
 }
@@ -47,6 +55,10 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& 
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
+		if (global.ctor_name.has_value() && !available_functions.contains(global.ctor_name.value()))
+			throw MissingGlobalCtorDtorError(true, global.ctor_name.value(), global.name);
+		if (global.dtor_name.has_value() && !available_functions.contains(global.dtor_name.value()))
+			throw MissingGlobalCtorDtorError(false, global.dtor_name.value(), global.name);
 		globals_map.insert(global, global.name);
 	}
 }

@@ -1,5 +1,5 @@
-global_data counter i64;
-global_data global_ptr ptr_i64;
+global_data counter i64 {};
+global_data global_ptr ptr_i64 {};
 
 function globaler_setter {} -> void {
 	init_lany_type  x, i64;
