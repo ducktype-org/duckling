@@ -631,4 +631,4 @@ namespace vm {
 	bool VMThread::waitForRunningResponse() {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
-}  // namespace vm
+}
