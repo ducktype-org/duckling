@@ -52,6 +52,14 @@ endif (USE_MARCH_NATIVE)
 # Debug uses -g by default, but we want to also ensure -O0 is used
 # std can use NDEBUG for internal assert purposes, so we should define it here
 # Release uses -O3 by default, but we want to use -O2 for now
-set(CMAKE_CXX_FLAGS_DEBUG      "-g -O0 -DBUILD_TYPE_DEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG      "-O0 -DBUILD_TYPE_DEBUG -g")
+# Coverage doesn't include debug symbols, but we want to ensure -O0 is used
+set(CMAKE_CXX_FLAGS_COV        "-O0 -DBUILD_TYPE_DEBUG")
 set(CMAKE_CXX_FLAGS_DEVRELEASE "-O2 -DBUILD_TYPE_DEV_RELEASE")
 set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
+
+
+# Strip binaries from symbols in Release build
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
+endif()
