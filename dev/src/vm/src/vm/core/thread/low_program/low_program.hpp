@@ -11,6 +11,7 @@
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <utility>
+#include "base/string_id.hpp"
 
 namespace vm::low {
 	using ByteCode = std::vector<MicroInstruction>;
@@ -24,6 +25,8 @@ namespace vm::low {
 		usize       local_stack_size;
 		usize       arg_size;
 		usize       ret_size;
+		std::vector <base::StrID> parameters;
+		base::StrID result_type;
 	};
 
 	/**

@@ -144,14 +144,6 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						function.body.push_back(translateInstruction(*instr));
 
 					new_code.functions.emplace_back(function);
-
-					std::vector<base::StrID> parameters_str;
-					parameters_str.reserve(function.signature.parameters.size());
-					for (const auto& param: function.signature.parameters)
-						parameters_str.emplace_back(param);
-					new_code.types.emplace_back(code::FunctionType(
-						function.name, parameters_str, function.signature.result_type
-					));
 				}
 			}
 

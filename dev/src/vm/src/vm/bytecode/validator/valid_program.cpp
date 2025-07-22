@@ -1,4 +1,5 @@
 #include "valid_program.hpp"
+#include <cstdio>
 
 #include "errors.hpp"
 
@@ -28,6 +29,10 @@ vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCol
 
 void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) {
 	valid = false;
+	for (const auto& func: collection.functions) type_context.signatures.put(func.name, func.signature);
+
+	for (const auto& [func_ref, id, name]: function_map.allData())
+		type_context.signatures.put(name, func_ref->signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertFunctions(collection.functions);
@@ -49,31 +54,12 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata();
 
-	base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
-
-	for (const auto& func: new_functions) signatures.put(func.name, func.signature);
-
-	for (const auto& [func_ref, id, name]: function_map.allData())
-		signatures.put(name, func_ref->signature);
-
-	for (const auto& type: type_context.getCurrentTypes()) {
-		if (std::holds_alternative<vm::code::FunctionType>(type)) {
-			const auto&   function_type = std::get<vm::code::FunctionType>(type);
-			FuncSignature signature;
-			signature.result_type = function_type.result;
-			signature.parameters.reserve(function_type.parameters.size());
-			for (const auto& param: function_type.parameters)
-				signature.parameters.emplace_back(param);
-			signatures.put(function_type.name, signature);
-		}
-	}
-
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = validateAndExtractReachableCode(
-			type_context.getCurrentTypes(), signatures, *type_metadata, globals_map, func
+			type_context.getCurrentTypes(), type_context.signatures, *type_metadata, globals_map, func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}

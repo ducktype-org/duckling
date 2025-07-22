@@ -118,7 +118,6 @@ namespace vm {
 		start_function.ret_size = 0;
 
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
-		auto called_func_type = executing_program->types->at(func.name);
 		auto i64_type         = executing_program->types->at(base::StrID("i64"));
 
 		u64  i64_type_id        = i64_type->getID().asInt();
@@ -140,9 +139,7 @@ namespace vm {
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			i64  converted_arg = func_args[i];
-			auto arg_type      = called_func_type->getNthParameterType(i).expect(
-                "Wrong number of passed arguments!"
-            );
+			auto arg_type      = executing_program->types->at(func.parameters[i]);
 			u64 arg_type_id = arg_type->getID().asInt();
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
@@ -195,8 +192,8 @@ namespace vm {
 
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
-		auto called_func_type   = executing_program->types->at(func.name);
-		auto called_return_type = called_func_type->getResultType().value();
+
+		auto called_return_type = executing_program->types->at(func.result_type);
 		auto argv_type          = executing_program->types->at(base::StrID("argv"));
 		auto argv_ptr_type      = executing_program->types->at(base::StrID("ptr_argv"));
 		auto i64_type           = executing_program->types->at(base::StrID("i64"));
@@ -278,7 +275,7 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		auto called_func_return_type = *executing_program->types->at(func.name)->getResultType();
+		auto called_func_return_type = executing_program->types->at(func.result_type);
 		frame->called_func_ret_size  = called_func_return_type->getSize();
 
 		const auto* instr = start_function.bc.data();
