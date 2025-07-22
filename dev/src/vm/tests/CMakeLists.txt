@@ -3,7 +3,7 @@ include(CMakePrintHelpers)
 # When VM runs code for a long time in TC mode, without the "tailcall" optimization
 # enabled, it will run out of stack space.
 function(duck_disable_tc_in_debug test_name test_set)
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE MATCHES "(?i)^dev")
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE MATCHES "^(Dev|dev).*")
                 set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED TRUE)
         endif()
 endfunction()
