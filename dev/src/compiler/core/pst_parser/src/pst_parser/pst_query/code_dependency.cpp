@@ -35,33 +35,16 @@ namespace pst {
 				return LangElement::getByID(lid.hash.val.data.at(0));
 			};
 			static auto get_tokens = [](AccessLocked<LangElement> locked) {
-				return locked.illegalAccess().map([](pst::Access<pst::LangElement> el) {
-					return el->viewTokens();
-				});
+				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
 			};
-			static auto file_location = [](const lexer::Token& tok) -> bool {
-				return tok.getPosition().getLocationType() == dia::LocationType::FileLocationType;
+			static auto file_location = [](CRef<lexer::Token> tok) {
+				return tok->getPosition().getLocationType() == dia::LocationType::FileLocationType;
 			};
 
-			auto transformed = nodes | transform(get_pst_node) | transform(get_tokens);
-			auto filtered    = transformed | filter([](auto opt) { return opt.has_value(); })
-			              | transform([](auto opt) { return opt.value(); });
-			auto joined = filtered | std::views::join;
-			static_assert(std::same_as<
-						  std::ranges::range_value_t<decltype(joined)>,
-						  CRef<lexer::Token>>);
-			static_assert(std::same_as<
-						  std::ranges::range_reference_t<decltype(joined)>,
-						  CRef<lexer::Token>>);
-			static_assert(std::invocable<
-						  decltype(file_location),
-						  std::ranges::range_reference_t<decltype(joined)>>);
-			static_assert(std::indirect_unary_predicate<
-						  decltype(file_location),
-						  std::ranges::iterator_t<decltype(joined)>>);
-			auto filtered2 = joined | ::std::views::filter(file_location);
-
-			return filtered2 | std::ranges::to<std::vector<CRef<lexer::Token>>>();
+			return nodes | transform(get_pst_node) | transform(get_tokens)
+			     | filter([](auto opt) { return opt.has_value(); })
+			     | transform([](auto opt) { return opt.value(); }) | std::views::join
+			     | filter(file_location) | std::ranges::to<std::vector<CRef<lexer::Token>>>();
 		}
 	}
 

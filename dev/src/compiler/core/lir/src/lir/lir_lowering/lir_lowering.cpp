@@ -245,8 +245,8 @@ namespace compiler::lir {
 					locals.pushBack(std::move(lifetime_flag));
 					auto flag_index = locals.lastIndex();
 
-					mir_to_lir_local.put(Ref{ &mir_local }, locals[local_index]);
-					mir_to_lifetime_flag.put(Ref{ &mir_local }, locals[flag_index]);
+					mir_to_lir_local.put(&mir_local, locals[local_index]);
+					mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
 				}
 			}
 
