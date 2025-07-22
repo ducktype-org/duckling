@@ -4,7 +4,7 @@
 
 namespace dia {
 	void Location::printPrefixInfo(printer::PrinterOStream& out) const {
-		out << "In file: " << getSourceFile().strView().data();
+		out << "In file: " << getSourceFile().getFilePath().strView().data();
 	}
 
 	void Location::printMessage(
@@ -32,7 +32,7 @@ namespace dia {
 	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> source):
 		  parent(parent),
 		  source(source),
-		  path(parent.getSource()->getPath()) {}
+		  path(parent.getSource()->getFile()) {}
 
 	Ref<tokenizer::TokenSource> MacroLocation::getSource() const { return source; }
 

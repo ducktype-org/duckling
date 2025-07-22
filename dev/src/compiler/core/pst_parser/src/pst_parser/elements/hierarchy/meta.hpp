@@ -4,13 +4,12 @@
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/base_element.hpp>
-#include <token_parser_core/common_elements.hpp>
-
 #include <base/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
 
 #include <set>
 

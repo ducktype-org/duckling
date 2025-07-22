@@ -9,6 +9,8 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <unordered_set>
+
 namespace vm::code {
 	/**
 	 * @brief State of the object represents a valid bytecode class.
@@ -94,6 +96,9 @@ namespace vm::code {
 
 		StableObjIdNameMap<code::Function>   function_map;
 		StableObjIdNameMap<code::GlobalData> globals_map;
+
+		// Useful when verifying the presence of constructors and destructors while inserting globals.
+		std::unordered_set<base::StrID> available_functions;
 
 		code::TypeContext type_context;
 

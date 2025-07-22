@@ -88,13 +88,15 @@ namespace vm {
 		return getBlock(id)->data.element_type;
 	}
 
-	void Memory::insertGlobalData(GlobalDataID id, TypeCRef type) {
+	bool Memory::tryInsertGlobalData(GlobalDataID id, TypeCRef type) {
 		std::lock_guard lock(mutex);
 		if (!global_data.contains(id)) {
 			auto             type_size = type->getSize();
 			base::OwningView storage(new byte[type_size], type_size);
 			global_data.put(id, std::move(storage));
+			return true;
 		}
+		return false;
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
@@ -125,7 +127,7 @@ namespace vm {
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
-		CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
+		if (dst.isNull() || src.isNull()) CORE_PANIC("Copying to/from null pointer");
 
 		std::lock_guard lock_dst(*dst.block->mutex_ref);
 		std::lock_guard lock_src(*src.block->mutex_ref);

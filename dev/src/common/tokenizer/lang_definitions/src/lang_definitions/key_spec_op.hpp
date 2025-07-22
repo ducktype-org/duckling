@@ -131,6 +131,7 @@ namespace lang_def {
 
 		// General text prefix operators (Not doesn't count)
 		Ref,
+		Box,
 		Copy,
 		Move,
 		Refof,
@@ -159,6 +160,8 @@ namespace lang_def {
 		BCVariant,
 		BCFunType,
 		BCGlobalData,
+		BCGlobalConstructor,
+		BCGlobalDestructor,
 		BCOpaque,
 		BCClass,
 		BCAbstract,

@@ -1,9 +1,9 @@
 #include "serializer.hpp"
 
-#include <lang_definitions/key_spec_op.hpp>
-
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
+
+#include <lang_definitions/key_spec_op.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -249,8 +249,18 @@ namespace vm::code {
 
 		void write() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
-			out << global_data.name.str.strView() << " " << global_data.type.str.strView();
-			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
+			if (global_data.ctor_name.has_value()) {
+				out << "\n    "
+					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
+					<< ": " << global_data.ctor_name.value().str.strView() << ",\n";
+			}
+			if (global_data.dtor_name.has_value()) {
+				out << "\n    "
+					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
+					<< ": " << global_data.dtor_name.value().str.strView() << ",\n";
+			}
+			out << '}' << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
 		}
 	};
 
