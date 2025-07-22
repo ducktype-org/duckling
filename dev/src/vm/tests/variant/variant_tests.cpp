@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(nestedVariantTest);
 		TESTER_ADD_TEST(variantInsideStruct);
 		TESTER_ADD_TEST(emptyVariant);
+		TESTER_ADD_TEST(nonInstantiableVariant);
 	}
 
 private:
@@ -81,6 +82,10 @@ private:
 	}
 
 	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
+
+	void nonInstantiableVariant() {
+		loadInvalidDbc("non_instantiable.dbc", { vm::code::UninstantiableValueError::ERR_MSG });
+	}
 
 	void emptyVariant() {
 		loadInvalidDbc("empty_variant.dbc", { vm::code::EmptyVariantError::ERR_MSG });
