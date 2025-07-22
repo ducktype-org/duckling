@@ -4,7 +4,7 @@ include(CMakePrintHelpers)
 # enabled, it will run out of stack space.
 function(duck_disable_tc_in_debug test_name test_set)
         if(test_set STREQUAL "vm_tc")
-                set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED "$<$<CONFIG:Debug>:True>")
+                set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED "$<$<OR:$<CONFIG:Debug>,$<CONFIG:CovDebug>>:True>")
         endif()
 endfunction()
 
