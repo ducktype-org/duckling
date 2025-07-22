@@ -1,4 +1,4 @@
-global_data global_x i32;
+global_data global_x i32 {};
 
 function main {
 	# ret_val -> main ret_val

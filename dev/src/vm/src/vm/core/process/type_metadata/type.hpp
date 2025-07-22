@@ -43,6 +43,7 @@ namespace vm {
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
+		bool        am_i_instantiable = true;
 
 		std::variant<
 			std::monostate,
@@ -57,6 +58,24 @@ namespace vm {
 			kind;
 
 		Type() = default;
+
+		/**
+		 * @brief Finds out if the type is instantiable knowing it is of kind::Data.
+		 * @param data The stored kind.
+		 */
+		void isInstantiableImpl(kind::Data& data);
+
+		/**
+		 * @brief Finds out if the type is instantiable knowing it is of kind::Variant.
+		 * @param data The stored kind.
+		 */
+		void isInstantiableImpl(kind::Variant& variant);
+
+		/**
+		 * @brief Finds out if the type is instantiable knowing it has inheritance.
+		 * @param inheritanceMetadata InheritanceMetadata of the stored class/interface.
+		 */
+		void inheritsFromImpl(InheritanceMetadata& inheritance_metadata);
 
 	public:
 		// Type declaration:
