@@ -62,13 +62,13 @@ private:
 
 	void simpleVariant1() {
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("simple_variant.dbc", "1", "13"), "Copying to/from null pointer"
+			runTestOnVmGetResult("simple_variant.dbc", "1", "13"), "Null pointer copy exception"
 		);
 	}
 
 	void simpleVariant2() {
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("simple_variant.dbc", "2", "13"), "Data was freed"
+			runTestOnVmGetResult("simple_variant.dbc", "2", "13"), "Use after free exception"
 		);
 	}
 
@@ -77,7 +77,7 @@ private:
 	void nestedVariantTest() {
 		runTestOnVm("nested.dbc", "15", "15");
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("nested_failing.dbc", "15", "15"), "Data was freed"
+			runTestOnVmGetResult("nested_failing.dbc", "15", "15"), "Use after free exception"
 		);
 	}
 
