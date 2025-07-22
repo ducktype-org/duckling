@@ -442,7 +442,7 @@ namespace compiler::mir {
 		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id) {
 			// @TODO: Optimize into a hashmap.
 			for (auto& local: local_list)
-				if (local.helios_id == helios_id) return  &local;
+				if (local.helios_id == helios_id) return &local;
 			return {};
 		}
 
