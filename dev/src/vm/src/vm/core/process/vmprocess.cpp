@@ -292,6 +292,8 @@ namespace vm {
 	VMProcess::~VMProcess() {
 		for (auto& t: vm_threads)
 			if (t.exec_thread) (void) (stop());
+		if (loaded_program.has_value())
+			getMainVMThread().execGlobalDestructors(&loaded_program.value());
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }

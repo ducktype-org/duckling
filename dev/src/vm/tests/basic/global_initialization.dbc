@@ -1,0 +1,23 @@
+# generated with duck using --dvm-backend flag
+# from compiler/driver/tests/globals_initialization
+
+type fun: _ctor_GLOBAL__Q_M22globals_initializationG1g { } void
+
+global_data _Q_M22globals_initializationG1g i64 {
+    constructor: _ctor_GLOBAL__Q_M22globals_initializationG1g,
+};
+
+function _ctor_GLOBAL__Q_M22globals_initializationG1g {
+    label                   label_0;
+    # Operation: Assign
+    mov_g64_imm            _Q_M22globals_initializationG1g,       5;
+    # Terminator: ReturnVoid
+    ret;
+}
+
+function main {
+    label                   label_0;
+    # Terminator: ReturnValue
+    mov_l64_g64             ret_val,_Q_M22globals_initializationG1g;
+    ret;
+}
