@@ -61,8 +61,10 @@ namespace vm::builtins {
 			Memory&                     memory,
 			const std::vector<VmValue>& args
 		) {
-			if (sizeof...(FunArgs) != args.size())
-				throw exceptions::VMInvalidBuiltinArgumentsException();
+			CORE_ASSERT(
+				sizeof...(FunArgs) == args.size(),
+				"Wrong number of arguments passed to the builtin function"
+			);
 			return callUnpackArgsImpl(
 				function, vm_return_type, thread, memory, args, std::index_sequence_for<FunArgs...>{}
 			);

@@ -28,6 +28,9 @@ namespace vm {
 		TypeMetadata& operator=(const TypeMetadata&) = delete;
 		TypeMetadata& operator=(TypeMetadata&&)      = delete;
 
+		/**
+		 * @note This function shouldn't be use after call to finalize().
+		 */
 		TypeRef addType(Type&& type);
 
 		/**

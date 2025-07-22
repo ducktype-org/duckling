@@ -102,7 +102,7 @@ namespace vm {
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
-		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(*parent_pointer.block->mutex_ref);
 		if_opt_some(parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested) {
 			if ((*nested)->data.element_type == type) return *nested;
@@ -111,7 +111,7 @@ namespace vm {
 	}
 
 	void Memory::setNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
-		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(mutex);
 		auto&           children = parent_pointer.block->children_blocks;
 		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {

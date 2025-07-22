@@ -14,10 +14,10 @@ namespace vm::exceptions {
 		}
 	};
 
-#define VM_RUNTIME_EXCEPTION(name, msg)             \
-	struct name: public VMRuntimeException {        \
-		constexpr static const char* ERR_MSG = msg; \
-		name(): VMRuntimeException(ERR_MSG) {}      \
+#define VM_RUNTIME_EXCEPTION(name, msg)                     \
+	struct name: public VMRuntimeException {                \
+		constexpr static std::string_view ERR_MSG = msg;    \
+		name(): VMRuntimeException(std::string(ERR_MSG)) {} \
 	}
 
 	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Null pointer copy exception");
@@ -26,6 +26,7 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMDoubleFreeException, "Double free exception");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Use after free exception");
 	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "Stack overflow exception");
+	// @TODO: add operator to constructor
 	VM_RUNTIME_EXCEPTION(VMUnknownOperatorException, "Unknown operator exception");
 	VM_RUNTIME_EXCEPTION(VMUnexpectedExecutionStatus, "Unexpected execution status exception");
 	VM_RUNTIME_EXCEPTION(VMInvalidBuiltinFunctionException, "Invalid builtin function exception");

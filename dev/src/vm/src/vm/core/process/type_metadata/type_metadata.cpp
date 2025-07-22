@@ -16,6 +16,7 @@ namespace vm {
 	}
 
 	void TypeMetadata::finalize() {
+		// @TODO: Add errors
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 
