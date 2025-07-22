@@ -5,13 +5,14 @@
 
 #include "instruction.hpp"
 
+#include "base/string_id.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <utility>
-#include "base/string_id.hpp"
 
 namespace vm::low {
 	using ByteCode = std::vector<MicroInstruction>;
@@ -20,13 +21,13 @@ namespace vm::low {
 	 * @brief Function data.
 	 */
 	struct FuncData {
-		base::StrID name;
-		ByteCode    bc;
-		usize       local_stack_size;
-		usize       arg_size;
-		usize       ret_size;
-		std::vector <base::StrID> parameters;
-		base::StrID result_type;
+		base::StrID              name;
+		ByteCode                 bc;
+		usize                    local_stack_size;
+		usize                    arg_size;
+		usize                    ret_size;
+		std::vector<base::StrID> parameters;
+		base::StrID              result_type;
 	};
 
 	/**

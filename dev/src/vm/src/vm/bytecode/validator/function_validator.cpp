@@ -17,7 +17,6 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-#include <cstdio>
 #include <variant>
 
 using namespace vm;

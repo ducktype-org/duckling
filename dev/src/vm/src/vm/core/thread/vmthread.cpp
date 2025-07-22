@@ -118,7 +118,7 @@ namespace vm {
 		start_function.ret_size = 0;
 
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
-		auto i64_type         = executing_program->types->at(base::StrID("i64"));
+		auto i64_type = executing_program->types->at(base::StrID("i64"));
 
 		u64  i64_type_id        = i64_type->getID().asInt();
 		auto funcs              = executing_program->functions;
@@ -140,7 +140,7 @@ namespace vm {
 		for (u64 i = 0; i < func_args.size(); i++) {
 			i64  converted_arg = func_args[i];
 			auto arg_type      = executing_program->types->at(func.parameters[i]);
-			u64 arg_type_id = arg_type->getID().asInt();
+			u64  arg_type_id   = arg_type->getID().asInt();
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				mov_l64_imm, stack_top, Memory::interpret<u64>(converted_arg)

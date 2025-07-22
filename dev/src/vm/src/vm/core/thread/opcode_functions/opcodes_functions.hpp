@@ -127,7 +127,7 @@ namespace vm {
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
-			u64  arg_count = called_func.parameters.size();
+			u64 arg_count              = called_func.parameters.size();
 			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 

@@ -101,16 +101,16 @@ namespace vm::loader::compiler {
 			low::FuncData func_data;
 			func_data.name = ctx.function->name.str;
 			// This is guaranteed to exist by builders.
-			code::FuncSignature signature = ctx.function->signature;
-			u64 parameters_size = 0;
+			code::FuncSignature signature       = ctx.function->signature;
+			u64                 parameters_size = 0;
 			for (const auto& param: signature.parameters) {
 				func_data.parameters.emplace_back(param.str);
 				auto type = ctx.type_map.at(param.str);
 				parameters_size += type->getSize();
 			}
-			func_data.arg_size = parameters_size;
-			func_data.ret_size = ctx.type_map.at(signature.result_type.str)->getSize();
-			func_data.result_type = signature.result_type.str;
+			func_data.arg_size         = parameters_size;
+			func_data.ret_size         = ctx.type_map.at(signature.result_type.str)->getSize();
+			func_data.result_type      = signature.result_type.str;
 			func_data.local_stack_size = ctx.local_stack_size;
 
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
@@ -205,9 +205,8 @@ namespace vm::loader::compiler {
 
 			code::FuncSignature func_signature = ctx.function->signature;
 			push(base::StrID("ret_val"), func_signature.result_type.str);
-			for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters)) {
+			for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
 				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
-			}
 			// instruction index, stack state, stack size
 			std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
 				{ ctx.function->body.size(), {}, 0 }  // sentinel
@@ -257,8 +256,9 @@ namespace vm::loader::compiler {
 						dfs_stack.pop_back();
 					}
 					variant_case(Op_call_func, instr) {
-						for (usize i = 0;
-						     i < ctx.func_map.at((instr.arg0.function_name)).get()->signature.parameters.size();
+						for (usize i = 0; i < ctx.func_map.at((instr.arg0.function_name))
+						                          .get()
+						                          ->signature.parameters.size();
 						     i++) {
 							pop();
 						}
