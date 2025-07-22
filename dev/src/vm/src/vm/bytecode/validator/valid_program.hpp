@@ -83,7 +83,6 @@ namespace vm::code {
 		/**
 		 * @brief Inserts globals. May invalidate state.
 		 * Cannot insert the same global data multiple times.
-		 * We use function_names to verify the presence of constructors and destructors.
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
 
