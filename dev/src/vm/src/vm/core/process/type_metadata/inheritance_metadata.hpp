@@ -6,6 +6,7 @@
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 
+#include <unordered_set>
 #include <variant>
 
 namespace vm {
@@ -27,6 +28,8 @@ namespace vm {
 		// Contains all the implementations of virtual methods for this class/interface.
 		// Unimplemented methods do not exist in the vtable.
 		base::HashMap<base::StrID, TypeCRef> vtable;
+		// Cached all superclasses.
+		std::unordered_set<TypeID> inherits_from;
 
 		InheritanceMetadata(
 			TypeCRef                             type,
