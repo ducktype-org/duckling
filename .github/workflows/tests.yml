@@ -175,7 +175,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         env:
-            BUILD_TYPE: ${{ matrix.build-type == 'debug' && 'dev' || matrix.build-type }}
+            BUILD_TYPE: ${{ matrix.build-type == 'debug' && 'Dev' || matrix.build-type }}
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
