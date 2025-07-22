@@ -256,11 +256,11 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrID>          name;
-		base::StableVector<BlockBuilder>     blocks;
-		base::Optional<BlockBuilderRef>      entry_block;
-		mutable base::StableVector<MirLocal> local_list;
-		tsh::FunctionAbstractType            function_type;
+		base::Optional<base::StrID>      name;
+		base::StableVector<BlockBuilder> blocks;
+		base::Optional<BlockBuilderRef>  entry_block;
+		base::StableVector<MirLocal>     local_list;
+		tsh::FunctionAbstractType        function_type;
 
 		LifetimeScopeTree lifetime_scope_tree;
 
@@ -439,7 +439,7 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id) const {
+		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id) {
 			// @TODO: Optimize into a hashmap.
 			for (auto& local: local_list)
 				if (local.helios_id == helios_id) return  &local;
