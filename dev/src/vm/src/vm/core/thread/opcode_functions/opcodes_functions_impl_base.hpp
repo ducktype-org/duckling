@@ -92,7 +92,10 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ DEREF_GLOBAL_RAW(TYPE, instr->arg0) = Memory::interpret<const TYPE>(instr->arg1); }     \
+		{                                                                                         \
+			DEREF_GLOBAL_RAW_UNSAFE(TYPE, instr->arg0)                                            \
+				= Memory::interpret<const TYPE>(instr->arg1);                                     \
+		}                                                                                         \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
@@ -170,7 +173,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
 			auto& dst_ptr = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  src_ptr = DEREF_GLOBAL_RAW(Pointer, instr->arg1);
+			auto  src_ptr = DEREF_GLOBAL_RAW_UNSAFE(Pointer, instr->arg1);
 			thread.process_memory.setPointer(dst_ptr, src_ptr);
 		}
 		FUNCTION_CONT(1);
@@ -178,7 +181,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
 		{
-			auto& dst_ptr = DEREF_GLOBAL_RAW(Pointer, instr->arg0);
+			auto& dst_ptr = DEREF_GLOBAL_RAW_UNSAFE(Pointer, instr->arg0);
 			auto  src_ptr = derefStack<Pointer>(local_stack, instr->arg1);
 			thread.process_memory.setPointer(dst_ptr, src_ptr);
 		}
@@ -652,7 +655,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto& dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto src_block     = frame->block_stack[src_block_idx];
