@@ -125,7 +125,6 @@ namespace tsh {
 		SymbolType<ABSTRACT_TYPE> symbol_type;
 		ValueCategory             value_category;
 	};
-
 	/**
 	 * @brief Deduces the symbol type from an ExpressionType.
 	 * @param expr_type The ExpressionType object describing the value of an expression.
