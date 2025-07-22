@@ -630,6 +630,7 @@ class FunctionValidator {
 
 			variant_case_novalue(Op_fneg_l64) {}
 			variant_case_novalue(Op_fneg_l32) {}
+
 			variant_case_novalue(Op_umul_l64_l64) {}
 			variant_case_novalue(Op_umul_l64_imm) {}
 			variant_case_novalue(Op_umul_l32_l32) {}
