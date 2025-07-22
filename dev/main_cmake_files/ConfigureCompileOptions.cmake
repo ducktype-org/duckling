@@ -49,15 +49,22 @@ if (USE_MARCH_NATIVE)
 	add_compile_options(-march=native)
 endif (USE_MARCH_NATIVE)
 
+
+# Dev - simple build without debug symbols and without optimizations
+# DevDebug - build with debug symbols and without optimizations
+# DevOpt - build with debug symbols and with optimizations
+# Release - build with optimizations and without debug symbols
+# Debug - defaults to DevDebug
+
+
 # Debug uses -g by default, but we want to also ensure -O0 is used
 # std can use NDEBUG for internal assert purposes, so we should define it here
 # Release uses -O3 by default, but we want to use -O2 for now
-set(CMAKE_CXX_FLAGS_DEBUG      "-O0 -DBUILD_TYPE_DEBUG -g")
-# Coverage doesn't include debug symbols, but we want to ensure -O0 is used.
-# USed to lower the disk memory used by the coverage process.
-set(CMAKE_CXX_FLAGS_COVDEBUG        "-O0 -DBUILD_TYPE_DEBUG")
-set(CMAKE_CXX_FLAGS_DEVRELEASE "-O2 -DBUILD_TYPE_DEV_RELEASE")
+set(CMAKE_CXX_FLAGS_DEVDEBUG   "-O0 -DBUILD_TYPE_DEBUG -g")
+set(CMAKE_CXX_FLAGS_DEV        "-O0 -DBUILD_TYPE_DEBUG")
+set(CMAKE_CXX_FLAGS_DEVOPT     "-O2 -DBUILD_TYPE_DEVOPT")
 set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG      ${CMAKE_CXX_FLAGS_DEVDEBUG})
 
 
 # Strip binaries from symbols in Release build

@@ -74,9 +74,9 @@ from click import Choice, option, command
     "--type",
     prompt="build type",
     help="The build type.",
-    default="debug",
+    default="Debug",
     type=Choice(
-        ["Debug", "Release", "DevRelease", "CovDebug"], case_sensitive=False
+        ["Dev", "DevDebug", "DevOpt", "Release", "Debug"], case_sensitive=False
     ),
 )
 @option(

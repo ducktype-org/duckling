@@ -34,7 +34,7 @@ private:
 	}
 
 	void badConversionTest() {
-#if defined(DEBUG) || defined(DEVRELEASE)
+#if defined(DEBUG) || defined(DEVOPT)
 		assertThrows<base::Panic>(
 			[]() { base::strToEnum<n::ZeroElements>(base::StrID("A")); },
 			"Bad conversion from string to enum was valid"

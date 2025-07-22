@@ -406,7 +406,7 @@ private:
 	}
 
 	void testDeps() {
-#if defined(DEBUG) || defined(DEVRELEASE)
+#if defined(DEBUG) || defined(DEVOPT)
 		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
@@ -455,7 +455,7 @@ private:
 	}
 
 	void entryPointSanityTest() {
-#if defined(DEBUG) || defined(DEVRELEASE)
+#if defined(DEBUG) || defined(DEVOPT)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CallingEntryPoint>(1); },
 			"Calling entry point from query did not panicked."
@@ -550,7 +550,7 @@ private:
 	}
 
 	void testContextSanityCheck() {
-#if defined(DEBUG) || defined(DEVRELEASE)
+#if defined(DEBUG) || defined(DEVOPT)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<context_leak::LeakQuery>(1); },
 			"Bad context usage not detected"
