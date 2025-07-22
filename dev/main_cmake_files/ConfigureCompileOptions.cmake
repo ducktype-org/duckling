@@ -53,8 +53,9 @@ endif (USE_MARCH_NATIVE)
 # std can use NDEBUG for internal assert purposes, so we should define it here
 # Release uses -O3 by default, but we want to use -O2 for now
 set(CMAKE_CXX_FLAGS_DEBUG      "-O0 -DBUILD_TYPE_DEBUG -g")
-# Coverage doesn't include debug symbols, but we want to ensure -O0 is used
-set(CMAKE_CXX_FLAGS_COV        "-O0 -DBUILD_TYPE_DEBUG")
+# Coverage doesn't include debug symbols, but we want to ensure -O0 is used.
+# USed to lower the disk memory used by the coverage process.
+set(CMAKE_CXX_FLAGS_COVDEBUG        "-O0 -DBUILD_TYPE_DEBUG")
 set(CMAKE_CXX_FLAGS_DEVRELEASE "-O2 -DBUILD_TYPE_DEV_RELEASE")
 set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
 
