@@ -35,6 +35,7 @@ namespace vm {
 
 		/**
 		 * @brief Finalize adding types.
+		 * @note This function shouldn't be called twice.
 		 */
 		void finalize();
 

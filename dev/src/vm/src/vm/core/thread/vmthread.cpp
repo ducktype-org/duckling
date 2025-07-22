@@ -607,8 +607,7 @@ namespace vm {
 		exec_thread = std::thread([this, program, func_name, run_arguments] {
 			try {
 				run(program, func_name, run_arguments);
-				// @TODO: catch not general std::exception&
-			} catch (const std::exception& e) {
+			} catch (const exceptions::VMRuntimeException& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
 				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 			}
