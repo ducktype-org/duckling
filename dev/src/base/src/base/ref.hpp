@@ -3,8 +3,6 @@
 #include "exceptions.hpp"
 #include "optional.hpp"
 
-#include <type_traits>
-
 namespace base {
 
 	template<class T>
@@ -46,8 +44,6 @@ namespace base {
 
 		template<class U>
 		Ref(const Ref<U>& other) noexcept: ptr{ other.get() } {}
-
-		operator T&() const { return **this; }
 
 		// @note: move constructors are not defined, since they are equivalent to copy constructors.
 		// moving still works, because they are not deleted.
@@ -93,26 +89,7 @@ namespace base {
 
 		~Ref() = default;
 	};
-}
 
-namespace std {
-	template<class R, class T, template<class> class RQual, template<class> class TQual>
-	struct basic_common_reference<base::Ref<R>, T, RQual, TQual> {
-		using type = std::common_reference_t<R&, TQual<T>>;
-	};
-
-	template<class R, class T, template<class> class RQual, template<class> class TQual>
-	struct basic_common_reference<T, base::Ref<R>, TQual, RQual> {
-		using type = std::common_reference_t<TQual<T>, R&>;
-	};
-
-	template<class R, class T, template<class> class RQual, template<class> class TQual>
-	struct basic_common_reference<base::Ref<R>, base::Ref<T>, RQual, TQual> {
-		using type = std::common_reference_t<R&, T&>;
-	};
-}
-
-namespace base {
 	/**
 	 * @brief A nullable pointer wrapper type, that does not owns the pointer.
 	 * Implements both null-unchecked and null-checked access to the pointer.
@@ -178,8 +155,6 @@ namespace base {
 		}
 
 		// Acessors:
-
-		operator T&() const { return **this; }
 
 		/**
 		 * @brief Null checked access method. Returns optional Ref to the pointed value.
@@ -253,23 +228,6 @@ namespace base {
 	auto  operator->() const { return element_name.operator->(); } \
 	auto& operator*() const { return element_name.operator*(); }
 
-}
-
-namespace std {
-	template<class R, class T, template<class> class RQual, template<class> class TQual>
-	struct basic_common_reference<base::MRef<R>, T, RQual, TQual> {
-		using type = std::common_reference_t<R&, TQual<T>>;
-	};
-
-	template<class R, class T, template<class> class RQual, template<class> class TQual>
-	struct basic_common_reference<T, base::MRef<R>, TQual, RQual> {
-		using type = std::common_reference_t<TQual<T>, R&>;
-	};
-
-	template<class R, class T, template<class> class RQual, template<class> class TQual>
-	struct basic_common_reference<base::MRef<R>, base::MRef<T>, RQual, TQual> {
-		using type = std::common_reference_t<R&, T&>;
-	};
 }
 
 // global namespace export:

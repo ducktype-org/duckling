@@ -4,90 +4,31 @@
 
 #include <tester/tester.hpp>
 
+
 // Ref, MRef asserts:
-template<template<class T> class RefType>
-consteval bool staticAssertRef() {
-	static_assert(std::is_trivially_copyable_v<RefType<int>>, "Ref should be trivially copyable");
-	static_assert(std::is_copy_constructible_v<RefType<int>>, "Ref should be copy constructible");
-	static_assert(std::is_move_constructible_v<RefType<int>>, "Ref should be move constructible");
-	static_assert(std::is_copy_assignable_v<RefType<int>>, "Ref should be copy assignable");
-	static_assert(std::is_move_assignable_v<RefType<int>>, "Ref should be move assignable");
 
-	static_assert(
-		std::common_reference_with<RefType<int>, int&>, "Ref should define a common reference"
-	);
-	static_assert(
-		std::common_reference_with<const RefType<const int>, int&>,
-		"Ref with const qualifiers should define a common reference"
-	);
-	static_assert(
-		std::common_reference_with<RefType<int>, const int&>,
-		"Ref should define a common reference with const qualified"
-	);
-	static_assert(
-		std::same_as<std::common_reference_t<RefType<int>, int&>, int&>,
-		"Common reference with Ref should be a l-value-reference"
-	);
-	static_assert(
-		std::same_as<std::common_reference_t<RefType<const int>, int&>, const int&>,
-		"Common reference with const qualified Ref should be a l-value-reference to const"
-	);
-	static_assert(
-		std::same_as<std::common_reference_t<RefType<int>, const int&>, const int&>,
-		"Common reference with Ref and const should be a l-value-reference ot const"
-	);
-	static_assert(
-		std::convertible_to<const RefType<int>, int&>,
-		"Ref should be convertible to a l-value-reference"
-	);
-	static_assert(
-		std::convertible_to<const RefType<const int>, const int&>,
-		"Ref of const should be convertible to a l-value-reference to const"
-	);
+static_assert(std::is_trivially_copyable_v<Ref<int>>, "Ref should be trivially copyable");
+static_assert(std::is_trivially_copyable_v<MRef<int>>, "MRef should be trivially copyable");
 
-	static_assert(
-		std::common_reference_with<RefType<int>, int&>, "Ref should define a common reference"
-	);
-	static_assert(
-		std::common_reference_with<const RefType<const int>, int&>,
-		"Ref with const qualifiers should define a common reference"
-	);
-	static_assert(
-		std::common_reference_with<RefType<int>, const int&>,
-		"Ref should define a common reference with const qualified"
-	);
-	static_assert(
-		std::same_as<std::common_reference_t<RefType<int>, int&>, int&>,
-		"Common reference with Ref should be a l-value-reference"
-	);
-	static_assert(
-		std::same_as<std::common_reference_t<RefType<const int>, int&>, const int&>,
-		"Common reference with const qualified Ref should be a l-value-reference to const"
-	);
-	static_assert(
-		std::same_as<std::common_reference_t<RefType<int>, const int&>, const int&>,
-		"Common reference with Ref and const should be a l-value-reference ot const"
-	);
-	static_assert(
-		std::convertible_to<const RefType<int>, int&>,
-		"Ref should be convertible to a l-value-reference"
-	);
-	static_assert(
-		std::convertible_to<const RefType<const int>, const int&>,
-		"Ref of const should be convertible to a l-value-reference to const"
-	);
-	return true;
-}
+static_assert(std::is_copy_constructible_v<Ref<int>>, "Ref should be copy constructible");
+static_assert(std::is_copy_constructible_v<MRef<int>>, "MRef should be copy constructible");
 
-static_assert(staticAssertRef<Ref>());
-static_assert(staticAssertRef<MRef>());
+static_assert(std::is_move_constructible_v<Ref<int>>, "Ref should be move constructible");
+static_assert(std::is_move_constructible_v<MRef<int>>, "MRef should be move constructible");
 
+static_assert(std::is_copy_assignable_v<Ref<int>>, "Ref should be copy assignable");
+static_assert(std::is_copy_assignable_v<MRef<int>>, "MRef should be copy assignable");
+
+static_assert(std::is_move_assignable_v<Ref<int>>, "Ref should be move assignable");
+static_assert(std::is_move_assignable_v<MRef<int>>, "MRef should be move assignable");
+
+static_assert(
+	not std::is_constructible_v<Ref<int>, std::nullptr_t>,
+	"Ref should not be constructible from nullptr"
+);
 static_assert(
 	std::is_constructible_v<MRef<int>, std::nullptr_t>, "MRef should be constructible from nullptr"
 );
-
-static_assert(std::common_reference_with<Ref<int>, int&>, "Ref should define a common reference");
-
 
 // Box, MBox asserts:
 static_assert(not std::is_copy_constructible_v<Box<int>>, "Box should be copy constructible");
