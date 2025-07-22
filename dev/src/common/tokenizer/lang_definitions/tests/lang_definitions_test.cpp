@@ -1,6 +1,5 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
-
 #include <tester/tester.hpp>
 
 class SimpleLangDefTest: public tester::TestSuite {
@@ -91,7 +90,7 @@ private:
 	}
 
 	void exportsForLSPTest() {
-		ASSERT_EQUAL(lang_def::getKeywords().size(), 78);
+		ASSERT_EQUAL(lang_def::getKeywords().size(), 79);
 		ASSERT_EQUAL(lang_def::getSpecials().size(), 6);
 		ASSERT_EQUAL(lang_def::getOperators().size(), 27);
 	}

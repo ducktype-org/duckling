@@ -65,7 +65,7 @@ namespace compiler::driver {
 	};
 
 	/**
-	 * Query that produces QBC/.o file for given Duckling module.
+	 * Query that produces DBC/.o file for given Duckling module.
 	 */
 	DECLARE_QUERY(CompileModule, KeyOf_CompileModule, artifacts::FileArtifact);
 
@@ -148,7 +148,10 @@ namespace compiler::driver {
 			base::StrID(base::strConcat("builtin_", backendTypeToStr(backend), ".o").c_str())
 		);
 		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-		mod.compile(builtin_obj_file.FILE.getPath(), backend_llvm::CompilationOutputType::Object);
+		mod.compile(
+			builtin_obj_file.FILE.getFilePath().getPath(),
+			backend_llvm::CompilationOutputType::Object
+		);
 		return builtin_obj_file;
 	}
 }

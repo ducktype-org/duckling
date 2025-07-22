@@ -50,7 +50,7 @@ jobs:
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
-    timeout-minutes: 20  # (Per matrix run)
+    timeout-minutes: 25  # (Per matrix run)
     runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
 
     env:
@@ -184,6 +184,7 @@ jobs:
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
+              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
 #              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
 #              Temporarily disabled due to disk space issues on GH runners. See #1021

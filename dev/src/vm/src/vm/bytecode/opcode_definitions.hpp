@@ -122,13 +122,11 @@ DEF_OPCODE(mul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_OPCODE(mul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(mul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
-
 DEF_OPCODE(mod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(mod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 
 DEF_OPCODE(mod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(mod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
 
 DEF_OPCODE(div_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(div_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
@@ -139,22 +137,46 @@ DEF_OPCODE(div_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_OPCODE(neg_l64, vm::opargs::StackLocal64)
 DEF_OPCODE(neg_l32, vm::opargs::StackLocal32)
 
+DEF_OPCODE(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+
+DEF_OPCODE(umul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(umul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_OPCODE(umod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(umod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+
+DEF_OPCODE(umod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(umod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_OPCODE(udiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(udiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+
+DEF_OPCODE(udiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(udiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
 // ========= LOGICAL OPERATIONS ========
 
 DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(cmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_OPCODE(ucmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(ucmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 
 DEF_OPCODE(cmpEq_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(cmpEq_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(cmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_OPCODE(ucmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(ucmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
 DEF_OPCODE(cmpEq_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_OPCODE(cmpEq_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_OPCODE(ucmpG_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(ucmpG_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 
 // sets the flag if pointer is null
 DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)

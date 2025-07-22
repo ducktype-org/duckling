@@ -4,11 +4,11 @@
 #include "../pst_state_forward.hpp"
 #include "elements_list.hpp"  // IWYU pragma: export
 
+#include <base/ints.hpp>
+
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
 #include <token_parser_core/common_elements.hpp>
-
-#include <base/ints.hpp>
 
 namespace pst {
 	using lang_def::Keyword;

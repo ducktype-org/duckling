@@ -2,6 +2,8 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/bytecode/validator/errors.hpp>
+
 class VmUnitTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmUnitTest
@@ -15,6 +17,12 @@ public:
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(globalInitializationTest);
+		TESTER_ADD_TEST(globalsInitializationTest);
+		TESTER_ADD_TEST(globalDestructorTest);
+		TESTER_ADD_TEST(globalNoConstructorTest);
+		TESTER_ADD_TEST(globalNoDestructorTest);
+		TESTER_ADD_TEST(verySimpleUnsignedTest);
 	}
 
 private:
@@ -38,6 +46,32 @@ private:
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
+
+	void globalInitializationTest() { runTestOnVm("global_initialization.dbc", {}, {}, {}, 5); }
+
+	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
+
+	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5, true); }
+
+	void globalNoConstructorTest() {
+		loadInvalidDbc(
+			"global_no_constructor.dbc",
+			{
+				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
+			}
+		);
+	}
+
+	void globalNoDestructorTest() {
+		loadInvalidDbc(
+			"global_no_destructor.dbc",
+			{
+				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
+			}
+		);
+	}
+
+	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
