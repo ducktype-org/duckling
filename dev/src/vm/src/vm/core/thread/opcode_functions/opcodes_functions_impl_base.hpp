@@ -507,9 +507,7 @@ namespace vm {
 				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto  block       = thread.process_memory.allocateHeap(type);
 			auto& dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  src_pointer = Memory::newBlockReference(block, 0);
-			thread.process_memory.setPointer(dst_pointer, src_pointer);
-			thread.process_memory.destroyBlockReference(src_pointer);
+			thread.process_memory.setPointer(dst_pointer, { block, 0 });
 		}
 		FUNCTION_CONT(1);
 	}
@@ -527,7 +525,7 @@ namespace vm {
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto  block     = frame->block_stack[block_idx];
-			thread.process_memory.setPointer(pointer, Memory::newBlockReference(block, 0));
+			thread.process_memory.setPointer(pointer, { block, 0 });
 		}
 		FUNCTION_CONT(1);
 	}
@@ -689,9 +687,7 @@ namespace vm {
 			auto  src    = derefStack<Pointer>(local_stack, instr->arg1);
 			auto  offset = static_cast<usize>(instr[1].arg0);
 
-			// dst = Memory::newBlockReference(src.getBlock(), offset);
-			thread.process_memory.setPointer(dst, Memory::newBlockReference(src.getBlock(), offset));
-			thread.process_memory.destroyBlockReference(dst);
+			thread.process_memory.setPointer(dst, { src.getBlock(), offset });
 		}
 		FUNCTION_CONT(2);
 	}
@@ -739,11 +735,7 @@ namespace vm {
 			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
 			auto data_offset = usize(index * i64(element_type->getSize()));
 
-			// dst = Memory::newBlockReference(tbl_pointer.getBlock(), data_offset);
-			thread.process_memory.setPointer(
-				dst, Memory::newBlockReference(tbl_pointer.getBlock(), data_offset)
-			);
-			thread.process_memory.destroyBlockReference(dst);
+			thread.process_memory.setPointer(dst, { tbl_pointer.getBlock(), data_offset });
 		}
 		FUNCTION_CONT(2);
 	}
