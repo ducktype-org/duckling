@@ -2,7 +2,7 @@
 
 #include <base/int_conv.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 
 #include <iostream>
 
@@ -18,35 +18,34 @@ void countFiles(const fs::FsTree& tree) {
 }
 
 int main(int argc, const char* argv[]) {
-	auto clap
-		= clap::Clap()
-	          .addHelpFlag()
-	          .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
+	auto clah
+		= clah::Clah("fs_parser_playground")
+	          .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
 	                   .addShortName('p')
 	                   .addShortDesc("Path to start the search")
 	                   .build())
-	          .add(clap::ParamBuilder::ofFlag()
+	          .add(clah::ParamBuilder::ofFlag()
 	                   .addLongName("noprint")
 	                   .addShortDesc(
 						   "If this flag is passed, then do not print the filesystem structure."
 					   )
 	                   .build())
-	          .add(clap::ParamBuilder::ofValue(clap::StringParser::make("File regex"))
+	          .add(clah::ParamBuilder::ofValue(clah::StringParser::make("File regex"))
 	                   .addShortName('f')
 	                   .addLongName("fileregex")
 	                   .addShortDesc("A file rejecting regex")
 	                   .build())
-	          .add(clap::ParamBuilder::ofValue(clap::StringParser::make("Directory regex"))
+	          .add(clah::ParamBuilder::ofValue(clah::StringParser::make("Directory regex"))
 	                   .addShortName('d')
 	                   .addLongName("dirregex")
 	                   .addShortDesc("A directory rejecting regex")
 	                   .build());
 
-	clap::ParsingResult res;
+	clah::ParsingResult res;
 	try {
-		res = clap.parse(base::safeIntConv<usize>(argc), argv);
-	} catch (clap::exceptions::HelpException& e) {
-		std::cout << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
+		res = clah.parse(base::safeIntConv<usize>(argc), argv);
+	} catch (clah::exceptions::HelpException& e) {
+		std::cout << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 	}
 
 	auto fs_tree = fs::FsTree::create(
