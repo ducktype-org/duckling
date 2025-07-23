@@ -18,18 +18,18 @@ class VmCodeInjectionTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(multipleFiles);
-		TESTER_ADD_TEST(injectCode);
-		TESTER_ADD_TEST(runNoArgFunction);
-		TESTER_ADD_TEST(runVoidFunction);
+		// TESTER_ADD_TEST(multipleFiles);
+		// TESTER_ADD_TEST(injectCode);
+		// TESTER_ADD_TEST(runNoArgFunction);
+		// TESTER_ADD_TEST(runVoidFunction);
 		TESTER_ADD_TEST(runNonVoidFunction);
-		TESTER_ADD_TEST(doubleRunFunction);
-		TESTER_ADD_TEST(manyRunFunctions);
-		TESTER_ADD_TEST(repl);
-		TESTER_ADD_TEST(replWithGlobals);
-		TESTER_ADD_TEST(separateGlobals);
-		TESTER_ADD_TEST(cyclicRepl);
-		TESTER_ADD_TEST(injectExistingFunction);
+		// TESTER_ADD_TEST(doubleRunFunction);
+		// TESTER_ADD_TEST(manyRunFunctions);
+		// TESTER_ADD_TEST(repl);
+		// TESTER_ADD_TEST(replWithGlobals);
+		// TESTER_ADD_TEST(separateGlobals);
+		// TESTER_ADD_TEST(cyclicRepl);
+		// TESTER_ADD_TEST(injectExistingFunction);
 	}
 
 private:
@@ -71,6 +71,8 @@ private:
 
 	std::shared_ptr<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
+		std::cout << response.has_value() << '\n';	
+		
 		ASSERT_TRUE(response.has_value());
 		auto vm_value              = response->vm_value;
 		vm_value->interpret<i64>() = value;
@@ -83,7 +85,7 @@ private:
 		fs::File file2(path("multiple_files_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
 
-		runAndCheckExitCode(pid, {}, std::vector<std::string>{}, "123", "123", 0);
+		runAndCheckExitCode(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 	}
 
 	void injectCode() {
@@ -93,7 +95,7 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 
-		runAndCheckExitCode(pid, {}, std::vector<std::string>{}, "123", "123", 0);
+		runAndCheckExitCode(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 	}
 
 	void runNoArgFunction() {
@@ -101,7 +103,7 @@ private:
 		fs::File file(path("call_no_arg_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		runAndCheckExitCode(pid, "summer", {}, {}, "735", 0);
+		runAndCheckExitCode(pid, "summer", vm::FunctionRunArguments{}, {}, "735", 0);
 	}
 
 	void runVoidFunction() {

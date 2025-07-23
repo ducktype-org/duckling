@@ -140,16 +140,16 @@ namespace vm {
 		stack_top += result_type->getSize();
 
 		for (u64 i = 0; i < func_args.size(); i++) {
-			const auto arg_value = func_args[i];
-			auto       arg_type  = called_func_type->getNthParameterType(i).expect(
+			const auto& arg_value = func_args[i];
+			auto        arg_type  = called_func_type->getNthParameterType(i).expect(
                 "Wrong number of passed arguments!"
             );
 			CORE_ASSERT(
 				arg_value->getPID() == process.getPID(), "VmValue comes from a different process"
 			);
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, reinterpret_cast<u64>(arg_value.get()), 0)
-			);
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				initFromVmValue, reinterpret_cast<u64>(arg_value.get()), 0
+			));
 			stack_top += arg_type->getSize();
 		}
 
@@ -356,10 +356,7 @@ namespace vm {
 
 		// Cleanup the previous VmValue
 		if_opt_some(exit_value_storage, value) value.freeData();
-
-		if (called_func_return_type->getSize() != 0) {
-
-		}
+		if (called_func_return_type->getSize() != 0) {}
 		// @note: The return value is the only block left on the block stack.
 		auto    block = frame->block_stack.back();
 		VmValue func_ret_val(process, called_func_return_type, Pointer(block, 0));
