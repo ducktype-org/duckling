@@ -5,6 +5,8 @@
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
 
+#include <vm/core/process/exceptions.hpp>
+
 namespace vm {
 
 	class Block;
@@ -30,15 +32,15 @@ namespace vm {
 		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
 
 		void movePointer(i64 move_by) {
-			if (block == nullptr) CORE_PANIC("Accessing null pointer");
+			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (move_by < 0 && base::safeIntConv<u64>(-move_by) > offset)
-				CORE_PANIC("Moving offset to negative value");
+				throw exceptions::VMNegativeOffsetException();
 			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
 		}
 
 		[[nodiscard]]
 		auto getBlock() -> Ref<Block> {
-			if (block == nullptr) CORE_PANIC("Accessing null pointer");
+			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
 			return &*block;
 		}
 
