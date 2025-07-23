@@ -77,9 +77,9 @@ clah::Clah getClahForMain() {
 	return getStandardDucklingOptions()
 	    .addSubcommand(
 			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")
-				.addPositional(clah::FileParser::make())
+				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					auto file_to_lex = options.getValue<fs::File>("file").value();
+					auto file_to_lex = options.getPositional<fs::File>(0);
 
 					auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
@@ -108,9 +108,9 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("parse", "Runs parser on a single file and prints result in json to cout.")
-				.addPositional(clah::FileParser::make())
+				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					auto file_to_parse = options.getValue<fs::File>("file").value();
+					auto file_to_parse = options.getPositional<fs::File>(0);
 
 					auto pst = pst::PST(file_to_parse);
 
@@ -131,9 +131,9 @@ clah::Clah getClahForMain() {
 				})
 		)
 	    .addSubcommand(clah::Clah("get_hout", "Debug prints hout-unit of a module.")
-	                       .addPositional(clah::FileParser::make())
+	                       .addPositional(clah::FileParser::make("module"))
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   auto path_to_compile = options.getValue<fs::File>("module").value();
+							   auto path_to_compile = options.getPositional<fs::File>(0);
 
 							   int exit_code = 0;
 
@@ -149,7 +149,7 @@ clah::Clah getClahForMain() {
 						   }))
 	    .addSubcommand(
 			clah::Clah("compile_module", "Compile given module into a binary.")
-				.addPositional(clah::FileParser::make())
+				.addPositional(clah::FileParser::make("module"))
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dump-llvm-ir")
 	                     .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
@@ -182,7 +182,7 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					auto path_to_compile = options.getValue<fs::File>("module").value();
+					auto path_to_compile = options.getPositional<fs::File>(0);
 
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
@@ -234,13 +234,13 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
+				.add(clah::ParamBuilder::ofValue(clah::FileParser::make("module"))
 	                     .addShortName('m')
 	                     .addLongName("module")
 	                     .addShortDesc("Path to the top-level source module of the package")
 	                     .required()
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
+				.add(clah::ParamBuilder::ofValue(clah::FileParser::make("file"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
@@ -251,7 +251,7 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					auto path_to_compile = options.getValue<fs::File>("module").value();
+					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
 		                                     : compiler::driver::BackendType::LLVM;

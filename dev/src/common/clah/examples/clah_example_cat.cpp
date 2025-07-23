@@ -29,7 +29,7 @@ void catFile(const clah::ParsingResult& result) {
 int main(int argc, const char** argv) {
 	// Create a clah object and set value parsers.
 	auto clah = clah::Clah("clah_example_cat")
-	                .addPositional(clah::FileParser::make())
+	                .addPositional(clah::FileParser::make("file"))
 	                // "another_file" is an optional name for the parameter's value.
 	                // Displays in i.e. a help message.
 	                .setDefaultValueParser(clah::FileParser::make("another_file"))
