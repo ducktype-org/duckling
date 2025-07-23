@@ -50,24 +50,25 @@ if (USE_MARCH_NATIVE)
 endif (USE_MARCH_NATIVE)
 
 
-# Dev - simple build without debug symbols and without optimizations
-# DevDebug - build with debug symbols and without optimizations
-# DevOpt - build with debug symbols and with optimizations
-# Release - build with optimizations and without debug symbols
-# Debug - defaults to DevDebug
+# Dev:       simple dev build without debug symbols and without optimizations
+# DevDebug:  dev build with debug symbols and without optimizations (best for everyday development)
+# DevOpt:    dev build with debug symbols and with optimizations
+# Release:   release build with optimizations and without debug symbols (release build have for example assertions disabled)
+# ReleaseOpt:release build with optimizations and without debug symbols
+# Debug:     defaults to DevDebug
 
 
-# Debug uses -g by default, but we want to also ensure -O0 is used
 # std can use NDEBUG for internal assert purposes, so we should define it here
 # Release uses -O3 by default, but we want to use -O2 for now
-set(CMAKE_CXX_FLAGS_DEVDEBUG   "-O0 -DBUILD_TYPE_DEBUG -g")
-set(CMAKE_CXX_FLAGS_DEV        "-O0 -DBUILD_TYPE_DEBUG")
-set(CMAKE_CXX_FLAGS_DEVOPT     "-O2 -DBUILD_TYPE_DEVOPT")
-set(CMAKE_CXX_FLAGS_RELEASE    "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEV        "-O0 -DBUILD_TYPE_DEV")
+set(CMAKE_CXX_FLAGS_DEVDEBUG   "-O0 -DBUILD_TYPE_DEV -g")
+set(CMAKE_CXX_FLAGS_DEVOPT     "-O2 -DBUILD_TYPE_DEV")
+set(CMAKE_CXX_FLAGS_RELEASE    "-O0 -DBUILD_TYPE_RELEASE -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASEOPT "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG      ${CMAKE_CXX_FLAGS_DEVDEBUG})
 
 
 # Strip binaries from symbols in Release build
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(CMAKE_BUILD_TYPE MATCHES "^Release.*$")
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
 endif()

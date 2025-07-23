@@ -27,7 +27,7 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      self-hosted-labels: '["debug", "release"]'
+      self-hosted-labels: '["dev", "release"]'
       github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
     secrets: inherit
 
@@ -37,7 +37,7 @@ jobs:
 
     strategy:
       matrix:
-        build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
+        build-type: [Dev, Release]  # (Release, Dev, RelWithDebInfo, etc.)
       fail-fast: false
 
     outputs:
@@ -51,17 +51,17 @@ jobs:
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
     timeout-minutes: 25  # (Per matrix run)
-    runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
+    runs-on: ${{ matrix.build-type == 'Dev' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' }}
 
     steps:
       - name: Set self-hosted flag
         id: set-self-hosted
         run: |
-          if [[ "${{ matrix.build-type }}" == "Debug" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
+          if [[ "${{ matrix.build-type }}" == "Dev" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "Release" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
@@ -72,7 +72,7 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
-          if [[ "${{ matrix.build-type }}" == "Debug" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+          if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=6" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "Release" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=3" >> $GITHUB_OUTPUT
@@ -174,8 +174,6 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
-        env:
-            BUILD_TYPE: ${{ matrix.build-type == 'debug' && 'Dev' || matrix.build-type }}
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
@@ -183,7 +181,7 @@ jobs:
               -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
               -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
               -D BUILD_DOCS=OFF \
-              -D CMAKE_BUILD_TYPE=$BUILD_TYPE \
+              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }}\
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \

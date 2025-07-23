@@ -87,7 +87,7 @@ namespace base {
 		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
 	)
 
-#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVOPT)
+#if defined(BUILD_TYPE_DEV)
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
@@ -122,7 +122,7 @@ namespace base {
  */
 
 
-#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVOPT)
+#if defined(BUILD_TYPE_DEV)
 	#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");
 #else
 	#define CORE_UNREACHABLE() std::unreachable();
