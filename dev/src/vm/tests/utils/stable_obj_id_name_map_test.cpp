@@ -7,7 +7,6 @@
 
 #include <array>
 
-// @TODO: Move this to preprocessor/loader directory after #648
 class ObjIdNameMapTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ObjIdNameMapTester
