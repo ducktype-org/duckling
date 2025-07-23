@@ -20,6 +20,7 @@ public:
 		TESTER_ADD_TEST(simpleVariant2);
 		TESTER_ADD_TEST(blocksDontDisappearTest);
 		TESTER_ADD_TEST(nestedVariantTest);
+		TESTER_ADD_TEST(nestedCopy);
 		TESTER_ADD_TEST(variantInsideStruct);
 		TESTER_ADD_TEST(emptyVariant);
 		TESTER_ADD_TEST(nonInstantiableVariant);
@@ -80,6 +81,8 @@ private:
 			runTestOnVmGetResult("nested_failing.dbc", "15", "15"), "Data was freed"
 		);
 	}
+
+	void nestedCopy() { runTestOnVm("nested_copy.dbc", "3", "3"); }
 
 	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
 
