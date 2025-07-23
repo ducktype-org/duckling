@@ -1,14 +1,14 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <lexer/lexer.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
 
 #include <base/defer.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>
 #include <init/init.hpp>
+#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -31,21 +31,21 @@ int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
 
 
-	auto clap
-		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
-	                                         .addShortName('p')
-	                                         .addShortDesc("Path to Duckling source root")
-	                                         .required()
-	                                         .build());
+	auto clah = clah::Clah("main_code_dependency_playground")
+	                .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
+	                         .addShortName('p')
+	                         .addShortDesc("Path to Duckling source root")
+	                         .required()
+	                         .build());
 
-	clap::ParsingResult options;
+	clah::ParsingResult options;
 
 	try {
-		options = clap.parse(usize(argc), argv);
-	} catch (clap::exceptions::HelpException& e) {
-		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
+		options = clah.parse(usize(argc), argv);
+	} catch (clah::exceptions::HelpException& e) {
+		std::cerr << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 		return 1;
-	} catch (clap::exceptions::ClapException& e) {
+	} catch (clah::exceptions::ClahException& e) {
 		std::cerr << e.what() << '\n';
 		return 1;
 	}

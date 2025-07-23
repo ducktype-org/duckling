@@ -1,6 +1,6 @@
 # Duckling source docs
 
-This directory contains documentation for the Duckling project. It is divided into two parts: Doxygen and Sphinx. Doxygen is used to document C++ code, while Sphinx is used for more general developer guidelines and implementation ideas. 
+This directory contains documentation for the Duckling project in Doxygen which is used to document C++ code.
 It includes helpful guides for developers, such as instructions on writing tests and examples, contributing to the repository, and creating documentation.
 
 ## Building docs
@@ -19,9 +19,8 @@ To build the docs, run:
 make docs
 ```
 
-Generated docs are placed inside `build/docs/sphinx/` and `build/docs/doxygen/` directories.
+Generated docs are placed inside `build/docs/doxygen/` directories.
 To open them, run:
 ```
-make open-sphinx-docs
 make open-doxygen-docs
 ```

@@ -52,10 +52,10 @@ private:
 		auto root = fs::FileManager::createRandomVirtualDirectory();
 
 		// Create subdirectories and files
-		auto sub_dir1 = fs::FileManager::createDirectoryIn(root, "subDir1");
-		auto sub_dir2 = fs::FileManager::createDirectoryIn(root, "subDir2");
-		auto file1    = fs::FileManager::createFileIn(root, "File1 content", "file1.txt");
-		auto file2    = fs::FileManager::createFileIn(sub_dir1, "File2 content", "file2.txt");
+		auto sub_dir1 = root.createSubDirectory("subDir1");
+		auto sub_dir2 = root.createSubDirectory("subDir2");
+		auto file1    = root.createSubFile("File1 content", "file1.txt");
+		auto file2    = sub_dir1.createSubFile("File2 content", "file2.txt");
 
 		// Create FsTree from the virtual root directory
 		auto fst = fs::FsTree::create(root);

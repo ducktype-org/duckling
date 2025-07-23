@@ -35,7 +35,7 @@ jobs:
         working-directory: ${{ env.DEV_DIR }}
         run: |
           python3 -m venv .venv
-          .venv/bin/python3 -m pip install -r docs/doc-config/requirements.txt
+          .venv/bin/python3 -m pip install -r requirements.txt
 
       - name: Create build directory
         working-directory: ${{ env.DEV_DIR }}
@@ -68,7 +68,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           echo "${{ secrets.WWW_SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
       
-      # Move "sphinx" and "doxygen" to specified directory on server.
+      # Move "doxygen" to specified directory on server.
       # The destination directory is ignored by the server and preconfigured one is used.
       # rsync is a tool for syncing files between two locations and avoiding 
       # unnecessary copying.
@@ -81,7 +81,6 @@ jobs:
         working-directory: ${{ env.DOCS_DIR }}
         run: |
           rsync -azhcv -e 'ssh -p 222  -i ~/.ssh/id_rsa' \
-          sphinx \
           doxygen \
           search-engine \
           ${{ secrets.WWW_LOGIN }}@${{ env.WWW_HOST }}:/home/

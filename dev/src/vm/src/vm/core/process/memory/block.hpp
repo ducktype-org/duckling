@@ -3,7 +3,7 @@
 #include <base/ints.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
-#include <base/strongly_typed_int.hpp>
+#include <base/strongly_typed_id.hpp>
 
 #include <vm/core/process/memory/allocator/block_data.hpp>
 
@@ -13,8 +13,7 @@
 
 namespace vm {
 
-	// @TODO: change to STRONG_TYPEDEF_IT when available
-	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockID, u64);
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);
 
 	/**
 	 * @brief Main block data structure.

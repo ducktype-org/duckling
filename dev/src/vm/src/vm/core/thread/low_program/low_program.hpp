@@ -27,6 +27,15 @@ namespace vm::low {
 	};
 
 	/**
+	 * @brief Global data.
+	 */
+	struct GlobData {
+		TypeCRef                    type;
+		base::Optional<base::StrID> ctor_name;
+		base::Optional<base::StrID> dtor_name;
+	};
+
+	/**
 	 * @brief Representation of the program VM runs.
 	 * Parser creates this structure from a list of ParsedFile structures after validation.
 	 * Executor uses it to execute the code.
@@ -46,13 +55,24 @@ namespace vm::low {
 			  types(std::move(types)),
 			  method_name_pool(method_name_pool) {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
-			for (const auto& global: global_data)
-				this->global_data.insert(this->types->at(global.type), global.name);
+
+			for (const auto& global: global_data) {
+				base::Optional<base::StrID> ctor_name;
+				base::Optional<base::StrID> dtor_name;
+
+				if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
+				if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
+
+				GlobData data{ .type      = this->types->at(global.type),
+					           .ctor_name = ctor_name,
+					           .dtor_name = dtor_name };
+				this->global_data.insert(data, global.name);
+			}
 		}
 
 		Box<TypeMetadata>                    types;
 		ObjIdNameMap<FuncData, usize>        functions;
-		ObjIdNameMap<TypeCRef, GlobalDataID> global_data;
+		ObjIdNameMap<GlobData, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<u64, base::StrID> method_name_pool;

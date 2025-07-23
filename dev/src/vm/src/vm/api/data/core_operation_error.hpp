@@ -17,6 +17,11 @@ namespace vm::api {
 
 	struct AttachDetachError {};
 
+	struct IOError {
+		std::string error;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IOError, error);
+	};
+
 	struct OtherError {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
@@ -29,6 +34,7 @@ namespace vm::api {
 		JoinError,
 		AttachDetachError,
 		OtherError,
+		IOError,
 		LoadProgramError>;
 }
 
@@ -38,3 +44,4 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::RunError, "RunError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::JoinError, "JoinError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::OtherError, "OtherError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::AttachDetachError, "AttachDetachError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::IOError, "IOError");
