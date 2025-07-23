@@ -111,7 +111,7 @@ namespace vm::builtins {
 			FOR_EACH(CASE_FUNC, InputI64, OutputI64)
 
 		default:
-			throw exceptions::VMInvalidBuiltinFunctionException();
+			CORE_PANIC("Invalid builtin function ID");
 		}
 	}
 

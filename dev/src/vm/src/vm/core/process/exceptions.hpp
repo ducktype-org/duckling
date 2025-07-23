@@ -20,28 +20,16 @@ namespace vm::exceptions {
 		name(): VMRuntimeException(std::string(ERR_MSG)) {} \
 	}
 
-	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Null pointer copy exception");
-	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Null pointer access exception");
-	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Out of block bounds exception");
-	VM_RUNTIME_EXCEPTION(VMDoubleFreeException, "Double free exception");
-	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Use after free exception");
-	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "Stack overflow exception");
-	// @TODO: add operator to constructor
-	VM_RUNTIME_EXCEPTION(VMUnknownOperatorException, "Unknown operator exception");
-	VM_RUNTIME_EXCEPTION(VMUnexpectedExecutionStatus, "Unexpected execution status exception");
-	VM_RUNTIME_EXCEPTION(VMInvalidBuiltinFunctionException, "Invalid builtin function exception");
-	VM_RUNTIME_EXCEPTION(VMInvalidBuiltinArgumentsException, "Invalid builtin arguments exception");
-	VM_RUNTIME_EXCEPTION(VMResuemedWithPausedStatusException, "Resumed with paused status exception");
-	VM_RUNTIME_EXCEPTION(VMNegativeOffsetException, "Negative offset exception");
+	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Copying to/from null pointer");
+	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
+	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
+	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
+	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "VM stack overflow");
+	VM_RUNTIME_EXCEPTION(VMResuemedWithPausedStatusException, "Resumed with paused status");
+	VM_RUNTIME_EXCEPTION(VMNegativeOffsetException, "Moving offset to negative value");
 	VM_RUNTIME_EXCEPTION(
-		VMUnreferencedBlockDeletionException, "Unreferenced block deletion exception"
+		VMUnreferencedBlockDeletionException, "Tried deleting a reference to an unreferenced block"
 	);
-	VM_RUNTIME_EXCEPTION(VMExtL64NotConsumedException, "ext_l64 not consumed exception");
-	VM_RUNTIME_EXCEPTION(VMExtTypeNotConsumedException, "ext_type not consumed exception");
-	VM_RUNTIME_EXCEPTION(VMExtFieldNotConsumedException, "ext_field not consumed exception");
-	VM_RUNTIME_EXCEPTION(VMExtTypeFieldNotConsumedException, "ext_type_field not found exception");
-	VM_RUNTIME_EXCEPTION(VMExtTypeL64NotConsumedException, "ext_type_l64 not consumed exception");
-	VM_RUNTIME_EXCEPTION(VMExcutingLabelException, "Handling label should not be possible");
 
 
 }

@@ -442,23 +442,23 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
-		throw exceptions::VMExtL64NotConsumedException();
+		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
-		throw exceptions::VMExtTypeNotConsumedException();
+		CORE_PANIC("ext_type not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_field)(FUNCTION_ARGS) {
-		throw exceptions::VMExtFieldNotConsumedException();
+		CORE_PANIC("ext_field not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
-		throw exceptions::VMExtTypeFieldNotConsumedException();
+		CORE_PANIC("ext_type_field not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_l64)(FUNCTION_ARGS) {
-		throw exceptions::VMExtTypeL64NotConsumedException();
+		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
@@ -759,7 +759,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(label)(FUNCTION_ARGS) {
-		throw exceptions::VMExcutingLabelException();
+		CORE_PANIC("Handling label should not be possible");
 	}
 }
 

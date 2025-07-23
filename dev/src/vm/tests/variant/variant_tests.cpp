@@ -7,6 +7,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/exceptions.hpp>
 
 class VmVariantTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -62,13 +63,15 @@ private:
 
 	void simpleVariant1() {
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("simple_variant.dbc", "1", "13"), "Null pointer copy exception"
+			runTestOnVmGetResult("simple_variant.dbc", "1", "13"),
+			vm::exceptions::VMNullPointerCopyException::ERR_MSG
 		);
 	}
 
 	void simpleVariant2() {
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("simple_variant.dbc", "2", "13"), "Use after free exception"
+			runTestOnVmGetResult("simple_variant.dbc", "2", "13"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
 	}
 
@@ -77,7 +80,8 @@ private:
 	void nestedVariantTest() {
 		runTestOnVm("nested.dbc", "15", "15");
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("nested_failing.dbc", "15", "15"), "Use after free exception"
+			runTestOnVmGetResult("nested_failing.dbc", "15", "15"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
 		);
 	}
 

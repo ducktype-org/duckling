@@ -29,7 +29,7 @@ namespace vm {
 		TypeMetadata& operator=(TypeMetadata&&)      = delete;
 
 		/**
-		 * @note This function shouldn't be use after call to finalize().
+		 * @note This function shouldn't be used after finalize().
 		 */
 		TypeRef addType(Type&& type);
 

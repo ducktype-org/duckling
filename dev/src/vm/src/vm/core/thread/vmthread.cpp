@@ -338,7 +338,7 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 			default: {
-				throw exceptions::VMUnknownOperatorException();
+				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
 			}
 			}
 		}
@@ -383,7 +383,7 @@ namespace vm {
 			throw KillProcessException{};
 
 		default:
-			throw exceptions::VMUnexpectedExecutionStatus();
+			CORE_PANIC("Unexpected execution status");
 		}
 	}
 
