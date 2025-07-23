@@ -1,7 +1,7 @@
 /**
  * @file param_builder.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
- * @brief This is the class through which clap::Parameter should be instantiated.
+ * @brief This is the class through which clah::Parameter should be instantiated.
  */
 
 #pragma once
@@ -11,10 +11,10 @@
 
 #include <utility>
 
-namespace clap {
+namespace clah {
 
 	/**
-	 * This exception is not meant to be handled, as it means clap::Parameter
+	 * This exception is not meant to be handled, as it means clah::Parameter
 	 * has been built inappropriately.
 	 */
 	struct ParamBuilderException: std::exception {
@@ -30,7 +30,7 @@ namespace clap {
 	};
 
 	/**
-	 * This class is provided as the one and only way to build clap::Parameter.
+	 * This class is provided as the one and only way to build clah::Parameter.
 	 */
 	class ParamBuilder {
 	public:
@@ -100,7 +100,7 @@ namespace clap {
 		 * Conditional means that it is conditionally required or conditionally forbidden
 		 * under certain conditions.
 		 * @param condition Function that returns true if parameter is correct - passes the
-		 * condition, false if not. Function takes a parameter clap::ParsingResult to deduce if it's
+		 * condition, false if not. Function takes a parameter clah::ParsingResult to deduce if it's
 		 * correct or not.
 		 * @param description Description of the condition.
 		 * @return A reference to self for the builder design pattern.

@@ -15,7 +15,7 @@
 #include <regex>
 #include <utility>
 
-namespace clap {
+namespace clah {
 
 	/**
 	 * A result of a single value parsing.
