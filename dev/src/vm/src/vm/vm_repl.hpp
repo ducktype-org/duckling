@@ -83,9 +83,6 @@ private:
 
 	DuckVMRepl();
 	// Helper methods
-	[[nodiscard]] static std::string strip(std::string string);
-	[[nodiscard]] static std::string lstrip(std::string string);
-	[[nodiscard]] static std::string rstrip(std::string string);
 	std::string                      loadCodeLinesUntil(const std::string& until);
 	[[nodiscard]] CallInfo           parseFunctionCallLine(const std::string& line) const;
 

@@ -2,9 +2,13 @@
 
 #include <base/optional.hpp>
 
+#include "vm/api/vm.hpp"
+#include "vm/core/process/interface_types.hpp"
+#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/api.hpp>
 #include <vm/api/data/core_operation_error.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -65,6 +69,14 @@ private:
 		ASSERT_EQUAL_PRINT(expected_exit_code, exit_code_response.value()->interpret<i64>());
 	}
 
+	std::shared_ptr<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+		auto response = vm::api::getVmValue(pid, "i64");
+		ASSERT_TRUE(response.has_value());
+		auto vm_value              = response->vm_value;
+		vm_value->interpret<i64>() = value;
+		return vm_value;
+	}
+
 	void multipleFiles() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("multiple_files_1.dbc"));
@@ -97,7 +109,8 @@ private:
 		fs::File file(path("call_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, "3", 0);
+		vm::FunctionRunArguments args = { getIntVmValue(pid, 1), getIntVmValue(pid, 2) };
+		runAndCheckExitCode(pid, "summer", args, {}, "3", 0);
 	}
 
 	void runNonVoidFunction() {
@@ -105,7 +118,8 @@ private:
 		fs::File file(path("call_non_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 695, 40 }, {}, {}, 735);
+		vm::FunctionRunArguments args = { getIntVmValue(pid, 695), getIntVmValue(pid, 40) };
+		runAndCheckExitCode(pid, "summer", args, {}, {}, 735);
 	}
 
 	void doubleRunFunction() {
@@ -113,8 +127,10 @@ private:
 		fs::File file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 8 }, {}, {}, 32);
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 6 }, {}, {}, 24);
+		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
+		runAndCheckExitCode(pid, "spring", args, {}, {}, 32);
+		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 4), getIntVmValue(pid, 6) };
+		runAndCheckExitCode(pid, "spring", args2, {}, {}, 24);
 	}
 
 	void manyRunFunctions() {
@@ -122,8 +138,10 @@ private:
 		fs::File file(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		for (i32 i = 0; i < 100; i++)
-			runAndCheckExitCode(pid, "spring", std::vector<i64>{ i, i }, {}, {}, i * i);
+		for (i32 i = 0; i < 100; i++) {
+			vm::FunctionRunArguments args = { getIntVmValue(pid, i), getIntVmValue(pid, i) };
+			runAndCheckExitCode(pid, "spring", args, {}, {}, i * i);
+		}
 	}
 
 	void repl() {
@@ -131,22 +149,24 @@ private:
 
 		fs::File file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 8 }, {}, {}, 32);
+		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
+		runAndCheckExitCode(pid, "spring", args, {}, {}, 32);
 
 		fs::File file2(path("repl_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, {}, 3);
+		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 1), getIntVmValue(pid, 2) };
+		runAndCheckExitCode(pid, "summer", args2, {}, {}, 3);
 	}
 
 	void replWithGlobals() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("repl_with_globals_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "1 2", {}, 0);
+		runAndCheckExitCode(pid, "globaler_setter", {}, "1 2", {}, 0);
 
 		fs::File file2(path("repl_with_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "globaler_reader", std::vector<i64>{}, {}, "12", 0);
+		runAndCheckExitCode(pid, "globaler_reader", {}, {}, "12", 0);
 	}
 
 	void cyclicRepl() {
@@ -154,11 +174,13 @@ private:
 
 		fs::File file1(path("loaded_func_call_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 4, 8 }, {}, {}, 12);
+		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
+		runAndCheckExitCode(pid, "summer", args, {}, {}, 12);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 2, 3 }, {}, {}, 10);
+		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 2), getIntVmValue(pid, 3) };
+		runAndCheckExitCode(pid, "summer", args2, {}, {}, 10);
 	}
 
 	void separateGlobals() {
@@ -168,7 +190,7 @@ private:
 
 		fs::File file2(path("separate_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "12", "12", 0);
+		runAndCheckExitCode(pid, "globaler_setter", {}, "12", "12", 0);
 	}
 
 	void injectExistingFunction() {

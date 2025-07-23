@@ -1,5 +1,6 @@
 #include "vm.hpp"
 
+#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>
@@ -79,7 +80,7 @@ namespace vm::api {
 	) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(
-				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
+					pid, request::RunFunction{ .func_name = function_name, .func_args = args }
 			))
 		    .transform(ignoreResponse);
 	}
@@ -125,6 +126,12 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(api::makeDataRequest(pid, request::Block{ BlockID(block_id) }))
 		    .and_then(mapOrWrongResponse<response::Block>);
+	}
+
+	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {
+		return Supervisor::get()
+		    .doRequest(api::makeDataRequest(pid, request::VmValue{ type_name }))
+		    .and_then(mapOrWrongResponse<response::VmValue>);
 	}
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {

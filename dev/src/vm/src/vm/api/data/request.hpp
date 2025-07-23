@@ -36,7 +36,7 @@ namespace vm::api {
 
 		struct RunFunction {
 			std::string                func_name;
-			std::vector<CRef<VmValue>> func_args;
+			std::vector<std::shared_ptr<VmValue>> func_args;
 		};
 
 		struct Input {
@@ -54,6 +54,10 @@ namespace vm::api {
 		struct ExecutionPosition {};
 
 		struct TypeMetadata {
+			std::string type_name;
+		};
+
+		struct VmValue {
 			std::string type_name;
 		};
 
@@ -93,7 +97,7 @@ namespace vm::api {
 	using IORequest
 		= std::variant<request::Input, request::Output, request::Attach, request::Detach>;
 
-	using DataRequest = std::variant<request::TypeMetadata, request::Block>;
+	using DataRequest = std::variant<request::TypeMetadata, request::Block, request::VmValue>;
 
 	struct StatusRequest {};
 

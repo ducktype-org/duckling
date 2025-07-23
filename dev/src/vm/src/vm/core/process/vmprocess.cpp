@@ -1,9 +1,11 @@
 #include "vmprocess.hpp"
 
+#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -266,6 +268,21 @@ namespace vm {
 					api::response::Block{ memory.requestBlockData(block_request.block_id) }
 				);
 			}
+			variant_case(api::request::VmValue, vmvalue_request) {
+				auto maybe_type
+					= loaded_program->types->atMaybe(base::StrID(vmvalue_request.type_name.c_str()));
+				match_optional(maybe_type) {
+					opt_some(type) {
+						auto vm_value = std::make_shared<vm::VmValue>(*this, type);
+						response      = api::response::VmValue{ vm_value };
+					}
+					opt_none {
+						response = std::unexpected(
+							api::CoreOperationError{ api::OtherError{ "Type not found" } }
+						);
+					}
+				}
+			}
 			variant_default { response = api::Response(api::response::Empty()); }
 		}
 		return response;
@@ -348,7 +365,9 @@ namespace vm {
 		variant_match(getStatus()) {
 			variant_case(api::Executing, exec_status) {
 				variant_match(exec_status.exec_status) {
-					variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
+					variant_case(api::ExecutionCompleted, completed) {
+						return completed.exit_value;
+					}
 					variant_default return std::unexpected(
 						api::StateError("Execution did not complete")
 					);

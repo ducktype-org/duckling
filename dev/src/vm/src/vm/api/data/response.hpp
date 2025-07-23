@@ -5,6 +5,8 @@
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
+#include <memory>
+
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
 struct nlohmann::adl_serializer<base::RawView> {
@@ -40,6 +42,12 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
 		};
 
+		struct VmValue {
+			std::shared_ptr<::vm::VmValue> vm_value;
+			// TODOP: Fix that.
+			// NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
+		};
+
 		struct BlockIDs {
 			std::vector<BlockID> ids;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(BlockIDs, ids);
@@ -60,6 +68,6 @@ namespace vm::api {
 		response::Empty,
 		response::BlockIDs,
 		response::CodePosition,
-		Ref<VmValue>,
+		response::VmValue,
 		ExitValue>;
 }

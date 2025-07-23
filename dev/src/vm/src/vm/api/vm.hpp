@@ -6,6 +6,8 @@
 
 #include <filesystem/file.hpp>
 
+#include "vm/api/data/response.hpp"
+#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/api.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
@@ -59,7 +61,12 @@ namespace vm::api {
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
-	std::expected<TypeCRef, ApiError>               getType(PID pid, const std::string& type_name);
-	std::expected<response::Block, ApiError>        getBlock(PID pid, u64 block_id);
+	std::expected<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
+	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id);
+
+	/**
+	 * @brief Returns an empty VmValue (initialized by zero) of the given type.
+	 */
+	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);
 }

@@ -7,6 +7,26 @@
 #include <string>
 #include <string_view>
 
+namespace {
+	std::shared_ptr<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+		auto response              = vm::api::getVmValue(pid, "i64");
+		auto vm_value              = response->vm_value;
+		vm_value->interpret<i64>() = value;
+		return vm_value;
+	}
+
+	std::string strip(std::string string) {
+		string.erase(0, string.find_first_not_of(" \t\n\r"));
+		string.erase(string.find_last_not_of(" \t\n\r") + 1);
+		return string;
+	}
+
+	std::string lstrip(std::string string) {
+		string.erase(0, string.find_first_not_of(" \t\n\r"));
+		return string;
+	}
+}
+
 DuckVMRepl DuckVMRepl::get() { return {}; }
 
 DuckVMRepl::DuckVMRepl() {
@@ -53,21 +73,6 @@ void DuckVMRepl::run() {
 }
 
 // ============== HELPERS ==============
-std::string DuckVMRepl::strip(std::string string) {
-	string.erase(0, string.find_first_not_of(" \t\n\r"));
-	string.erase(string.find_last_not_of(" \t\n\r") + 1);
-	return string;
-}
-
-std::string DuckVMRepl::lstrip(std::string string) {
-	string.erase(0, string.find_first_not_of(" \t\n\r"));
-	return string;
-}
-
-std::string DuckVMRepl::rstrip(std::string string) {
-	string.erase(string.find_last_not_of(" \t\n\r") + 1);
-	return string;
-}
 
 std::string DuckVMRepl::loadCodeLinesUntil(const std::string& until) {
 	std::string function_code = "";
@@ -106,23 +111,23 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 	std::string function_name = strip(line.substr(0, paren_open));
 	std::string args_str      = line.substr(paren_open + 1, paren_close - paren_open - 1);
 
-	u64              start = 0;
-	std::vector<CRef<vm::VmValue>> arguments;
-	// while (start < args_str.length()) {
-	// 	u64 end = args_str.find(',', start);
-	//
-	// 	// Last argument.
-	// 	if (end == std::string::npos) end = args_str.length();
-	//
-	// 	std::string arg = strip(args_str.substr(start, end - start));
-	// 	try {
-	// 		if (!arg.empty()) arguments.push_back(std::stoi(arg));
-	// 	} catch (const std::exception& e) {
-	// 		std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
-	// 		return {};
-	// 	}
-	// 	start = end + 1;
-	// }
+	u64                                       start = 0;
+	std::vector<std::shared_ptr<vm::VmValue>> arguments;
+	while (start < args_str.length()) {
+		u64 end = args_str.find(',', start);
+
+		// Last argument.
+		if (end == std::string::npos) end = args_str.length();
+
+		std::string arg = strip(args_str.substr(start, end - start));
+		try {
+			if (!arg.empty()) arguments.push_back(getIntVmValue(pid, std::stoi(arg)));
+		} catch (const std::exception& e) {
+			std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
+			return {};
+		}
+		start = end + 1;
+	}
 
 	return { .func_name = function_name, .func_args = arguments };
 }
