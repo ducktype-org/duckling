@@ -10,8 +10,6 @@ class VmUnitTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(floatingPointArithmetic32Test);
-		//  TESTER_ADD_TEST(floatingPointArithmetic64Test);
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
@@ -49,13 +47,6 @@ private:
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 
-	// void floatingPointArithmetic32Test() {
-	//	runTestOnVm("floating_point_arithmetic_32.dbc", "", "1056964608", {}, 0);
-	// }
-	//
-	// void floatingPointArithmetic64Test() {
-	//	runTestOnVm("floating_point_arithmetic_64.dbc", "", "1056964608", {}, 0);
-	//}
 	void globalInitializationTest() { runTestOnVm("global_initialization.dbc", {}, {}, {}, 5); }
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }

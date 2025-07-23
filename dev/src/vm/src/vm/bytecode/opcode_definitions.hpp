@@ -160,6 +160,7 @@ DEF_OPCODE(fdiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
 DEF_OPCODE(fneg_l64, vm::opargs::StackLocal64)
 DEF_OPCODE(fneg_l32, vm::opargs::StackLocal32)
+
 DEF_OPCODE(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 
