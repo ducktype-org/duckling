@@ -174,6 +174,7 @@ namespace vm {
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {
 		std::lock_guard lock(*block->mutex_ref);
+		CORE_ASSERT(block->data.view.size() > offset, "Pointer out of bounds");
 		block->refcount++;
 		return { block, offset };
 	}

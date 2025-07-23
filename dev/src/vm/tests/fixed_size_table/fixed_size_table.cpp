@@ -9,6 +9,7 @@ public:
 		TESTER_ADD_TEST(oneValue);
 		TESTER_ADD_TEST(arrSum);
 		TESTER_ADD_TEST(initWithZero);
+		TESTER_ADD_TEST(leaOOB);
 	}
 
 private:
@@ -17,6 +18,8 @@ private:
 	void arrSum() { runTestOnVm("arr_sum.dbc", "", "903", {}); }
 
 	void initWithZero() { runTestOnVm("init_with_zero.dbc", "", "0", {}); }
+
+	void leaOOB() { assertExecutionPanickedWith(runTestOnVmGetResult("lea_oob.dbc", "", "", {}), "Pointer out of bounds"); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fixed_size_table/");

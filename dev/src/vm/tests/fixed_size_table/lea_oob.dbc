@@ -1,0 +1,25 @@
+type fixed_size_table: stable64 i64 4
+type pointer: stable64_ptr stable64
+
+function main {
+    # ret_val
+    # argc
+    # *argv
+    init_lany_type evil_ptr, ptr_i64;
+    init_lany_type evil_idx, i64;
+    init_lany_type arr_ptr, stable64_ptr;
+    alloc_lptr_type arr_ptr, stable64;
+    mov_l64_imm evil_idx, 4;
+
+    fixedSizeTableLea_lptr_lptr evil_ptr, arr_ptr;
+    ext_l64 evil_idx;
+
+    free_lptr arr_ptr;
+    deinit; # arr_ptr
+    deinit; # evil_idx
+    deinit; # evil_ptr
+    deinit; # *argv
+    deinit; # argc
+    ret;
+
+}
