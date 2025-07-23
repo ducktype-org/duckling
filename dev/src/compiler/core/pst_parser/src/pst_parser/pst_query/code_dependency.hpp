@@ -1,8 +1,7 @@
 #pragma once
 
-#include <lexer/token.hpp>
-
 #include <diagnostic/source_position.hpp>
+#include <lexer/token.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 

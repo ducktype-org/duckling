@@ -1,13 +1,12 @@
 #include "source.hpp"
 
-#include <lexer/classifications.hpp>
-#include <lexer/decode.hpp>
-#include <lexer/lexer_class.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
 #include <diagnostic/location.hpp>
+#include <lexer/decode.hpp>
+#include <lexer/lexer_class.hpp>
+#include <unicode_classification/classifications.hpp>
 
 namespace tokenizer {
 	/**
@@ -19,7 +18,7 @@ namespace tokenizer {
 	 * newline
 	 */
 	usize isNewLine(const std::span<const lexer::Char> where) {
-		auto& newline = lexer::Classifications::newline;
+		auto& newline = unicode::Classifications::newline;
 		if (where.size() > 0 && where[0].is(newline)) {
 			if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;
 			return 1;

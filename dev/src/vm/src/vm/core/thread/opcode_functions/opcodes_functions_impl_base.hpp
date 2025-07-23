@@ -35,6 +35,7 @@
 #include <base/variant.hpp>
 
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
@@ -330,7 +331,7 @@ namespace vm {
 			instr             = function.bc.data();
 
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
+				throw exceptions::VMStackOverflowException();
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
@@ -758,7 +759,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(label)(FUNCTION_ARGS) {
-		CORE_PANIC("Handling label should not be possible.");
+		CORE_PANIC("Handling label should not be possible");
 	}
 }
 

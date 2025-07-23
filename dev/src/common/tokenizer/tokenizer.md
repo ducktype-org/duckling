@@ -10,3 +10,5 @@ Tokenizer is a subset of Common modules that together transform source code into
 \subpage token_file-module
 
 \subpage token-parser-core-module
+
+\subpage token-unicode-classification-module

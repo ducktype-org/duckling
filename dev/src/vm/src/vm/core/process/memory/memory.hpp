@@ -15,6 +15,7 @@
 #include <base/ref.hpp>
 #include <base/stable_container.hpp>
 
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <cstring>
@@ -75,7 +76,15 @@ namespace vm {
 
 		void freeBlock(Ref<Block> block);
 
-		void insertGlobalData(GlobalDataID id, TypeCRef type);
+		/**
+		 * @brief Attempts to insert global data associated with the given ID.
+		 *
+		 * @param id The unique identifier for the global data.
+		 * @param type The type reference to associate with the global data.
+		 * @return true if the global data was inserted successfully (i.e., it did not already
+		 * exist); false otherwise.
+		 */
+		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
 
 		/**
 		 * @brief Returns a view of global data by the id.
@@ -118,11 +127,11 @@ namespace vm {
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
 				-> base::ModRawView {
-			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
+			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			std::lock_guard lock(*pointer.block->mutex_ref);
-			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
+			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
-				CORE_PANIC("Accessing data out of bounds");
+				throw exceptions::VMOutOfBlockBoundsException();
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
