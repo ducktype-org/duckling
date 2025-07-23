@@ -1,0 +1,22 @@
+#pragma once
+
+#include "empty_struct.hpp"
+#include "type_parse.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/ref.hpp>
+
+#include <nlohmann/json.hpp>
+
+template<class T>
+struct nlohmann::adl_serializer<Ref<T>> {
+	static void to_json(json& j, const Ref<T>& v) {
+		using DT   = std::decay_t<T>;
+		j["type"] = std::string(TypeParseTraits<DT>::name.data());
+		j["data"] = *v;
+	}
+
+	static void from_json(const json&, const Ref<T>&) {
+		CORE_PANIC("Parsing data from JSON into a custom variant is not supported (yet).");
+	}
+};

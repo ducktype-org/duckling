@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vm/core/thread/vmvalue.hpp"
+
 #include <json/json.hpp>
 
 #include <variant>
@@ -24,11 +26,11 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	using ExitCode = i64;
+	using ExitValue = CRef<VmValue>;
 
 	struct ExecutionCompleted {
-		ExitCode exit_code;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::ExecutionCompleted, exit_code);
+		ExitValue exit_value;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::ExecutionCompleted, exit_value);
 	};
 
 	struct ExecutionStopped {};

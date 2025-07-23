@@ -30,17 +30,17 @@ public:
 
 private:
 	void runAndCheckExitCode(
-		vm::PID                                                         pid,
-		const base::Optional<std::string>&                              func_name          = {},
-		const std::variant<std::vector<i64>, std::vector<std::string>>& args               = {},
-		const base::Optional<std::string>&                              optional_input     = {},
-		const base::Optional<std::string>&                              optional_output    = {},
-		i64                                                             expected_exit_code = 0
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name          = {},
+		const vm::RunArguments&            args               = {},
+		const base::Optional<std::string>& optional_input     = {},
+		const base::Optional<std::string>& optional_output    = {},
+		i64                                expected_exit_code = 0
 	) {
 		match_optional(func_name) {
 			opt_some(func_name) {
-				ASSERT_TRUE(std::holds_alternative<std::vector<i64>>(args));
-				auto function_args = std::get<std::vector<i64>>(args);
+				ASSERT_TRUE(std::holds_alternative<vm::FunctionRunArguments>(args));
+				const auto& function_args = std::get<vm::FunctionRunArguments>(args);
 				ASSERT_TRUE(vm::api::runFunction(pid, func_name, function_args).has_value());
 			}
 			opt_none {
@@ -60,9 +60,9 @@ private:
 			ASSERT_EQUAL(output, output_response->output);
 		}
 
-		auto exit_code_response = vm::api::getExitCode(pid);
+		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_TRUE(exit_code_response.has_value());
-		ASSERT_EQUAL_PRINT(expected_exit_code, *exit_code_response);
+		ASSERT_EQUAL_PRINT(expected_exit_code, exit_code_response.value()->interpret<i64>());
 	}
 
 	void multipleFiles() {

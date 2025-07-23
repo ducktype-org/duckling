@@ -19,8 +19,9 @@ namespace vm {
 
 	std::expected<PID, api::ApiError> Supervisor::newProcess() {
 		std::unique_lock lock(rw_process_table);
-		process_table.emplace(next, makeBox<VMProcess>());
-		return next++;
+		PID pid = next++;
+		process_table.emplace(pid, makeBox<VMProcess>(pid));
+		return pid;
 	}
 
 	std::expected<api::Response, api::ApiError> Supervisor::doRequest(

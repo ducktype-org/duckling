@@ -8,6 +8,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/process/interface_types.hpp>
 
 #include <vector>
 
@@ -43,9 +44,9 @@ namespace vm::api {
 	std::expected<void, ApiError> loadStdlib(PID pid);
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& path);
 	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code);
-	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args = {});
+	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 	std::expected<void, ApiError> runFunction(
-		PID pid, const std::string& func_name, const std::vector<i64>& args = {}
+		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
 	);
 	std::expected<void, ApiError> join(PID pid);
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);
@@ -54,7 +55,7 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
 
-	std::expected<ExitCode, ApiError> getExitCode(PID pid);
+	std::expected<CRef<VmValue>, ApiError> getExitValue(PID pid);
 
 	std::expected<response::Output, ApiError> output(PID pid);
 

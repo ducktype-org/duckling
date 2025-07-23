@@ -1,5 +1,7 @@
 #pragma once
 
+#include "interface_types.hpp"
+
 #include <base/optional.hpp>
 
 #include <listener/listener.hpp>
@@ -9,11 +11,9 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
@@ -34,10 +34,6 @@ namespace vm::loader {
 }
 
 namespace vm {
-	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
-	using ProgramRunArguments  = std::vector<std::string>;
-	using FunctionRunArguments = std::vector<i64>;
-	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -48,7 +44,7 @@ namespace vm {
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
 	 * It is responsible for loading and parsing of the program,
-	 * creating and reseting the Execution Thread,
+	 * creating and resetting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
 	 *
@@ -56,7 +52,11 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class VMProcess final: public Listener<api::ProcStatus> {
+		friend class VmValue;
+
 	private:
+		PID my_pid;
+
 		std::shared_mutex rw_global;
 
 		api::ProcStatus             status;
@@ -100,7 +100,8 @@ namespace vm {
 			const api::DataRequest& request
 		);
 
-		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
+		std::expected<api::Response, api::CoreOperationError> doRequest(
+			const api::IORequest& request
 		);
 
 		/**
@@ -134,7 +135,8 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
+		std::expected<api::Response, api::CoreOperationError> input(
+			const api::request::Input& request
 		);
 
 		/**
@@ -193,7 +195,6 @@ namespace vm {
 
 		ProcIO& getIO();
 
-
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.
 		/**
@@ -201,8 +202,10 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
-		VMProcess();
+		PID getPID() const;
 
-		~VMProcess() final;
+		VMProcess(PID my_pid);
+
+		~VMProcess() override;
 	};
 }

@@ -54,7 +54,7 @@ namespace compiler::backend_vm {
 		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
 			variant_match(layout()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
-					return vm::code::PrimitiveType(base::StrID("void"), 0);
+					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout.getSize());

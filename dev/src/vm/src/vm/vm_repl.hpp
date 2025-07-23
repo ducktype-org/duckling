@@ -54,8 +54,8 @@ public:
 
 private:
 	struct CallInfo {
-		std::string      func_name;
-		std::vector<i64> func_args;
+		std::string              func_name;
+		vm::FunctionRunArguments func_args;
 	};
 
 	vm::PID pid{};
@@ -91,7 +91,7 @@ private:
 
 	// VM API Functions
 	bool loadOnVm(const std::string& code);
-	i64  runOnVm(const std::string& func_name, const std::vector<i64>& func_args = {});
+	i64  runOnVm(const std::string& func_name, const vm::FunctionRunArguments& func_args = {});
 	void loadAndRun(const std::string& code);
 
 	// Process User Requests

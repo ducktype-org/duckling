@@ -60,5 +60,6 @@ namespace vm::api {
 		response::Empty,
 		response::BlockIDs,
 		response::CodePosition,
-		ExitCode>;
+		Ref<VmValue>,
+		ExitValue>;
 }

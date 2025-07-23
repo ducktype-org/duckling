@@ -22,7 +22,7 @@ namespace vm::builtins {
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<VmValue>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMThread& thread, Memory& memory, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
 			if (std::is_void_v<Ret>) {
 				function(thread, args[Is].interpret<FunArgs>()...);
 				return {};
@@ -30,7 +30,7 @@ namespace vm::builtins {
 			auto value = function(thread, args[Is].interpret<FunArgs>()...);
 			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
 
-			auto vm_value             = VmValue(vm_return_type, memory);
+			auto vm_value             = VmValue(process, vm_return_type);
 			vm_value.interpret<Ret>() = value;
 			return vm_value;
 		}
@@ -56,13 +56,13 @@ namespace vm::builtins {
 		base::Optional<VmValue> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
 			TypeCRef                    vm_return_type,
+			VMProcess&                  process,
 			VMThread&                   thread,
-			Memory&                     memory,
 			const std::vector<VmValue>& args
 		) {
 			if (sizeof...(FunArgs) != args.size()) CORE_PANIC("Argument number mismatch!");
 			return callUnpackArgsImpl(
-				function, vm_return_type, thread, memory, args, std::index_sequence_for<FunArgs...>{}
+				function, vm_return_type, process, thread, args, std::index_sequence_for<FunArgs...>{}
 			);
 		}
 	}
@@ -88,8 +88,8 @@ namespace vm::builtins {
 	base::Optional<VmValue> callBuiltinFunction(
 		BuiltinFunctionID           id,
 		TypeCRef                    builtin_func_type,
+		VMProcess&                  process,
 		VMThread&                   thread,
-		Memory&                     memory,
 		const std::vector<VmValue>& arguments
 	) {
 		switch (id) {
@@ -98,8 +98,8 @@ namespace vm::builtins {
 		return callUnpackArgs(                   \
 			FunctionHandlers::builtin##ID_NAME,  \
 			*builtin_func_type->getResultType(), \
+			process,                             \
 			thread,                              \
-			memory,                              \
 			arguments                            \
 		);                                       \
 	}
@@ -154,9 +154,11 @@ namespace vm::builtins {
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
 				code::Function builtin_function;
 				builtin_function.name = func_type.name;
-				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(
-					vm::opargs::BuiltinFunctionName(func_type.name)
-				));
+				builtin_function.body.emplace_back(
+					code::instructions::Op_call_builtin_func(
+						vm::opargs::BuiltinFunctionName(func_type.name)
+					)
+				);
 				builtin_function.body.emplace_back(code::instructions::Op_ret{});
 				code_collection.functions.push_back(builtin_function);
 			}

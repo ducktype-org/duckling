@@ -34,7 +34,7 @@ int cli(bool load_stdlib) {
 int cli(const fs::File& filepath, bool load_stdlib) {
 	vm::PID pid{};
 
-	std::expected<vm::api::ExitCode, std::string> result
+	std::expected<i64, std::string> result
 		= vm::api::spawn()
 	          .and_then([&](vm::api::ProcessInfo info) {
 				  pid = info.pid;
@@ -46,7 +46,8 @@ int cli(const fs::File& filepath, bool load_stdlib) {
 	          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 	          .and_then([&] { return vm::api::run(pid); })
 	          .and_then([&] { return vm::api::join(pid); })
-	          .and_then([&] { return vm::api::getExitCode(pid); })
+	          .and_then([&] { return vm::api::getExitValue(pid); })
+	          .transform([&](CRef<vm::VmValue> vm_value) { return vm_value->interpret<i64>(); })
 	          .transform_error(convertError);
 
 	if (result.has_value())

@@ -1,5 +1,7 @@
 #include "vm_repl.hpp"
 
+#include "core/process/interface_types.hpp"
+
 #include <format>
 #include <iostream>
 #include <string>
@@ -105,22 +107,22 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 	std::string args_str      = line.substr(paren_open + 1, paren_close - paren_open - 1);
 
 	u64              start = 0;
-	std::vector<i64> arguments;
-	while (start < args_str.length()) {
-		u64 end = args_str.find(',', start);
-
-		// Last argument.
-		if (end == std::string::npos) end = args_str.length();
-
-		std::string arg = strip(args_str.substr(start, end - start));
-		try {
-			if (!arg.empty()) arguments.push_back(std::stoi(arg));
-		} catch (const std::exception& e) {
-			std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
-			return {};
-		}
-		start = end + 1;
-	}
+	std::vector<CRef<vm::VmValue>> arguments;
+	// while (start < args_str.length()) {
+	// 	u64 end = args_str.find(',', start);
+	//
+	// 	// Last argument.
+	// 	if (end == std::string::npos) end = args_str.length();
+	//
+	// 	std::string arg = strip(args_str.substr(start, end - start));
+	// 	try {
+	// 		if (!arg.empty()) arguments.push_back(std::stoi(arg));
+	// 	} catch (const std::exception& e) {
+	// 		std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
+	// 		return {};
+	// 	}
+	// 	start = end + 1;
+	// }
 
 	return { .func_name = function_name, .func_args = arguments };
 }
@@ -140,15 +142,17 @@ bool DuckVMRepl::loadOnVm(const std::string& code) {
 	return !bad;
 }
 
-i64 DuckVMRepl::runOnVm(const std::string& func_name, const std::vector<i64>& func_args) {
+i64 DuckVMRepl::runOnVm(const std::string& func_name, const vm::FunctionRunArguments& func_args) {
 	CORE_ASSERT(
 		vm::api::runFunction(pid, func_name, func_args).has_value(), "Failed to runFunction\n"
 	);
 	CORE_ASSERT(vm::api::join(pid).has_value(), "Error: Join failed\n");
 
-	auto exit_code_response = vm::api::getExitCode(pid);
+	auto exit_code_response = vm::api::getExitValue(pid);
 	CORE_ASSERT(exit_code_response.has_value(), "Error: Empty exit_code\n");
-	return *exit_code_response;
+	// @TODO: Improve this to allow other types as well
+	CORE_ASSERT(exit_code_response.value()->type->getName().str() == "i64", "Error: Type not i64\n");
+	return exit_code_response.value()->interpret<i64>();
 }
 
 void DuckVMRepl::loadAndRun(const std::string& code) {

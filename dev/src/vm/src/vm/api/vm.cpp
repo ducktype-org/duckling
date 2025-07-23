@@ -2,6 +2,7 @@
 
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
 namespace vm::api {
@@ -74,7 +75,7 @@ namespace vm::api {
 	}
 
 	std::expected<void, ApiError> runFunction(
-		PID pid, const std::string& function_name, const std::vector<i64>& args
+		PID pid, const std::string& function_name, const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(
@@ -146,10 +147,10 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<i64, ApiError> getExitCode(PID pid) {
+	std::expected<CRef<VmValue>, ApiError> getExitValue(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExitCodeRequest(pid))
-		    .and_then(mapOrWrongResponse<ExitCode>);
+		    .and_then(mapOrWrongResponse<CRef<VmValue>>);
 	}
 
 }

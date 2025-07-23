@@ -71,8 +71,8 @@ namespace vm::builtins {
 	base::Optional<VmValue> callBuiltinFunction(
 		BuiltinFunctionID           id,
 		TypeCRef                    builtin_func_type,
+		VMProcess&                  process,
 		VMThread&                   thread,
-		Memory&                     memory,
 		const std::vector<VmValue>& arguments
 	);
 
