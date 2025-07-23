@@ -82,9 +82,7 @@ private:
 		);
 	}
 
-	void nestedCopy() {
-		runTestOnVm("nested_copy.dbc", "3", "3");
-	}
+	void nestedCopy() { runTestOnVm("nested_copy.dbc", "3", "3"); }
 
 	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
 
