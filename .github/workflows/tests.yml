@@ -27,7 +27,7 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      self-hosted-labels: '["dev", "release"]'
+      self-hosted-labels: '["debug", "release"]'
       github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
     secrets: inherit
 
@@ -37,7 +37,7 @@ jobs:
 
     strategy:
       matrix:
-        build-type: [Dev, Release]  # (Release, Dev, RelWithDebInfo, etc.)
+        build-type: [Dev, ReleaseOpt]  # (Release, Dev, RelWithDebInfo, etc.)
       fail-fast: false
 
     outputs:
@@ -54,7 +54,7 @@ jobs:
     runs-on: ${{ matrix.build-type == 'Dev' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
 
     env:
-      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'ReleaseOpt' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' }}
 
     steps:
@@ -63,7 +63,7 @@ jobs:
         run: |
           if [[ "${{ matrix.build-type }}" == "Dev" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "Release" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
+          elif [[ "${{ matrix.build-type }}" == "ReleaseOpt" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
           else
             echo "is-self-hosted=false" >> $GITHUB_OUTPUT
@@ -74,7 +74,7 @@ jobs:
         run: |
           if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=6" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "Release" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+          elif [[ "${{ matrix.build-type }}" == "ReleaseOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=3" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
