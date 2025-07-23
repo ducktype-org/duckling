@@ -55,9 +55,9 @@ private:
 				unit_layout.getSourceType() == ctx.query<QueryUnitType>({}),
 				"Layout should have source type as constructed."
 			);
-			variant_match(unit_layout()) {
-				variant_case(EmptyTypeLayout, l) { /* good */ }
-				variant_default { fail("Layout of unit type should be empty."); }
+			// @TODO can be probably done via assert
+			if_vrnt_not(unit_layout(), EmptyTypeLayout) {
+				fail("Layout of unit type should be empty.");
 			}
 			testPrinting(unit_layout, ctx);
 
@@ -233,26 +233,26 @@ private:
 				variant_layout.getSourceType() == variant_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(variant_layout()) {
-				variant_case(VariantTypeLayout, l) {
-					assertTrue(
-						l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
-					);
-					assertTrue(l.getTagSize() == BYTE_SIZE, "Variant tag should not be too big.");
-					assertTrue(
-						l.getDataOffset() == Bytes(2),
-						"Data offset takes should take alignment into account."
-					);
-					assertTrue(
-						l.getIndexOfType(i8_type) != l.getIndexOfType(f16_type),
-						"Different variant options should have different indices."
-					);
-					assertTrue(
-						l.getTypeOfIndex(0) != l.getTypeOfIndex(1),
-						"Different indices should correspond to different types."
-					);
-				}
-				variant_default { fail("Layout of variant type should be variant-like."); }
+			if_vrnt_is(variant_layout(), VariantTypeLayout, l) {
+				assertTrue(
+					l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
+				);
+				assertTrue(l.getTagSize() == BYTE_SIZE, "Variant tag should not be too big.");
+				assertTrue(
+					l.getDataOffset() == Bytes(2),
+					"Data offset takes should take alignment into account."
+				);
+				assertTrue(
+					l.getIndexOfType(i8_type) != l.getIndexOfType(f16_type),
+					"Different variant options should have different indices."
+				);
+				assertTrue(
+					l.getTypeOfIndex(0) != l.getTypeOfIndex(1),
+					"Different indices should correspond to different types."
+				);
+			}
+			else { 
+				fail("Layout of variant type should be variant-like."); 
 			}
 			testPrinting(variant_layout, ctx, true);
 		});
@@ -280,14 +280,14 @@ private:
 				tuple_layout.getSourceType() == tuple_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(tuple_layout()) {
-				variant_case(TupleTypeLayout, l) {
-					assertTrue(
-						l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
-							&& l.getComponentOffset(2) == Bytes(8),
-						"Tuple layout should align its component layouts."
-					);
-				}
+			if_vrnt_is(tuple_layout(), TupleTypeLayout, l) {
+				assertTrue(
+					l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
+						&& l.getComponentOffset(2) == Bytes(8),
+					"Tuple layout should align its component layouts."
+				);
+			}
+			else {
 				variant_default { fail("Layout of tuple type should be tuple-like."); }
 			}
 			testPrinting(tuple_layout, ctx, true);
@@ -305,36 +305,18 @@ private:
 			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
 			TypeInterface           my_class_interface = my_class_type.getInterface(ctx);
 
-			const SymID a_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("a"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
+			const auto get_field_symbol = [&](const char* c_str) {
+				if_vrnt_is(my_class_interface.resolve(base::StrID(c_str), ctx), TypeInterface::SingleMatch, m)
+					return m.best_match.getSymbol();
+				
 				CORE_PANIC("Could not resolve field.");
-			}();
-			const SymID b_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("b"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
-			}();
-			const SymID c_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("c"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
-			}();
-			const SymID d_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("d"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
-			}();
-			const SymID e_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("e"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
-			}();
+			}
+
+			const SymID a_field_symbol = get_field_symbol("a");
+			const SymID b_field_symbol = get_field_symbol("b");
+			const SymID c_field_symbol = get_field_symbol("c");
+			const SymID d_field_symbol = get_field_symbol("d");
+			const SymID e_field_symbol = get_field_symbol("e");
 
 			TypeLayout my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
 			assertTrue(
@@ -347,19 +329,20 @@ private:
 				"Layout should have source type as constructed."
 			);
 
-			variant_match(my_class_layout()) {
-				variant_case(ClassTypeLayout, l) {
-					assertTrue(
-						l.getFieldOffset(a_field_symbol) == Bytes(0)
-							&& l.getFieldOffset(b_field_symbol) == Bytes(2)
-							&& l.getFieldOffset(c_field_symbol) == Bytes(8)
-							&& l.getFieldOffset(d_field_symbol) == Bytes(16)
-							&& l.getFieldOffset(e_field_symbol) == Bytes(24),
-						"Class layout should align its component layouts."
-					);
-				}
-				variant_default { fail("Layout of class type should be class-like."); }
+			if_vrnt_is(my_class_layout(), ClassTypeLayout, l) {
+				assertTrue(
+					l.getFieldOffset(a_field_symbol) == Bytes(0)
+					&& l.getFieldOffset(b_field_symbol) == Bytes(2)
+					&& l.getFieldOffset(c_field_symbol) == Bytes(8)
+					&& l.getFieldOffset(d_field_symbol) == Bytes(16)
+					&& l.getFieldOffset(e_field_symbol) == Bytes(24),
+					"Class layout should align its component layouts."
+				);
 			}
+			else { 
+				fail("Layout of class type should be class-like."); 
+			}
+
 			testPrinting(my_class_layout, ctx, true);
 		});
 	}

@@ -734,11 +734,8 @@ private:
 						  ASSERT_EQUAL(expected_scope, inner_scope);
 
 						  for (auto sub_inner: inner_expr.unlock(ctx)->viewSubElements()) {
-							  variant_match(sub_inner) {
-								  variant_case(pst::LangElement::Child, sub_expr) {
-									  sub_test_expr(sub_expr);
-								  }
-								  variant_default {}
+							  if_vrnt_is(sub_inner, pst::LangElement::Child, sub_expr) {
+								  sub_test_expr(sub_expr);
 							  }
 						  }
 					  };

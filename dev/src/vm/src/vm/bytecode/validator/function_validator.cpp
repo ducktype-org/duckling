@@ -459,13 +459,9 @@ class FunctionValidator {
 					if (!valid) throw UnknownMethodError(generic_arg);
 				}
 				variant_case(opargs::Label, label_value) {
-					variant_match(instruction) {
-						variant_case_novalue(Op_label) {}
-						// The default instruction for a label argument is a jump instruction.
-						variant_default {
-							if (!index_of_label.contains(label_value.label_name))
-								throw UnknownLabelError(label_value);
-						}
+					if_vrnt_not(instruction, Op_label) {
+						if (!index_of_label.contains(label_value.label_name))
+							throw UnknownLabelError(label_value);
 					}
 				}
 
@@ -478,13 +474,13 @@ class FunctionValidator {
 
 				variant_case(opargs::Field, field) {
 					auto type = tod_map.at(field.type_name);
-					variant_match(*type) {
-						variant_case(DataType, ztruct) {
-							if (std::ranges::find(ztruct.fields, field.field_name, &Field::name)
-							    == ztruct.fields.end())
-								throw UnknownFieldError(field);
-						}
-						variant_default { throw InvalidArgumentTypeError(arg); }
+					if_vrnt_is(*type, DataType, ztruct) {
+						if (std::ranges::find(ztruct.fields, field.field_name, &Field::name)
+							== ztruct.fields.end())
+							throw UnknownFieldError(field);
+					}
+					else { 
+						throw InvalidArgumentTypeError(arg);
 					}
 				}
 

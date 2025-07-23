@@ -634,10 +634,10 @@ private:
 
 		UniqueTypesVariant_t<decltype(y)> y1 = 1;
 
-		variant_match(y1) {
-			variant_case(int, val) ASSERT_EQUAL(val, 1);
-			variant_default CORE_PANIC("Invalid state");
-		}
+		if_vrnt_is(y1, int, val)
+			ASSERT_EQUAL(val, 1);
+		else
+			CORE_PANIC("Invalid state");
 
 		static_assert(std::is_same_v<
 					  std::variant<int, float, bool>,
@@ -701,9 +701,12 @@ private:
 		bool entered2 = false;
 		ASSERT_TRUE(!result.hasValue());
 		ASSERT_TRUE(result.hasError());
-		variant_match(result.error()) {
-			variant_case(Err2, value) { entered2 = true; }
-			variant_default CORE_PANIC("Invalid branch");
+
+		if_vrnt_is(result.error(), Err2, _) {
+			entered2 = true;
+		}
+		else {
+			CORE_PANIC("Invalid branch");
 		}
 		ASSERT_TRUE(entered2);
 	}

@@ -18,13 +18,9 @@ int main(int argc, char** argv) {
 	if (!loaded_file_response.has_value()) {
 		auto error = loaded_file_response.error();
 
-		variant_match(error) {
-			variant_case(vm::api::CoreOperationError, core_error) {
-				variant_match(core_error) {
-					variant_case(vm::api::LoadProgramError, load_error) {
-						std::cerr << "Load errors: \n" << load_error.why << "\n";
-					}
-				}
+		if_vrnt_is(error, vm::api::CoreOperationError, core_error) {
+			if_vrnt_is(core_error, vm::api::LoadProgramError, load_error) {
+				std::cerr << "Load errors: \n" << load_error.why << "\n";
 			}
 		}
 

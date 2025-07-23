@@ -294,19 +294,16 @@ namespace compiler::mir {
 	public:
 		FunctionBuilder(query::Context& ctx, const HSymID helios_symbol):
 			  function_type([&]() {
-				  variant_match(helios_symbol) {
-					  variant_case(FunctionSymID, fun_sym) {
-						  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
-					          ->expect("Handling errors in MIR is not supported yet")
-					          .getType();
-					  }
-					  variant_default {
-						  CORE_PANIC(
-							  "FunctionBuilder constructor should be called only with FunctionSymID"
-						  );
-					  }
+				  if_vrnt_is(helios_symbol, FunctionSymID, fun_sym) {
+					  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
+				          ->expect("Handling errors in MIR is not supported yet")
+				          .getType();
 				  }
-
+				  else 
+					  CORE_PANIC(
+						  "FunctionBuilder constructor should be called only with FunctionSymID"
+					  );
+				
 				  CORE_UNREACHABLE();
 			  }()),
 			  lifetime_scope_tree(),
@@ -513,20 +510,17 @@ namespace compiler::mir {
 		 */
 		void collect(const helios::HOUTFunction& hout_function) {
 			auto function_helios_symbol = function.getHeliosSymbol();
-			variant_match(function_helios_symbol) {
-				variant_case(FunctionSymID, function_sym) {
-					CORE_ASSERT(
-						function_sym.id == hout_function.original_symbol,
-						"Bad function passed to LocalVarCollectionVisitor"
-					);
-				}
-
-				variant_default {
-					CORE_PANIC(
-						"The Function wasn't created from HOUTFunction, so you should not use "
-						"collect."
-					);
-				}
+			if_vrnt_is(function_helios_symbol, FunctionSymID, function_sym) {
+				CORE_ASSERT(
+					function_sym.id == hout_function.original_symbol,
+					"Bad function passed to LocalVarCollectionVisitor"
+				);
+			}
+			else {
+				CORE_PANIC(
+					"The Function wasn't created from HOUTFunction, so you should not use "
+					"collect."
+				);
 			}
 
 			u64 parameter_index = 0;

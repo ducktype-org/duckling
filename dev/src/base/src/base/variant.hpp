@@ -132,6 +132,16 @@ namespace base::internal {
 	default:            \
 		if (true)
 
+#define if_vrnt_is(variant, TYPE, value_name) \
+	PUSH_DIAGNOSTIC                            \
+	NO_SHADOW                                  \
+	if (auto&& internal_variant = variant; std::holds_alternative<TYPE>(internal_variant)) \
+		for (bool _once = true; _once;)        \
+			for (auto&& value_name = std::get<TYPE>(internal_variant); _once; _once = false) POP_DIAGNOSTIC
+
+
+#define if_vrnt_not(variant, TYPE) if (!std::holds_alternative<TYPE>(variant))
+
 /**
  * @brief Use instead of `std::visit` with multiple choices.
  */

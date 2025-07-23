@@ -49,9 +49,9 @@ private:
 
 			auto a_resolution = my_class_interface.resolve(base::StrID("a"), ctx);
 
-			variant_match(a_resolution) {
-				variant_case_novalue(TypeInterface::SingleMatch) {}
-				variant_default { assertTrue(false, "Member 'a' should match exactly."); }
+			// @TODO not sure, but this could be done via simple assertTrue
+			if_vrnt_not(a_resolution, TypeInterface::SingleMatch) {
+				assertTrue(false, "Member 'a' should match exactly.");
 			}
 		});
 	}

@@ -72,12 +72,12 @@ private:
 		std::cerr << "Check parent\n";
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			variant_match(imd->kind) {
-				variant_case(vm::InheritanceMetadata::Class, clazz) {
-					assertFalse(clazz.is_abstract, "Parent should be a concrete class");
-					assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
-				}
-				variant_default { fail("Parent should be a class"); }
+			if_vrnt_is(imd->kind, vm::InheritanceMetadata::Class, clazz) {
+				assertFalse(clazz.is_abstract, "Parent should be a concrete class");
+				assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
+			}
+			else{ 
+				fail("Parent should be a class"); 
 			}
 
 			assertTrue(imd->implements.empty(), "Parent should not implement anything");
@@ -107,14 +107,16 @@ private:
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			variant_match(imd->kind) {
-				variant_case(vm::InheritanceMetadata::Class, clazz) {
-					assertFalse(clazz.is_abstract, "Child should be a concrete class");
-					assertTrue(clazz.extends.has_value(), "Child should have a superclass");
-					assertTrue(*clazz.extends == super_type, "Child should be a Parent's child");
-				}
-				variant_default { fail("Child should be a class"); }
+			
+			if_vrnt_is(imd->kind, vm::InheritanceMetadata::Class, clazz) {
+				assertFalse(clazz.is_abstract, "Child should be a concrete class");
+				assertTrue(clazz.extends.has_value(), "Child should have a superclass");
+				assertTrue(*clazz.extends == super_type, "Child should be a Parent's child");
 			}
+			else { 
+				fail("Child should be a class"); 
+			}
+			
 			assertTrue(
 				std::ranges::equal(
 					imd->implements,
@@ -157,14 +159,14 @@ private:
 	void checkPietMondrian(vm::TypeCRef type) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			variant_match(imd->kind) {
-				variant_case(vm::InheritanceMetadata::Class, clazz) {
-					assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
-					assertFalse(
-						clazz.extends.has_value(), "PietMondrian should not extend anything"
-					);
-				}
-				variant_default { fail("PietMondrian should be a class"); }
+			if_vrnt_is(imd->kind, vm::InheritanceMetadata::Class, clazz) {
+				assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
+				assertFalse(
+					clazz.extends.has_value(), "PietMondrian should not extend anything"
+				);
+			}
+			else { 
+				fail("PietMondrian should be a class"); 
 			}
 
 			assertTrue(imd->implements.empty(), "PietMondrian should implement no interfaces");

@@ -21,20 +21,18 @@ namespace {
 			usage += "<" + positional->getTypeName() + "> ";
 
 		for (const auto& param: clap.getParameters()) {
-			variant_match(param.getParameterNecessity()) {
-				variant_case(clap::Required, _) {
-					usage += "<";
-					bool has_short_name = false;
-					if_opt_some(param.getShortName(), name) {
-						usage += "-" + std::string(1, name);
-						has_short_name = true;
-					}
-					if_opt_some(param.getLongName(), name) {
-						if (has_short_name) usage += "/";
-						usage += "--" + name.stdString();
-					}
-					usage += " " + param.getValueParser()->getTypeName() + "> ";
+			if_vrnt_is(param.getParameterNecessity(), clap::Required, _) {
+				usage += "<";
+				bool has_short_name = false;
+				if_opt_some(param.getShortName(), name) {
+					usage += "-" + std::string(1, name);
+					has_short_name = true;
 				}
+				if_opt_some(param.getLongName(), name) {
+					if (has_short_name) usage += "/";
+					usage += "--" + name.stdString();
+				}
+				usage += " " + param.getValueParser()->getTypeName() + "> ";
 			}
 		}
 		usage += "[options] ";

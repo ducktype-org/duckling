@@ -16,9 +16,7 @@
 namespace vm {
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
-			variant_match(imd.kind) {
-				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
-			}
+			if_vrnt_is(imd.kind, InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
 			return false;
 		};
 		if_opt_some(data.inheritance_metadata, imd) {
@@ -188,18 +186,15 @@ namespace vm {
 
 	// pointer, fixedSizeTable, dynamicTable
 	base::Optional<TypeCRef> Type::getInnerType() const {
-		auto get_inner_type = [](auto t) { return t->inner_type; };
-
-		auto pointer_option = get<kind::Pointer>().map(get_inner_type);
-		if (pointer_option.has_value()) return (TypeCRef) pointer_option.value();
-
-		auto fixed_size_table_option = get<kind::FixedSizeTable>().map(get_inner_type);
-		if (fixed_size_table_option.has_value()) return (TypeCRef) fixed_size_table_option.value();
-
-		auto dynamic_table_option = get<kind::DynamicTable>().map(get_inner_type);
-		if (dynamic_table_option.has_value()) return (TypeCRef) dynamic_table_option.value();
-
-		return {};
+		return std::visit(
+			[](const auto& held_kind) -> base::Optional<TypeCRef> {
+				if constexpr (requires { held_kind.inner_type; })
+					return (TypeCRef) held_kind.inner_type;
+				else
+					return {};
+			},
+			kind
+		);
 	}
 
 	// struct
@@ -216,24 +211,18 @@ namespace vm {
 
 	// inheritance
 	base::Optional<base::CRef<InheritanceMetadata>> Type::getInheritanceMetadata() const {
-		variant_match(kind) {
-			variant_case(kind::Data, data) {
-				if (data.inheritance_metadata.has_value())
-					return &data.inheritance_metadata.value();
-			}
+		if_vrnt_is(kind, kind::Data, data) {
+			if (data.inheritance_metadata.has_value()) return &data.inheritance_metadata.value();
 		}
 		return {};
 	}
 
 	base::Optional<TypeCRef> Type::getSuperClass() const {
-		variant_match(kind) {
-			variant_case(kind::Data, data) {
-				if_opt_some(data.inheritance_metadata, imd) {
-					variant_match(imd.kind) {
-						variant_case(InheritanceMetadata::Class, class_kind) {
-							if (class_kind.extends.has_value()) return class_kind.extends.value();
-						}
-					}
+		if_vrnt_is(kind, kind::Data, data) {
+			if_opt_some(data.inheritance_metadata, imd) {
+				if_vrnt_is(imd.kind, InheritanceMetadata::Class, class_kind) {
+					if (class_kind.extends.has_value()) 
+						return class_kind.extends.value();
 				}
 			}
 		}
