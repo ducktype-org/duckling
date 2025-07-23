@@ -234,12 +234,7 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
-				.add(clah::ParamBuilder::ofValue(clah::FileParser::make("module"))
-	                     .addShortName('m')
-	                     .addLongName("module")
-	                     .addShortDesc("Path to the top-level source module of the package")
-	                     .required()
-	                     .build())
+				.addPositional(clah::FileParser::make("module"))
 				.add(clah::ParamBuilder::ofValue(clah::FileParser::make("file"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
