@@ -7,6 +7,7 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
@@ -150,10 +151,7 @@ namespace vm {
 	}
 
 	void Type::finalize() {
-		if (state == State::Finalizing) {
-			// @TODO: better errors
-			CORE_PANIC("Cyclic type dependency");
-		}
+		if (state == State::Finalizing) throw code::CyclicDependencyError(*this);
 		if (state == State::Finalized) return;
 		state = State::Finalizing;
 		defer(state = State::Finalized);
