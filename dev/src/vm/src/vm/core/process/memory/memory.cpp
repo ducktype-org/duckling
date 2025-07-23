@@ -141,6 +141,16 @@ namespace vm {
 		     iter = dst_child_blocks.erase(iter)) {
 			freeBlock(iter->second);
 		}
+
+		auto copy_blocks_recursivly
+			= [this](const auto& self, Ref<Block> block_dst, Ref<Block> block_src) -> void {
+			for (auto nested: block_src->children_blocks) {
+				Pointer new_pointer(block_dst, nested.first);
+				setNestedViewBlock(new_pointer, nested.second->data.element_type);
+				self(self, new_pointer.getBlock()->children_blocks[nested.first], nested.second);
+			}
+		};
+
 		// Copy the child blocks
 		auto& src_child_blocks = src.getBlock()->children_blocks;
 		for (auto iter = src_child_blocks.lower_bound(src.offset);
@@ -149,7 +159,9 @@ namespace vm {
 			auto    offset      = dst.offset + iter->first - src.offset;
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
 			setNestedViewBlock(new_pointer, iter->second->data.element_type);
-			// @TODO We should go down the tree here...
+			copy_blocks_recursivly(
+				copy_blocks_recursivly, new_pointer.getBlock()->children_blocks[offset], iter->second
+			);
 		}
 
 		// Copy the data itself
