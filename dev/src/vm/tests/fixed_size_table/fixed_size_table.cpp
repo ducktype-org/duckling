@@ -19,7 +19,7 @@ private:
 
 	void initWithZero() { runTestOnVm("init_with_zero.dbc", "", "0", {}); }
 
-	void lea() { runTestOnVmGetResult("lea.dbc", "", "42", {}); }
+	void lea() { runTestOnVm("lea.dbc", "", "42", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fixed_size_table/");
