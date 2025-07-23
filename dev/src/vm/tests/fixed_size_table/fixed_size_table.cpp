@@ -19,7 +19,11 @@ private:
 
 	void initWithZero() { runTestOnVm("init_with_zero.dbc", "", "0", {}); }
 
-	void leaOOB() { assertExecutionPanickedWith(runTestOnVmGetResult("lea_oob.dbc", "", "", {}), "Pointer out of bounds"); }
+	void leaOOB() {
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("lea_oob.dbc", "", "", {}), "Pointer out of bounds"
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fixed_size_table/");

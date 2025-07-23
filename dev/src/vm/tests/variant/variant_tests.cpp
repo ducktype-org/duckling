@@ -26,7 +26,6 @@ public:
 	}
 
 private:
-
 	void verySimpleVariant() { runTestOnVm("very_simple_variant.dbc", "42", "42"); }
 
 	void simpleVariant0() { runTestOnVm("simple_variant.dbc", "0", "13"); }
