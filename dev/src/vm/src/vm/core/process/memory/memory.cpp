@@ -5,6 +5,8 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
+#include <vm/core/process/exceptions.hpp>
+
 #include <mutex>
 
 namespace vm {
@@ -30,13 +32,13 @@ namespace vm {
 	}
 
 	void Memory::destroyReference(Ref<Block> block) {
-		if (block->refcount == 0) CORE_PANIC("Tried deleting a reference to an unreferenced block");
+		if (block->refcount == 0) throw exceptions::VMUnreferencedBlockDeletionException();
 		if (--block->refcount == 0) deleteBlock(block);
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		if (static_cast<u64>(id) >= blocks.size()) CORE_PANIC("Accessing block out of bounds");
-		if (!blocks[usize(id)].used) CORE_PANIC("Accessing freed block");
+		if (static_cast<u64>(id) >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
+		if (!blocks[usize(id)].used) exceptions::VMUseAfterFreeException();
 		return &blocks[static_cast<u64>(id)];
 	}
 
@@ -100,7 +102,7 @@ namespace vm {
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
-		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(*parent_pointer.block->mutex_ref);
 		if_opt_some(parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested) {
 			if ((*nested)->data.element_type == type) return *nested;
@@ -109,7 +111,7 @@ namespace vm {
 	}
 
 	void Memory::setNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
-		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(mutex);
 		auto&           children = parent_pointer.block->children_blocks;
 		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
@@ -127,7 +129,7 @@ namespace vm {
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
-		if (dst.isNull() || src.isNull()) CORE_PANIC("Copying to/from null pointer");
+		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst(*dst.block->mutex_ref);
 		std::lock_guard lock_src(*src.block->mutex_ref);
