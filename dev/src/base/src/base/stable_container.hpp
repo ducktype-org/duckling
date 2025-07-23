@@ -12,6 +12,12 @@
 
 namespace base {
 	namespace internal {
+		/**
+		 * @class BaseStableVector
+		 * @brief Wrapper class over a container (std::deque) which returns Ref/CRef on access.
+		 * @details It is used to allow a seamless conversion from StableVector<Data> to
+		 * StableVector<const Data>.
+		 */
 		template<class Data>
 		class BaseStableVector {
 			using ContainerT = std::deque<Data>;
@@ -116,12 +122,18 @@ namespace base {
 	template<class Data>
 	class StableVector;
 
+	/**
+	 * @details Actually stores Data, but returns it as const on access.
+	 */
 	template<class Data>
 	class StableVector<const Data>: private internal::BaseStableVector<Data> {
 		using Base = internal::BaseStableVector<Data>;
 
 		friend class StableVector<Data>;
 
+		/**
+		 * @brief Constructor form a base (without const) for further use in toConstData.
+		 */
 		explicit StableVector(Base&& base): Base{ std::move(base) } {}
 
 	public:
