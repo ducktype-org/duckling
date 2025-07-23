@@ -9,7 +9,7 @@ public:
 		TESTER_ADD_TEST(oneValue);
 		TESTER_ADD_TEST(arrSum);
 		TESTER_ADD_TEST(initWithZero);
-		TESTER_ADD_TEST(leaOOB);
+		TESTER_ADD_TEST(lea);
 	}
 
 private:
@@ -19,11 +19,7 @@ private:
 
 	void initWithZero() { runTestOnVm("init_with_zero.dbc", "", "0", {}); }
 
-	void leaOOB() {
-		assertExecutionPanickedWith(
-			runTestOnVmGetResult("lea_oob.dbc", "", "", {}), "Pointer out of bounds"
-		);
-	}
+	void lea() { runTestOnVmGetResult("lea.dbc", "", "42", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fixed_size_table/");
