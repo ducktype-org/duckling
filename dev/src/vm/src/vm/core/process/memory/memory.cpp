@@ -95,6 +95,7 @@ namespace vm {
 		if (!global_data.contains(id)) {
 			auto             type_size = type->getSize();
 			base::OwningView storage(new byte[type_size], type_size);
+			global_blocks.put(id, allocateDummy(type, storage.modView().getBegin()));
 			global_data.put(id, std::move(storage));
 			return true;
 		}
@@ -178,12 +179,15 @@ namespace vm {
 	}
 
 	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
-		destroyBlockReference(dst);
+		if_opt_some(dst.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			destroyBlockReference(dst);
+		}
 		if_opt_some(src.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
 			block->refcount++;
-			dst = src;
 		}
+		dst = src;
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {
