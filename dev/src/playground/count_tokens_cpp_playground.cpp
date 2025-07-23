@@ -14,7 +14,7 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
 
@@ -86,21 +86,22 @@ struct CppParser {
 };
 
 int main(int argc, const char** argv) {
-	auto clap = clap::Clap().addHelpFlag().addPositional(clap::FileParser::make("file"));
+	auto clah
+		= clah::Clah("count_tokens_cpp_playground").addPositional(clah::FileParser::make("file"));
 
-	clap::ParsingResult input;
+	clah::ParsingResult input;
 
 	try {
-		input = clap.parse(base::safeIntConv<usize>(argc), argv);
-	} catch (clap::exceptions::ClapException& e) {
+		input = clah.parse(base::safeIntConv<usize>(argc), argv);
+	} catch (clah::exceptions::ClahException& e) {
 		printer::StreamPrinter::print({
 			{ "duckling: ", printer::Color::DEFAULT },
 			{ "error: ", printer::Color::RED },
 			{ e.what(), printer::Color::DEFAULT },
 		});
 		return 1;
-	} catch (clap::exceptions::HelpException& e) {
-		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+	} catch (clah::exceptions::HelpException& e) {
+		std::string help_message = clah::HelpMessageGenerator::generate(clah, e.parsing_result);
 		std::cout << help_message << '\n';
 		return 0;
 	}

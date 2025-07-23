@@ -13,7 +13,7 @@
 
 #include <variant>
 
-namespace clap {
+namespace clah {
 
 	// Forward declaration
 	class ParsingResult;
@@ -32,7 +32,7 @@ namespace clap {
 
 	/**
 	 * Parameter class is used to store all the information about the parameter/flag inside
-	 * clap::Clap.
+	 * clah::Clah.
 	 */
 	class Parameter {
 		friend class ParamBuilder;
@@ -68,6 +68,13 @@ namespace clap {
 		 */
 		[[nodiscard]]
 		const ParameterNecessity& getParameterNecessity() const;
+
+		/**
+		 * Returns a name of the parameter.
+		 * A long name if available, short name otherwise or an empty optional is none is specified.
+		 * @return  Optional name of the parameter.
+		 */
+		[[nodiscard]] base::Optional<std::string> getParameterName() const;
 
 	private:
 		Parameter() = default;
