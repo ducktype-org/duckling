@@ -71,6 +71,11 @@ private:
 		);
 	}
 
+	void floatOperationTest() {
+		runTestOnVm("floating_point_arithmetic_32.dbc", "", "", {}, 1'056'964'608);
+		runTestOnVm("floating_point_arithmetic_64.dbc", "", "", {}, 4'602'678'819'172'646'912);
+	}
+
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 };
 
