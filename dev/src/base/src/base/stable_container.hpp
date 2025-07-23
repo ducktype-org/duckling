@@ -29,7 +29,7 @@ namespace base {
 
 			BaseStableVector(ContainerT&& data): data(std::move(data)) {}
 
-			BaseStableVector(const ContainerT& data): data(std::move(data)) {}
+			BaseStableVector(const ContainerT& data): data(data) {}
 
 		public:
 			using RefT  = Ref<Data>;
