@@ -10,6 +10,13 @@
 
 namespace vm {
 	namespace internal {
+
+		/**
+		 * @class BaseObjIdNameMap
+		 * @tparam ContainerT a container type to store types in
+		 * @details We want to have two similar structures, a stable non-copyable map and an
+		 * unstable copyable map. To remove duplication we define a base for both.
+		 */
 		template<class T, class ContainerT, class ObjID = u64>
 		requires(std::constructible_from<ObjID, usize> && std::constructible_from<usize, ObjID>)
 		class BaseObjIdNameMap {
@@ -136,12 +143,6 @@ namespace vm {
 				name_to_id.put(name, id);
 			}
 
-			/**
-			 * @note We are using std::deque here, because references to its data are always valid
-			 * (do not become dangling). This is because:
-			 * * Deleting from the structure is not possible.
-			 * * deque does not relocate memory (unlike vector)
-			 */
 			ContainerT                        values{};
 			std::vector<base::StrID>          id_to_name{};
 			base::HashMap<base::StrID, ObjID> name_to_id{};
@@ -150,10 +151,7 @@ namespace vm {
 
 	/**
 	 * @brief A Stable container, that maps an element of type T with a name, and
-	 * assigns an ID to it. It is used by loader to map functions and type to ids.
-	 * If T is copyable, then this structure is as well.
-	 * After copy, new elements inserted to it will be given new, consecutive IDs, so
-	 * previously stored IDs will map to equal, but copied objects. (old references will not break).
+	 * assigns an ID to it.
 	 * @note It's not possible to erase values from this structure.
 	 */
 	template<class T, class ObjID = u64>
@@ -162,21 +160,26 @@ namespace vm {
 		using Base = internal::BaseObjIdNameMap<T, std::deque<T>, ObjID>;
 
 	public:
-		StableObjIdNameMap()                                       = default;
-		StableObjIdNameMap(StableObjIdNameMap&&)                   = default;
-		StableObjIdNameMap& operator=(StableObjIdNameMap&&) &      = default;
-		StableObjIdNameMap(const StableObjIdNameMap&)              = default;
-		StableObjIdNameMap& operator=(const StableObjIdNameMap&) & = default;
+		StableObjIdNameMap()                                  = default;
+		StableObjIdNameMap(StableObjIdNameMap&&)              = default;
+		StableObjIdNameMap& operator=(StableObjIdNameMap&&) & = default;
 
 		// The copy does not have the same pointers, it is not stable.
-		// Thus copying is more often then not a programming error.
-		// StableObjIdNameMap(const StableObjIdNameMap&)            = delete;
-		// StableObjIdNameMap& operator=(const StableObjIdNameMap&) = delete;
+		// Thus, copying is more often than not a programming error.
+		StableObjIdNameMap(const StableObjIdNameMap&)            = delete;
+		StableObjIdNameMap& operator=(const StableObjIdNameMap&) = delete;
 
 		using Base::contains, Base::begin, Base::end, Base::size, Base::insert, Base::atMaybe,
 			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData;
 	};
 
+	/**
+	 * @brief A Stable container, that maps an element of type T with a name, and
+	 * assigns an ID to it.
+	 * If T is copyable, then this structure is as well.
+	 * After copy previously stored IDs will map to equal, but copied objects.
+	 * @note It's not possible to erase values from this structure.
+	 */
 	template<class T, class ObjID = u64>
 	requires(std::constructible_from<ObjID, usize> && std::constructible_from<usize, ObjID>)
 	class ObjIdNameMap: private internal::BaseObjIdNameMap<T, std::vector<T>, ObjID> {
