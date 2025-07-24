@@ -1,7 +1,5 @@
 # Duckling VM Benchmarks
 
-# Benchmark VM versions
-
 Folder structure:
 ```
 ├── old_benchmark

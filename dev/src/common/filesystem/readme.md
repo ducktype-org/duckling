@@ -1,7 +1,5 @@
 # Filesystem Module
 
-# Filesystem Module
-
 The **Filesystem Module** represents the final abstraction layer in Duckling between the real filesystem and the internal compiler operations. It provides a unified interface for handling different types of files and directories through the `File` class and `FileManager` utilities.
 
 ## Overview

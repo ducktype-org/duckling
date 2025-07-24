@@ -1,7 +1,5 @@
 # Scripts
 
-# Scripts
-
 This folder contains scripts we use in the project.
 
 ## File structure

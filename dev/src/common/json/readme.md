@@ -1,7 +1,5 @@
 # JSON Module
 
-# JSON module documentation
-
 ## Library nlohmann::json
 Source and documentation:
 https://github.com/nlohmann/json

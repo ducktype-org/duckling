@@ -1,7 +1,5 @@
 # LLVM Backend
 
-# LLVM backend
-
 This module contains llvm backend for Duckling compiler.
 It also encapsulated llvm components in a way, that usage of this module
 does not require to include llvm headers.

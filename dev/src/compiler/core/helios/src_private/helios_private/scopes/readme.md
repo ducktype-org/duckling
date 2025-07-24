@@ -1,7 +1,5 @@
 # HELIOS Scopes
 
-# HELIOS Scopes API
-
 Note: This is mostly to list operations, see docs for details.
 
 * `QueryRootScopeOf` -- Get module root scope for given module.

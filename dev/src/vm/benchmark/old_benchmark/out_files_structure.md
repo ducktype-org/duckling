@@ -1,7 +1,5 @@
 # File Structure
 
-# Struktura plików out
-
 Kolejność języków:
 
 * C++
