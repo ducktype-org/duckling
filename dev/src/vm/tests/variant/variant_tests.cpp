@@ -40,7 +40,7 @@ private:
 			variant_default {
 				fail(base::strConcat(
 					"Expected ",
-					// TypeParseTraits<vm::api::Executing>::name.data(), TODO
+					TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
 					", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
 				));
 			}

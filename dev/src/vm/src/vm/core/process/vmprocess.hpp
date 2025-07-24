@@ -102,8 +102,7 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::ApiError> input(const api::request::Input& request
-		);
+		std::expected<api::Response, api::ApiError> input(const api::request::Input& request);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
@@ -164,7 +163,7 @@ namespace vm {
 		ProcIO& getIO();
 
 		/**
-		 * @brief Entry point to perform requests on the process. TODO komentarz
+		 * @brief Entry point to perform requests on the process.
 		 */
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 

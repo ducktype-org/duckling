@@ -163,20 +163,25 @@ namespace vm {
 			variant_case(api::request::Run, run_request) {
 				return runFunction("main", run_request.program_args);
 			}
+
 			variant_case(api::request::RunFunction, run_func_request) {
 				return runFunction(run_func_request.func_name, run_func_request.func_args);
 			}
+
 			variant_case_novalue(api::request::Join) { return join(); }
+
 			variant_case_novalue(api::request::Pause) {
 				auto response = getMainVMThread().pause();
 				if (!response) return std::unexpected(api::ApiError{ api::PauseError{} });
 				return getMainVMThread().getCurrentPosition();
 			}
+
 			variant_case_novalue(api::request::Resume) {
 				auto response = getMainVMThread().resume();
 				if (!response) return std::unexpected(api::ApiError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
+
 			variant_case_novalue(api::request::Step) {
 				auto response = getMainVMThread().step();
 				if (!response)
@@ -185,24 +190,30 @@ namespace vm {
 					});
 				return getMainVMThread().getCurrentPosition();
 			}
+
 			variant_case(api::request::LoadStdlib, load_stdlib_request) {
 				return loadProgram(std::vector<code::CodeCollection>{ *builtins::getStdlibModule() })
 				    .transform_error([](auto err) { return api::ApiError{ err }; });
 			}
+
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::ApiError{ err };
 				});
 			}
+
 			variant_case(api::request::LoadCode, load_request) {
 				return loadProgram(load_request.code_collections).transform_error([](auto err) {
 					return api::ApiError{ err };
 				});
 			}
+
 			variant_case_novalue(api::request::Stop) { return stop(); }
+
 			variant_case_novalue(api::request::ExecutionPosition) {
 				return getMainVMThread().getCurrentPosition();
 			}
+
 			variant_case_novalue(api::request::WaitForBreakpoint) {
 				std::shared_lock lock(rw_status);
 				status_cv.wait(lock, [&] {
@@ -216,13 +227,18 @@ namespace vm {
 
 				return getMainVMThread().getCurrentPosition();
 			}
+
 			variant_case(api::request::Input, input_request) { return input(input_request); }
+
 			variant_case_novalue(api::request::Output) { return output(); }
+
 			variant_case(api::request::Attach, attach_request) {
 				getMainVMThread().notifyPaused();
 				return attach(attach_request.istream, attach_request.ostream);
 			}
+
 			variant_case_novalue(api::request::Detach) { return detach(); }
+
 			variant_case(api::request::TypeMetadata, type_request) {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
@@ -240,6 +256,7 @@ namespace vm {
 					}
 				}
 			}
+
 			variant_case(api::request::Block, block_request) {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
@@ -249,10 +266,13 @@ namespace vm {
 					}
 				}
 			}
+
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
 			}
+
 			variant_case(api::request::ExitCodeRequest, exit_code_request) { return getExitCode(); }
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
