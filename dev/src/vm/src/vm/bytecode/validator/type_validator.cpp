@@ -7,8 +7,6 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-#include <cstdio>
-
 namespace {
 	using namespace vm::code;
 	using FieldVector = std::vector<std::pair<base::StrID, vm::TypeRef>>;
