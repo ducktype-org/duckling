@@ -50,11 +50,11 @@ namespace vm::api {
 		OtherError,
 		IOError,
 		LoadProgramError,
-        ProcessNotFound,
-        WrongResponse,
-        StateError>;
+		ProcessNotFound,
+		WrongResponse,
+		StateError>;
 
-    std::string errorToString(const ApiError& api_error);
+	std::string errorToString(const ApiError& api_error);
 }
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ResumeError, "ResumeError");
