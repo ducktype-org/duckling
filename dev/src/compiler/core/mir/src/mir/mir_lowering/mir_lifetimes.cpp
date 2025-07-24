@@ -61,8 +61,8 @@ namespace compiler::mir {
 
 		std::map<ScopeRef, std::vector<LocalRef>> locals_by_scope;
 		for (auto& local: function.local_list)
-			if (local->scope.value() != function.no_lifetime_scope)
-				locals_by_scope[local->scope.value()].emplace_back(local.ref());
+			if (local.scope.value() != function.no_lifetime_scope)
+				locals_by_scope[local.scope.value()].emplace_back(&local);
 
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.

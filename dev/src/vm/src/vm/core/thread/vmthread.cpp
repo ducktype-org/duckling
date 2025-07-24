@@ -14,6 +14,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
@@ -334,7 +335,7 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 			default: {
-				CORE_PANIC("Unknown operator:", u64(instr->nontc_opcode));
+				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
 			}
 			}
 		}
@@ -379,7 +380,7 @@ namespace vm {
 			throw KillProcessException{};
 
 		default:
-			CORE_PANIC("unexpected execution status");
+			CORE_PANIC("Unexpected execution status");
 		}
 	}
 
@@ -413,7 +414,7 @@ namespace vm {
 				break;
 			}
 			default:
-				CORE_PANIC("resumed with paused status");
+				throw exceptions::VMResuemedWithPausedStatusException();
 			}
 		}
 	}
@@ -603,8 +604,7 @@ namespace vm {
 		exec_thread = std::thread([this, program, func_name, run_arguments] {
 			try {
 				run(program, func_name, run_arguments);
-				// @TODO: catch not general std::exception&
-			} catch (const std::exception& e) {
+			} catch (const exceptions::VMRuntimeException& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
 				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 			}

@@ -1,4 +1,4 @@
-@page tester-module Tester Module
+# Tester Module
 
 @tableofcontents
 
