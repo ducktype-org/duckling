@@ -344,23 +344,23 @@ private:
 			bool was_z = false;
 
 			for (auto& local: locals) {
-				if (local->getName() == "x") {
+				if (local.getName() == "x") {
 					ASSERT_TRUE(not was_x);
-					ASSERT_EQUAL(local->parameter_index.value(), 0);
-					ASSERT_EQUAL(local->type.getType(), i16_type);
+					ASSERT_EQUAL(local.parameter_index.value(), 0);
+					ASSERT_EQUAL(local.type.getType(), i16_type);
 					was_x = true;
-				} else if (local->getName() == "y") {
+				} else if (local.getName() == "y") {
 					ASSERT_TRUE(not was_y);
-					ASSERT_EQUAL(local->parameter_index.value(), 1);
-					ASSERT_EQUAL(local->type.getType(), i32_type);
+					ASSERT_EQUAL(local.parameter_index.value(), 1);
+					ASSERT_EQUAL(local.type.getType(), i32_type);
 					was_y = true;
-				} else if (local->getName() == "z") {
+				} else if (local.getName() == "z") {
 					ASSERT_TRUE(not was_z);
-					ASSERT_EQUAL(local->parameter_index.value(), 2);
-					ASSERT_EQUAL(local->type.getType(), i64_type);
+					ASSERT_EQUAL(local.parameter_index.value(), 2);
+					ASSERT_EQUAL(local.type.getType(), i64_type);
 					was_z = true;
 				} else {
-					ASSERT_TRUE(local->parameter_index.empty());
+					ASSERT_TRUE(local.parameter_index.empty());
 				}
 			}
 
