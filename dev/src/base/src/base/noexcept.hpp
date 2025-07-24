@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
+#if defined(BUILD_TYPE_DEV)
 	/**
      * @brief Function will not throw in Release build
      */
