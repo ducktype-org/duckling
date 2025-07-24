@@ -40,12 +40,6 @@ namespace vm::api {
 			std::vector<i64> func_args;
 		};
 
-		struct Input {
-			std::string input;
-		};
-
-		struct Output {};
-
 		struct Join {};
 
 		struct Step {};
@@ -62,10 +56,13 @@ namespace vm::api {
 			BlockID block_id;
 		};
 
-		struct Memory {
-			Pointer pointer;
-			u64     size{};
+		struct StatusRequest {};
+
+		struct Input {
+			std::string input;
 		};
+
+		struct Output {};
 
 		struct Attach {
 			std::istream& istream;
@@ -74,43 +71,39 @@ namespace vm::api {
 
 		struct Detach {};
 
+		struct ExitCodeRequest {};
 	}
 
-	// @Deprecated - ExecutorRequest will have template based api (not variant based)
-	using ExecutorRequest = std::variant<
+	using RequestVariant = std::variant<
 		request::LoadStdlib,
 		request::LoadFiles,
 		request::LoadCode,
-		request::Resume,
 		request::Pause,
+		request::Resume,
 		request::Stop,
 		request::Run,
 		request::RunFunction,
 		request::Join,
 		request::Step,
 		request::WaitForBreakpoint,
-		request::ExecutionPosition>;
-
-	using IORequest
-		= std::variant<request::Input, request::Output, request::Attach, request::Detach>;
-
-	using DataRequest = std::variant<request::TypeMetadata, request::Block>;
-
-	struct StatusRequest {};
-
-	struct ExitCodeRequest {};
-
-	using RequestVariant
-		= std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest, ExitCodeRequest>;
+		request::ExecutionPosition,
+		request::TypeMetadata,
+		request::Block,
+		request::StatusRequest,
+		request::Input,
+		request::Output,
+		request::Attach,
+		request::Detach,
+		request::ExitCodeRequest>;
 
 	struct SupervisorRequest {
 		PID            pid;
 		RequestVariant request;
 	};
 
-	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
+	/*SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);
 	SupervisorRequest makeExitCodeRequest(PID pid);
-	SupervisorRequest makeIORequest(PID pid, IORequest&& data);
+	SupervisorRequest makeIORequest(PID pid, IORequest&& data);*/
 }

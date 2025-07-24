@@ -1,5 +1,5 @@
 #include "request.hpp"
-
+/*
 namespace vm::api {
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data) {
 		return SupervisorRequest{ .pid = pid, .request = std::move(data) };
@@ -21,4 +21,4 @@ namespace vm::api {
 		return SupervisorRequest{ .pid = pid, .request = std::move(data) };
 	}
 
-}
+}*/
