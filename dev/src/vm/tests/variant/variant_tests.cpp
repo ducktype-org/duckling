@@ -28,36 +28,6 @@ public:
 	}
 
 private:
-	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece) {
-		std::string local_error        = "";
-		auto        exec_status_result = vm::api::getExecutionStatus(test_result.pid);
-		ASSERT_TRUE(exec_status_result.has_value());
-
-		variant_match(exec_status_result.value()) {
-			variant_case(vm::api::Executing, executing) {
-				variant_match(executing.exec_status) {
-					variant_case(vm::api::ExecutionPanicked, panicked) {
-						ASSERT_TRUE(panicked.error_message.contains(err_piece));
-					}
-					variant_default {
-						fail(base::strConcat(
-							"Expected ",
-							TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
-							", but found: " + to_string(nlohmann::json(executing))
-						));
-					}
-				}
-			}
-			variant_default {
-				fail(base::strConcat(
-					"Expected ",
-					TypeParseTraits<vm::api::Executing>::name.data(),
-					", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
-				));
-			}
-		}
-	}
-
 	void verySimpleVariant() { runTestOnVm("very_simple_variant.dbc", "42", "42"); }
 
 	void simpleVariant0() { runTestOnVm("simple_variant.dbc", "0", "13"); }
