@@ -162,7 +162,9 @@ namespace vm {
 
 		friend class TypeMetadata;
 
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, size);  // TODO: add better output of type
+		// @TODO check how to make STRONG_TYPEDEF_INT not interfere with NLOHMANN
+		// @TODO: add better output of type
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, size);
 	};
 }
 

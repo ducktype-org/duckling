@@ -5,6 +5,7 @@
 
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
+#include <base/strongly_typed_int.hpp>
 
 #include <unordered_map>
 #include <vector>
@@ -17,8 +18,7 @@ namespace vm::kind {
 	};
 
 	struct Data {
-		// @todo: change to strongly typed when it will be in utils
-		using FieldID = u64;
+		STRONG_TYPEDEF_INT(FieldID, u64)
 
 		base::HashMap<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>              fields;

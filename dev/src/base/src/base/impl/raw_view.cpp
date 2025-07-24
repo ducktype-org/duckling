@@ -11,7 +11,10 @@ namespace base {
 		return { new_data, arr_size };
 	}
 
-	RawView RawView::subSuffix(usize from) const { return { begin + from, arr_size - from }; }
+	RawView RawView::subSuffix(usize from) const {
+		CORE_ASSERT(from <= arr_size, "trying to get suffix which is outside of view");
+		return { begin + from, arr_size - from };
+	}
 
 	RawView::RawView(const char* const c_str): begin{ reinterpret_cast<RawArray>(c_str) } {
 		i32 pos = 0;
