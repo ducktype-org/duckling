@@ -112,13 +112,10 @@ namespace vm {
 		if (io_redirecter)
 			return std::unexpected(api::ApiError{
 				api::IOError{ "Cannot read output from api when IO is being redirected" } });
-		variant_match(status) {
-			variant_case(api::Executing, executing) {
-				// If we are still executing, then wait for at least some output.
-				if (!api::isStatusTerminal(executing.exec_status))
-					io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
-			}
-		}
+
+		if (isExecuting(status))
+			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
+
 		content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();
@@ -146,16 +143,13 @@ namespace vm {
 	base::Optional<api::ApiError> VMProcess::validateMemoryRequest() {
 		api::ProcStatus status = getStatus();
 
-		if (!std::holds_alternative<api::Executing>(status)) {
-			if (std::holds_alternative<api::Parsing>(status)
-			    || std::holds_alternative<api::TypeAnalysis>(status)) {
-				return api::ApiError{ api::OtherError{
-					"Cannot do memory request while parsing or analyzing types" } };
-			}
+		if (std::holds_alternative<api::Parsing>(status)
+		    || std::holds_alternative<api::TypeAnalysis>(status)) {
+			return api::ApiError{ api::OtherError{
+				"Cannot do memory request while parsing or analyzing types" } };
 		}
 
-		api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
-		if (std::holds_alternative<api::Running>(exec_status))
+		if (std::holds_alternative<api::Running>(status))
 			return api::ApiError{ api::OtherError{
 				"Cannot do memory request while program is running" } };
 
@@ -212,18 +206,11 @@ namespace vm {
 			variant_case_novalue(api::request::WaitForBreakpoint) {
 				std::shared_lock lock(rw_status);
 				status_cv.wait(lock, [&] {
-					if (!std::holds_alternative<api::Executing>(status)) return false;
-					auto exec_status = std::get<api::Executing>(status).exec_status;
-					return std::holds_alternative<api::Paused>(exec_status)
-					    || api::isStatusTerminal(exec_status);
+					return std::holds_alternative<api::Paused>(status)
+					    || api::isStatusTerminal(status);
 				});
 
-				if (!std::holds_alternative<api::Executing>(status))
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "unexpected status response" } });
-
-				auto exec_status = std::get<api::Executing>(status).exec_status;
-				if (!std::holds_alternative<api::Paused>(exec_status))
+				if (!std::holds_alternative<api::Paused>(status))
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "unexpected status response" } });
 
@@ -311,15 +298,11 @@ namespace vm {
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
 		variant_match(getStatus()) {
-			variant_case(api::Executing, exec_status) {
-				variant_match(exec_status.exec_status) {
-					variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
-					variant_default return std::unexpected(
-						api::StateError("Execution did not complete")
-					);
-				}
-			}
-			variant_default return std::unexpected(api::StateError("Execution did not start"));
+			variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
+			variant_default return std::unexpected(api::StateError(
+				executingStarted(getStatus()) ? "Execution did not complete"
+											  : "Execution did not start"
+			));
 		}
 		CORE_UNREACHABLE();
 	}

@@ -90,7 +90,7 @@ namespace vm {
 
 		RuntimeData runtime_data;
 
-		api::ExecStatus status = api::NotStarted{};
+		api::ProcStatus status = api::NotStarted{};
 
 		/**
 		 * @brief Link to parent process.
@@ -123,7 +123,7 @@ namespace vm {
 		 * @brief Message queue to send responses to the VMProcess.
 		 * @todo rewrite this to C++ futures
 		 */
-		BlockingQueue<api::ExecStatus> execution_response_queue;
+		BlockingQueue<api::ProcStatus> execution_response_queue;
 
 		bool waitForBreakpointResponse();
 
@@ -131,7 +131,7 @@ namespace vm {
 
 		bool waitForRunningResponse();
 
-		void respondExecutionRequest(const api::ExecStatus& response);
+		void respondExecutionRequest(const api::ProcStatus& response);
 
 		void executeOneStep();
 
@@ -181,7 +181,7 @@ namespace vm {
 		 */
 		i64 executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 
-		void setProcessStatus(const vm::api::ExecStatus& status);
+		void setProcessStatus(const vm::api::ProcStatus& status);
 
 		void handleBreakpoint();
 

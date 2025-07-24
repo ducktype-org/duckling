@@ -579,9 +579,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status) {
+	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 		status = new_status;
-		process.onEvent(api::Executing{ new_status });
+		process.onEvent(new_status);
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -615,7 +615,7 @@ namespace vm {
 		return waitForRunningResponse();
 	}
 
-	void VMThread::respondExecutionRequest(const api::ExecStatus& response) {
+	void VMThread::respondExecutionRequest(const api::ProcStatus& response) {
 		setProcessStatus(response);
 		execution_response_queue.push(response);
 	}
