@@ -54,6 +54,9 @@ namespace vm::api {
 		WrongResponse,
 		StateError>;
 
+	/**
+	 * @brief Converts the ApiError to a string representation in a JSON format.
+	 */
 	std::string errorToString(const ApiError& api_error);
 }
 
