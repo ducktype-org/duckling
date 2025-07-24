@@ -53,9 +53,11 @@ namespace vm::api {
 	}
 
 	constexpr bool executingStarted(const ProcStatus& status) {
-		return ! (std::holds_alternative<ExecutionNotStarted>(status)
+		return !(
+			std::holds_alternative<ExecutionNotStarted>(status)
 			|| std::holds_alternative<Parsing>(status)
-			|| std::holds_alternative<TypeAnalysis>(status));
+			|| std::holds_alternative<TypeAnalysis>(status)
+		);
 	}
 
 	constexpr bool isExecuting(const ProcStatus& status) {
