@@ -43,12 +43,14 @@ namespace vm::code {
 		/**
 		 * @brief Produces valid CodeCollection.
 		 */
+		[[nodiscard]]
 		CodeCollection produceValidCodeCollection() const;
 
 		/**
 		 * @brief Produces TypeMetadata, that is isomorphic with its state.
 		 * @TODO: Fix an issue, that TypeMetadata has to be built twice.
 		 */
+		[[nodiscard]]
 		Box<TypeMetadata> produceTypeMetadata() const;
 
 		/**
@@ -56,6 +58,7 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
+		[[nodiscard]]
 		ValidProgram newInsertCode(const code::CodeCollection& collection) const;
 
 		/**
@@ -67,10 +70,13 @@ namespace vm::code {
 		 */
 		void insertCode(const code::CodeCollection& collections);
 
+		[[nodiscard]]
 		const StableObjIdNameMap<TypeOfData>& types() const;
 
+		[[nodiscard]]
 		const StableObjIdNameMap<GlobalData>& globals() const;
 
+		[[nodiscard]]
 		const StableObjIdNameMap<Function>& functions() const;
 
 	private:

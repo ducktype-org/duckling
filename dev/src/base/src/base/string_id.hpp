@@ -118,7 +118,7 @@ namespace base {
 
 		[[nodiscard]]
 		bool isGood() const {
-			return !id.isBad();
+			return id.isGood();
 		}
 
 		auto operator<=>(const StrID& oth) const = default;
