@@ -1,4 +1,4 @@
-\page token-parser-core-module Token Parser Core module
+# Token Parser Core module
 
 Module implementing general tools and interfaces taking the output of lexer(recursive list of tokens) and preparing it for usage by a parser.
 
