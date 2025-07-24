@@ -101,7 +101,7 @@ namespace vm {
 
 		size      = POINTER_SIZE;
 		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ inner };
+		kind      = kind::DynamicTable{ .inner_type = inner };
 	}
 
 	void Type::defineData(

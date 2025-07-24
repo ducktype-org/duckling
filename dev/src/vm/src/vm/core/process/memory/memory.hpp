@@ -70,10 +70,14 @@ namespace vm {
 
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
+		auto allocateHeapN(TypeCRef type, u64 n) -> Ref<Block>;
+
 		/**
 		 * @brief Creates a block with externally managed data life-time.
 		 */
 		auto allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
+
+		auto reallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void;
 
 		void freeBlock(Ref<Block> block);
 
@@ -137,7 +141,7 @@ namespace vm {
 		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
 		static constexpr
-			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
+			__attribute__((noinline)) auto getPointerData(Pointer pointer, u64 size_bytes)
 				-> base::ModRawView {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			std::lock_guard lock(*pointer.block->mutex_ref);

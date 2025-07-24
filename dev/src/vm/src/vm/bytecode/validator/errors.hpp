@@ -330,6 +330,9 @@ namespace vm::code {
 		FixedSizeTableTypeMismatchError, "Inner fixed size table type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		DynamicTableTypeMismatchError, "Inner dynamic table type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		StructTypeMismatchError, "Inner struct type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(

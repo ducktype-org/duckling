@@ -364,6 +364,36 @@ DEF_OPCODE(
 )
 
 // expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableLea_lptr_lptr,
+	vm::opargs::StackLocalPtr /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocal64 	 index */
+)
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableLoad_lany_lptr,
+	vm::opargs::StackLocalAny /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocal64 	 index */
+)
+
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableStore_lptr_lany,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::StackLocalAny /* source,
+    vm::opargs::StackLocal64 	 index */
+)
+
+DEF_OPCODE(
+	dynTableReAlloc_lptr_type,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::Type /* inner type ,
+vm::opargs::StackLocal64     new elem count*/
+)
+
+// expects `ext_l64` to be the next instruction
 // DEF_OPCODE(pointerTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // expects `ext_type_l64` to be the next instruction
 // DEF_OPCODE(pointerTableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)

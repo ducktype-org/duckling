@@ -28,6 +28,14 @@ namespace vm {
 			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
 		}
 
+		BlockData allocateN(TypeCRef type, u64 n) {
+			auto             size = type->getInnerType().value()->getSize() * n;
+			auto             ptr  = new std::byte[size];
+			base::OwningView view{ ptr, size };
+			allocated.push_back(std::move(view));
+			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
+		}
+
 		void deallocate(Ref<BlockData> data) final {
 			auto ptr = data->view.getBegin();
 			for (auto it = allocated.begin(); it != allocated.end(); ++it) {
