@@ -63,7 +63,6 @@ namespace vm::api {
 	constexpr bool isExecuting(const ProcStatus& status) {
 		return !isStatusTerminal(status) && executingStarted(status);
 	}
-
 }
 
 
