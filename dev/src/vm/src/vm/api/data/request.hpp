@@ -101,9 +101,4 @@ namespace vm::api {
 		RequestVariant request;
 	};
 
-	/*SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
-	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
-	SupervisorRequest makeStatusRequest(PID pid);
-	SupervisorRequest makeExitCodeRequest(PID pid);
-	SupervisorRequest makeIORequest(PID pid, IORequest&& data);*/
 }
