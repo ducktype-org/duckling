@@ -141,7 +141,7 @@ namespace vm {
 		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
 		static constexpr
-			__attribute__((noinline)) auto getPointerData(Pointer pointer, u64 size_bytes)
+			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
 				-> base::ModRawView {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			std::lock_guard lock(*pointer.block->mutex_ref);
