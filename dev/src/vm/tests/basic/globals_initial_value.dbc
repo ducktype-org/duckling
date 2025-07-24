@@ -1,0 +1,13 @@
+global_data g i64 {
+    initial_value: 5,
+};
+
+global_data f i64 {
+    initial_value: 7,
+};
+
+function main {
+    mov_g64_g64             f, g;
+    mov_l64_g64             ret_val,g;
+    ret;
+}
