@@ -16,7 +16,9 @@
 namespace vm {
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
-			if_vrnt_is(imd.kind, InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
+			if_vrnt_is(imd.interface_kind, InheritanceMetadata::Class, clazz) { 
+				return !clazz.is_abstract; 
+			}
 			return false;
 		};
 		if_opt_some(data.inheritance_metadata, imd) {
@@ -71,7 +73,6 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Primitive;
 		size      = pass_size;
 		kind      = kind::Primitive();
 	}
@@ -81,7 +82,6 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-		kind_type = Kind::Pointer;
 		kind      = kind::Pointer{ inner };
 	}
 
@@ -89,7 +89,6 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::FixedSizeTable;
 		kind      = kind::FixedSizeTable{ .inner_type = inner, .size = table_size };
 	}
 
@@ -98,7 +97,6 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-		kind_type = Kind::DynamicTable;
 		kind      = kind::DynamicTable{ inner };
 	}
 
@@ -109,7 +107,6 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Data;
 		auto data = kind::Data{};
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
@@ -124,7 +121,6 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 		kind = variant;
@@ -135,7 +131,6 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
 	}
 
@@ -143,7 +138,6 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Opaque;
 		size      = pass_size;
 		kind      = kind::Opaque{};
 	}
@@ -220,9 +214,8 @@ namespace vm {
 	base::Optional<TypeCRef> Type::getSuperClass() const {
 		if_vrnt_is(kind, kind::Data, data) {
 			if_opt_some(data.inheritance_metadata, imd) {
-				if_vrnt_is(imd.kind, InheritanceMetadata::Class, class_kind) {
-					if (class_kind.extends.has_value()) 
-						return class_kind.extends.value();
+				if_vrnt_is(imd.interface_kind, InheritanceMetadata::Class, clazz) {
+					return clazz.extends;
 				}
 			}
 		}
@@ -262,8 +255,8 @@ namespace vm {
 	}
 
 	base::Optional<TypeCRef> Type::getResultType() const {
-		return get<kind::Function>().flatMap([](CRef<kind::Function> function) {
-			return base::Optional<TypeCRef>(function->result);
+		return get<kind::Function>().map([](CRef<kind::Function> function) {
+			return function->result;
 		});
 	}
 }

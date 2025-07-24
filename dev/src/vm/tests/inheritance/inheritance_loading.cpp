@@ -1,3 +1,4 @@
+#include <type_traits>
 #include <vm_tester_utils.hpp>
 
 #include <base/optional.hpp>
@@ -72,14 +73,12 @@ private:
 		std::cerr << "Check parent\n";
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			if_vrnt_is(imd->kind, vm::InheritanceMetadata::Class, clazz) {
-				assertFalse(clazz.is_abstract, "Parent should be a concrete class");
-				assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
-			}
-			else{ 
-				fail("Parent should be a class"); 
-			}
+			assertTrue(imd->kind.holds_alternative<vm::InheritanceMetadata::Class>, "Parent should be a class");
 
+			auto&& clazz =  std::get<vm::InheritanceMetadata::Class>(imd->kind);
+			assertFalse(clazz.is_abstract, "Parent should be a concrete class");
+			assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
+			
 			assertTrue(imd->implements.empty(), "Parent should not implement anything");
 			assertTrue(imd->virtual_methods.size() == 1, "Parent should declare one virtual method");
 			assertTrue(imd->vtable.size() == 1, "Parents' vtable should contain one method");
@@ -107,16 +106,13 @@ private:
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
+			assertTrue(imd->kind.holds_alternative<vm::InheritanceMetadata::Class>, "Child should be a class");
 			
-			if_vrnt_is(imd->kind, vm::InheritanceMetadata::Class, clazz) {
-				assertFalse(clazz.is_abstract, "Child should be a concrete class");
-				assertTrue(clazz.extends.has_value(), "Child should have a superclass");
-				assertTrue(*clazz.extends == super_type, "Child should be a Parent's child");
-			}
-			else { 
-				fail("Child should be a class"); 
-			}
-			
+			auto&& clazz = std::get<vm::InheritanceMetadata::Class>(imd->kind);
+			assertFalse(clazz.is_abstract, "Child should be a concrete class");
+			assertTrue(clazz.extends.has_value(), "Child should have a superclass");
+			assertTrue(*clazz.extends == super_type, "Child should be a Parent's child");
+
 			assertTrue(
 				std::ranges::equal(
 					imd->implements,
@@ -159,15 +155,11 @@ private:
 	void checkPietMondrian(vm::TypeCRef type) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
-			if_vrnt_is(imd->kind, vm::InheritanceMetadata::Class, clazz) {
-				assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
-				assertFalse(
-					clazz.extends.has_value(), "PietMondrian should not extend anything"
-				);
-			}
-			else { 
-				fail("PietMondrian should be a class"); 
-			}
+			assertTrue(imd->kind.holds_alternative(vm::InheritanceMetadata::Class), "PietMondrian should be a class");
+
+			auto&& clazz = std::get<vm::InheritanceMetadata::Class>(imd->kind);
+			assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
+			assertFalse(clazz.extends.has_value(), "PietMondrian should not extend anything");
 
 			assertTrue(imd->implements.empty(), "PietMondrian should implement no interfaces");
 			assertTrue(imd->virtual_methods.empty(), "PietMondrian should have no virtual methods");

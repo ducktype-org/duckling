@@ -2,8 +2,10 @@
 
 #include "kinds.hpp"
 
+#include "base/exceptions.hpp"
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
 
@@ -16,6 +18,7 @@ namespace vm {
 
 	/// Size of type in bytes
 	// @TODO: change to strongly typed int
+	// @TODO check how to make STRONG_TYPEDEF_INT not interfere with NLOHMANN
 	using TypeSize = u64;
 
 	class Type final {
@@ -41,7 +44,6 @@ namespace vm {
 
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
-		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
 
@@ -122,7 +124,19 @@ namespace vm {
 
 		[[nodiscard]]
 		Kind getKind() const {
-			return kind_type;
+			variant_match(kind) {
+				variant_case_novalue(std::monostate) { return Kind::None; }
+				variant_case_novalue(kind::Primitive) { return Kind::Primitive; }
+				variant_case_novalue(kind::Pointer) { return Kind::Pointer; }
+				variant_case_novalue(kind::FixedSizeTable) { return Kind::FixedSizeTable; }
+				variant_case_novalue(kind::DynamicTable) { return Kind::DynamicTable; }
+				variant_case_novalue(kind::Data) { return Kind::Data; }
+				variant_case_novalue(kind::Variant) { return Kind::Variant; }
+				variant_case_novalue(kind::Function) { return Kind::Function; }
+				variant_case_novalue(kind::Opaque) { return Kind::Opaque; }
+				variant_default { CORE_PANIC("This kind of Type is not implemented"); }
+			};
+			return Kind::None;
 		}
 
 		// @todo: Interface below may change
@@ -162,7 +176,6 @@ namespace vm {
 
 		friend class TypeMetadata;
 
-		// @TODO check how to make STRONG_TYPEDEF_INT not interfere with NLOHMANN
 		// @TODO: add better output of type
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, size);
 	};

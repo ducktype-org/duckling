@@ -366,7 +366,7 @@ namespace {
 		base::HashMap<base::StrID, vm::TypeCRef> vtable;
 		buildVTableRecursive(inh, inh, vtable, metadata, ctx);
 
-		vm::InheritanceMetadata::Kind kind;
+		vm::InheritanceMetadata::interfaceKind kind;
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			kind = vm::InheritanceMetadata::Class{
 				.is_abstract = inh.is_abstract,

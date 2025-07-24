@@ -299,11 +299,12 @@ namespace compiler::mir {
 				          ->expect("Handling errors in MIR is not supported yet")
 				          .getType();
 				  }
-				  else 
-					  CORE_PANIC(
-						  "FunctionBuilder constructor should be called only with FunctionSymID"
+				  else {
+					CORE_PANIC(
+					  "FunctionBuilder constructor should be called only with FunctionSymID"
 					  );
-				
+				  }
+
 				  CORE_UNREACHABLE();
 			  }()),
 			  lifetime_scope_tree(),

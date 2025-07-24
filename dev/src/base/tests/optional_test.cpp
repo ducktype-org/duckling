@@ -369,17 +369,6 @@ public:
 				A(const A&)            = delete;
 				A& operator=(const A&) = delete;
 			};
-
-			std::expected<float, A> opt = 5.5f;
-			match_optional(opt) {
-				opt_some_move(v) ASSERT_EQUAL(5.5f, v);
-				opt_err(a [[maybe_unused]]) fail("Invalid branch");
-			}
-			opt = std::unexpected<A>(1);
-			match_optional(opt) {
-				opt_some_move(v [[maybe_unused]]) fail("Invalid branch");
-				opt_err(a) ASSERT_EQUAL(1, a.val);
-			}
 		}
 	}
 

@@ -476,12 +476,10 @@ class FunctionValidator {
 					auto type = tod_map.at(field.type_name);
 					if_vrnt_is(*type, DataType, ztruct) {
 						if (std::ranges::find(ztruct.fields, field.field_name, &Field::name)
-							== ztruct.fields.end())
+						    == ztruct.fields.end())
 							throw UnknownFieldError(field);
 					}
-					else { 
-						throw InvalidArgumentTypeError(arg);
-					}
+					else { throw InvalidArgumentTypeError(arg); }
 				}
 
 				// All possible opargs must be handled. Unhandled opargs panic.

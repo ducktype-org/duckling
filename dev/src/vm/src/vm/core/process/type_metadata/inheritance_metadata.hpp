@@ -18,10 +18,10 @@ namespace vm {
 
 		struct Interface {};
 
-		using Kind = std::variant<Interface, Class>;
+		using interfaceKind = std::variant<Interface, Class>;
 
 		TypeCRef              type;
-		Kind                  kind;
+		interfaceKind         interface_kind;
 		std::vector<TypeCRef> implements;
 		// Virtual method declarations for this class. Contains only methods introduced in this class.
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
@@ -33,13 +33,13 @@ namespace vm {
 
 		InheritanceMetadata(
 			TypeCRef                             type,
-			Kind                                 kind,
+			interfaceKind                        kind,
 			std::vector<TypeCRef>                implements,
 			base::HashMap<base::StrID, TypeCRef> virtual_methods,
 			base::HashMap<base::StrID, TypeCRef> vtable
 		):
 			  type{ type },
-			  kind{ kind },
+			  interface_kind{ kind },
 			  implements{ std::move(implements) },
 			  virtual_methods{ std::move(virtual_methods) },
 			  vtable{ std::move(vtable) } {}

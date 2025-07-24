@@ -234,9 +234,7 @@ private:
 				"Layout should have source type as constructed."
 			);
 			if_vrnt_is(variant_layout(), VariantTypeLayout, l) {
-				assertTrue(
-					l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
-				);
+				assertTrue(l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning.");
 				assertTrue(l.getTagSize() == BYTE_SIZE, "Variant tag should not be too big.");
 				assertTrue(
 					l.getDataOffset() == Bytes(2),
@@ -251,9 +249,7 @@ private:
 					"Different indices should correspond to different types."
 				);
 			}
-			else { 
-				fail("Layout of variant type should be variant-like."); 
-			}
+			else { fail("Layout of variant type should be variant-like."); }
 			testPrinting(variant_layout, ctx, true);
 		});
 	}
@@ -305,12 +301,19 @@ private:
 			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
 			TypeInterface           my_class_interface = my_class_type.getInterface(ctx);
 
-			const auto get_field_symbol = [&](const char* c_str) {
-				if_vrnt_is(my_class_interface.resolve(base::StrID(c_str), ctx), TypeInterface::SingleMatch, m)
-					return m.best_match.getSymbol();
-				
-				CORE_PANIC("Could not resolve field.");
-			}
+			const auto get_field_symbol =
+				[&](const char* c_str) {
+					if_vrnt_is(
+						my_class_interface.resolve(base::StrID(c_str), ctx),
+						TypeInterface::SingleMatch,
+						m
+					) 
+					else {
+						return m.best_match.getSymbol();
+					}
+
+					CORE_PANIC("Could not resolve field.");
+				}
 
 			const SymID a_field_symbol = get_field_symbol("a");
 			const SymID b_field_symbol = get_field_symbol("b");
@@ -332,16 +335,14 @@ private:
 			if_vrnt_is(my_class_layout(), ClassTypeLayout, l) {
 				assertTrue(
 					l.getFieldOffset(a_field_symbol) == Bytes(0)
-					&& l.getFieldOffset(b_field_symbol) == Bytes(2)
-					&& l.getFieldOffset(c_field_symbol) == Bytes(8)
-					&& l.getFieldOffset(d_field_symbol) == Bytes(16)
-					&& l.getFieldOffset(e_field_symbol) == Bytes(24),
+						&& l.getFieldOffset(b_field_symbol) == Bytes(2)
+						&& l.getFieldOffset(c_field_symbol) == Bytes(8)
+						&& l.getFieldOffset(d_field_symbol) == Bytes(16)
+						&& l.getFieldOffset(e_field_symbol) == Bytes(24),
 					"Class layout should align its component layouts."
 				);
 			}
-			else { 
-				fail("Layout of class type should be class-like."); 
-			}
+			else { fail("Layout of class type should be class-like."); }
 
 			testPrinting(my_class_layout, ctx, true);
 		});

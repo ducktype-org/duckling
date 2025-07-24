@@ -14,9 +14,7 @@
 
 std::string convertError(const vm::api::ApiError& api_error) {
 	if_vrnt_is(api_error, vm::api::CoreOperationError, core) {
-		if_vrnt_is(core, vm::api::LoadProgramError, load) {
-			return load.why;
-		}
+		if_vrnt_is(core, vm::api::LoadProgramError, load) { return load.why; }
 	}
 	return vm::api::errorToString(api_error);
 }
