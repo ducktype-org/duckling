@@ -5,6 +5,8 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
+#include <vm/core/process/exceptions.hpp>
+
 #include <mutex>
 
 namespace vm {
@@ -30,13 +32,13 @@ namespace vm {
 	}
 
 	void Memory::destroyReference(Ref<Block> block) {
-		if (block->refcount == 0) CORE_PANIC("Tried deleting a reference to an unreferenced block");
+		if (block->refcount == 0) throw exceptions::VMUnreferencedBlockDeletionException();
 		if (--block->refcount == 0) deleteBlock(block);
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		if (static_cast<u64>(id) >= blocks.size()) CORE_PANIC("Accessing block out of bounds");
-		if (!blocks[usize(id)].used) CORE_PANIC("Accessing freed block");
+		if (static_cast<u64>(id) >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
+		if (!blocks[usize(id)].used) exceptions::VMUseAfterFreeException();
 		return &blocks[static_cast<u64>(id)];
 	}
 
@@ -93,6 +95,7 @@ namespace vm {
 		if (!global_data.contains(id)) {
 			auto             type_size = type->getSize();
 			base::OwningView storage(new byte[type_size], type_size);
+			global_blocks.put(id, allocateDummy(type, storage.modView().getBegin()));
 			global_data.put(id, std::move(storage));
 			return true;
 		}
@@ -100,7 +103,7 @@ namespace vm {
 	}
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
-		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(*parent_pointer.block->mutex_ref);
 		if_opt_some(parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested) {
 			if ((*nested)->data.element_type == type) return *nested;
@@ -109,7 +112,7 @@ namespace vm {
 	}
 
 	void Memory::setNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
-		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(mutex);
 		auto&           children = parent_pointer.block->children_blocks;
 		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
@@ -127,7 +130,7 @@ namespace vm {
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
-		if (dst.isNull() || src.isNull()) CORE_PANIC("Copying to/from null pointer");
+		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst(*dst.block->mutex_ref);
 		std::lock_guard lock_src(*src.block->mutex_ref);
@@ -139,6 +142,16 @@ namespace vm {
 		     iter = dst_child_blocks.erase(iter)) {
 			freeBlock(iter->second);
 		}
+
+		auto copy_blocks_recursivly
+			= [this](const auto& self, Ref<Block> block_dst, Ref<Block> block_src) -> void {
+			for (auto nested: block_src->children_blocks) {
+				Pointer new_pointer(block_dst, nested.first);
+				setNestedViewBlock(new_pointer, nested.second->data.element_type);
+				self(self, new_pointer.getBlock()->children_blocks[nested.first], nested.second);
+			}
+		};
+
 		// Copy the child blocks
 		auto& src_child_blocks = src.getBlock()->children_blocks;
 		for (auto iter = src_child_blocks.lower_bound(src.offset);
@@ -147,7 +160,9 @@ namespace vm {
 			auto    offset      = dst.offset + iter->first - src.offset;
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
 			setNestedViewBlock(new_pointer, iter->second->data.element_type);
-			// @TODO We should go down the tree here...
+			copy_blocks_recursivly(
+				copy_blocks_recursivly, new_pointer.getBlock()->children_blocks[offset], iter->second
+			);
 		}
 
 		// Copy the data itself
@@ -164,12 +179,15 @@ namespace vm {
 	}
 
 	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
-		destroyBlockReference(dst);
+		if_opt_some(dst.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			destroyBlockReference(dst);
+		}
 		if_opt_some(src.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
 			block->refcount++;
-			dst = src;
 		}
+		dst = src;
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {
