@@ -74,6 +74,7 @@ private:
 	}
 
 	void globalInitialValueTest() { runTestOnVm("global_initial_value.dbc", {}, {}, {}, 5); }
+
 	void globalsInitialValueTest() { runTestOnVm("globals_initial_value.dbc", {}, {}, {}, 5); }
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
