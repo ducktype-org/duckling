@@ -53,7 +53,7 @@ endif (USE_MARCH_NATIVE)
 # Dev:       simple dev build without debug symbols and without optimizations
 # DevDebug:  dev build with debug symbols and without optimizations (best for everyday development)
 # DevOpt:    dev build with debug symbols and with optimizations
-# Release:   release build with optimizations and without debug symbols (release build have for example assertions disabled)
+# Release:   release build without optimizations and without debug symbols (release build have for example assertions disabled)
 # ReleaseOpt:release build with optimizations and without debug symbols
 # Debug:     defaults to DevDebug
 
