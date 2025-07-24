@@ -1,8 +1,8 @@
 \page common-readme Common modules
 
-## clap
+## clah
 
-\subpage clap-module
+\subpage clah-module
 
   Library for parsing user input passed through command line
   arguments.
