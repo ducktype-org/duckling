@@ -2,16 +2,12 @@
 
 #include "errors.hpp"
 
-#include <lang_definitions/key_spec_op.hpp>
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/token_stream.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>

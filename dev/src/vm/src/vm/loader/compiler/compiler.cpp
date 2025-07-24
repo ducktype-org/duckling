@@ -93,7 +93,6 @@ namespace vm::loader::compiler {
 				}
 				variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 			}
-
 			CORE_UNREACHABLE();
 		}
 

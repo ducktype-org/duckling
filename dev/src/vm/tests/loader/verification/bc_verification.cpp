@@ -279,7 +279,7 @@ private:
 		loadInvalidDbc(
 			"wrong/unknown_method.dbc",
 			{
-				vm::code::UnknownMethodError::ERR_MSG,
+				vm::code::InvalidVirtualMethodImplementationError::ERR_MSG,
 			}
 		);
 	}

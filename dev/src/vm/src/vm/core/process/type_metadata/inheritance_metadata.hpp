@@ -27,16 +27,16 @@ namespace vm {
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
 		// Contains all the implementations of virtual methods for this class/interface.
 		// Unimplemented methods do not exist in the vtable.
-		base::HashMap<base::StrID, TypeCRef> vtable;
+		base::HashMap<base::StrID, base::StrID> vtable;
 		// Cached all superclasses.
 		std::unordered_set<TypeID> inherits_from;
 
 		InheritanceMetadata(
-			TypeCRef                             type,
-			Kind                                 kind,
-			std::vector<TypeCRef>                implements,
-			base::HashMap<base::StrID, TypeCRef> virtual_methods,
-			base::HashMap<base::StrID, TypeCRef> vtable
+			TypeCRef                                type,
+			Kind                                    kind,
+			std::vector<TypeCRef>                   implements,
+			base::HashMap<base::StrID, TypeCRef>    virtual_methods,
+			base::HashMap<base::StrID, base::StrID> vtable
 		):
 			  type{ type },
 			  kind{ kind },

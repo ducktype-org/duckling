@@ -8,7 +8,11 @@ type fun: method_I1_int {pointer_I1} i64
 type fun: method_parent_int {pointer_parent, i64} void
 
 type fun: method_child_int {pointer_child, i64} void
-type fun: Child_cry_impl {pointer_child, i64} void
+
+
+function Child_cry_impl {pointer_child, i64} -> void {
+    ret;
+}
 
 function Parent_getAge_impl {pointer_parent, i64} -> void {
     init_lany_type age, i64;

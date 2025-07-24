@@ -286,14 +286,14 @@ class FunctionValidator {
 		impl_name            = inh_meta->virtual_methods[instr.arg1.method_name]->getName();
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
-		auto signature     = signatures.at(impl_name);
-		bool check_ret_val = signature.result_type.str != base::StrID("void");
+		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
+		bool check_ret_val = func_type.result != base::StrID("void");
 
-		if (signature.parameters.size() > local_stack.size() + check_ret_val)
+		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
-		for (auto param: signature.parameters | std::views::drop(1) | std::views::reverse) {
-			if (code::typeName(*local_stack.back().type) != param.str)
+		for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
+			if (code::typeName(*local_stack.back().type) != param)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
@@ -305,7 +305,7 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type.str)
+		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -937,7 +937,6 @@ class FunctionValidator {
 			);
 
 			visited_instructions[index] = true;
-
 			variant_match(instructions[index]) {
 				variant_case(Op_init_lany_type, instr) {
 					local_stack.push(instr.arg0, instr.arg1);
