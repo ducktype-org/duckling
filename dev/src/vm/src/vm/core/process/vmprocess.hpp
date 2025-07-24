@@ -7,7 +7,6 @@
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
-#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -79,9 +78,9 @@ namespace vm {
 		 * io operations, start/stop the Execution Thread or communicate with the Execution Thread.
 		 *
 		 * @param request Request that performs action on the Execution Thread.
-		 * @return std::expected<api::Response, api::CoreOperationError>
+		 * @return std::expected<api::Response, api::ApiError>
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
+		std::expected<api::Response, api::ApiError> doRequest(
 			const api::ExecutorRequest& request
 		);
 
@@ -94,13 +93,13 @@ namespace vm {
 		 * It inspects the VM's memory stored in the DataManager.
 		 *
 		 * @param request
-		 * @return std::expected<api::Response, api::CoreOperationError>
+		 * @return std::expected<api::Response, api::ApiError>
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
+		std::expected<api::Response, api::ApiError> doRequest(
 			const api::DataRequest& request
 		);
 
-		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
+		std::expected<api::Response, api::ApiError> doRequest(const api::IORequest& request
 		);
 
 		/**
@@ -114,27 +113,27 @@ namespace vm {
 		/**
 		 * @brief Creates new thread that runs a function in the Executor service.
 		 */
-		std::expected<api::Response, api::CoreOperationError> runFunction(
+		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
 		);
 
 		/**
 		 * @brief Joins the executing thread.
 		 */
-		std::expected<api::Response, api::CoreOperationError> join();
+		std::expected<api::Response, api::ApiError> join();
 
 		/**
 		 * @brief Stops the executing thread (by joining it).
 		 * After this method is called, the thread is removed.
 		 */
-		std::expected<api::Response, api::CoreOperationError> stop();
+		std::expected<api::Response, api::ApiError> stop();
 
 		/**
 		 * @brief Passes the input string to the executing thread.
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
+		std::expected<api::Response, api::ApiError> input(const api::request::Input& request
 		);
 
 		/**
@@ -142,7 +141,7 @@ namespace vm {
 		 * If the output stream is empty, it waits until it is not.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> output();
+		std::expected<api::Response, api::ApiError> output();
 
 		/**
 		 * @brief Gets the status of the process (memory-safe).
@@ -170,11 +169,11 @@ namespace vm {
 		 * @brief Attaching means all IO is interactive, input is read from stdin, output
 		 * @brief is automatically forwarded to stdout.
 		 */
-		std::expected<api::Response, api::CoreOperationError> attach(
+		std::expected<api::Response, api::ApiError> attach(
 			std::istream& istream = std::cin, std::ostream& ostream = std::cout
 		);
 
-		std::expected<api::Response, api::CoreOperationError> detach();
+		std::expected<api::Response, api::ApiError> detach();
 
 		// @TODO: Improve this....
 		std::deque<VMThread> vm_threads;

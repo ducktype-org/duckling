@@ -1,20 +1,70 @@
 #pragma once
 
-#include "core_operation_error.hpp"
-#include "process_error.hpp"
-#include "state_error.hpp"
+#include <json/json.hpp>
 
 #include <variant>
 
 namespace vm::api {
+	struct ResumeError {};
+
+	struct PauseError {};
+
+	struct RunError {};
+
+	struct JoinError {};
+
+	struct AttachDetachError {};
+
+	struct OtherError {
+		std::string error;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
+	};
+
+	struct IOError {
+		std::string error;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(IOError, error);
+	};
+
+	struct LoadProgramError {
+		std::string why;
+
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(LoadProgramError, why);
+	};
+
+	struct ProcessNotFound {};
+
 	struct WrongResponse {};
 
-	using ApiError = std::variant<ProcessError, CoreOperationError, WrongResponse, StateError>;
+	struct StateError {
+		std::string why;
 
-	/**
-	 * @brief Converts the ApiError to a string representation in a JSON format.
-	 */
-	std::string errorToString(const ApiError& api_error);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StateError, why);
+	};
+
+	using ApiError = std::variant<
+		ResumeError,
+		PauseError,
+		RunError,
+		JoinError,
+		AttachDetachError,
+		OtherError,
+		IOError,
+		LoadProgramError,
+        ProcessNotFound,
+        WrongResponse,
+        StateError>;
+
+    std::string errorToString(const ApiError& api_error);
 }
 
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ResumeError, "ResumeError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::PauseError, "PauseError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::RunError, "RunError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::JoinError, "JoinError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::AttachDetachError, "AttachDetachError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::OtherError, "OtherError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::IOError, "IOError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::LoadProgramError, "LoadProgramError")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessNotFound, "ProcessNotFound")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::WrongResponse, "WrongResponse")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::StateError, "StateError")

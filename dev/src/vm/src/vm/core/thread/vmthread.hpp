@@ -7,7 +7,7 @@
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 
-#include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
@@ -258,7 +258,7 @@ namespace vm {
 		 */
 		void execGlobalDestructors(CRef<low::LowVMProgram> program);
 
-		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
+		std::expected<api::Response, api::ApiError> getCurrentPosition();
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
