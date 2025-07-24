@@ -1,4 +1,4 @@
-add_library(HELIOS
+add_library(HELIOS STATIC
 	src_private/helios_private/symbols/symbols.cpp
 	src_private/helios_private/scopes/scopes.cpp
 	src_private/helios_private/utils/pst_walkers.cpp

@@ -102,3 +102,26 @@ private:
 	void processExecuteInstructionList();
 	void processFunctionCall(const std::string& line);
 };
+
+class DuckVMReplException: public base::Exception {
+	std::string message;
+
+public:
+	DuckVMReplException(std::string message): base::Exception(), message(std::move(message)) {}
+
+	[[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
+};
+
+#define DEFINE_REPL_EXCEPTION(err, msg)                     \
+	struct err: public DuckVMReplException {                \
+		constexpr static std::string_view ERR_MSG = msg;    \
+		err(): DuckVMReplException(std::string(ERR_MSG)) {} \
+	}
+
+DEFINE_REPL_EXCEPTION(ReplFailedToSpawnProcessException, "Failed to spawn the VM process for REPL.");
+DEFINE_REPL_EXCEPTION(
+	ReplFailedToAttachStreamsException, "Failed to attach streams to the VM process for REPL."
+);
+DEFINE_REPL_EXCEPTION(ReplFailedToJoinProcessException, "Failed to join the VM process for REPL.");
+DEFINE_REPL_EXCEPTION(ReplEmptyExitCodeException, "Exit code is empty, cannot continue REPL.");
+DEFINE_REPL_EXCEPTION(ReplFailedToRunCodeException, "Failed to run code in REPL.");

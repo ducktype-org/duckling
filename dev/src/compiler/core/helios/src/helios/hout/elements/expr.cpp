@@ -290,6 +290,16 @@ namespace compiler::helios::code {
 			out << "not ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::Ref:
+			out << "ref ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Box:
+			out << "box ";
+			expr->debugPrint(out);
+			break;
+		default:
+			CORE_PANIC("unsupported unary operation");
 		}
 	}
 

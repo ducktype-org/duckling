@@ -37,7 +37,7 @@ jobs:
 
     strategy:
       matrix:
-        build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
+        build-type: [Dev, DevOpt]  # (Release, Dev, RelWithDebInfo, etc.)
       fail-fast: false
 
     outputs:
@@ -50,20 +50,20 @@ jobs:
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
-    timeout-minutes: 20  # (Per matrix run)
-    runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
+    timeout-minutes: 25  # (Per matrix run)
+    runs-on: ${{ matrix.build-type == 'Dev' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
 
     env:
-      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' }}
 
     steps:
       - name: Set self-hosted flag
         id: set-self-hosted
         run: |
-          if [[ "${{ matrix.build-type }}" == "Debug" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
+          if [[ "${{ matrix.build-type }}" == "Dev" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "Release" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
+          elif [[ "${{ matrix.build-type }}" == "DevOpt" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
             echo "is-self-hosted=true" >> $GITHUB_OUTPUT
           else
             echo "is-self-hosted=false" >> $GITHUB_OUTPUT
@@ -72,9 +72,9 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
-          if [[ "${{ matrix.build-type }}" == "Debug" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+          if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=6" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "Release" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+          elif [[ "${{ matrix.build-type }}" == "DevOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=3" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT

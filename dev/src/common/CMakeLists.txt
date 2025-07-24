@@ -1,4 +1,4 @@
-add_subdirectory(clap)
+add_subdirectory(clah)
 add_subdirectory(diagnostic)
 add_subdirectory(filesystem)
 add_subdirectory(init)

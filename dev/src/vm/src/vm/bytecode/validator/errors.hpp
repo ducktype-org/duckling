@@ -9,6 +9,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <string_view>
 #include <utility>
@@ -69,6 +70,25 @@ namespace vm::code {
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.
 	 */
+	class MissingGlobalCtorDtorError: public ValidationError {
+	public:
+		constexpr const static std::string_view ERR_MSG = "Missing function declaration for ";
+
+		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
+			  ValidationError(base::strConcat(
+				  ERR_MSG,
+				  is_ctor ? "constructor '" : "destructor '",
+				  func_name,
+				  "' of global variable '",
+				  global_name,
+				  "'"
+			  )) {}
+	};
+
+	/**
+	 * @brief position-less error for function definitions.
+	 * For function name arguments, like in call instructions, use UnknownFunctionError.
+	 */
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
@@ -77,6 +97,16 @@ namespace vm::code {
 		TypeIsNotFunctionalError(base::StrID type_name):
 			  ValidationError(base::strConcat(ERR_MSG, type_name)),
 			  TYPE_NAME(type_name) {}
+	};
+
+	class CyclicDependencyError: public ValidationError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Cyclic dependency detected: ";
+		const base::StrID                       TYPE_NAME;
+
+		CyclicDependencyError(const Type& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())),
+			  TYPE_NAME(type.getName()) {}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
