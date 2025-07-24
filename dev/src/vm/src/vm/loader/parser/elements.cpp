@@ -160,6 +160,7 @@ namespace vm::loader::parser {
 				);
 				out->dtor_name = value;
 			} else if (state[0].is(lang_def::Keyword::BCGlobalInitialValue)) {
+				state.parse().all(lang_def::Keyword::BCGlobalInitialValue, lang_def::NamedOperator::Colon);
 				// @TODO more general than unsigned long
 				out->initial_value = opargs_parsers::parseInt<i64, int>(state);
 			}
