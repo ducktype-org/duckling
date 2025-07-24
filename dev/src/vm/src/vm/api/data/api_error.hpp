@@ -2,6 +2,7 @@
 
 #include <json/json.hpp>
 
+#include <string>
 #include <variant>
 
 namespace vm::api {

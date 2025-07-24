@@ -8,6 +8,10 @@
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 
+#include <json/json.hpp>
+
+#include <iostream>
+#include <string>
 #include <variant>
 #include <vector>
 
