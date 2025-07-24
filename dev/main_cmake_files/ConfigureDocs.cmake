@@ -4,7 +4,7 @@
 option(BUILD_DOCS "Build test programs" ON)
 
 if(BUILD_DOCS)
-	add_subdirectory(docs)
+	add_subdirectory(docs/config)
 
 	# add_custom_target(docs-clean make -s -f CmakeFiles/Makefile2 docs/clean)
 	# add_custom_target(docs-clean ninja -t clean docs)

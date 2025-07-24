@@ -1,4 +1,4 @@
-\page printer-requirements Printer Requirements
+# Printer Requirements
 
 ## Moduł do wypisywania komunikatów na konsolę.
 
