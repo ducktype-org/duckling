@@ -8,7 +8,6 @@ More information about files and directories can be found in the Doxygen documen
 
 # Module overview:
 
-* [config](./config/readme.md)
 * [core/backends/dvm](./core/backends/dvm/README.md)
 * [core/backends/llvm](./core/backends/llvm/README.md)
 * [core/frontend](./core/frontend/readme.md)

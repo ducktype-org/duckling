@@ -1,6 +1,6 @@
 # Common modules
 
-* [clap](./clap/readme.md)
+* [clah](./clah/readme.md)
 * [diagnostic](./diagnostic/readme.md)
 * [filesystem](./filesystem/readme.md)
 * [hashing](./hashing/readme.md)
