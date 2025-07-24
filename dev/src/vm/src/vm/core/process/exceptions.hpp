@@ -34,5 +34,4 @@ namespace vm::exceptions {
 		VMReallocTruncationException, "Reallocating dynamic table to less than its current size"
 	);
 
-
 }
