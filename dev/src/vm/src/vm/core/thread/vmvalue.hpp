@@ -49,15 +49,26 @@ namespace vm {
 		template<class T>
 		[[nodiscard]]
 		constexpr T& interpret(const usize offset = 0) {
-			// TODOP: Disallow interpret when the type is void.
-			// @TODO: Fix
+			CORE_ASSERT(
+				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
+			);
+			CORE_ASSERT(
+				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
+			);
+			// @TODO: Fix, UB?
 			// return interpretBytes<T>(*(data.data() + offset));
 			return *reinterpret_cast<T*>(data.data() + offset);
 		}
 
 		template<class T>
 		[[nodiscard]] constexpr const T& interpret(const usize offset = 0) const {
-			// @TODO: Fix
+			CORE_ASSERT(
+				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
+			);
+			CORE_ASSERT(
+				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
+			);
+			// @TODO: Fix, UB?, UB?
 			// return interpretBytes<const T>(*(data.data() + offset));
 			return *reinterpret_cast<const T*>(data.data() + offset);
 		}

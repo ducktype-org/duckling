@@ -42,9 +42,13 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
 		};
 
+		struct Type {
+			TypeCRef type;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, type);
+		};
+
 		struct VmValue {
 			std::shared_ptr<::vm::VmValue> vm_value;
-			// TODOP: Fix that.
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
 		};
 
@@ -64,7 +68,7 @@ namespace vm::api {
 		ProcStatus,
 		response::Output,
 		response::Block,
-		TypeCRef,  // TODOP: Wouldn't t be nicer to return a TypeStruct?
+		response::Type,
 		response::Empty,
 		response::BlockIDs,
 		response::CodePosition,

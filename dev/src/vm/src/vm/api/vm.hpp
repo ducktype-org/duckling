@@ -61,7 +61,7 @@ namespace vm::api {
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
-	std::expected<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
+	std::expected<response::Type, ApiError>  getType(PID pid, const std::string& type_name);
 	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id);
 
 	/**

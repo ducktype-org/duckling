@@ -741,9 +741,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
-			std::cerr << "Performing initFromVmValue..." << std::endl;
 			const VmValue& vm_value = *reinterpret_cast<const VmValue*>(instr->arg0);
-			std::cerr << "Value type " << vm_value.type->getName().strView() << std::endl;
 			performInit(instr, local_stack, frame, thread, vm_value.type->getID());
 			vm_value.exportData({ frame->block_stack.back(), 0 });
 		}

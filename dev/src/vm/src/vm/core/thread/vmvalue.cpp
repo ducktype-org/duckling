@@ -14,7 +14,6 @@ vm::VmValue::VmValue(VMProcess& process, TypeCRef type, Pointer src): VmValue(pr
 }
 
 vm::VmValue::~VmValue() {
-	// TODOP: Make free data automatic.
 	if (!pointer.isNull()) std::cerr << "VmValue not freed!\n";
 }
 

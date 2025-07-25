@@ -116,10 +116,10 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::Output>);
 	}
 
-	std::expected<TypeCRef, ApiError> getType(PID pid, const std::string& type_name) {
+	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name) {
 		return Supervisor::get()
 		    .doRequest(api::makeDataRequest(pid, request::TypeMetadata{ type_name }))
-		    .and_then(mapOrWrongResponse<TypeCRef>);
+		    .and_then(mapOrWrongResponse<response::Type>);
 	}
 
 	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id) {

@@ -233,8 +233,6 @@ namespace vm {
 			}
 		}
 
-		// TODOP: This seems strange? Why do we need a program to be in the executing state when
-		// performing data requests?
 		if (std::holds_alternative<api::Executing>(status)) {
 			api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
 			if (std::holds_alternative<api::Running>(exec_status)) {
@@ -249,7 +247,7 @@ namespace vm {
 				auto res
 					= loaded_program->types->atMaybe(base::StrID(type_request.type_name.c_str()));
 				match_optional(res) {
-					opt_some(value) { response = TypeCRef(value); }
+					opt_some(value) { response = api::response::Type{ value }; }
 					opt_none {
 						response = std::unexpected(api::CoreOperationError{
 							api::OtherError{ "Type not found" } });

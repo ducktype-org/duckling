@@ -89,7 +89,9 @@ auto VmTestSuite::runTestImpl(
 	const auto exit_value
 		= vm::api::getExitValue(pid).transform([&](const std::shared_ptr<vm::VmValue>& value) {
 			  ASSERT_TRUE(value->type->getName().str() == "i64");
-			  return value->interpret<i64>();
+			  auto exit_code = value->interpret<i64>();
+			  value->freeData();
+			  return exit_code;
 		  });
 	return { .pid = pid, .run_result = exit_value };
 }

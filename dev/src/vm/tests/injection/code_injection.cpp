@@ -30,7 +30,22 @@ public:
 	}
 
 private:
-	// TODOP: expected_exit_code is na empty optional when void is returned.
+	/**
+	 * @brief Executes a function or a program within a VM process and verifies the results.
+	 *
+	 * @param pid The Process ID of the target VM process.
+	 * @param func_name An optional name of the function to execute. If empty, the function assumes
+	 * it's running a whole program (the `main` function).
+	 * @param args A variant holding either `vm::FunctionRunArguments` (for `runFunction`) or
+	 * `vm::ProgramRunArguments` (for `run`). The correct type must be provided based on whether
+	 * `func_name` is set.
+	 * @param optional_input An optional string to be passed as standard input to the process.
+	 * @param optional_output An optional string to which the process's standard output will be
+	 * compared.
+	 * @param expected_exit_code An optional expected exit code (`i64`). If provided, the function's
+	 * return value is asserted to be equal to it. If not provided, the function asserts that the
+	 * return type was `void`.
+	 */
 	void runAndCheckExitCode(
 		vm::PID                            pid,
 		const base::Optional<std::string>& func_name          = {},
@@ -72,7 +87,6 @@ private:
 			// function is void.
 			ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
 
-		// TODOP: Move free data into the destructor.
 		exit_value->freeData();
 	}
 
