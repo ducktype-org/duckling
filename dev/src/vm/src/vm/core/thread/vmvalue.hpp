@@ -55,7 +55,7 @@ namespace vm {
 			CORE_ASSERT(
 				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
 			);
-			// @TODO: Fix, UB?
+			// @TODO: This is unsafe(potentially an UB?). We should think of a better way. This should change in #1133.
 			// return interpretBytes<T>(*(data.data() + offset));
 			return *reinterpret_cast<T*>(data.data() + offset);
 		}
@@ -68,7 +68,7 @@ namespace vm {
 			CORE_ASSERT(
 				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
 			);
-			// @TODO: Fix, UB?, UB?
+			// @TODO: This is unsafe(potentially an UB?). We should think of a better way. This should change in #1133.
 			// return interpretBytes<const T>(*(data.data() + offset));
 			return *reinterpret_cast<const T*>(data.data() + offset);
 		}

@@ -112,7 +112,7 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 	std::string args_str      = line.substr(paren_open + 1, paren_close - paren_open - 1);
 
 	u64                                       start = 0;
-	std::vector<std::shared_ptr<vm::VmValue>> arguments;
+	vm::FunctionRunArguments arguments;
 	while (start < args_str.length()) {
 		u64 end = args_str.find(',', start);
 
@@ -154,7 +154,7 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, const vm::FunctionRunArgum
 
 	auto exit_code_response = vm::api::getExitValue(pid);
 	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
-	// @TODO: Improve this to allow other types as well.
+	// @TODO: Improve this to allow other types as well. This should change in #1132.
 	if (exit_code_response.value()->type->getName() == base::StrID("i64")) throw ReplWrongReturnTypeException();
 	return exit_code_response.value()->interpret<i64>();
 }
