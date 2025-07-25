@@ -21,9 +21,9 @@ namespace compiler::driver {
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
 			CORE_ASSERT(
-				fs::FileManager::folderExists(artifacts_options.artifacts_path),
+				artifacts_options.artifacts_path.exists(),
 				"Artifacts path does not exist:",
-				artifacts_options.artifacts_path.nativePath(),
+				artifacts_options.artifacts_path.native(),
 				"!"
 			);
 			global_state::setters::setRootCollection(
