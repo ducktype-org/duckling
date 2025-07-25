@@ -8,6 +8,7 @@
 
 #include <vm/core/process/exceptions.hpp>
 
+#include <iostream>
 #include <mutex>
 
 namespace vm {
@@ -99,13 +100,11 @@ namespace vm {
 			size_t type_size = type->getSize();
 			byte*  raw       = new byte[type_size];
 
-			if (initial_value.has_value())
-				std::memcpy(raw, &initial_value.value(), type_size);
-			else
-				std::memset(raw, 0, type_size);  // Zero-initialize if no value provided
-
 			base::OwningView storage(raw, type_size);
 			global_blocks.put(id, allocateDummy(type, storage.modView().getBegin()));
+			
+			if (initial_value.has_value())
+				std::memcpy(storage.modView().getBegin(), &initial_value.value(), type_size);
 
 			global_data.put(id, std::move(storage));
 			return true;
