@@ -5,7 +5,7 @@
 #include <string>
 
 namespace compiler::driver {
-	enum class BackendType : bool { LLVM, DVM };
+	enum class BackendType { LLVM, DVM };
 
 	std::string backendTypeToStr(BackendType type);
 }

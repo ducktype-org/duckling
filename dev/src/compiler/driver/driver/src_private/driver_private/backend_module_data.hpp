@@ -9,9 +9,9 @@ namespace compiler::driver {
 	struct LIRModuleGlobal final {
 		lir::LirGlobal lir_global;
 		base::Optional<CRef<lir::Function>>
-			global_ctor;  //< Optional, if the global has a constructor.
+			global_ctor;  ///< Optional, if the global has a constructor.
 		base::Optional<CRef<lir::Function>>
-			global_dtor;  //< Optional, if the global has a destructor.
+			global_dtor;  ///< Optional, if the global has a destructor.
 	};
 
 	/**
