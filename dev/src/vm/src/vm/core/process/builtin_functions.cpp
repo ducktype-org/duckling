@@ -10,6 +10,7 @@
 #include <vm/bytecode/opcode_definitions.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -60,7 +61,10 @@ namespace vm::builtins {
 			VMThread&                   thread,
 			const std::vector<VmValue>& args
 		) {
-			if (sizeof...(FunArgs) != args.size()) CORE_PANIC("Argument number mismatch!");
+			CORE_ASSERT(
+				sizeof...(FunArgs) == args.size(),
+				"Wrong number of arguments passed to the builtin function"
+			);
 			return callUnpackArgsImpl(
 				function, vm_return_type, process, thread, args, std::index_sequence_for<FunArgs...>{}
 			);

@@ -31,9 +31,9 @@ DuckVMRepl DuckVMRepl::get() { return {}; }
 
 DuckVMRepl::DuckVMRepl() {
 	auto process_pid_response = vm::api::spawn();
-	CORE_ASSERT(process_pid_response.has_value(), "Error: Failed to spawn a process");
+	if (!process_pid_response.has_value()) throw ReplFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
-	CORE_ASSERT(vm::api::attach(pid, std::cin, std::cout), "Error: Attach failed\n");
+	if (!vm::api::attach(pid, std::cin, std::cout)) throw ReplFailedToAttachStreamsException();
 }
 
 void DuckVMRepl::run() {
@@ -148,15 +148,14 @@ bool DuckVMRepl::loadOnVm(const std::string& code) {
 }
 
 i64 DuckVMRepl::runOnVm(const std::string& func_name, const vm::FunctionRunArguments& func_args) {
-	CORE_ASSERT(
-		vm::api::runFunction(pid, func_name, func_args).has_value(), "Failed to runFunction\n"
-	);
-	CORE_ASSERT(vm::api::join(pid).has_value(), "Error: Join failed\n");
+	if (!vm::api::runFunction(pid, func_name, func_args).has_value())
+		throw ReplFailedToRunCodeException();
+	if (!vm::api::join(pid).has_value()) throw ReplFailedToJoinProcessException();
 
 	auto exit_code_response = vm::api::getExitValue(pid);
-	CORE_ASSERT(exit_code_response.has_value(), "Error: Empty exit_code\n");
-	// @TODO: Improve this to allow other types as well
-	CORE_ASSERT(exit_code_response.value()->type->getName().str() == "i64", "Error: Type not i64\n");
+	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
+	// @TODO: Improve this to allow other types as well.
+	if (exit_code_response.value()->type->getName() == base::StrID("i64")) throw ReplWrongReturnTypeException();
 	return exit_code_response.value()->interpret<i64>();
 }
 

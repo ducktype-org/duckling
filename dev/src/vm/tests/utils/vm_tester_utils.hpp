@@ -78,6 +78,8 @@ protected:
 		bool                               add_stdlib      = false
 	);
 
+	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);
+
 	/**
 	 * @brief Loads a file containing a program which violates syntactic or static verification
 	 * guidelines. Asserts what error keywords are present in the error message.

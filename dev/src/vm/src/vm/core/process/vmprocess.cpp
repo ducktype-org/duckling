@@ -114,7 +114,10 @@ namespace vm {
 	std::expected<api::Response, api::CoreOperationError> VMProcess::output() {
 		auto        lock = io.lock();
 		std::string content;
-		CORE_ASSERT(!io_redirecter, "Cannot read output from api when IO is being redirected");
+		// Cannot read output from api when IO is being redirected
+		if (io_redirecter)
+			return std::unexpected(api::CoreOperationError{
+				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 		variant_match(status) {
 			variant_case(api::Executing, executing) {
 				// If we are still executing, then wait for at least some output.

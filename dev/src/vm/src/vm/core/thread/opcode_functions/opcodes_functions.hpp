@@ -2,6 +2,7 @@
 
 #include "../config.hpp"
 
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/vmthread.hpp>
 
@@ -116,7 +117,8 @@ namespace vm {
 
 			frame++;
 
-			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
+			if (frame + 1 >= runtime_data.frame_stack_end)
+				throw exceptions::VMStackOverflowException();
 
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
@@ -126,7 +128,7 @@ namespace vm {
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
+				throw exceptions::VMStackOverflowException();
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called

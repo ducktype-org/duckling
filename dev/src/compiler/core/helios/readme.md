@@ -1,6 +1,7 @@
-@page helios-module Helios
+# Helios
 
-\subpage helios-scopes
+* [mangling-scheme](./src/helios/mangler/mangling-scheme.md)
+* [src_private/helios_private/scopes](./src_private/helios_private/scopes/readme.md)
 
 
 @attention
@@ -88,5 +89,3 @@ This way we can "short-path" simple evaluations, that will be extremely common i
 
 * Simple operations in types
 * Simple operations on integers
-
-
