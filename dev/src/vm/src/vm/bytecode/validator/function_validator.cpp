@@ -235,7 +235,6 @@ class FunctionValidator {
 	const TypeMetadata&                              type_metadata;
 	const StableObjIdNameMap<GlobalData>&            globals;
 	const Function&                                  function;
-	FuncSignature                                    signature;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -914,7 +913,7 @@ class FunctionValidator {
 	}
 
 	void traverseControlFlowGraph() {
-		LocalStack local_stack(signature, tod_map, type_metadata);
+		LocalStack local_stack(function.signature, tod_map, type_metadata);
 		visited_instructions.resize(function.body.size());
 		std::vector<std::tuple<usize, LocalStack>> dfs_stack{
 			{ function.body.size(), local_stack }  // sentinel
@@ -990,7 +989,7 @@ class FunctionValidator {
 					index++;
 				}
 				variant_case(Op_ret_tailcall_func, instr) {
-					validateTailcall(local_stack, instr, signature);
+					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
@@ -1013,15 +1012,13 @@ public:
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const TypeMetadata&                              type_metadata,
 		const StableObjIdNameMap<GlobalData>&            globals,
-		const Function&                                  function,
-		FuncSignature                                    signature
+		const Function&                                  function
 	):
 		  tod_map(tod_map),
 		  signatures(signatures),
 		  type_metadata(type_metadata),
 		  globals(globals),
-		  function(function),
-		  signature(std::move(signature)) {}
+		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
 		preprocessLabels();
@@ -1045,7 +1042,7 @@ vm::code::Function vm::code::validateAndExtractReachableCode(
 	FuncSignature signature = signatures.at(function.name);
 
 	FunctionValidator validator(
-		tod_map, signatures, type_metadata, globals_map, function, signature
+		tod_map, signatures, type_metadata, globals_map, function
 	);
 
 	Function new_function;
