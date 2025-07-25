@@ -2,15 +2,14 @@
 
 #include "../backend_module_data.hpp"
 
-#include <artifacts/artifacts.hpp>
 #include <backends/llvm/llvm_backend.hpp>
+
+#include <artifacts/artifacts.hpp>
 #include <query_framework/context_fd.hpp>
 
 namespace compiler::driver {
 
-	backend_llvm::Module compileLIRModuleToLLVM(
-		query::Context& ctx, const LIRModuleData& lir_module
-	);
+	backend_llvm::Module compileLIRModuleToLLVM(query::Context& ctx, const LIRModuleData& lir_module);
 
 
 	/**

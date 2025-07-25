@@ -1,11 +1,12 @@
 #include "initialize.hpp"
 
-#include <diagnostic/logger.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
-#include <lexer/lexer_class.hpp>
 
 #include <base/variant.hpp>
+
+#include <diagnostic/logger.hpp>
+#include <lexer/lexer_class.hpp>
 
 namespace compiler::driver {
 

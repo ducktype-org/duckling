@@ -8,8 +8,9 @@
 
 #include "../backend_type.hpp"
 
-#include <artifacts/artifacts.hpp>
 #include <frontend/module_tree/module_id.hpp>
+
+#include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::driver {

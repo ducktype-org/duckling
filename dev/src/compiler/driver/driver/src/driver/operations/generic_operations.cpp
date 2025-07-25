@@ -8,6 +8,7 @@
 #include <global_state/options.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
+
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
