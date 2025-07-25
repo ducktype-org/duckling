@@ -1,4 +1,4 @@
-\page lir LIR
+# LIR
 
 # What is LIR
 

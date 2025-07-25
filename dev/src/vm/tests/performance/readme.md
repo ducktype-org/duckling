@@ -1,4 +1,4 @@
-\page vm-performance-tests VM Performance Tests
+# VM Performance Tests
 
 # Performance tests
 

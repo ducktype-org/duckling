@@ -1,6 +1,4 @@
-\page json-module JSON Module
-
-# JSON module documentation
+# JSON Module
 
 ## Library nlohmann::json
 Source and documentation:

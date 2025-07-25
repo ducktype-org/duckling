@@ -1,4 +1,4 @@
-@page module-tree-readme Module Tree
+# Module Tree
 
 This is a tree-like representation of a Duckling module tree.
 
