@@ -1,10 +1,10 @@
 #include "vm.hpp"
 
-#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 namespace vm::api {
 	void ignoreResponse([[maybe_unused]] const Response& response) {}
@@ -80,7 +80,7 @@ namespace vm::api {
 	) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(
-					pid, request::RunFunction{ .func_name = function_name, .func_args = args }
+				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
 			))
 		    .transform(ignoreResponse);
 	}
@@ -154,10 +154,10 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<CRef<VmValue>, ApiError> getExitValue(PID pid) {
+	std::expected<std::shared_ptr<VmValue>, ApiError> getExitValue(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExitCodeRequest(pid))
-		    .and_then(mapOrWrongResponse<CRef<VmValue>>);
+		    .and_then(mapOrWrongResponse<std::shared_ptr<VmValue>>);
 	}
 
 }

@@ -154,11 +154,9 @@ namespace vm::builtins {
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
 				code::Function builtin_function;
 				builtin_function.name = func_type.name;
-				builtin_function.body.emplace_back(
-					code::instructions::Op_call_builtin_func(
-						vm::opargs::BuiltinFunctionName(func_type.name)
-					)
-				);
+				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(
+					vm::opargs::BuiltinFunctionName(func_type.name)
+				));
 				builtin_function.body.emplace_back(code::instructions::Op_ret{});
 				code_collection.functions.push_back(builtin_function);
 			}

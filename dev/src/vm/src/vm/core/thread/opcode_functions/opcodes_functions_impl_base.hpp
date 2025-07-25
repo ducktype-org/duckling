@@ -450,8 +450,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			thread.process_memory.freeBlock(
-				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
+			thread.process_memory.freeBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
 		FUNCTION_CONT(1);

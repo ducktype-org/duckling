@@ -41,7 +41,7 @@ namespace vm {
 
 		void freeData();
 
-		PID getPID() const;
+		[[nodiscard]] PID getPID() const;
 
 		TypeCRef type;
 		Pointer  pointer;
@@ -49,6 +49,7 @@ namespace vm {
 		template<class T>
 		[[nodiscard]]
 		constexpr T& interpret(const usize offset = 0) {
+			// TODOP: Disallow interpret when the type is void.
 			// @TODO: Fix
 			// return interpretBytes<T>(*(data.data() + offset));
 			return *reinterpret_cast<T*>(data.data() + offset);
@@ -69,6 +70,7 @@ namespace vm {
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::VmValue, "VmValue");
 
+// NOLINTBEGIN(readability-identifier-naming)
 template<>
 struct nlohmann::adl_serializer<vm::VmValue> {
 	static void to_json(json& j, const vm::VmValue& v) {
@@ -88,3 +90,19 @@ struct nlohmann::adl_serializer<vm::VmValue> {
 		CORE_PANIC("Parsing data from JSON into a VmValue is not supported (yet).");
 	}
 };
+
+template<>
+struct nlohmann::adl_serializer<std::shared_ptr<vm::VmValue>> {
+	static void to_json(json& j, const std::shared_ptr<vm::VmValue>& ptr) {
+		if (ptr)
+			j = *ptr;
+		else
+			j = nullptr;
+	}
+
+	static void from_json(const json&, const std::shared_ptr<vm::VmValue>&) {
+		CORE_PANIC("Parsing data from JSON into a VmValue is not supported (yet).");
+	}
+};
+
+// NOLINTEND(readability-identifier-naming)

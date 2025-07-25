@@ -6,11 +6,11 @@
 
 #include <filesystem/file.hpp>
 
-#include "vm/api/data/response.hpp"
-#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/api.hpp>
+#include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 #include <vector>
 
@@ -57,7 +57,7 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
 
-	std::expected<CRef<VmValue>, ApiError> getExitValue(PID pid);
+	std::expected<std::shared_ptr<VmValue>, ApiError> getExitValue(PID pid);
 
 	std::expected<response::Output, ApiError> output(PID pid);
 

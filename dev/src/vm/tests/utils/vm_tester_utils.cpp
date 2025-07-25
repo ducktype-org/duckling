@@ -86,10 +86,11 @@ auto VmTestSuite::runTestImpl(
 		EXPECT_VOID(output_response);
 		ASSERT_EQUAL_PRINT(output, output_response->output);
 	}
-	const auto exit_value = vm::api::getExitValue(pid).transform([&](CRef<vm::VmValue> value) {
-		ASSERT_TRUE(value->type->getName().str() == "i64");
-		return value->interpret<i64>();
-	});
+	const auto exit_value
+		= vm::api::getExitValue(pid).transform([&](const std::shared_ptr<vm::VmValue>& value) {
+			  ASSERT_TRUE(value->type->getName().str() == "i64");
+			  return value->interpret<i64>();
+		  });
 	return { .pid = pid, .run_result = exit_value };
 }
 

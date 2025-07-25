@@ -42,9 +42,7 @@ namespace vm {
 		}
 #endif
 
-	VMThread::~VMThread() {
-		if_opt_some(exit_value_storage, value) { value.freeData(); }
-	}
+	VMThread::~VMThread() {}
 
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
@@ -231,7 +229,7 @@ namespace vm {
 
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
-			// to ints. This should change after #722
+			// to ints. This should change after #722.
 			u64 converted_arg = static_cast<u64>(std::stoll(arg));
 			start_function.bc.insert(
 				start_function.bc.end(),
@@ -278,7 +276,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	Ref<VmValue> VMThread::executeFunction(
+	std::shared_ptr<VmValue> VMThread::executeFunction(
 		const low::FuncData& start_function, const low::FuncData& func
 	) {
 		// Frame of the called function.
@@ -298,8 +296,7 @@ namespace vm {
 		// so we turn off pedantic warnings
 		// for this case
 		PUSH_DIAGNOSTIC
-		_Pragma(
-			"GCC diagnostic ignored \"-Wpedantic\""
+		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
 		) constexpr static std::array<void*, OP_CASES_COUNT>
 			opcode_label = {
 
@@ -353,18 +350,14 @@ namespace vm {
 		}
 	End:
 #endif
-
-		// Cleanup the previous VmValue
-		if_opt_some(exit_value_storage, value) value.freeData();
-		if (called_func_return_type->getSize() != 0) {}
 		// @note: The return value is the only block left on the block stack.
-		auto    block = frame->block_stack.back();
-		VmValue func_ret_val(process, called_func_return_type, Pointer(block, 0));
+		auto block = frame->block_stack.back();
+		exit_value_storage
+			= std::make_shared<VmValue>(process, called_func_return_type, Pointer(block, 0));
 		process_memory.freeBlock(block);
 		frame->resetFrameData();
 
-		exit_value_storage = std::move(func_ret_val);
-		return &*exit_value_storage;
+		return exit_value_storage;
 	}
 
 	// executeFunction end
@@ -574,20 +567,15 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(
-							api::response::CodePosition{
-								.function_id
-								= static_cast<u64>(index),  // Assuming function_id is int
-								.instr_number = static_cast<u64>(instr - func.bc.data()) }
-						);
+						return api::Response(api::response::CodePosition{
+							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(
-					api::CoreOperationError{
-						api::OtherError{ "wrong execution status while reading current position" } }
-				);
+				return std::unexpected(api::CoreOperationError{
+					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
 		CORE_UNREACHABLE();

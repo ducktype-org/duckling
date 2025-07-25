@@ -126,9 +126,7 @@ namespace vm::loader::compiler {
 				}
 
 				func_data.bc.emplace_back(makeLowInstruction(
-					low::fix8FromInstr(op),
-					interpretBytes<u64>(arg_0),
-					interpretBytes<u64>(arg_1)
+					low::fix8FromInstr(op), interpretBytes<u64>(arg_0), interpretBytes<u64>(arg_1)
 				));
 			}
 			return func_data;

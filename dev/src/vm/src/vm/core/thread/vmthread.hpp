@@ -142,7 +142,7 @@ namespace vm {
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		low::FuncData createProgramStartFunction(
+		[[nodiscard]] low::FuncData createProgramStartFunction(
 			const low::FuncData& func, const ProgramRunArguments& args
 		) const;
 
@@ -152,7 +152,7 @@ namespace vm {
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
 		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
 		 */
-		low::FuncData createStartFunctionFor(
+		[[nodiscard]] low::FuncData createStartFunctionFor(
 			const low::FuncData& func, const FunctionRunArguments& func_args
 		) const;
 
@@ -170,7 +170,9 @@ namespace vm {
 		 * @param func - the function to execute.
 		 * @return Reference to value returned by the program
 		 */
-		Ref<VmValue> executeFunction(const low::FuncData& start_function, const low::FuncData& func);
+		std::shared_ptr<VmValue> executeFunction(
+			const low::FuncData& start_function, const low::FuncData& func
+		);
 
 		void setProcessStatus(const api::ExecStatus& status);
 
@@ -179,12 +181,13 @@ namespace vm {
 		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
 		/**
-		 * @brief Stores exit value of the last ran function.
-		 * ExecutionCompleted exec status can store a reference
-		 * to this object.
-		 * @note This is not ideal, as deleting the thread will also delete the value.
+		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
+		 * store a shared_ptr to this object.
+		 * @note This is done with shared pointers since VmValue is uncopyble, but should be usable
+		 * even after the executing thread is deleted (otherwise the VmValue would be deleted as
+		 * well).
 		 */
-		base::Optional<VmValue> exit_value_storage;
+		std::shared_ptr<VmValue> exit_value_storage;
 
 	public:
 		~VMThread();

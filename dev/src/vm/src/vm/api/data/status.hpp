@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vm/core/thread/vmvalue.hpp"
+#include <vm/core/thread/vmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -26,11 +26,23 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	using ExitValue = CRef<VmValue>;
+	// TODOP: Pretty sure this is not needed.
+	using ExitValue = std::shared_ptr<::vm::VmValue>;
 
 	struct ExecutionCompleted {
 		ExitValue exit_value;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::ExecutionCompleted, exit_value);
+
+		friend void to_json(
+			nlohmann ::json& nlohmann_json_j, const vm ::api ::ExecutionCompleted& nlohmann_json_t
+		) {
+			nlohmann_json_j["exit_value"] = nlohmann_json_t.exit_value;
+		}
+
+		friend void from_json(
+			const nlohmann ::json& nlohmann_json_j, vm ::api ::ExecutionCompleted& nlohmann_json_t
+		) {
+			nlohmann_json_j.at("exit_value").get_to(nlohmann_json_t.exit_value);
+		}
 	};
 
 	struct ExecutionStopped {};

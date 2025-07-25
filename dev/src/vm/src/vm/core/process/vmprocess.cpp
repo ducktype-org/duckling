@@ -1,11 +1,9 @@
 #include "vmprocess.hpp"
 
-#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -16,6 +14,7 @@
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -89,11 +88,9 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(
-					api::CoreOperationError(
-						api::OtherError("Execution panicked with error: " + panicked.error_message)
-					)
-				);
+				return std::unexpected(api::CoreOperationError(
+					api::OtherError("Execution panicked with error: " + panicked.error_message)
+				));
 			}
 			variant_default {
 				return std::unexpected(
@@ -145,9 +142,8 @@ namespace vm {
 
 		// @TODO: make two different "stop" functions, one that throws error if program panicked
 		if (!response)
-			return std::unexpected(
-				api::CoreOperationError{ api::OtherError{ "unexpected status response" } }
-			);
+			return std::unexpected(api::CoreOperationError{
+				api::OtherError{ "unexpected status response" } });
 		return api::response::Empty{};
 	}
 
@@ -176,11 +172,9 @@ namespace vm {
 			variant_case_novalue(api::request::Step) {
 				auto response = getMainVMThread().step();
 				if (!response)
-					return std::unexpected(
-						api::CoreOperationError{
-							api::OtherError{ "step error" },
-						}
-					);
+					return std::unexpected(api::CoreOperationError{
+						api::OtherError{ "step error" },
+					});
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::LoadStdlib, load_stdlib_request) {
@@ -211,15 +205,13 @@ namespace vm {
 				});
 
 				if (!std::holds_alternative<api::Executing>(status))
-					return std::unexpected(
-						api::CoreOperationError{ api::OtherError{ "unexpected status response" } }
-					);
+					return std::unexpected(api::CoreOperationError{
+						api::OtherError{ "unexpected status response" } });
 
 				auto exec_status = std::get<api::Executing>(status).exec_status;
 				if (!std::holds_alternative<api::Paused>(exec_status))
-					return std::unexpected(
-						api::CoreOperationError{ api::OtherError{ "unexpected status response" } }
-					);
+					return std::unexpected(api::CoreOperationError{
+						api::OtherError{ "unexpected status response" } });
 
 				return getMainVMThread().getCurrentPosition();
 			}
@@ -236,19 +228,21 @@ namespace vm {
 		if (!std::holds_alternative<api::Executing>(status)) {
 			if (std::holds_alternative<api::Parsing>(status)
 			    || std::holds_alternative<api::TypeAnalysis>(status)) {
-				return std::unexpected(
-					api::CoreOperationError{ api::OtherError{
-						"Cannot do memory request while parsing or analyzing types" } }
-				);
+				return std::unexpected(api::CoreOperationError{ api::OtherError{
+					"Cannot do memory request while parsing or analyzing types" } });
 			}
 		}
 
-		api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
-		if (std::holds_alternative<api::Running>(exec_status))
-			return std::unexpected(
-				api::CoreOperationError{
-					api::OtherError{ "Cannot do memory request while program is running" } }
-			);
+		// TODOP: This seems strange? Why do we need a program to be in the executing state when
+		// performing data requests?
+		if (std::holds_alternative<api::Executing>(status)) {
+			api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
+			if (std::holds_alternative<api::Running>(exec_status)) {
+				return std::unexpected(api::CoreOperationError{
+					api::OtherError{ "Cannot do memory request while program is running" } });
+			}
+		}
+
 		std::expected<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
@@ -257,16 +251,14 @@ namespace vm {
 				match_optional(res) {
 					opt_some(value) { response = TypeCRef(value); }
 					opt_none {
-						response = std::unexpected(
-							api::CoreOperationError{ api::OtherError{ "Type not found" } }
-						);
+						response = std::unexpected(api::CoreOperationError{
+							api::OtherError{ "Type not found" } });
 					}
 				}
 			}
 			variant_case(api::request::Block, block_request) {
-				response = api::Response(
-					api::response::Block{ memory.requestBlockData(block_request.block_id) }
-				);
+				response = api::Response(api::response::Block{
+					memory.requestBlockData(block_request.block_id) });
 			}
 			variant_case(api::request::VmValue, vmvalue_request) {
 				auto maybe_type
@@ -277,9 +269,8 @@ namespace vm {
 						response      = api::response::VmValue{ vm_value };
 					}
 					opt_none {
-						response = std::unexpected(
-							api::CoreOperationError{ api::OtherError{ "Type not found" } }
-						);
+						response = std::unexpected(api::CoreOperationError{
+							api::OtherError{ "Type not found" } });
 					}
 				}
 			}

@@ -35,7 +35,7 @@ namespace vm::api {
 		};
 
 		struct RunFunction {
-			std::string                func_name;
+			std::string                           func_name;
 			std::vector<std::shared_ptr<VmValue>> func_args;
 		};
 

@@ -83,8 +83,8 @@ private:
 
 	DuckVMRepl();
 	// Helper methods
-	std::string                      loadCodeLinesUntil(const std::string& until);
-	[[nodiscard]] CallInfo           parseFunctionCallLine(const std::string& line) const;
+	std::string            loadCodeLinesUntil(const std::string& until);
+	[[nodiscard]] CallInfo parseFunctionCallLine(const std::string& line) const;
 
 	// VM API Functions
 	bool loadOnVm(const std::string& code);

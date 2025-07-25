@@ -47,7 +47,9 @@ int cli(const fs::File& filepath, bool load_stdlib) {
 	          .and_then([&] { return vm::api::run(pid); })
 	          .and_then([&] { return vm::api::join(pid); })
 	          .and_then([&] { return vm::api::getExitValue(pid); })
-	          .transform([&](CRef<vm::VmValue> vm_value) { return vm_value->interpret<i64>(); })
+	          .transform([&](const std::shared_ptr<vm::VmValue>& vm_value) {
+				  return vm_value->interpret<i64>();
+			  })
 	          .transform_error(convertError);
 
 	if (result.has_value())
