@@ -12,7 +12,7 @@ database of error messages. Certain points are also inspired from
 and [clang documentation](https://clang.llvm.org/docs/InternalsManual.html#diagnostic-wording).
 
 > Note: this document assumes that you have read the documentation
-of \ref dia-templates "**diagnostic templates**". There you can find
+of \ref dia-templates. There you can find
 technical information about the anatomy of diagnostics (what are
 its parts and how these parts are used).
 
