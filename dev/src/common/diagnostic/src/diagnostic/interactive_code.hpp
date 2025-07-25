@@ -40,7 +40,7 @@ namespace dia {
 		json tojson() {
 			auto j        = json::object();
 			j["location"] = position;
-			j["content"]  = { { "type", "code" }, { "content", serialize_code() } };
+			j["content"]  = { { "type", "grouping" }, { "content", serialize_code() } };
 			return j;
 		}
 

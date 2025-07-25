@@ -8,6 +8,9 @@ using nlohmann::json;
 json dia::InteractiveMessage::tojson() const {
 	const SerializationParams& params = InteractiveLogger::params();
 	json                       res    = json::object();
+	res["main_info"]                  = content;
+	res["displayed_secondary_infos"]  = notes;
+	res["secondary_infos"]            = json::array();
 	res["entities"]                   = json::object();
 	if (params.include_symbols) {
 		auto content_symbols = content->get_symbols();
@@ -31,9 +34,6 @@ json dia::InteractiveMessage::tojson() const {
 			res["entities"].update(j);
 		}
 	}
-	res["main_info"]                 = content;
-	res["displayed_secondary_infos"] = notes;
-	res["secondary_infos"]           = json::array();
 	return res;
 }
 
@@ -41,7 +41,7 @@ json dia::OperatorNotFound::Params::tojson() {
 	json lhs_type, rhs_type;
 	// TODO: make this better, eg. creating class for entities
 	json code       = json::object();
-	code["type"]    = "code";
+	code["type"]    = "grouping";
 	code["content"] = lhs->expression_type.getType().toString();
 	lhs_type["refers_to"]
 		= std::to_string(lhs->expression_type.getType().queryUnstablePerfectHash());
