@@ -46,8 +46,14 @@ namespace vm {
 		TypeCRef type;
 		Pointer  pointer;
 
+		/**
+		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
+		 * @warning This operation is unsafe and violates strict alignment rules.
+		 * The caller is expected to know what they are doing. Incorrect usage may lead to UB.
+		 *
+		 * @todo: This is unsafe. Maybe there's a better way. This should change in #1133.
+		 **/
 		template<class T>
-		[[nodiscard]]
 		constexpr T& interpret(const usize offset = 0) {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
@@ -55,11 +61,16 @@ namespace vm {
 			CORE_ASSERT(
 				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
 			);
-			// @TODO: This is unsafe(potentially an UB?). We should think of a better way. This
-			// should change in #1133. return interpretBytes<T>(*(data.data() + offset));
-			return *reinterpret_cast<T*>(data.data() + offset);
+			return interpretBytes<T>(data.data() + offset);
 		}
 
+		/**
+		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
+		 * @warning This operation is unsafe and violates strict alignment rules.
+		 * The caller is expected to know what they are doing. Incorrect usage may lead to UB.
+		 *
+		 * @todo: This is unsafe. Maybe there's a better way. This should change in #1133.
+		 **/
 		template<class T>
 		[[nodiscard]] constexpr const T& interpret(const usize offset = 0) const {
 			CORE_ASSERT(
@@ -68,9 +79,7 @@ namespace vm {
 			CORE_ASSERT(
 				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
 			);
-			// @TODO: This is unsafe(potentially an UB?). We should think of a better way. This
-			// should change in #1133. return interpretBytes<const T>(*(data.data() + offset));
-			return *reinterpret_cast<const T*>(data.data() + offset);
+			return interpretBytes<const T>(data.data() + offset);
 		}
 
 		[[nodiscard]] byte* getBytes();
@@ -89,7 +98,6 @@ struct nlohmann::adl_serializer<vm::VmValue> {
 		j["data_type"]   = v.type->getName().str();
 		j["data_length"] = v.type->getSize();
 		// Convert VmValue's bytes to HEX string
-		// @TODO: Test this
 		std::stringstream ss;
 		ss << std::hex;
 		for (size_t i = 0; i < v.type->getSize(); ++i)

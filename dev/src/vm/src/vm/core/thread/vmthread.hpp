@@ -190,7 +190,6 @@ namespace vm {
 		std::shared_ptr<VmValue> exit_value_storage;
 
 	public:
-		~VMThread();
 		VMThread(VMProcess& process);
 
 		void breakActiveExecution();
