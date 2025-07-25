@@ -159,5 +159,4 @@ namespace vm::api {
 		    .doRequest(api::makeExitCodeRequest(pid))
 		    .and_then(mapOrWrongResponse<std::shared_ptr<VmValue>>);
 	}
-
 }

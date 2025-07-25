@@ -91,7 +91,7 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ DEREF_GLOBAL_RAW_UNSAFE(TYPE, instr->arg0) = interpretBytes<const TYPE>(instr->arg1); }            \
+		{ DEREF_GLOBAL_RAW_UNSAFE(TYPE, instr->arg0) = interpretBytes<const TYPE>(instr->arg1); } \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
