@@ -43,8 +43,6 @@ namespace vm {
 		}
 #endif
 
-	VMThread::~VMThread() {}
-
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),

@@ -753,11 +753,11 @@ namespace vm {
 	}
 
 	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
-#define CAST_PRIMIVE(SIZE) \
+#define CAST_PRIMITIVE(SIZE) \
 	RETURN_TYPE OpFuns::OPCODE_NAME(cast_l##SIZE##_type)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
-	FOR_EACH(CAST_PRIMIVE, 8, 16, 32, 64)
-#undef CAST_PRIMIVE
+	FOR_EACH(CAST_PRIMITIVE, 8, 16, 32, 64)
+#undef CAST_PRIMITIVE
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
@@ -779,6 +779,7 @@ namespace vm {
 		CORE_PANIC("Handling label should not be possible");
 	}
 
+	// NOLINTBEGIN(performance-no-int-to-ptr)
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
 			const VmValue& vm_value = *reinterpret_cast<const VmValue*>(instr->arg0);
@@ -787,6 +788,8 @@ namespace vm {
 		}
 		FUNCTION_CONT(1);
 	}
+
+	// NOLINTEND(performance-no-int-to-ptr)
 }
 
 #undef OPCODE_NAME
