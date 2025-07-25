@@ -9,6 +9,9 @@
 
 namespace compiler::driver {
 
+	/**
+	 * @brief Compiles the LIRModuleData to LLVM Module.
+	 */
 	backend_llvm::Module compileLIRModuleToLLVM(query::Context& ctx, const LIRModuleData& lir_module);
 
 

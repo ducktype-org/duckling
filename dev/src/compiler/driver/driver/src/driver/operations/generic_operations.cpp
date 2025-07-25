@@ -63,7 +63,7 @@ namespace compiler::driver {
 			case BackendType::LLVM: {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
 				llvm_module.compile(
-					output.FILE.getPath(), backend_llvm::CompilationOutputType::Object
+					output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 				);
 
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
@@ -82,7 +82,7 @@ namespace compiler::driver {
 			}
 			case BackendType::DVM: {
 				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
-				std::ofstream dvm_file(output.FILE.getPath(), std::ios::binary);
+				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
 				dvm_file.close();
