@@ -15,7 +15,7 @@ of the compiler's source code.
 
 > This document goes through the technicalities of creating and using
 info templates. For more information on guidelines about writing the content
-of these templates, see the \ref dia-guidelines guidelines page.
+of these templates, see the \ref dia-guidelines page.
 
 ## Anatomy of an info template
 A template describes the representation of a standalone, coherent
