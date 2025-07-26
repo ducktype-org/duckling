@@ -95,7 +95,8 @@ namespace compiler::driver {
 	 * Note that is doesn't encapsulate cli options such as --help or --version.
 	 * It is used to configure the compiler's behavior once the compiler is actually used
 	 * via the Driver.
-	 * @important: this structure is used only to initialize the compiler, not to store the options themself.
+	 * @important: this structure is used only to initialize the compiler, not to store the options
+	 * themself.
 	 */
 	struct CompilerModeOfOperationAndOptions {
 		/**

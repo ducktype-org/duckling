@@ -6,8 +6,8 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <driver/hout_to_binary_driver.hpp>
-#include <driver/package_compilation_driver.hpp>
+#include <driver/initialize.hpp>
+#include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst.hpp>
@@ -69,6 +69,17 @@ clah::Clah getStandardDucklingOptions() {
 		});
 }
 
+compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
+	const clah::ParsingResult& parsing_result
+) {
+	return compiler::driver::options_types::DebugOptions{
+		.lexer_cerr    = parsing_result.isFlag("lexer-cerr"),
+		.logger_cerr   = parsing_result.isFlag("logger-cerr"),
+		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
+		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
+	};
+}
+
 /**
  * @brief Generate Clah instance with all standard "main" parameters.
  * @return clah::Clah
@@ -79,6 +90,12 @@ clah::Clah getClahForMain() {
 			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+							.debug_options = getDebugOptionsFromClap(options),
+						}
+					);
+
 					auto file_to_lex = options.getPositional<fs::File>(0);
 
 					auto token_file = tokenizer::makeTokenSource(file_to_lex);
@@ -110,6 +127,12 @@ clah::Clah getClahForMain() {
 			clah::Clah("parse", "Runs parser on a single file and prints result in json to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+							.debug_options = getDebugOptionsFromClap(options),
+						}
+					);
+
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
 					auto pst = pst::PST(file_to_parse);
@@ -133,6 +156,12 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(clah::Clah("get_hout", "Debug prints hout-unit of a module.")
 	                       .addPositional(clah::FileParser::make("module"))
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
+
 							   auto path_to_compile = options.getPositional<fs::File>(0);
 
 							   int exit_code = 0;
@@ -164,72 +193,30 @@ clah::Clah getClahForMain() {
 							 "Also compiles to assembly file (alongside main compilation)."
 						 )
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("add-builtin-library")
-	                     .addShortDesc("Links builtin library into the final executable.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("dvm-run")
-	                     .addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
-	                     .conditional(
-							 [](const clah::ParsingResult& result) {
-								 return not(
-									 result.isFlag("dvm-run") && not result.isFlag("dvm-backend")
-								 );
-							 },
-							 "Cannot run the code on the DVM without the --dvm-backend "
-							 "option."
-						 )
-	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.compilation_artifacts = {
+								.artifacts_path = fs::FilePath("./duck_build/"),
+							},
+							.debug_options = getDebugOptionsFromClap(options),
+						}
+					);
+
 					auto path_to_compile = options.getPositional<fs::File>(0);
 
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
-					auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-					auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					driver::HoutToBinaryDriver driver{
-						driver::BackendOptions{
-							.backend_type         = backend_type,
-							.compile_to_assembly  = options.isFlag("compile-to-assembly"),
-							.dump_llvm_ir         = options.isFlag("dump-llvm-ir"),
-							.dvm_code_only_memory = options.isFlag("dvm-run"),
-							.add_builtin_library  = options.isFlag("add-builtin-library"),
-						},
-					};
+					auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-					// @TODO: Mock collection for purpose of compilation of single module. This
-		            // should change in #1113.
-					artifacts::ArtifactCollection base_artifact_collection{
-						"./duck_build/",
-					};
-					auto output_name
-						= backend_type == driver::BackendType::DVM ? "module.qbc" : "module.o";
 					auto output_artifact
-						= base_artifact_collection.fileArtifactAtOrNew(base::StrID(output_name));
+						= query::entryPoint<driver::CompileModule>({ root, backend_type });
 
-					int exit_code = 0;
-					query::utils::withContextDo([&](query::Context& ctx) {
-						driver.compileHOUTUnit(
-							ctx, &top_level, base::StrID("main_module"), output_artifact
-						);
-						if (options.isFlag("dvm-run")) {
-							auto run_result = driver.run();
-							if (run_result.has_value()) {
-								exit_code = run_result.value().exit_code;
-							} else {
-								std::cerr << "Error: " << run_result.error() << "\n";
-								exit_code = 1;
-							}
-						}
-					});
-
-					return exit_code;
+					return 0;
 				})
 		)
 	    .addSubcommand(
@@ -246,25 +233,64 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					auto path_to_compile = options.getPositional<fs::File>(0);
+					compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.compilation_artifacts = {
+								.artifacts_path = options.getValue<fs::File>("artifact-location").value().getFilePath(),
+							},
+							.debug_options = getDebugOptionsFromClap(options),
+						}
+					);
+
+					auto path_to_compile = options.getValue<fs::File>("module").value();
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
 		                                     : compiler::driver::BackendType::LLVM;
-					auto artifact_location
-						= options.getValue<fs::File>("artifact-location").value();
 
 					defer(printContextErrors());
 
-					compiler::driver::PackageCompilationDriver driver{
-						backend_type,
-						path_to_compile,
-						artifact_location.getFilePath().native(),
-					};
-					driver.compilerEntirePackage();
+					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
 
 					return 0;
 				})
 		)
+	    .addSubcommand(clah::Clah("dvm_run", "Compile given module to DVM (in-memory) and run it")
+	                       .addPositional(clah::FileParser::make("module"))
+	                       .add(clah::ParamBuilder::ofFlag()
+	                                .addLongName("add-builtin-library")
+	                                .addShortDesc("Links builtin library into the final executable.")
+	                                .build())
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   auto path_to_compile = options.getValue<fs::File>("module").value();
+							   using namespace compiler;
+
+							   compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.compilation_artifacts = {
+					.artifacts_path = fs::FilePath("./duck_build/"),
+				},
+				.debug_options = getDebugOptionsFromClap(options),
+			}
+		);
+
+							   auto root
+								   = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+							   int exit_code = 0;
+							   query::utils::withContextDo([&](query::Context& ctx) {
+								   auto run_result = driver::runModuleOnDVM(
+									   ctx, root, options.isFlag("add-builtin-library")
+								   );
+								   if (run_result.has_value()) {
+									   exit_code = run_result.value().exit_code;
+								   } else {
+									   std::cerr << "Error: " << run_result.error() << "\n";
+									   exit_code = 1;
+								   }
+							   });
+
+							   return exit_code;
+						   }))
 	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   throw base::LogicError("Command `throw` thrown successfully!");

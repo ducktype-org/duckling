@@ -13,7 +13,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
-
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
