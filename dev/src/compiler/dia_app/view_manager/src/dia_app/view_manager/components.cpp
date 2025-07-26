@@ -21,21 +21,6 @@ namespace dia_app {
 
 		Component::~Component() {}
 
-		std::shared_ptr<Component> Component::deepCopy() {
-			assert(false);
-			return {};
-		}
-
-		component_get_view_data_t<::view::HlComponent> Component::getHlView() const {
-			assert(false);
-			return {};
-		}
-
-		component_get_view_data_t<::view::NoHlComponent> Component::getNoHlView() const {
-			assert(false);
-			return {};
-		}
-
 		void Component::registerInteraction(
 			InteractionType interaction_type, InteractionContext& interaction_context
 		) {
@@ -69,6 +54,10 @@ namespace dia_app {
 			debug(this->content, this->assoc_side_entries);
 			debug("TextComponent::getNoHlView() end");
 			return { std::move(left), std::move(mid) };
+		}
+
+		component_get_view_data_t<::view::HlComponent> TextComponent::getHlView() const {
+			ASSERT(false, "tried to call getHlView() method on TextComponent; this is not permitted");
 		}
 
 		std::shared_ptr<Component> TextComponent::deepCopy() {

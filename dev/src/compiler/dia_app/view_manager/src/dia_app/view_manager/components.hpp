@@ -66,9 +66,9 @@ namespace dia_app {
 				std::weak_ptr<ViewConstructor> view_constructor
 			);
 
-			virtual component_get_view_data_t<::view::HlComponent> getHlView() const;
+			virtual component_get_view_data_t<::view::HlComponent> getHlView() const = 0;
 
-			virtual component_get_view_data_t<::view::NoHlComponent> getNoHlView() const;
+			virtual component_get_view_data_t<::view::NoHlComponent> getNoHlView() const = 0;
 
 			virtual void registerInteraction(
 				InteractionType interaction_type, InteractionContext& interaction_context
@@ -76,7 +76,7 @@ namespace dia_app {
 
 			virtual ~Component();
 
-			virtual std::shared_ptr<Component> deepCopy();
+			virtual std::shared_ptr<Component> deepCopy() = 0;
 		};
 
 		class TextComponent: public Component {
@@ -92,6 +92,9 @@ namespace dia_app {
 				std::string                    content,
 				std::vector<side_entry_id_t>   assoc_side_entries
 			);
+
+			// Not permitted.
+			component_get_view_data_t<::view::HlComponent> getHlView() const override;
 
 			component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 

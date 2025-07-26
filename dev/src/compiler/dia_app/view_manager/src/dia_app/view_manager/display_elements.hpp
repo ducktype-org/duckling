@@ -22,8 +22,7 @@ namespace dia_app {
 			std::set<std::string> groups;
 
 			// Cached component generated from this display element.
-			std::shared_ptr<view_manager::Component> generated_component
-				= std::shared_ptr<view_manager::Component>();
+			std::shared_ptr<view_manager::Component> generated_component;
 
 			DisplayElement() = default;
 
