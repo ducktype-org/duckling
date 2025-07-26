@@ -118,7 +118,7 @@ namespace dia {
 
 	class RoundBracket: public ParseError {
 	public:
-		RoundBracket(dia::SourcePosition position): ParseError("parse", "roundbracket", position) {}
+		RoundBracket(dia::SourcePosition position): ParseError("parse", "for_round_bracket", position) {}
 	};
 
 	class TODOError: public InteractiveMessage {

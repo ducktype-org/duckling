@@ -45,7 +45,7 @@ namespace dia {
 
 	class EmptyParams: public ContentParams {
 	public:
-		json tojson() override { return json{}; }
+		json tojson() override { return json::object(); }
 	};
 
 	class InteractiveContent {
