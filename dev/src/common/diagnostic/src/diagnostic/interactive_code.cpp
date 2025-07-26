@@ -101,7 +101,7 @@ void dia::InteractiveCode::visit_leafs(
 		out.push_back(child_json);
 	}
 	// TODO: this is awful copypaste.
-	if (pst->getSourcePosition().getEnd() > last_position) {
+	if (pst->getSourcePosition().getEnd() >= last_position) {
 		json node       = json::object();
 		node["content"] = make_string_array(
 			pst->getSourcePosition().getSource(),
