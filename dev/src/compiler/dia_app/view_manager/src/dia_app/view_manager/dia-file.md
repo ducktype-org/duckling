@@ -28,19 +28,63 @@ The baseline syntax of the diagnostic file is JSON.
 of type `my_type` as `<my_type>` and an array
 of objects of type `my_type` as `[<my_type>...]`.
 
+The general structure of the diagnostic file goes as follows:
+- the file contains a list of info groups,
+- each info group represents one diagnostic message and consists of a number
+of infos along with metadata,
+- each info represents one piece of information in the diagnostic message.
+
 The content of the diagnostic file can therefore
 be represented as:
 ```
 [<info_group>...]
 ```
-that is, as an array of info groups
-(we'll define what an `info_group` is in the following
-sections).
+that is, as an array of info groups.
 
 ## 1. Infos
-@ TODO add descriptions
+
+### `info_group`
+An info group, representing one diagnostic message, consists of
+one main info (containing the most general description of the error
+or warning) and possibly many secondary infos (some of which may be
+displayed at the start - `displayed_secondary_infos` and some after
+user interactions).
+
+An info group also contains a dictionary of [entities](#3-entities)
+related to its content.
+
+| Key               | Value                 | Optional  |
+| --                | --                    | --        |
+| main_info         | `<main_info>`         | no        |
+| displayed_secondary_infos | `[<info_handle>...]` | no |
+| secondary_infos   | `[<secondary_info>...]` | no      |
+| entities          | `<entities>`          | no        |
+
+#### `entities`
+A dictionary with keys of type `string`
+and values of type [`entity`](#3-entities).
+
+### `info_handle`
+An info handle is a piece of data which identifies a specific info.
+It can either be an index in the `secondary_infos` array in the info group,
+or, if the info has not yet been evaluated, a lazy info handle.
+
+#### Lazy info handle
+A lazy info handle represents an info which has not yet been evaluated.
+It contains a `handle` - a piece of data which can later be used to retrieve
+the evaluated contents of this info.
+
+| Key       | Value                 | Optional  |
+| --        | --                    | --        |
+| type      | `"dummy_handle"`      | no        |
+| handle    | `<lazy_info_handle>`  | no        |
 
 ### `main_info`
+The main info contains the most general description of a diagnostic message.
+It consists of some metadata, a set of parameters for its respective
+message template (\ref dia-templates), and an optional code element
+to be included in the displayed info.
+
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
 | metadata  | `<main_info_metadata>`| no        |
@@ -48,6 +92,15 @@ sections).
 | code      | `<code>`              | yes       |
 
 ### `secondary_info`
+The secondary infos contain additional information about a diagnostic message.
+They are very similiar to main infos, except for their metadata type
+and the fact that secondary infos may contain [explore edges](#explore_edge).
+
+> Note: the explore edges are only displayed in infos which have not initially
+been displayed.
+@TODO should it be this way? can't we display them always and potentially
+open up a copy of the info in side panel along with the outgoing edge?
+
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
 | metadata  | `<secondary_info_metadata>`| no   |
@@ -56,6 +109,10 @@ sections).
 | explore_edges | `[<explore_edge>...]` | yes   |
 
 ### Info metadata
+Info metadata identifies the message template (\ref dia-templates)
+a given info refers to. Main infos can only be of type *error*
+or *warning*, while secondary infos may only be one of: *note*,
+*hint* or *docs*.
 
 #### `main_info_metadata`
 | Key       | Value                 | Optional  |
@@ -76,6 +133,10 @@ A dictionary with keys of type `string`
 and values of type `component`.
 
 ### `code`
+A code element represents a piece of code attached to a specific info.
+It consists of its location metadata and content of type
+[`component`](#2-components).
+
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
 | location  | `<location>`          | no        |
@@ -97,31 +158,17 @@ important when LS is connected, but will it
 be used here or maybe somewhere else?
 
 ### `explore_edge`
+An explore edge consists of a handle to the info it refers to,
+a class edge `name`, and a set of parameters for that edge.
+
+> For more information about explore edges, see the \ref dia-templates
+document.
+
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
 | handle    | `<info_handle>`       | no        |
 | name      | `<string>`            | no        |
 | params    | `<params>`            | no        |
-
-### `info_handle`
-
-#### Lazy info handle
-| Key       | Value                 | Optional  |
-| --        | --                    | --        |
-| type      | `"dummy_handle"`      | no        |
-| handle    | `<lazy_info_handle>`  | no        |
-
-### `info_group`
-| Key               | Value                 | Optional  |
-| --                | --                    | --        |
-| main_info         | `<main_info>`         | no        |
-| displayed_secondary_infos | `[<info_handle>...]` | no |
-| secondary_infos   | `[<secondary_info>...]` | no      |
-| entities          | `<entities>`          | no        |
-
-### `entities`
-A dictionary with keys of type `string`
-and values of type [`entity`](#3-entities).
 
 ## 2. Components
 @TODO `<string>` or `<more_descriptive_type_names>`?
