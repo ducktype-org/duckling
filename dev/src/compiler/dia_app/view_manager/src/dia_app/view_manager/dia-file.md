@@ -81,6 +81,9 @@ and values of type `component`.
 | location  | `<location>`          | no        |
 | content   | `<component>`         | no        |
 
+> Note that **[text components](#text_component) are not permitted** inside
+the `code` element.
+
 #### Code `location`
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
@@ -237,13 +240,15 @@ component.
 
 ### `component`
 Finally, a `component` is one of:
-- `<text_component>`,
+- `<text_component>` (*),
 - `<code_component>`,
 - `<start_line_component>`,
 - `<concat_component>`,
 - `<grouping_component>`,
 - `<entity_component>`,
 - `<lazy_component>`.
+
+> (*) See [code element](#code) for an exception to this rule.
 
 ## 3. Entities
 An entity is any kind of object
