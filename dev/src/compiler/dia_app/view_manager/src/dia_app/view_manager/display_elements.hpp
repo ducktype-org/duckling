@@ -17,6 +17,24 @@ namespace dia_app {
 
 		Ptr parse(const json& msg);
 
+		struct TextElement;
+		struct CodeElement;
+		struct ConcatElement;
+		struct StartLineElement;
+		struct InteractElement;
+		struct EntityElement;
+		struct LazyElement;
+
+		struct DisplayElementVisitor {
+			virtual void visitText(TextElement *el) = 0;
+			virtual void visitCode(CodeElement *el) = 0;
+			virtual void visitConcat(ConcatElement *el) = 0;
+			virtual void visitStartLine(StartLineElement *el) = 0;
+			virtual void visitInteract(InteractElement *el) = 0;
+			virtual void visitEntity(EntityElement *el) = 0;
+			virtual void visitLazy(LazyElement *el) = 0;
+		};
+
 		struct DisplayElement {
 			std::set<InfoHandle>  assoc_infos;
 			std::set<std::string> groups;
@@ -81,6 +99,8 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) = 0;
+
+			virtual void accept(DisplayElementVisitor *visitor) = 0;
 		};
 
 		struct TextElement: public DisplayElement {
@@ -97,6 +117,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitText(this);
+			}
 		};
 
 		struct ConcatElement: public DisplayElement {
@@ -116,6 +140,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitConcat(this);
+			}
 		};
 
 		struct StartLineElement: public DisplayElement {
@@ -133,6 +161,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitStartLine(this);
+			}
 		};
 
 		struct InteractElement: public DisplayElement {
@@ -150,6 +182,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitInteract(this);
+			}
 		};
 
 		struct LazyElement: public DisplayElement {
@@ -168,6 +204,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitLazy(this);
+			}
 		};
 
 		struct EntityElement: public DisplayElement {
@@ -187,6 +227,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitEntity(this);
+			}
 		};
 
 		struct CodeElement: public DisplayElement {
@@ -204,6 +248,10 @@ namespace dia_app {
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
+
+			virtual void accept(DisplayElementVisitor *visitor) {
+				visitor->visitCode(this);
+			}
 		};
 
 	}  // namespace dia_file

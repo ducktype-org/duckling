@@ -49,6 +49,9 @@ namespace message_template {
                 pointer_messages[key] = DisplayPointerMessage(val, handle);
             }
 
+            // Verify code metadata against the template.
+            verify_code();
+
             // Description can be nullptr.
             description = apply(handle.template_data.description, handle);
 
@@ -60,6 +63,60 @@ namespace message_template {
                 auto description = description_ptr->toText(handle.toDataHandle());
 
                 explore_edges.emplace_back(description, edge.handle);
+            }
+        }
+
+        void verify_code() const {
+            struct VerifyCodeVisitor : public dia_file::DisplayElementVisitor {
+                bool is_ok = true;
+                const Info *info;
+
+                VerifyCodeVisitor(const Info *info) : info(info) {}
+
+                virtual void visitText(dia_file::TextElement *el) {
+                    verify_groups(el->groups);
+                }
+                virtual void visitCode(dia_file::CodeElement *el) {
+                    verify_groups(el->groups);
+                }
+                virtual void visitConcat(dia_file::ConcatElement *el) {
+                    verify_groups(el->groups);
+                    for (auto &child : el->elems) {
+                        child->accept(this);
+                    }
+                }
+                virtual void visitStartLine(dia_file::StartLineElement *el) {
+                    verify_groups(el->groups);
+                }
+                virtual void visitInteract(dia_file::InteractElement *el) {
+                    verify_groups(el->groups);
+                    el->content->accept(this);
+                    el->alt_content->accept(this);
+                }
+                virtual void visitEntity(dia_file::EntityElement *el) {
+                    verify_groups(el->groups);
+                    el->content->accept(this);
+                }
+                virtual void visitLazy(dia_file::LazyElement *el) {
+                    verify_groups(el->groups);
+                    // TODO: remember about verification upon fetching.
+                }
+
+                void verify_groups(const std::set<std::string> &groups) {
+                    for (auto &g : groups) {
+                        if (!info->pointer_messages.contains(g)) {
+                            is_ok = false;
+                            break;
+                        }
+                    }
+                }
+            };
+        
+            if (code.has_value()) {
+                VerifyCodeVisitor v(this);
+                code.value().content->accept(&v);
+
+                ASSERT(v.is_ok, "some component inside info code refers to a non-existent group");
             }
         }
     };
