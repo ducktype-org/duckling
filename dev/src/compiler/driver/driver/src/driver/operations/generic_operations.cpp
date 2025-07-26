@@ -14,10 +14,7 @@
 #include <query_framework/query_impl.hpp>
 
 
-// #include <vm/api/data/api_error.hpp>
-// #include <vm/api/data/process_info.hpp>
 #include <vm/api/vm.hpp>
-// #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <fstream>
@@ -46,8 +43,9 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
-			// Note: in the future it should use stable hashing for incremental
+			// Note: #939 in the future it should use stable hashing for incremental
 			// compilation. For now its ok.
+			// Also deal with module id (it is unstable).
 			auto output_name
 				= key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
@@ -129,7 +127,6 @@ namespace compiler::driver {
 		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
 		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
-
 
 		vm::PID pid{};
 

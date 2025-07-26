@@ -34,13 +34,15 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
-		// @TODO PR: maybe validate that init was done here
+		// @TODO #PR: maybe validate that init was done here
 
 		CORE_ASSERT(!is_initialized, "Compiler is already initialized!");
 		is_initialized = true;
 
 		variant_match(options.mode) {
-			variant_case(CompilerModeOfOperationAndOptions::BareMode, _) {}
+			variant_case(CompilerModeOfOperationAndOptions::BareMode, options) {
+				handleDebugOptions(options.debug_options);
+			}
 			variant_case(CompilerModeOfOperationAndOptions::PackageCompilationMode, options) {
 				handleDebugOptions(options.debug_options);
 				handleArtifactsOptions(options.compilation_artifacts);

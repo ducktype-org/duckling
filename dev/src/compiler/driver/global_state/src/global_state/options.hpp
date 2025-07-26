@@ -4,7 +4,7 @@
 
 namespace global_state {
 	/**
-	 * Some debug options, that can be freely swapped during compiler operations.
+	 * Some debug options, that can be freely changed during compiler operations.
 	 * This should be only used via getDynamicDebugOptions function.
 	 * @TODO: #1058 this is the same category as lexer-cerr/logger-cerr options, we should add some
 	 * consistent abstraction for that.

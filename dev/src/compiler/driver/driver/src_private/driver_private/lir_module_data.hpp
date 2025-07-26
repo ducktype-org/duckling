@@ -19,6 +19,9 @@ namespace compiler::driver {
 	 * It will be fed to the backend operations to generate the final output.
 	 */
 	struct LIRModuleData final {
+		/**
+		 * @brief The module ID is more or a lass a module name, that will be use by the backend.
+		 */
 		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
 		std::vector<LIRModuleGlobal>
