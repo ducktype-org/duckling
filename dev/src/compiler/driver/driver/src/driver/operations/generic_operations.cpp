@@ -96,7 +96,7 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackageIntoBinary(const fs::File& package_location, BackendType backend) {
+	void compilerEntirePackage(const fs::File& package_location, BackendType backend) {
 		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;

@@ -29,17 +29,17 @@ namespace compiler::driver {
 			// };
 
 			struct BackendOptions final {
-				struct VMBackend {};
+				struct DVMBackend {};
 
 				struct LLVMBackend {};
 
 				// /**
-				//  * If empty, then VMBackend is not available.
+				//  * If empty, then DVM backend is not available.
 				//  */
-				// base::Optional<VMBackend> vm_backend;
+				// base::Optional<VMBackend> dvm_backend;
 
 				// /**
-				//  * If empty, then LLVMBackend is not available.
+				//  * If empty, then LLVM backend is not available.
 				//  */
 				// base::Optional<LLVMBackend> llvm_backend;
 			};

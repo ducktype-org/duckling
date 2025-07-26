@@ -260,7 +260,7 @@ clah::Clah getClahForMain() {
 						path_to_compile,
 						artifact_location.getFilePath().native(),
 					};
-					driver.compilerEntirePackageIntoBinary();
+					driver.compilerEntirePackage();
 
 					return 0;
 				})

@@ -17,8 +17,10 @@ namespace compiler::driver {
 
 	/**
 	 * Temporary interface for compiling the entire package into a single binary.
+	 * It compiler every module into the .o/.dbc files (via queries),
+	 * and also for LLVM backend it links them into a single binary.
 	 */
-	void compilerEntirePackageIntoBinary(const fs::File& package_location, BackendType backend);
+	void compilerEntirePackage(const fs::File& package_location, BackendType backend);
 
 	struct RunOutput final {
 		int exit_code;
