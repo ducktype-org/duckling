@@ -4,33 +4,7 @@
 
 namespace dia_app {
 namespace dia_file {
-    // ----- DIAGNOSTICS FILE SYNTAX -----
-
-    // Display element types:
-    // - (1st top-most) entity <- { "type": "entity", "refers_to": ... }
-    // - (2nd) interact <- { ... "alt_content": ... }
-    // - (3rd) concat, <- []
-    // - (4th) lines, <- { "type": "lines", "content": ... }
-    // - (5th) text, <- "some text" or { "type": "text", ... }
-
-    // Co robi compiler:
-    // - zbiera paramsy do templatek tekstowych
-    // - robi rozkład na content i alt_content
-    // - ustawia podkreślenia
-    // - dodaje metadane o entities
-    // - dodaje explore_edges
-
-    // Co robi view constructor:
-    // - parsuje plik .dia
-    // - aplikuje templatki tekstowe (parsowanie templatki, substitution, dodanie nowych infos)
-    // - skanuje metadane o entities w celu dodania assoc_infos
-    // - zwraca repr wewn state managera
-
-    // Co robi state manager:
-    // - komunikuje się z UI
-    // - formułuje zapytania do view constructora
-    // - utrzymuje stan widoku
-
+    
     struct CodeData {
         struct Location {
             std::string file;
