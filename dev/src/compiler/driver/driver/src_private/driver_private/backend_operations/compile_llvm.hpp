@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../backend_module_data.hpp"
+#include "../lir_module_data.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 
