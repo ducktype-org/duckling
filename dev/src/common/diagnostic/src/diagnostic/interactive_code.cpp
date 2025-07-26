@@ -27,7 +27,7 @@ namespace {
 		auto              lines = source->viewSplitRange(start, end);
 		std::vector<json> v;
 		for (auto& l: lines) {
-			v.emplace_back(l.second.stdString());
+			v.emplace_back(json{{"type", "code"}, {"content", l.second.stdString()}});
 			v.push_back({ { "type", "start_line" }, { "number", l.first + 1 } });
 		}
 		if (!v.empty()) v.pop_back();
