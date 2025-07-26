@@ -60,8 +60,6 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("Print version and exit")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
-			dia::Logger::setImmediatelyDump(options.isFlag("logger-cerr"));
-			lexer::Lexer::setTokenMessages(options.isFlag("lexer-cerr"));
 			if (options.isFlag("version")) {
 				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
 				throw clah::exceptions::SuccessExitException(options);
