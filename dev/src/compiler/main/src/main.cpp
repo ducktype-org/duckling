@@ -240,7 +240,7 @@ clah::Clah getClahForMain() {
 						}
 					);
 
-					auto path_to_compile = options.getValue<fs::File>("module").value();
+					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
 		                                     : compiler::driver::BackendType::LLVM;
@@ -259,7 +259,7 @@ clah::Clah getClahForMain() {
 	                                .addShortDesc("Links builtin library into the final executable.")
 	                                .build())
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   auto path_to_compile = options.getValue<fs::File>("module").value();
+							   auto path_to_compile = options.getPositional<fs::File>(0);
 							   using namespace compiler;
 
 							   compiler::driver::initializeTheCompiler(
