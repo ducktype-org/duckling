@@ -4,6 +4,7 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
+#include <base/stable_hashmap.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
@@ -15,24 +16,39 @@
 
 namespace compiler::frontend {
 
+	class ModuleTree2;
+
 	/**
-	 * @brief Structure representing Duckling  source file.
-	 * It is currently assumed that source files exist only within Module Trees.
+	 * @brief Represents a source file in the Duckling compiler.
 	 */
-	struct SourceFile final {
+	class SourceFile final {
 		fs::File                   path;
 		base::StrID                lang_file_name;
 		FileID                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
-		/**
-		 * @brief Module the file belongs to
-		 * @note: in the future there might be module-less files
-		 */
-		ModuleID linked_module;
+		static base::StableHashMap<FileID, SourceFile> file_map;
 
-		SourceFile(fs::File, ModuleID linked_module);
+		SourceFile(fs::File path);
 
+		void update();
+
+		friend class ModuleTree2;
+	public:
+
+		static Ref<SourceFile> create(fs::File path);
+
+		static Ref<SourceFile> getSourceFile(FileID id);
+
+		static Ref<SourceFile> getSourceFile(const fs::File& file);
+
+		[[nodiscard]] fs::File getPath() const { return path; }
+
+		[[nodiscard]] base::StrID getLangFileName() const {
+			return lang_file_name;
+		}
+
+		[[nodiscard]] FileID getID() const { return id; }
 		/**
 		 * @brief Lazily parses the source file and returns PST
 		 * @return CRef<pst::PST>
@@ -49,7 +65,7 @@ namespace compiler::frontend {
 		/**
 		 * @brief Returns an unstable perfect hash for this SourceFile.
 		 * @details
-		 *   The hash is currently computed based on the file's path.
+		 *   The hash is returns the hash of FileID.
 		 */
 		u64 queryUnstablePerfectHash();
 	};

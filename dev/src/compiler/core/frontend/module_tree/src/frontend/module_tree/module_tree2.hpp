@@ -30,6 +30,7 @@ namespace compiler::frontend {
 	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
 
     class ModuleTreeBuilder;
+    class ModuleTree2Modifier;
     
     /**
      * ModuleTree2 - A more generic and modifiable version of ModuleTree.
@@ -42,15 +43,20 @@ namespace compiler::frontend {
      */
     class ModuleTree2 {
         friend class ModuleTreeBuilder;
-    
+        friend class ModuleTree2Modifier;
+
+        static base::StableHashMap<ModuleID, ModuleTree2> module_map;
+
     public:
         /**
          * Factory method to create ModuleTree2 from filesystem tree.
-         * @param root Pre-constructed std::shared_ptr<fs::FsTree> with a module structure.
+         * @param root Pre-constructed fs::File with a module structure.
          * @return A valid pointer with the root.
          */
-        static std::shared_ptr<ModuleTree2> create(std::shared_ptr<fs::FsTree> root);
-        
+        static Ref<ModuleTree2> create(fs::File root);
+
+        static Ref<ModuleTree2> getModule(ModuleID id);
+
         /**
          * Accessor to module's parent module. A module might not have a parent module.
          * @return If a module has parent module, then a reference to it is passed
@@ -72,21 +78,21 @@ namespace compiler::frontend {
          * @return A reference to the main source file.
          */
         [[nodiscard]]
-        const SourceFile& getMainSourceFile() const;
-        
+        base::CRef<SourceFile> getMainSourceFile() const;
+
         /**
          * Accesses the source files of the module.
          * @return A std::vector<SourceFile> with source files to iterate over.
          */
         [[nodiscard]]
-        const std::vector<SourceFile>& getSourceFiles() const;
-        
+        std::vector<base::CRef<SourceFile>> getSourceFiles() const;
+
         /**
          * Accesses the submodules located in this submodule. Submodules are indexed by their name.
          * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
          */
         [[nodiscard]]
-        const base::HashMap<base::StrID, std::shared_ptr<ModuleTree2>>& getSubmodules() const;
+        const base::HashMap<base::StrID, base::CRef<ModuleTree2>>& getSubmodules() const;
         
         /**
          * Accesses all the other files that are located inside the module.
@@ -95,8 +101,8 @@ namespace compiler::frontend {
          */
         [[nodiscard]]
         const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
-        
-        /**W
+
+        /**
          * Parses the name of the module.
          * @return base::StrID with the name. `A.dmf -> A`, `/.../module/ -> module`.
          */
@@ -118,13 +124,6 @@ namespace compiler::frontend {
         ModuleID getID() const;
         
         /**
-         * Gets the current hash of the module tree (changes with modifications).
-         * @return Hash value representing current state.
-         */
-        [[nodiscard]]
-        u64 getUnstableHash() const;
-        
-        /**
          * Checks if the module tree has been modified since last hash calculation.
          * @return True if modified, false otherwise.
          */
@@ -133,17 +132,6 @@ namespace compiler::frontend {
         
     private:
         ModuleTree2();
-        
-        /**
-         * Modification operations - private to ensure controlled access.
-         */
-        void addSourceFile(query::Context& ctx, const SourceFile& file);
-        void removeSourceFile(query::Context& ctx, FileID file_id);
-        void setMainSourceFile(query::Context& ctx, const SourceFile& file);
-        void addSubmodule(query::Context& ctx, base::StrID name, std::shared_ptr<ModuleTree2> submodule);
-        void removeSubmodule(query::Context& ctx, base::StrID name);
-        void addOtherFile(query::Context& ctx, const fs::File& file);
-        void removeOtherFile(query::Context& ctx, const fs::File& file);
         
         /**
          * Updates the hash after modifications.
@@ -169,13 +157,12 @@ namespace compiler::frontend {
         ModuleID m_id;
         u64 m_hash;
         bool m_modified;
-        
-        base::Optional<std::weak_ptr<ModuleTree2>> m_parent;
-        std::shared_ptr<fs::FsTree> m_fs_tree;
-        
-        base::Optional<SourceFile> m_main_source_file;
-        std::vector<SourceFile> m_source_files;
-        base::HashMap<base::StrID, std::shared_ptr<ModuleTree2>> m_submodules;
+
+        base::Optional<base::Ref<ModuleTree2>> m_parent;
+
+        base::Optional<base::Ref<SourceFile>> m_main_source_file;
+        std::vector<base::Ref<SourceFile>> m_source_files;
+        base::HashMap<base::StrID, base::Ref<ModuleTree2>> m_submodules;
         base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
     };
     
@@ -189,42 +176,37 @@ namespace compiler::frontend {
         /**
          * Creates a new builder instance.
          */
-        static std::unique_ptr<ModuleTreeBuilder> create();
-        
-        /**
-         * Creates a builder from existing filesystem tree.
-         */
-        static std::unique_ptr<ModuleTreeBuilder> createFromFs(std::shared_ptr<fs::FsTree> root);
-        
+        static base::Box<ModuleTreeBuilder> create();
+
         /**
          * Adds a source file to the module being built.
          */
-        ModuleTreeBuilder& addSourceFile(const SourceFile& file);
-        
+       bool addSourceFile(base::Ref<SourceFile> file);
+
         /**
          * Sets the main source file for the module.
          */
-        ModuleTreeBuilder& setMainSourceFile(const SourceFile& file);
+        bool setMainSourceFile(base::Ref<SourceFile> file);
         
         /**
          * Adds a submodule to the module being built.
          */
-        ModuleTreeBuilder& addSubmodule(base::StrID name, std::shared_ptr<ModuleTree2> submodule);
-        
+        bool addSubmodule(base::StrID name, base::Ref<ModuleTree2> submodule);
+
         /**
          * Adds an other file to the module being built.
          */
-        ModuleTreeBuilder& addOtherFile(const fs::File& file);
+        bool addOtherFile(const fs::File& file);
         
         /**
          * Sets the name of the module.
          */
-        ModuleTreeBuilder& setName(base::StrID name);
+        bool setName(base::StrID name);
         
         /**
          * Sets the parent module.
          */
-        ModuleTreeBuilder& setParent(std::shared_ptr<ModuleTree2> parent);
+        bool setParent(base::Ref<ModuleTree2> parent);
         
         /**
          * Validates the current state of the builder.
@@ -238,13 +220,36 @@ namespace compiler::frontend {
          * After calling this, the builder becomes invalid.
          * @return The constructed ModuleTree2.
          */
-        std::shared_ptr<ModuleTree2> finalize();
-        
+        base::Ref<ModuleTree2> finalize();
+
     private:
         ModuleTreeBuilder();
-        
-        std::shared_ptr<ModuleTree2> m_module;
+
         base::StrID m_name;
         bool m_finalized;
+    };
+
+    class ModuleTree2Modifier {
+    public:
+        /**
+         * Modification operations - private to ensure controlled access.
+         */
+        bool addSourceFile(query::Context& ctx, base::Ref<SourceFile> file);
+        bool removeSourceFile(query::Context& ctx, FileID file_id);
+        bool setMainSourceFile(query::Context& ctx, base::Ref<SourceFile> file);
+        bool addSubmodule(query::Context& ctx, base::Ref<ModuleTree2> submodule);
+        bool removeSubmodule(query::Context& ctx, ModuleID id);
+        bool addOtherFile(query::Context& ctx, const fs::File& file);
+        bool removeOtherFile(query::Context& ctx, const fs::File& file);
+        bool setParent(query::Context& ctx, base::Ref<ModuleTree2> parent);
+        bool removeParent(query::Context& ctx);
+
+        static bool removeModule(query::Context& ctx, ModuleID module_id);
+
+        static void fileModified(
+            query::Context& ctx, const fs::File& file
+        );
+    private:
+        base::Ref<ModuleTree2> m_module;
     };
 }

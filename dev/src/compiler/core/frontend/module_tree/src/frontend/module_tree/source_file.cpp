@@ -1,4 +1,7 @@
 #include "source_file.hpp"
+#ifdef DEBUG
+#include <unordered_set>
+#endif
 
 #include <base/exceptions.hpp>
 
@@ -6,19 +9,75 @@
 
 namespace {
 	using ContentMap
-		= base::HashMap<std::filesystem::path, base::SharedView, std::hash<std::filesystem::path>>;
+		= base::HashMap<std::filesystem::path, base::SharedView>;
 	ContentMap to_content;
+
+	base::HashMap<std::filesystem::path, compiler::frontend::FileID> file_id_map;
+#ifdef DEBUG
+	std::unordered_set<compiler::frontend::FileID> changed_files_ids;
+#endif
 }
 
 namespace compiler::frontend {
-	SourceFile::SourceFile(fs::File path, ModuleID module_id):
+	SourceFile::SourceFile(fs::File path):
 		  path(std::move(path)),
-		  id(FileID::next()),
-		  linked_module(module_id) {
+		  id(FileID::next()) {
 		lang_file_name = base::StrID(this->path.getFilePath().stem().c_str());
 		// Add or replace file content in cache
 		auto abs_path = this->path.getFilePath().absolute().getPath();
-		if (!to_content.contains(abs_path)) to_content.put(abs_path, this->path.getContent());
+		to_content.put(abs_path, this->path.getContent());
+		file_id_map.put(abs_path, id);
+		file_map.put(id, *this);
+	}
+
+	Ref<SourceFile> SourceFile::create(fs::File path) {
+		auto abs_path = path.getFilePath().absolute().getPath();
+
+		if (!to_content.contains(abs_path)){
+			return {new SourceFile(std::move(path))};
+		}
+
+		CORE_ASSERT(!to_content.at(abs_path).view() != this->path.getContent().view(), base::strConcat(
+			"SourceFile with path `", abs_path.string(), "` already exists in cache with different content!"
+		));
+
+		return getSourceFile(path);
+	}
+
+	Ref<SourceFile> SourceFile::getSourceFile(FileID id) {
+		#ifdef DEBUG
+		CORE_ASSERT(
+			!changed_files_ids.contains(id),
+			"SourceFile with ID " + std::to_string(id.asInt()) + " has changed since last query. Please use the new FileID."
+		);
+		#endif
+		CORE_ASSERT(
+			file_map.contains(id),
+			"SourceFile with ID " + std::to_string(id.asInt()) + " does not exist!"
+		);
+		return file_map.at(id);
+	}
+
+	Ref<SourceFile> SourceFile::getSourceFile(const fs::File& file) {
+		auto abs_path = file.getFilePath().absolute().getPath();
+		CORE_ASSERT(file_id_map.contains(abs_path), "SourceFile with path `" + abs_path.string() + "` does not exist!");
+		return getSourceFile(file_id_map.at(abs_path));
+	}
+
+	void SourceFile::update() {
+		auto abs_path = this->path.getFilePath().absolute().getPath();
+		CORE_ASSERT(to_content.contains(abs_path), "SourceFile with path `" + abs_path.string() + "` does not exist in cache!");
+		if (to_content.at(abs_path).view() != this->path.getContent().view()) {
+			// If content has changed, update the cache
+			#ifdef DEBUG
+			changed_files_ids.insert(id);
+			#endif
+			file_map.erase(id);
+			id = FileID::next();
+			to_content.put(abs_path, this->path.getContent());
+			file_id_map.put(abs_path, id);
+			file_map.put(id, *this);
+		}
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
@@ -39,12 +98,6 @@ namespace compiler::frontend {
 	}
 
 	u64 SourceFile::queryUnstablePerfectHash() {
-		static u64                             next_hash = 0;
-		static base::HashMap<std::string, u64> hash_map;
-		std::string                            abs_path = path.getFilePath().absolute().getPath();
-		if (hash_map.contains(abs_path)) return hash_map.at(abs_path);
-		u64 hash = next_hash++;
-		hash_map.put(abs_path, hash);
-		return hash;
+		return id.queryUnstablePerfectHash();
 	}
 }
