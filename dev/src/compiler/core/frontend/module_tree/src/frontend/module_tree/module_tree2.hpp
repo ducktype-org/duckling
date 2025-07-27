@@ -32,15 +32,6 @@ namespace compiler::frontend {
     class ModuleTreeBuilder;
     class ModuleTree2Modifier;
     
-    /**
-     * ModuleTree2 - A more generic and modifiable version of ModuleTree.
-     * 
-     * Key improvements:
-     * - Supports adding/removing files and modules
-     * - Hash-based change tracking
-     * - Builder pattern for construction
-     * - More abstract operations
-     */
     class ModuleTree2 {
         friend class ModuleTreeBuilder;
         friend class ModuleTree2Modifier;
