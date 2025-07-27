@@ -101,6 +101,7 @@ namespace lang_def {
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
@@ -126,6 +127,8 @@ namespace lang_def {
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
 			{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
+			{ Keyword::BCGlobalConstructor, "constructor", KeywordFlags() },
+			{ Keyword::BCGlobalDestructor, "destructor", KeywordFlags() },
 			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },

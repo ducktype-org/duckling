@@ -1,0 +1,10 @@
+type fun: g_ctor { } void
+
+global_data g i64 {
+    constructor: g_ctor,
+};
+
+function main {
+    mov_l64_g64 ret_val, g;
+    ret;
+}

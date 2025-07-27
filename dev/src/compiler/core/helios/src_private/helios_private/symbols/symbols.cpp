@@ -73,8 +73,9 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
-				if (el->getParent().has_value())
-					return global_variable_pst_contex(el->getParent().value().unlock(ctx));
+				// we panic if there is no parent:
+				return global_variable_pst_contex(el->getParent().value().unlock(ctx));
+
 			default:
 				CORE_PANIC("Unexpected pst path of variable");
 			}
@@ -126,7 +127,8 @@ namespace compiler::helios {
 		);
 		std::vector<SymID> output;
 		output.reserve(symbol_table.size());
-		for (auto& symbol: symbol_table) output.push_back(GetSymRef_Functor::make(symbol.ref()));
+
+		for (auto& symbol: symbol_table) output.push_back(GetSymRef_Functor::make(&symbol));
 		return output;
 	}
 

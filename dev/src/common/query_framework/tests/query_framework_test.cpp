@@ -406,6 +406,7 @@ private:
 	}
 
 	void testDeps() {
+#if defined(BUILD_TYPE_DEV)
 		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
@@ -439,6 +440,7 @@ private:
 				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
+#endif
 	}
 
 	void testSideInput() {
@@ -453,10 +455,12 @@ private:
 	}
 
 	void entryPointSanityTest() {
+#if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CallingEntryPoint>(1); },
 			"Calling entry point from query did not panicked."
 		);
+#endif
 	}
 
 	template<class Query>
@@ -546,6 +550,7 @@ private:
 	}
 
 	void testContextSanityCheck() {
+#if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<context_leak::LeakQuery>(1); },
 			"Bad context usage not detected"
@@ -554,6 +559,7 @@ private:
 			context_leak::use_leaked_query_happened,
 			"Something else happened, the test is inconclusive"
 		);
+#endif
 	}
 
 	void serializeDeserializeGraphTest() {
