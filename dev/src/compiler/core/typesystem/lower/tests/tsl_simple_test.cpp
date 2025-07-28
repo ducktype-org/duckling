@@ -284,7 +284,7 @@ private:
 				);
 			}
 			else {
-				variant_default { fail("Layout of tuple type should be tuple-like."); }
+				fail("Layout of tuple type should be tuple-like.");
 			}
 			testPrinting(tuple_layout, ctx, true);
 		});
@@ -307,13 +307,12 @@ private:
 						my_class_interface.resolve(base::StrID(c_str), ctx),
 						TypeInterface::SingleMatch,
 						m
-					) 
-					else {
+					) {
 						return m.best_match.getSymbol();
 					}
 
 					CORE_PANIC("Could not resolve field.");
-				}
+				};
 
 			const SymID a_field_symbol = get_field_symbol("a");
 			const SymID b_field_symbol = get_field_symbol("b");

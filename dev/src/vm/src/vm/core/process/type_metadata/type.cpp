@@ -11,6 +11,7 @@
 #include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
+#include <concepts>
 #include <utility>
 
 namespace vm {

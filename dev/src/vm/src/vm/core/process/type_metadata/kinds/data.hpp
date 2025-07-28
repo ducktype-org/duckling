@@ -18,7 +18,9 @@ namespace vm::kind {
 	};
 
 	struct Data {
-		STRONG_TYPEDEF_INT(FieldID, u64)
+		// @todo: change to strongly typed when it will be in utils
+		// @TODO: check if it is possible to make this strong typed ex. (operator[] in type.hpp)
+		using FieldID = u64;
 
 		base::HashMap<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>              fields;

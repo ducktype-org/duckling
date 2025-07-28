@@ -178,7 +178,8 @@ namespace base {
 			  private_optional(value) {}
 
 		template<class... Args>
-		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args
+		requires std::is_constructible_v<T, Args...>
+		constexpr explicit Optional(Args&&... args
 		) noexcept(std::is_nothrow_constructible_v<T, Args...>):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
