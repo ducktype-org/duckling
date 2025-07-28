@@ -97,7 +97,6 @@ namespace base {
 				DETAIL_THROW_PANIC(                                                        \
 					"    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__ \
 				);                                                                         \
-			[[assume(cond)]];                                                              \
 		} while (0) /*do{ } while(0) construction only to force semicolon*/
 #else
 	/**
