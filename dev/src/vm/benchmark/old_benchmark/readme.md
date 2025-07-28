@@ -1,4 +1,4 @@
-\page vm-benchmark-old Rift VM Old Benchmark
+# Rift VM Old Benchmark
 
 - \subpage vm-old-out-files-structure
 - \subpage vm-old-andrzej-raport

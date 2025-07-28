@@ -2,9 +2,11 @@ include(CMakePrintHelpers)
 
 # When VM runs code for a long time in TC mode, without the "tailcall" optimization
 # enabled, it will run out of stack space.
-function(duck_disable_tc_in_debug test_name test_set)
-        if(test_set STREQUAL "vm_tc")
-                set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED "$<$<CONFIG:Debug>:True>")
+function(duck_disable_tc_when_not_opt test_name test_set)
+        if (test_set STREQUAL "vm_tc")
+                if(NOT CMAKE_BUILD_TYPE MATCHES ".*Opt.*")
+                        set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED TRUE)
+                endif()
         endif()
 endfunction()
 
@@ -34,14 +36,14 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_correctness_test correctness/correctness.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_disable_tc_in_debug(correctness_test ${test_set})
+        duck_disable_tc_when_not_opt(correctness_test ${test_set})
 
         duck_add_test_custom(vm ${test_set}_debugger_test debugger/debugger_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_debugger_infinite_test debugger/debugger_infinite_tests.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_disable_tc_in_debug("debugger_infinite_test" ${test_set})
+        duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
 
         duck_add_test_custom(vm ${test_set}_building_test loader/assembly/bc_building.cpp
                 USES ${libvm} Tester ${vmtester})
