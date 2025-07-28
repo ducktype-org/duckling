@@ -13,7 +13,7 @@ on:
 env:
   DEV_DIR: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
-  DOCS_DIR: ${{ github.workspace }}/dev/build/docs
+  DOCS_DIR: ${{ github.workspace }}/dev/build/docs/config
   WWW_HOST: ducktype.org
 
 jobs:

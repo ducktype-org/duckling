@@ -1,5 +1,3 @@
-@page scripts-readme Scripts
-
 # Scripts
 
 This folder contains scripts we use in the project.
@@ -12,4 +10,4 @@ This folder contains scripts we use in the project.
 * [VM](VM/) - scripts for the Duckling Virtual Machine,
 * [toolbox](toolbox/) - python modules used by `toolbox.py`.
 
-@subpage cmake-scripts-readme
+* [cmake](./cmake/readme.md)

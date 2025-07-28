@@ -1,4 +1,4 @@
-@page cmake-scripts-readme Make scripts
+# Make scripts
 
 These scripts should be used in a directory where `make` is enabled. For ease of use their copies are located in subdirectory script/ of the build directory. Any use of make should copy the changes from their original location to the build directory.
 

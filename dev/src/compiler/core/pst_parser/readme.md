@@ -1,3 +1,3 @@
-\page pst-parser-module PST parser
+# PST parser
 
 \subpage element-hierarchy
