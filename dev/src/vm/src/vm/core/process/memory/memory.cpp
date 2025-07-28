@@ -53,9 +53,10 @@ namespace vm {
 		return createBlock(heap_allocator.allocate(type));
 	}
 
-	auto Memory::allocateHeapN(TypeCRef type, u64 n) -> Ref<Block> {
+	auto Memory::dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<Block> {
 		std::lock_guard lock(mutex);
-		return createBlock(heap_allocator.allocateN(type, n));
+		auto            inner_type = type->getInnerType().value();
+		return createBlock(heap_allocator.dynTableAllocateN(type, inner_type, n));
 	}
 
 	auto Memory::allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
@@ -63,14 +64,15 @@ namespace vm {
 		return createBlock(dummy_allocator.allocate(type, stack_pointer));
 	}
 
-	auto Memory::reallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void {
+	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void {
 		std::lock_guard lock(mutex);
-		if (n * type->getInnerType().value()->getSize() < block->data.view.size())
-			throw exceptions::VMReallocTruncationException();
-		BlockData new_block_data = heap_allocator.allocateN(type, n);
-		auto      old_view       = block->data.view;
-		auto      new_view       = new_block_data.view;
-		std::memcpy(new_view.getBegin(), old_view.getBegin(), old_view.size());
+		auto            inner_type     = type->getInnerType().value();
+		BlockData       new_block_data = heap_allocator.dynTableAllocateN(type, inner_type, n);
+		auto            old_view       = block->data.view;
+		auto            new_view       = new_block_data.view;
+		std::memcpy(
+			new_view.getBegin(), old_view.getBegin(), std::min(old_view.size(), new_view.size())
+		);
 		heap_allocator.deallocate(&block->data);
 		block->data = new_block_data;
 	}

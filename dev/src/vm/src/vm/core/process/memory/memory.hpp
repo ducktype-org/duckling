@@ -70,14 +70,19 @@ namespace vm {
 
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
-		auto allocateHeapN(TypeCRef type, u64 n) -> Ref<Block>;
+		// Assumes type is a dynamic table type.
+		auto dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<Block>;
 
 		/**
 		 * @brief Creates a block with externally managed data life-time.
 		 */
 		auto allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
 
-		auto reallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void;
+		/**
+		 * @brief Dynamically reallocates block data.
+		 * @note Assumes that type is a dynamic table type and reallocates it to
+		   a table of size n with elements of type equal to type's inner type. */
+		auto dynTableReallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void;
 
 		void freeBlock(Ref<Block> block);
 

@@ -5,10 +5,15 @@ class DynamicTableVmTest: public VmTestSuite {
 #define TESTER_CLASS DynamicTableVmTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(dynArrSum); }
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(dynArrSum);
+		TESTER_ADD_TEST(lea);
+	}
 
 private:
 	void dynArrSum() { runTestOnVm("dyn_arr_sum.dbc", "", "55", {}); }
+
+	void lea() { runTestOnVm("lea.dbc", "", "4", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/dynamic_table/");

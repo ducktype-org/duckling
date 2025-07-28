@@ -829,11 +829,14 @@ namespace vm {
 			auto new_elem_count = derefStack<u64>(local_stack, instr[1].arg0);
 
 			if (tbl_pointer.isNull()) {
-				auto new_block = thread.process_memory.allocateHeapN(element_type, new_elem_count);
+				auto new_block
+					= thread.process_memory.dynTableAllocateHeapN(element_type, new_elem_count);
 				thread.process_memory.setPointer(tbl_pointer, { new_block, 0 });
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
-				thread.process_memory.reallocateBlockDataN(tbl_block, element_type, new_elem_count);
+				thread.process_memory.dynTableReallocateBlockDataN(
+					tbl_block, element_type, new_elem_count
+				);
 			}
 		}
 		FUNCTION_CONT(2);

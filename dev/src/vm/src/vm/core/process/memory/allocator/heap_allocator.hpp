@@ -28,12 +28,14 @@ namespace vm {
 			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
 		}
 
-		BlockData allocateN(TypeCRef type, u64 n) {
-			auto             size = type->getInnerType().value()->getSize() * n;
+		// Only used for dynamic table (re)allocation.
+		// Assumes that table_type is a dynamic table type with inner type inner_type.
+		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
+			auto             size = inner_type->getSize() * n;
 			auto             ptr  = new std::byte[size];
 			base::OwningView view{ ptr, size };
 			allocated.push_back(std::move(view));
-			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
+			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
 		}
 
 		void deallocate(Ref<BlockData> data) final {
