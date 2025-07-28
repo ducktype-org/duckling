@@ -224,6 +224,41 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(udiv, 64, u64, /=)
 	DEFINE_ARITHMETIC_OP(udiv, 32, u32, /=)
 
+#define DEFINE_BOOLEAN_OP(NAME, BITS_SIZE, TYPE, OP)                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				= derefStack<TYPE>(local_stack, instr->arg0)                             \
+					OP derefStack<TYPE>(local_stack, instr->arg1);                       \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				= derefStack<TYPE>(local_stack, instr->arg0)                             \
+					OP derefStack<TYPE>(local_stack, instr->arg1);                       \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}
+
+	DEFINE_BOOLEAN_OP(and, 64, i64, &&)
+	DEFINE_BOOLEAN_OP(and, 32, i32, &&)
+	DEFINE_BOOLEAN_OP(or, 64, i64, ||)
+	DEFINE_BOOLEAN_OP(or, 32, i32, ||)
+	DEFINE_BOOLEAN_OP(xor, 64, i64, !=)
+	DEFINE_BOOLEAN_OP(xor, 32, i32, !=)
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(not_l64)(FUNCTION_ARGS) {
+		{ derefStack<i64>(local_stack, instr->arg0) = !derefStack<i64>(local_stack, instr->arg0); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(not_l32)(FUNCTION_ARGS) {
+		{ derefStack<i32>(local_stack, instr->arg0) = !derefStack<i32>(local_stack, instr->arg0); }
+		FUNCTION_CONT(1);
+	}
+
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \

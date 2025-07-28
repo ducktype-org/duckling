@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
+		TESTER_ADD_TEST(verySimpleBooleanTest);
 	}
 
 private:
@@ -72,6 +73,8 @@ private:
 	}
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
+
+	void verySimpleBooleanTest() { runTestOnVm("very_simple_boolean.dbc", "", "1", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
