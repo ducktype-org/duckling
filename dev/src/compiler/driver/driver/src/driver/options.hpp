@@ -23,7 +23,7 @@ namespace compiler::driver {
 		/**
 		 * Options used for actual compilation of the source code.
 		 */
-		struct CompilationOptions {
+		struct CompilationOptions final {
 			// struct OptimizationOptions {
 			//     u64 level;
 			// };
@@ -51,10 +51,10 @@ namespace compiler::driver {
 		};
 
 		struct DebugOptions final {
-			bool lexer_cerr;
-			bool logger_cerr;
-			bool dump_llvm_ir;
-			bool dump_llvm_asm;
+			bool lexer_cerr  = false;
+			bool logger_cerr = false;
+			bool dump_llvm_ir = false;
+			bool dump_llvm_asm = false;
 		};
 
 		struct ArtifactsOptions final {
@@ -69,7 +69,7 @@ namespace compiler::driver {
 			// bool rm_artifacts_after_compilation = false;
 		};
 
-		struct PackageInfo {
+		struct PackageInfo final {
 			std::string package_name;
 			std::string package_path;
 		};
@@ -98,12 +98,12 @@ namespace compiler::driver {
 	 * @important: this structure is used only to initialize the compiler, not to store the options
 	 * themself.
 	 */
-	struct CompilerModeOfOperationAndOptions {
+	struct CompilerModeOfOperationAndOptions final {
 		/**
 		 * Bare mode, where compiler doesn't do any initializations apart from debug options,
 		 * but you can still (try to) use its internal functions by hand.
 		 */
-		struct BareMode {
+		struct BareMode final {
 			options_types::DebugOptions debug_options;
 		};
 
@@ -111,7 +111,7 @@ namespace compiler::driver {
 		 * Package compilation mode, compiler is used to compile a package
 		 * and its dependencies.
 		 */
-		struct PackageCompilationMode {
+		struct PackageCompilationMode final {
 			// options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;

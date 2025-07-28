@@ -32,7 +32,7 @@ namespace compiler::backend_llvm {
 	 * @brief Encapsulates a llvm module in a way
 	 * that does not require to include llvm headers.
 	 */
-	struct Module {
+	struct Module final {
 	private:
 		// this is done this way, to avoid including llvm headers here:
 		Box<ModuleImpl> impl;
