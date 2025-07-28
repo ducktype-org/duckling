@@ -1,9 +1,9 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
-#include <linker/link.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
+#include <linker/link.hpp>
 
 #include <base/string_id.hpp>
 
@@ -29,7 +29,6 @@ public:
 	}
 
 private:
-
 	void objFileGenerated() {
 		using namespace compiler;
 
@@ -47,7 +46,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({module, driver::BackendType::LLVM});
+			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
 			ASSERT_TRUE(module_o.FILE.exists());
 
@@ -71,15 +70,14 @@ private:
 
 		auto module
 			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
-		
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({module, driver::BackendType::LLVM});
+			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
-			auto module_name
-				= base::StrID(base::strConcat("module_", module.asInt()).c_str());
+			auto module_name = base::StrID(base::strConcat("module_", module.asInt()).c_str());
 
-			auto asm_file = module_name.str() + ".s";
+			auto asm_file     = module_name.str() + ".s";
 			auto llvm_ir_file = module_name.str() + ".ll";
 
 			assertTrue(std::filesystem::exists(asm_file), "Assembly file does not exist");
@@ -92,7 +90,7 @@ private:
 
 	void dvmBackendRuns() {
 		using namespace compiler;
-		
+
 		driver::initializeTheCompiler(
 			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.compilation_artifacts = {
@@ -130,7 +128,9 @@ private:
 		);
 
 		// this also checks if llvm IR lib compile and link into the executable:
-		driver::compilerEntirePackage(fs::File(path("modules/functions")), driver::BackendType::LLVM);
+		driver::compilerEntirePackage(
+			fs::File(path("modules/functions")), driver::BackendType::LLVM
+		);
 		assertTrue(
 			std::filesystem::exists(artifacts_path / "package_llvm.exe"),
 			"Object file does not exist"
@@ -155,24 +155,18 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({module, driver::BackendType::LLVM});
+			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
-			assertTrue(
-				module_o.FILE.exists(),
-				"Object file does not exist"
-			);
+			assertTrue(module_o.FILE.exists(), "Object file does not exist");
 
 			std::filesystem::remove(module_o.FILE.getFilePath().getPath());
 		});
 
-	
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module_dbc = ctx.query<driver::CompileModule>({module, driver::BackendType::DVM});
-			assertTrue(
-				module_dbc.FILE.exists(),
-				"Object file does not exist"
-			);
+			auto module_dbc
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM });
+			assertTrue(module_dbc.FILE.exists(), "Object file does not exist");
 
 			std::filesystem::remove(module_dbc.FILE.getFilePath().getPath());
 
@@ -199,8 +193,8 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-	
-			auto run_result = driver::runModuleOnDVM(ctx, module, false);;
+			auto run_result = driver::runModuleOnDVM(ctx, module, false);
+			;
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(5, run_result.value().exit_code);
 		});

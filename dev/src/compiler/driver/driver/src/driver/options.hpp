@@ -51,9 +51,9 @@ namespace compiler::driver {
 		};
 
 		struct DebugOptions final {
-			bool lexer_cerr  = false;
-			bool logger_cerr = false;
-			bool dump_llvm_ir = false;
+			bool lexer_cerr    = false;
+			bool logger_cerr   = false;
+			bool dump_llvm_ir  = false;
 			bool dump_llvm_asm = false;
 		};
 
