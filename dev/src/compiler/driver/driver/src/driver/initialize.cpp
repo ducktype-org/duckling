@@ -34,7 +34,10 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
-		// @TODO #PR: maybe validate that init was done here
+		CORE_ASSERT(
+			init::wasInitObject(),
+			"InitObject should be used before call to the initializeTheCompiler function!"
+		);
 
 		CORE_ASSERT(!is_initialized, "Compiler is already initialized!");
 		is_initialized = true;
