@@ -4,6 +4,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
+#include <global_state/options.hpp>
 
 #include <base/string_id.hpp>
 
@@ -18,31 +19,36 @@ class DriverTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DriverTest
 
+	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// note: all of those tests have to work on different 
+		// modules, since otherwise query will cache the results, and tests
+		// wont test what they are supposed to:
 		TESTER_ADD_TEST(objFileGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(packageCompiles);
 		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
+
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.compilation_artifacts = {
+					.artifacts_path = artifacts_path,
+				},
+				.debug_options         = {}
+			}
+		);
 	}
 
 private:
 	void objFileGenerated() {
 		using namespace compiler;
 
-		driver::initializeTheCompiler(
-			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.compilation_artifacts = {
-					.artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath(),
-				},
-				.debug_options         = {}
-			}
-		);
-
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions_1")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -56,20 +62,16 @@ private:
 
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
-		driver::initializeTheCompiler(
-			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.compilation_artifacts = {
-					.artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath(),
-				},
-				.debug_options         = {
-					.dump_llvm_ir  = true,
-					.dump_llvm_asm = true,
-				}
-			}
+
+		global_state::getDynamicDebugOptions()->llvm_dump_ir = true;
+		global_state::getDynamicDebugOptions()->llvm_dump_asm = true;
+		defer(
+			global_state::getDynamicDebugOptions()->llvm_dump_ir = false;
+			global_state::getDynamicDebugOptions()->llvm_dump_asm = false;
 		);
 
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions_2")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -91,19 +93,8 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 
-		driver::initializeTheCompiler(
-			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.compilation_artifacts = {
-					.artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath(),
-				},
-				.debug_options         = {
-				}
-			}
-		);
-
-
 		auto module
-			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions")));
+			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions_3")));
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -116,39 +107,25 @@ private:
 
 	void packageCompiles() {
 		using namespace compiler;
-		auto artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-		driver::initializeTheCompiler(
-			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.compilation_artifacts = {
-					.artifacts_path = artifacts_path,
-				},
-				.debug_options         = {
-				}
-			}
-		);
 
 		// this also checks if llvm IR lib compile and link into the executable:
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions")), driver::BackendType::LLVM
+			fs::File(path("modules/functions_4")), driver::BackendType::LLVM
 		);
+
+		auto exe_path = artifacts_path / "package_llvm.exe";
 		assertTrue(
-			std::filesystem::exists(artifacts_path / "package_llvm.exe"),
-			"Object file does not exist"
+			std::filesystem::exists(exe_path),
+			base::strConcat("Executable file does not exist: ", exe_path.native())
+		);
+
+		driver::compilerEntirePackage(
+			fs::File(path("modules/functions_4")), driver::BackendType::DVM
 		);
 	}
 
 	void globalsTest() {
 		using namespace compiler;
-		auto artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-		driver::initializeTheCompiler(
-			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.compilation_artifacts = {
-					.artifacts_path = artifacts_path,
-				},
-				.debug_options         = {
-				}
-			}
-		);
 
 		auto module
 			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/globals")));
@@ -178,16 +155,7 @@ private:
 
 	void globalsInitializationTest() {
 		using namespace compiler;
-		auto artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-		driver::initializeTheCompiler(
-			driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.compilation_artifacts = {
-					.artifacts_path = artifacts_path,
-				},
-				.debug_options         = {
-				}
-			}
-		);
+
 		auto module = query::entryPoint<frontend::QueryModuleTree>(
 			fs::File(path("modules/globals_initialization"))
 		);
@@ -202,4 +170,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/src/compiler/driver/tests/")
+TESTER_COMMON_MAIN("/src/compiler/driver/driver/tests/")
