@@ -1,4 +1,4 @@
-@page lexer-module Lexer
+# Lexer
 
 @tableofcontents
 

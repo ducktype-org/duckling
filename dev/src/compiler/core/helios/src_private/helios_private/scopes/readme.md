@@ -1,6 +1,4 @@
-\page helios-scopes HELIOS Scopes
-
-# HELIOS Scopes API
+# HELIOS Scopes
 
 Note: This is mostly to list operations, see docs for details.
 
