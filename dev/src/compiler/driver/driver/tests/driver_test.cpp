@@ -1,10 +1,10 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <global_state/options.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <global_state/options.hpp>
 
 #include <base/string_id.hpp>
 
@@ -23,7 +23,7 @@ class DriverTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// note: all of those tests have to work on different 
+		// note: all of those tests have to work on different
 		// modules, since otherwise query will cache the results, and tests
 		// wont test what they are supposed to:
 		TESTER_ADD_TEST(objFileGenerated);
@@ -63,12 +63,10 @@ private:
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 
-		global_state::getDynamicDebugOptions()->llvm_dump_ir = true;
+		global_state::getDynamicDebugOptions()->llvm_dump_ir  = true;
 		global_state::getDynamicDebugOptions()->llvm_dump_asm = true;
-		defer(
-			global_state::getDynamicDebugOptions()->llvm_dump_ir = false;
-			global_state::getDynamicDebugOptions()->llvm_dump_asm = false;
-		);
+		defer(global_state::getDynamicDebugOptions()->llvm_dump_ir  = false;
+		      global_state::getDynamicDebugOptions()->llvm_dump_asm = false;);
 
 		auto module
 			= query::entryPoint<frontend::QueryModuleTree>(fs::File(path("modules/functions_2")));
