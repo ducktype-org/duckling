@@ -33,7 +33,7 @@ namespace compiler::driver {
 			case BackendType::LLVM:
 				return ".o";
 			case BackendType::DVM:
-				return ".dvc";
+				return ".dbc";
 			default:
 				CORE_PANIC("bad backend type");
 			}
