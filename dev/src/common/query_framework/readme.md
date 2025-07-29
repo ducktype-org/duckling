@@ -1,4 +1,4 @@
-@page query-framework-module Query Framework
+# Query Framework
 @tableofcontents
 
 This module provides implementation of Query Framework used in compiler.

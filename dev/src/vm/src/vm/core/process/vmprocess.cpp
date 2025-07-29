@@ -4,10 +4,9 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
-#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
@@ -57,26 +56,25 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::runFunction(
+	std::expected<api::Response, api::ApiError> VMProcess::runFunction(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		if (!loaded_program.has_value())
-			return std::unexpected(api::CoreOperationError{ api::RunError{} });
+		if (!loaded_program.has_value()) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		bool response
 			= getMainVMThread().spawnThreadAndRun(&*loaded_program, func_name, run_arguments);
-		if (!response) return std::unexpected(api::CoreOperationError{ api::RunError{} });
+		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::join() {
+	std::expected<api::Response, api::ApiError> VMProcess::join() {
 		// @TODO: check status
 		auto& thread          = getMainVMThread();
 		auto& opt_exec_thread = thread.exec_thread;
 		if (!opt_exec_thread || !opt_exec_thread->joinable())
-			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
+			return std::unexpected(api::ApiError{ api::JoinError{} });
 
 		opt_exec_thread->join();
 		opt_exec_thread.reset();
@@ -87,21 +85,18 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(api::CoreOperationError(
+				return std::unexpected(api::ApiError(
 					api::OtherError("Execution panicked with error: " + panicked.error_message)
 				));
 			}
 			variant_default {
-				return std::unexpected(
-					api::CoreOperationError(api::OtherError("Unexpected run status!"))
-				);
+				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));
 			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::input(
-		const api::request::Input& request
+	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request
 	) {
 		// @TODO: https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
@@ -110,25 +105,32 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::output() {
+	std::expected<api::Response, api::ApiError> VMProcess::output() {
 		auto        lock = io.lock();
 		std::string content;
 		// Cannot read output from api when IO is being redirected
 		if (io_redirecter)
-			return std::unexpected(api::CoreOperationError{
+			return std::unexpected(api::ApiError{
 				api::IOError{ "Cannot read output from api when IO is being redirected" } });
+<<<<<<< HEAD
 		if_vrnt_is(status, api::Executing, executing) {
 			// If we are still executing, then wait for at least some output.
 			if (!api::isStatusTerminal(executing.exec_status))
 				io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 		}
+=======
+
+		if (isExecuting(status))
+			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
+
+>>>>>>> origin/main
 		content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::stop() {
+	std::expected<api::Response, api::ApiError> VMProcess::stop() {
 		auto& thread          = getMainVMThread();
 		auto  response        = thread.stop();
 		auto& opt_exec_thread = thread.exec_thread;
@@ -137,152 +139,148 @@ namespace vm {
 			opt_exec_thread->join();
 			getMainVMThread().exec_thread.reset();
 		} else {
-			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
+			return std::unexpected(api::ApiError{ api::JoinError{} });
 		}
 
 		// @TODO: make two different "stop" functions, one that throws error if program panicked
 		if (!response)
-			return std::unexpected(api::CoreOperationError{
-				api::OtherError{ "unexpected status response" } });
+			return std::unexpected(api::ApiError{ api::OtherError{ "unexpected status response" } });
 		return api::response::Empty{};
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::doRequest(
-		const api::ExecutorRequest& request
-	) {
-		variant_match(request) {
-			variant_case(api::request::Run, run_request) {
-				return runFunction("main", run_request.program_args);
-			}
-			variant_case(api::request::RunFunction, run_func_request) {
-				return runFunction(run_func_request.func_name, run_func_request.func_args);
-			}
-			variant_case_novalue(api::request::Join) { return join(); }
-			variant_case_novalue(api::request::Pause) {
-				auto response = getMainVMThread().pause();
-				if (!response) return std::unexpected(api::CoreOperationError{ api::PauseError{} });
-				return getMainVMThread().getCurrentPosition();
-			}
-			variant_case_novalue(api::request::Resume) {
-				auto response = getMainVMThread().resume();
-				if (!response)
-					return std::unexpected(api::CoreOperationError{ api::ResumeError{} });
-				return api::Response(api::response::Empty());
-			}
-			variant_case_novalue(api::request::Step) {
-				auto response = getMainVMThread().step();
-				if (!response)
-					return std::unexpected(api::CoreOperationError{
-						api::OtherError{ "step error" },
-					});
-				return getMainVMThread().getCurrentPosition();
-			}
-			variant_case(api::request::LoadStdlib, load_stdlib_request) {
-				return loadProgram(std::vector<code::CodeCollection>{ *builtins::getStdlibModule() })
-				    .transform_error([](auto err) { return api::CoreOperationError{ err }; });
-			}
-			variant_case(api::request::LoadFiles, load_request) {
-				return loadProgram(load_request.filenames).transform_error([](auto err) {
-					return api::CoreOperationError{ err };
-				});
-			}
-			variant_case(api::request::LoadCode, load_request) {
-				return loadProgram(load_request.code_collections).transform_error([](auto err) {
-					return api::CoreOperationError{ err };
-				});
-			}
-			variant_case_novalue(api::request::Stop) { return stop(); }
-			variant_case_novalue(api::request::ExecutionPosition) {
-				return getMainVMThread().getCurrentPosition();
-			}
-			variant_case_novalue(api::request::WaitForBreakpoint) {
-				std::shared_lock lock(rw_status);
-				status_cv.wait(lock, [&] {
-					if (!std::holds_alternative<api::Executing>(status)) return false;
-					auto exec_status = std::get<api::Executing>(status).exec_status;
-					return std::holds_alternative<api::Paused>(exec_status)
-					    || api::isStatusTerminal(exec_status);
-				});
-
-				if (!std::holds_alternative<api::Executing>(status))
-					return std::unexpected(api::CoreOperationError{
-						api::OtherError{ "unexpected status response" } });
-
-				auto exec_status = std::get<api::Executing>(status).exec_status;
-				if (!std::holds_alternative<api::Paused>(exec_status))
-					return std::unexpected(api::CoreOperationError{
-						api::OtherError{ "unexpected status response" } });
-
-				return getMainVMThread().getCurrentPosition();
-			}
-			variant_default { return api::Response(api::response::Empty()); }
-		}
-		CORE_UNREACHABLE();
-	}
-
-	std::expected<api::Response, api::CoreOperationError> VMProcess::doRequest(
-		const api::DataRequest& request
-	) {
+	base::Optional<api::ApiError> VMProcess::validateMemoryRequest() {
 		api::ProcStatus status = getStatus();
 
-		if (!std::holds_alternative<api::Executing>(status)) {
-			if (std::holds_alternative<api::Parsing>(status)
-			    || std::holds_alternative<api::TypeAnalysis>(status)) {
-				return std::unexpected(api::CoreOperationError{ api::OtherError{
-					"Cannot do memory request while parsing or analyzing types" } });
-			}
+		if (std::holds_alternative<api::Parsing>(status)
+		    || std::holds_alternative<api::TypeAnalysis>(status)) {
+			return api::ApiError{ api::OtherError{
+				"Cannot do memory request while parsing or analyzing types" } };
 		}
 
-		api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
-		if (std::holds_alternative<api::Running>(exec_status))
-			return std::unexpected(api::CoreOperationError{
-				api::OtherError{ "Cannot do memory request while program is running" } });
-		std::expected<api::Response, api::CoreOperationError> response;
-		variant_match(request) {
-			variant_case(api::request::TypeMetadata, type_request) {
-				auto res
-					= loaded_program->types->atMaybe(base::StrID(type_request.type_name.c_str()));
-				match_optional(res) {
-					opt_some(value) { response = value; }
-					opt_none {
-						response = std::unexpected(api::CoreOperationError{
-							api::OtherError{ "Type not found" } });
-					}
-				}
-			}
-			variant_case(api::request::Block, block_request) {
-				response = api::Response(api::response::Block{
-					memory.requestBlockData(block_request.block_id) });
-			}
-			variant_default { response = api::Response(api::response::Empty()); }
-		}
-		return response;
-	}
+		if (std::holds_alternative<api::Running>(status))
+			return api::ApiError{ api::OtherError{
+				"Cannot do memory request while program is running" } };
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::doRequest(
-		const api::IORequest& request
-	) {
-		variant_match(request) {
-			variant_case(api::request::Input, input_request) { return input(input_request); }
-			variant_case_novalue(api::request::Output) { return output(); }
-			variant_case(api::request::Attach, attach_request) {
-				getMainVMThread().notifyPaused();
-				return attach(attach_request.istream, attach_request.ostream);
-			}
-			variant_case_novalue(api::request::Detach) { return detach(); }
-		}
-		CORE_UNREACHABLE();
+		return {};
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
 		variant_match(request) {
-			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
-			variant_case(api::DataRequest, data_request) { return doRequest(data_request); }
-			variant_case(api::IORequest, io_request) { return doRequest(io_request); }
-			variant_case(api::StatusRequest, status_request) { return api::Response(getStatus()); }
-			variant_case(api::ExitCodeRequest, exit_code_request) { return getExitCode(); }
+			variant_case(api::request::Run, run_request) {
+				return runFunction("main", run_request.program_args);
+			}
+
+			variant_case(api::request::RunFunction, run_func_request) {
+				return runFunction(run_func_request.func_name, run_func_request.func_args);
+			}
+
+			variant_case_novalue(api::request::Join) { return join(); }
+
+			variant_case_novalue(api::request::Pause) {
+				auto response = getMainVMThread().pause();
+				if (!response) return std::unexpected(api::ApiError{ api::PauseError{} });
+				return getMainVMThread().getCurrentPosition();
+			}
+
+			variant_case_novalue(api::request::Resume) {
+				auto response = getMainVMThread().resume();
+				if (!response) return std::unexpected(api::ApiError{ api::ResumeError{} });
+				return api::Response(api::response::Empty());
+			}
+
+			variant_case_novalue(api::request::Step) {
+				auto response = getMainVMThread().step();
+				if (!response)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "step error" },
+					});
+				return getMainVMThread().getCurrentPosition();
+			}
+
+			variant_case(api::request::LoadStdlib, load_stdlib_request) {
+				return loadProgram(std::vector<code::CodeCollection>{ *builtins::getStdlibModule() })
+				    .transform_error([](auto err) { return api::ApiError{ err }; });
+			}
+
+			variant_case(api::request::LoadFiles, load_request) {
+				return loadProgram(load_request.filenames).transform_error([](auto err) {
+					return api::ApiError{ err };
+				});
+			}
+
+			variant_case(api::request::LoadCode, load_request) {
+				return loadProgram(load_request.code_collections).transform_error([](auto err) {
+					return api::ApiError{ err };
+				});
+			}
+
+			variant_case_novalue(api::request::Stop) { return stop(); }
+
+			variant_case_novalue(api::request::ExecutionPosition) {
+				return getMainVMThread().getCurrentPosition();
+			}
+
+			variant_case_novalue(api::request::WaitForBreakpoint) {
+				std::shared_lock lock(rw_status);
+				status_cv.wait(lock, [&] {
+					return std::holds_alternative<api::Paused>(status)
+					    || api::isStatusTerminal(status);
+				});
+
+				if (!std::holds_alternative<api::Paused>(status))
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "unexpected status response" } });
+
+				return getMainVMThread().getCurrentPosition();
+			}
+
+			variant_case(api::request::Input, input_request) { return input(input_request); }
+
+			variant_case_novalue(api::request::Output) { return output(); }
+
+			variant_case(api::request::Attach, attach_request) {
+				getMainVMThread().notifyPaused();
+				return attach(attach_request.istream, attach_request.ostream);
+			}
+
+			variant_case_novalue(api::request::Detach) { return detach(); }
+
+			variant_case(api::request::TypeMetadata, type_request) {
+				match_optional(validateMemoryRequest()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						auto res = loaded_program->types->atMaybe(
+							base::StrID(type_request.type_name.c_str())
+						);
+						match_optional(res) {
+							opt_some(value) { return value; }
+							opt_none {
+								return std::unexpected(api::ApiError{
+									api::OtherError{ "Type not found" } });
+							}
+						}
+					}
+				}
+			}
+
+			variant_case(api::request::Block, block_request) {
+				match_optional(validateMemoryRequest()) {
+					opt_some(error) { return std::unexpected(error); }
+					opt_none {
+						return api::Response(api::response::Block{
+							memory.requestBlockData(block_request.block_id) });
+					}
+				}
+			}
+
+			variant_case(api::request::StatusRequest, status_request) {
+				return api::Response(getStatus());
+			}
+
+			variant_case(api::request::ExitCodeRequest, exit_code_request) { return getExitCode(); }
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
@@ -301,21 +299,19 @@ namespace vm {
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::attach(
+	std::expected<api::Response, api::ApiError> VMProcess::attach(
 		std::istream& istream, std::ostream& ostream
 	) {
 		// @TODO: Flush the ostream from ProcIO to new ostream.
-		if (io_redirecter)
-			return std::unexpected(api::CoreOperationError{ api::AttachDetachError{} });
+		if (io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
 
 		// So long this object lives, any IO is redirected.
 		io_redirecter.emplace(io.attach(istream, ostream));
 		return api::Response(api::response::Empty());
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::detach() {
-		if (!io_redirecter)
-			return std::unexpected(api::CoreOperationError{ api::AttachDetachError{} });
+	std::expected<api::Response, api::ApiError> VMProcess::detach() {
+		if (!io_redirecter) return std::unexpected(api::ApiError{ api::AttachDetachError{} });
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
 	}
@@ -330,15 +326,11 @@ namespace vm {
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
 		variant_match(getStatus()) {
-			variant_case(api::Executing, exec_status) {
-				variant_match(exec_status.exec_status) {
-					variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
-					variant_default return std::unexpected(
-						api::StateError("Execution did not complete")
-					);
-				}
-			}
-			variant_default return std::unexpected(api::StateError("Execution did not start"));
+			variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
+			variant_default return std::unexpected(api::StateError(
+				executingStarted(getStatus()) ? "Execution did not complete"
+											  : "Execution did not start"
+			));
 		}
 		CORE_UNREACHABLE();
 	}

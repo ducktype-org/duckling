@@ -1,6 +1,4 @@
-\page llvm-backend LLVM Backend
-
-# LLVM backend
+# LLVM Backend
 
 This module contains llvm backend for Duckling compiler.
 It also encapsulated llvm components in a way, that usage of this module
@@ -150,3 +148,4 @@ Currently unused includes, that might be useful in the future
 #include <llvm/ADT/Optional.h>
 ```
 
+* [src_private/backends/llvm_private](./src_private/backends/llvm_private/README.md)

@@ -23,7 +23,208 @@
 
 using namespace vm;
 using namespace code;
-using namespace func_validator_helpers;
+
+namespace {
+	// Helpers for validation, mainly `ext_*` instructions
+	using namespace instructions;
+
+	template<typename T, typename Tup>
+	struct IsIn;
+
+	template<typename T, typename... Ts>
+	struct IsIn<T, std::tuple<Ts...>> {
+		static constexpr bool VALUE = (std::same_as<T, Ts> || ...);
+	};
+
+	template<typename... Tups>
+	using Cat = decltype(std::tuple_cat(std::declval<Tups>()...));
+
+	template<typename Tup>
+	struct HoldsOneOfImpl;
+
+	template<typename... Ts>
+	struct HoldsOneOfImpl<std::tuple<Ts...>> {
+		constexpr bool operator()(const Instruction& instr) {
+			return (std::holds_alternative<Ts>(instr) || ...);
+		}
+	};
+
+	template<typename Tup>
+	constexpr bool holdsOneOf(const Instruction& instr) {
+		return HoldsOneOfImpl<Tup>{}(instr);
+	}
+
+	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
+	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
+	using DeinitializingInstructions
+		= std::tuple<Op_deinit, Op_call_func, Op_call_builtin_func, Op_virtual_call_lptr_method>;
+	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtin_func>;
+	template<typename T>
+	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
+	template<typename T>
+	concept DeinitializingInstruction = IsIn<T, DeinitializingInstructions>::VALUE;
+
+	template<typename T>
+	concept CallingInstruction = IsIn<T, CallingInstructions>::VALUE;
+
+	template<Extension E>
+	struct ExtensionMetadata;
+
+	template<>
+	struct ExtensionMetadata<Op_ext_l64> {
+		using RequiredAfter = std::tuple<
+			Op_fixedSizeTableLea_lptr_lptr,
+			Op_fixedSizeTableLoad_lany_lptr,
+			Op_fixedSizeTableStore_lptr_lany>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<>
+	struct ExtensionMetadata<Op_ext_type> {
+		using RequiredAfter = std::tuple<
+			Op_downcast_lptr_lptr,
+			Op_variantGetInner_lptr_lvnt,
+			Op_variantGetInner_lptr_lptr>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<>
+	struct ExtensionMetadata<Op_ext_field> {
+		using RequiredAfter
+			= std::tuple<Op_structLea_lptr_lptr, Op_structLoad_lany_lptr, Op_structStore_lptr_lany>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<typename Tup>
+	struct CatRequired;
+
+	template<typename... Ts>
+	struct CatRequired<std::tuple<Ts...>> {
+		using Value = Cat<typename ExtensionMetadata<Ts>::RequiredAfter...>;
+	};
+
+	template<Extension E>
+	bool acceptsExtension(CRef<Instruction> instr) {
+		return holdsOneOf<
+			Cat<typename ExtensionMetadata<E>::RequiredAfter,
+		        typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
+	}
+
+	bool requiresSomeExtension(CRef<Instruction> instr) {
+		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
+	}
+
+	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
+	const ExpectedT& expectPointerType(
+		const PointerType&                    pointer,
+		const StableObjIdNameMap<TypeOfData>& tod_map,
+		Args&&... error_args
+	) {
+		const auto& pointed_type = tod_map.at(pointer.inner);
+		if (!std::holds_alternative<ExpectedT>(*pointed_type))
+			throw ErrorT(std::forward<Args>(error_args)...);
+		return std::get<ExpectedT>(*pointed_type);
+	}
+
+	template<class ErrorT = PointerTypeMismatchError, class... Args>
+	void validateStructExtFieldType(
+		const DataType&      ztruct,
+		const opargs::Field& field_arg,
+		base::StrID          expected_field_type,
+		Args&&... error_args
+	) {
+		if (ztruct.name != field_arg.type_name)
+			throw StructTypeMismatchError(std::forward<Args>(error_args)...);
+
+		base::StrID field_name = field_arg.field_name;
+		Field       field      = *std::ranges::find(ztruct.fields, field_name, &Field::name);
+
+		if (field.type != expected_field_type) throw ErrorT(std::forward<Args>(error_args)...);
+	}
+}
+
+/**
+ * @brief Represents a local stack variable.
+ */
+struct LocalStackEntry {
+	base::StrID      local_name;
+	CRef<TypeOfData> type;
+
+	constexpr bool operator==(const LocalStackEntry& other) const {
+		return local_name == other.local_name && *type == *other.type;
+	}
+};
+
+class LocalStack {
+	std::vector<LocalStackEntry> stack_state;
+
+	// the following are CRefs instead of const& to allow copy/move.
+
+	CRef<StableObjIdNameMap<TypeOfData>>         tod_map;
+	[[maybe_unused]] CRef<TypeMetadata>          type_metadata;
+	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
+
+public:
+	LocalStack(const LocalStack&)            = default;
+	LocalStack(LocalStack&&)                 = default;
+	LocalStack& operator=(const LocalStack&) = default;
+	LocalStack& operator=(LocalStack&&)      = default;
+
+	LocalStack(
+		const FunctionType&                   function_type,
+		const StableObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&                   type_metadata
+	):
+		  tod_map(&tod_map),
+		  type_metadata(&type_metadata) {
+		push(base::StrID("ret_val"), function_type.result);
+		for (auto [idx, param]: std::views::enumerate(function_type.parameters))
+			push(base::StrID(base::strConcat("arg", idx).c_str()), param);
+	}
+
+	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
+
+	void push(const opargs::StackLocalAny& local, const opargs::Type& type) {
+		auto tod = tod_map->at(type.type_name);
+
+		if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
+
+		stack_state.emplace_back(local.var_name, tod);
+		local_name_to_type.put(local.var_name, tod);
+	}
+
+	/**
+	 * @brief Pops the top element from the stack state and updates local variable mappings.
+	 * Can be only used with instructions which effectively deinitialize the local stack
+	 * (deinit, call_func, virtual_call and call_builtin_func)
+	 */
+	template<DeinitializingInstruction InstructionType>
+	void pop(const InstructionType& cause) {
+		if (stack_state.size() == 1) throw RetValDeinitError(cause);
+		const auto& top = stack_state.back();
+		local_name_to_type.erase(top.local_name);
+		stack_state.pop_back();
+	}
+
+	usize size() const { return stack_state.size(); }
+
+	const LocalStackEntry& back() const { return stack_state.back(); }
+
+	const LocalStackEntry& front() const { return stack_state.front(); }
+
+	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
+		auto  local_name = VISIT(local, l, return l.var_name);
+		auto& curr_type  = local_name_to_type.at(local_name);
+		auto  new_type   = tod_map->at(type.type_name);
+		curr_type        = new_type;
+		for (auto& entry: stack_state)
+			if (entry.local_name == local_name) entry.type = new_type;
+	}
+
+	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
+
+	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type.at(local_name); }
+};
 
 /**
  * @brief Class responsible for function validation.

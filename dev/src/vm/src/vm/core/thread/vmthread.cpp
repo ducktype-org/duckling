@@ -556,30 +556,32 @@ namespace vm {
 		return false;
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
-		if_vrnt_is(status, api::Paused, _) {
-			auto frame = runtime_data.frame_stack_current;
-			auto instr = frame->instr;
+	std::expected<api::Response, api::ApiError> VMThread::getCurrentPosition() {
+		variant_match(status) {
+			variant_case_novalue(api::Paused) {
+				auto frame = runtime_data.frame_stack_current;
+				auto instr = frame->instr;
 
-			for (size_t index = 0; index < executing_program->functions.size(); ++index) {
-				const auto& func = executing_program->functions[index];
-				if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-					return api::Response(api::response::CodePosition{
-						.function_id  = static_cast<u64>(index),  // Assuming function_id is int
-						.instr_number = static_cast<u64>(instr - func.bc.data()) });
+				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
+					const auto& func = executing_program->functions[index];
+					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
+						return api::Response(api::response::CodePosition{
+							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+					}
 				}
 			}
-		}
-		else {
-			return std::unexpected(api::CoreOperationError{
-				api::OtherError{ "wrong execution status while reading current position" } });
+			variant_default {
+				return std::unexpected(api::ApiError{
+					api::OtherError{ "wrong execution status while reading current position" } });
+			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status) {
+	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 		status = new_status;
-		process.onEvent(api::Executing{ new_status });
+		process.onEvent(new_status);
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -613,7 +615,7 @@ namespace vm {
 		return waitForRunningResponse();
 	}
 
-	void VMThread::respondExecutionRequest(const api::ExecStatus& response) {
+	void VMThread::respondExecutionRequest(const api::ProcStatus& response) {
 		setProcessStatus(response);
 		execution_response_queue.push(response);
 	}

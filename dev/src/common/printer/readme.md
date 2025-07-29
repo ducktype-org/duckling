@@ -1,4 +1,4 @@
-\page printer-module Printer Module
+# Printer Module
 
 \tableofcontents
 
