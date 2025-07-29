@@ -4,7 +4,7 @@
 
 namespace vm::kind {
 	struct FixedSizeTable final {
-		TypeRef inner_type;
+		TypeCRef inner_type;
 		u64     size;
 	};
 }

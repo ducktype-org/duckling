@@ -197,7 +197,7 @@ namespace vm {
 		return get<kind::Data>().flatMap(
 			[field_name](CRef<kind::Data> data) -> base::Optional<Offset> {
 				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
-					return data->fields[*field_index].offset;
+					return data->fields[static_cast<u64>(*field_index)].offset;
 				}
 				return {};
 			}
@@ -224,11 +224,12 @@ namespace vm {
 	}
 
 	bool Type::inheritsFrom(TypeCRef other) const {
-		match_optional(getInheritanceMetadata()) {
-			opt_some(imd) { return imd->inherits_from.contains(other->getID()); }
-			opt_none { return false; }
+		if_opt_some(getInheritanceMetadata(), imd) {
+			return imd->inherits_from.contains(other->getID());
 		}
-		CORE_UNREACHABLE();
+		else {
+			return false;
+		}
 	}
 
 	bool Type::isInstantiable() const { return am_i_instantiable; }

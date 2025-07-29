@@ -1,7 +1,6 @@
 #include "type_metadata.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/variant.hpp>
 
 namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {

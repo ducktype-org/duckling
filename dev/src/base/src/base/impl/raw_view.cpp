@@ -11,8 +11,14 @@ namespace base {
 		return { new_data, arr_size };
 	}
 
+	/**
+	 * @brief skips the first `from` letters of the view. Cannot skip more than length of the view.
+	 * 
+	 * @param from 
+	 * @return RawView 
+	 */
 	RawView RawView::subSuffix(usize from) const {
-		CORE_ASSERT(from <= arr_size, "trying to get suffix which is outside of view");
+		CORE_ASSERT(from <= arr_size, "trying to skip too many letters in subSuffix()");
 		return { begin + from, arr_size - from };
 	}
 

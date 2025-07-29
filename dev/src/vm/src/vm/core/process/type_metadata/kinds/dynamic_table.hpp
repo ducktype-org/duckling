@@ -4,6 +4,6 @@
 
 namespace vm::kind {
 	struct DynamicTable {
-		TypeRef inner_type;
+		TypeCRef inner_type;
 	};
 }
