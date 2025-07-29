@@ -75,7 +75,11 @@ private:
 
 	void checkZeroDivision() {
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("zero_division.dbc", "", "0"),
+			runTestOnVmGetResult("zero_division_i64.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 	}
