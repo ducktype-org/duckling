@@ -12,6 +12,3 @@ It is done this way so the client can easily, depending on the variant alternati
 Either add a new type to the `ApiError` variant. One such type could be a `PreprocessorError` struct representing the information about error that could happen during the preprocessor phase.
 
 While deciding how to add a new error type, it is crucial to think "What is the new error representing, and where it would fit best?". It is, ultimately, a subjective choice.
-
-## IMPORTANT!!!
-Each change in the API types and API calls should be done together with changes in the swagger file in the VM directory.
