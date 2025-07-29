@@ -1,4 +1,4 @@
-\page element-hierarchy Element Class Hierarchy
+# Element Class Hierarchy
 
 Forward deklaracje są zapisane w odziemnym pliku/plikach
 

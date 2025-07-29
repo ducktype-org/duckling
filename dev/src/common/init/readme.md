@@ -1,4 +1,4 @@
-\page init-module Init Module
+# Init Module
 
 Simple utility module for scheduling functions to execute right after main starts, and right before main finishes,
 as well as to run code before main.

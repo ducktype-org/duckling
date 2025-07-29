@@ -70,8 +70,10 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
-		using RequiredAfter
-			= std::tuple<Op_fixedSizeTableLoad_lany_lptr, Op_fixedSizeTableStore_lptr_lany>;
+		using RequiredAfter = std::tuple<
+			Op_fixedSizeTableLea_lptr_lptr,
+			Op_fixedSizeTableLoad_lany_lptr,
+			Op_fixedSizeTableStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 

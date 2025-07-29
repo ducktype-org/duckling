@@ -1,4 +1,4 @@
-\page mir MIR
+# MIR
 
 # What is MIR
 

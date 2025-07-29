@@ -1,4 +1,4 @@
-@page hashing-module Hash Module
+# Hash Module
 
 This module implements hashing utilities that allow to easily add hashing support to any type and
 to hash any set of objects using a hashing algorithm of choice. Module provides some ready
