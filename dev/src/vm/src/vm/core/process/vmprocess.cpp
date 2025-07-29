@@ -112,18 +112,10 @@ namespace vm {
 		if (io_redirecter)
 			return std::unexpected(api::ApiError{
 				api::IOError{ "Cannot read output from api when IO is being redirected" } });
-<<<<<<< HEAD
-		if_vrnt_is(status, api::Executing, executing) {
-			// If we are still executing, then wait for at least some output.
-			if (!api::isStatusTerminal(executing.exec_status))
-				io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
-		}
-=======
 
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 
->>>>>>> origin/main
 		content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();

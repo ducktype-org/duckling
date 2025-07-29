@@ -11,13 +11,8 @@
 #include <iostream>
 
 std::string convertError(const vm::api::ApiError& api_error) {
-<<<<<<< HEAD
-	if_vrnt_is(api_error, vm::api::CoreOperationError, core) {
-		if_vrnt_is(core, vm::api::LoadProgramError, load) { return load.why; }
-=======
 	variant_match(api_error) {
 		variant_case(vm::api::LoadProgramError, load) { return load.why; }
->>>>>>> origin/main
 	}
 	return vm::api::errorToString(api_error);
 }
