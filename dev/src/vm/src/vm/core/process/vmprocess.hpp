@@ -9,7 +9,6 @@
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
-#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -73,37 +72,6 @@ namespace vm {
 		loader::Loader loader{};
 
 		/**
-		 * @brief Performs external execution request on the VCPU.
-		 *
-		 * This method is called by the supervisor. The possible requests include
-		 * io operations, start/stop the Execution Thread or communicate with the Execution Thread.
-		 *
-		 * @param request Request that performs action on the Execution Thread.
-		 * @return std::expected<api::Response, api::CoreOperationError>
-		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::ExecutorRequest& request
-		);
-
-		/**
-		 * @brief Performs external data request on the VCPU.
-		 *
-		 * This method is called by the supervisor.
-		 * Only valid state of the VCPU for data requests is "Executing",
-		 * but the executor has to be paused in some way to perform the request.
-		 * It inspects the VM's memory stored in the DataManager.
-		 *
-		 * @param request
-		 * @return std::expected<api::Response, api::CoreOperationError>
-		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::DataRequest& request
-		);
-
-		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
-		);
-
-		/**
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
@@ -114,35 +82,36 @@ namespace vm {
 		/**
 		 * @brief Creates new thread that runs a function in the Executor service.
 		 */
-		std::expected<api::Response, api::CoreOperationError> runFunction(
+		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
 		);
 
 		/**
 		 * @brief Joins the executing thread.
 		 */
-		std::expected<api::Response, api::CoreOperationError> join();
+		std::expected<api::Response, api::ApiError> join();
 
 		/**
 		 * @brief Stops the executing thread (by joining it).
 		 * After this method is called, the thread is removed.
 		 */
-		std::expected<api::Response, api::CoreOperationError> stop();
+		std::expected<api::Response, api::ApiError> stop();
 
 		/**
 		 * @brief Passes the input string to the executing thread.
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
-		);
+		std::expected<api::Response, api::ApiError> input(const api::request::Input& request);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
 		 * If the output stream is empty, it waits until it is not.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> output();
+		std::expected<api::Response, api::ApiError> output();
+
+		base::Optional<api::ApiError> validateMemoryRequest();
 
 		/**
 		 * @brief Gets the status of the process (memory-safe).
@@ -170,11 +139,11 @@ namespace vm {
 		 * @brief Attaching means all IO is interactive, input is read from stdin, output
 		 * @brief is automatically forwarded to stdout.
 		 */
-		std::expected<api::Response, api::CoreOperationError> attach(
+		std::expected<api::Response, api::ApiError> attach(
 			std::istream& istream = std::cin, std::ostream& ostream = std::cout
 		);
 
-		std::expected<api::Response, api::CoreOperationError> detach();
+		std::expected<api::Response, api::ApiError> detach();
 
 		// @TODO: Improve this....
 		std::deque<VMThread> vm_threads;
@@ -193,8 +162,6 @@ namespace vm {
 
 		ProcIO& getIO();
 
-		// Each of the following methods can be called concurrently, so they should synchronize
-		// resources.
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */

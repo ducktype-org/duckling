@@ -7,20 +7,9 @@
 #include <variant>
 
 namespace vm::api {
-	struct ExecutionNotStarted {};
-
-	struct Parsing {};
-
-	struct TypeAnalysis {};
-
-	struct ExecutionPanicked {
-		std::string error_message;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
-	};
+	struct Running {};
 
 	struct Paused {};
-
-	struct Running {};
 
 	struct WaitingForInput {};
 
@@ -35,28 +24,46 @@ namespace vm::api {
 
 	struct ExecutionStopped {};
 
-	using ExecStatus = std::variant<
+	struct ExecutionPanicked {
+		std::string error_message;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
+	};
+
+	struct ExecutionNotStarted {};
+
+	struct Parsing {};
+
+	struct TypeAnalysis {};
+
+	using ProcStatus = std::variant<
 		Running,
 		Paused,
 		WaitingForInput,
 		NotStarted,
 		ExecutionCompleted,
 		ExecutionStopped,
-		ExecutionPanicked>;
+		ExecutionPanicked,
+		ExecutionNotStarted,
+		Parsing,
+		TypeAnalysis>;
 
-	constexpr bool isStatusTerminal(const ExecStatus& status) {
+	constexpr bool isStatusTerminal(const ProcStatus& status) {
 		return std::holds_alternative<ExecutionCompleted>(status)
 		    || std::holds_alternative<ExecutionStopped>(status)
 		    || std::holds_alternative<ExecutionPanicked>(status);
 	}
 
-	struct Executing {
-		ExecStatus exec_status;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
-	};
+	constexpr bool executingStarted(const ProcStatus& status) {
+		return !(
+			std::holds_alternative<ExecutionNotStarted>(status)
+			|| std::holds_alternative<Parsing>(status)
+			|| std::holds_alternative<TypeAnalysis>(status)
+		);
+	}
 
-	using ProcStatus = std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
-
+	constexpr bool isExecuting(const ProcStatus& status) {
+		return !isStatusTerminal(status) && executingStarted(status);
+	}
 }
 
 
@@ -68,7 +75,6 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

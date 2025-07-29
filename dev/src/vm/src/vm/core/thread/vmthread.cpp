@@ -557,7 +557,7 @@ namespace vm {
 		return false;
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+	std::expected<api::Response, api::ApiError> VMThread::getCurrentPosition() {
 		variant_match(status) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -573,16 +573,16 @@ namespace vm {
 				}
 			}
 			variant_default {
-				return std::unexpected(api::CoreOperationError{
+				return std::unexpected(api::ApiError{
 					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::setProcessStatus(const api::ExecStatus& new_status) {
+	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 		status = new_status;
-		process.onEvent(api::Executing{ new_status });
+		process.onEvent(new_status);
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -616,7 +616,7 @@ namespace vm {
 		return waitForRunningResponse();
 	}
 
-	void VMThread::respondExecutionRequest(const api::ExecStatus& response) {
+	void VMThread::respondExecutionRequest(const api::ProcStatus& response) {
 		setProcessStatus(response);
 		execution_response_queue.push(response);
 	}

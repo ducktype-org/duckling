@@ -50,24 +50,13 @@ void VmTestSuite::assertExecutionPanickedWith(
 	ASSERT_TRUE(exec_status_result.has_value());
 
 	variant_match(exec_status_result.value()) {
-		variant_case(vm::api::Executing, executing) {
-			variant_match(executing.exec_status) {
-				variant_case(vm::api::ExecutionPanicked, panicked) {
-					ASSERT_TRUE(panicked.error_message.contains(err_piece));
-				}
-				variant_default {
-					fail(base::strConcat(
-						"Expected ",
-						TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
-						", but found: " + to_string(nlohmann::json(executing))
-					));
-				}
-			}
+		variant_case(vm::api::ExecutionPanicked, panicked) {
+			ASSERT_TRUE(panicked.error_message.contains(err_piece));
 		}
 		variant_default {
 			fail(base::strConcat(
 				"Expected ",
-				TypeParseTraits<vm::api::Executing>::name.data(),
+				TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
 				", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
 			));
 		}
@@ -81,10 +70,8 @@ void VmTestSuite::loadInvalidDbc(
 	auto     loaded_file_response = vm::api::loadFiles(initProcess(), { file });
 	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
-	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
-	auto core_op = std::get<vm::api::CoreOperationError>(err);
-	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
-	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
+	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
 		assertTrue(
