@@ -30,6 +30,7 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(
 		VMUnreferencedBlockDeletionException, "Tried deleting a reference to an unreferenced block"
 	);
+	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 
 
 }
