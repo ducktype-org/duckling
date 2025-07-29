@@ -46,7 +46,7 @@ namespace vm {
 
 	/**
 	 * @brief Number of fixed and preallocated stack bytes.
-	 * 256 - a magic number - it means if all the frames take on average 256 bytes
+	 * 256 - a magic number - it means if frames take on average 256 bytes
 	 * of stack space, then there can be at most FRAME_COUNT frames
 	 * on the stack, but if functions on average take more than 256 bytes of space
 	 * then fewer frames will be able to fit.
@@ -168,7 +168,7 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Reference to value returned by the program
+		 * @return Shared pointer containing a value returned by the program
 		 */
 		std::shared_ptr<VmValue> executeFunction(
 			const low::FuncData& start_function, const low::FuncData& func

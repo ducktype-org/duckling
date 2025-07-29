@@ -1,5 +1,4 @@
-add_library(JSON INTERFACE
-        src/json/ref.hpp)
+add_library(JSON INTERFACE)
 
 target_include_directories(JSON INTERFACE src)
 target_link_libraries(JSON INTERFACE Base nlohmann_json::nlohmann_json)

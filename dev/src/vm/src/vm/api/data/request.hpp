@@ -5,6 +5,7 @@
 #include <filesystem/file.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/thread/vmvalue.hpp>
@@ -31,12 +32,12 @@ namespace vm::api {
 		struct Stop {};
 
 		struct Run {
-			std::vector<std::string> program_args;
+			ProgramRunArguments program_args;
 		};
 
 		struct RunFunction {
-			std::string                           func_name;
-			std::vector<std::shared_ptr<VmValue>> func_args;
+			std::string          func_name;
+			FunctionRunArguments func_args;
 		};
 
 		struct Input {
