@@ -32,5 +32,4 @@ namespace vm::exceptions {
 	);
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 
-
 }
