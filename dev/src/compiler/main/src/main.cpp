@@ -186,7 +186,7 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Compile to DVM bytecode.")
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("compile-to-assembly")
+	                     .addLongName("dump-llvm-asm")
 	                     .addShortDesc(
 							 "Also compiles to assembly file (alongside main compilation)."
 						 )
@@ -224,7 +224,7 @@ clah::Clah getClahForMain() {
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
-	                     .required()
+						 .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
@@ -234,7 +234,8 @@ clah::Clah getClahForMain() {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.compilation_artifacts = {
-								.artifacts_path = options.getValue<fs::File>("artifact-location").value().getFilePath(),
+								.artifacts_path = 
+									options.getValue<fs::File>("artifact-location").copyValueOr("./duck_build/").getFilePath(),
 							},
 							.debug_options = getDebugOptionsFromClap(options),
 						}

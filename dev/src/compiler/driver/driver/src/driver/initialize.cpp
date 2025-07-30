@@ -21,12 +21,22 @@ namespace compiler::driver {
 		}
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
-			CORE_ASSERT(
-				artifacts_options.artifacts_path.exists(),
-				"Artifacts path does not exist:",
-				artifacts_options.artifacts_path.native(),
-				"!"
-			);
+			auto path = artifacts_options.artifacts_path;
+			if (not path.exists()) {
+				if (path.isPhysical()) {
+					auto file = fs::FileManager::createPhysicalFolder(path);
+					CORE_ASSERT(file.exists(), "Failed to create artifacts folder: " + path.string());
+				}
+				else if (path.isTemporary()) {
+					auto file = fs::FileManager::createTempFolder(path);
+					CORE_ASSERT(file.exists(), "Failed to create artifacts folder: " + path.string());
+				}
+				else {
+					throw base::LogicError(
+						"Artifacts path must be either physical or temporary, but got: " + path.string()
+					);
+				}
+			}
 			global_state::setters::setRootCollection(
 				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
 			);
