@@ -93,7 +93,7 @@ namespace vm {
 	bool Memory::tryInsertGlobalData(GlobalDataID id, TypeCRef type) {
 		std::lock_guard lock(mutex);
 		if (!global_data.contains(id)) {
-			auto             type_size = type->getSize();
+			auto             type_size = u64(type->getSize());
 			base::OwningView storage(new byte[type_size], type_size);
 			global_blocks.put(id, allocateDummy(type, storage.modView().getBegin()));
 			global_data.put(id, std::move(storage));
@@ -122,7 +122,7 @@ namespace vm {
 
 		auto block_data         = parent_pointer.block->data;
 		block_data.element_type = type;
-		block_data.view         = getPointerData(parent_pointer, type->getSize());
+		block_data.view         = getPointerData(parent_pointer, u64(type->getSize()));
 
 		auto new_block = createBlock(block_data);  // @note createBlock nulls them bytes
 		new_block->refcount++;  // so that the block does not disappear accidentally
@@ -138,7 +138,7 @@ namespace vm {
 		// Free child blocks.
 		auto& dst_child_blocks = dst.getBlock()->children_blocks;
 		for (auto iter = dst_child_blocks.lower_bound(dst.offset);
-		     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize();
+		     iter != dst_child_blocks.end() && iter->first < dst.offset + u64(type->getSize());
 		     iter = dst_child_blocks.erase(iter)) {
 			freeBlock(iter->second);
 		}
@@ -155,7 +155,7 @@ namespace vm {
 		// Copy the child blocks
 		auto& src_child_blocks = src.getBlock()->children_blocks;
 		for (auto iter = src_child_blocks.lower_bound(src.offset);
-		     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize();
+		     iter != src_child_blocks.end() && iter->first < src.offset + u64(type->getSize());
 		     ++iter) {
 			auto    offset      = dst.offset + iter->first - src.offset;
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
@@ -166,9 +166,9 @@ namespace vm {
 		}
 
 		// Copy the data itself
-		auto dst_view = getPointerData(dst, type->getSize());
-		auto src_view = getPointerData(src, type->getSize());
-		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize());
+		auto dst_view = getPointerData(dst, u64(type->getSize()));
+		auto src_view = getPointerData(src, u64(type->getSize()));
+		std::memcpy(dst_view.getBegin(), src_view.getBegin(), u64(type->getSize()));
 	}
 
 	auto Memory::destroyBlockReference(Pointer pointer) -> void {

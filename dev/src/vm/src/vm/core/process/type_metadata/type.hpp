@@ -5,6 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
+#include <base/strongly_typed_int.hpp>
 #include <base/variant.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
@@ -17,13 +18,11 @@ namespace vm {
 	class TypeMetadata;
 
 	/// Size of type in bytes
-	// @TODO: change to strongly typed int
-	// @TODO check how to make STRONG_TYPEDEF_INT not interfere with NLOHMANN
-	using TypeSize = u64;
+	STRONG_TYPEDEF_INT(TypeSize, u64)
 
 	class Type final {
 	public:
-		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
+		constexpr static TypeSize POINTER_SIZE = TypeSize(sizeof(Pointer));
 
 		enum class Kind {
 			None,
@@ -43,7 +42,7 @@ namespace vm {
 		State state = State::Declared;
 
 		base::StrID name;
-		TypeSize    size      = TypeSize(-1);
+		TypeSize    size = TypeSize(-1ULL);
 		TypeID      id{};
 		bool        am_i_instantiable = true;
 
@@ -112,7 +111,7 @@ namespace vm {
 
 		[[nodiscard]]
 		TypeSize getSize() const {
-			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
+			CORE_ASSERT(size != TypeSize(-1ULL), "getSize called before type finalization");
 			return size;
 		}
 
@@ -124,61 +123,80 @@ namespace vm {
 
 		[[nodiscard]]
 		Kind getKind() const {
-			variant_match(kind) {
-				variant_case_novalue(std::monostate) { return Kind::None; }
-				variant_case_novalue(kind::Primitive) { return Kind::Primitive; }
-				variant_case_novalue(kind::Pointer) { return Kind::Pointer; }
-				variant_case_novalue(kind::FixedSizeTable) { return Kind::FixedSizeTable; }
-				variant_case_novalue(kind::DynamicTable) { return Kind::DynamicTable; }
-				variant_case_novalue(kind::Data) { return Kind::Data; }
-				variant_case_novalue(kind::Variant) { return Kind::Variant; }
-				variant_case_novalue(kind::Function) { return Kind::Function; }
-				variant_case_novalue(kind::Opaque) { return Kind::Opaque; }
-				variant_default { CORE_PANIC("This kind of Type is not implemented"); }
-			};
-			return Kind::None;
+			variant_match(kind){ variant_case_novalue(std::monostate){ return Kind::None;
 		}
 
-		// @todo: Interface below may change
+		variant_case_novalue(kind::Primitive) { return Kind::Primitive; }
 
-		// @TODO: move function below to kind:: structures without `option`
-		// Forward here version with option
+		variant_case_novalue(kind::Pointer) { return Kind::Pointer; }
 
-		/**
-		 * Get inner type of pointer, fixed size or dynamic table
-		 * @return some(inner type) for pointer, fixed size or dynamic table. none otherwise
-		 */
-		base::Optional<TypeCRef> getInnerType() const;
+		variant_case_novalue(kind::FixedSizeTable) { return Kind::FixedSizeTable; }
 
-		// data
-		[[nodiscard]]
-		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+		variant_case_novalue(kind::DynamicTable) { return Kind::DynamicTable; }
 
-		// inheritance
-		[[nodiscard]]
-		base::Optional<base::CRef<InheritanceMetadata>> getInheritanceMetadata() const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getSuperClass() const;
-		[[nodiscard]]
-		bool inheritsFrom(TypeCRef other) const;
-		[[nodiscard]]
-		bool isInstantiable() const;
+		variant_case_novalue(kind::Data) { return Kind::Data; }
 
-		// function
-		[[nodiscard]]
-		base::Optional<u64> getParameterCount() const;
-		[[nodiscard]]
-		base::Optional<u64> getParametersSize() const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
-		[[nodiscard]]
-		base::Optional<TypeCRef> getResultType() const;
+		variant_case_novalue(kind::Variant) { return Kind::Variant; }
 
-		friend class TypeMetadata;
+		variant_case_novalue(kind::Function) { return Kind::Function; }
 
-		// @TODO: add better output of type
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, size);
+		variant_case_novalue(kind::Opaque) { return Kind::Opaque; }
+
+		variant_default { CORE_PANIC("This kind of Type is not implemented"); }
 	};
+
+	return Kind::None;
+}
+
+// @todo: Interface below may change
+
+// @TODO: move function below to kind:: structures without `option`
+// Forward here version with option
+
+/**
+ * Get inner type of pointer, fixed size or dynamic table
+ * @return some(inner type) for pointer, fixed size or dynamic table. none otherwise
+ */
+base::Optional<TypeCRef> getInnerType() const;
+
+// data
+[[nodiscard]]
+base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+
+// inheritance
+[[nodiscard]]
+base::Optional<base::CRef<InheritanceMetadata>> getInheritanceMetadata() const;
+[[nodiscard]]
+base::Optional<TypeCRef> getSuperClass() const;
+[[nodiscard]]
+bool inheritsFrom(TypeCRef other) const;
+[[nodiscard]]
+bool isInstantiable() const;
+
+// function
+[[nodiscard]]
+base::Optional<u64> getParameterCount() const;
+[[nodiscard]]
+base::Optional<u64> getParametersSize() const;
+[[nodiscard]]
+base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
+[[nodiscard]]
+base::Optional<TypeCRef> getResultType() const;
+
+friend class TypeMetadata;
+
+// @TODO: add better output of type
+// @TODO: check if there is better way to handle strong int in JSON
+// NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, size);
+friend void to_json(nlohmann ::json& nlohmann_json_j, const Type& nlohmann_json_t) {
+	nlohmann_json_j["size"] = u64(nlohmann_json_t.size);
+}
+
+friend void from_json(const nlohmann ::json& nlohmann_json_j, Type& nlohmann_json_t) {
+	nlohmann_json_t.size = TypeSize(nlohmann_json_j.at("size"));
+}
+}
+;
 }
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::Type, "Type");

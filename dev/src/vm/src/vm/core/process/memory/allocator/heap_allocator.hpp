@@ -21,7 +21,7 @@ namespace vm {
 
 	public:
 		BlockData allocate(TypeCRef type) {
-			auto             size = type->getSize();
+			auto             size = u64(type->getSize());
 			auto             ptr  = new std::byte[size];
 			base::OwningView view{ ptr, size };
 			allocated.push_back(std::move(view));

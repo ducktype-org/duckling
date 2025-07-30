@@ -103,7 +103,7 @@ namespace vm::loader::compiler {
 			// This is guaranteed to exist by builders.
 			auto functional_type       = ctx.type_map.at(ctx.function->name.str);
 			func_data.arg_size         = functional_type->getParametersSize().value();
-			func_data.ret_size         = functional_type->getResultType().value()->getSize();
+			func_data.ret_size         = u64(functional_type->getResultType().value()->getSize());
 			func_data.local_stack_size = ctx.local_stack_size;
 
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
@@ -168,7 +168,7 @@ namespace vm::loader::compiler {
 				}
 
 				offsets.put(local.var_name, curr_stack_size);
-				auto type_size = ctx.type_map.at(type.type_name)->getSize();
+				auto type_size = u64(ctx.type_map.at(type.type_name)->getSize());
 				type_size_stack.push_back(type_size);
 				curr_stack_size += type_size;
 				max_stack_size = std::max(max_stack_size, curr_stack_size);

@@ -137,7 +137,7 @@ namespace vm {
 		// the return value of the function. Void functions always return with the exit_code = 0.
 		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id));
 
-		stack_top += i64_type->getSize();
+		stack_top += u64(i64_type->getSize());
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			i64  converted_arg = func_args[i];
@@ -149,7 +149,7 @@ namespace vm {
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				mov_l64_imm, stack_top, Memory::interpret<u64>(converted_arg)
 			));
-			stack_top += arg_type->getSize();
+			stack_top += u64(arg_type->getSize());
 		}
 
 		start_function.bc.insert(
@@ -280,7 +280,7 @@ namespace vm {
 		std::byte* local_stack = runtime_data.local_stack_base;
 
 		auto called_func_return_type = *executing_program->types->at(func.name)->getResultType();
-		frame->called_func_ret_size  = called_func_return_type->getSize();
+		frame->called_func_ret_size  = u64(called_func_return_type->getSize());
 
 		const auto* instr = start_function.bc.data();
 

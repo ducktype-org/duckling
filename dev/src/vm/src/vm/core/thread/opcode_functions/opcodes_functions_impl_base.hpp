@@ -430,7 +430,7 @@ namespace vm {
 				frame->block_stack.size(), frame->local_stack_head
 			);
 			frame->block_stack.push_back(block);
-			frame->local_stack_head += type->getSize();
+			frame->local_stack_head += u64(type->getSize());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -445,7 +445,7 @@ namespace vm {
 			// will overwrite the old mappings
 
 			thread.process_memory.freeBlock(block);
-			frame->local_stack_head -= type->getSize();
+			frame->local_stack_head -= u64(type->getSize());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -734,7 +734,7 @@ namespace vm {
 			auto  element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset = usize(index * i64(element_type->getSize()));
+			auto data_offset = usize(index * i64(u64(element_type->getSize())));
 
 			thread.process_memory.setPointer(dst, { tbl_pointer.getBlock(), data_offset });
 		}
@@ -747,7 +747,7 @@ namespace vm {
 			auto element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset = index * i64(element_type->getSize());
+			auto data_offset = index * i64(u64(element_type->getSize()));
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
@@ -770,7 +770,7 @@ namespace vm {
 			auto index = derefStack<i64>(local_stack, instr[1].arg0);
 			auto element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * i64(element_type->getSize()));
+			tbl_pointer.movePointer(index * i64(u64(element_type->getSize())));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}

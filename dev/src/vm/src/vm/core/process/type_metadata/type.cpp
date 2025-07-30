@@ -11,14 +11,13 @@
 #include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
-#include <concepts>
 #include <utility>
 
 namespace vm {
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
-			if_vrnt_is(imd.interface_kind, InheritanceMetadata::Class, clazz) { 
-				return !clazz.is_abstract; 
+			if_vrnt_is(imd.interface_kind, InheritanceMetadata::Class, clazz) {
+				return !clazz.is_abstract;
 			}
 			return false;
 		};
@@ -74,31 +73,31 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = pass_size;
-		kind      = kind::Primitive();
+		size = pass_size;
+		kind = kind::Primitive();
 	}
 
 	void Type::definePointer(TypeCRef inner) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		kind      = kind::Pointer{ inner };
+		size = POINTER_SIZE;
+		kind = kind::Pointer{ inner };
 	}
 
 	void Type::defineFixedSizeTable(TypeRef inner, u64 table_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind      = kind::FixedSizeTable{ .inner_type = inner, .size = table_size };
+		kind = kind::FixedSizeTable{ .inner_type = inner, .size = table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		kind      = kind::DynamicTable{ inner };
+		size = POINTER_SIZE;
+		kind = kind::DynamicTable{ inner };
 	}
 
 	void Type::defineData(
@@ -131,16 +130,16 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+		size = POINTER_SIZE;
+		kind = kind::Function{ .parameters = std::move(parameters), .result = result };
 	}
 
 	void Type::defineOpaque(TypeSize pass_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = pass_size;
-		kind      = kind::Opaque{};
+		size = pass_size;
+		kind = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -152,7 +151,8 @@ namespace vm {
 		variant_match(kind) {
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
-				this->size = fixed_size_table.inner_type->getSize() * fixed_size_table.size;
+				this->size
+					= TypeSize(u64(fixed_size_table.inner_type->getSize()) * fixed_size_table.size);
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
@@ -160,20 +160,20 @@ namespace vm {
 				for (auto& field: data.fields) {
 					field.offset = offset;
 					field.type->finalize();
-					offset += field.type->getSize();
+					offset += u64(field.type->getSize());
 				}
-				this->size = offset;
+				this->size = TypeSize(offset);
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
-				TypeSize data_size = 0;
+				TypeSize data_size = TypeSize(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size = 16 + data_size;
+				this->size = TypeSize(16 + u64(data_size));
 				isInstantiableImpl(variant);
 			}
 		}
@@ -197,7 +197,7 @@ namespace vm {
 		return get<kind::Data>().flatMap(
 			[field_name](CRef<kind::Data> data) -> base::Optional<Offset> {
 				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
-					return data->fields[*field_index].offset;
+					return data->fields[u64(*field_index)].offset;
 				}
 				return {};
 			}
@@ -227,7 +227,7 @@ namespace vm {
 		if_opt_some(getInheritanceMetadata(), imd) {
 			return imd->inherits_from.contains(other->getID());
 		}
-		
+
 		return false;
 	}
 
@@ -243,7 +243,7 @@ namespace vm {
 	base::Optional<u64> Type::getParametersSize() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
 			usize size = 0;
-			for (const auto& param: function->parameters) size += param->getSize();
+			for (const auto& param: function->parameters) size += u64(param->getSize());
 			return size;
 		});
 	}

@@ -3,12 +3,11 @@
 #include "../definitions.hpp"
 #include "../inheritance_metadata.hpp"
 
-#include <base/strongly_typed_id.hpp>
+#include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
-#include <base/strongly_typed_int.hpp>
+#include <base/strongly_typed_id.hpp>
 
-#include <unordered_map>
 #include <vector>
 
 namespace vm::kind {
@@ -19,9 +18,7 @@ namespace vm::kind {
 	};
 
 	struct Data {
-		// @todo: change to strongly typed when it will be in utils
-		using FieldID = u64;
-		
+		STRONG_TYPEDEF_ID_DIRECT_CREATION(FieldID)
 
 		base::HashMap<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>              fields;

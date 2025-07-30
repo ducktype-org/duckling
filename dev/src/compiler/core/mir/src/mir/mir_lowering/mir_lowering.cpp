@@ -300,8 +300,8 @@ namespace compiler::mir {
 				          .getType();
 				  }
 				  else {
-					CORE_PANIC(
-					  "FunctionBuilder constructor should be called only with FunctionSymID"
+					  CORE_PANIC(
+						  "FunctionBuilder constructor should be called only with FunctionSymID"
 					  );
 				  }
 

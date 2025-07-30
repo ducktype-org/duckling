@@ -8,8 +8,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
-
-namespace vm::code::func_validator_helpers{
+namespace vm::code::func_validator_helpers {
 	// Helpers for validation, mainly `ext_*` instructions
 
 	using namespace instructions;
@@ -58,8 +57,10 @@ namespace vm::code::func_validator_helpers{
 
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
-		using RequiredAfter
-			= std::tuple<Op_fixedSizeTableLoad_lany_lptr, Op_fixedSizeTableStore_lptr_lany>;
+		using RequiredAfter = std::tuple<
+			Op_fixedSizeTableLea_lptr_lptr,
+			Op_fixedSizeTableLoad_lany_lptr,
+			Op_fixedSizeTableStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -91,7 +92,7 @@ namespace vm::code::func_validator_helpers{
 	bool acceptsExtension(CRef<Instruction> instr) {
 		return holdsOneOf<
 			Cat<typename ExtensionMetadata<E>::RequiredAfter,
-				typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
+		        typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
 	}
 
 	bool requiresSomeExtension(CRef<Instruction> instr) {

@@ -27,7 +27,7 @@ namespace vm {
 		VmValue& operator=(VmValue&&)      = default;
 
 		VmValue(TypeCRef type, Memory& memory):
-			  data(type->getSize()),
+			  data(u64(type->getSize())),
 			  memory(&memory),
 			  type(type),
 			  pointer(memory.allocateDummy(type, data.data()), 0) {}

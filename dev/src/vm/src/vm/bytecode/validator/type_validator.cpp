@@ -16,7 +16,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 	for (const auto& type: types) {
 		variant_match(type) {
 			variant_case(PrimitiveType, data) {
-				metadata->at(data.name)->definePrimitive(data.size);
+				metadata->at(data.name)->definePrimitive(TypeSize(data.size));
 			}
 			variant_case(PointerType, data) {
 				metadata->at(data.name)->definePointer(
@@ -63,7 +63,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 				);
 			}
 			variant_case(OpaqueType, opaque) {
-				metadata->at(opaque.name)->defineOpaque(opaque.size);
+				metadata->at(opaque.name)->defineOpaque(TypeSize(opaque.size));
 			}
 			variant_case(ClassType, clazz) {
 				TypeRef                 tp     = metadata->at(clazz.name);

@@ -29,7 +29,7 @@ namespace vm::builtins {
 				return {};
 			}
 			auto value = function(thread, args[Is].interpret<FunArgs>()...);
-			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+			CORE_ASSERT(sizeof(value) == u64(vm_return_type->getSize()), "Type sizes do not match");
 
 			auto vm_value             = VmValue(vm_return_type, memory);
 			vm_value.interpret<Ret>() = value;

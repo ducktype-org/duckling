@@ -91,7 +91,7 @@
 		for (auto&& _value_name = *_internal_optional; _perform_if; _perform_if = false) \
 	POP_DIAGNOSTIC
 
-	#define opt_some_move(_value_name)                                                                  \
+#define opt_some_move(_value_name)                                                                  \
 	PUSH_DIAGNOSTIC                                                                                 \
 	NO_SHADOW                                                                                       \
 	if (bool _perform_if = _internal_optional.has_value())                                          \
@@ -193,8 +193,7 @@ namespace base {
 			  private_optional(value) {}
 
 		template<class... Args>
-		requires std::is_constructible_v<T, Args...>
-		constexpr explicit Optional(Args&&... args
+		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args
 		) noexcept(std::is_nothrow_constructible_v<T, Args...>):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 

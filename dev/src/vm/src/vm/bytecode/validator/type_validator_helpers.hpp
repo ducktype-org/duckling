@@ -1,4 +1,4 @@
-#pragma  once
+#pragma once
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
