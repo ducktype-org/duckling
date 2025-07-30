@@ -2,8 +2,7 @@
 
 #include <base/str_utils.hpp>
 
-#include <vm/api/data/core_operation_error.hpp>
-#include <vm/api/data/load_program_error.hpp>
+#include <vm/api/data/api_error.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/parser/errors.hpp>
