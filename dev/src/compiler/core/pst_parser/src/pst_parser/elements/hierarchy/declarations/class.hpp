@@ -10,9 +10,9 @@ namespace pst {
 	class Class final: public Decl {
 	private:
 		tpc::Identifier                name;
-		AccessInternal<ExprElement>    base;
-		AccessInternal<ImplementsList> implements;
-		AccessInternal<ClassBlock>     body;
+		NAMED_CHILD(base, ExprElement);
+		NAMED_CHILD(implements, ImplementsList);
+		NAMED_CHILD(body, ClassBlock);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class, ElementKind::Class);

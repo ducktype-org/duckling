@@ -5,6 +5,7 @@
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <base/ref.hpp>
+#include <base/template_helpers.hpp>
 
 #include <query_framework/context_fd.hpp>
 #include <token_parser_core/debug_print.hpp>
@@ -86,6 +87,8 @@ namespace pst {
 		MCRef<Element> ref;
 
 		template</*std::derived_from<LangElement>*/ typename E>
+		friend class AccessInternalAnonymous;
+		template</*std::derived_from<LangElement>*/ typename E, base::TemplateStringLiteral name>
 		friend class AccessInternal;
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessLocked;
@@ -160,19 +163,34 @@ namespace pst {
 	 * store elements.
 	 */
 	template</*std::derived_from<LangElement>*/ typename Element>
-	class AccessInternal final {
+	class AccessInternalAnonymous final {
 	private:
 		MBox<Element> box;
 
 		template<typename E>
-		friend class AccessInternal;
+		friend class AccessInternalAnonymous;
+
+		template<typename State>
+		friend class PSTAutomatic;
+
+		template<typename E>
+		AccessInternalAnonymous& operator=(AccessInternalAnonymous<E>&& oth) noexcept {
+			box = std::move(oth).box;
+			return *this;
+		}
+
+		template<typename E>
+		AccessInternalAnonymous& operator=(MBox<E>&& mbox) noexcept {
+			box = std::move(mbox);
+			return *this;
+		}
 
 	public:
-		AccessInternal()                               = default;
-		AccessInternal(const AccessInternal<Element>&) = default;
-		AccessInternal(AccessInternal<Element>&&)      = default;
+		AccessInternalAnonymous()                               = default;
+		AccessInternalAnonymous(const AccessInternalAnonymous&) = delete;
+		AccessInternalAnonymous(AccessInternalAnonymous&&)      = delete;
 
-		AccessInternal(MBox<Element>&& box): box(std::move(box)) {}
+		AccessInternalAnonymous(MBox<Element>&& box): box(std::move(box)) {}
 
 		/**
 		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
@@ -180,8 +198,35 @@ namespace pst {
 		 */
 		AccessLocked<Element> give() const { return { box.ref() }; }
 
+		/**
+		 * @brief For internal usage of an Element, the alternative is to make Element a friend of
+		 * AccessInternal but it allows for easier access leaks.
+		 */
+		MCRef<Element> internal() const { return box.ref(); }
+
+		/**
+		 * @brief For internal usage of an Element, mutable version
+		 */
+		MRef<Element> internalMut() const { return box.ref_mut(); }
+	};
+
+	/**
+	 * @brief Wrapper for an optional pst box. It should only be used inside of pst as a way to
+	 * store elements.
+	 */
+	template</*std::derived_from<LangElement>*/ typename Element, base::TemplateStringLiteral name>
+	class AccessInternal final {
+	private:
+		MBox<Element> box;
+
+		template<typename, base::TemplateStringLiteral>
+		friend class AccessInternal;
+
+		template<typename State>
+		friend class PSTAutomatic;
+
 		template<typename E>
-		AccessInternal& operator=(AccessInternal<E>&& oth) noexcept {
+		AccessInternal& operator=(AccessInternal<E, name>&& oth) noexcept {
 			box = std::move(oth).box;
 			return *this;
 		}
@@ -192,11 +237,29 @@ namespace pst {
 			return *this;
 		}
 
+	public:
+		AccessInternal()                               = default;
+		AccessInternal(const AccessInternal&) = default;
+		AccessInternal(AccessInternal&&)      = default;
+
+		AccessInternal(MBox<Element>&& box): box(std::move(box)) {}
+
+		/**
+		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
+		 * return locked accesses.
+		 */
+		AccessLocked<Element> give() const { return { box.ref() }; }
+
 		/**
 		 * @brief For internal usage of an Element, the alternative is to make Element a friend of
 		 * AccessInternal but it allows for easier access leaks.
 		 */
 		MCRef<Element> internal() const { return box.ref(); }
+
+		/**
+		 * @brief For internal usage of an Element, mutable version
+		 */
+		MRef<Element> internalMut() const { return box.ref_mut(); }
 	};
 
 	/**
@@ -204,10 +267,18 @@ namespace pst {
 	 * outside of them.
 	 */
 	template<typename T>
-	void nullAwareDprint(const AccessInternal<T>& acc, std::ostream& out) {
+	void nullAwareDprint(const AccessInternalAnonymous<T>& acc, std::ostream& out) {
+		tpc::nullAwareDprint(acc.internal(), out);
+	}
+
+	template<typename T, base::TemplateStringLiteral name>
+	void nullAwareDprint(const AccessInternal<T, name>& acc, std::ostream& out) {
 		tpc::nullAwareDprint(acc.internal(), out);
 	}
 }
+
+#define NAMED_CHILD(name, Type) AccessInternal<Type, #name > name
+#define NAMED_CHILD_OPT(name, Type) base::Optional<AccessInternal<Type, #name >> name
 
 #define VISITOR_ACCESS_METHOD_INTERFACE(type) void visit##type(pst::Access<type>)
 

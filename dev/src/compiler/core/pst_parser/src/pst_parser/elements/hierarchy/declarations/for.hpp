@@ -9,9 +9,9 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier           optional_name;
 		tpc::Identifier                   iterator;
-		AccessInternal<ForTypeExprHolder> type;
-		AccessInternal<CommaExprHolder>   iterable;
-		AccessInternal<CodeBlockOrStmt>   body;
+		NAMED_CHILD(type, ForTypeExprHolder);
+		NAMED_CHILD(iterable, CommaExprHolder);
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}

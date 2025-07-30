@@ -11,7 +11,7 @@ namespace pst {
 	 * the optional "star" is ignored.
 	 */
 	class Import final: public Stmt {
-		AccessInternal<DottedName> names;
+		NAMED_CHILD(names, DottedName);
 		tpc::Identifier            alias;
 
 	public:

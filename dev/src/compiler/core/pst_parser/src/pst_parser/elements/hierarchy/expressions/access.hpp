@@ -10,7 +10,7 @@ namespace pst::expr {
 	class Access final: public ExprElement {
 		base::StrID                                 type;  ///< either `.` or `.?`
 		tpc::Identifier                             name;
-		base::Optional<AccessInternal<ExprElement>> template_specifier;
+		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}

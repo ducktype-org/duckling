@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class Alias final: public Stmt {
 		tpc::Identifier            name;
-		AccessInternal<DottedName> points_to;
+		NAMED_CHILD(points_to, DottedName);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias, ElementKind::Alias);

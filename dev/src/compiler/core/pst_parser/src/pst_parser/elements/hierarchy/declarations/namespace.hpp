@@ -5,7 +5,7 @@
 namespace pst {
 	class Namespace final: public Decl {
 		tpc::Identifier           name;
-		AccessInternal<CodeBlock> body;
+		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace, ElementKind::Namespace);

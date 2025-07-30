@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier   optional_name;
-		AccessInternal<CodeBlock> code_block;
+		NAMED_CHILD(code_block, CodeBlock);
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {

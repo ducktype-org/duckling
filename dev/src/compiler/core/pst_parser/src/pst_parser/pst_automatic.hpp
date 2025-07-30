@@ -174,8 +174,18 @@ namespace pst {
 		 * @brief Parses an Element. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed element.
 		 */
+		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
+		PSTAutomatic& one(AccessInternal<T, name>* result, [[maybe_unused]] bool ignorable = false) {
+			with(result, T::parse);
+			return *this;
+		}
+
+		/**
+		 * @brief Parses an Element. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed element.
+		 */
 		template<std::derived_from<LangElement> T>
-		PSTAutomatic& one(AccessInternal<T>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(AccessInternalAnonymous<T>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
 			return *this;
 		}
@@ -194,8 +204,8 @@ namespace pst {
 		 * @brief Parses an Element. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed element.
 		 */
-		template<std::derived_from<LangElement> T>
-		PSTAutomatic& one(base::Optional<AccessInternal<T>>* result, [[maybe_unused]] bool ignorable = false) {
+		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
+		PSTAutomatic& one(base::Optional<AccessInternal<T, name>>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
 			return *this;
 		}
@@ -206,11 +216,73 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
-		PSTAutomatic& assign(Sink* sink, MBox<El> sub_tree) {
+		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
+		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El> sub_tree) {
+			if (sub_tree) {
+				sub_tree->setParent(el);
+				el->addNamedChild(name, sub_tree);
+				*sink = std::move(sub_tree);
+			}
+			return *this;
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
+		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El> sub_tree) {
+			if (sub_tree) {
+				sub_tree->setParent(el);
+				el->addNamedChild(name, sub_tree);
+				*sink = std::move(sub_tree);
+			}
+			return *this;
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<LangElement> El>
+		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El> sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
+				*sink = std::move(sub_tree);
+			}
+			return *this;
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<LangElement> El>
+		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El> sub_tree) {
+			if (sub_tree) {
+				sub_tree->setParent(el);
+				el->addChild(sub_tree);
+				*sink = std::move(sub_tree);
+			}
+			return *this;
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<LangElement> El, typename Sink>
+		PSTAutomatic& assign(Sink* sink, MBox<El> sub_tree) {
+			if (sub_tree) {
 				*sink = std::move(sub_tree);
 			}
 			return *this;
@@ -261,8 +333,17 @@ namespace pst {
 		/**
 		 * @brief Call a default parse function with additional arguments and automation.
 		 */
+		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name, typename... Args>
+		PSTAutomatic& withDef(AccessInternal<El, name>* result, Args&&... args) {
+			with(result, El::parse, std::forward<Args>(args)...);
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 */
 		template<std::derived_from<LangElement> El, typename... Args>
-		PSTAutomatic& withDef(AccessInternal<El>* result, Args&&... args) {
+		PSTAutomatic& withDef(AccessInternalAnonymous<El>* result, Args&&... args) {
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -279,8 +360,17 @@ namespace pst {
 		/**
 		 * @brief Call a default parse function with additional arguments and automation.
 		 */
+		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name, typename... Args>
+		PSTAutomatic& withDef(base::Optional<AccessInternal<El, name>>* result, Args&&... args) {
+			with(result, El::parse, std::forward<Args>(args)...);
+			return *this;
+		}
+
+		/**
+		 * @brief Call a default parse function with additional arguments and automation.
+		 */
 		template<std::derived_from<LangElement> El, typename... Args>
-		PSTAutomatic& withDef(base::Optional<AccessInternal<El>>* result, Args&&... args) {
+		PSTAutomatic& withDef(base::Optional<AccessInternalAnonymous<El>>* result, Args&&... args) {
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}

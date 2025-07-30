@@ -7,10 +7,10 @@ namespace pst {
 	 * @brief If declaration
 	 */
 	class If final: public CodeDecl {
-		AccessInternal<RoundGroupExpr>  condition;
+		NAMED_CHILD(condition, RoundGroupExpr);
 		tpc::OptionalIdentifier         optional_name;
-		AccessInternal<CodeBlockOrStmt> body;
-		AccessInternal<CodeBlockOrStmt> else_body;
+		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {

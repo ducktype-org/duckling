@@ -4,13 +4,36 @@
 
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
+#include <base/variant.hpp>
+
+#include <ranges>
 
 namespace pst {
+	std::string ElementPath::str() {
+		using namespace std::ranges;
+		using namespace std::views;
+		return elements | join_with('.') | to<std::string>();
+	}
+
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
 	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
+
+	void LangElement::calcElementPathsRecursive(const ElementPath& path) {
+		for(auto& el: sub_elements) {
+			variant_match(el) {
+				variant_case(InternalChild, child) {
+					CORE_PANIC("Default implementation of calculating element paths cannot handle unnamed sub-elements. Encountered while calculating for: " + elementType());
+				}
+				variant_case(InternalNamedChild, named_child) {
+					ElementPath child_path(path, named_child.first);
+					named_child.second->calcElementPaths(child_path);
+				}
+			}
+		}
+	}
 
 	void LangElement::addToken(CRef<tpc::Token> t) {
 		sub_elements.emplace_back(t);
@@ -21,11 +44,27 @@ namespace pst {
 
 	void LangElement::addToken(const tpc::Token& t) { addToken(&t); }
 
-	void LangElement::addChild(MCRef<LangElement> el) {
+	void LangElement::addChild(Ref<LangElement> el) {
+		sub_elements.emplace_back(el );
+		setLastToken(el->getSourcePosition());
+	}
+
+	void LangElement::addChild(MRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			sub_elements.emplace_back(AccessLocked{ el });
-			setLastToken(opt.value()->getSourcePosition());
+			addChild(opt.value());
+		}
+	}
+
+	void LangElement::addNamedChild(const std::string& name, Ref<LangElement> el) {
+		sub_elements.emplace_back(InternalNamedChild{name, el});
+		setLastToken(el->getSourcePosition());
+	}
+
+	void LangElement::addNamedChild(const std::string& name, MRef<LangElement> el) {
+		auto opt = el.toOpt();
+		if (opt) {
+			addNamedChild(name, opt.value());
 		}
 	}
 

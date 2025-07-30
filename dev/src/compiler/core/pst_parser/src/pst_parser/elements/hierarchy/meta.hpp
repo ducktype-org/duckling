@@ -67,7 +67,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<AccessInternal<Attribute>>;
+		using AttrList = std::vector<AccessInternalAnonymous<Attribute>>;
 
 		AttrList attributes;
 

@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Top-level element that is the root of the pst of a single file.
 	 */
 	class TopLevel final: public Decl {
-		std::vector<AccessInternal<Stmt>> statements;
+		std::vector<AccessInternalAnonymous<Stmt>> statements;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel, ElementKind::TopLevel);

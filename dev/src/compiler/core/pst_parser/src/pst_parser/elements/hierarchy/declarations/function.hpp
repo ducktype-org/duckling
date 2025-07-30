@@ -9,9 +9,9 @@ namespace pst {
 	 */
 	class Fun final: public Decl {
 		tpc::Identifier                                 name;
-		AccessInternal<ParamList>                       params;
-		base::Optional<AccessInternal<CommaExprHolder>> ret;
-		AccessInternal<CodeBlockOrStmt>                 body;
+		NAMED_CHILD(params, ParamList);
+		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);

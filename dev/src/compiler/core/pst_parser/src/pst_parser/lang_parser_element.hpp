@@ -22,24 +22,51 @@ namespace pst {
 
 	class PstVisitor;
 
+	/**
+	 * @brief This is a simple text implementation of element path that might still have some conflicts
+	 *
+	 * It's supposed to uniquely identify elements in a parsed tree while ignoring some changes(mostly symbols with different names changing).
+	 *
+	 * The path is constructed from words periods and brackets:
+	 *  - Capitalized words signify element type
+	 *  - lowercase words signify accessors such as left, right, block
+	 *  - numbers in brackets signify which element it signifies
+	 *
+	 * @note The current implementation is non-optimal but for now it should suffice.
+	 *
+	 * @todo Add source information, and specify what is in the path
+	 */
 	struct ElementPath final {
-		// Add source information
-		std::vector<std::string>
+		ElementPath(const ElementPath& parent, const std::string& ext): elements(parent.elements.begin(), parent.elements.end()) {
+			elements.push_back(ext);
+		}
+
+		std::string str();
+
+	private:
+		std::vector<std::string> elements;
 	};
 
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+	public:
+		using SubToken = base::CRef<lexer::Token>;
+
 	private:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
+		using InternalChild = Ref<LangElement>;
+		using InternalNamedChild = std::pair<std::string, Ref<LangElement>>;
+
+		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
+
 	public:
 		using Child = AccessLocked<LangElement>;
+		using NamedChild = std::pair<std::string, AccessLocked<LangElement>>;
 
-		using SubToken = base::CRef<lexer::Token>;
-
-		using SubElement = std::variant<SubToken, Child>;
+		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
@@ -70,6 +97,35 @@ namespace pst {
 			out << ", ";
 		}
 
+		/**
+		 * @brief Calls the Element paths for children of a given element, has to be overriden for elements that have unnamed children.
+		 */
+		virtual void calcElementPathsRecursive(const ElementPath& path);
+
+		/**
+		 * @brief Calculates Element paths for this Element and children.
+		 */
+		void calcElementPaths(const ElementPath& path) {
+			element_path = {path, elementType()};
+			calcElementPathsRecursive(element_path.value());
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 */
+		template <typename Element, base::TemplateStringLiteral name>
+		void calcChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
+			access_ref.internalMut()->calcElementPaths(path);
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 */
+		template <typename Element>
+		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path) const {
+			access_ref.internalMut()->calcElementPaths(path);
+		}
+
 	private:
 		/**
 		 * @brief Helper function for filtering variants
@@ -94,7 +150,19 @@ namespace pst {
 		[[nodiscard]]
 		auto viewSubElements() const {
 			using namespace std::views;
-			return std::ranges::ref_view(sub_elements);
+
+			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
+				if (std::holds_alternative<InternalChild>(t)) {
+					return std::get<InternalChild>(t);
+				} else if (std::holds_alternative<InternalNamedChild>(t)) {
+					auto& [name, inter] = std::get<InternalNamedChild>(t);
+					return NamedChild{name, {inter}};
+				} else {
+					return std::get<SubToken>(t);
+				}
+			};
+
+			return std::ranges::ref_view(sub_elements) | transform(get_locked);
 		}
 
 		/**
@@ -103,8 +171,20 @@ namespace pst {
 		[[nodiscard]]
 		auto viewChildren() const {
 			using namespace std::views;
-			return viewSubElements() | filter(holds<Child, SubElement>)
-			     | transform(choose<Child, SubElement>);
+
+			constexpr auto is_child = [](const SubElement& t) -> bool {
+				return std::holds_alternative<Child>(t) || std::holds_alternative<NamedChild>(t);
+			};
+			constexpr auto strip_name = [](const SubElement& t) -> const Child& {
+				if (std::holds_alternative<NamedChild>(t)) {
+					return std::get<NamedChild>(t).second;	
+				} else {
+					return std::get<Child>(t);
+				}
+			};
+
+			return viewSubElements() | filter(is_child)
+			     | transform(strip_name);
 		}
 
 		/**
@@ -113,7 +193,7 @@ namespace pst {
 		[[nodiscard]]
 		auto viewTokens() const {
 			using namespace std::views;
-			return sub_elements | filter(holds<SubToken, SubElement>)
+			return viewSubElements() | filter(holds<SubToken, SubElement>)
 			     | transform(choose<SubToken, SubElement>);
 		}
 
@@ -181,9 +261,9 @@ namespace pst {
 
 	protected:
 		dia::SourcePosition                       source_position;
-		std::vector<SubElement>                   sub_elements;
+		std::vector<InternalSubElement>                   sub_elements;
 		base::Optional<AccessLocked<LangElement>> parent;
-		base::Optional<AccessLocked<LangElement>> parent;
+		base::Optional<ElementPath> element_path;
 
 		/**
 		 * @brief Kind of the element.
@@ -196,16 +276,31 @@ namespace pst {
 		void addToken(CRef<lexer::Token> token);
 
 		template<std::derived_from<LangElement> El>
-		void addChild(MCRef<El> el) {
+		void addChild(MRef<El> el) {
 			auto opt = el.toOpt();
 			if (opt) addChild(opt.value());
 		}
 
-		void addChild(MCRef<LangElement> child);
+		void addChild(MRef<LangElement> child);
+		void addChild(Ref<LangElement> child);
 
 		template<typename T>
 		void addChild(MBox<T>& child) {
 			addChild(child.refMut());
+		}
+
+		template<std::derived_from<LangElement> El>
+		void addNamedChild(const std::string& name, MRef<El> el) {
+			auto opt = el.toOpt();
+			if (opt) addNamedChild(name, opt.value());
+		}
+
+		void addNamedChild(const std::string& name, MRef<LangElement> child);
+		void addNamedChild(const std::string& name, Ref<LangElement> child);
+
+		template<typename T>
+		void addNamedChild(const std::string& name, MBox<T>& child) {
+			addNamedChild(name, child.refMut());
 		}
 
 		/**

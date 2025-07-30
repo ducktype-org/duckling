@@ -8,7 +8,7 @@ namespace pst::expr {
 	 */
 	class PrefixOperator: public ExprElement {
 	protected:
-		AccessInternal<ExprElement> expr;
+		NAMED_CHILD(expr, ExprElement);
 		Operator                    op;
 
 	public:

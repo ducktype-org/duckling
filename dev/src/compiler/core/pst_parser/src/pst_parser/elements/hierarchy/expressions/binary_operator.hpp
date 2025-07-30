@@ -8,9 +8,9 @@ namespace pst::expr {
 	 */
 	class BinaryOperator: public ExprElement {
 	protected:
-		AccessInternal<ExprElement> left;
+		NAMED_CHILD(left, ExprElement);
 		Operator                    op;
-		AccessInternal<ExprElement> right;
+		NAMED_CHILD(right, ExprElement);
 
 	public:
 		explicit BinaryOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):

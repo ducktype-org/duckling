@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Simple expand macro
 	 */
 	class Expand final: public Stmt {
-		AccessInternal<CommaExprHolder> value;
+		NAMED_CHILD(value, CommaExprHolder);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Expand, ElementKind::Expand);

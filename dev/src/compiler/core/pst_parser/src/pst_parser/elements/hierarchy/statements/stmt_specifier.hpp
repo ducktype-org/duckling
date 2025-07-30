@@ -13,7 +13,7 @@ namespace pst {
 	 */
 	class StmtSpecifier final: public Stmt {
 		Keyword                         specifier = Keyword::NotAKeyword;
-		AccessInternal<CodeBlockOrStmt> code_block_or_stmt;
+		NAMED_CHILD(code_block_or_stmt, CodeBlockOrStmt);
 
 	public:
 		static constexpr std::array<Keyword, 3> SPECIFIERS_ARRAY = {

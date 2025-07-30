@@ -20,7 +20,7 @@ namespace pst {
 		};
 
 	private:
-		std::vector<AccessInternal<Stmt>> statements;
+		std::vector<AccessInternalAnonymous<Stmt>> statements;
 		CodeBlockType type = Undefined;
 
 	public:
@@ -43,5 +43,10 @@ namespace pst {
 		bool isStatementAggregate() const final {
 			return true;
 		}
+
+		/**
+		 * @todo implement
+		 */
+		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Class Block that contains Class statements.
 	 */
 	class ClassBlock final: public NotStmt {
-		std::vector<AccessInternal<ClassStmt>> statements;
+		std::vector<AccessInternalAnonymous<ClassStmt>> statements;
 
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
@@ -30,5 +30,10 @@ namespace pst {
 		bool isStatementAggregate() const final {
 			return true;
 		}
+
+		/**
+		 * @todo implement
+		 */
+		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

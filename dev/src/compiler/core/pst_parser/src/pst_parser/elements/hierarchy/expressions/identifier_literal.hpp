@@ -8,7 +8,7 @@ namespace pst::expr {
 	 */
 	class IdentifierLiteral final: public ExprElement {
 		tpc::Identifier                             name;
-		base::Optional<AccessInternal<ExprElement>> template_specifier;
+		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		IdentifierLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}

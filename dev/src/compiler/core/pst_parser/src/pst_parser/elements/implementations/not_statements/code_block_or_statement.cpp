@@ -6,34 +6,41 @@ namespace pst {
 	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state, CodeBlock::CodeBlockType code_block_order_type) {
 		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
-			AccessInternal<CodeBlock> block;
+			MBox<CodeBlock> block;
 			state.parse(out).with(&block, CodeBlock::parse, fwdVal(code_block_order_type));
-			if (!block.internal()) return nullptr;
-			out->content = std::move(block);
+			if (!block) return nullptr;
+			state.parse(out).assign(&out->code_block, std::move(block));
 		} else {
-			AccessInternal<Stmt> stmt;
+			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
-			if (!stmt.internal()) return nullptr;
-			out->content = std::move(stmt);
+			if (!stmt) return nullptr;
+			state.parse(out).assign(&out->stmt, std::move(stmt));
 		}
 
 		return out;
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {
-		auto print_through = [&](const auto& el) { return nullAwareDprint(el, out); };
-
-		std::visit(print_through, content);
+		if (code_block) {
+			nullAwareDprint(code_block.value(), out);
+		} else {
+			nullAwareDprint(stmt.value(), out);
+		}
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
-		variant_match(content) {
-			variant_case(AccessInternal<Stmt>, stmt) { return const_iterator(&stmt); }
-			variant_case(AccessInternal<CodeBlock>, code_block) {
-				return code_block.internal()->begin();
-			}
+		if (code_block) {
+			return code_block.value().internal()->begin();
+		} else {
+			return const_iterator(&stmt.value());
 		}
-		CORE_UNREACHABLE();
+		// variant_match(content) {
+			// variant_case(AccessInternal<Stmt>, stmt) { return const_iterator(&stmt); }
+			// variant_case(AccessInternal<CodeBlock>, code_block) {
+				// return code_block.internal()->begin();
+			// }
+		// }
+		// CORE_UNREACHABLE();
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {

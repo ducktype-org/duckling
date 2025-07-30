@@ -14,7 +14,7 @@ namespace pst {
 	template<
 		class ListElements,
 		GetName getName,
-		class Container = std::vector<AccessInternal<ListElements>>>
+		class Container = std::vector<AccessInternalAnonymous<ListElements>>>
 	class List: public NotStmt {
 	protected:
 		Container elements;
@@ -43,6 +43,16 @@ namespace pst {
 				out << ",";
 			}
 			out << "]";
+		}
+
+		/**
+		 * @brief A default override for lists that adds the index.
+		 */
+		void calcElementPathsRecursive(const ElementPath& path) override {
+			for(usize i = 0; i < elements.size(); i++) {
+				ElementPath child_path(path, std::format("[%llu]", i));
+				calcChildPath(elements[i], child_path);
+			} 
 		}
 	};
 }

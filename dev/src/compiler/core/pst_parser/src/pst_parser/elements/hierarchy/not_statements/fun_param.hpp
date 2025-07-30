@@ -8,8 +8,8 @@ namespace pst {
 	 */
 	class FunParam final: public NotStmt {
 		tpc::Identifier                                     name;
-		AccessInternal<UniversalExprHolder>                 type;
-		base::Optional<AccessInternal<UniversalExprHolder>> initial;
+		NAMED_CHILD(type, UniversalExprHolder);
+		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {
