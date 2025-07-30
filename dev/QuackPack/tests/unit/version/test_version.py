@@ -1,6 +1,6 @@
 import pytest
 
-from quackpack.util.version import Version
+from quackpack.util.types.version import Version
 
 
 def test_version_parsing():

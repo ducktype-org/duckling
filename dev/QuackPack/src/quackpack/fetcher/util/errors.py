@@ -1,13 +1,4 @@
-from quackpack.util.errors import QuackPackError
-
-
-class UninitializedClientError(QuackPackError):
-    """
-    Exception raised when the Ducknest client or metadata cache has not been initialized.
-    """
-
-    def __init__(self):
-        super().__init__("Fetcher: Ducknest client or metadata cache not initialized")
+from quackpack.util.types.errors import QuackPackError
 
 
 class MissingEventLoopError(QuackPackError):

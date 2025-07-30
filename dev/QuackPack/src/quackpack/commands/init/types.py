@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
 
-from quackpack.util.global_context import GlobalContext
+from quackpack.global_context import GlobalContext
 
 
 class NewVenvType(Enum):
@@ -16,4 +16,7 @@ class InitOptions:
     destination: Path
     name: str
     type: NewVenvType
+    is_ephemeral: bool
+    use_local_storage: bool
+    expose_freezefile: bool
     ctx: GlobalContext

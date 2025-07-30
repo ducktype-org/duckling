@@ -54,20 +54,23 @@ to exist after reboot even if it has been used before. The problem affects
 however only relatively new virtual environments.
 """
 
+from __future__ import annotations
+
 import os
 import shutil
 from hashlib import sha256
 from pathlib import Path
-from typing import Final
+from typing import Any, Final, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer, field_validator
 from pydantic_core import ValidationError
 
-from quackpack.config.project import Metadata
+from quackpack.manifest.schemas.registry import GitSourceSchema, RegistryManifestSchema
+from quackpack.manifest.source import GitSource
 from quackpack.signals import EnableInterrupt
 from quackpack.storage.paths import StoragePaths
 from quackpack.util.context_managers import OsFdContext
-from quackpack.util.pkgid import Identifier, ResolvedId
+from quackpack.util.types.pkgid import GitPackageId, Identifier, PackageId
 
 
 def transfer_file(*, source: Path, target: Path) -> None:
@@ -96,94 +99,178 @@ def try_fsync_dir(dir: Path) -> None:
     """
 
     try:
-        with EnableInterrupt(), OsFdContext(dir, os.O_RDONLY) as dir_fd:
+        with OsFdContext(dir, os.O_RDONLY) as dir_fd:
             os.fsync(dir_fd)
     except (NotImplementedError, OSError):
         pass
-
-
-class Dependency(BaseModel):
-    """
-    A dependency used in the virtual environment.
-
-    :ivar quackpack.util.pkgid.ResolvedId id: Fully resolved identifier of the dependency.
-    :ivar list[str] used_flags: Flags used to compile the dependency.
-    :ivar list[str] | None system: List of required operating systems.
-    :ivar list[str] | None arch: List of required CPU architectures.
-    """
-
-    id: ResolvedId
-    used_flags: list[str]
-    system: list[str] | None = None
-    arch: list[str] | None = None
-
-
-class StorageVenv(BaseModel):
-    """
-    The canonical representation of a virtual environment's stored state.
-
-    :ivar dict[quackpack.util.pkgid.Identifier, quackpack.storage.venv.Dependency] dependencies:
-        Mapping of dependency identifiers to their metadata.
-    :ivar quackpack.config.project.Metadata metadata: Metadata associated with this virtual environment.
-    :ivar pathlib.Path last_location: Filesystem path of the last environment location.
-    :ivar float last_modification: Timestamp of the last modification.
-    :ivar float last_access: Timestamp of the last access.
-    """
-
-    dependencies: dict[Identifier, Dependency]
-    metadata: Metadata
-    last_location: Path
-    last_modification: float
-    last_access: float
 
 
 class _CorruptedFileError:
     pass
 
 
-def _load_venv_file(path: Path) -> StorageVenv | _CorruptedFileError:
+class PackageFreeze(BaseModel):
     """
-    Load and validate a virtual environment state file.
+    Information required to build a package in a given dependencies realization.
 
-    :param pathlib.Path path: Path to the metadata file.
-    :return: Parsed :class:`StorageVenv` object if valid, :class:`_CorruptedFileError` otherwise.
-    :rtype: quackpack.storage.venv.StorageVenv | quackpack.storage.venv._CorruptedFileError
-    """
-
-    with EnableInterrupt(), open(path, encoding="utf-8") as f:
-        content = f.read()
-    try:
-        data, checksum = content.rsplit("\n", maxsplit=1)
-    except ValueError:
-        return _CorruptedFileError()
-
-    hash = sha256()
-    hash.update(bytes(data, encoding="utf-8"))
-    if checksum != hash.hexdigest():
-        return _CorruptedFileError()
-
-    try:
-        return StorageVenv.model_validate_json(data)
-    except ValidationError:
-        return _CorruptedFileError()
-
-
-def _save_venv_file(path: Path, venv: StorageVenv) -> None:
-    """
-    Write a virtual environment state to disk with content validation checksum.
-
-    :param pathlib.Path path: Path to save the metadata file to.
-    :param quackpack.storage.venv.StorageVenv venv: The environment data to store.
+    :ivar dict[quackpack.util.pkgid.Identifier, quackpack.util.pkgid.PackageId] dependencies: Dependencies of a given package.
+    :ivar list[quackpack.util.pkgid.Identifier] used_flags: Flags used to compile the dependency.
+    :ivar list[str] | None system: List of required operating systems.
+    :ivar list[str] | None arch: List of required CPU architectures.
     """
 
-    data = venv.model_dump_json()
-    with open(path, "w", encoding="utf-8") as f:
+    dependencies: dict[Identifier, PackageId]
+    used_flags: list[Identifier]
+    system: list[str] | None = None
+    arch: list[str] | None = None
+
+
+class _Dependency(BaseModel):
+    id: PackageId
+    data: PackageFreeze
+
+
+class _GitFetchCacheEntry(BaseModel):
+    source: GitSource
+    result: GitPackageId
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def deserialize_source(cls, value: Any) -> GitSource:
+        if isinstance(value, GitSource):
+            return value
+        value = GitSourceSchema.model_validate(value)
+        # this should be `GitSource.from_schema`, but for dumb python reason it cannot exist
+        return GitSource(git_url=value.git_url, commit=value.commit, tag=value.tag, branch=value.branch)
+
+    @field_serializer("source")
+    def serialize_source(self, source: GitSource) -> GitSourceSchema:
+        return cast(GitSourceSchema, source.into_schema().inner)
+
+
+class VenvFreeze(BaseModel):
+    """
+    Realization of requirements stored in virtual environment manifest.
+    Contains all the information required to build and run code using the given virtual environment.
+
+    :ivar dict[quackpack.util.pkgid.Identifier, quackpack.util.pkgid.PackageId] direct_dependencies:
+        Mapping from direct dependency identifiers to concrete packages.
+    :ivar dict[quackpack.util.pkgid.PackageId, quackpack.storage.files.PackageFreeze] dependencies:
+        Build graph of the realization, together with feature flags used for each package.
+    :ivar dict[quackpack.manifest.source.GitSource, quackpack.util.pkgid.GitPackageId] git_fetch_cache:
+        Cache of associations from unresolved git sources (which may use branch or tag) to conrete git ids.
+        Updated on each freeze file creation to store all the git sources that appreared in the solving process.
+        The values of the cache are required to exist as keys to `dependencies`.
+    """
+
+    direct_dependencies: dict[Identifier, PackageId]
+    dependencies: dict[PackageId, PackageFreeze]
+    git_fetch_cache: dict[GitSource, GitPackageId]
+
+    @field_validator("dependencies", mode="before")
+    @classmethod
+    def deserialize_dependencies(cls, value: Any) -> dict[PackageId, PackageFreeze]:
+        if isinstance(value, dict):
+            entries = (
+                _Dependency.model_validate({"id": k, "data": v})
+                for k, v in cast(dict[Any, Any], value).items()
+            )
+        elif isinstance(value, list):
+            entries = (_Dependency.model_validate(dep) for dep in cast(list[Any], value))
+        else:
+            raise ValueError("Expected dict or list of dependency entries")
+        return {dep.id: dep.data for dep in entries}
+
+    @field_serializer("dependencies")
+    def serialize_dependencies(self, dependencies: dict[PackageId, PackageFreeze]) -> list[_Dependency]:
+        return [_Dependency(id=k, data=v) for k, v in dependencies.items()]
+
+    @field_validator("git_fetch_cache", mode="before")
+    @classmethod
+    def deserialize_git_fetch_cache(cls, value: Any) -> dict[GitSource, GitPackageId]:
+        if isinstance(value, dict):
+            entries = (
+                _GitFetchCacheEntry.model_validate({"source": k, "result": v})
+                for k, v in cast(dict[Any, Any], value).items()
+            )
+        elif isinstance(value, list):
+            entries = (_GitFetchCacheEntry.model_validate(entry) for entry in cast(list[Any], value))
+        else:
+            raise ValueError("Expected dict or list of git fetch cache entries")
+        return {entry.source: entry.result for entry in entries}
+
+    @field_serializer("git_fetch_cache")
+    def serialize_git_fetch_cache(
+        self, git_fetch_cache: dict[GitSource, GitPackageId]
+    ) -> list[_GitFetchCacheEntry]:
+        return [
+            _GitFetchCacheEntry(source=source, result=result) for source, result in git_fetch_cache.items()
+        ]
+
+
+class StorageVenv(BaseModel):
+    """
+    State of virtual environment in the storage. Stores the freeze for the given
+    virtual environment, copy of manifest's metadata, and additional info
+    required for storage functioning: last location and access info.
+
+    :ivar quackpack.storage.files.VenvFreeze freeze: Realization of dependency requirements.
+    :ivar quackpack.schemas.manifest.ManifestSchema original_schema: Copy of the corresponding manifest.
+    :ivar pathlib.Path last_location: Filesystem path of the last environment location.
+    :ivar float last_modification: Timestamp of the last modification.
+    :ivar float last_access: Timestamp of the last access.
+    """
+
+    freeze: VenvFreeze
+    original_schema: RegistryManifestSchema
+    is_ephemeral: bool
+    last_location: Path
+    last_modification: float
+    last_access: float
+
+    @staticmethod
+    def load(path: Path) -> StorageVenv | _CorruptedFileError:
+        """
+        Load and validate a virtual environment state file.
+
+        :param pathlib.Path path: Path to the metadata file.
+        :return: Parsed :class:`StorageVenv` object if valid, :class:`_CorruptedFileError` otherwise.
+        :rtype: quackpack.storage.files.StorageVenv | quackpack.storage.venv._CorruptedFileError
+        """
+
+        with EnableInterrupt(), open(path, encoding="utf-8") as f:
+            content = f.read()
+        try:
+            data, checksum = content.rsplit("\n", maxsplit=1)
+        except ValueError:
+            return _CorruptedFileError()
+
         hash = sha256()
         hash.update(bytes(data, encoding="utf-8"))
-        with EnableInterrupt():
-            f.write(f"{data}\n{hash.hexdigest()}")
-            f.flush()
-            os.fsync(f.fileno())
+        if checksum != hash.hexdigest():
+            return _CorruptedFileError()
+
+        try:
+            return StorageVenv.model_validate_json(data)
+        except ValidationError:
+            return _CorruptedFileError()
+
+    def save(self, path: Path) -> None:
+        """
+        Write a virtual environment state to disk with content validation checksum.
+
+        :param pathlib.Path path: Path to save the metadata file to.
+        :param quackpack.storage.files.StorageVenv venv: The environment data to store.
+        """
+
+        data = self.model_dump_json()
+        with open(path, "w", encoding="utf-8") as f:
+            hash = sha256()
+            hash.update(bytes(data, encoding="utf-8"))
+            with EnableInterrupt():
+                f.write(f"{data}\n{hash.hexdigest()}")
+                f.flush()
+                os.fsync(f.fileno())
 
 
 def fix_and_load_venv(storage: StoragePaths, venv_id: Identifier) -> StorageVenv | None:
@@ -208,20 +295,21 @@ def fix_and_load_venv(storage: StoragePaths, venv_id: Identifier) -> StorageVenv
     backup_existed = backup_path.exists()
     # if main file is valid, return state held in it
     if existed:
-        data = _load_venv_file(path)
+        data = StorageVenv.load(path)
         if not isinstance(data, _CorruptedFileError):
             return data
     # otherwise, the state is not canonical, and current state, if it exists,
     # is held in the backup file
     if backup_existed:
-        data = _load_venv_file(backup_path)
+        data = StorageVenv.load(backup_path)
         if not isinstance(data, _CorruptedFileError):
             # transform the state into canonical one, by moving the valid
             # backup into main file
             with EnableInterrupt():
                 transfer_file(source=backup_path, target=path)
             if not existed:
-                try_fsync_dir(storage.venv_dir(venv_id))
+                with EnableInterrupt():
+                    try_fsync_dir(storage.venv_dir(venv_id))
             return data
     # both files are not valid, so the venv does not exist,
     # put it in the canonical form by deleting its directory
@@ -239,7 +327,7 @@ def save_venv(storage: StoragePaths, venv_id: Identifier, venv_data: StorageVenv
 
     :param quackpack.storage.paths.StoragePaths storage: Storage layout manager.
     :param quackpack.util.pkgid.Identifier venv_id: Identifier of the virtual environment.
-    :param quackpack.storage.venv.StorageVenv venv_data: New environment state to persist.
+    :param quackpack.storage.files.StorageVenv venv_data: New environment state to persist.
     """
 
     path = storage.venv_metadata(venv_id)
@@ -256,11 +344,12 @@ def save_venv(storage: StoragePaths, venv_id: Identifier, venv_data: StorageVenv
         with EnableInterrupt():
             transfer_file(source=path, target=backup_path)
         if not backup_existed:
-            try_fsync_dir(storage.venv_dir(venv_id))
-    _save_venv_file(path, venv_data)
+            with EnableInterrupt():
+                try_fsync_dir(storage.venv_dir(venv_id))
+    venv_data.save(path)
     if not existed:
         # also initialize the `.old` file, such that issues
         # relating to unavailable directory `fsync` are minimized
         with EnableInterrupt():
             transfer_file(source=path, target=backup_path)
-        try_fsync_dir(storage.venv_dir(venv_id))
+            try_fsync_dir(storage.venv_dir(venv_id))

@@ -5,8 +5,8 @@ import pytest
 
 from quackpack.fetcher.api_types import Package, SingleMetadata
 from quackpack.fetcher.cache import MetadataCache, MetadataCacheContext, SQLiteDatabase
-from quackpack.util.errors import QuackPackError
-from quackpack.util.pkgid import Identifier
+from quackpack.util.types.errors import QuackPackError
+from quackpack.util.types.pkgid import Identifier
 
 
 @pytest.fixture(scope="function")
@@ -25,14 +25,34 @@ def example_metadata():
     content = """
 {
     "metadata": {
-        "author": "Patryk Rogalski",
+        "authors": ["Patryk Rogalski"],
         "version": "1.2.3",
         "name": "quackpack",
-        "license": "GLTWSPL"
+        "license": "GLTWSPL",
+        "description": ""
     },
     "dependencies": {
-        "pkg1": { "version": "2.3.4" }
-    }
+        "pkg1": {
+            "version": ["2.3.4"],
+            "source": {
+                "inner": {
+                    "type": "registry",
+                    "registry_url": "xd"
+                }
+            },
+            "features": [],
+            "pinned": false,
+            "conditions": {
+                "system": [],
+                "arch": [],
+                "package_features": []
+            }
+        }
+    },
+    "dev_dependencies": {},
+    "features": {},
+    "targets": {},
+    "profiles": {}
 }
     """
     return SingleMetadata.model_validate_json(content)

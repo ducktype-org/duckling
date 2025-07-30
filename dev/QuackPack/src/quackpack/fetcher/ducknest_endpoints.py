@@ -1,3 +1,7 @@
+"""
+Module containing endpoints for Ducknest instance interaction.
+"""
+
 import urllib.parse
 
 from quackpack.fetcher.api_types import Package, PackageName

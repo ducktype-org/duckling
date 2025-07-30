@@ -1,19 +1,22 @@
+"""
+Module containing types used in fetcher code.
+"""
+
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from pydantic import AnyUrl, BaseModel
+from pydantic import BaseModel
 
-from quackpack.config.project import Manifest
-from quackpack.config.project.git_entry import GitEntry
-from quackpack.util.pkgid import Identifier
+from quackpack.manifest.schemas.registry import RegistryManifestSchema
+from quackpack.util.types.pkgid import Identifier
 
 __all__ = ["MultiMetadata", "MultiMetadataResult", "Package", "SingleMetadata", "SingleMetadataResult"]
 
-SingleMetadata = Manifest
+SingleMetadata = RegistryManifestSchema
 
-# TODO: actual implement this in pending merge request
 PackageName = Identifier
-URLType = AnyUrl
+URLType = str
 
 
 class MultiMetadata(BaseModel):
@@ -22,7 +25,6 @@ class MultiMetadata(BaseModel):
 
 class Package(BaseModel):
     id: PackageName
-    # TODO: find something better
     version: str
 
 
@@ -42,7 +44,7 @@ class MultiMetadataResult:
 
 @dataclass(frozen=True)
 class SingleGitMetadataResult:
-    git_entry: GitEntry
+    git_entry: Any
     destination_path: Path
     commit_hash: str
     result: SingleMetadata | None

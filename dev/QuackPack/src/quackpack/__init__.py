@@ -11,7 +11,7 @@ def main() -> None:
 
         signal(SIGINT, raising_signal_handler)
         signal(SIGTERM, raising_signal_handler)
-        from quackpack.setup_and_run import setup_and_run
+        from quackpack.cli.setup_and_run import setup_and_run
 
         setup_and_run()
     except SignalInterrupt as e:

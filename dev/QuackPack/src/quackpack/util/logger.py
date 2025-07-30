@@ -1,5 +1,4 @@
 import logging
-from os import getenv
 from typing import Final, override
 
 from rich.logging import RichHandler
@@ -31,22 +30,25 @@ class QuackPackDebugFilter(logging.Filter):
             filename = record.name
             module_name = filename.rsplit(".", maxsplit=1)[0]
             # NOTE: This is for command-line debugging particular modules, like in cargo: https://doc.crates.io/contrib/implementation/debugging.html.
-            self._cached_filter = _debug_env_value in (filename, module_name, "quackpack", "qp", "all")
+            is_good_module = module_name.startswith(("quackpack", "qp"))
+            self._cached_filter = is_good_module and (
+                _debug_env_value in (filename, module_name, "quackpack", "qp", "all")
+                or (_debug_env_value is not None and module_name.startswith(_debug_env_value))
+            )
         return self._cached_filter
 
 
 # FIXME: Should RichHandler take console, so console settings propagate to the loggers?
 #        And if yes, then which one?
-def setup_logger() -> None:
+def setup_logger(debug_env_value: str | None) -> None:
     """
     Setup logger for debug printing.
     """
     # PERF: Cache environmental variable, so getenv() doesn't become bottle-neck.
     global _debug_env_value
-    _debug_env_value = getenv("QP_DEBUG")
-    # NOTE: We set every logger level to DEBUG, and instead rely on filters.
+    _debug_env_value = debug_env_value
+    # NOTE: We don't set default log level here (in a root logger), because that affects loggers of dependencies (looking at you, gitpython).
     logging.basicConfig(
-        level=logging.DEBUG,
         format=__FORMAT,
         datefmt=__DATE_FORMAT,
         force=True,
@@ -73,5 +75,7 @@ def get_logger(name: str) -> logging.Logger:
     - `logging.Logger`: logger for provided `name`.
     """
     logger = logging.getLogger(name)
+    # For our loggers, we are setting DEBUG level and rely on filter.
     logger.addFilter(QuackPackDebugFilter())
+    logger.setLevel(logging.DEBUG)
     return logger

@@ -1,90 +1,58 @@
-from __future__ import annotations
+from collections.abc import Iterable
+from typing import cast
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import override
-
-from quackpack.config.project import DependencyConditions, DependencyEntry, GitEntry, LocalEntry
-from quackpack.solver.universal_names import UniversalName
-from quackpack.util.pkgid import Identifier
-from quackpack.util.version import Version
-
-
-class NoFlags(Enum):
-    NO_FLAGS = 0
+from quackpack.manifest.dependency import Dependency
+from quackpack.manifest.source import GitSource
+from quackpack.solver.gathering import GatheredInfo
+from quackpack.solver.types.packages_by_id import PackagesById
+from quackpack.solver.types.resolved_id import ResolvedIdGit
+from quackpack.solver.types.unresolved_id import IdResolvents, UnresolvedId
+from quackpack.solver.types.unresolved_package import ResolvedPackage, UnresolvedPackage
+from quackpack.util.types.pkgid import GitPackageId
 
 
-def check_conditions(origin_flag: str | NoFlags, conditions: DependencyConditions | None) -> bool:
-    if conditions is None:
-        return True
-
-    # TODO: Check arch and system
-    if conditions.project_flags is None:
-        return True
-    else:
-        return origin_flag is not NoFlags.NO_FLAGS and origin_flag in (
-            (conditions.project_flags.root,)
-            if isinstance(conditions.project_flags, Identifier)
-            else conditions.project_flags
-        )
-
-
-def check_conditions_any(origin_flags: list[str | NoFlags], conditions: DependencyConditions | None) -> bool:
-    return any(check_conditions(flag, conditions) for flag in origin_flags)
-
-
-def get_flags(origin_flag: NoFlags | str, dep_entry: DependencyEntry) -> list[NoFlags | str]:
-    flags_to_check: list[NoFlags | str] = [NoFlags.NO_FLAGS]
-    for flag_entry in dep_entry.flags:
-        if isinstance(flag_entry, Identifier):
-            flags_to_check.append(flag_entry.root)
+def get_possible_realizations(
+    dependency: Dependency, packages_by_id: PackagesById, id_resolvents: IdResolvents
+) -> list[ResolvedPackage]:
+    if dependency.is_pinned:
+        pinned = UnresolvedPackage.create(
+            UnresolvedId.from_dependency(dependency), dependency.versions[0]
+        ).resolve(id_resolvents)
+        if pinned not in packages_by_id[pinned.id]:
+            return []
         else:
-            for flag, condition in flag_entry.items():
-                # TODO: Is this right, or should it be check_conditions(flag, condition)?
-                if check_conditions(origin_flag, condition):
-                    flags_to_check.append(flag.root)
-    return flags_to_check
+            return [pinned]
+    else:
+        id = UnresolvedId.from_dependency(dependency)
+        baseline_packages = [
+            UnresolvedPackage.create(id, version).resolve(id_resolvents)
+            for version in ((None,) if id.is_local() else dependency.versions)
+        ]
+        return [
+            package
+            for package in packages_by_id[id.resolve(id_resolvents)]
+            # NOTE: Selector to any version should be None instead of [],
+            # similarily to system and arch selectors.
+            # However the amount of changes to schemas required for that
+            # is not worth the effort.
+            if dependency.versions == [] or package.is_compatible_with_any(baseline_packages)
+        ]
 
 
-# A class to identify single package version.
-class SolverPackage:
-    name: UniversalName
-    version: Version | GitEntry | LocalEntry
-
-    def __init__(self, name: UniversalName, version: Version | GitEntry | LocalEntry):
-        self.name = name
-        self.version = version
-
-    @override
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, SolverPackage):
-            return False
-        return self.name == other.name and self.version == other.version
-
-    @override
-    def __hash__(self) -> int:
-        return hash((self.name, self.version))
-
-    @override
-    def __str__(self) -> str:
-        return f"SolverPackage\nname: {self.name!s}\nversion: {self.version!s}\n"
-
-
-@dataclass
-class SolverPackageWithFlag:
-    package: SolverPackage
-    flag: str | NoFlags
-
-    @override
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, SolverPackageWithFlag):
-            return False
-        return self.package == other.package and self.flag == other.flag
-
-    @override
-    def __hash__(self) -> int:
-        return hash((self.package, self.flag))
-
-    @override
-    def __str__(self) -> str:
-        return f"SolverPackageWithFlag\nname: {self.package.name!s}\nversion: {self.package.version!s}\nflag: {self.flag!s}"
+def create_git_fetch_cache(
+    data: GatheredInfo, used_packages: Iterable[ResolvedPackage]
+) -> dict[GitSource, GitPackageId]:
+    result = dict[GitSource, GitPackageId]()
+    used_gits = {cast(ResolvedIdGit, pkg.id) for pkg in used_packages if pkg.id.is_git()}
+    for unresolved, resolved in data.id_resolvents.git_resolvents.items():
+        if resolved not in used_gits:
+            continue
+        result[
+            GitSource(
+                git_url=unresolved.repository_url,
+                commit=unresolved.commit,
+                tag=unresolved.tag,
+                branch=unresolved.branch,
+            )
+        ] = GitPackageId(url=resolved.repository_url, commit=resolved.commit)
+    return result

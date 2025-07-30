@@ -1,8 +1,4 @@
-# NOTE: Trust me, I know what I am doing
-
-# ruff: noqa: PGH004
-# ruff: noqa
-# type: ignore
+# ruff: noqa: ARG002
 
 import asyncio
 import os
@@ -17,7 +13,7 @@ from hypercorn.config import Config
 
 from quackpack.fetcher.client import CurlHTTPClient
 from quackpack.fetcher.util import HTTPRequest
-from quackpack.util.errors import QuackPackError
+from quackpack.util.types.errors import QuackPackError
 
 
 # NOTE: Beauties of using non-isolated CI/CD runner...
@@ -31,7 +27,7 @@ def tcp_port():
 
 
 # NOTE: Just usual pytest_asyncio magic - *simply* override event_loop_policy fixture.
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")  # pyright: ignore[reportArgumentType]
 def event_loop_policy():
     policy = asyncio.DefaultEventLoopPolicy()
     if os.name == "posix":
@@ -57,7 +53,7 @@ class TestHTTPClient:
     #       Of course, it is required - async fixtures do not work otherwise.
     #       Oh, by the way - scope and loop_scope are two different things...
     @pytest_asyncio.fixture(loop_scope="class", scope="class")
-    async def dummy_app(self, tcp_port):
+    async def dummy_app(self, tcp_port: int):
         from ducknest.routers import dummy_routers
 
         hypercorn_config = Config()
@@ -84,41 +80,47 @@ class TestHTTPClient:
         http_client.close()
         http_client.close()
 
-    async def test_error(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_error(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         request = HTTPRequest(url="http://localhost:0/dummy/hello", method="GET")
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
-
+            assert response is not None
             assert response.code == 599
 
-    async def test_single_request(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_single_request(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/hello", method="GET")
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
 
+            assert response is not None
             assert response.code == 200
             assert response.buffer is not None
             assert response.buffer.read().decode() == '{"msg":"Hello World"}'
 
-    async def test_multiple_requests(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_multiple_requests(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         with BytesIO() as buf:
             request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/hello", method="GET")
             response = await http_client.fetch(request, buf)
 
+            assert response is not None
             assert response.code == 200
             assert response.buffer is not None
             assert response.buffer.read().decode() == '{"msg":"Hello World"}'
 
             request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/hello1", method="GET")
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 404
 
-    async def test_file_buffer(self, http_client: CurlHTTPClient, dummy_app: FastAPI, monkeypatch, tcp_port):
+    async def test_file_buffer(
+        self, http_client: CurlHTTPClient, dummy_app: FastAPI, monkeypatch: pytest.MonkeyPatch, tcp_port: int
+    ):
+        print(type(monkeypatch))
         mock_file = BytesIO()
 
-        def mock_open(file, mode):
+        def mock_open(file: str, mode: str):
             assert file == "dummy_file.txt"
             assert mode == "w"
             return mock_file
@@ -128,13 +130,14 @@ class TestHTTPClient:
         request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/hello", method="GET")
 
         response = await http_client.fetch(request, mock_file)
+        assert response is not None
 
         mock_file.seek(0)
         file_content = mock_file.read().decode()
 
         assert file_content == '{"msg":"Hello World"}'
 
-    async def test_post(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_post(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         with BytesIO() as buf:
             request = HTTPRequest(
                 url=f"http://localhost:{tcp_port}/dummy/echo",
@@ -144,31 +147,36 @@ class TestHTTPClient:
             )
             response = await http_client.fetch(request, buf)
 
+            assert response is not None
             assert response.code == 200
             assert response.buffer is not None
             assert response.buffer.read().decode() == "abc"
 
-    async def test_request_body(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_request_body(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         with BytesIO() as buf:
             request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/echo", method="POST", body=None)
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert isinstance(response.error, ValueError)
 
             request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/echo", method="GET", body="abc")
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert isinstance(response.error, ValueError)
 
             request = HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/echo", method="PATCH", body="abc")
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 405
 
-    async def test_parallel_requests(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_parallel_requests(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         secs = 2
 
         requests = [HTTPRequest(url=f"http://localhost:{tcp_port}/dummy/nap/{secs}") for _ in range(5)]
         tasks = [asyncio.create_task(http_client.fetch(request, BytesIO())) for request in requests]
         for task in asyncio.as_completed(tasks, timeout=secs + 0.5):
             response = await task
+            assert response is not None
             assert response.code == 200
 
         # fixture provides curl client with 10 handlers, thus performing 11 requests requires 2 rounds and the timeout is expected
@@ -177,10 +185,11 @@ class TestHTTPClient:
         with pytest.raises(asyncio.TimeoutError):
             for task in asyncio.as_completed(tasks, timeout=secs + 0.5):
                 response = await task
+                assert response is not None
                 assert response.code == 200
 
     @pytest.mark.skip(reason="TODO: does not work on students")
-    async def test_features(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port):
+    async def test_features(self, http_client: CurlHTTPClient, dummy_app: FastAPI, tcp_port: int):
         user_agent = "MyCustomUserAgent/1.0"
         custom_headers = {"X-Custom-Header": "CustomValue"}
         request = HTTPRequest(
@@ -192,6 +201,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 200
 
         proxy_host = "localhost"
@@ -207,6 +217,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 599
 
         proxy_host = "localhost"
@@ -221,6 +232,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 599
 
         proxy_host = "localhost"
@@ -235,6 +247,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert isinstance(response.error, ValueError)
 
         request = HTTPRequest(
@@ -246,6 +259,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 599
 
         request = HTTPRequest(
@@ -255,6 +269,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert isinstance(response.error, KeyError)
 
         request = HTTPRequest(
@@ -267,6 +282,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 200
 
         request = HTTPRequest(
@@ -278,6 +294,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 200
 
         request = HTTPRequest(
@@ -290,6 +307,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert response.code == 200
 
         request = HTTPRequest(
@@ -302,6 +320,7 @@ class TestHTTPClient:
 
         with BytesIO() as buf:
             response = await http_client.fetch(request, buf)
+            assert response is not None
             assert isinstance(response.error, ValueError)
 
         # TODO: there are more single statements to be covered, which should be tested analogously

@@ -11,6 +11,16 @@ An 🚀 *extremely fast* 📦 package manager for 🦆 Duckling programming lang
 
 ## Building the project
 
+### With `pip`
+
+You can just run:
+
+```bash
+pip install .
+```
+
+### With `uv`
+
 We are using `uv` as a modern package manager for Python and as our build system.
 
 Check their [Installation guide](https://docs.astral.sh/uv/getting-started/installation/) for how to install `uv`.
@@ -50,30 +60,3 @@ pre-commit install --hook-type pre-push
 ```
 
 `pre-commit` runs almost all CI steps (except `pytest`) before pushing.
-
-## [`git-lfs`](https://git-lfs.com/) and `pre-commit` hooks
-
-Git currently doesn't support multiple hooks of the same type.
-Here's how to combine `git-lfs` hooks with `pre-commit`:
-
-1. Install `git-lfs` as explained in their documentation.
-
-1. Clone the repo. You should see many similar looking hooks (the ones without `.sample` extension) in `.git/hooks/` directory — those are from `git-lfs`.
-
-1. Install `pre-commit` as explained above. It should warn you, that old hook has been moved to `.git/hooks/pre-push.legacy`.
-
-1. Now do some manual file editing on `.git/hooks/pre-push`:
-
-    1. Remove the `exec` command from any `if` branches.
-
-    1. Copy the relevant lines from `.git/hooks/pre-push.legacy` (usually those starting with `command -v ...` and `git lfs <hook-type> ...`)
-       and paste them at the end of the current file.
-
-    1. [Optional, but recommended] Add `set -e` at the top of the file to ensure early exit on failure (for `bash`).
-
-Now `pre-commit` and `git-lfs` should coexist peacefully.
-
-### Troubleshooting
-
-1. Make sure the hook type used by `git-lfs` matches the filename.
-   At the end of the hook file you should see a line like: `git lfs <hook-type> ...`.

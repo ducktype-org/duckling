@@ -29,7 +29,6 @@ from typing import NamedTuple, cast
 
 import pycurl
 
-# import uvloop
 from quackpack.fetcher.util import (
     HTTPError,
     HTTPHeaders,
@@ -40,6 +39,7 @@ from quackpack.fetcher.util import (
     MissingEventLoopError,
     parse_http1_response_start_line,
 )
+from quackpack.fetcher.util.curl_progress import CurlProgress
 from quackpack.util.logger import get_logger
 
 curl_log = get_logger(__name__)
@@ -101,7 +101,6 @@ class CurlHTTPClient:
         self._multi.setopt(pycurl.M_TIMERFUNCTION, self._set_timeout)
         self._multi.setopt(pycurl.M_SOCKETFUNCTION, self._handle_socket)
 
-        # TODO: Add progress bar.
         self._curls = [self._curl_create() for _ in range(max_clients)]
         self._free_list: Queue[pycurl.Curl] = Queue()
         for _curl in self._curls:
@@ -245,7 +244,6 @@ class CurlHTTPClient:
         :param bytes _data: Additional data associated with the event.
         """
 
-        # TODO: investigate why OSError can be sometimes observed in stdout (but does not break anything)
         if event in (pycurl.POLL_IN, pycurl.POLL_OUT, pycurl.POLL_INOUT):
             if fd in self._fds:
                 self._loop.remove_reader(fd)
@@ -296,6 +294,7 @@ class CurlHTTPClient:
         """
 
         curl_log.debug("Finishing cURL client")
+        assert hasattr(curl, "info"), "curl without additional `info` object"
         info = cast(CurlInfo, curl.info)  # pyright: ignore[reportAttributeAccessIssue]
         assert isinstance(info, CurlInfo)
         curl.info = None  # pyright: ignore[reportAttributeAccessIssue]
@@ -342,7 +341,9 @@ class CurlHTTPClient:
         finally:
             headers_buffer.close()
 
-    async def fetch(self, request: HTTPRequest, buffer: BytesIO | FileIO) -> HTTPResponse | None:
+    async def fetch(
+        self, request: HTTPRequest, buffer: BytesIO | FileIO, progress: CurlProgress | None = None
+    ) -> HTTPResponse | None:
         """
         Fetch an HTTP request using cURL.
 
@@ -362,13 +363,20 @@ class CurlHTTPClient:
 
         start_time = time.monotonic()
         curl = await self._free_list.get()
-        curl.info = CurlInfo(future, request, buffer, headers_buffer, start_time)  # pyright: ignore[reportAttributeAccessIssue]
+        info = CurlInfo(future, request, buffer, headers_buffer, start_time)
+        curl.info = info  # pyright: ignore[reportAttributeAccessIssue]
+
+        if not hasattr(self, "_curl_progress"):
+            self._curl_progress = progress
+
+        if self._curl_progress is not None:
+            self._curl_progress.add_task(curl, description=request.url)
 
         request_proxy = HTTPRequestProxy(request, dict(HTTPRequest.DEFAULTS))
         request = cast(HTTPRequest, request_proxy)
 
         try:
-            self._curl_setup_request(curl, request, curl.info.buffer, curl.info.headers_buffer)  # pyright: ignore[reportAttributeAccessIssue]
+            self._curl_setup_request(curl, request, info.buffer, info.headers_buffer)
         except Exception as e:
             curl_log.error("Failed to setup request.")
             res = HTTPResponse(request=request, code=599, error=e)
@@ -417,6 +425,13 @@ class CurlHTTPClient:
 
         curl.setopt(pycurl.URL, request.url.encode())
         curl.setopt(pycurl.WRITEFUNCTION, buffer.write)
+
+        if self._curl_progress is not None:
+            curl.setopt(pycurl.NOPROGRESS, False)
+            curl.setopt(
+                pycurl.XFERINFOFUNCTION,
+                lambda dlt, dld, ult, uld: self._curl_progress.status(curl, dlt, dld, ult, uld),  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType, reportOptionalMemberAccess]
+            )
 
         # NOTE: Original comment.
         # libcurl's magic "Expect: 100-continue" behavior causes delays
@@ -545,7 +560,7 @@ class CurlHTTPClient:
             request_buffer = BytesIO(body)
 
             def ioctl(cmd: int) -> None:
-                if cmd == curl.IOCMD_RESTARTREAD:  # pyright: ignore[reportAttributeAccessIssue]
+                if cmd == pycurl.IOCMD_RESTARTREAD:
                     request_buffer.seek(0)
 
             curl.setopt(pycurl.READFUNCTION, request_buffer.read)

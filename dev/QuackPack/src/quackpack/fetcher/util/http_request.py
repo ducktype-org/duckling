@@ -65,8 +65,8 @@ class HTTPRequest:
     # Merged with the values on the request object by AsyncHTTPClient
     # implementations.
     DEFAULTS: Final[dict[str, Any]] = {
-        "connect_timeout": 60.0,  # TODO
-        "request_timeout": 60.0,  # TODO
+        "connect_timeout": 60.0,  # NOTE: Arbitrary value.
+        "request_timeout": 60.0,  # NOTE: Arbitrary value.
         "follow_redirects": True,
         "max_redirects": 5,
         "decompress_response": True,
@@ -162,7 +162,7 @@ class HTTPRequest:
         """
 
         # NOTE: Original comment.
-        # TODO: headers may actually be a plain dict until fairly late in
+        # Headers may actually be a plain dict until fairly late in
         # the process (AsyncHTTPClient.fetch), but practically speaking,
         # whenever the property is used they're already HTTPHeaders.
         return cast(HTTPHeaders, self._headers)

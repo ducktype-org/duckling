@@ -12,9 +12,11 @@ from git import Repo
 from git.exc import GitCommandError, GitCommandNotFound
 
 from quackpack.fetcher.api_types import SingleMetadata
-from quackpack.project_loader import ProjectLoader
-from quackpack.util.errors import QuackPackError
+from quackpack.fetcher.util.git_progress import GitRemoteProgress
+from quackpack.global_context import GlobalContext
+from quackpack.package_loader import PackageLoader
 from quackpack.util.logger import get_logger
+from quackpack.util.types.errors import QuackPackError
 
 logger = get_logger(__name__)
 
@@ -29,13 +31,15 @@ class GitClient:
         cls,
         url: str,
         destination: Path,
+        ctx: GlobalContext,
         *,
         branch: str | None = None,
         tag: str | None = None,
         rev: str | None = None,
+        progress: GitRemoteProgress | None = None,
     ) -> tuple[str, SingleMetadata]:
         """
-        Clone a Git repository to a local directory and fetch project metadata.
+        Clone a Git repository to a local directory and fetch package metadata.
 
         :param str url: The URL of the Git repository to clone.
         :param pathlib.Path destination: The local path where the repository will be cloned.
@@ -44,15 +48,11 @@ class GitClient:
         :param str | None rev: The revision (commit hash) to checkout after cloning.
         :raises quackpack.util.errors.QuackPackError: If the destination exists or a Git command fails.
         :raises ValueError: If both ``branch`` and ``tag`` are provided simultaneously.
-        :return: The fetched project Git commit hash and configuration metadata.
+        :return: The fetched package Git commit hash and configuration metadata.
         :rtype: tuple[str, quackpack.fetcher.api_types.SingleMetadata]
         """
 
         logger.debug(f"Git client: cloning '{url}' to {destination}; {branch=}, {tag=}, {rev=}")
-        try:
-            destination.mkdir(parents=True, exist_ok=False)
-        except FileExistsError as e:
-            raise QuackPackError(e) from e
 
         if branch is not None and tag is not None:
             raise ValueError("Expected at most one option of 'branch' and 'tag'.")
@@ -65,9 +65,11 @@ class GitClient:
         if branch is not None or tag is not None:
             clone_options["branch"] = branch or tag
 
-        # TODO: add progress bar
         try:
-            repo = Repo.clone_from(url, destination, **clone_options)
+            if progress is not None:
+                repo = Repo.clone_from(url, destination, **clone_options, progress=progress)  # pyright: ignore[reportArgumentType]
+            else:
+                repo = Repo.clone_from(url, destination, **clone_options)
         except (GitCommandNotFound, GitCommandError) as e:
             raise QuackPackError(e) from e
 
@@ -77,7 +79,7 @@ class GitClient:
             except GitCommandError as e:
                 raise QuackPackError(e) from e
 
-        metadata = ProjectLoader.find_at_exact_directory(destination).manifest_without_acquiring_lock()
+        metadata = PackageLoader.find_at_exact_directory(destination, ctx).manifest
         commit_hash = str(repo.rev_parse("HEAD"))
 
-        return commit_hash, metadata
+        return commit_hash, metadata.summary.into_schema()

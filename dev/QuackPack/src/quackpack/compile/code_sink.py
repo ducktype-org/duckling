@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Never
 
-from quackpack.util.pkgid import Identifier, ResolvedId
+from quackpack.storage.files import VenvFreeze
+from quackpack.util.types.pkgid import PackageId
 
 
 class Continuation(ABC):
@@ -12,15 +13,9 @@ class Continuation(ABC):
 
 class CodeSinkConnection(ABC):
     @abstractmethod
-    def load_library(self, _alias: Identifier, _dep: ResolvedId, _path: Path) -> None:
+    def load_dependencies(self, freeze: VenvFreeze, path_mapping: dict[PackageId, Path]) -> None:
         """
-        Asks the sink to load specified library. Blocks until the operation is completed.
-        """
-
-    @abstractmethod
-    def check_platform(self, required_system: list[str] | None, required_arch: list[str] | None) -> bool:
-        """
-        Returns if the provided sytem requirements are satisfied.
+        Asks the sink to load the dependencies. Blocks until the operation is completed.
         """
 
     @abstractmethod

@@ -19,6 +19,9 @@ dependencies = [
     "pywin32>=308 ; sys_platform == 'win32'",
     "uvloop>=0.21.0 ; os_name == 'posix'",
     "pyscipopt>=5.4.1",
+    "tomlkit>=0.13.2",
+    "strictyaml>=1.7.3",
+    "treelib>=1.8.0",
 ]
 
 [project.scripts]
@@ -41,6 +44,8 @@ dev = [
 ]
 
 [tool.pyright]
+exclude = [".venv", "tests/unit/fetcher"]
+ignore = [".venv", "tests/unit/fetcher"]
 pythonPlatform = "All"
 pythonVersion = "3.12"
 reportImportCycles = "error"

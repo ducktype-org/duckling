@@ -1,19 +1,28 @@
 from dataclasses import dataclass
 
-from quackpack.project import Project
-from quackpack.storage import venv_sync
-from quackpack.util.global_context import GlobalContext
+from quackpack.global_context import GlobalContext
+from quackpack.package_loader import PackageLoader
+from quackpack.storage.storage import venv_sync
 
 
 @dataclass(frozen=True, kw_only=True)
 class SyncOptions:
     ctx: GlobalContext
 
-    target: Project
-    """
-    Project to be synced.
-    """
+    overwrite: bool
+
+    frozen: bool
+
+    offline: bool
+
+    sync_global: bool
 
 
 def sync(opts: SyncOptions):
-    venv_sync(opts.ctx, opts.target)
+    overwrite = opts.overwrite
+    if opts.sync_global:
+        package = PackageLoader.global_package(opts.ctx)
+        overwrite = True
+    else:
+        package = PackageLoader.find_from_cwd(opts.ctx)
+    venv_sync(opts.ctx, package, overwrite=overwrite, frozen=opts.frozen, offline=opts.offline)

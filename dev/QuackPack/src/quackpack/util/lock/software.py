@@ -7,7 +7,7 @@ from typing import Final, override
 from quackpack.signals import EnableInterrupt
 from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
-PROBE_INTERVAL: Final[float] = 1.0
+PROBE_INTERVAL: Final[float] = 0.25
 
 
 class SoftwareFileLock(BaseFileLock):
@@ -44,10 +44,6 @@ class SoftwareFileLock(BaseFileLock):
                 break
             if not self.blocking:
                 raise LockWouldBlock from None
-            # TODO 🔨 dobrać odstęp (raczej nie ma sensu próbować używać
-            # obserwowania filesystemu: wydaje się to bardziej niszowe
-            # niż filelocki, więc lepiej by było wyifować aby używane
-            # były filelocki zapewniane przez dany egzotyczny system)
             with EnableInterrupt():
                 sleep(PROBE_INTERVAL)
 

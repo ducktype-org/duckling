@@ -26,8 +26,11 @@ from quackpack.fetcher.api_types import MultiMetadata, Package, PackageName, Sea
 from quackpack.fetcher.client.curl_http_client import CurlHTTPClient
 from quackpack.fetcher.ducknest_endpoints import DucknestEndpoints
 from quackpack.fetcher.util import FailedRequestError, HTTPRequest, HTTPResponse
-from quackpack.util.errors import QuackPackError
+from quackpack.fetcher.util.curl_progress import CurlProgress
+from quackpack.manifest.schemas.registry import RegistryManifestSchema
 from quackpack.util.logger import get_logger
+from quackpack.util.types.errors import QuackPackError
+from quackpack.util.types.pkgid import Identifier
 
 logger = get_logger(__name__)
 
@@ -48,7 +51,11 @@ class DucknestClient:
         self.client.close()
 
     async def _get(
-        self, url: str, buffer: BytesIO | FileIO, headers: dict[str, str] | None = None
+        self,
+        url: str,
+        buffer: BytesIO | FileIO,
+        headers: dict[str, str] | None = None,
+        curl_progress: CurlProgress | None = None,
     ) -> HTTPResponse | None:
         """
         Perform an asynchronous HTTP GET request.
@@ -62,7 +69,7 @@ class DucknestClient:
 
         logger.debug(f"Ducknest client: GET to '{url}'")
         request = HTTPRequest(url, method="GET", headers=headers, validate_cert=False)
-        response = await self.client.fetch(request, buffer=buffer)
+        response = await self.client.fetch(request, buffer=buffer, progress=curl_progress)
         return response
 
     async def _post(
@@ -169,7 +176,9 @@ class DucknestClient:
         except ValidationError as e:
             raise QuackPackError(e) from e
 
-    async def publish_package(self, instance_url: str, metadata: SingleMetadata, data_path: Path) -> None:
+    async def publish_package(
+        self, instance_url: str, manifest: RegistryManifestSchema, data_path: Path
+    ) -> None:
         """
         Publish a package to a Ducknest instance.
 
@@ -181,17 +190,17 @@ class DucknestClient:
         """
 
         logger.debug(
-            f"Ducknest client: publishing package '{metadata.metadata.name}v{metadata.metadata.version}' to '{instance_url}'"
+            f"Ducknest client: publishing package '{manifest.metadata.name}v{manifest.metadata.version}' to '{instance_url}'"
         )
 
-        package = Package(id=metadata.metadata.name, version=str(metadata.metadata.version))
+        package = Package(id=Identifier(manifest.metadata.name), version=manifest.metadata.version.root)
 
         create_url = urljoin(instance_url, DucknestEndpoints.post_package())
         with BytesIO() as buffer:
             response = await self._post(
                 create_url,
                 buffer,
-                body=metadata.model_dump_json().encode(),
+                body=manifest.model_dump_json().encode(),
                 headers={"Content-Type": "application/json"},
             )
 
@@ -220,13 +229,16 @@ class DucknestClient:
             if response is None or response.error is not None:
                 raise FailedRequestError
 
-    async def get_package_blob(self, instance_url: str, package: Package, filepath: Path) -> bool:
+    async def get_package_blob(
+        self, instance_url: str, package: Package, filepath: Path, curl_progress: CurlProgress | None
+    ) -> bool:
         """
         Download a package blob from a Ducknest instance and save it to a file.
 
         :param str instance_url: The base URL of the Ducknest instance.
         :param quackpack.fetcher.api_types.Package package: The package to download the blob for.
         :param pathlib.Path filepath: The path to save the downloaded blob.
+        :param quackpack.fetcher.util.CurlProgress | None curl_progress: Class for tracking CurlHTTPClient download progress.
         :return: Whether the blob was successfully saved to the specified filepath.
         :rtype: bool
         :raises quackpack.fetcher.util.FailedRequestError: If the request failed.
@@ -238,11 +250,11 @@ class DucknestClient:
         url = urljoin(instance_url, DucknestEndpoints.get_package_blob(package))
 
         with FileIO(filepath, "wb") as buffer:
-            response = await self._get(url, buffer)
+            response = await self._get(url, buffer, curl_progress=curl_progress)
             if response is None:
                 raise FailedRequestError
 
-        # TODO: REVIEW: do we need something better?
+        # NOTE: This check should be a little bit more sophisticated.
         return response.code == 200
 
     async def search(self, instance_url: str, query: str) -> SearchResult:

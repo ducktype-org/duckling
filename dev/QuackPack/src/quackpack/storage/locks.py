@@ -20,8 +20,8 @@ Provides locks for accessing storage:
   (be deleted), the data lock must be held.
 - ``TrySyncLock``: grants mutable access to the storage-stored virtual environment
   configuration. Respects all of the conditions given in the descriptions of the
-  previous two locks. If the operation would block, ``SyncWouldBlock`` is
-  thrown instead. As we do not assume any fair queueing of lock operations,
+  previous two locks. If the operation would block, `quackpack.util.locks.common.LockWouldBlock` is
+  raised instead. As we do not assume any fair queueing of lock operations,
   this prevents error-prone situation, in which two concurrent synchronization
   operations would execute out of the order in which the user started them.
 
@@ -80,7 +80,7 @@ from quackpack.signals import EnableInterrupt
 from quackpack.storage.paths import StoragePaths
 from quackpack.util.lock import FileLock
 from quackpack.util.lock.common import LockType
-from quackpack.util.pkgid import Identifier
+from quackpack.util.types.pkgid import Identifier
 
 
 class CleanLock:
@@ -130,13 +130,12 @@ class CleanLock:
 
 
 class TrySyncLock:
-    # TODO: reference to SyncWouldBlock in docstring
     """
-    A non-blocking lock for mutable access to a virtual environment's configuration.
+    A non-blocking lock for mutable access to a virtual environment's dependencies.
 
     Ensures the operation does not interfere with global clean operations or
     other concurrent synchronization tasks. If it cannot acquire the required
-    locks, it raises ``SyncWouldBlock``.
+    locks, it raises `quackpack.util.locks.common.LockWouldBlock`.
 
     :param storage: The storage layout manager.
     :type storage: quackpack.storage.paths.StoragePaths
@@ -159,6 +158,7 @@ class TrySyncLock:
                 self.sync_lock.__enter__()
             except Exception:
                 self.clean_lock.__exit__(None, None, None)
+                raise
         else:
             with self.clean_lock:
                 self.sync_lock.__enter__()

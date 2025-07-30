@@ -14,8 +14,8 @@ from pydantic import ValidationError
 
 from quackpack.fetcher.api_types import MultiMetadata, Package, PackageName, SingleMetadata
 from quackpack.fetcher.cache.sqlite_database import SQLiteDatabase, SQLiteDatabaseContext
-from quackpack.util.errors import QuackPackError
 from quackpack.util.logger import get_logger
+from quackpack.util.types.errors import QuackPackError
 
 logger = get_logger(__name__)
 
@@ -143,7 +143,9 @@ class MetadataCache(SQLiteDatabase):
         """
 
         for metadata in multi_metadata.packages_metadata:
-            package = Package(id=multi_package_id, version=str(metadata.metadata.version))
+            assert metadata.metadata is not None, "should come from parse"
+            assert metadata.metadata.version is not None, "should come from parse"
+            package = Package(id=multi_package_id, version=metadata.metadata.version.root)
 
             self.add_metadata(package, metadata)
 

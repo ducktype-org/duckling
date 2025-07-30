@@ -1,4 +1,4 @@
-from quackpack.util.levenshtein import distance
+from quackpack.cli.levenshtein import distance
 
 
 def test_empty():

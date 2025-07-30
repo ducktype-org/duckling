@@ -5,8 +5,8 @@ from unittest.mock import mock_open
 import pytest
 from pydantic import BaseModel, ConfigDict, Discriminator, RootModel, Tag
 
-from quackpack.util.deser.deserialize import load_and_validate
-from quackpack.util.deser.errors import ConfigFileLoadError
+from quackpack.util.yaml.errors import ConfigFileLoadError
+from quackpack.util.yaml.strict_parsing import load_and_validate
 
 
 def test_deserialises_valid_data(tmp_path: Path):

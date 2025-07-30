@@ -1,12 +1,14 @@
 from contextlib import chdir
 
-from quackpack.commands.init.file_creators import AdvancedProject, BasicProject
+from quackpack.commands.init.file_creators import AdvancedPackage, BasicPackage
 from quackpack.commands.init.types import InitOptions, NewVenvType
-from quackpack.config.project import Manifest
-from quackpack.project_loader import ProjectLoader
-from quackpack.util.errors import QuackPackError
+from quackpack.manifest.editable import EditableManifest
+from quackpack.manifest.schemas.manifest import ManifestSchema, MetadataSchema, SemverSchema
+from quackpack.package_loader import PackageLoader
 from quackpack.util.logger import get_logger
-from quackpack.util.pkgid import Identifier
+from quackpack.util.types.errors import QuackPackError
+from quackpack.util.types.pkgid import Identifier
+from quackpack.util.types.version import Version
 
 logger = get_logger(__name__)
 
@@ -25,37 +27,43 @@ def create_at(options: InitOptions) -> None:
         venv_id = Identifier(options.name)
     except ValueError:
         raise QuackPackError(
-            f"'{options.name}' is not valid project name, use '--name' to override"
+            f"`{options.name}` is not a valid package name\nhint: use `--name` to override"
         ) from None
     if options.ctx.console.quiet and options.type is NewVenvType.Full:
         # FIXME: If console is --quiet, then user won't see this message xD.
         raise QuackPackError("don't pass '--quiet' with '--full'")
-    logger.debug(f"Creating new project '{options.name}' at '{options.destination}' of type {options.type!s}")
+    logger.debug(f"Creating new package '{options.name}' at '{options.destination}' of type {options.type!s}")
     try:
         options.destination.mkdir(parents=True, exist_ok=True)
     # https://docs.python.org/3/library/pathlib.html#pathlib.Path.mkdir
     except FileExistsError:
         raise QuackPackError(
-            f"Destination '{options.destination}' already exists, but it's not a directory"
+            f"package's root directory `{options.destination}` already exists, but it's not a directory"
         ) from None
-    manifest_destination = options.destination / ProjectLoader.MANIFEST_NAME
-    # FIXME: Do we change configuration for libraries?
-    basic_manifest = Manifest.create_basic_with_name(venv_id)
+    manifest_destination = options.destination / PackageLoader.MANIFEST_NAME
+    metadata = MetadataSchema(version=SemverSchema(str(Version.default())), name=str(venv_id))
+    manifest = ManifestSchema(metadata=metadata)
+    saveable_manifest = EditableManifest.create_with_data(
+        manifest.model_dump(exclude_none=True, exclude_unset=True)
+    )
     try:
-        basic_manifest.save_to(manifest_destination, mode="x")
+        with open(manifest_destination, mode="x") as f:
+            f.write(saveable_manifest.as_str())
     except FileExistsError:
-        raise QuackPackError(f"Cannot reinitialize Venv at '{options.destination}'") from None
+        raise QuackPackError(f"cannot reinitialize package at `{options.destination}`") from None
     if options.type is NewVenvType.PlainVenv:
-        options.ctx.console.info(f"Successfully created new venv '{options.name}' at '{options.destination}'")
+        options.ctx.console.info(
+            f"Successfully created new package `{options.name}` at `{options.destination}`"
+        )
         return
-    # FIXME: Should we rollback from errors after this points? Meaning we don't leave partially initialised venv...
+    # FIXME: Should we rollback from errors after this points? Meaning we don't leave partially initialized venv...
     with chdir(options.destination):
-        _populate_project_files(options, basic_manifest)
+        _populate_package_files(options, manifest)
 
 
-def _populate_project_files(options: InitOptions, manifest: Manifest) -> None:
+def _populate_package_files(options: InitOptions, manifest: ManifestSchema) -> None:
     """
-    Populate basic project files at CWD.
+    Populate basic package files at CWD.
     ----
     Args:
     - `options`: init options.
@@ -63,9 +71,9 @@ def _populate_project_files(options: InitOptions, manifest: Manifest) -> None:
     assert options.type is not NewVenvType.PlainVenv, "PlainVenvs have no files to populate"
     match options.type:
         case NewVenvType.Binary:
-            creator = BasicProject(options=options)
+            creator = BasicPackage(options=options)
         case NewVenvType.Full:
-            creator = AdvancedProject(options=options, manifest=manifest)
+            creator = AdvancedPackage(options=options, manifest=manifest)
         case _:
-            raise QuackPackError(f"Unknown Venv type '{options.type}'")
+            raise QuackPackError(f"unknown Venv type `{options.type}`")
     creator.execute()

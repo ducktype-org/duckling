@@ -1,18 +1,18 @@
 import asyncio
 from dataclasses import dataclass
 
-from quackpack.fetcher import Fetcher
-from quackpack.project import Project
-from quackpack.util.global_context import GlobalContext
+from quackpack.fetcher import FetcherContext
+from quackpack.global_context import GlobalContext
+from quackpack.package import Package
 
 
 @dataclass(frozen=True, kw_only=True)
 class PublishOptions:
     ctx: GlobalContext
 
-    source: Project
+    source: Package
     """
-    Project to be published.
+    package to be published.
     """
 
 
@@ -20,7 +20,6 @@ def publish(opts: PublishOptions) -> None:
     asyncio.run(_publish_impl(opts.ctx, opts.source))
 
 
-# TODO: FIXME: change to real address defined somewhere in the ctx...
-async def _publish_impl(ctx: GlobalContext, project: Project) -> None:
-    with Fetcher(ctx) as fetcher:
-        await fetcher.publish_package(ctx.configuration.repository.url, project)
+async def _publish_impl(ctx: GlobalContext, package: Package) -> None:
+    with FetcherContext(ctx) as fetcher:
+        await fetcher.publish_package(ctx.registry_url(), package)

@@ -6,88 +6,64 @@ This page explains the structure of global Quack Pack's configuration file.
 
 Quack Pack looks for configuration file in the following locations, in this order:
 
-- `$QP_CONFIG/config.yaml`, if `$QP_CONFIG` is set,
-- `$XDG_CONFIG_HOME/qp/config.yaml`, if `$XDG_CONFIG_HOME` is set,
+- `$QP_CONFIG/config.toml`, if `$QP_CONFIG` is set,
+- `$XDG_CONFIG_HOME/qp/config.toml`, if `$XDG_CONFIG_HOME` is set,
 - otherwise:
-  - `$HOME/.config/qp/config.yaml` on Linux, and Unix/POSIX,
-  - `$HOME/Library/Application Support/qp/config.yaml` on macOS,
-  - `%LOCALAPPDATA%\qp\config.yaml` on Windows.
+  - `$HOME/.config/qp/config.toml` on Linux, Unix/POSIX, and macOS,
+  - `%LOCALAPPDATA%\qp\config.toml` on Windows.
 
 Quack Pack cache directory lives in first found place, in following order:
 
 - `$QP_CACHE`, if `$QP_CACHE` is set,
 - `$XDG_CACHE_HOME/qp/`, if `$XDG_CACHE_HOME` is set,
 - otherwise:
-  - `$HOME/.cache/qp/` on Linux, and Unix/POSIX,
-  - `$HOME/Library/Caches/qp/` on macOS,
+  - `$HOME/.cache/qp/` on Linux, Unix/POSIX, and macOS,
   - `%LOCALAPPDATA%\caches\qp\` on Windows.
 
 ## Configuration file structure
 
-Global configuration follows YAML file format, for ease of manual edition and reading it.
+Global configuration follows TOML file format, for ease of manual edition and reading it.
 
-```yaml
-aliases:
-  al: some-cool-command --with-bunch-of-options
+```toml
+[aliases]
+al = "some-cool-command --with-bunch-of-options"
 
-cache:
-  download_dir: $HOME/.cache/duck/qp
-  metadata_db_path: $HOME/.qp_sqlite3
-  fetcher_lockfile: $HOME/.cache/qp/lock
-  max_size: 10G
+[cache]
+download_dir = "~/.cache/duck/qp"
+metadata_db_path = "~/.qp_sqlite3"
+fetcher_lockfile = "~/.cache/qp/lock"
 
-storage:
-  storage: $HOME/.local/share/qp/storage
-  temporary_lifetime: 100
+[storage]
+dir = "~/.local/share/qp/storage"
+temporary_lifetime = "100"
 
-packaging:
-  build_from_source: false
+[packaging]
+build_from_source = false
 
-build:
-  targets:
-    i686:
-      compiler_flags: [-flto]
-  profiles:
-    debug:
-      compiler_flags: [-O0, -ggdb3 ]
+[build.targets]
+i686.compiler_flags = ["-flto"]
 
-repository:
-  default: [ https://www.quackpack.com ]
-  extra: [ https://another-cool-repo.com, ~/src/local-project ]
+[build.profiles]
+debug.compiler_flags = ["-O0", "-ggdb3"]
 
-security:
-  typo_tolerance:
-    enabled: false
-    max_distance: 1
+[registry]
+default = "https://www.quackpack.com"
+
+[security.typos]
+enabled = true
+max_distance = 10
 ```
 
 ### aliases
 
 List of aliases for Quack Pack. Each alias is in form:
 
-```yaml
-alias_name: string representing alias
+```toml
+alias_name = "string representing alias"
 ```
 
 Aliases are expanded by copy-pasting. In particular, from the example configuration,
 `qp al --foo` is equivalent to `qp some-cool-command --with-bunch-of-options --foo`.
-
-#### NOTE:
-
-You can either use `String` or `List[String]` as a type.
-If it's not `List[String]`, an alias will be split by spaces, and this operation is not context aware!
-
-That is, if You want to have:
-
-```yaml
-alias_name: build "Don't split me"
-```
-
-You should use:
-
-```yaml
-alias_name: [build, "\"Don't split me\""]
-```
 
 ### cache
 
@@ -96,8 +72,6 @@ alias_name: [build, "\"Don't split me\""]
 - `metadata_db_path`: type is `String`. This file points to SQLite3 database, where Quack Pack keeps metadata of dependencies. Defaults to `CACHE_DIRECTORY/metadata_db.sqlite`
 
 - `fetcher_lockfile`: type is `String`. This file is used as a global lockfile for Quack Pack fetcher. Defaults to `CACHE_DIRECTORY/fetcher.lock`.
-
-- `max_size`: maximum available size for cache. It's type is `<number><suffix>`, where `<suffix>` is one of `G`, `M`, or `K`, appropriately for gigabytes, megabytes and kilobytes.
 
 ### storage
 
@@ -111,23 +85,15 @@ These options affect how internally Quack Pack stores packages.
 
 - `build_from_source`: type is `Boolean`. If set to `true`, Quack Pack will download source of every dependency and locally compile it to bytecode. Useful for projects, where performance is the key. Defaults to `false`.
 
-### dependency_solver
-
-This subsection is responsible for configuring options of dependency solver.
-
-- `Todo`: type is `True`. TODO: co tu dodać.
-
 ### build
 
 - `targets`: dictionary with extra compiler flags for different targets. Each value should be a dictionary with a single key `compiler_flags`, which points to a `List[String]`.
 
 - `profiles`: dictionary with extra compiler flags for different profiles. Each value should be a dictionary with a single key `compiler_flags`, which points to a `List[String]`.
 
-### repository
+### registry
 
-- `default`: type is `String` or `List[String]`. Default URL or list of default URLs for Ducknest's servers.
-
-- `extra`: type is `String` or `List[String]`. Provides extra repositories, from which packages can be downloaded. Defaults to `""`, which stands for no extra repositories. Each entry should implement sparse.
+- `url`: type is `String. Default URL of Ducknest registry.
 
 ### security
 

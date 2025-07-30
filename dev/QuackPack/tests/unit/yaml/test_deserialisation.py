@@ -3,8 +3,8 @@ from unittest.mock import mock_open
 
 import pytest
 
-from quackpack.util.deser.errors import ConfigFileLoadError
-from quackpack.util.deser.yaml.strict_parsing import strict_safe_load
+from quackpack.util.yaml.errors import ConfigFileLoadError
+from quackpack.util.yaml.strict_parsing import strict_safe_load
 
 
 def test_successful_deserialization_and_positions(tmp_path: Path):
