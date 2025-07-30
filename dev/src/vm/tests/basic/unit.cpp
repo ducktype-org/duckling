@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
+		TESTER_ADD_TEST(floatOperationTest);
 	}
 
 private:
@@ -72,8 +73,8 @@ private:
 	}
 
 	void floatOperationTest() {
-		runTestOnVm("floating_point_arithmetic_32.dbc", "", "", {}, 1'056'964'608);
-		runTestOnVm("floating_point_arithmetic_64.dbc", "", "", {}, 4'602'678'819'172'646'912);
+		runTestOnVm("floating_point_arithmetic_32.dbc", "", "1056964608", {});
+		runTestOnVm("floating_point_arithmetic_64.dbc", "", "4602678819172646912", {});
 	}
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }

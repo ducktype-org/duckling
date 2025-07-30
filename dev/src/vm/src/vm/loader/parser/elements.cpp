@@ -24,7 +24,7 @@ namespace vm::loader::parser {
 			try {
 				usize  pos    = 0;
 				auto&& str    = token.getValue().str();
-				T      result = std::stoi(str, &pos);
+				T      result = std::stoull(str, &pos);
 				// Check if the number was fully parsed
 				if (pos == str.length()) return result;
 			} catch (std::logic_error&) {}
@@ -54,8 +54,8 @@ namespace vm::loader::parser {
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
 			auto pos         = state.getPosition();
-			auto value       = parseInt<i64, vm::opargs::Immediate>(state);
-			auto arg         = opargs::Immediate{ Memory::interpret<u64>(value) };
+			auto value       = parseInt<u64, vm::opargs::Immediate>(state);
+			auto arg         = opargs::Immediate{ value };
 			arg.bytecode_pos = dia::SourcePosition(
 				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
 			);
