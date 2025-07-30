@@ -1,25 +1,20 @@
-#include "hout_to_binary_driver.hpp"
+#include "operations.hpp"
 
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 namespace compiler::driver {
 
-	void HoutToBinaryDriver::compileHOUTUnit(
-		query::Context&              ctx,
-		base::CRef<helios::HOUTUnit> hout_unit,
-		base::StrID                  module_id,
-		artifacts::FileArtifact      output_artifact
+
+	LIRModuleData compileHOUTUnitToLIRModuleData(
+		query::Context& ctx, base::CRef<compiler::helios::HOUTUnit> hout_unit, base::StrID module_id
 	) {
-		std::vector<BackendModuleGlobal> globals;
+		std::vector<LIRModuleGlobal> globals;
 		globals.reserve(hout_unit->glob_data.size());
 
 		for (const auto& hout_global: hout_unit->glob_data) {
@@ -30,7 +25,7 @@ namespace compiler::driver {
 					CRef mir_function
 						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_global })->value();
 					auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
-					globals.emplace_back(BackendModuleGlobal{
+					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
 						// @TODO: add legit dtors when implemented #929
 						.global_ctor = lir_function,
@@ -63,16 +58,10 @@ namespace compiler::driver {
 			functions.push_back(lir_function);
 		}
 
-		BackendModuleData module_data{
+		return LIRModuleData{
 			.module_id = module_id,
 			.functions = functions,
 			.globals   = globals,
 		};
-
-		backend_driver->compileModule(ctx, module_data, std::move(output_artifact));
-	}
-
-	std::expected<RunOutput, std::string> HoutToBinaryDriver::run() {
-		return backend_driver->run();
 	}
 }

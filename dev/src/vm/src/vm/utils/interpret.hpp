@@ -1,8 +1,9 @@
 #pragma once
 
+#include <base/ints.hpp>
+
 #include <bit>
 #include <cstddef>
-#include <base/ints.hpp>
 
 namespace vm {
 	/**

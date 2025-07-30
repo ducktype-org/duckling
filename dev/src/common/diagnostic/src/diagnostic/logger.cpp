@@ -8,7 +8,7 @@
 
 namespace dia {
 
-	bool Logger::immediately_dump = false;
+	constinit bool Logger::immediately_dump = false;
 
 	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
 
