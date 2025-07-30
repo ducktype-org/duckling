@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <iostream>
 #include <ranges>
+#include <string>
 #include <variant>
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -156,11 +157,11 @@ namespace compiler::backend_vm {
 			// Save locals offset
 			for (const auto& var: ctx.lir_func->local_list) {
 				// This is most likely redundant
-				CORE_ASSERT(!ctx.lir_local_to_name.contains(var.ref()), "Duplicated lir local");
+				CORE_ASSERT(!ctx.lir_local_to_name.contains(&var), "Duplicated lir local");
 
-				auto vm_type = getTypeFromLayout(var->layout);
-				ctx.lir_local_types.put(var.ref(), vm_type);
-				match_optional(var->parameter_index) {
+				auto vm_type = getTypeFromLayout(var.layout);
+				ctx.lir_local_types.put(&var, vm_type);
+				match_optional(var.parameter_index) {
 					opt_some(param_idx) {
 						// In this case we are handling a parameter
 						CORE_ASSERT(
@@ -169,16 +170,15 @@ namespace compiler::backend_vm {
 						);
 
 						auto name = base::StrID(base::strConcat("arg", param_idx).c_str());
-						ctx.lir_local_to_name.put(var.ref(), name);
+						ctx.lir_local_to_name.put(&var, name);
 					}
 					opt_none {
 						// In this case we are handling a regular variable
-						auto tp_name  = typeName(vm_type);
-						auto var_name = base::StrID(
-							base::strConcat("var", ctx.variable_to_id[var.ref()]).c_str()
-						);
+						auto tp_name = typeName(vm_type);
+						auto var_name
+							= base::StrID(base::strConcat("var", ctx.variable_to_id[&var]).c_str());
 						initType(ctx, var_name, tp_name);
-						ctx.lir_local_to_name.put(var.ref(), var_name);
+						ctx.lir_local_to_name.put(&var, var_name);
 					}
 				}
 			}
@@ -215,7 +215,7 @@ namespace compiler::backend_vm {
 			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
 			auto local_layouts = lir_function->local_list
-			                   | std::views::transform([](auto&& local) { return local->layout; });
+			                   | std::views::transform([](auto& local) { return local.layout; });
 
 			for (const auto& layout: local_layouts) types.push_back(getTypeFromLayout(layout));
 		}
@@ -592,7 +592,7 @@ namespace compiler::backend_vm {
 		  module_id(module_id),
 		  valid_program(ValidProgram::withBuiltins()) {
 		CodeCollection                   compiled_types;
-		CodeCollection                   global_data;
+		CodeCollection                   compiled_collection;
 		std::vector<CRef<lir::Function>> ctors;
 		std::vector<CRef<lir::Function>> dtors;
 
@@ -602,28 +602,28 @@ namespace compiler::backend_vm {
 		for (const auto& global: globals) {
 			auto global_type = getTypeFromLayout(*global.lir_global.layout);
 			compiled_types.types.push_back(global_type);
-			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
-			global_data.global_data.push_back(GlobalData{
-				{}, global.lir_global.mangled_name, typeName(global_type) });
 
-			// @TODO: handle ctors and dtors in DMV properly
+			base::Optional<Identifier> ctor_name;
+			base::Optional<Identifier> dtor_name;
+
 			if (global.global_ctor.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, global.global_ctor.value());
+				ctor_name = Identifier(global.global_ctor.value()->mangled_name);
 				ctors.emplace_back(global.global_ctor.value());
 			}
 			if (global.global_dtor.has_value()) {
 				insertTypesUsedByFunction(compiled_types.types, global.global_dtor.value());
+				dtor_name = Identifier(global.global_dtor.value()->mangled_name);
 				dtors.emplace_back(global.global_dtor.value());
 			}
+
+			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			compiled_collection.global_data.push_back(GlobalData{
+				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}
 
 		// Insert and validate types:
 		valid_program.insertCode(compiled_types);
-
-		// Insert and validate global data:
-		valid_program.insertCode(global_data);
-
-		CodeCollection compiled_functions;
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
@@ -640,8 +640,7 @@ namespace compiler::backend_vm {
 
 				addTerminator(ctx, lir_block);
 			}
-
-			compiled_functions.functions.emplace_back(std::move(ctx.bytecode_func));
+			compiled_collection.functions.emplace_back(std::move(ctx.bytecode_func));
 		};
 
 		for (const auto& ctor: ctors) process_function(ctor);
@@ -649,8 +648,8 @@ namespace compiler::backend_vm {
 		//@TODO: add dtors when implemented
 
 		for (const auto& lir_function: functions) process_function(lir_function);
-		// Insert and validate functions:
-		valid_program.insertCode(compiled_functions);
+		// Insert and validate types, global data and functions:
+		valid_program.insertCode(compiled_collection);
 	}
 
 	vm::code::CodeCollection Module::build() const {

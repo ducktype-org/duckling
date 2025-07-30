@@ -5,13 +5,14 @@
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
-// NOLINTBEGIN(readability-identifier-naming)
+#include <string>
+
 template<>
 struct nlohmann::adl_serializer<base::RawView> {
 	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
 
 	static void from_json(const json&, const base::RawView&) {
-		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (yet).");
+		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (maybe yet).");
 	}
 };
 
@@ -23,8 +24,6 @@ struct nlohmann::adl_serializer<vm::BlockID> {
 		e = static_cast<vm::BlockID>(std::stoull(j.get<std::string>()));
 	}
 };
-
-// NOLINTEND(readability-identifier-naming)
 
 namespace vm::api {
 	namespace response {

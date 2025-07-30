@@ -42,6 +42,9 @@ namespace vm::code {
 	struct GlobalData final: ElementBase {
 		Identifier name;
 		Identifier type;
+
+		base::Optional<Identifier> ctor_name;
+		base::Optional<Identifier> dtor_name;
 	};
 
 	/**

@@ -3,11 +3,10 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include <clap/clap.hpp>
+#include <clah/clah.hpp>
 
 #include <base64.hpp>
 
-#include <iostream>
 
 PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -238,6 +237,33 @@ void showVersion() {
 	std::cout << "DucklingLS daemon version 0.0.\n";
 }
 
+clah::Clah getLspDaemonCLI() {
+	return clah::Clah("lsp_daemon", "The Duckling Language Server Protocol daemon.")
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addShortName('v')
+	             .addLongName("version")
+	             .addShortDesc("Show version information and exit")
+	             .build())
+	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("version")) {
+				showVersion();
+				throw clah::exceptions::SuccessExitException(options);
+			}
+		})
+	    .addSubcommand(clah::Clah("start", "Starts the LSP server on a given port")
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("port"))
+	                                .addShortName('p')
+	                                .addLongName("port")
+	                                .addShortDesc("The port for the server to listen on.")
+	                                .required()
+	                                .build())
+	                       .setHandler([](const clah::ParsingResult& options) {
+							   auto port = options.getValue<i64>("port").value();
+							   server(i32(port));
+							   return 0;
+						   }));
+}
+
 /**
  * @brief The main function of the LSP daemon.
  *
@@ -253,44 +279,26 @@ void showVersion() {
  */
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
-	auto clap = clap::Clap()
-	                .addHelpFlag()
-	                .add(clap::ParamBuilder::ofFlag()
-	                         .addShortName('v')
-	                         .addLongName("version")
-	                         .addShortDesc("Show version information")
-	                         .build())
-	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-	                         .addShortName('p')
-	                         .addLongName("port")
-	                         .addShortDesc("Choose port for server")
-	                         .build());
-
-	clap::ParsingResult result;
+	auto clah = getLspDaemonCLI();
 
 	try {
 		// Parse the command-line arguments
-		result = clap.parse(base::safeIntConv<usize>(argc), argv);
-	} catch (clap::exceptions::ClapException& e) {
-		// Handle general parsing exceptions and print error message
-		printer::StreamPrinter      console = printer::StreamPrinter();
-		printer::PrinterContentsSeq contents;
-		contents.emplace_back("duckling: ", printer::Color::DEFAULT, printer::Color::DEFAULT);
-		contents.emplace_back("error: ", printer::Color::RED, printer::Color::DEFAULT);
-		contents.emplace_back(e.what(), printer::Color::DEFAULT, printer::Color::DEFAULT);
-		console.printNL(contents);
+		return clah.execute(base::safeIntConv<usize>(argc), argv);
+	} catch (const base::Exception& e) {
+		printer::StreamPrinter::print({
+			{ "[ERROR] ", printer::Color::RED },
+			{ "Exception was caught with message:\n", printer::Color::DEFAULT },
+			{ e.what(), printer::Color::DEFAULT },
+			{ "\nAborting\n", printer::Color::DEFAULT },
+		});
 		return 1;
-	} catch (clap::exceptions::HelpException& e) {
-		// Handle help exception and print help message
-		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-		std::cout << help_message << '\n';
-		return 0;
+	} catch (const std::exception& e) {
+		printer::StreamPrinter::print({
+			{ "[ERROR] ", printer::Color::RED },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
+			{ e.what(), printer::Color::DEFAULT },
+			{ "\nAborting\n", printer::Color::DEFAULT },
+		});
+		return 1;
 	}
-
-	if (result.isFlag("version")) showVersion();
-	// Check if the port parameter is provided and start the server on the specified port
-	else if (auto port = result.getValue<i64>("port"))
-		server(i32(port.value()));
-	else
-		throw std::runtime_error("No port or file specified");
 }

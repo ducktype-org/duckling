@@ -14,6 +14,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
@@ -337,7 +338,7 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 			default: {
-				CORE_PANIC("Unknown operator:", u64(instr->nontc_opcode));
+				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
 			}
 			}
 		}
@@ -382,7 +383,7 @@ namespace vm {
 			throw KillProcessException{};
 
 		default:
-			CORE_PANIC("unexpected execution status");
+			CORE_PANIC("Unexpected execution status");
 		}
 	}
 
@@ -416,7 +417,7 @@ namespace vm {
 				break;
 			}
 			default:
-				CORE_PANIC("resumed with paused status");
+				throw exceptions::VMResuemedWithPausedStatusException();
 			}
 		}
 	}
@@ -442,8 +443,26 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		executing_program = program;
-		for (const auto& [type, id, name]: program->global_data.allData())
-			process_memory.insertGlobalData(id, *type);
+		for (const auto& [global, id, name]: program->global_data.allData()) {
+			// Insert the global data if it hasn't been initialized; then run constructor if present
+			if (process_memory.tryInsertGlobalData(id, global->type)
+			    && global->ctor_name.has_value()) {
+				try {
+					const auto& func = *executing_program->functions
+					                        .atMaybe(base::StrID(global->ctor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->ctor_name.value().str()
+											);
+					low::FuncData start_function;
+					start_function = createStartFunctionFor(func, {});
+					i64 exit_code  = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+				} catch (const KillProcessException& e) {
+					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+				}
+			}
+		}
 
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
@@ -462,6 +481,31 @@ namespace vm {
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		}
+	}
+
+	/**
+	 * @brief Function to be called when the VMProcess is destroyed.
+	 */
+	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
+		executing_program = program;
+		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
+			if (global->dtor_name.has_value()) {
+				try {
+					const auto& func = *executing_program->functions
+					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .expect(
+												"Called function does not exist: "
+												+ global->dtor_name.value().str()
+											);
+					low::FuncData start_function;
+					start_function = createStartFunctionFor(func, {});
+					i64 exit_code  = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+				} catch (const KillProcessException& e) {
+					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+				}
+			}
 		}
 	}
 
@@ -512,7 +556,7 @@ namespace vm {
 		return false;
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+	std::expected<api::Response, api::ApiError> VMThread::getCurrentPosition() {
 		variant_match(status) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -528,16 +572,16 @@ namespace vm {
 				}
 			}
 			variant_default {
-				return std::unexpected(api::CoreOperationError{
+				return std::unexpected(api::ApiError{
 					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status) {
+	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 		status = new_status;
-		process.onEvent(api::Executing{ new_status });
+		process.onEvent(new_status);
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -563,8 +607,7 @@ namespace vm {
 		exec_thread = std::thread([this, program, func_name, run_arguments] {
 			try {
 				run(program, func_name, run_arguments);
-				// @TODO: catch not general std::exception&
-			} catch (const std::exception& e) {
+			} catch (const exceptions::VMRuntimeException& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
 				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 			}
@@ -572,7 +615,7 @@ namespace vm {
 		return waitForRunningResponse();
 	}
 
-	void VMThread::respondExecutionRequest(const api::ExecStatus& response) {
+	void VMThread::respondExecutionRequest(const api::ProcStatus& response) {
 		setProcessStatus(response);
 		execution_response_queue.push(response);
 	}

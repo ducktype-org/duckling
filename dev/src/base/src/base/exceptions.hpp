@@ -87,20 +87,23 @@ namespace base {
 		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
 	)
 
-#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
+#if defined(BUILD_TYPE_DEV)
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...) \
-		if (!(cond))                     \
-		DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
+	#define CORE_ASSERT(cond, what, ...)                                                   \
+		do {                                                                               \
+			if (!(cond))                                                                   \
+				DETAIL_THROW_PANIC(                                                        \
+					"    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__ \
+				);                                                                         \
+			[[assume(cond)]];                                                              \
+		} while (0) /*do{ } while(0) construction only to force semicolon*/
 #else
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...) \
-		do {                             \
-		} while (0)
+	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
 #endif
 
 /**
@@ -122,7 +125,7 @@ namespace base {
  */
 
 
-#if defined(BUILD_TYPE_DEBUG) || defined(BUILD_TYPE_DEVRELEASE)
+#if defined(BUILD_TYPE_DEV)
 	#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");
 #else
 	#define CORE_UNREACHABLE() std::unreachable();
