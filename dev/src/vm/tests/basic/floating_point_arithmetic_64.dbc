@@ -28,8 +28,13 @@ function foo {
     fdiv_l64_l64 		a, b;				# a = 0.5
     fdiv_l64_imm 		a, 4607182418800017408;		# a = 0.5 (divide by 1.0)
 
+    fneg_l64 			a;					# a = -0.5
+	fneg_l64			b;					# b = -0.5
+
     cmpEq_l64_l64 		a, b;
     jmpIfNot_label 		fail;
+
+    fneg_l64			a;
 
     mov_l64_l64 		ret_val, a;
     ret;

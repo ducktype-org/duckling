@@ -28,8 +28,13 @@ function foo {
 	fdiv_l32_l32 		a, b;				# a = 0.5
 	fdiv_l32_imm 		a, 1065353216;		# a = 0.5
 
+	fneg_l32 			a;					# a = -0.5
+	fneg_l32			b;					# b = -0.5
+
 	cmpEq_l32_l32 		a, b;
 	jmpIfNot_label 		fail;
+
+	fneg_l32			a;
 
 	mov_l32_l32 		ret_val, a;
 	ret;
