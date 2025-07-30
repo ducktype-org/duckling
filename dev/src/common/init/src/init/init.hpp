@@ -35,6 +35,12 @@ namespace init {
 		InitObject();
 		~InitObject();
 	};
+
+	/**
+	 * Returns true if InitObject was constructed.
+	 * Should be used for sanity-checks only.
+	 */
+	bool wasInitObject();
 }
 
 /**
