@@ -16,9 +16,16 @@ namespace vm {
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
 	 * It is NOT meant to be used by the internal memory module.
 	 * @note Passed data is copied.
-	 * @note User of VmValue is responsible for releasing the held blocks.
+	 * @note VmValue is owned by the process which created it. It can only be created with the
+	 `VMProcess::createVmValue()` function. It's automatically freed when VMProcess is freed.
 	 */
 	class VmValue {
+	private:
+		friend class VMProcess;
+		VmValue(VMProcess& process, TypeCRef type);
+		VmValue(VMProcess& process, TypeCRef type, Pointer src);
+		void freeData();
+
 		std::vector<byte> data;        /// data.size() == type.getSize()
 		Ref<VMProcess>    my_process;  /// The process for which the VmValue exists.
 		Ref<Memory>       memory;
@@ -29,9 +36,6 @@ namespace vm {
 		VmValue& operator=(const VmValue&) = delete;
 		VmValue& operator=(VmValue&&)      = default;
 
-		VmValue(VMProcess& process, TypeCRef type);
-
-		VmValue(VMProcess& process, TypeCRef type, Pointer src);
 
 		~VmValue();
 
@@ -39,7 +43,6 @@ namespace vm {
 
 		void importData(Pointer src);
 
-		void freeData();
 
 		[[nodiscard]] PID getPID() const;
 
@@ -106,20 +109,6 @@ struct nlohmann::adl_serializer<vm::VmValue> {
 	}
 
 	static void from_json(const json&, const vm::VmValue&) {
-		CORE_PANIC("Parsing data from JSON into a VmValue is not supported (yet).");
-	}
-};
-
-template<>
-struct nlohmann::adl_serializer<std::shared_ptr<vm::VmValue>> {
-	static void to_json(json& j, const std::shared_ptr<vm::VmValue>& ptr) {
-		if (ptr)
-			j = *ptr;
-		else
-			j = nullptr;
-	}
-
-	static void from_json(const json&, const std::shared_ptr<vm::VmValue>&) {
 		CORE_PANIC("Parsing data from JSON into a VmValue is not supported (yet).");
 	}
 };

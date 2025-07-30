@@ -278,7 +278,7 @@ namespace vm {
 						);
 						match_optional(maybe_type) {
 							opt_some(type) {
-								auto vm_value = std::make_shared<vm::VmValue>(*this, type);
+								auto vm_value = createVmValue(type);
 								return api::response::VmValue{ vm_value };
 							}
 							opt_none {
@@ -300,6 +300,18 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
+	Ref<VmValue> VMProcess::createVmValue(TypeCRef type) {
+		auto vm_value = Box<VmValue>::fromPointer(new VmValue(*this, type));
+		owned_vm_values.pushBack(std::move(vm_value));
+		return owned_vm_values.last()->refMut();
+	}
+
+	Ref<VmValue> VMProcess::createVmValue(TypeCRef type, Pointer src) {
+		auto vm_value = Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+		owned_vm_values.pushBack(std::move(vm_value));
+		return owned_vm_values.last()->refMut();
+	}
+
 	PID VMProcess::getPID() const { return my_pid; }
 
 	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {
@@ -311,6 +323,7 @@ namespace vm {
 			if (t.exec_thread) (void) (stop());
 		if (loaded_program.has_value())
 			getMainVMThread().execGlobalDestructors(&loaded_program.value());
+		for (auto& vm_value: owned_vm_values) vm_value->freeData();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }

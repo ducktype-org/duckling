@@ -5,6 +5,6 @@
 namespace vm {
 	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
 	using ProgramRunArguments  = std::vector<std::string>;
-	using FunctionRunArguments = std::vector<std::shared_ptr<vm::VmValue>>;
+	using FunctionRunArguments = std::vector<Ref<vm::VmValue>>;
 	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 }

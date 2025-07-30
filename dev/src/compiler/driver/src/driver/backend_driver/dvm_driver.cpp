@@ -60,7 +60,7 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
-		    .transform([](const std::shared_ptr<vm::VmValue>& exit_value) {
+		    .transform([](Ref<vm::VmValue> exit_value) {
 				return RunOutput{ .exit_code
 				                  = base::safeIntConv<int>(exit_value->interpret<i64>()) };
 			});

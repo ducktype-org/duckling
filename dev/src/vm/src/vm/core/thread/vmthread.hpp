@@ -122,6 +122,12 @@ namespace vm {
 		std::atomic<bool> execution_request_break = false;
 
 		/**
+		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
+		 * store a shared_ptr to this object.
+		 */
+		base::Optional<Ref<VmValue>> exit_value_storage{};
+
+		/**
 		 * @brief Message queue to send responses to the VMProcess.
 		 * @todo rewrite this to C++ futures
 		 */
@@ -168,11 +174,9 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Shared pointer containing a value returned by the program
+		 * @return Constant reference to a value returned by the program
 		 */
-		std::shared_ptr<VmValue> executeFunction(
-			const low::FuncData& start_function, const low::FuncData& func
-		);
+		Ref<VmValue> executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 
 		void setProcessStatus(const vm::api::ProcStatus& status);
 
@@ -180,14 +184,6 @@ namespace vm {
 
 		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
-		/**
-		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
-		 * store a shared_ptr to this object.
-		 * @note This is done with shared pointers since VmValue is uncopyble, but should be usable
-		 * even after the executing thread is deleted (otherwise the VmValue would be deleted as
-		 * well).
-		 */
-		std::shared_ptr<VmValue> exit_value_storage;
 
 	public:
 		VMThread(VMProcess& process);

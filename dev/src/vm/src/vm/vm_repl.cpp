@@ -8,7 +8,7 @@
 #include <string_view>
 
 namespace {
-	std::shared_ptr<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	Ref<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response              = vm::api::getVmValue(pid, "i64");
 		auto vm_value              = response->vm_value;
 		vm_value->interpret<i64>() = value;

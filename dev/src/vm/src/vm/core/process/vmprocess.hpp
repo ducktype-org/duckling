@@ -72,6 +72,15 @@ namespace vm {
 		loader::Loader loader{};
 
 		/**
+		 * @brief Storage for all VmValue which belong to this process.
+		 * @note This is added to resolve lifetime problems.
+		 */
+		base::StableVector<Box<VmValue>> owned_vm_values;
+
+		// @TODO: Improve this....
+		std::deque<VMThread> vm_threads;
+
+		/**
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
@@ -145,10 +154,8 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> detach();
 
-		// @TODO: Improve this....
-		std::deque<VMThread> vm_threads;
-
 		VMThread& getMainVMThread();
+
 
 	public:
 		void onEvent(const api::ProcStatus& event) noexcept override;
@@ -168,6 +175,15 @@ namespace vm {
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
 		PID getPID() const;
+
+		/**
+		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
+		 * The VmValue is owned by the VMProcess.
+		 * @return A non-owning, modifiable reference to the new VmValue.
+		 * @note This may change if we decide VmValues are read only.
+		 */
+		Ref<VmValue> createVmValue(TypeCRef type);
+		Ref<VmValue> createVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
 

@@ -275,7 +275,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	std::shared_ptr<VmValue> VMThread::executeFunction(
+	Ref<VmValue> VMThread::executeFunction(
 		const low::FuncData& start_function, const low::FuncData& func
 	) {
 		// Frame of the called function.
@@ -350,13 +350,12 @@ namespace vm {
 	End:
 #endif
 		// @note: The return value is the only block left on the block stack.
-		auto block = frame->block_stack.back();
-		exit_value_storage
-			= std::make_shared<VmValue>(process, called_func_return_type, Pointer(block, 0));
+		auto block         = frame->block_stack.back();
+		exit_value_storage = process.createVmValue(called_func_return_type, Pointer(block, 0));
 		process_memory.freeBlock(block);
 		frame->resetFrameData();
 
-		return exit_value_storage;
+		return exit_value_storage.value();
 	}
 
 	// executeFunction end
@@ -421,7 +420,7 @@ namespace vm {
 				break;
 			}
 			default:
-				throw exceptions::VMResuemedWithPausedStatusException();
+				throw exceptions::VMResumedWithPausedStatusException();
 			}
 		}
 	}

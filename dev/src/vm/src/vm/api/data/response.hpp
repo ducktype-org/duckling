@@ -48,7 +48,7 @@ namespace vm::api {
 		};
 
 		struct VmValue {
-			std::shared_ptr<::vm::VmValue> vm_value;
+			Ref<::vm::VmValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
 		};
 

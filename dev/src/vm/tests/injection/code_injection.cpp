@@ -86,20 +86,14 @@ private:
 			// @note: If expected_exit_code is an empty optional, it's expected that a called
 			// function is void.
 			ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
-
-		exit_value->freeData();
 	}
 
-	std::shared_ptr<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	Ref<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
 		ASSERT_TRUE(response.has_value());
 		auto vm_value              = response->vm_value;
 		vm_value->interpret<i64>() = value;
 		return vm_value;
-	}
-
-	void freeVmValues(const vm::FunctionRunArguments& vm_values) {
-		for (const auto& value: vm_values) value->freeData();
 	}
 
 	void multipleFiles() {
@@ -136,7 +130,6 @@ private:
 
 		vm::FunctionRunArguments args = { getIntVmValue(pid, 1), getIntVmValue(pid, 2) };
 		runAndCheckExitCode(pid, "summer", args, {}, "3", {});
-		freeVmValues(args);
 	}
 
 	void runNonVoidFunction() {
@@ -146,7 +139,6 @@ private:
 
 		vm::FunctionRunArguments args = { getIntVmValue(pid, 695), getIntVmValue(pid, 40) };
 		runAndCheckExitCode(pid, "summer", args, {}, {}, 735);
-		freeVmValues(args);
 	}
 
 	void doubleRunFunction() {
@@ -158,8 +150,6 @@ private:
 		runAndCheckExitCode(pid, "spring", args, {}, {}, 32);
 		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 4), getIntVmValue(pid, 6) };
 		runAndCheckExitCode(pid, "spring", args2, {}, {}, 24);
-		freeVmValues(args);
-		freeVmValues(args2);
 	}
 
 	void manyRunFunctions() {
@@ -170,7 +160,6 @@ private:
 		for (i32 i = 0; i < 100; i++) {
 			vm::FunctionRunArguments args = { getIntVmValue(pid, i), getIntVmValue(pid, i) };
 			runAndCheckExitCode(pid, "spring", args, {}, {}, i * i);
-			freeVmValues(args);
 		}
 	}
 
@@ -181,13 +170,11 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
 		runAndCheckExitCode(pid, "spring", args, {}, {}, 32);
-		freeVmValues(args);
 
 		fs::File file2(path("repl_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 1), getIntVmValue(pid, 2) };
 		runAndCheckExitCode(pid, "summer", args2, {}, {}, 3);
-		freeVmValues(args2);
 	}
 
 	void replWithGlobals() {
@@ -208,13 +195,11 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
 		runAndCheckExitCode(pid, "summer", args, {}, {}, 12);
-		freeVmValues(args);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 2), getIntVmValue(pid, 3) };
 		runAndCheckExitCode(pid, "spring", args2, {}, {}, 10);
-		freeVmValues(args2);
 	}
 
 	void separateGlobals() {

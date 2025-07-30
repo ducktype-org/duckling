@@ -68,12 +68,12 @@ namespace vm::builtins {
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
 	 */
-	base::Optional<VmValue> callBuiltinFunction(
-		BuiltinFunctionID           id,
-		TypeCRef                    builtin_func_type,
-		VMProcess&                  process,
-		VMThread&                   thread,
-		const std::vector<VmValue>& arguments
+	base::Optional<Ref<VmValue>> callBuiltinFunction(
+		BuiltinFunctionID                id,
+		TypeCRef                         builtin_func_type,
+		VMProcess&                       process,
+		VMThread&                        thread,
+		const std::vector<Ref<VmValue>>& arguments
 	);
 
 	/**

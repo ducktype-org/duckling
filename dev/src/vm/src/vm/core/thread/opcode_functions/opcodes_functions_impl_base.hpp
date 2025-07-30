@@ -44,6 +44,7 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <bit>
 #include <variant>
 
 #ifdef DEBUG_OPCODES
@@ -297,18 +298,18 @@ namespace vm {
 			auto real_function_type = thread.executing_program->types->at(function_type->name);
 			auto arg_count          = function_type->parameters.size();
 
-			std::vector<VmValue> args;
-			u64                  first_arg_idx = frame->block_stack.size() - arg_count;
+			std::vector<Ref<VmValue>> args;
+			u64                       first_arg_idx = frame->block_stack.size() - arg_count;
 
 			// Create VmValue objects from local arguments
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_type->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
 				auto              block     = frame->block_stack[first_arg_idx + i];
-				args.emplace_back(thread.process, real_type, Pointer(block, 0));
+				args.push_back(thread.process.createVmValue(real_type, Pointer(block, 0)));
 			}
 
-			base::Optional<VmValue> return_value = builtins::callBuiltinFunction(
+			base::Optional<Ref<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id, real_function_type, thread.process, thread, args
 			);
 
@@ -316,12 +317,9 @@ namespace vm {
 			match_optional(return_value) {
 				opt_none {}
 				opt_some(value) {
-					value.exportData(Pointer(frame->block_stack[first_arg_idx - 1], 0));
-					value.freeData();
+					value->exportData(Pointer(frame->block_stack[first_arg_idx - 1], 0));
 				}
 			}
-
-			for (auto& vm_value: args) vm_value.freeData();
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
@@ -779,17 +777,14 @@ namespace vm {
 		CORE_PANIC("Handling label should not be possible");
 	}
 
-	// NOLINTBEGIN(performance-no-int-to-ptr)
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
-			const VmValue& vm_value = *reinterpret_cast<const VmValue*>(instr->arg0);
+			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
 			performInit(instr, local_stack, frame, thread, vm_value.type->getID());
 			vm_value.exportData({ frame->block_stack.back(), 0 });
 		}
 		FUNCTION_CONT(1);
 	}
-
-	// NOLINTEND(performance-no-int-to-ptr)
 }
 
 #undef OPCODE_NAME

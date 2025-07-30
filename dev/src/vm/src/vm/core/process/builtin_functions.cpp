@@ -22,17 +22,18 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<VmValue>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
+		base::Optional<Ref<VmValue>>
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Ref<VmValue>>& args, std::index_sequence<Is...>) {
 			if (std::is_void_v<Ret>) {
-				function(thread, args[Is].interpret<FunArgs>()...);
+				function(thread, args[Is]->interpret<FunArgs>()...);
 				return {};
 			}
-			auto value = function(thread, args[Is].interpret<FunArgs>()...);
+			auto value = function(thread, args[Is]->interpret<FunArgs>()...);
 			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
 
-			auto vm_value             = VmValue(process, vm_return_type);
-			vm_value.interpret<Ret>() = value;
+			auto vm_value = process.createVmValue(vm_return_type);
+
+			vm_value->interpret<Ret>() = value;
 			return vm_value;
 		}
 
@@ -54,12 +55,12 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<VmValue> callUnpackArgs(
+		base::Optional<Ref<VmValue>> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
-			TypeCRef                    vm_return_type,
-			VMProcess&                  process,
-			VMThread&                   thread,
-			const std::vector<VmValue>& args
+			TypeCRef                         vm_return_type,
+			VMProcess&                       process,
+			VMThread&                        thread,
+			const std::vector<Ref<VmValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
@@ -89,12 +90,12 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(output.size());
 	}
 
-	base::Optional<VmValue> callBuiltinFunction(
-		BuiltinFunctionID           id,
-		TypeCRef                    builtin_func_type,
-		VMProcess&                  process,
-		VMThread&                   thread,
-		const std::vector<VmValue>& arguments
+	base::Optional<Ref<VmValue>> callBuiltinFunction(
+		BuiltinFunctionID                id,
+		TypeCRef                         builtin_func_type,
+		VMProcess&                       process,
+		VMThread&                        thread,
+		const std::vector<Ref<VmValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                       \

@@ -57,7 +57,7 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
 
-	std::expected<std::shared_ptr<VmValue>, ApiError> getExitValue(PID pid);
+	std::expected<Ref<VmValue>, ApiError> getExitValue(PID pid);
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
