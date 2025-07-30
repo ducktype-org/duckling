@@ -12,8 +12,7 @@ namespace vm {
 
 	std::expected<Ref<VMProcess>, api::ApiError> Supervisor::getProcess(PID pid) {
 		std::shared_lock lock(rw_process_table);
-		if (!process_table.contains(pid))
-			return std::unexpected(api::ProcessError{ api::ProcessNotFound{} });
+		if (!process_table.contains(pid)) return std::unexpected(api::ProcessNotFound{});
 		return process_table.at(pid).refMut();
 	}
 
@@ -35,8 +34,7 @@ namespace vm {
 
 	std::expected<void, api::ApiError> Supervisor::killProcess(PID pid) {
 		std::unique_lock lock(rw_process_table);
-		if (!process_table.contains(pid))
-			return std::unexpected(api::ProcessError{ api::ProcessNotFound{} });
+		if (!process_table.contains(pid)) return std::unexpected(api::ProcessNotFound{});
 
 		process_table.erase(pid);
 		return {};
