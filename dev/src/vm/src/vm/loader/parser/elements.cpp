@@ -14,6 +14,7 @@
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/core/process/memory/memory.hpp>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
@@ -54,7 +55,7 @@ namespace vm::loader::parser {
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
 			auto pos         = state.getPosition();
 			auto value       = parseInt<i64, vm::opargs::Immediate>(state);
-			auto arg         = opargs::Immediate{ value };
+			auto arg         = opargs::Immediate{ Memory::interpret<u64>(value) };
 			arg.bytecode_pos = dia::SourcePosition(
 				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
 			);
