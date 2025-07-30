@@ -91,13 +91,9 @@ namespace base {
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...)                                                   \
-		do {                                                                               \
-			if (!(cond))                                                                   \
-				DETAIL_THROW_PANIC(                                                        \
-					"    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__ \
-				);                                                                         \
-		} while (0) /*do{ } while(0) construction only to force semicolon*/
+	#define CORE_ASSERT(cond, what, ...) \
+		if (!(cond))                     \
+		DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
 #else
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
