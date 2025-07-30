@@ -224,7 +224,7 @@ clah::Clah getClahForMain() {
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
-						 .optional()
+	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")

@@ -25,15 +25,18 @@ namespace compiler::driver {
 			if (not path.exists()) {
 				if (path.isPhysical()) {
 					auto file = fs::FileManager::createPhysicalFolder(path);
-					CORE_ASSERT(file.exists(), "Failed to create artifacts folder: " + path.string());
-				}
-				else if (path.isTemporary()) {
+					CORE_ASSERT(
+						file.exists(), "Failed to create artifacts folder: " + path.string()
+					);
+				} else if (path.isTemporary()) {
 					auto file = fs::FileManager::createTempFolder(path);
-					CORE_ASSERT(file.exists(), "Failed to create artifacts folder: " + path.string());
-				}
-				else {
+					CORE_ASSERT(
+						file.exists(), "Failed to create artifacts folder: " + path.string()
+					);
+				} else {
 					throw base::LogicError(
-						"Artifacts path must be either physical or temporary, but got: " + path.string()
+						"Artifacts path must be either physical or temporary, but got: "
+						+ path.string()
 					);
 				}
 			}
