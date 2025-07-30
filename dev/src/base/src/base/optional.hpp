@@ -91,11 +91,26 @@
 		for (auto&& _value_name = *_internal_optional; _perform_if; _perform_if = false) \
 	POP_DIAGNOSTIC
 
+	#define opt_some_move(_value_name)                                                                  \
+	PUSH_DIAGNOSTIC                                                                                 \
+	NO_SHADOW                                                                                       \
+	if (bool _perform_if = _internal_optional.has_value())                                          \
+		for (auto&& _value_name = *std::move(_internal_optional); _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
 #define opt_err(_err_name)                                                                    \
 	PUSH_DIAGNOSTIC                                                                           \
 	NO_SHADOW                                                                                 \
 	if (bool _perform_if = !_internal_optional.has_value())                                   \
 		for (auto&& _err_name = _internal_optional.error(); _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
+#define opt_err_move(_err_name)                                                     \
+	PUSH_DIAGNOSTIC                                                                 \
+	NO_SHADOW                                                                       \
+	if (bool _perform_if = !_internal_optional.has_value())                         \
+		for (auto&& _err_name = std::move(_internal_optional).error(); _perform_if; \
+		     _perform_if      = false)                                              \
 	POP_DIAGNOSTIC
 
 #define opt_none    \

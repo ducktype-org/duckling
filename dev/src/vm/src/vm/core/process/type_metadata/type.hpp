@@ -2,7 +2,7 @@
 
 #include "kinds.hpp"
 
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>

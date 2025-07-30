@@ -6,6 +6,6 @@
 
 namespace vm::kind {
 	struct Variant {
-		std::vector<TypeCRef> alternatives;
+		std::vector<TypeRef> alternatives;
 	};
 }
