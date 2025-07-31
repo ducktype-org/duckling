@@ -1,6 +1,5 @@
 add_files(
 		vm.cpp
-		data/request.cpp
 		data/api_error.cpp
 )
 

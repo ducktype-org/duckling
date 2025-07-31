@@ -98,9 +98,7 @@ namespace base {
 	/**
      * @brief base::Panic based assert that allows catching for testing purposes.
      */
-	#define CORE_ASSERT(cond, what, ...) \
-		do {                             \
-		} while (0)
+	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
 #endif
 
 /**

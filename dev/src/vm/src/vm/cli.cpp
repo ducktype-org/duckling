@@ -4,8 +4,6 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
-#include <vm/api/data/core_operation_error.hpp>
-#include <vm/api/data/load_program_error.hpp>
 #include <vm/api/data/process_info.hpp>
 
 #include <json/json.hpp>
@@ -14,11 +12,7 @@
 
 std::string convertError(const vm::api::ApiError& api_error) {
 	variant_match(api_error) {
-		variant_case(vm::api::CoreOperationError, core) {
-			variant_match(core) {
-				variant_case(vm::api::LoadProgramError, load) { return load.why; }
-			}
-		}
+		variant_case(vm::api::LoadProgramError, load) { return load.why; }
 	}
 	return vm::api::errorToString(api_error);
 }
