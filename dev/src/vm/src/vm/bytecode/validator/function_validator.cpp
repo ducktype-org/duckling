@@ -627,20 +627,13 @@ class FunctionValidator {
 			variant_case_novalue(Op_ucmpG_l32_imm) {}
 			variant_case_novalue(Op_ucmpG_l8_l8) {}
 			variant_case_novalue(Op_ucmpG_l8_imm) {}
-			variant_case_novalue(Op_and_l64_l64) {}
-			variant_case_novalue(Op_and_l64_imm) {}
-			variant_case_novalue(Op_and_l32_l32) {}
-			variant_case_novalue(Op_and_l32_imm) {}
-			variant_case_novalue(Op_or_l64_l64) {}
-			variant_case_novalue(Op_or_l64_imm) {}
-			variant_case_novalue(Op_or_l32_l32) {}
-			variant_case_novalue(Op_or_l32_imm) {}
-			variant_case_novalue(Op_xor_l64_l64) {}
-			variant_case_novalue(Op_xor_l64_imm) {}
-			variant_case_novalue(Op_xor_l32_l32) {}
-			variant_case_novalue(Op_xor_l32_imm) {}
-			variant_case_novalue(Op_not_l64) {}
-			variant_case_novalue(Op_not_l32) {}
+			variant_case_novalue(Op_log_and_l8_l8) {}
+			variant_case_novalue(Op_log_and_l8_imm) {}
+			variant_case_novalue(Op_log_or_l8_l8) {}
+			variant_case_novalue(Op_log_or_l8_imm) {}
+			variant_case_novalue(Op_log_xor_l8_l8) {}
+			variant_case_novalue(Op_log_xor_l8_imm) {}
+			variant_case_novalue(Op_log_not_l8) {}
 
 
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
