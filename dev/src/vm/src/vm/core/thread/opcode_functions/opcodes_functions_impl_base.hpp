@@ -199,6 +199,27 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                          \
 	}
 
+#define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			auto& lhs = derefStack<TYPE>(local_stack, instr->arg0);                      \
+			auto& rhs = derefStack<TYPE>(local_stack, instr->arg1);                      \
+			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
+			lhs /= rhs;                                                                  \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{                                                                                \
+			auto& lhs = derefStack<TYPE>(local_stack, instr->arg0);                      \
+			auto  rhs = Memory::interpret<const TYPE>(instr->arg1);                      \
+			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
+			lhs /= rhs;                                                                  \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}
+
+
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
 	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
 	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
@@ -207,15 +228,15 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
 	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
 	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
-	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
-	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
+	DEFINE_DIVISION_OP(div, 64, i64)
+	DEFINE_DIVISION_OP(div, 32, i32)
 
 	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
 	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
 	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
 	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
-	DEFINE_ARITHMETIC_OP(udiv, 64, u64, /=)
-	DEFINE_ARITHMETIC_OP(udiv, 32, u32, /=)
+	DEFINE_DIVISION_OP(udiv, 64, u64)
+	DEFINE_DIVISION_OP(udiv, 32, u32)
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
