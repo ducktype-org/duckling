@@ -117,8 +117,7 @@ namespace base {
 	// Sanity check
 	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
 	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
-		  && requires (KEY_T&& k) { static_cast<usize>(k); }
-	class VectorMap {
+	      && requires(KEY_T&& k) { static_cast<usize>(k); } class VectorMap {
 		std::vector<Optional<DATA_T>> map;
 		usize                         element_count{};
 
@@ -145,8 +144,7 @@ namespace base {
 		 */
 		DATA_T& operator[](const KEY_T key) {
 			auto idx = static_cast<usize>(key);
-			if (idx < map.size() and map.at(idx).has_value())
-				return *map.at(idx);
+			if (idx < map.size() and map.at(idx).has_value()) return *map.at(idx);
 			throw LogicError("No value assigned to key in VectorMap");
 		}
 
@@ -196,8 +194,7 @@ namespace base {
 		 * @brief Constructs value from @p args at @p key position.
 		 */
 		template<class... Args>
-		requires std::is_constructible_v<DATA_T, Args...>
-		void emplace(KEY_T key, Args&&... args) {
+		requires std::is_constructible_v<DATA_T, Args...> void emplace(KEY_T key, Args&&... args) {
 			put(key, std::move(DATA_T(std::forward<Args>(args)...)));
 		}
 
