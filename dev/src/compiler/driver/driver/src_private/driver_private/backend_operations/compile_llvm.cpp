@@ -1,8 +1,9 @@
-#include "llvm_driver.hpp"
+#include "compile_llvm.hpp"
 
-#include "llvm_ir_lib.hpp"  // IWYU pragma: keep
+#include "llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
+#include <global_state/artifacts_location.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -10,10 +11,8 @@
 
 namespace compiler::driver {
 
-	void LLVMDriver::compileModule(
-		query::Context&          ctx,
-		const BackendModuleData& lir_module,
-		artifacts::FileArtifact  output_artifact
+	backend_llvm::Module compileLIRModuleToLLVM(
+		query::Context& ctx, const LIRModuleData& lir_module
 	) {
 		backend_llvm::Module mod(lir_module.module_id);
 
@@ -34,7 +33,7 @@ namespace compiler::driver {
 			}
 		}
 
-		if (!ctors.empty()) {
+		if (not ctors.empty()) {
 			auto module_ctor = lir::fromLIRFunctions(
 				ctx,
 				ctors,
@@ -44,7 +43,7 @@ namespace compiler::driver {
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 		}
 
-		if (!dtors.empty()) {
+		if (not dtors.empty()) {
 			// Dtors should be called in reverse order
 			std::vector<CRef<lir::Function>> reversed_dtors(dtors.rbegin(), dtors.rend());
 			auto                             module_dtor = lir::fromLIRFunctions(
@@ -59,26 +58,18 @@ namespace compiler::driver {
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);
 
-		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
+		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
 
-		if (options->dump_llvm_ir) {
-			base::StrID llvm_ir_path
-				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
-			mod.debugDumpToFile(llvm_ir_path);
-		}
+		return mod;
+	}
 
-		if (options->compile_to_assembly) {
-			base::StrID assembly_path
-				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
-			mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
-		}
-
-		// @TODO there should be one instance for all duck compiler options
-		// and it should be passed to the backend drivers
-
+	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {
+		auto builtin_obj_file
+			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID("builtins_llvm.o"));
+		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
 		mod.compile(
-			output_artifact.FILE.getFilePath().getPath(), backend_llvm::CompilationOutputType::Object
+			builtin_obj_file.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 		);
-		object_file_paths.push_back(output_artifact.FILE.getFilePath().getPath());
+		return builtin_obj_file;
 	}
 }
