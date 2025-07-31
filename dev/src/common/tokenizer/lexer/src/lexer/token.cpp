@@ -89,6 +89,10 @@ namespace lexer {
 		return { Type::NumLiteral, literal, position };
 	}
 
+	Token Token::makeTypeSpecifier(base::RawView literal, const dia::SourcePosition& position) {
+		return { Type::TypeSpecifier, literal, position };
+	}
+
 	Token Token::makeString(const base::RawView string, const dia::SourcePosition& position) {
 		return { Type::String, string, position };
 	}
@@ -206,6 +210,8 @@ namespace lexer {
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
+
+	bool Token::isTypeSpecifier() const { return type == Type::TypeSpecifier; };
 
 	bool Token::isComment() const { return type == Type::Comment; }
 
