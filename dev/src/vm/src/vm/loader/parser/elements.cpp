@@ -36,6 +36,107 @@ namespace vm::loader::parser {
 			return T{ 0 };
 		}
 
+		template<class T, class K>
+		T parseLiteral(F8ParserState& state) {
+			auto token = state.tokens().next();
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				i32    value = std::stoi(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 4)
+					result = bit_cast<T>(value);
+				else if constexpr (sizeof(T) == 8)
+					// Copies 32 bits of value into the lower bits of result
+					// and fills the upper bits with zeros.
+					result = std::bit_cast<T>(static_cast<u64>(value));
+				// Check if the number was fully parsed
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				auto   value = std::stoul(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 4)
+					result = bit_cast<T>(value);
+				else if constexpr (sizeof(T) == 8)
+					// Copies 32 bits of value into the lower bits of result
+					// and fills the upper bits with zeros.
+					result = std::bit_cast<T>(static_cast<u64>(value));
+				// Check if the number was fully parsed
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				i64    value = std::stoll(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 8)
+					result = std::bit_cast<T>(static_cast<u64>(value));
+				else {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+					));
+					return T{ 0 };
+				}
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				u64    value = std::stoull(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 8)
+					result = std::bit_cast<T>(value);
+				else {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+					));
+					return T{ 0 };
+				}
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				double value = std::stod(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 8) {
+					u64 double_bits = std::bit_cast<u64>(value);
+					result          = std::bit_cast<T>(static_cast<u64>(double_bits));
+				} else {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+					));
+					return T{ 0 };
+				}
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				float  value = std::stof(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 4)
+					result = bit_cast<T>(value);
+				else if constexpr (sizeof(T) == 8) {
+					u32 float_bits = std::bit_cast<u32>(value);
+					result         = std::bit_cast<T>(static_cast<u64>(float_bits));
+				}
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+
+			state.log(makeBox<InvalidLiteral>(
+				token.getPosition(),
+				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+			));
+			return T{ 0 };
+		}
+
 		base::StrID parseStr(F8ParserState& state) {
 			tpc::Identifier identifier;
 			state.parse().one(&identifier);
@@ -54,7 +155,7 @@ namespace vm::loader::parser {
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
 			auto pos         = state.getPosition();
-			auto value       = parseInt<u64, vm::opargs::Immediate>(state);
+			auto value       = parseLiteral<u64, vm::opargs::Immediate>(state);
 			auto arg         = opargs::Immediate{ value };
 			arg.bytecode_pos = dia::SourcePosition(
 				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
