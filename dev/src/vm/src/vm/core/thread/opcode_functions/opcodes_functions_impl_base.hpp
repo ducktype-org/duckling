@@ -269,8 +269,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_l8)(FUNCTION_ARGS) {
 		{
-			derefStack<i8>(local_stack, instr->arg0)
-				= i8{ (derefStack<i8>(local_stack, instr->arg0) == i8{ 0 }) };
+			bool result = (derefStack<i8>(local_stack, instr->arg0) == i8{ 0 });
+			derefStack<i8>(local_stack, instr->arg0) = (result ? i8{ 1 } : i8{ 0 });
 		}
 		FUNCTION_CONT(1);
 	}
