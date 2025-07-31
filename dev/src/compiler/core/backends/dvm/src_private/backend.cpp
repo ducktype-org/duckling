@@ -385,6 +385,12 @@ namespace compiler::backend_vm {
 				return OpKind::neg;
 			case lir::Operation::Call:
 				return OpKind::call;
+			case lir::Operation::BooleanAnd:
+				return OpKind::log_and;
+			case lir::Operation::BooleanOr:
+				return OpKind::log_or;
+			case lir::Operation::BooleanNot:
+				return OpKind::log_not;
 			case lir::Operation::IntegerULt:
 				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSLt:
@@ -481,7 +487,8 @@ namespace compiler::backend_vm {
 
 			// Transforms arguments.
 			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
-			    || kind == OpKind::div || kind == OpKind::mod) {
+			    || kind == OpKind::div || kind == OpKind::mod || kind == OpKind::log_and
+			    || kind == OpKind::log_or || kind == OpKind::log_xor) {
 				CORE_ASSERT(args.size() == 3, "Invalid arithmetic operation argument count");
 				if (args[0] == args[1]) {
 					// This resolves e.g. `a = a + b;` by doing `a = b`
@@ -497,7 +504,7 @@ namespace compiler::backend_vm {
 					args.pop_front();
 					args.push_front(output);
 				}
-			} else if (kind == OpKind::neg) {
+			} else if (kind == OpKind::neg || kind == OpKind::log_not) {
 				CORE_ASSERT(args.size() == 2, "Invalid argument count for neg");
 				if (args[0] == args[1]) {
 					// a = -a;
