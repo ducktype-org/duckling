@@ -10,9 +10,9 @@ namespace pst {
 	 */
 	class Method final: public ClassStmt {
 		tpc::Identifier                                 name;
-		AccessInternal<ParamList>                       params;
-		base::Optional<AccessInternal<CommaExprHolder>> ret;
-		AccessInternal<CodeBlock>                       body;
+		NAMED_CHILD(params, ParamList);
+		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);

@@ -8,8 +8,8 @@ namespace pst {
 	 */
 	class Variable final: public Decl {
 		tpc::Identifier                                 name;
-		base::Optional<AccessInternal<CommaExprHolder>> type;
-		base::Optional<AccessInternal<CommaExprHolder>> value;
+		NAMED_CHILD_OPT(type, CommaExprHolder);
+		NAMED_CHILD_OPT(value, CommaExprHolder);
 		bool                                            is_const = true;
 
 		template<typename T, lang_def::Keyword key>

@@ -7,9 +7,9 @@ namespace pst {
 	 * @brief While declaration
 	 */
 	class While final: public CodeDecl {
-		AccessInternal<RoundGroupExpr>  condition;
+		NAMED_CHILD(condition, RoundGroupExpr);
 		tpc::OptionalIdentifier         optional_name;
-		AccessInternal<CodeBlockOrStmt> body;
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		explicit While(const dia::SourcePosition& position): CodeDecl(position) {

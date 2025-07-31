@@ -10,8 +10,8 @@ namespace pst {
 	class Field final: public ClassStmt {
 		bool                                            is_mutable = true;
 		tpc::Identifier                                 name;
-		AccessInternal<CommaExprHolder>                 type;
-		base::Optional<AccessInternal<CommaExprHolder>> init;
+		NAMED_CHILD(type, CommaExprHolder);
+		NAMED_CHILD_OPT(init, CommaExprHolder);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);

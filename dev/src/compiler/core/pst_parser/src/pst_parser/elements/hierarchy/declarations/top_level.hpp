@@ -35,5 +35,7 @@ namespace pst {
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
+
+		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

@@ -50,17 +50,20 @@ namespace pst::expr {
 
 		while (length > 0) {
 			fwd = toNextLink(state, length);
-			out->chain.emplace_back(nullptr);
+			MBox<ExprElement> extension;
 			if (state[0].is(lang_def::NamedOperator::Period)) {
-				state.parse(out).with(&out->chain.back(), Access::parse, +fwd);
+				state.parse(out).with(&extension, Access::parse, +fwd);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
-				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);
+				state.parse(out).with(&extension, Call::parse, +fwd);
 			} else {
 				state.log(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
 				));
 				fastForward(state, fwd);
+			}
+			if (extension) {
+				out->chain.emplace_back(nullptr);
 			}
 			length -= fwd;
 		}

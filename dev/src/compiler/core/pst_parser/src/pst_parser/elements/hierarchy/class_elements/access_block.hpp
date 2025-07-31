@@ -17,7 +17,7 @@ namespace pst {
 		};
 
 		lang_def::Keyword          specifier = lang_def::Keyword::NotAKeyword;
-		AccessInternal<ClassBlock> block;
+		NAMED_CHILD(block, ClassBlock);	
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);

@@ -10,7 +10,7 @@ namespace pst {
 	 * Currently allows: using, alias
 	 */
 	class NonClassStmt: public ClassStmt {
-		AccessInternal<Stmt> inner_stmt;
+		NAMED_CHILD(inner_stmt, Stmt);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);

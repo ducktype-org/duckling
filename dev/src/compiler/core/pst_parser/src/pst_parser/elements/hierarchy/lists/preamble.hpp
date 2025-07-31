@@ -45,14 +45,14 @@ namespace pst {
 			out << "]";
 		}
 
-		/**
-		 * @brief A default override for lists that adds the index.
-		 */
-		void calcElementPathsRecursive(const ElementPath& path) override {
-			for(usize i = 0; i < elements.size(); i++) {
-				ElementPath child_path(path, std::format("[%llu]", i));
-				calcChildPath(elements[i], child_path);
-			} 
-		}
+		// /**
+		 // * @brief A default override for lists that adds the index.
+		 // */
+		// void calcElementPathsRecursive(const ElementPath& path) override {
+			// for(usize i = 0; i < elements.size(); i++) {
+				// ElementPath child_path(path, std::format("[%llu]", i));
+				// calcChildPath(elements[i], child_path);
+			// } 
+		// }
 	};
 }

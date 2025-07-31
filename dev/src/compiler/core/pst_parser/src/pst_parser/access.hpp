@@ -190,6 +190,8 @@ namespace pst {
 		AccessInternalAnonymous(const AccessInternalAnonymous&) = delete;
 		AccessInternalAnonymous(AccessInternalAnonymous&&)      = delete;
 
+		AccessInternalAnonymous(std::nullptr_t): box(nullptr) {}
+
 		AccessInternalAnonymous(MBox<Element>&& box): box(std::move(box)) {}
 
 		/**
@@ -207,7 +209,7 @@ namespace pst {
 		/**
 		 * @brief For internal usage of an Element, mutable version
 		 */
-		MRef<Element> internalMut() const { return box.ref_mut(); }
+		MRef<Element> internalMut() { return box.refMut(); }
 	};
 
 	/**
