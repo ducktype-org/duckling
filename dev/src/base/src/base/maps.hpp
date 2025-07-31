@@ -49,7 +49,6 @@ namespace base {
 			return *this;
 		}
 
-		// Change operator[] behaviour:
 		DATA_T& operator[](const KEY_T& key) { return ContainerType::at(key); }
 
 		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
@@ -117,7 +116,9 @@ namespace base {
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	// Sanity check
 	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
-	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>> class VectorMap {
+	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
+		  && requires (KEY_T&& k) { static_cast<usize>(k); }
+	class VectorMap {
 		std::vector<Optional<DATA_T>> map;
 		usize                         element_count{};
 
@@ -143,18 +144,21 @@ namespace base {
 		 * Throws `base::LogicError` on bad element access.
 		 */
 		DATA_T& operator[](const KEY_T key) {
-			if (usize(key) < map.size() and map.at(usize(key)).has_value())
-				return *map.at(usize(key));
+			auto idx = static_cast<usize>(key);
+			if (idx < map.size() and map.at(idx).has_value())
+				return *map.at(idx);
 			throw LogicError("No value assigned to key in VectorMap");
 		}
 
 		Optional<Ref<DATA_T>> atMaybe(KEY_T key) {
-			if (static_cast<usize>(key) < map.size()) return &*map.at(static_cast<usize>(key));
+			auto idx = static_cast<usize>(key);
+			if (idx < map.size()) return &*map.at(idx);
 			return {};
 		}
 
 		Optional<CRef<DATA_T>> atMaybe(KEY_T key) const {
-			if (static_cast<usize>(key) < map.size()) return &*map.at(static_cast<usize>(key));
+			auto idx = static_cast<usize>(key);
+			if (idx < map.size()) return &*map.at(idx);
 			return {};
 		}
 
@@ -162,46 +166,48 @@ namespace base {
 		 * @brief Inserts empty value at @p key
 		 */
 		void put(KEY_T key) {
-			if (usize(key) >= map.size()) map.resize(key + 1);
-			if (!map.at(usize(key)).has_value()) element_count++;
-			map.at(usize(key)) = DATA_T();
+			auto idx = static_cast<usize>(key);
+			if (idx >= map.size()) map.resize(idx + 1);
+			if (!map.at(idx).has_value()) element_count++;
+			map.at(idx) = DATA_T();
 		}
 
 		/**
 		 * @brief Moves @p data value to @p key position.
 		 */
 		void put(KEY_T key, DATA_T&& data) requires is_move {
-			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
-			if (!map.at(usize(key)).has_value()) element_count++;
-			map.at(usize(key)).emplace(std::move(data));
+			auto idx = static_cast<usize>(key);
+			if (idx >= map.size()) map.resize(idx + 1);
+			if (!map.at(idx).has_value()) element_count++;
+			map.at(idx).emplace(std::move(data));
 		}
 
 		/**
 		 * @brief Copies @p data value to @p key position.
 		 */
 		void put(KEY_T key, const DATA_T& data) requires is_copy {
-			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
-			if (!map.at(usize(key)).has_value()) element_count++;
-			map.at(usize(key)).emplace(data);
+			auto idx = static_cast<usize>(key);
+			if (idx >= map.size()) map.resize(idx + 1);
+			if (!map.at(idx).has_value()) element_count++;
+			map.at(idx).emplace(data);
 		}
 
 		/**
 		 * @brief Constructs value from @p args at @p key position.
-		 *
-		 * @note I'm not sure this works properly with move disabled.
-		 * @note I'm not sure whether argument move shouldn't be a forward.
 		 */
 		template<class... Args>
+		requires std::is_constructible_v<DATA_T, Args...>
 		void emplace(KEY_T key, Args&&... args) {
-			put(key, std::move(DATA_T(std::move(&args...))));
+			put(key, std::move(DATA_T(std::forward<Args>(args)...)));
 		}
 
 		/**
 		 * @brief Checks whether the map has an element on @p key position.
 		 */
 		bool contains(KEY_T key) const {
-			if (usize(key) >= map.size()) return false;
-			return map.at(usize(key)).has_value();
+			auto idx = static_cast<usize>(key);
+			if (idx >= map.size()) return false;
+			return map.at(idx).has_value();
 		}
 
 		/**
@@ -209,9 +215,10 @@ namespace base {
 		 * @returns Whether a value was erased.
 		 */
 		bool erase(KEY_T key) {
-			if (usize(key) >= map.size()) return false;
-			if (map.at(usize(key)).has_value()) {
-				map.at(usize(key)).reset();
+			auto idx = static_cast<usize>(key);
+			if (idx >= map.size()) return false;
+			if (map.at(idx).has_value()) {
+				map.at(idx).reset();
 				element_count--;
 				return true;
 			}
