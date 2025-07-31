@@ -53,36 +53,28 @@ namespace vm {
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
 		 * @warning This operation is unsafe and violates strict alignment rules.
 		 * The caller is expected to know what they are doing. Incorrect usage may lead to UB.
-		 *
-		 * @todo: This is unsafe. Maybe there's a better way. This should change in #1133.
 		 **/
 		template<class T>
-		constexpr T& interpret(const usize offset = 0) {
+		T readBytes(const usize offset = 0) const {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
-			CORE_ASSERT(
-				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
-			);
-			return interpretBytes<T>(data.data() + offset);
+			CORE_ASSERT(offset + sizeof(T) <= data.size(), "Out of bounds read");
+			return vm::safeReadBytes<T>(data.data() + offset);
 		}
 
 		/**
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
 		 * @warning This operation is unsafe and violates strict alignment rules.
 		 * The caller is expected to know what they are doing. Incorrect usage may lead to UB.
-		 *
-		 * @todo: This is unsafe. Maybe there's a better way. This should change in #1133.
 		 **/
 		template<class T>
-		[[nodiscard]] constexpr const T& interpret(const usize offset = 0) const {
+		void writeBytes(const T& value, const usize offset = 0) {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
-			CORE_ASSERT(
-				offset + sizeof(T) <= data.size(), "Interpreting as value exceeding the data.size()"
-			);
-			return interpretBytes<const T>(data.data() + offset);
+			CORE_ASSERT(offset + sizeof(T) <= data.size(), "Out of bounds write");
+			return vm::safeWriteBytes<T>(data.data(), value);
 		}
 
 		[[nodiscard]] byte* getBytes();

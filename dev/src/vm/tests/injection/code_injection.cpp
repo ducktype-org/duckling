@@ -81,7 +81,7 @@ private:
 		ASSERT_TRUE(exit_code_response.has_value());
 		const auto& exit_value = exit_code_response.value();
 		if (expected_exit_code.has_value())
-			ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value->interpret<i64>());
+			ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value->readBytes<i64>());
 		else
 			// @note: If expected_exit_code is an empty optional, it's expected that a called
 			// function is void.
@@ -91,8 +91,8 @@ private:
 	Ref<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
 		ASSERT_TRUE(response.has_value());
-		auto vm_value              = response->vm_value;
-		vm_value->interpret<i64>() = value;
+		auto vm_value = response->vm_value;
+		vm_value->writeBytes<i64>(value);
 		return vm_value;
 	}
 

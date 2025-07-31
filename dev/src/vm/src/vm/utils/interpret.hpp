@@ -2,43 +2,67 @@
 
 #include <base/ints.hpp>
 
-#include <bit>
-#include <cstddef>
+#include <cstring>
+#include <type_traits>
 
 namespace vm {
 	/**
-	 * Interprets U's bytes as type T.
-	 * @tparam T Type of returned reference
-	 * @tparam U Initial type of data
-	 * @param value the data
-	 * @return Reference to U's bytes as T.
+	 * @brief Safely reads an object of type T from a raw byte buffer.
+	 * @note This function performs a bitwise copy from the buffer into a new
+	 * object of type T. It is complies with strict aliasing rules and memory alignment.
+	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
+	 * trivially copyable types.
+	 *
+	 * @tparam T The target type to construct. Must be trivially copyable.
+	 * @param ptr A pointer to the beginning of the source byte buffer.
+	 * @param offset An optional offset in bytes from the start of the buffer.
+	 * @return A new object of type T, constructed from the bytes in the buffer.
+	 */
+	template<typename T>
+	[[nodiscard]] inline T safeReadBytes(const byte* ptr, usize offset = 0)
+		requires std::is_trivially_copyable_v<T> {
+		T value;
+		std::memcpy(&value, ptr + offset, sizeof(T));
+		return value;
+	}
+
+	/**
+	 * @brief Safely reinterprets a source object's bytes as a new object of type T.
+	 * @note This function performs a bitwise copy from the buffer into a new
+	 * object of type T. It is complies with strict aliasing rules and memory alignment.
+	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
+	 * trivially copyable types.
+	 *
+	 * @note Both T and U must be trivially copyable.
+	 * @note `sizeof(T)` must be less than or equal to `sizeof(U)`.
+	 * @tparam T The target type to construct.
+	 * @tparam U The type of the source object.
+	 * @param source_object The object whose bytes will be read.
+	 * @return A new object of type T, constructed from the bytes of `source_object`.
+	 *
 	 */
 	template<typename T, typename U>
-	requires(sizeof(T) <= sizeof(U)) constexpr static T& interpretBytes(U& value) {
-		return *reinterpret_cast<T*>(&value);
+	[[nodiscard]] inline T safeReadBytes(const U& source_object) requires(
+		std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> && sizeof(T) <= sizeof(U)
+	) {
+		return safeReadBytes<T>(reinterpret_cast<const byte*>(&source_object));
 	}
 
 	/**
-	 * @brief Interprets a bytes pointed to by `ptr` as an object of type T.
+	 * @brief Safely writes the byte representation of an object to a buffer.
+	 * @note This function performs a bitwise copy from the buffer into a new
+	 * object of type T. It is complies with strict aliasing rules and memory alignment.
+	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
+	 * trivially copyable types.
 	 *
-	 * @tparam T The target type to interpret the bytes as.
-	 * @param ptr A pointer to the beginning of the byte buffer.
-	 * @return A reference to the memory, now treated as type T.
+	 * @tparam T The type of the object to write. Must be trivially copyable.
+	 * @param dest A pointer to the beginning of the destination byte buffer.
+	 * @param value The object to write.
+	 * @param offset An optional offset in bytes from the start of the buffer.
 	 */
 	template<typename T>
-	constexpr static T& interpretBytes(byte* ptr) {
-		return *std::bit_cast<T*>(ptr);
-	}
-
-	/**
-	 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
-	 *
-	 * @tparam T The target type to interpret the bytes as.
-	 * @param ptr A pointer to the beginning of the const byte buffer.
-	 * @return A const reference to the memory, now treated as type T.
-	 */
-	template<typename T>
-	constexpr static const T& interpretBytes(const byte* ptr) {
-		return *std::bit_cast<const T*>(ptr);
+	inline void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
+		requires(std::is_trivially_copyable_v<T>) {
+		std::memcpy(dest + offset, &value, sizeof(T));
 	}
 }

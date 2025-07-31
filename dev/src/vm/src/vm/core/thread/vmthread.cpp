@@ -144,9 +144,9 @@ namespace vm {
 			CORE_ASSERT(
 				arg_value->getPID() == process.getPID(), "VmValue comes from a different process"
 			);
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVmValue, reinterpret_cast<u64>(arg_value.get()), 0
-			));
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
+			);
 			stack_top += arg_type->getSize();
 		}
 

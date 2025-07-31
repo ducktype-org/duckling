@@ -301,15 +301,15 @@ namespace vm {
 	}
 
 	Ref<VmValue> VMProcess::createVmValue(TypeCRef type) {
-		auto vm_value = Box<VmValue>::fromPointer(new VmValue(*this, type));
-		owned_vm_values.pushBack(std::move(vm_value));
-		return owned_vm_values.last()->refMut();
+		auto value = VmValue{ *this, type };
+		owned_vm_values.pushBack(std::move(value));
+		return owned_vm_values.last();
 	}
 
 	Ref<VmValue> VMProcess::createVmValue(TypeCRef type, Pointer src) {
-		auto vm_value = Box<VmValue>::fromPointer(new VmValue(*this, type, src));
-		owned_vm_values.pushBack(std::move(vm_value));
-		return owned_vm_values.last()->refMut();
+		auto value = VmValue{ *this, type, src };
+		owned_vm_values.emplaceBack(std::move(value));
+		return owned_vm_values.last();
 	}
 
 	PID VMProcess::getPID() const { return my_pid; }
@@ -323,7 +323,7 @@ namespace vm {
 			if (t.exec_thread) (void) (stop());
 		if (loaded_program.has_value())
 			getMainVMThread().execGlobalDestructors(&loaded_program.value());
-		for (auto& vm_value: owned_vm_values) vm_value->freeData();
+		for (auto& vm_value: owned_vm_values) vm_value.freeData();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }

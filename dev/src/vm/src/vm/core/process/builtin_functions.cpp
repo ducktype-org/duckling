@@ -25,15 +25,15 @@ namespace vm::builtins {
 		base::Optional<Ref<VmValue>>
 			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Ref<VmValue>>& args, std::index_sequence<Is...>) {
 			if (std::is_void_v<Ret>) {
-				function(thread, args[Is]->interpret<FunArgs>()...);
+				function(thread, args[Is]->readBytes<FunArgs>()...);
 				return {};
 			}
-			auto value = function(thread, args[Is]->interpret<FunArgs>()...);
+			auto value = function(thread, args[Is]->readBytes<FunArgs>()...);
 			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
 
 			auto vm_value = process.createVmValue(vm_return_type);
 
-			vm_value->interpret<Ret>() = value;
+			vm_value->writeBytes<Ret>(value);
 			return vm_value;
 		}
 

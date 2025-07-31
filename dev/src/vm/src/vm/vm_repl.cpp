@@ -9,9 +9,9 @@
 
 namespace {
 	Ref<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
-		auto response              = vm::api::getVmValue(pid, "i64");
-		auto vm_value              = response->vm_value;
-		vm_value->interpret<i64>() = value;
+		auto response = vm::api::getVmValue(pid, "i64");
+		auto vm_value = response->vm_value;
+		vm_value->writeBytes<i64>(value);
 		return vm_value;
 	}
 
@@ -156,7 +156,7 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, const vm::FunctionRunArgum
 	// @TODO: Improve this to allow other types as well. This should change in #1132.
 	if (exit_code_response.value()->type->getName() == base::StrID("i64"))
 		throw ReplWrongReturnTypeException();
-	return exit_code_response.value()->interpret<i64>();
+	return exit_code_response.value()->readBytes<i64>();
 }
 
 void DuckVMRepl::loadAndRun(const std::string& code) {

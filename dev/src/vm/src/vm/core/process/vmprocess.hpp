@@ -75,7 +75,7 @@ namespace vm {
 		 * @brief Storage for all VmValue which belong to this process.
 		 * @note This is added to resolve lifetime problems.
 		 */
-		base::StableVector<Box<VmValue>> owned_vm_values;
+		base::StableVector<VmValue> owned_vm_values;
 
 		// @TODO: Improve this....
 		std::deque<VMThread> vm_threads;

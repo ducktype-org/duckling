@@ -143,7 +143,7 @@ namespace compiler::driver {
 		    .transform_error(vm::api::errorToString)
 		    .transform([](Ref<vm::VmValue> exit_value) {
 				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_value->interpret<i64>()) };
+				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
 			});
 	}
 

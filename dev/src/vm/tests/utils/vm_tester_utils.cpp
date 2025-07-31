@@ -107,7 +107,7 @@ auto VmTestSuite::runTestImpl(
 	}
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](Ref<vm::VmValue> value) {
 		ASSERT_TRUE(value->type->getName().str() == "i64");
-		auto exit_code = value->interpret<i64>();
+		auto exit_code = value->readBytes<i64>();
 		return exit_code;
 	});
 	return { .pid = pid, .run_result = exit_value };

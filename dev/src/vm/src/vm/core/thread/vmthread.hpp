@@ -123,7 +123,7 @@ namespace vm {
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
-		 * store a shared_ptr to this object.
+		 * store a reference to this object.
 		 */
 		base::Optional<Ref<VmValue>> exit_value_storage{};
 
@@ -174,7 +174,7 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Constant reference to a value returned by the program
+		 * @return Mutable reference to a value returned by the program
 		 */
 		Ref<VmValue> executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 

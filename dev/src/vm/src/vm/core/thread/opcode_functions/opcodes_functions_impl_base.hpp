@@ -88,11 +88,11 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ derefStack<TYPE>(local_stack, instr->arg0) = interpretBytes<const TYPE>(instr->arg1); } \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = safeReadBytes<TYPE>(instr->arg1); }        \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ DEREF_GLOBAL_RAW_UNSAFE(TYPE, instr->arg0) = interpretBytes<const TYPE>(instr->arg1); } \
+		{ DEREF_GLOBAL_RAW_UNSAFE(TYPE, instr->arg0) = safeReadBytes<TYPE>(instr->arg1); }        \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
@@ -186,17 +186,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                            \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {           \
-		{                                                                                          \
-			derefStack<TYPE>(local_stack, instr->arg0)                                             \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                                     \
-		}                                                                                          \
-		FUNCTION_CONT(1);                                                                          \
-	}                                                                                              \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                    \
-		{ derefStack<TYPE>(local_stack, instr->arg0) OP interpretBytes<const TYPE>(instr->arg1); } \
-		FUNCTION_CONT(1);                                                                          \
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                   \
+			derefStack<TYPE>(local_stack, instr->arg0)                                      \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                              \
+		}                                                                                   \
+		FUNCTION_CONT(1);                                                                   \
+	}                                                                                       \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
+		{ derefStack<TYPE>(local_stack, instr->arg0) OP safeReadBytes<TYPE>(instr->arg1); } \
+		FUNCTION_CONT(1);                                                                   \
 	}
 
 #define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
@@ -212,7 +212,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
 			auto& lhs = derefStack<TYPE>(local_stack, instr->arg0);                      \
-			auto  rhs = Memory::interpret<const TYPE>(instr->arg1);                      \
+			auto  rhs = safeReadBytes<TYPE>(instr->arg1);                                \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
 			lhs /= rhs;                                                                  \
 		}                                                                                \
@@ -238,20 +238,20 @@ namespace vm {
 	DEFINE_DIVISION_OP(udiv, 64, u64)
 	DEFINE_DIVISION_OP(udiv, 32, u32)
 
-#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)               \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)               \
-				OP interpretBytes<const TYPE>(instr->arg1);                              \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {          \
+		{                                                                                         \
+			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)                        \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                                    \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
+		{                                                                                         \
+			frame->flags.flag                                                                     \
+				= derefStack<TYPE>(local_stack, instr->arg0) OP safeReadBytes<TYPE>(instr->arg1); \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
 	}
 
 	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
@@ -690,7 +690,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
-			auto field_offset = interpretBytes<const i64>(instr[1].arg0);
+			auto field_offset = safeReadBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
@@ -711,7 +711,7 @@ namespace vm {
 			auto dst_pointer   = Pointer(dst_block, 0);
 
 			auto src_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
-			auto field_offset = interpretBytes<const i64>(instr[1].arg0);
+			auto field_offset = safeReadBytes<i64>(instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);
