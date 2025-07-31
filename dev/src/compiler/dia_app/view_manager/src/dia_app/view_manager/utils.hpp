@@ -3,6 +3,9 @@
 #include <expected>
 #include <json/json.hpp>
 #include <yaml-cpp/yaml.h>
+#include <base/optional.hpp>
+#include <base/maps.hpp>
+#include <base/variant.hpp>
 
 #ifdef DEBUG
 auto&operator<<(auto&o,std::pair<auto,auto>p){return o<<"("<<p.first<<", "<<p.second<<")";}
@@ -168,49 +171,35 @@ namespace dia_app {
         struct TemplateData;
     }
     namespace dia_file {
-        struct ParamData;
+        struct InfoParams;
         struct DisplayElement;
-        using Ptr = std::shared_ptr<DisplayElement>;
+        using DisplayPtr = std::shared_ptr<DisplayElement>;
     }
-    // A stateless info params handle for lazy fetching of infos.
-    using InfoHandle = uint;
-    struct InfoParamsHandle;
+
+    using InfoID = uint;
+    using EntityID = std::string;
+    using LazyDisplayID = std::string;
+
+    using ComponentHandle = json;
 
     // An explore edge for the state manager (with evaluated description).
     struct ExploreEdge {
         std::string description;
-        InfoHandle handle;
+        InfoID handle;
 
-        ExploreEdge(const std::string &description, InfoHandle handle) :
+        ExploreEdge(const std::string &description, InfoID handle) :
             description(description), handle(handle) {}
     };
     // An explore edge from the diagnostic file.
     struct ExploreEdgeParams {
         std::string name;
-        std::map<std::string, dia_file::Ptr> params;
-        InfoHandle handle;
+        base::HashMap<std::string, dia_file::DisplayPtr> params;
+        InfoID handle;
 
         ExploreEdgeParams(const json &edge);
     };
 
-    // A data handle for accessing and modifying the entities and secondary_infos
-    // of a view constructor instance.
-    // 
-    // Note: this handle contains references to ViewConstructor fields.
-    //       Do not let it escape the ViewConstructor's scope!
-    struct DataHandle {
-        using ParamData = dia_file::ParamData;
-
-        std::map<std::string, json> &entities;
-        std::vector<ParamData> &secondary_infos;
-        std::map<InfoHandle, InfoParamsHandle> &info_handles;
-
-        DataHandle(
-            std::map<std::string, json> &entities,
-            std::vector<ParamData> &secondary_infos,
-            std::map<InfoHandle, InfoParamsHandle> &info_handles
-        );
-    };
+    struct ViewConstructor;
 
     // A data handle for accessing and modifying the entities, secondary_infos,
     // and a specific message template of a view constructor instance.
@@ -219,69 +208,23 @@ namespace dia_app {
     //       Do not let it escape the ViewConstructor's scope!
     struct TemplateDataHandle {
         using TemplateData = message_template::TemplateData;
-        using ParamData = dia_file::ParamData;
+        using InfoParams = dia_file::InfoParams;
 
+        ViewConstructor &vc;
         const TemplateData &template_data;
         // Auxiliary parameters for explore edges templates (shadow param_data).
-        std::map<std::string, dia_file::Ptr> aux_params;
-        const ParamData &param_data;
+        base::HashMap<std::string, dia_file::DisplayPtr> aux_params;
+        const InfoParams &param_data;
 
         // Macro evaluation stack for detecting infinite recursion.
         std::set<std::string> macro_stack;
 
-        std::map<std::string, json> &entities;
-        std::vector<ParamData> &secondary_infos;
-        std::map<InfoHandle, InfoParamsHandle> &info_handles;
-
         TemplateDataHandle(
+            ViewConstructor &vc,
             const TemplateData &template_data,
-            const ParamData &param_data,
-            DataHandle data_handle
+            const InfoParams &param_data
         );
-        TemplateDataHandle with_aux_params(const std::map<std::string, dia_file::Ptr> &aux_params) const;
+        TemplateDataHandle with_aux_params(const base::HashMap<std::string, dia_file::DisplayPtr> &aux_params) const;
 
-        DataHandle toDataHandle() const;
-
-    };
-
-    // A handle for the lazy evaluation of alt_content.
-    // To be replaced by some LS-generated handle for later access.
-    using ResourceHandle = json;
-    using EntityHandle = std::pair<std::string, json>;
-
-    // A stateful info params handle for lazy fetching of infos.
-    class InfoParamsHandle {
-    private:
-        std::optional<ShortMetadata> metadata;
-        std::optional<uint> idx;
-        
-        // To be replaced by some LS-generated handle for later access.
-        std::optional<json> param_data;
-
-        uint load(DataHandle dh);
-    
-    public:
-        InfoParamsHandle() {}
-        InfoParamsHandle(uint idx) : idx(idx) {}
-        InfoParamsHandle(const ShortMetadata &metadata) : metadata(metadata) {}
-        InfoParamsHandle(const json &handle_json);
-        
-        bool operator==(const InfoParamsHandle &other) const {
-            // InfoParamsHandle is always in one of three states.
-            if (metadata.has_value()) {
-                return other.metadata.has_value() && metadata.value() == other.metadata.value();
-            }
-            if (idx.has_value()) {
-                return other.idx.has_value() && idx.value() == other.idx.value();
-            }
-            return param_data.has_value() && other.param_data.has_value() && param_data.value() == other.param_data.value();
-        }
-
-        // Fetch the info params for this handle if necessary.
-        // The handle is updated upon fetching and so
-        // does not fetch the data twice.
-        static uint load(InfoHandle info, DataHandle dh);
-
-        static InfoHandle add(const InfoParamsHandle &params_handle, DataHandle dh);
     };
 }

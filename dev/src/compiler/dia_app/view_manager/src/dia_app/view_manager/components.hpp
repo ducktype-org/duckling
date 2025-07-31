@@ -9,9 +9,9 @@ namespace dia_app {
 		using component_id_t = uint32_t;
 
 		static_assert(
-			std::is_same_v<InfoHandle, uint32_t>, "Ensure that side_entry match the protocol!"
+			std::is_same_v<InfoID, uint32_t>, "Ensure that side_entry match the protocol!"
 		);
-		using side_entry_id_t = InfoHandle;
+		using side_entry_id_t = InfoID;
 
 		using hl_id_t    = uint32_t;
 		using priority_t = uint32_t;

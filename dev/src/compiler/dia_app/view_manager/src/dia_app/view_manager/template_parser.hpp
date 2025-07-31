@@ -10,8 +10,8 @@ namespace dia_app {
 	namespace message_template {
 
 		struct TemplateElement;
-		using Ptr = std::shared_ptr<TemplateElement>;
-		Ptr parse(const YAML::Node& msg);
+		using TemplatePtr = std::shared_ptr<TemplateElement>;
+		TemplatePtr parse(const YAML::Node& msg);
 
 #define MAX_PRIORITY_UINT 1'000'000'000
 
@@ -21,7 +21,7 @@ namespace dia_app {
 			// Type of the message: error | warning | note | hint | docs.
 			std::string type;
 			// Content of the message.
-			Ptr message;
+			TemplatePtr message;
 
 			PointerMessage() {}
 
@@ -44,15 +44,15 @@ namespace dia_app {
 		struct TemplateData {
 			Metadata metadata;
 			// Declared macros.
-			std::map<std::string, Ptr> macros;
+			std::map<std::string, TemplatePtr> macros;
 
 			// -- Message parts --
-			Ptr                                   header_message;
+			TemplatePtr                                   header_message;
 			std::map<std::string, PointerMessage> pointer_messages;
-			Ptr                                   description;
-			std::map<std::string, Ptr>			  explore_edges;
+			TemplatePtr                                   description;
+			std::map<std::string, TemplatePtr>			  explore_edges;
 
-			TemplateData(const dia_file::ParamData& params) {
+			TemplateData(const dia_file::InfoParams& params) {
 				// Fetch the message template.
 				std::string   filename = params.metadata.getPath();
 				std::ifstream file(filename);
@@ -123,7 +123,7 @@ namespace dia_app {
 		private:
 			// Verify whether there are enough provided params and that no surplus params
 			// were provided.
-			void verify_params(const YAML::Node& declared_params, const std::map<std::string, dia_file::Ptr>& provided_params) const {
+			void verify_params(const YAML::Node& declared_params, const base::HashMap<std::string, dia_file::DisplayPtr>& provided_params) const {
 				if (declared_params && declared_params.IsMap()) {
 					// Did not provide more than available.
 					for (const auto& it: provided_params) assert(declared_params[it.first]);

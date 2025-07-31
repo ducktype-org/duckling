@@ -8,7 +8,7 @@ namespace dia_app {
 namespace message_template {
 
     // Apply the message template to message.
-    inline dia_file::Ptr apply(Ptr message, TemplateDataHandle handle) {
+    inline dia_file::DisplayPtr apply(TemplatePtr message, TemplateDataHandle handle) {
         if (!message) return nullptr;
         
         // Evaluate the template.
@@ -18,7 +18,7 @@ namespace message_template {
     struct DisplayPointerMessage {
         uint priority;
         std::string type;
-        dia_file::Ptr message;
+        dia_file::DisplayPtr message;
 
         DisplayPointerMessage() {}
         DisplayPointerMessage(const PointerMessage &msg, TemplateDataHandle handle) :
@@ -32,10 +32,10 @@ namespace message_template {
         using CodeData = dia_file::CodeData;
 
         Metadata metadata;
-        dia_file::Ptr header_message;
-        std::optional<CodeData> code;
+        dia_file::DisplayPtr header_message;
+        base::Optional<CodeData> code;
         std::map<std::string, DisplayPointerMessage> pointer_messages;
-        dia_file::Ptr description;
+        dia_file::DisplayPtr description;
         std::vector<ExploreEdge> explore_edges;
 
         Info(TemplateDataHandle handle) :
@@ -60,45 +60,49 @@ namespace message_template {
                 // Remember to include auxiliary parameters included in the explore edge.
                 auto description_ptr = apply(edge_template, handle.with_aux_params(edge.params));
                 // In explore edges only plain text is displayed.
-                auto description = description_ptr->toText(handle.toDataHandle());
+                dia_file::ToTextVisitor v(handle.vc);
+				description_ptr->accept(v);
+                auto description = v.builder;
 
                 explore_edges.emplace_back(description, edge.handle);
             }
         }
 
         void verify_code() const {
+            using namespace dia_file;
+
             struct VerifyCodeVisitor : public dia_file::DisplayElementVisitor {
                 bool is_ok = true;
                 const Info *info;
 
                 VerifyCodeVisitor(const Info *info) : info(info) {}
 
-                virtual void visitText(dia_file::TextElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitTextDElement(const TextDElement &el) {
+                    verify_groups(el.groups);
                 }
-                virtual void visitCode(dia_file::CodeElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitCodeDElement(const CodeDElement &el) {
+                    verify_groups(el.groups);
                 }
-                virtual void visitConcat(dia_file::ConcatElement *el) {
-                    verify_groups(el->groups);
-                    for (auto &child : el->elems) {
-                        child->accept(this);
+                virtual void visitConcatDElement(const ConcatDElement &el) {
+                    verify_groups(el.groups);
+                    for (auto &child : el.elems) {
+                        child->accept(*this);
                     }
                 }
-                virtual void visitStartLine(dia_file::StartLineElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitStartLineDElement(const StartLineDElement &el) {
+                    verify_groups(el.groups);
                 }
-                virtual void visitInteract(dia_file::InteractElement *el) {
-                    verify_groups(el->groups);
-                    el->content->accept(this);
-                    el->alt_content->accept(this);
+                virtual void visitInteractDElement(const InteractDElement &el) {
+                    verify_groups(el.groups);
+                    el.content->accept(*this);
+                    el.alt_content->accept(*this);
                 }
-                virtual void visitEntity(dia_file::EntityElement *el) {
-                    verify_groups(el->groups);
-                    el->content->accept(this);
+                virtual void visitEntityDElement(const EntityDElement &el) {
+                    verify_groups(el.groups);
+                    el.content->accept(*this);
                 }
-                virtual void visitLazy(dia_file::LazyElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitLazyDElement(const LazyDElement &el) {
+                    verify_groups(el.groups);
                     // TODO: remember about verification upon fetching.
                 }
 
@@ -112,17 +116,13 @@ namespace message_template {
                 }
             };
         
-            if (code.has_value()) {
+            if_opt_some(code, code_v) {
                 VerifyCodeVisitor v(this);
-                code.value().content->accept(&v);
+                code_v.content->accept(v);
 
                 ASSERT(v.is_ok, "some component inside info code refers to a non-existent group");
             }
         }
-    };
-
-    enum class Error {
-        TemplateFileNotFound
     };
 
     /*
@@ -131,15 +131,15 @@ namespace message_template {
         
         Return true upon success.
     */
-    inline std::expected<Info, Error> apply(
-        const dia_file::ParamData &param_data,
-        DataHandle data_handle
+    inline Info apply(
+        ViewConstructor &vc,
+        const dia_file::InfoParams &param_data
     ) {
         try {
             TemplateData template_data(param_data);
-            return Info(TemplateDataHandle(template_data, param_data, data_handle));
+            return Info(TemplateDataHandle(vc, template_data, param_data));
         } catch (TemplateFileNotFoundException e) {
-            return std::unexpected(Error::TemplateFileNotFound);
+            ASSUME(false, "message template file was not found on disk");
         }
     }
 
