@@ -69,7 +69,7 @@ namespace compiler::helios {
 	using PotentialParsingErrors
 		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 
-	using QueryConstValueOf_Result = query::QResult<i64, errors::Failed>;
+	using QueryConstValueOf_Result = query::QResult<num_ctv, errors::Failed>;
 
 	/**
 	 * Calculates a value of a constant.

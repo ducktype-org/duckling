@@ -205,9 +205,12 @@ namespace compiler::backend_llvm {
 		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
 		if (lir_global.inital_value.has_value()) {
-			global->setInitializer(llvm::ConstantInt::getSigned(
-				global->getValueType(), static_cast<i64>(lir_global.inital_value.value())
-			));
+			i64 value = std::visit([](auto val) -> i64 {
+				return static_cast<i64>(val); // Fallback for other types
+			}, lir_global.inital_value.value());
+
+
+			global->setInitializer(llvm::ConstantInt::getSigned(global->getValueType(), value));
 		} else {
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}

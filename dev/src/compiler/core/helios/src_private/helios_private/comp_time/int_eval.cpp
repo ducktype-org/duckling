@@ -12,14 +12,14 @@
 #include <cmath>
 
 namespace compiler::helios {
-	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {
+	struct IMPLEMENT_QUERY(EvalExprToNumCTV, NumCTVEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
 			Context&                            ctx;
-			query::QResult<i64, errors::Failed> result;
+			query::QResult<num_ctv, errors::Failed> result;
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 
-			static query::QResult<i64, errors::Failed> evaluateExpr(
+			static query::QResult<num_ctv, errors::Failed> evaluateExpr(
 				Context& ctx, const code::Expr& expr
 			) {
 				EvaluateHoutExprVisitor visitor(ctx);
@@ -27,8 +27,8 @@ namespace compiler::helios {
 				return visitor.result;
 			}
 
-			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
-				result = expr.value;
+			void visitLiteralNumCTVExpr(const code::LiteralNumCTVExpr& expr) final {
+				result = static_cast<const num_ctv&>(expr.value);
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
@@ -57,54 +57,80 @@ namespace compiler::helios {
 					result = lhs_result;
 					return;
 				}
+
 				auto rhs_result = evaluateExpr(ctx, *expr.rhs);
 				if (rhs_result.hasError()) {
 					result = rhs_result;
 					return;
 				}
-				i64 lhs_value = lhs_result.value(), rhs_value = rhs_result.value();
-				switch (expr.operation) {
-				case code::BuiltinBinary::IntegerAdd:
-					result = lhs_value + rhs_value;
-					break;
-				case code::BuiltinBinary::IntegerSub:
-					result = lhs_value - rhs_value;
-					break;
-				case code::BuiltinBinary::IntegerMul:
-					result = lhs_value * rhs_value;
-					break;
-				case code::BuiltinBinary::IntegerDiv:
-					result = lhs_value / rhs_value;
-					break;
-				case code::BuiltinBinary::IntegerMod:
-					result = lhs_value % rhs_value;
-					break;
-				case code::BuiltinBinary::IntegerPow:
-					result = static_cast<i64>(std::pow(lhs_value, rhs_value));
-					break;
-				case code::BuiltinBinary::BooleanAnd:
-					result = lhs_value and rhs_value;
-					break;
-				case code::BuiltinBinary::BooleanOr:
-					result = lhs_value or rhs_value;
-					break;
-				default:
-					result = query::QError(errors::Failed());
-					throw base::NotYetImplemented(
-						"Evaluation of different than '+-*/%**' binary operators is not "
-						"implemented yet"
-					);
-				}
+
+				const auto& lhs_value = lhs_result.value();
+				const auto& rhs_value = rhs_result.value();
+
+				result = std::visit([&](auto lhs, auto rhs) -> num_ctv {
+					using LhsT = decltype(lhs);
+					using RhsT = decltype(rhs);
+					
+					// Fallback to a known, safe type promotion if common_type fails
+					using ResultT = std::conditional_t<
+						std::is_arithmetic_v<LhsT> && std::is_arithmetic_v<RhsT>,
+						long double,  // promote to long double for numeric ops
+						void          // or handle custom logic
+					>;
+
+					if constexpr (std::is_arithmetic_v<ResultT>) {
+						switch (expr.operation) {
+							case code::BuiltinBinary::IntegerAdd:
+								return static_cast<num_ctv>(static_cast<ResultT>(lhs) + static_cast<ResultT>(rhs));
+
+							case code::BuiltinBinary::IntegerSub:
+								return static_cast<num_ctv>(static_cast<ResultT>(lhs) - static_cast<ResultT>(rhs));
+
+							case code::BuiltinBinary::IntegerMul:
+								return static_cast<num_ctv>(static_cast<ResultT>(lhs) * static_cast<ResultT>(rhs));
+
+							case code::BuiltinBinary::IntegerDiv:
+								return static_cast<num_ctv>(static_cast<ResultT>(lhs) / static_cast<ResultT>(rhs));
+
+							case code::BuiltinBinary::IntegerMod:
+								return static_cast<num_ctv>(
+									static_cast<int64_t>(lhs) % static_cast<int64_t>(rhs)
+								);
+
+							case code::BuiltinBinary::IntegerPow:
+								return static_cast<num_ctv>(static_cast<ResultT>(std::pow(lhs, rhs)));
+
+							case code::BuiltinBinary::BooleanAnd:
+								return static_cast<num_ctv>(static_cast<bool>(lhs) && static_cast<bool>(rhs));
+
+							case code::BuiltinBinary::BooleanOr:
+								return static_cast<num_ctv>(static_cast<bool>(lhs) || static_cast<bool>(rhs));
+
+							default:
+								throw base::NotYetImplemented("Evaluation of other binary operators is not implemented yet");
+						}
+					} else {
+						throw std::runtime_error("Operands must be arithmetic");
+					}
+				}, lhs_value, rhs_value);
 			}
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
 				result = evaluateExpr(ctx, *expr.expr);
 				if (result.hasError()) return;
-				i64 result_value = result.value();
+
+				const num_ctv& result_value = result.value();
 
 				switch (expr.operation) {
 				case code::BuiltinUnary::IntegerNegation:
-					result = -result_value;
+					result = std::visit([](auto val) -> NumCTVEval_Result {
+						using T = decltype(val);
+						if constexpr (std::is_arithmetic_v<T>) {
+							return static_cast<num_ctv>(-val); // Safe unary minus
+						} else {
+							return query::QError(errors::Failed());
+						}
+					}, result_value);
 					break;
 				default:
 					result = query::QError(errors::Failed());
@@ -129,7 +155,16 @@ namespace compiler::helios {
 					return;
 				}
 
-				result = cond_result.value() ? true_result.value() : false_result.value();
+				result = std::visit([&](auto cond_val) -> NumCTVEval_Result {
+					using T = decltype(cond_val);
+					if constexpr (std::is_arithmetic_v<T>) {
+						bool condition = static_cast<bool>(cond_val);
+						return condition ? true_result : false_result;
+					} else {
+						return query::QError(errors::Failed());
+					}
+				}, cond_result.value());
+
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
@@ -168,5 +203,5 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToI64);
+	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToNumCTV);
 };

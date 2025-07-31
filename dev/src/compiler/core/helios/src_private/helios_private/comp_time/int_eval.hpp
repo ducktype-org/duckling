@@ -9,12 +9,12 @@
 
 namespace compiler::helios {
 
-	using IntEval_Result = query::QResult<i64, errors::Failed>;
+	using NumCTVEval_Result = query::QResult<num_ctv, errors::Failed>;
 
 	/**
 	 * Query that comp-time evaluates an expresion.
 	 * @note For now it only supports integer values,
 	 * in the future we will introduce more generic CTV values.
 	 */
-	DECLARE_QUERY(EvalExprToI64, pst::GenericPSTQueryKey<pst::ExprElement>, IntEval_Result)
+	DECLARE_QUERY(EvalExprToNumCTV, pst::GenericPSTQueryKey<pst::ExprElement>, NumCTVEval_Result)
 }

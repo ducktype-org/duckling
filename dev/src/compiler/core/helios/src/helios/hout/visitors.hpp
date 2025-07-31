@@ -15,7 +15,7 @@ namespace compiler::helios::code {
 		AssignmentStmt
 	);
 	MAKE_VISITOR(HoutExpr,
-		LiteralIntExpr,
+		LiteralNumCTVExpr,
 		LiteralBoolExpr,
 		LiteralStringExpr,
 		LiteralTypeExpr,

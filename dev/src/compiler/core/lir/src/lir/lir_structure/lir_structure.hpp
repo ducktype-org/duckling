@@ -94,7 +94,7 @@ namespace compiler::lir {
 		LirGlobalType type;
 
 		//@TODO: change it to CTV
-		base::Optional<u64> inital_value;
+		base::Optional<num_ctv> inital_value;
 
 	private:
 		LirGlobal(
@@ -102,7 +102,7 @@ namespace compiler::lir {
 			const tsl::TypeLayout& layout,
 			const base::StrID&     mangled_name,
 			const LirGlobalType    type         = LirGlobalType::Variable,
-			base::Optional<u64>    inital_value = {}
+			base::Optional<num_ctv>    inital_value = {}
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),

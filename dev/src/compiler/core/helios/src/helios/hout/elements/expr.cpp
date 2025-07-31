@@ -19,7 +19,7 @@ namespace compiler::helios::code {
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
-	EXPR_VISITOR(LiteralIntExpr)
+	EXPR_VISITOR(LiteralNumCTVExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
@@ -34,13 +34,13 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
 
-	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
+	LiteralNumCTVExpr::LiteralNumCTVExpr(query::Context& ctx, num_ctv value, usize size):
 		  Expr(
 
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on type of literal.
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  ctx.query<tsh::QueryIntegralType>({ size }),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Immutable,
 				  },
@@ -49,7 +49,16 @@ namespace compiler::helios::code {
 		  ),
 		  value(value) {}
 
-	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+	void LiteralNumCTVExpr::debugPrint(std::ostream& out) const {
+    std::visit([&](auto val) {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_arithmetic_v<T>) {
+            out << std::to_string(static_cast<i64>(val)); // or static_cast<int>(val) if you want integer output
+        } else {
+            out << "<non-numeric>";
+        }
+    }, value);
+}
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
 		  Expr(

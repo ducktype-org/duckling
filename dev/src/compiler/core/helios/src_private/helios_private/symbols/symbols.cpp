@@ -572,7 +572,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<i64 COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<num_ctv COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -581,7 +581,7 @@ namespace compiler::helios {
 				);
 
 			// @TODO: Handle potential lack of value
-			return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
+			return ctx.query<EvalExprToNumCTV>(const_symbol->getValue().value().unlock(ctx)->getExpr());
 		}
 
 		QUERY_AUTO_CACHE_COPY

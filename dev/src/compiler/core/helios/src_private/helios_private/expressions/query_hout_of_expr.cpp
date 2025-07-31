@@ -1,4 +1,5 @@
 #include "query_hout_of_expr.hpp"
+#include <regex>
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -78,8 +79,13 @@ namespace compiler::helios::code {
 			base::Optional<base::Box<Expr>> node;
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+				std::string value = stmt->getValue().str();
+				std::regex float_pattern(R"(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)");
+				if (std::regex_match(value, float_pattern)) {
+					node = makeBox<LiteralNumCTVExpr>(ctx, std::stod(stmt->getValue().str()), 64);
+				} else {
+					node = makeBox<LiteralNumCTVExpr>(ctx, std::stoi(stmt->getValue().str()), 64);
+				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {

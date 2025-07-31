@@ -75,7 +75,10 @@ namespace compiler::helios {
 		std::stringstream out;
 		if (std::holds_alternative<HOUTGlobalConst>(value)) {
 			auto const_value = std::get<HOUTGlobalConst>(value).value;
-			out << "const " << original_name.strView() << " = " << const_value << "\n";
+			std::visit([&](const auto& val) {
+				out << "const " << original_name.strView() << " = " << val << "\n";
+			}, const_value);
+
 		} else if (std::holds_alternative<HOUTGlobalVariable>(value)) {
 			out << "var " << original_name.strView() << " = ";
 			std::get<HOUTGlobalVariable>(value).initial_value.get()->ref()->debugPrint(out);

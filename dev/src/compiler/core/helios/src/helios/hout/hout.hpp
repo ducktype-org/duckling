@@ -104,7 +104,7 @@ namespace compiler::helios {
 
 	struct HOUTGlobalConst final {
 		// @TODO: CTV from TS:
-		i64 value;
+		num_ctv value;
 	};
 
 	struct HOUTGlobalVariable final {

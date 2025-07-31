@@ -889,7 +889,7 @@ namespace compiler::mir {
 			this->out.emplace(lowering_result);
 		}
 
-		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
+		void visitLiteralNumCTVExpr(const hc::LiteralNumCTVExpr& expr) override {
 			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
 
