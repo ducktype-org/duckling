@@ -407,6 +407,8 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+
+		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -422,6 +424,8 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
+
+		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
@@ -454,9 +458,7 @@ namespace lexer {
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 
-		if (peek().is(unicode::Classifications::name_start)) {
-			typeSpecifierHandler(output);
-		}
+		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
 
 	void Lexer::typeSpecifierHandler(Tokens& output) {

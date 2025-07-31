@@ -42,6 +42,36 @@ namespace vm::loader::parser {
 			try {
 				usize  pos   = 0;
 				auto&& str   = token.getValue().str();
+				double value = std::stod(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 8) {
+					u64 double_bits = std::bit_cast<u64>(value);
+					result          = std::bit_cast<T>(static_cast<u64>(double_bits));
+				} else {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+					));
+					return T{ 0 };
+				}
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
+				float  value = std::stof(str, &pos);
+				T      result;
+				if constexpr (sizeof(T) == 4)
+					result = bit_cast<T>(value);
+				else if constexpr (sizeof(T) == 8) {
+					u32 float_bits = std::bit_cast<u32>(value);
+					result         = std::bit_cast<T>(static_cast<u64>(float_bits));
+				}
+				if (pos == str.length()) return result;
+			} catch (std::logic_error&) {}
+			try {
+				usize  pos   = 0;
+				auto&& str   = token.getValue().str();
 				i32    value = std::stoi(str, &pos);
 				T      result;
 				if constexpr (sizeof(T) == 4)
@@ -96,36 +126,6 @@ namespace vm::loader::parser {
 						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
 					));
 					return T{ 0 };
-				}
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				double value = std::stod(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 8) {
-					u64 double_bits = std::bit_cast<u64>(value);
-					result          = std::bit_cast<T>(static_cast<u64>(double_bits));
-				} else {
-					state.log(makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
-					));
-					return T{ 0 };
-				}
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				float  value = std::stof(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 4)
-					result = bit_cast<T>(value);
-				else if constexpr (sizeof(T) == 8) {
-					u32 float_bits = std::bit_cast<u32>(value);
-					result         = std::bit_cast<T>(static_cast<u64>(float_bits));
 				}
 				if (pos == str.length()) return result;
 			} catch (std::logic_error&) {}
