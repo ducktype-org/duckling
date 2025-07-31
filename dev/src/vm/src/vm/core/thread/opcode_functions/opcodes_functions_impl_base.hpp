@@ -245,26 +245,22 @@ namespace vm {
 	DEFINE_DIVISION_OP(udiv, 64, u64)
 	DEFINE_DIVISION_OP(udiv, 32, u32)
 
-#define DEFINE_BOOLEAN_OP(NAME, OP)                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {              \
-		{                                                                         \
-			derefStack<i8>(local_stack, instr->arg0)                              \
-				= (derefStack<i8>(local_stack, instr->arg0) != i8{ 0 })           \
-			              OP(derefStack<i8>(local_stack, instr->arg1) != i8{ 0 }) \
-			        ? i8{ 1 }                                                     \
-			        : i8{ 0 };                                                    \
-		}                                                                         \
-		FUNCTION_CONT(1);                                                         \
-	}                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {             \
-		{                                                                         \
-			derefStack<i8>(local_stack, instr->arg0)                              \
-				= (derefStack<i8>(local_stack, instr->arg0) != i8{ 0 })           \
-			              OP(Memory::interpret<const i8>(instr->arg1) != i8{ 0 }) \
-			        ? i8{ 1 }                                                     \
-			        : i8{ 0 };                                                    \
-		}                                                                         \
-		FUNCTION_CONT(1);                                                         \
+#define DEFINE_BOOLEAN_OP(NAME, OP)                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                            \
+		{                                                                                       \
+			derefStack<i8>(local_stack, instr->arg0)                                            \
+				= static_cast<i8>((derefStack<i8>(local_stack, instr->arg0) != i8{ 0 })         \
+			                          OP(derefStack<i8>(local_stack, instr->arg1) != i8{ 0 })); \
+		}                                                                                       \
+		FUNCTION_CONT(1);                                                                       \
+	}                                                                                           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                           \
+		{                                                                                       \
+			derefStack<i8>(local_stack, instr->arg0)                                            \
+				= static_cast<i8>((derefStack<i8>(local_stack, instr->arg0) != i8{ 0 })         \
+			                          OP(Memory::interpret<const i8>(instr->arg1) != i8{ 0 })); \
+		}                                                                                       \
+		FUNCTION_CONT(1);                                                                       \
 	}
 
 	DEFINE_BOOLEAN_OP(log_and, &&)
