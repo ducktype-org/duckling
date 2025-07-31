@@ -1,0 +1,44 @@
+fun simple_test1(c: i64) = {
+    var a: i64 = 10;
+    var b: i64 = 15;
+    a = b; # this is move (in test)
+    a = 3;
+}
+
+fun simple_test2(c: i64) = {
+    var a: i64 = 10;
+    var b: i64 = 15;
+    while (b < 16){
+        a = b; # this is move (in test)
+    }
+}
+
+fun simple_test3(c: i64) = {
+    var a: i64 = 10;
+    var b: i64 = 15;
+    if (b < 16){
+        a = b; # this is move (in test)
+    }
+    a = 3;
+}
+
+fun simple_test4(c: i64) = {
+    var a: i64 = 10;
+    var b: i64 = 15;
+    if (b < 16){
+        a = b; # this is move (in test)
+    }
+    b = 3;
+}
+
+fun simple_test5(c: i64) = {
+    var a: i64 = 10;
+    var b: i64 = 15;
+    while (b < 16){
+        if (b < 16){
+            b = 4;
+            a = b; # this is move (in test)
+        }
+    }
+    a = 3;
+}

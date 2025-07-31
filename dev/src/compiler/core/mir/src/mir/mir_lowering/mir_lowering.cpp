@@ -7,6 +7,7 @@
 #include "mir_lowering.hpp"
 
 #include "mir_lifetimes.hpp"
+#include "mir_validation.hpp"
 
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -1266,6 +1267,8 @@ namespace compiler::mir {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
+
+		if (!validateFunction(function)) return query::QError(helios::errors::Failed());
 
 		// It should be always zero because the last block is generated as the first one.
 		auto last_block_id = BlockID(0);

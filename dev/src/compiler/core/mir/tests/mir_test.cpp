@@ -6,6 +6,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -13,6 +14,8 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <algorithm>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -33,6 +36,7 @@ public:
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(moveValidation);
 	}
 
 private:
@@ -296,7 +300,6 @@ private:
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) })->value();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
-
 			u64 count_of_calls = 0;
 
 			static std::array functions_to_call = {
@@ -420,6 +423,80 @@ private:
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) })->value();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
+		});
+	}
+
+	void moveValidation() {
+		// @note This test is very fragile and may require hotfixes even after unrelated changes.
+		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
+		// 'else', 'break', 'continue', 'switch' etc..
+		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit->functions;
+
+			for (auto& fun: functions) {
+				if (fun.original_name.str() == "simple_test1") {
+					auto& mir_rep = ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					// mir_rep.debugPrint(std::cout);
+					// std::cout << '\n';
+					// for (auto& block_id: mir_rep.block_order) {
+					//	auto& block = mir_rep.blocks[block_id];
+					//	std::cout << block.instructions.size() << '\n';
+					//	std::cout << '\n';
+					// }
+				}
+				if (fun.original_name.str() == "simple_test2") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+				}
+				if (fun.original_name.str() == "simple_test3") {
+					auto& mir_rep = ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					// mir_rep.debugPrint(std::cout);
+					// std::cout << '\n';
+					// for (auto& block_id: mir_rep.block_order) {
+					//	auto& block = mir_rep.blocks[block_id];
+					//	std::cout << block.instructions.size() << '\n';
+					//	std::cout << '\n';
+					// }
+				}
+				if (fun.original_name.str() == "simple_test4") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+
+					mir_rep.debugPrint(std::cout);
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+
+					ASSERT_TRUE(!validateFunction(mir_rep));
+
+					std::cout<<"FNISHED\n";
+					//ASSERT_TRUE(!validateFunction(mir_rep));
+				}
+				if (fun.original_name.str() == "simple_test5") {
+					auto& mir_rep = ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					// mir_rep.debugPrint(std::cout);
+					// std::cout << '\n';
+					// for (auto& block_id: mir_rep.block_order) {
+					//	auto& block = mir_rep.blocks[block_id];
+					//	std::cout << block.instructions.size() << '\n';
+					//	std::cout << '\n';
+					// }
+				}
+			}
 		});
 	}
 };
