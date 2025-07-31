@@ -4,7 +4,7 @@ function foo {
 	init_lany_type		a, i32;
 	init_lany_type		b, i32;
 
-	mov_l32_imm 		b, 0.5f;		# b = 0.5
+	mov_l32_imm 		b, 1056964608;		# b = 0.5
 	mov_l32_l32 		a, b;				# a = 0.5
 
 	fadd_l32_l32 		a, b;				# a = 1.0
