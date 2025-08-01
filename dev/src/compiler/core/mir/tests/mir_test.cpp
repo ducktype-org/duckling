@@ -300,6 +300,7 @@ private:
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) })->value();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
+
 			u64 count_of_calls = 0;
 
 			static std::array functions_to_call = {
@@ -514,7 +515,6 @@ private:
 					);
 
 					ASSERT_TRUE(!validateFunction(mir_rep));
-
 				}
 
 				if (fun.original_name.str() == "bad3") {
