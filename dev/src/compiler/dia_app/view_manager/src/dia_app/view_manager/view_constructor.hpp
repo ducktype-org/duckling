@@ -25,7 +25,7 @@ namespace dia_app {
 		// their index in this collection).
 		base::HashMap<LazyDisplayID, DisplayPtr> fetched_components;
 
-		ViewConstructor(uint info_group_no, const json& data) {
+		ViewConstructor(u32 info_group_no, const json& data) {
 			// Access the requested info group data.
 			const json& info_group = data[info_group_no];
 

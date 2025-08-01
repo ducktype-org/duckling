@@ -106,7 +106,7 @@ namespace dia_app {
 
 		struct CaseOfTElement: public TemplateElement {
 			TemplatePtr                        pattern;
-			std::map<std::string, TemplatePtr> cases;
+			base::Map<std::string, TemplatePtr> cases;
 
 			CaseOfTElement(const YAML::Node& elem_node) {
 				assert(elem_node["case"]);
@@ -115,7 +115,7 @@ namespace dia_app {
 				assert(elem_node["of"] && elem_node["of"].IsMap());
 				for (const auto& it: elem_node["of"]) {
 					const std::string key = it.first.as<std::string>();
-					cases[key]            = parse(it.second);
+					cases.put(key, parse(it.second));
 				}
 				assert(elem_node["of"]["[other]"] && "CaseOfTElement missing [other] case");
 			}

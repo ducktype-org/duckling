@@ -8,8 +8,8 @@ namespace dia_file {
     struct CodeData {
         struct Location {
             std::string file;
-            uint line, column;
-            uint last_modified;
+            u32 line, column;
+            u32 last_modified;
 
             Location() {}
             Location(const json &location) {

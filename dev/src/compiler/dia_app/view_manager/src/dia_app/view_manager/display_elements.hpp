@@ -1,6 +1,7 @@
 #pragma once
 #include <utility>
 #include <base/visitor.hpp>
+#include <base/visitor.hpp>
 
 #include "utils.hpp"
 #include "view_constructor.hpp"
@@ -92,6 +93,7 @@ namespace dia_app {
 			) = 0;
 
 			virtual void accept(DisplayElementVisitor &visitor) = 0;
+			virtual void accept(DisplayElementVisitor &visitor) = 0;
 		};
 
 		struct TextDElement: public DisplayElement {
@@ -133,7 +135,7 @@ namespace dia_app {
 
 		struct StartLineDElement: public DisplayElement {
 			// Line number.
-			std::optional<uint> number;
+			base::Optional<u32> number;
 
 			StartLineDElement(const json& elem_json);
 			StartLineDElement(const StartLineDElement& other);

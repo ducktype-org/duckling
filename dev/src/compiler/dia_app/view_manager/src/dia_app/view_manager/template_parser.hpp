@@ -17,7 +17,7 @@ namespace dia_app {
 
 		struct PointerMessage {
 			// The lower this number, the higher the priority.
-			uint priority;
+			u32 priority;
 			// Type of the message: error | warning | note | hint | docs.
 			std::string type;
 			// Content of the message.
@@ -44,13 +44,13 @@ namespace dia_app {
 		struct TemplateData {
 			Metadata metadata;
 			// Declared macros.
-			std::map<std::string, TemplatePtr> macros;
+			base::HashMap<std::string, TemplatePtr> macros;
 
 			// -- Message parts --
-			TemplatePtr                                   header_message;
-			std::map<std::string, PointerMessage> pointer_messages;
-			TemplatePtr                                   description;
-			std::map<std::string, TemplatePtr>			  explore_edges;
+			TemplatePtr                                   		header_message;
+			base::HashMap<std::string, PointerMessage> 	pointer_messages;
+			TemplatePtr                                   		description;
+			base::HashMap<std::string, TemplatePtr>			  	explore_edges;
 
 			TemplateData(const dia_file::InfoParams& params) {
 				// Fetch the message template.
@@ -75,7 +75,7 @@ namespace dia_app {
 				if (macros_node && macros_node.IsMap()) {
 					for (const auto& it: macros_node) {
 						const std::string key = it.first.as<std::string>();
-						macros[key]           = parse(it.second);
+						macros.put(key, parse(it.second));
 					}
 				}
 
@@ -90,7 +90,7 @@ namespace dia_app {
 						const std::string key = it.first.as<std::string>();
 						assert(it.second["content"]);
 						
-						explore_edges[key] = parse(it.second["content"]);
+						explore_edges.put(key, parse(it.second["content"]));
 
 						// Verify params of all users of this edge template.
 						for (const auto& e: params.explore_edges) {
@@ -112,7 +112,7 @@ namespace dia_app {
 					assert(pm_node.IsMap());
 					for (const auto& it: pm_node) {
 						const std::string key = it.first.as<std::string>();
-						pointer_messages[key] = PointerMessage(it.second);
+						pointer_messages.put(key, PointerMessage(it.second));
 					}
 				}
 

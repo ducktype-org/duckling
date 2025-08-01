@@ -16,7 +16,7 @@ namespace message_template {
     }
 
     struct DisplayPointerMessage {
-        uint priority;
+        u32 priority;
         std::string type;
         dia_file::DisplayPtr message;
 
@@ -34,7 +34,7 @@ namespace message_template {
         Metadata metadata;
         dia_file::DisplayPtr header_message;
         base::Optional<CodeData> code;
-        std::map<std::string, DisplayPointerMessage> pointer_messages;
+        base::HashMap<std::string, DisplayPointerMessage> pointer_messages;
         dia_file::DisplayPtr description;
         std::vector<ExploreEdge> explore_edges;
 
@@ -46,7 +46,7 @@ namespace message_template {
             ASSUME(header_message, "no header message after template application");
 
             for (auto &[key, val] : handle.template_data.pointer_messages) {
-                pointer_messages[key] = DisplayPointerMessage(val, handle);
+                pointer_messages.put(key, DisplayPointerMessage(val, handle));
             }
 
             // Verify code metadata against the template.
@@ -117,7 +117,9 @@ namespace message_template {
             };
         
             if_opt_some(code, code_v) {
+            if_opt_some(code, code_v) {
                 VerifyCodeVisitor v(this);
+                code_v.content->accept(v);
                 code_v.content->accept(v);
 
                 ASSERT(v.is_ok, "some component inside info code refers to a non-existent group");

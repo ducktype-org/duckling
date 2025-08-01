@@ -1,4 +1,7 @@
 #pragma once
+#include <base/optional.hpp>
+#include <base/maps.hpp>
+
 #include <iostream>
 #include <expected>
 #include <json/json.hpp>
@@ -87,6 +90,16 @@ namespace dia_app {
             case InfoType::Docs: return "docs";
         }
     }
+
+    template<typename V>
+    base::HashMap<std::string, V> from_json(const json& data) {
+        ASSUME_OBJ(data);
+        base::HashMap<std::string, V> res;
+        for (auto &[key, val] : data.items()) {
+            res.put(key, val);
+        }
+        return res;
+    }
     
     // Message params metadata (identifies the message template).
     // Appears both in the diagnostic file and in message template files (as "include on").
@@ -129,7 +142,7 @@ namespace dia_app {
         InfoType type;
         std::string family;
         std::string name;
-        uint code;
+        u32 code;
         std::string active_from;
         std::string active_until;
 
@@ -176,7 +189,7 @@ namespace dia_app {
         using DisplayPtr = std::shared_ptr<DisplayElement>;
     }
 
-    using InfoID = uint;
+    using InfoID = u32;
     using EntityID = std::string;
     using LazyDisplayID = std::string;
 

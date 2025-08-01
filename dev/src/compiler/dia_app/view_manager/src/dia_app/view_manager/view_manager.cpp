@@ -26,7 +26,7 @@ namespace dia_app {
                 std::make_shared<id_to_interactive_component_mapping_t>(),
 				std::make_shared<id_to_view_constructor_mapping_t>(),
 				std::make_unique<std::map<std::string, hl_id_t>>(),
-                std::optional<DataHandle>{},
+                base::Optional<DataHandle>{},
                 std::weak_ptr<ViewConstructor>{}
             );
 			std::vector<Diagnostic>                       diagnostics;

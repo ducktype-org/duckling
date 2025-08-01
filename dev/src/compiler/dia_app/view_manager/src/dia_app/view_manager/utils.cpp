@@ -19,6 +19,7 @@ namespace dia_app {
 		}
 	}
 
+
 	TemplateDataHandle::TemplateDataHandle(
 		ViewConstructor &vc, const TemplateData& template_data, const InfoParams& param_data
 	):
@@ -31,4 +32,5 @@ namespace dia_app {
 		res.aux_params = aux_params;
 		return res;
 	}
+
 }
