@@ -124,6 +124,8 @@ namespace compiler::mir {
 		return true;
 	}
 
-	bool validateFunction(const Function& fun) { return validateMoves(fun); }
+	base::OkBad validateFunction(const Function& fun) {
+		return validateMoves(fun) ? base::OK : base::BAD;
+	}
 
 }

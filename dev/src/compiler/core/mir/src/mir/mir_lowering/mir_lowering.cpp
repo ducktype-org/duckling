@@ -1268,7 +1268,7 @@ namespace compiler::mir {
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
 
-		if (!validateFunction(function)) return query::QError(helios::errors::Failed());
+		if (validateFunction(function).isBad()) return query::QError(helios::errors::Failed());
 
 		// It should be always zero because the last block is generated as the first one.
 		auto last_block_id = BlockID(0);

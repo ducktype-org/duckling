@@ -447,7 +447,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
 				if (fun.original_name.str() == "good2") {
@@ -460,7 +460,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
 				if (fun.original_name.str() == "good3") {
@@ -474,7 +474,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
 				if (fun.original_name.str() == "good4") {
@@ -488,7 +488,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
 				if (fun.original_name.str() == "bad1") {
@@ -502,7 +502,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(!validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isBad());
 				}
 
 				if (fun.original_name.str() == "bad2") {
@@ -515,7 +515,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(!validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isBad());
 				}
 
 				if (fun.original_name.str() == "bad3") {
@@ -528,7 +528,7 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
-					ASSERT_TRUE(!validateFunction(mir_rep));
+					ASSERT_TRUE(validateFunction(mir_rep).isBad());
 				}
 			}
 		});
