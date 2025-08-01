@@ -1,0 +1,7 @@
+# Expression tests
+
+Tests:
+  expressions:
+    Cases:
+      conditional:
+        ExitCode: 99
