@@ -97,7 +97,7 @@ namespace compiler::mir {
 
 			auto visit = [&](this const auto& self, const BlockID& id, const int& state) -> bool {
 				visited[id][state] = true;
-				int next_state;
+				int next_state = not_usable;
 				if (state == not_usable) {
 					if (moved_variables[id].contains(local.first)
 					    || used_variables[id].contains(local.first))
