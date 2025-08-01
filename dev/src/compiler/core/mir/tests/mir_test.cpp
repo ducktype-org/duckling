@@ -15,8 +15,6 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include <algorithm>
-
 using namespace tsh;
 using namespace compiler::helios::test_utils;
 using compiler::mir::BlockID;
