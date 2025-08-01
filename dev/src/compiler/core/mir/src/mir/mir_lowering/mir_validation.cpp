@@ -3,19 +3,16 @@
 #include <base/maps.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 namespace compiler::mir {
 
 
 	bool validateMoves(const Function& fun) {
-		std::unordered_map<BlockID, std::unordered_set<LocalID>>
-			moved_variables;  // Variables moved in Block, they can't be used after this Block.
-		std::unordered_map<BlockID, std::unordered_set<LocalID>>
-			used_variables;   // Variables which must be valid, at the begining of Block.
+		std::unordered_map<BlockID, std::unordered_set<LocalID>> moved_variables,
+			used_variables;  // Variables moved in Block, they can't be used after this Block,
+		                     // variables which must be valid, at the begining of Block.
 
 		std::unordered_map<LocalID, BlockID> construction_block;
 
@@ -34,7 +31,7 @@ namespace compiler::mir {
 					}
 				}
 
-				// Output can't be local moved variable.
+				// Output can't be local, already moved, variable.
 				if (instr.output.has_value()
 				    && std::holds_alternative<LocalRef>(instr.output.value())) {
 					used_variables[block.first].insert(std::get<LocalRef>(instr.output.value())->id);
@@ -94,7 +91,7 @@ namespace compiler::mir {
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
-				visited[id][usable] = false, visited[id][not_usable];
+				visited[id][usable] = false, visited[id][not_usable] = false;
 
 			const auto& starting_block = local.second;
 
