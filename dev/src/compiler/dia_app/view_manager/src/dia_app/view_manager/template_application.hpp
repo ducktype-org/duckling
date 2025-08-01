@@ -8,7 +8,7 @@ namespace dia_app {
 namespace message_template {
 
     // Apply the message template to message.
-    inline dia_file::Ptr apply(Ptr message, TemplateDataHandle handle) {
+    inline dia_file::DisplayPtr apply(TemplatePtr message, TemplateDataHandle handle) {
         if (!message) return nullptr;
         
         // Evaluate the template.
@@ -18,7 +18,7 @@ namespace message_template {
     struct DisplayPointerMessage {
         u32 priority;
         std::string type;
-        dia_file::Ptr message;
+        dia_file::DisplayPtr message;
 
         DisplayPointerMessage() {}
         DisplayPointerMessage(const PointerMessage &msg, TemplateDataHandle handle) :
@@ -32,10 +32,10 @@ namespace message_template {
         using CodeData = dia_file::CodeData;
 
         Metadata metadata;
-        dia_file::Ptr header_message;
+        dia_file::DisplayPtr header_message;
         base::Optional<CodeData> code;
         base::HashMap<std::string, DisplayPointerMessage> pointer_messages;
-        dia_file::Ptr description;
+        dia_file::DisplayPtr description;
         std::vector<ExploreEdge> explore_edges;
 
         Info(TemplateDataHandle handle) :
@@ -60,44 +60,48 @@ namespace message_template {
                 // Remember to include auxiliary parameters included in the explore edge.
                 auto description_ptr = apply(edge_template, handle.with_aux_params(edge.params));
                 // In explore edges only plain text is displayed.
-                auto description = description_ptr->toText(handle.toDataHandle());
+                dia_file::ToTextVisitor v(handle.vc);
+				description_ptr->accept(v);
+                auto description = v.builder;
 
                 explore_edges.emplace_back(description, edge.handle);
             }
         }
 
         void verify_code() const {
+            using namespace dia_file;
+
             struct VerifyCodeVisitor : public dia_file::DisplayElementVisitor {
                 bool is_ok = true;
                 const Info *info;
 
                 VerifyCodeVisitor(const Info *info) : info(info) {}
 
-                virtual void visitTextElement(const dia_file::TextElement &el) {
+                virtual void visitTextDElement(const TextDElement &el) {
                     verify_groups(el.groups);
                 }
-                virtual void visitCodeElement(const dia_file::CodeElement &el) {
+                virtual void visitCodeDElement(const CodeDElement &el) {
                     verify_groups(el.groups);
                 }
-                virtual void visitConcatElement(const dia_file::ConcatElement &el) {
+                virtual void visitConcatDElement(const ConcatDElement &el) {
                     verify_groups(el.groups);
                     for (auto &child : el.elems) {
                         child->accept(*this);
                     }
                 }
-                virtual void visitStartLineElement(const dia_file::StartLineElement &el) {
+                virtual void visitStartLineDElement(const StartLineDElement &el) {
                     verify_groups(el.groups);
                 }
-                virtual void visitInteractElement(const dia_file::InteractElement &el) {
+                virtual void visitInteractDElement(const InteractDElement &el) {
                     verify_groups(el.groups);
                     el.content->accept(*this);
                     el.alt_content->accept(*this);
                 }
-                virtual void visitEntityElement(const dia_file::EntityElement &el) {
+                virtual void visitEntityDElement(const EntityDElement &el) {
                     verify_groups(el.groups);
                     el.content->accept(*this);
                 }
-                virtual void visitLazyElement(const dia_file::LazyElement &el) {
+                virtual void visitLazyDElement(const LazyDElement &el) {
                     verify_groups(el.groups);
                     // TODO: remember about verification upon fetching.
                 }
@@ -111,18 +115,13 @@ namespace message_template {
                     }
                 }
             };
-        
+            
             if_opt_some(code, code_v) {
                 VerifyCodeVisitor v(this);
                 code_v.content->accept(v);
-
                 ASSERT(v.is_ok, "some component inside info code refers to a non-existent group");
             }
         }
-    };
-
-    enum class Error {
-        TemplateFileNotFound
     };
 
     /*
@@ -131,15 +130,15 @@ namespace message_template {
         
         Return true upon success.
     */
-    inline std::expected<Info, Error> apply(
-        const dia_file::ParamData &param_data,
-        DataHandle data_handle
+    inline Info apply(
+        ViewConstructor &vc,
+        const dia_file::InfoParams &param_data
     ) {
         try {
             TemplateData template_data(param_data);
-            return Info(TemplateDataHandle(template_data, param_data, data_handle));
+            return Info(TemplateDataHandle(vc, template_data, param_data));
         } catch (TemplateFileNotFoundException e) {
-            return std::unexpected(Error::TemplateFileNotFound);
+            ASSUME(false, "message template file was not found on disk");
         }
     }
 

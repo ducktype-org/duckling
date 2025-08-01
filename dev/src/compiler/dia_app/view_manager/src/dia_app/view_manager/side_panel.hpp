@@ -33,8 +33,8 @@ namespace dia_app {
 				std::vector<SideEdge>                 edges
 			);
 
-			static SideInfo createFromInfoHandle(
-				InfoHandle                        info_handle,
+			static SideInfo createFromInfoID(
+				InfoID                        info_handle,
 				std::shared_ptr<ViewConstructor>& view_constructor,
 				std::shared_ptr<CreationContext>                  creation_context
 			);
@@ -54,8 +54,8 @@ namespace dia_app {
 		public:
 			SidePath(std::vector<SideInfo> infos, std::weak_ptr<ViewConstructor> view_constructor);
 
-			static SidePath createFromInfoHandle(
-				InfoHandle                        info_handle,
+			static SidePath createFromInfoID(
+				InfoID                        info_handle,
 				std::shared_ptr<ViewConstructor>& view_constructor,
 				std::shared_ptr<CreationContext>                  creation_context
 			);

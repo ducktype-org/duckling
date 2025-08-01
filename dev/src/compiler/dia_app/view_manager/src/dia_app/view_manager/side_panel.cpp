@@ -29,8 +29,8 @@ namespace dia_app {
 			  sections(std::move(sections)),
 			  edges(std::move(edges)) {}
 
-		SideInfo SideInfo::createFromInfoHandle(
-			InfoHandle                        info_handle,
+		SideInfo SideInfo::createFromInfoID(
+			InfoID                        info_handle,
 			std::shared_ptr<ViewConstructor>& view_constructor,
 			std::shared_ptr<CreationContext>                  creation_context
 		) {
@@ -83,7 +83,7 @@ namespace dia_app {
 		base::Optional<SideInfo> SideInfo::getEdge(edge_id_t handle, std::shared_ptr<ViewConstructor> view_constructor, std::shared_ptr<CreationContext> creation_context) {
 			for (const auto &edge : this->edges) {
 				if (edge.edge_id == handle) {
-					return SideInfo::createFromInfoHandle(handle, view_constructor, creation_context);
+					return SideInfo::createFromInfoID(handle, view_constructor, creation_context);
 				}
 			}
 			return {};
@@ -95,14 +95,14 @@ namespace dia_app {
 							infos(std::move(infos)),
 							view_constructor(std::move(view_constructor)) {}
 
-		SidePath SidePath::createFromInfoHandle(
-			InfoHandle                        info_handle,
+		SidePath SidePath::createFromInfoID(
+			InfoID                        info_handle,
 			std::shared_ptr<ViewConstructor>& view_constructor,
 			std::shared_ptr<CreationContext>                  creation_context
 		) {
 			std::vector<SideInfo> infos;
 			auto                  info
-				= SideInfo::createFromInfoHandle(info_handle, view_constructor, creation_context);
+				= SideInfo::createFromInfoID(info_handle, view_constructor, creation_context);
 			infos.emplace_back(std::move(info));
 			return SidePath(std::move(infos), view_constructor);
 		}
@@ -147,7 +147,7 @@ namespace dia_app {
 			auto vc = view_constructor.lock();
             std::vector<SidePath> paths;
             for (const auto &side_entry: side_entries) {
-                paths.emplace_back(SidePath::createFromInfoHandle(side_entry, vc, interaction_context.creation_context));
+                paths.emplace_back(SidePath::createFromInfoID(side_entry, vc, interaction_context.creation_context));
             }
             if (interaction_context.after_open.has_value()) {
                 interaction_context.after_open.value()(std::move(paths));

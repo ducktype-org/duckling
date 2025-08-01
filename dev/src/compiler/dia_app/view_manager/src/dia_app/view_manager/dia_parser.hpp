@@ -20,7 +20,7 @@ namespace dia_file {
             }
         };
         Location location;
-        Ptr content;
+        DisplayPtr content;
 
         CodeData() {}
         CodeData(const json &data) {
@@ -33,36 +33,64 @@ namespace dia_file {
     };
 
     // Message parameter data (message template identifier and params)
-    struct ParamData {
+    struct InfoParams {
         ShortMetadata metadata;
-        base::HashMap<std::string, Ptr> params;
+        base::HashMap<std::string, DisplayPtr> params;
         base::Optional<CodeData> code;
         std::vector<ExploreEdgeParams> explore_edges;
         
-        ParamData() {}
-        ParamData(const json &param_data) {
-            ASSUME_HAS(param_data, "metadata");
-            metadata = ShortMetadata(param_data["metadata"]);
+        InfoParams() {}
+        InfoParams(const json &info) {
+            // Parse required meta
+            ASSUME_HAS(info, "metadata");
+            metadata = ShortMetadata(info["metadata"]);
             
-            ASSUME_HAS(param_data, "params");
-            ASSUME_OBJ(param_data["params"]);
-            for (auto &[key, val] : param_data["params"].items()) {
+            // Parse required params.
+            ASSUME_HAS(info, "params");
+            ASSUME_OBJ(info["params"]);
+            for (auto &[key, val] : info["params"].items()) {
                 params.put(key, parse(val));
             }
-
-            if (param_data.contains("code")) {
-                code = CodeData(param_data["code"]);
+            
+            // Parse optional code section.
+            if (info.contains("code")) {
+                code = CodeData(info["code"]);
             }
-
-            if (param_data.contains("explore_edges")) {
-                for (auto &edge : param_data["explore_edges"]) {
+            
+            // Parse optional explore edges.
+            if (info.contains("explore_edges")) {
+                for (auto &edge : info["explore_edges"]) {
                     explore_edges.emplace_back(edge);
                 }
             }
         }
 
-        ParamData(const ShortMetadata &metadata) : metadata(metadata) {}
+        InfoParams(const ShortMetadata &metadata) : metadata(metadata) {}
     };
 
+    struct Entity {
+        std::string kind;
+        std::vector<InfoID> assoc_infos;
+        base::HashMap<std::string, json> fields;
+
+        Entity(const json &entity) {
+            ASSUME_OBJ(entity);
+            ASSUME_HAS_STR_ASSIGN(entity, kind);
+            
+            // Parse associated infos.
+            ASSUME_HAS(entity, "assoc_infos");
+            ASSUME_ARR(entity, "assoc_infos");
+            for (auto &el : entity["assoc_infos"]) {
+                ASSUME(el.is_string(), "info ID in assoc_infos must be a string");
+                assoc_infos.push_back(el);
+            }
+
+            // Parse other fields.
+            for (auto &[key, val] : entity.items()) {
+                if (key == "assoc_infos") continue;
+                fields.put(key, val);
+            }
+        }
+    };
 } // namespace dia_file
 } // namespace dia_app

@@ -3,6 +3,7 @@
 #include <base/visitor.hpp>
 
 #include "utils.hpp"
+#include "view_constructor.hpp"
 
 namespace dia_app {
 	namespace view_manager {
@@ -14,34 +15,31 @@ namespace dia_app {
 
 		// Element which can be displayed as a part of text.
 		struct DisplayElement;
-		using Ptr = std::shared_ptr<DisplayElement>;
+		using DisplayPtr = std::shared_ptr<DisplayElement>;
 
-		Ptr parse(const json& msg);
+		DisplayPtr parse(const json& msg);
 
-		struct TextElement;
-		struct CodeElement;
-		struct ConcatElement;
-		struct StartLineElement;
-		struct InteractElement;
-		struct EntityElement;
-		struct LazyElement;
+		struct TextDElement;
+		struct CodeDElement;
+		struct ConcatDElement;
+		struct StartLineDElement;
+		struct InteractDElement;
+		struct EntityDElement;
+		struct LazyDElement;
 
 		MAKE_VISITOR(DisplayElement,
-			TextElement,
-			CodeElement,
-			ConcatElement,
-			StartLineElement,
-			InteractElement,
-			EntityElement,
-			LazyElement
+			TextDElement,
+			CodeDElement,
+			ConcatDElement,
+			StartLineDElement,
+			InteractDElement,
+			EntityDElement,
+			LazyDElement
 		);
 
 		struct DisplayElement {
-			std::set<InfoHandle>  assoc_infos;
+			std::set<InfoID>  assoc_infos;
 			std::set<std::string> groups;
-
-			// Cached component generated from this display element.
-			std::shared_ptr<view_manager::Component> generated_component;
 
 			DisplayElement() = default;
 
@@ -52,32 +50,24 @@ namespace dia_app {
 			virtual ~DisplayElement() = default;
 
 			// Make a deep copy of this element.
-			virtual Ptr copy() const = 0;
+			virtual DisplayPtr copy() const = 0;
 
 			// Get all associated infos on this particular element.
 			// Note: this does *not* get all associated infos from
 			//       the entire subtree.
-			virtual std::set<InfoHandle> getAssocInfos(DataHandle dh) const { return assoc_infos; }
+			virtual std::set<InfoID> getAssocInfos(ViewConstructor &vc) const { return assoc_infos; }
 
 			// Check whether this particular element has
 			// any associated infos. May fetch some entities.
-			bool hasAssocInfos(DataHandle dh) const { return getAssocInfos(dh).size() > 0; }
-
-			// Evaluate the pure text content of this element.
-			// Only evaluates the default content (alt_content is ignored).
-			// Used e.g. for "case of" matching in message templates.
-			virtual std::string toText(DataHandle dh) const = 0;
-
-			// Serialize this element (DEBUG ONLY).
-			virtual json show(DataHandle dh) const = 0;
+			bool hasAssocInfos(ViewConstructor &vc) const { return getAssocInfos(vc).size() > 0; }
 
 			// Accumulation data for to-component conversion.
 			struct AccData {
-				std::set<InfoHandle>  assoc_infos;
+				std::set<InfoID>  assoc_infos;
 				std::set<std::string> groups;
 
-				std::vector<InfoHandle> getAssocInfos() const {
-					return std::vector<InfoHandle>(assoc_infos.begin(), assoc_infos.end());
+				std::vector<InfoID> getAssocInfos() const {
+					return std::vector<InfoID>(assoc_infos.begin(), assoc_infos.end());
 				}
 
 				std::vector<std::string> getGroups() const {
@@ -104,155 +94,186 @@ namespace dia_app {
 			virtual void accept(DisplayElementVisitor &visitor) = 0;
 		};
 
-		struct TextElement: public DisplayElement {
+		struct TextDElement: public DisplayElement {
 			std::string content;
 
-			TextElement(const json& elem_json);
-			TextElement(const TextElement& other);
+			TextDElement(const json& elem_json);
+			TextDElement(const TextDElement& other);
 
-			Ptr         copy() const;
-			std::string toText(DataHandle _) const;
-
-			json show(DataHandle _) const;
+			DisplayPtr         copy() const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitTextElement(*this);
+				visitor.visitTextDElement(*this);
 			}
 		};
 
-		struct ConcatElement: public DisplayElement {
-			std::vector<Ptr> elems;
+		struct ConcatDElement: public DisplayElement {
+			std::vector<DisplayPtr> elems;
 
-			ConcatElement(const json& elem_json);
-			ConcatElement(const ConcatElement& other);
+			ConcatDElement(const json& elem_json);
+			ConcatDElement(const ConcatDElement& other);
 			// Auxiliary constructor used in template_elements.hpp.
 			// Note: does not deep copy the input pointers.
-			ConcatElement(const std::vector<Ptr>& elems);
+			ConcatDElement(const std::vector<DisplayPtr>& elems);
 
-			Ptr         copy() const;
-			std::string toText(DataHandle dh) const;
-
-			json show(DataHandle dh) const;
+			DisplayPtr         copy() const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitConcatElement(*this);
+				visitor.visitConcatDElement(*this);
 			}
 		};
 
-		struct StartLineElement: public DisplayElement {
+		struct StartLineDElement: public DisplayElement {
 			// Line number.
 			base::Optional<u32> number;
 
-			StartLineElement(const json& elem_json);
-			StartLineElement(const StartLineElement& other);
+			StartLineDElement(const json& elem_json);
+			StartLineDElement(const StartLineDElement& other);
 
-			Ptr         copy() const;
-			std::string toText(DataHandle dh) const;
-
-			json show(DataHandle dh) const;
+			DisplayPtr         copy() const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitStartLineElement(*this);
+				visitor.visitStartLineDElement(*this);
 			}
 		};
 
-		struct InteractElement: public DisplayElement {
-			Ptr content;
-			Ptr alt_content;
+		struct InteractDElement: public DisplayElement {
+			DisplayPtr content;
+			DisplayPtr alt_content;
 
-			InteractElement(const json& elem_json);
-			InteractElement(const InteractElement& other);
+			InteractDElement(const json& elem_json);
+			InteractDElement(const InteractDElement& other);
 
-			Ptr         copy() const;
-			std::string toText(DataHandle dh) const;
-
-			json show(DataHandle dh) const;
+			DisplayPtr         copy() const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitInteractElement(*this);
+				visitor.visitInteractDElement(*this);
 			}
 		};
 
-		struct LazyElement: public DisplayElement {
-			ResourceHandle handle;
+		struct LazyDElement: public DisplayElement {
+			LazyDisplayID id;
 
-			LazyElement(const json& elem_json);
-			LazyElement(const LazyElement& other);
+			LazyDElement(const json& elem_json);
+			LazyDElement(const LazyDElement& other);
 
-			Ptr         copy() const;
-			std::string toText(DataHandle dh) const;
+			DisplayPtr         copy() const;
 
-			Ptr evaluated(DataHandle dh) const;
-
-			json show(DataHandle dh) const;
+			DisplayPtr evaluated(ViewConstructor &vc) const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitLazyElement(*this);
+				visitor.visitLazyDElement(*this);
 			}
 		};
 
-		struct EntityElement: public DisplayElement {
+		struct EntityDElement: public DisplayElement {
 			std::string refers_to;
-			Ptr         content;
+			DisplayPtr         content;
 
-			EntityElement(const json& elem_json);
-			EntityElement(const EntityElement& other);
+			EntityDElement(const json& elem_json);
+			EntityDElement(const EntityDElement& other);
 
-			Ptr                  copy() const;
-			std::set<InfoHandle> getAssocInfos(DataHandle dh) const;
-
-			std::string toText(DataHandle dh) const;
-
-			json show(DataHandle dh) const;
+			DisplayPtr                  copy() const;
+			std::set<InfoID> getAssocInfos(ViewConstructor &vc) const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitEntityElement(*this);
+				visitor.visitEntityDElement(*this);
 			}
 		};
 
-		struct CodeElement: public DisplayElement {
+		struct CodeDElement: public DisplayElement {
 			std::string content;
 
-			CodeElement(const json& elem_json);
-			CodeElement(const CodeElement& other);
+			CodeDElement(const json& elem_json);
+			CodeDElement(const CodeDElement& other);
 
-			Ptr copy() const;
-
-			std::string toText(DataHandle dh) const;
-
-			json show(DataHandle dh) const;
+			DisplayPtr copy() const;
 
 			virtual std::shared_ptr<view_manager::Component> toComponentImpl(
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
 			virtual void accept(DisplayElementVisitor &visitor) {
-				visitor.visitCodeElement(*this);
+				visitor.visitCodeDElement(*this);
 			}
+		};
+
+		// Evaluate the pure text content of an element.
+		// Only evaluates the default content (alt_content is ignored).
+		// Used e.g. for "case of" matching in message templates.
+		struct ToTextVisitor : public DisplayElementVisitor {
+			ViewConstructor &vc;
+			std::string builder;
+
+			ToTextVisitor(ViewConstructor &vc) : vc(vc) {}
+
+			virtual void visitTextDElement(const TextDElement &el) {
+				builder += el.content;
+			}
+			virtual void visitCodeDElement(const CodeDElement &el) {
+				builder += el.content;
+			}
+			virtual void visitConcatDElement(const ConcatDElement &el) {
+				for (auto &child : el.elems) {
+					child->accept(*this);
+				}
+			}
+			virtual void visitStartLineDElement(const StartLineDElement &el) {
+				builder += '\n';
+			}
+			virtual void visitInteractDElement(const InteractDElement &el) {
+				// Only consider the primary content of this element.
+				// According to the default serialization semantics,
+				// alternative content is to be ignored.
+				el.content->accept(*this);
+			}
+			virtual void visitEntityDElement(const EntityDElement &el) {
+				el.content->accept(*this);
+			}
+			virtual void visitLazyDElement(const LazyDElement &el) {
+				// Serialize the evaluated subtree of this element.
+				el.evaluated(vc)->accept(*this);
+			}
+		};
+
+		// @TODO implement toComponent in this visitor pattern.
+		// This will enable great decoupling between the View Constructor
+		// and View Manager source code and facilitate further development
+		// of the laziness mechanism.
+		struct ToComponentVisitor : public DisplayElementVisitor {
+			ViewConstructor &vc;
+			// @TODO creation_context contains some useless fields, including a separate view constructor.
+			// this can all be extracted to fields of this class.
+			std::shared_ptr<CreationContext> creation_context;
+
+			// Data accumulated during the search.
+			DisplayElement::AccData accData;
+
+			std::shared_ptr<Component> result;
 		};
 
 	}  // namespace dia_file
