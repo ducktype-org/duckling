@@ -1,7 +1,6 @@
 #pragma once
 #include <utility>
 #include <base/visitor.hpp>
-#include <base/visitor.hpp>
 
 #include "utils.hpp"
 #include "view_constructor.hpp"
@@ -92,7 +91,6 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) = 0;
 
-			virtual void accept(DisplayElementVisitor &visitor) = 0;
 			virtual void accept(DisplayElementVisitor &visitor) = 0;
 		};
 

@@ -115,13 +115,10 @@ namespace message_template {
                     }
                 }
             };
-        
-            if_opt_some(code, code_v) {
+            
             if_opt_some(code, code_v) {
                 VerifyCodeVisitor v(this);
                 code_v.content->accept(v);
-                code_v.content->accept(v);
-
                 ASSERT(v.is_ok, "some component inside info code refers to a non-existent group");
             }
         }

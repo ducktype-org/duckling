@@ -48,10 +48,7 @@ namespace dia_app {
 
 			// Parse the collection of entities.
 			ASSUME_HAS(info_group, "entities");
-			ASSUME_OBJ(info_group["entities"]);
-			for (auto &[id, e] : info_group["entities"].items()) {
-				entities.put(id, Entity(e));
-			}
+			entities = from_json<Entity>(info_group["entities"]);
 		}
 
 		// ViewManager should use only `getSecondaryInfo` and `getMainInfo`.
