@@ -13,7 +13,6 @@ metadata:
   description: Very cool package for MIM
   license: GLWTS
   language_edition: 2.71.0
-  is_ephermal: False
 
 dependencies:
   list:
@@ -80,7 +79,6 @@ This is the only obligatory section of the manifest. It contains following keys:
 - `description`: [OPTIONAL] short package's description. It's visible on [**FIXME:** insert here default ducknest URL].
 - `license`: [OPTIONAL] license used in the package. Note, that it is **REQUIRED**, when package is about to be published.
 - `language_edition`: [OPTIONAL] Language version required by this package.
-- `is_ephermal`: [OPTIONAL] should this virtual environment be treated as a temporary virtual environment. When publishing, it is **REQUIRED** to set this to `false`.
 
 ## Dependencies and dev dependencies
 Each top-level key is a different dependency. 
@@ -183,7 +181,3 @@ They are both dictionaries, with keys being:
 Each name should be a dictionary with single key:
 
 - `compiler_flags`: list of extra compiler flags to be append.
-
-### NOTE
-
-Any profile name is a valid profile, but targets are more restricted, to the following list: FIXME.
