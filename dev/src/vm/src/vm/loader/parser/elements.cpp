@@ -24,7 +24,7 @@ namespace vm::loader::parser {
 			try {
 				usize  pos    = 0;
 				auto&& str    = token.getValue().str();
-				T      result = std::stoull(str, &pos);
+				T      result = static_cast<T>(std::stoull(str, &pos));
 				// Check if the number was fully parsed
 				if (pos == str.length()) return result;
 			} catch (std::logic_error&) {}
@@ -38,96 +38,130 @@ namespace vm::loader::parser {
 
 		template<class T, class K>
 		T parseLiteral(F8ParserState& state) {
-			auto token = state.tokens().next();
+			auto token      = state.tokens().next();
+			auto next_token = state.tokens().peek();
+			// Consume the type specifier
+			if (next_token.isTypeSpecifier()) state.tokens().next();
+			auto&& str = token.getValue().str();
 			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				double value = std::stod(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 8) {
-					u64 double_bits = std::bit_cast<u64>(value);
-					result          = std::bit_cast<T>(static_cast<u64>(double_bits));
+				if (next_token.isTypeSpecifier()) {
+					auto&& str_type = next_token.getValue().str();
+					if (str_type == "f") {
+						usize pos   = 0;
+						float value = std::stof(str, &pos);
+						if (pos == str.length()) {
+							if constexpr (sizeof(T) == 4)
+								return std::bit_cast<T>(value);
+							else if constexpr (sizeof(T) == 8)
+								return std::bit_cast<T>(static_cast<double>(value));
+						}
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
+						));
+						return T{ 0 };
+					} else if (str_type == "d") {
+						usize  pos   = 0;
+						double value = std::stod(str, &pos);
+						if (pos == str.length()) {
+							if constexpr (sizeof(T) == 8) return std::bit_cast<T>(value);
+						}
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
+						));
+						return T{ 0 };
+					} else if (str_type == "i32") {
+						usize pos  = 0;
+						u32   bits = std::bit_cast<u32>(std::stoi(str, &pos));
+						if (pos == str.length()) {
+							if constexpr (sizeof(T) == 4)
+								return std::bit_cast<T>(bits);
+							else if constexpr (sizeof(T) == 8)
+								return std::bit_cast<T>(static_cast<u64>(bits));
+						}
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
+						));
+						return T{ 0 };
+					} else if (str_type == "i64") {
+						usize pos  = 0;
+						u64   bits = std::bit_cast<u64>(std::stoull(str, &pos));
+
+						if (pos == str.length())
+							if constexpr (sizeof(T) == 8) return std::bit_cast<T>(bits);
+
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
+						));
+						return T{ 0 };
+					} else if (str_type == "u32") {
+						usize pos  = 0;
+						u32   bits = static_cast<u32>(std::stoul(str, &pos));
+						if (pos == str.length()) {
+							if constexpr (sizeof(T) == 4)
+								return std::bit_cast<T>(bits);
+							else if constexpr (sizeof(T) == 8)
+								return std::bit_cast<T>(static_cast<u64>(bits));
+						}
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
+						));
+						return T{ 0 };
+					} else if (str_type == "u64") {
+						usize pos  = 0;
+						u64   bits = std::stoull(str, &pos);
+						if (pos == str.length())
+							if constexpr (sizeof(T) == 8) return std::bit_cast<T>(bits);
+
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat("Unsupported size for `", base::typeName<K>(), "`.")
+						));
+						return T{ 0 };
+					} else {
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Unknown type specifier `",
+								str_type,
+								"` for `",
+								base::typeName<K>(),
+								"`."
+							)
+						));
+					}
+				} else if constexpr (sizeof(T) == 8) {
+					// By default, we assume 64-bit integer or double if it has a dot
+					if (str.find('.') != std::string::npos) {
+						double value  = std::stod(str);
+						T      result = std::bit_cast<T>(value);
+						return result;
+					} else {
+						i64 value  = std::stoll(str);
+						T   result = std::bit_cast<T>(value);
+						return result;
+					}
+				} else if constexpr (sizeof(T) == 4) {
+					// For 32-bit integers, we check if it has a dot for float or double
+					if (str.find('.') != std::string::npos) {
+						float value  = std::stof(str);
+						T     result = std::bit_cast<T>(value);
+						return result;
+					} else {
+						i32 value  = std::stoi(str);
+						T   result = std::bit_cast<T>(value);
+						return result;
+					}
 				} else {
 					state.log(makeBox<InvalidLiteral>(
 						token.getPosition(),
-						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+						base::strConcat("Unsupported size for `", base::typeName<K>(), "`.")
 					));
-					return T{ 0 };
 				}
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				float  value = std::stof(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 4)
-					result = bit_cast<T>(value);
-				else if constexpr (sizeof(T) == 8) {
-					u32 float_bits = std::bit_cast<u32>(value);
-					result         = std::bit_cast<T>(static_cast<u64>(float_bits));
-				}
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				i32    value = std::stoi(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 4)
-					result = bit_cast<T>(value);
-				else if constexpr (sizeof(T) == 8)
-					// Copies 32 bits of value into the lower bits of result
-					// and fills the upper bits with zeros.
-					result = std::bit_cast<T>(static_cast<u64>(value));
-				// Check if the number was fully parsed
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				auto   value = std::stoul(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 4)
-					result = bit_cast<T>(value);
-				else if constexpr (sizeof(T) == 8)
-					// Copies 32 bits of value into the lower bits of result
-					// and fills the upper bits with zeros.
-					result = std::bit_cast<T>(static_cast<u64>(value));
-				// Check if the number was fully parsed
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				i64    value = std::stoll(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 8)
-					result = std::bit_cast<T>(static_cast<u64>(value));
-				else {
-					state.log(makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
-					));
-					return T{ 0 };
-				}
-				if (pos == str.length()) return result;
-			} catch (std::logic_error&) {}
-			try {
-				usize  pos   = 0;
-				auto&& str   = token.getValue().str();
-				u64    value = std::stoull(str, &pos);
-				T      result;
-				if constexpr (sizeof(T) == 8)
-					result = std::bit_cast<T>(value);
-				else {
-					state.log(makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
-					));
-					return T{ 0 };
-				}
-				if (pos == str.length()) return result;
 			} catch (std::logic_error&) {}
 
 			state.log(makeBox<InvalidLiteral>(
