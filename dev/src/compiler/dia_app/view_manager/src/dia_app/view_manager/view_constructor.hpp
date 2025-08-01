@@ -54,6 +54,7 @@ namespace dia_app {
 			}
 		}
 
+		// ViewManager should use only `getSecondaryInfo` and `getMainInfo`.
 		message_template::Info getSecondaryInfo(InfoID id) {
 			// Fetch data if needed.
 			if (!secondary_infos.contains(id)) {
