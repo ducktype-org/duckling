@@ -439,7 +439,7 @@ private:
 				if (fun.original_name.str() == "good1") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
 
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 
@@ -453,7 +453,7 @@ private:
 				if (fun.original_name.str() == "good2") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
 
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
@@ -466,7 +466,8 @@ private:
 				if (fun.original_name.str() == "good3") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
+
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[2]].instructions[1].flags.emplace_back(
@@ -479,7 +480,8 @@ private:
 				if (fun.original_name.str() == "good4") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
+
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[1].flags.emplace_back(
@@ -492,7 +494,8 @@ private:
 				if (fun.original_name.str() == "bad1") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
+
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
@@ -505,7 +508,7 @@ private:
 				if (fun.original_name.str() == "bad2") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
 
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
@@ -518,7 +521,7 @@ private:
 				if (fun.original_name.str() == "bad3") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					auto& mir_rep = (compiler::mir::Function&) mir_rep_const;
 
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
