@@ -437,17 +437,21 @@ private:
 			auto& functions = unit->functions;
 
 			for (auto& fun: functions) {
-				if (fun.original_name.str() == "simple_test1") {
-					auto& mir_rep = ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					// mir_rep.debugPrint(std::cout);
-					// std::cout << '\n';
-					// for (auto& block_id: mir_rep.block_order) {
-					//	auto& block = mir_rep.blocks[block_id];
-					//	std::cout << block.instructions.size() << '\n';
-					//	std::cout << '\n';
-					// }
+				if (fun.original_name.str() == "good1") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep));
 				}
-				if (fun.original_name.str() == "simple_test2") {
+
+				if (fun.original_name.str() == "good2") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
@@ -457,44 +461,73 @@ private:
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
 
+					ASSERT_TRUE(validateFunction(mir_rep));
 				}
-				if (fun.original_name.str() == "simple_test3") {
-					auto& mir_rep = ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					// mir_rep.debugPrint(std::cout);
-					// std::cout << '\n';
-					// for (auto& block_id: mir_rep.block_order) {
-					//	auto& block = mir_rep.blocks[block_id];
-					//	std::cout << block.instructions.size() << '\n';
-					//	std::cout << '\n';
-					// }
-				}
-				if (fun.original_name.str() == "simple_test4") {
+
+				if (fun.original_name.str() == "good3") {
 					auto& mir_rep_const
 						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 
-					mir_rep.debugPrint(std::cout);
+					mir_rep.blocks[mir_rep.block_order[2]].instructions[1].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep));
+				}
+
+				if (fun.original_name.str() == "good4") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[1].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep));
+				}
+
+				if (fun.original_name.str() == "bad1") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(!validateFunction(mir_rep));
+				}
+
+				if (fun.original_name.str() == "bad2") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
 
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
-
 
 					ASSERT_TRUE(!validateFunction(mir_rep));
 
-					std::cout<<"FNISHED\n";
-					//ASSERT_TRUE(!validateFunction(mir_rep));
 				}
-				if (fun.original_name.str() == "simple_test5") {
-					auto& mir_rep = ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-					// mir_rep.debugPrint(std::cout);
-					// std::cout << '\n';
-					// for (auto& block_id: mir_rep.block_order) {
-					//	auto& block = mir_rep.blocks[block_id];
-					//	std::cout << block.instructions.size() << '\n';
-					//	std::cout << '\n';
-					// }
+
+				if (fun.original_name.str() == "bad3") {
+					auto& mir_rep_const
+						= ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
+					auto& mir_rep = const_cast<compiler::mir::Function&>(mir_rep_const);
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(!validateFunction(mir_rep));
 				}
 			}
 		});

@@ -10,130 +10,119 @@
 
 namespace compiler::mir {
 
+
 	bool validateMoves(const Function& fun) {
-		std::unordered_map<BlockID, base::Map<LocalID, u64>>
-			moved_variables;  // Variables used in Block, they can't be used after this Block.
-		std::unordered_map<BlockID, std::vector<LocalID>>
+		std::unordered_map<BlockID, std::unordered_set<LocalID>>
+			moved_variables;  // Variables moved in Block, they can't be used after this Block.
+		std::unordered_map<BlockID, std::unordered_set<LocalID>>
 			used_variables;   // Variables which must be valid, at the begining of Block.
 
-		std::unordered_map<BlockID, std::unordered_set<BlockID>>
-			prev_blocks;  // Prev_block is transposed transition graph of function.
+		std::unordered_map<LocalID, BlockID> construction_block;
 
 		for (const auto& block: fun.blocks) {
+			auto process_instruction = [&](Instruction instr) {
+				if (instr.operation == Operation::Destruct
+				    || instr.operation == Operation::DestructIf)
+					return true;  // Lir handles destructors.
 
-			auto process_instruction = [&](Instruction instr){
-				for (const auto& flag: instr.flags){
-					if (flag.flag == OperationFlag::Flag::Move) { // Move
-						if (!moved_variables[block.first].contains(flag.local->id))
-							moved_variables[block.first].emplace(flag.local->id, 0);
-						++moved_variables[block.first][flag.local->id];
-					}else{ // Construct or desctruct
-						used_variables[block.first].push_back(flag.local);
+				// Firstly list all arguments - They must be valid.
+				for (const auto& arg: instr.arguments) {
+					if (arg.isLocal()) {
+						used_variables[block.first].insert(arg.get<LocalRef>()->id);
+						if (moved_variables[block.first].contains(arg.get<LocalRef>()->id))
+							return false;  // It is already moved.
 					}
 				}
 
-				// Argument usage:
-				
+				// Output can't be local moved variable.
+				if (instr.output.has_value()
+				    && std::holds_alternative<LocalRef>(instr.output.value())) {
+					used_variables[block.first].insert(std::get<LocalRef>(instr.output.value())->id);
+					if (moved_variables[block.first].contains(
+							std::get<LocalRef>(instr.output.value())->id
+						))
+						return false;  // It is already moved.
+				}
 
+				for (const auto& flag: instr.flags) {
+					if (flag.flag == OperationFlag::Flag::Move) {
+						// @note Now we assume that variable moved in instruction, must be its
+						// argument and appear exactly one time there. It can't be output of
+						// instruction. It may change in the future.
+
+						if (moved_variables[block.first].contains(flag.local->id))
+							return false;  // Already moved.
+
+						moved_variables[block.first].insert(flag.local->id);
+
+						if (std::ranges::count_if(
+								instr.arguments,
+								[&](const auto& arg) {
+									return arg.isLocal()
+							            && (arg.template get<LocalRef>()->id == flag.local->id);
+								}
+							)
+						    != 1)
+							return false;  // Used 0 or 2 or more times as argument.
+
+						if (instr.output.has_value()
+						    && std::holds_alternative<LocalRef>(instr.output.value())
+						    && std::get<LocalRef>(instr.output.value())->id == flag.local->id)
+							return false;  // Moved local used as output.
+					}
+					if (flag.flag == OperationFlag::Flag::Construct) {
+						// Assume constructors are valid (every use is after construct).
+						construction_block[flag.local->id] = block.first;
+					}
+					// Ommit destruct flag - LIR will handle it.
+				}
+				return true;
 			};
 
-			for (const auto& instruction: block.second->instructions) {
-				for (const auto& flag: instruction.flags)
-					if (flag.flag == OperationFlag::Flag::Move) {
-						if (!moved_variables[block.first].contains(flag.local->id))
-							moved_variables[block.first].emplace(flag.local->id, 0);
-						++moved_variables[block.first][flag.local->id];
+			for (const auto& instruction: block.second->instructions)
+				if (!process_instruction(instruction)) return false;
+
+			if (!process_instruction(block.second->terminator)) return false;
+		}
+
+		// For each variable start DFS starting in block of its construction. Look for any use after
+		// move, visit all achievable blocks, except for starting one. Each block can be visited in
+		// two states: variable can be used and can't.
+
+		std::unordered_map<BlockID, bool[2]> visited;  // with usable and not usable.
+		const int                            usable = 0, not_usable = 1;
+
+		for (const auto& local: construction_block) {
+			for (const auto& id: fun.block_order)
+				visited[id][usable] = false, visited[id][not_usable];
+
+			const auto& starting_block = local.second;
+
+			auto visit = [&](this const auto& self, const BlockID& id, const int& state) -> bool {
+				visited[id][state] = true;
+				int next_state;
+				if (state == not_usable) {
+					if (moved_variables[id].contains(local.first)
+					    || used_variables[id].contains(local.first))
+						return false;
+					next_state = not_usable;
+				} else {
+					if (moved_variables[id].contains(local.first))
+						next_state = not_usable;
+					else
+						next_state = usable;
+				}
+
+				for (const auto& next_block: getTerminatorSuccessors(fun.blocks[id].terminator)) {
+					if (next_block != starting_block && !visited[next_block][next_state]) {
+						if (!self(next_block, next_state)) return false;
 					}
-			}  // Count moves in each block body.
-
-			// And terminator.
-			const auto& terminator = block.second->terminator;
-			for (const auto& flag: terminator.flags) {
-				if (flag.flag == OperationFlag::Flag::Move) {
-					if (!moved_variables[block.first].contains(flag.local->id))
-						moved_variables[block.first].emplace(flag.local->id, 0);
-					++moved_variables[block.first][flag.local->id];
 				}
-			}
+				return true;
+			};
 
-			for (const auto& next_block: getTerminatorSuccessors(terminator))
-				prev_blocks[next_block].emplace(block.first);
+			if (!visit(starting_block, usable)) return false;
 		}
-
-		std::unordered_set<BlockID> visited;
-		std::vector<BlockID>        post_order;
-
-		auto dfs1 = [&](this const auto& self,
-		                const BlockID&   cr) -> void {  // visits graph, sets post-order
-			visited.insert(cr);
-			for (const auto& next_block: getTerminatorSuccessors(fun.blocks[cr].terminator))
-				if (!visited.contains(next_block)) self(next_block);
-			post_order.push_back(cr);
-		};
-
-		for (const auto& block: fun.block_order)
-			if (!visited.contains(block)) dfs1(block);
-		std::reverse(post_order.begin(), post_order.end());
-		visited.clear();
-
-		std::unordered_map<BlockID, u64> connected_component;
-		u64                              current_connected = 0;
-
-		auto dfs2 = [&](this const auto& self, const BlockID& cr)
-			-> void {  // Mark all reachable, unvisited blocks with currect connected component id.
-			visited.insert(cr);
-			connected_component[cr] = current_connected;
-			for (const auto& next_block: prev_blocks[cr])
-				if (!visited.contains(next_block)) self(next_block);
-		};
-
-		for (const auto& block: post_order) {
-			if (!visited.contains(block)) {
-				dfs2(block);
-				++current_connected;
-			}
-		}
-
-		std::vector<base::Map<LocalID, u64>> moved_in_cycle(current_connected);
-		std::vector<std::vector<u64>> edges(current_connected);  // compressed transposed graph
-		// Each connected component must have 0 moves (or consists of exactly 1 node and 0 edges).
-
-		// Set edges.
-		for (const auto& source: prev_blocks) {
-			for (const auto& target: source.second) {
-				if (connected_component[source.first] != connected_component[target]) {
-					edges[connected_component[target]].push_back(connected_component[source.first]);
-				} else if (!moved_variables[source.first].empty()
-				           || !moved_variables[target].empty()) {
-					return false;  // There exists some cycle between source and target and there
-					               // are moves in it.
-				}
-			}
-		}
-
-		//  Set moved in cycle.
-		for (const auto& block: moved_variables) {
-			for (const auto& variable: block.second) {
-				if (!moved_in_cycle[connected_component[block.first]].contains(variable.first))
-					moved_in_cycle[connected_component[block.first]].emplace(variable.first, 0);
-				moved_in_cycle[connected_component[block.first]][variable.first] += variable.second;
-				if (moved_in_cycle[connected_component[block.first]][variable.first] > 1)
-					return false;
-			}
-		}
-
-		// All cycles all valid on their own. Check whole graph.
-		for (i64 i = current_connected - 1; i >= 0; --i) {
-			for (auto incoming_branch: edges[i]) {
-				for (auto moved: moved_in_cycle[incoming_branch])
-					if (moved.second && moved_in_cycle[i].contains(moved.first)) return false;
-			}
-
-			for (auto incoming_branch: edges[i])
-				for (auto moved: moved_in_cycle[incoming_branch])
-					moved_in_cycle[i].emplace(moved.first, 1);
-		}
-
 
 		return true;
 	}
