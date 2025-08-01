@@ -14,7 +14,7 @@ namespace dia_app {
 		// in the specified order (others can be displayed after
 		// interactions).
 		std::vector<InfoHandle>     displayed_secondary_infos;
-		std::map<std::string, json> entities;
+		base::HashMap<std::string, json> entities;
 
 		// A collection of info handles to avoid duplicate info fetches.
 		//
@@ -25,9 +25,9 @@ namespace dia_app {
 		//             handle duplicates. That's why we have
 		//             "stateless handles (`InfoHandle`) for stateful
 		//             handles (`InfoParamsHandle`)".
-		std::map<InfoHandle, InfoParamsHandle> info_handles;
+		base::HashMap<InfoHandle, InfoParamsHandle> info_handles;
 
-		ViewConstructor(uint error_no, const json& data) {
+		ViewConstructor(u32 error_no, const json& data) {
 			const json& info_group = data[error_no];
 
 			main_info = ParamData(info_group["main_info"]);
@@ -42,14 +42,14 @@ namespace dia_app {
 					displayed_secondary_infos.push_back(InfoParamsHandle::add(el, dataHandle()));
 			}
 
-			ASSUME_OBJ(info_group["entities"]);
-			entities = info_group["entities"];
+			const json &e = info_group["entities"];
+			entities = from_json<json>(e);
 		}
 
 		std::expected<message_template::Info, message_template::Error> loadSecondaryInfo(
 			InfoHandle info_handle
 		) {
-			uint idx = InfoParamsHandle::load(info_handle, dataHandle());
+			u32 idx = InfoParamsHandle::load(info_handle, dataHandle());
 			ASSUME(idx < secondary_infos.size(), "secondary info index out-of-bounds");
 			return loadInfo(secondary_infos[idx]);
 		}

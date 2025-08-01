@@ -16,7 +16,7 @@ namespace message_template {
     }
 
     struct DisplayPointerMessage {
-        uint priority;
+        u32 priority;
         std::string type;
         dia_file::Ptr message;
 
@@ -33,8 +33,8 @@ namespace message_template {
 
         Metadata metadata;
         dia_file::Ptr header_message;
-        std::optional<CodeData> code;
-        std::map<std::string, DisplayPointerMessage> pointer_messages;
+        base::Optional<CodeData> code;
+        base::HashMap<std::string, DisplayPointerMessage> pointer_messages;
         dia_file::Ptr description;
         std::vector<ExploreEdge> explore_edges;
 
@@ -46,7 +46,7 @@ namespace message_template {
             ASSUME(header_message, "no header message after template application");
 
             for (auto &[key, val] : handle.template_data.pointer_messages) {
-                pointer_messages[key] = DisplayPointerMessage(val, handle);
+                pointer_messages.put(key, DisplayPointerMessage(val, handle));
             }
 
             // Verify code metadata against the template.
@@ -73,32 +73,32 @@ namespace message_template {
 
                 VerifyCodeVisitor(const Info *info) : info(info) {}
 
-                virtual void visitText(dia_file::TextElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitTextElement(const dia_file::TextElement &el) {
+                    verify_groups(el.groups);
                 }
-                virtual void visitCode(dia_file::CodeElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitCodeElement(const dia_file::CodeElement &el) {
+                    verify_groups(el.groups);
                 }
-                virtual void visitConcat(dia_file::ConcatElement *el) {
-                    verify_groups(el->groups);
-                    for (auto &child : el->elems) {
-                        child->accept(this);
+                virtual void visitConcatElement(const dia_file::ConcatElement &el) {
+                    verify_groups(el.groups);
+                    for (auto &child : el.elems) {
+                        child->accept(*this);
                     }
                 }
-                virtual void visitStartLine(dia_file::StartLineElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitStartLineElement(const dia_file::StartLineElement &el) {
+                    verify_groups(el.groups);
                 }
-                virtual void visitInteract(dia_file::InteractElement *el) {
-                    verify_groups(el->groups);
-                    el->content->accept(this);
-                    el->alt_content->accept(this);
+                virtual void visitInteractElement(const dia_file::InteractElement &el) {
+                    verify_groups(el.groups);
+                    el.content->accept(*this);
+                    el.alt_content->accept(*this);
                 }
-                virtual void visitEntity(dia_file::EntityElement *el) {
-                    verify_groups(el->groups);
-                    el->content->accept(this);
+                virtual void visitEntityElement(const dia_file::EntityElement &el) {
+                    verify_groups(el.groups);
+                    el.content->accept(*this);
                 }
-                virtual void visitLazy(dia_file::LazyElement *el) {
-                    verify_groups(el->groups);
+                virtual void visitLazyElement(const dia_file::LazyElement &el) {
+                    verify_groups(el.groups);
                     // TODO: remember about verification upon fetching.
                 }
 
@@ -112,9 +112,9 @@ namespace message_template {
                 }
             };
         
-            if (code.has_value()) {
+            if_opt_some(code, code_v) {
                 VerifyCodeVisitor v(this);
-                code.value().content->accept(&v);
+                code_v.content->accept(v);
 
                 ASSERT(v.is_ok, "some component inside info code refers to a non-existent group");
             }

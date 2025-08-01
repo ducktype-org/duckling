@@ -1,4 +1,7 @@
 #pragma once
+#include <base/optional.hpp>
+#include <base/maps.hpp>
+
 #include <iostream>
 #include <expected>
 #include <json/json.hpp>
@@ -84,6 +87,16 @@ namespace dia_app {
             case InfoType::Docs: return "docs";
         }
     }
+
+    template<typename V>
+    base::HashMap<std::string, V> from_json(const json& data) {
+        ASSUME_OBJ(data);
+        base::HashMap<std::string, V> res;
+        for (auto &[key, val] : data.items()) {
+            res.put(key, val);
+        }
+        return res;
+    }
     
     // Message params metadata (identifies the message template).
     // Appears both in the diagnostic file and in message template files (as "include on").
@@ -126,7 +139,7 @@ namespace dia_app {
         InfoType type;
         std::string family;
         std::string name;
-        uint code;
+        u32 code;
         std::string active_from;
         std::string active_until;
 
@@ -173,7 +186,7 @@ namespace dia_app {
         using Ptr = std::shared_ptr<DisplayElement>;
     }
     // A stateless info params handle for lazy fetching of infos.
-    using InfoHandle = uint;
+    using InfoHandle = u32;
     struct InfoParamsHandle;
 
     // An explore edge for the state manager (with evaluated description).
@@ -187,7 +200,7 @@ namespace dia_app {
     // An explore edge from the diagnostic file.
     struct ExploreEdgeParams {
         std::string name;
-        std::map<std::string, dia_file::Ptr> params;
+        base::HashMap<std::string, dia_file::Ptr> params;
         InfoHandle handle;
 
         ExploreEdgeParams(const json &edge);
@@ -201,14 +214,14 @@ namespace dia_app {
     struct DataHandle {
         using ParamData = dia_file::ParamData;
 
-        std::map<std::string, json> &entities;
+        base::HashMap<std::string, json> &entities;
         std::vector<ParamData> &secondary_infos;
-        std::map<InfoHandle, InfoParamsHandle> &info_handles;
+        base::HashMap<InfoHandle, InfoParamsHandle> &info_handles;
 
         DataHandle(
-            std::map<std::string, json> &entities,
+            base::HashMap<std::string, json> &entities,
             std::vector<ParamData> &secondary_infos,
-            std::map<InfoHandle, InfoParamsHandle> &info_handles
+            base::HashMap<InfoHandle, InfoParamsHandle> &info_handles
         );
     };
 
@@ -223,22 +236,22 @@ namespace dia_app {
 
         const TemplateData &template_data;
         // Auxiliary parameters for explore edges templates (shadow param_data).
-        std::map<std::string, dia_file::Ptr> aux_params;
+        base::HashMap<std::string, dia_file::Ptr> aux_params;
         const ParamData &param_data;
 
         // Macro evaluation stack for detecting infinite recursion.
         std::set<std::string> macro_stack;
 
-        std::map<std::string, json> &entities;
+        base::HashMap<std::string, json> &entities;
         std::vector<ParamData> &secondary_infos;
-        std::map<InfoHandle, InfoParamsHandle> &info_handles;
+        base::HashMap<InfoHandle, InfoParamsHandle> &info_handles;
 
         TemplateDataHandle(
             const TemplateData &template_data,
             const ParamData &param_data,
             DataHandle data_handle
         );
-        TemplateDataHandle with_aux_params(const std::map<std::string, dia_file::Ptr> &aux_params) const;
+        TemplateDataHandle with_aux_params(const base::HashMap<std::string, dia_file::Ptr> &aux_params) const;
 
         DataHandle toDataHandle() const;
 
@@ -252,17 +265,17 @@ namespace dia_app {
     // A stateful info params handle for lazy fetching of infos.
     class InfoParamsHandle {
     private:
-        std::optional<ShortMetadata> metadata;
-        std::optional<uint> idx;
+        base::Optional<ShortMetadata> metadata;
+        base::Optional<u32> idx;
         
         // To be replaced by some LS-generated handle for later access.
-        std::optional<json> param_data;
+        base::Optional<json> param_data;
 
-        uint load(DataHandle dh);
+        u32 load(DataHandle dh);
     
     public:
         InfoParamsHandle() {}
-        InfoParamsHandle(uint idx) : idx(idx) {}
+        InfoParamsHandle(u32 idx) : idx(idx) {}
         InfoParamsHandle(const ShortMetadata &metadata) : metadata(metadata) {}
         InfoParamsHandle(const json &handle_json);
         
@@ -280,7 +293,7 @@ namespace dia_app {
         // Fetch the info params for this handle if necessary.
         // The handle is updated upon fetching and so
         // does not fetch the data twice.
-        static uint load(InfoHandle info, DataHandle dh);
+        static u32 load(InfoHandle info, DataHandle dh);
 
         static InfoHandle add(const InfoParamsHandle &params_handle, DataHandle dh);
     };

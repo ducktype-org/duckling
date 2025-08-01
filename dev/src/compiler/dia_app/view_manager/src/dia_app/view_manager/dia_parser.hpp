@@ -8,8 +8,8 @@ namespace dia_file {
     struct CodeData {
         struct Location {
             std::string file;
-            uint line, column;
-            uint last_modified;
+            u32 line, column;
+            u32 last_modified;
 
             Location() {}
             Location(const json &location) {
@@ -35,8 +35,8 @@ namespace dia_file {
     // Message parameter data (message template identifier and params)
     struct ParamData {
         ShortMetadata metadata;
-        std::map<std::string, Ptr> params;
-        std::optional<CodeData> code;
+        base::HashMap<std::string, Ptr> params;
+        base::Optional<CodeData> code;
         std::vector<ExploreEdgeParams> explore_edges;
         
         ParamData() {}
@@ -47,7 +47,7 @@ namespace dia_file {
             ASSUME_HAS(param_data, "params");
             ASSUME_OBJ(param_data["params"]);
             for (auto &[key, val] : param_data["params"].items()) {
-                params[key] = parse(val);
+                params.put(key, parse(val));
             }
 
             if (param_data.contains("code")) {

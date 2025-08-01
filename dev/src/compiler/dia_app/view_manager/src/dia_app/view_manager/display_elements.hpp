@@ -1,5 +1,6 @@
 #pragma once
 #include <utility>
+#include <base/visitor.hpp>
 
 #include "utils.hpp"
 
@@ -25,15 +26,15 @@ namespace dia_app {
 		struct EntityElement;
 		struct LazyElement;
 
-		struct DisplayElementVisitor {
-			virtual void visitText(TextElement *el) = 0;
-			virtual void visitCode(CodeElement *el) = 0;
-			virtual void visitConcat(ConcatElement *el) = 0;
-			virtual void visitStartLine(StartLineElement *el) = 0;
-			virtual void visitInteract(InteractElement *el) = 0;
-			virtual void visitEntity(EntityElement *el) = 0;
-			virtual void visitLazy(LazyElement *el) = 0;
-		};
+		MAKE_VISITOR(DisplayElement,
+			TextElement,
+			CodeElement,
+			ConcatElement,
+			StartLineElement,
+			InteractElement,
+			EntityElement,
+			LazyElement
+		);
 
 		struct DisplayElement {
 			std::set<InfoHandle>  assoc_infos;
@@ -100,7 +101,7 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) = 0;
 
-			virtual void accept(DisplayElementVisitor *visitor) = 0;
+			virtual void accept(DisplayElementVisitor &visitor) = 0;
 		};
 
 		struct TextElement: public DisplayElement {
@@ -118,8 +119,8 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitText(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitTextElement(*this);
 			}
 		};
 
@@ -141,14 +142,14 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitConcat(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitConcatElement(*this);
 			}
 		};
 
 		struct StartLineElement: public DisplayElement {
 			// Line number.
-			std::optional<uint> number;
+			base::Optional<u32> number;
 
 			StartLineElement(const json& elem_json);
 			StartLineElement(const StartLineElement& other);
@@ -162,8 +163,8 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitStartLine(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitStartLineElement(*this);
 			}
 		};
 
@@ -183,8 +184,8 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitInteract(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitInteractElement(*this);
 			}
 		};
 
@@ -205,8 +206,8 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitLazy(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitLazyElement(*this);
 			}
 		};
 
@@ -228,8 +229,8 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitEntity(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitEntityElement(*this);
 			}
 		};
 
@@ -249,8 +250,8 @@ namespace dia_app {
 				std::shared_ptr<view_manager::CreationContext> creation_context, AccData acc_data
 			) override;
 
-			virtual void accept(DisplayElementVisitor *visitor) {
-				visitor->visitCode(this);
+			virtual void accept(DisplayElementVisitor &visitor) {
+				visitor.visitCodeElement(*this);
 			}
 		};
 

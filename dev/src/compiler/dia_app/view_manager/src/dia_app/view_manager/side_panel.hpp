@@ -43,7 +43,7 @@ namespace dia_app {
 
 			side_info_id_t getId();
 
-			std::optional<SideInfo> getEdge(edge_id_t handle, std::shared_ptr<ViewConstructor> view_constructor, std::shared_ptr<CreationContext> creation_context);
+			base::Optional<SideInfo> getEdge(edge_id_t handle, std::shared_ptr<ViewConstructor> view_constructor, std::shared_ptr<CreationContext> creation_context);
 		};
 
 		class SidePath {

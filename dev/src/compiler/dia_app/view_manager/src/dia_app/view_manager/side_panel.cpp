@@ -80,7 +80,7 @@ namespace dia_app {
 
 		side_info_id_t SideInfo::getId() { return this->id; }
 
-		std::optional<SideInfo> SideInfo::getEdge(edge_id_t handle, std::shared_ptr<ViewConstructor> view_constructor, std::shared_ptr<CreationContext> creation_context) {
+		base::Optional<SideInfo> SideInfo::getEdge(edge_id_t handle, std::shared_ptr<ViewConstructor> view_constructor, std::shared_ptr<CreationContext> creation_context) {
 			for (const auto &edge : this->edges) {
 				if (edge.edge_id == handle) {
 					return SideInfo::createFromInfoHandle(handle, view_constructor, creation_context);

@@ -20,13 +20,13 @@ namespace dia_app {
 		using column_no_t = uint32_t;
 
 
-		using line_metadata_t = std::optional<uint>;
+		using line_metadata_t = base::Optional<uint>;
 
 		template<class T>
-		using line_suffix_data_t = std::optional<std::unique_ptr<T>>;
+		using line_suffix_data_t = base::Optional<std::unique_ptr<T>>;
 
 		template<class T>
-		using line_data_t = std::pair<line_metadata_t, std::optional<std::unique_ptr<T>>>;
+		using line_data_t = std::pair<line_metadata_t, base::Optional<std::unique_ptr<T>>>;
 
 		template<class T>
 		using component_get_view_data_t
@@ -39,7 +39,7 @@ namespace dia_app {
 		class SidePath;
 
 		struct InteractionContext {
-			std::optional<std::function<void(std::vector<SidePath>)>> after_open;
+			base::Optional<std::function<void(std::vector<SidePath>)>> after_open;
             std::shared_ptr<CreationContext> creation_context;
 		};
 
@@ -193,12 +193,12 @@ namespace dia_app {
 
 		class StartLineComponent: public Component {
 		private:
-			std::optional<uint> number;
+			base::Optional<uint> number;
 
 		public:
 			StartLineComponent(
 				std::weak_ptr<ViewConstructor> view_constructor,
-				std::optional<uint>            number
+				base::Optional<uint>            number
 			);
 
 			component_get_view_data_t<::view::HlComponent> getHlView() const override;
@@ -212,14 +212,14 @@ namespace dia_app {
 			std::shared_ptr<id_to_interactive_component_mapping_t> id_to_component;
 			std::shared_ptr<id_to_view_constructor_mapping_t>      id_to_view_constructor;
 			std::unique_ptr<std::map<std::string, hl_id_t>>        hl_name_to_id;
-			std::optional<DataHandle>                              data_handle;
+			base::Optional<DataHandle>                              data_handle;
 			std::weak_ptr<ViewConstructor>                         view_constructor;
 
             CreationContext(
                 std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component,
                 std::shared_ptr<id_to_view_constructor_mapping_t>      id_to_view_constructor,
                 std::unique_ptr<std::map<std::string, hl_id_t>>        hl_name_to_id,
-                std::optional<DataHandle>                              data_handle,
+                base::Optional<DataHandle>                              data_handle,
                 std::weak_ptr<ViewConstructor>                         view_constructor
             );
 		};

@@ -174,7 +174,7 @@ namespace dia_app {
 					if (subcomponent.second.has_value())
 						non_empty.emplace_back(std::move(subcomponent.second.value()));
 				if (non_empty.empty()) {
-					return line_data_t<T>{ line_number, std::optional<std::unique_ptr<T>>() };
+					return line_data_t<T>{ line_number, base::Optional<std::unique_ptr<T>>() };
 				} else {
 					auto component = std::make_unique<T>();
 					for (auto& subcomponent: non_empty) {
@@ -189,7 +189,7 @@ namespace dia_app {
 				auto elm = std::move(results_by_lines[0]);
 				results_by_lines.erase(results_by_lines.begin());
 				if (elm.empty()) {
-					return std::optional<std::unique_ptr<T>>{};
+					return base::Optional<std::unique_ptr<T>>{};
 				} else {
 					auto [_, component] = wrap_line(elm);
 					return std::move(component);
@@ -373,14 +373,14 @@ namespace dia_app {
 		// StartLineComponent
 
 		StartLineComponent::StartLineComponent(
-            std::weak_ptr<ViewConstructor> view_constructor,std::optional<uint> number):
+            std::weak_ptr<ViewConstructor> view_constructor,base::Optional<uint> number):
 			  Component(std::move(view_constructor)), number(number) {}
 
 		component_get_view_data_t<::view::HlComponent> StartLineComponent::getHlView() const {
 			debug("StartLineComponent::getHlView() begin");
 			auto left = line_suffix_data_t<::view::HlComponent>{};
 			auto mid  = std::vector<line_data_t<::view::HlComponent>>();
-			mid.emplace_back(this->number, std::optional<std::unique_ptr<::view::HlComponent>>{});
+			mid.emplace_back(this->number, base::Optional<std::unique_ptr<::view::HlComponent>>{});
 			debug("StartLineComponent::getHlView() end");
 			return { std::move(left), std::move(mid) };
 		}
@@ -389,7 +389,7 @@ namespace dia_app {
 			debug("StartLineComponent::getNoHlView() begin");
 			auto left = line_suffix_data_t<::view::NoHlComponent>{};
 			auto mid  = std::vector<line_data_t<::view::NoHlComponent>>();
-			mid.emplace_back(this->number, std::optional<std::unique_ptr<::view::NoHlComponent>>{});
+			mid.emplace_back(this->number, base::Optional<std::unique_ptr<::view::NoHlComponent>>{});
 			debug("StartLineComponent::getNoHlView() end");
 			return { std::move(left), std::move(mid) };
 		}
@@ -406,7 +406,7 @@ namespace dia_app {
 			std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component,
 			std::shared_ptr<id_to_view_constructor_mapping_t>      id_to_view_constructor,
 			std::unique_ptr<std::map<std::string, hl_id_t>>        hl_name_to_id,
-			std::optional<DataHandle>                              data_handle,
+			base::Optional<DataHandle>                              data_handle,
 			std::weak_ptr<ViewConstructor>                         view_constructor
 		) : 
 			id_to_component(std::move(id_to_interactive_component)),

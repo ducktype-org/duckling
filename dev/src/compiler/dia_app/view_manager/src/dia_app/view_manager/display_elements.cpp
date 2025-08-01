@@ -433,7 +433,7 @@ namespace dia_app {
 		void fetch_entity(EntityHandle entity_handle, DataHandle data_handle) {
 			// Here fetching from the LS may happen in the future
 			// which may modify the data under data_handle.
-			data_handle.entities[entity_handle.first] = entity_handle.second;
+			data_handle.entities.put(entity_handle.first, entity_handle.second);
 		}
 
     std::set<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle) {
