@@ -1,4 +1,3 @@
-
 #include "../mir_structure/mir_structure.hpp"
 
 #include <base/maps.hpp>
