@@ -103,13 +103,12 @@ namespace compiler::mir {
 		// two states: variable can be used and can't.
 
 
-		// It should be HashSet<BlockID, state>, but there is no hash.
 		constexpr int usable = 0, not_usable = 1;
-
-		struct states {
+		struct States final {
 			bool state[2] = { false, false };
 		};
-
+		
+		// It should be HashSet<BlockID, state>, but there is no hash.
 		base::HashMap<BlockID, states> visited;  // with usable and not usable.
 
 		// Insert all blocks.
