@@ -104,10 +104,11 @@ namespace compiler::mir {
 
 
 		constexpr int usable = 0, not_usable = 1;
+
 		struct States final {
 			bool state[2] = { false, false };
 		};
-		
+
 		// It should be HashSet<BlockID, state>, but there is no hash.
 		base::HashMap<BlockID, States> visited;  // with usable and not usable.
 
