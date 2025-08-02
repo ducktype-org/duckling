@@ -7,6 +7,7 @@
 #include "mir_lowering.hpp"
 
 #include "mir_lifetimes.hpp"
+#include "mir_validation.hpp"
 
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -1372,6 +1373,9 @@ namespace compiler::mir {
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			if (validateFunction(function_reachable).isBad())
+				return query::QError(helios::errors::Failed());
 
 			return function_reachable;
 		}
