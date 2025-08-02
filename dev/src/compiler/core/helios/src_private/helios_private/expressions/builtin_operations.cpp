@@ -19,14 +19,14 @@ namespace compiler::helios::code {
 		auto rhs_type = rhs->expression_type;
 
 		// Confirm appropriate types.
-		auto argument_kind           = lhs_type.getType().getKind();
-		bool are_arguments_same_kind = argument_kind == rhs_type.getType().getKind();
-		bool are_arguments_int_or_bool
-			= argument_kind == tsh::Kind::Integral or argument_kind == tsh::Kind::Bool;
+		auto argument_kind                   = lhs_type.getType().getKind();
+		bool are_arguments_int_float_or_bool = argument_kind == tsh::Kind::Integral
+		                                    or argument_kind == tsh::Kind::Bool
+		                                    or argument_kind == tsh::Kind::Float;
 
-		if (not are_arguments_same_kind or not are_arguments_int_or_bool) {
+		if (not are_arguments_int_float_or_bool) {
 			// @TODO: report an error?
-			// No builtins for types other than ints and bools for now.
+			// No builtins for types other than ints floats and bools for now.
 			return {};
 		}
 

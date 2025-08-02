@@ -581,7 +581,9 @@ namespace compiler::helios {
 				);
 
 			// @TODO: Handle potential lack of value
-			return ctx.query<EvalExprToNumCTV>(const_symbol->getValue().value().unlock(ctx)->getExpr());
+			return ctx.query<EvalExprToNumCTV>(
+				const_symbol->getValue().value().unlock(ctx)->getExpr()
+			);
 		}
 
 		QUERY_AUTO_CACHE_COPY

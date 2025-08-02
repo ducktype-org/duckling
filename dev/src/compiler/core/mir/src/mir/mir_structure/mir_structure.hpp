@@ -94,14 +94,16 @@ namespace compiler::mir {
 		i64 value;
 
 		MirIntegerConst(num_ctv value) {
-			std::visit([&](auto&& val) {
-				using T = std::decay_t<decltype(val)>;
-				if constexpr (std::is_convertible_v<T, i64>) {
-					this->value = static_cast<i64>(val);
-				} else {
-					throw std::runtime_error("Cannot convert to i64");
-				}
-			}, value);
+			std::visit(
+				[&](auto&& val) {
+					using T = std::decay_t<decltype(val)>;
+					if constexpr (std::is_convertible_v<T, i64>)
+						this->value = static_cast<i64>(val);
+					else
+						throw std::runtime_error("Cannot convert to i64");
+				},
+				value
+			);
 		}
 
 		bool operator==(const MirIntegerConst& other) const = default;
@@ -278,7 +280,7 @@ namespace compiler::mir {
 		MIRValue(MirGlobal value): value(value) {}
 
 		MIRValue(num_ctv value): value(MirIntegerConst(value)) {}
-		
+
 		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;

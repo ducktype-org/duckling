@@ -34,31 +34,52 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
 
-	LiteralNumCTVExpr::LiteralNumCTVExpr(query::Context& ctx, num_ctv value, usize size):
-		  Expr(
+	LiteralNumCTVExpr::LiteralNumCTVExpr(query::Context& ctx, num_ctv value):
+		  Expr(tsh::ExpressionType<>(
+			  [&]() -> tsh::SymbolType<> {
+				  using namespace tsh;
 
-			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on type of literal.
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryIntegralType>({ size }),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
+				  return std::visit(
+					  [&](auto&& actual_value) -> SymbolType<> {
+						  using T = std::decay_t<decltype(actual_value)>;
+
+						  if constexpr (std::is_integral_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryIntegralType>({ sizeof(T) * 8 }),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else if constexpr (std::is_floating_point_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else {
+							  throw std::runtime_error("Unsupported num_ctv type");
+						  }
+					  },
+					  value
+				  );
+			  }(),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )),
 		  value(value) {}
 
 	void LiteralNumCTVExpr::debugPrint(std::ostream& out) const {
-    std::visit([&](auto val) {
-        using T = std::decay_t<decltype(val)>;
-        if constexpr (std::is_arithmetic_v<T>) {
-            out << std::to_string(static_cast<i64>(val)); // or static_cast<int>(val) if you want integer output
-        } else {
-            out << "<non-numeric>";
-        }
-    }, value);
-}
+		std::visit(
+			[&](auto val) {
+				using T = std::decay_t<decltype(val)>;
+				if constexpr (std::is_arithmetic_v<T>) {
+					out << std::to_string(static_cast<i64>(val)
+				    );  // or static_cast<int>(val) if you want integer output
+				} else {
+					out << "<non-numeric>";
+				}
+			},
+			value
+		);
+	}
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
 		  Expr(

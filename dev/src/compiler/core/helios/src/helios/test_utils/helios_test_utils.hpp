@@ -24,7 +24,8 @@ namespace compiler::helios::test_utils {
 	SymbolList getChain(const std::string_view chain, ScopeID scope);
 
 	/**
-	 * Get the num_ctv (integral or double-like) value of the last symbol in a symbol chain in a given scope.
+	 * Get the num_ctv (integral or double-like) value of the last symbol in a symbol chain in a
+	 * given scope.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
 	 * @return The value of the last symbol in the chain.

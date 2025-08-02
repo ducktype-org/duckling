@@ -46,6 +46,7 @@ public:
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testError);
 		TESTER_ADD_TEST(testI32Consts);
+		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
@@ -100,6 +101,17 @@ private:
 		ASSERT_EQUAL(2, getValue("T1", root_scope));
 		ASSERT_EQUAL(3, getValue("T2", root_scope));
 		ASSERT_EQUAL(30, getValue("F", root_scope));
+	}
+
+	void testNumericLiterals() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/numeric_literals")));
+
+		for (auto con = 'A'; con <= 'E'; con++) {
+			auto value = getValue(std::string(1, con), root_scope);
+			ASSERT_TRUE(std::holds_alternative<double>(value));
+			auto* f = std::get_if<double>(&value);
+			ASSERT_EQUAL(5.3, *f);
+		}
 	}
 
 	void testClassSymbolData() {

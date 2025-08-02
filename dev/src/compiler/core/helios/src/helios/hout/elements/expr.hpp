@@ -46,7 +46,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		num_ctv value;
 
-		LiteralNumCTVExpr(query::Context& ctx, num_ctv value, usize size);
+		LiteralNumCTVExpr(query::Context& ctx, num_ctv value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

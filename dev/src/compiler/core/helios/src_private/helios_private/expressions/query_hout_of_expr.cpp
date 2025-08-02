@@ -1,5 +1,4 @@
 #include "query_hout_of_expr.hpp"
-#include <regex>
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -80,12 +79,19 @@ namespace compiler::helios::code {
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				std::string value = stmt->getValue().str();
-				std::regex float_pattern(R"(^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$)");
-				if (std::regex_match(value, float_pattern)) {
-					node = makeBox<LiteralNumCTVExpr>(ctx, std::stod(stmt->getValue().str()), 64);
-				} else {
-					node = makeBox<LiteralNumCTVExpr>(ctx, std::stoi(stmt->getValue().str()), 64);
-				}
+				std::cerr << "Value: " << value << "\n";
+				// Check if it's a float-like string
+				bool is_float
+					= (value.find('.') != std::string::npos || value.find('e') != std::string::npos
+				       || value.find('E') != std::string::npos);
+
+				// Exclude hex or binary prefixes
+				bool is_prefixed = (value.starts_with("0x") || value.starts_with("0b"));
+
+				if (is_float && !is_prefixed)
+					node = makeBox<LiteralNumCTVExpr>(ctx, std::stod(value));
+				else
+					node = makeBox<LiteralNumCTVExpr>(ctx, std::stoll(value));
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {

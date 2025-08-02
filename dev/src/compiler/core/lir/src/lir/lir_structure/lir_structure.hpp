@@ -98,11 +98,11 @@ namespace compiler::lir {
 
 	private:
 		LirGlobal(
-			const helios::SymID    helios_id,
-			const tsl::TypeLayout& layout,
-			const base::StrID&     mangled_name,
-			const LirGlobalType    type         = LirGlobalType::Variable,
-			base::Optional<num_ctv>    inital_value = {}
+			const helios::SymID     helios_id,
+			const tsl::TypeLayout&  layout,
+			const base::StrID&      mangled_name,
+			const LirGlobalType     type         = LirGlobalType::Variable,
+			base::Optional<num_ctv> inital_value = {}
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),

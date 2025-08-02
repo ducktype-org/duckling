@@ -14,7 +14,7 @@
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(EvalExprToNumCTV, NumCTVEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
-			Context&                            ctx;
+			Context&                                ctx;
 			query::QResult<num_ctv, errors::Failed> result;
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
@@ -67,52 +67,59 @@ namespace compiler::helios {
 				const auto& lhs_value = lhs_result.value();
 				const auto& rhs_value = rhs_result.value();
 
-				result = std::visit([&](auto lhs, auto rhs) -> num_ctv {
-					using LhsT = decltype(lhs);
-					using RhsT = decltype(rhs);
-					
-					// Fallback to a known, safe type promotion if common_type fails
-					using ResultT = std::conditional_t<
-						std::is_arithmetic_v<LhsT> && std::is_arithmetic_v<RhsT>,
-						long double,  // promote to long double for numeric ops
-						void          // or handle custom logic
-					>;
+				result = std::visit(
+					[&](auto lhs, auto rhs) -> num_ctv {
+						using LhsT = decltype(lhs);
+						using RhsT = decltype(rhs);
 
-					if constexpr (std::is_arithmetic_v<ResultT>) {
-						switch (expr.operation) {
+						// Fallback to a known, safe type promotion if common_type fails
+						using ResultT = std::conditional_t<
+							std::is_arithmetic_v<LhsT> && std::is_arithmetic_v<RhsT>,
+							std::common_type_t<LhsT, RhsT>,
+							f80>;
+
+						if constexpr (std::is_arithmetic_v<ResultT>) {
+							switch (expr.operation) {
 							case code::BuiltinBinary::IntegerAdd:
-								return static_cast<num_ctv>(static_cast<ResultT>(lhs) + static_cast<ResultT>(rhs));
+								return static_cast<ResultT>(lhs) + static_cast<ResultT>(rhs);
 
 							case code::BuiltinBinary::IntegerSub:
-								return static_cast<num_ctv>(static_cast<ResultT>(lhs) - static_cast<ResultT>(rhs));
+								return static_cast<ResultT>(lhs) - static_cast<ResultT>(rhs);
 
 							case code::BuiltinBinary::IntegerMul:
-								return static_cast<num_ctv>(static_cast<ResultT>(lhs) * static_cast<ResultT>(rhs));
+								return static_cast<ResultT>(lhs) * static_cast<ResultT>(rhs);
 
 							case code::BuiltinBinary::IntegerDiv:
-								return static_cast<num_ctv>(static_cast<ResultT>(lhs) / static_cast<ResultT>(rhs));
+								return static_cast<ResultT>(lhs) / static_cast<ResultT>(rhs);
 
 							case code::BuiltinBinary::IntegerMod:
-								return static_cast<num_ctv>(
-									static_cast<int64_t>(lhs) % static_cast<int64_t>(rhs)
-								);
+								return static_cast<i64>(lhs) % static_cast<i64>(rhs);
 
 							case code::BuiltinBinary::IntegerPow:
-								return static_cast<num_ctv>(static_cast<ResultT>(std::pow(lhs, rhs)));
+								return static_cast<ResultT>(std::pow(lhs, rhs));
 
 							case code::BuiltinBinary::BooleanAnd:
-								return static_cast<num_ctv>(static_cast<bool>(lhs) && static_cast<bool>(rhs));
+								return static_cast<num_ctv>(
+									static_cast<bool>(lhs) && static_cast<bool>(rhs)
+								);
 
 							case code::BuiltinBinary::BooleanOr:
-								return static_cast<num_ctv>(static_cast<bool>(lhs) || static_cast<bool>(rhs));
+								return static_cast<num_ctv>(
+									static_cast<bool>(lhs) || static_cast<bool>(rhs)
+								);
 
 							default:
-								throw base::NotYetImplemented("Evaluation of other binary operators is not implemented yet");
+								throw base::NotYetImplemented(
+									"Evaluation of other operators is not implemented yet"
+								);
+							}
+						} else {
+							throw std::runtime_error("Operands must be arithmetic");
 						}
-					} else {
-						throw std::runtime_error("Operands must be arithmetic");
-					}
-				}, lhs_value, rhs_value);
+					},
+					lhs_value,
+					rhs_value
+				);
 			}
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
@@ -123,14 +130,16 @@ namespace compiler::helios {
 
 				switch (expr.operation) {
 				case code::BuiltinUnary::IntegerNegation:
-					result = std::visit([](auto val) -> NumCTVEval_Result {
-						using T = decltype(val);
-						if constexpr (std::is_arithmetic_v<T>) {
-							return static_cast<num_ctv>(-val); // Safe unary minus
-						} else {
-							return query::QError(errors::Failed());
-						}
-					}, result_value);
+					result = std::visit(
+						[](auto val) -> NumCTVEval_Result {
+							using T = decltype(val);
+							if constexpr (std::is_arithmetic_v<T>)
+								return static_cast<num_ctv>(-val);  // Safe unary minus
+							else
+								return query::QError(errors::Failed());
+						},
+						result_value
+					);
 					break;
 				default:
 					result = query::QError(errors::Failed());
@@ -155,16 +164,18 @@ namespace compiler::helios {
 					return;
 				}
 
-				result = std::visit([&](auto cond_val) -> NumCTVEval_Result {
-					using T = decltype(cond_val);
-					if constexpr (std::is_arithmetic_v<T>) {
-						bool condition = static_cast<bool>(cond_val);
-						return condition ? true_result : false_result;
-					} else {
-						return query::QError(errors::Failed());
-					}
-				}, cond_result.value());
-
+				result = std::visit(
+					[&](auto cond_val) -> NumCTVEval_Result {
+						using T = decltype(cond_val);
+						if constexpr (std::is_arithmetic_v<T>) {
+							bool condition = static_cast<bool>(cond_val);
+							return condition ? true_result : false_result;
+						} else {
+							return query::QError(errors::Failed());
+						}
+					},
+					cond_result.value()
+				);
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
