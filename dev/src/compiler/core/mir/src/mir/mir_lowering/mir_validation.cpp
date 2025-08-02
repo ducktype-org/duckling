@@ -4,7 +4,7 @@
 #include <base/optional.hpp>
 
 #include <algorithm>
-#include <array>
+#include <cstddef>
 #include <unordered_set>
 #include <variant>
 
@@ -102,23 +102,29 @@ namespace compiler::mir {
 		// move, visit all achievable blocks, except for starting one. Each block can be visited in
 		// two states: variable can be used and can't.
 
+
 		// It should be HashSet<BlockID, state>, but there is no hash.
-		base::HashMap<BlockID, std::array<bool, 2>> visited;  // with usable and not usable.
-		constexpr int                               usable = 0, not_usable = 1;
+		constexpr int usable = 0, not_usable = 1;
+
+		struct states {
+			bool state[2] = { false, false };
+		};
+
+		base::HashMap<BlockID, states> visited;  // with usable and not usable.
 
 		// Insert all blocks.
-		for (const auto& id: fun.block_order) visited.emplace(id, std::array<bool, 2>{});
+		for (const auto& id: fun.block_order) visited.emplace(id, states());
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
-				visited[id][usable] = false, visited[id][not_usable] = false;
+				visited[id].state[usable] = false, visited[id].state[not_usable] = false;
 
 			const auto& starting_block = local.second;
 
-			auto visit = [&](this const auto& self, const BlockID& id, const int& state) -> bool {
-				visited[id][state] = true;
-				int next_state     = not_usable;
-				if (state == not_usable) {
+			auto visit = [&](this const auto& self, const BlockID& id, const int& cr_state) -> bool {
+				visited[id].state[cr_state] = true;
+				int next_state            = not_usable;
+				if (cr_state == not_usable) {
 					if (moved_variables[id].contains(local.first)
 					    || used_variables[id].contains(local.first))
 						return false;
@@ -131,7 +137,7 @@ namespace compiler::mir {
 				}
 
 				for (const auto& next_block: getTerminatorSuccessors(fun.blocks[id].terminator)) {
-					if (next_block != starting_block && !visited[next_block][next_state]) {
+					if (next_block != starting_block && !visited[next_block].state[next_state]) {
 						if (!self(next_block, next_state)) return false;
 					}
 				}
