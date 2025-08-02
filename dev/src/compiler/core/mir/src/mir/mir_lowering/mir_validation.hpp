@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../mir_structure/mir_structure.hpp"
 
 namespace compiler::mir {
