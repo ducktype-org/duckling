@@ -109,10 +109,10 @@ namespace compiler::mir {
 		};
 		
 		// It should be HashSet<BlockID, state>, but there is no hash.
-		base::HashMap<BlockID, states> visited;  // with usable and not usable.
+		base::HashMap<BlockID, States> visited;  // with usable and not usable.
 
 		// Insert all blocks.
-		for (const auto& id: fun.block_order) visited.emplace(id, states());
+		for (const auto& id: fun.block_order) visited.emplace(id, States());
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
