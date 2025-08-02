@@ -1268,8 +1268,6 @@ namespace compiler::mir {
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
 
-		if (validateFunction(function).isBad()) return query::QError(helios::errors::Failed());
-
 		// It should be always zero because the last block is generated as the first one.
 		auto last_block_id = BlockID(0);
 		if (not function.blocks.contains(last_block_id)) return function;
@@ -1375,6 +1373,9 @@ namespace compiler::mir {
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			if (validateFunction(function_reachable).isBad())
+				return query::QError(helios::errors::Failed());
 
 			return function_reachable;
 		}

@@ -1,32 +1,46 @@
+
 #include "../mir_structure/mir_structure.hpp"
 
 #include <base/maps.hpp>
+#include <base/optional.hpp>
 
 #include <algorithm>
-#include <unordered_map>
+#include <array>
 #include <unordered_set>
+#include <variant>
 
 namespace compiler::mir {
 
 
 	bool validateMoves(const Function& fun) {
-		std::unordered_map<BlockID, std::unordered_set<LocalID>> moved_variables,
-			used_variables;  // Variables moved in Block, they can't be used after this Block,
-		                     // variables which must be valid, at the begining of Block.
+		using LocalSet      = std::unordered_set<LocalID>;
+		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;
 
-		std::unordered_map<LocalID, BlockID> construction_block;
+		BlockLocalSet
+			moved_variables;  // Variables moved in Block, they can't be used after this Block,
+		BlockLocalSet used_variables;  // variables which must be valid, at the begining of Block.
 
+		for (const auto& block: fun.blocks) {  // Fill with blocks.
+			moved_variables.emplace(block.first, LocalSet());
+			used_variables.emplace(block.first, LocalSet());
+		}
+		base::HashMap<LocalID, BlockID>
+			construction_block;  // For each Local store where it is constructed.
+
+		// Anlyse each block independently.
 		for (const auto& block: fun.blocks) {
 			auto process_instruction = [&](Instruction instr) {
 				if (instr.operation == Operation::Destruct
 				    || instr.operation == Operation::DestructIf)
-					return true;  // Lir handles destructors.
+
+					return true;  // Lir decides whether destruction should be performed.
 
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
-						used_variables[block.first].insert(arg.get<LocalRef>()->id);
-						if (moved_variables[block.first].contains(arg.get<LocalRef>()->id))
+						used_variables.at(block.first).insert(arg.get<LocalRef>()->id);
+
+						if (moved_variables.at(block.first).contains(arg.get<LocalRef>()->id))
 							return false;  // It is already moved.
 					}
 				}
@@ -34,18 +48,19 @@ namespace compiler::mir {
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value()
 				    && std::holds_alternative<LocalRef>(instr.output.value())) {
-					used_variables[block.first].insert(std::get<LocalRef>(instr.output.value())->id);
-					if (moved_variables[block.first].contains(
-							std::get<LocalRef>(instr.output.value())->id
-						))
+					used_variables.at(block.first)
+						.insert(std::get<LocalRef>(instr.output.value())->id);
+
+					if (moved_variables.at(block.first)
+					        .contains(std::get<LocalRef>(instr.output.value())->id))
 						return false;  // It is already moved.
 				}
 
 				for (const auto& flag: instr.flags) {
 					if (flag.flag == OperationFlag::Flag::Move) {
-						// @note Now we assume that variable moved in instruction, must be its
-						// argument and appear exactly one time there. It can't be output of
-						// instruction. It may change in the future.
+						// @note Now we assume that variable moved in instruction, must be
+						// its argument and appear exactly one time there. It can't be
+						// output of instruction. It may change in the future.
 
 						if (moved_variables[block.first].contains(flag.local->id))
 							return false;  // Already moved.
@@ -69,7 +84,7 @@ namespace compiler::mir {
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {
 						// Assume constructors are valid (every use is after construct).
-						construction_block[flag.local->id] = block.first;
+						construction_block.emplace(flag.local->id, block.first);
 					}
 					// Ommit destruct flag - LIR will handle it.
 				}
@@ -82,12 +97,18 @@ namespace compiler::mir {
 			if (!process_instruction(block.second->terminator)) return false;
 		}
 
+		// Now we perform global analysys.
+
 		// For each variable start DFS starting in block of its construction. Look for any use after
 		// move, visit all achievable blocks, except for starting one. Each block can be visited in
 		// two states: variable can be used and can't.
 
-		std::unordered_map<BlockID, bool[2]> visited;  // with usable and not usable.
-		const int                            usable = 0, not_usable = 1;
+		// It should be HashSet<BlockID, state>, but there is no hash.
+		base::HashMap<BlockID, std::array<bool, 2>> visited;  // with usable and not usable.
+		constexpr int                               usable = 0, not_usable = 1;
+
+		// Insert all blocks.
+		for (const auto& id: fun.block_order) visited.emplace(id, std::array<bool, 2>{});
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
