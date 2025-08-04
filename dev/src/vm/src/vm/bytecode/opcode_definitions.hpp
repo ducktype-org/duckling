@@ -179,6 +179,22 @@ DEF_OPCODE(udiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_OPCODE(udiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(udiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
+// ========= BOOLEAN OPERATIONS ========
+
+// Evaluate logical operations (AND, OR, etc.) on operands as booleans (non-zero = true)
+// Result is 0 or 1 stored in the first argument
+
+DEF_OPCODE(log_and_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(log_and_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+DEF_OPCODE(log_or_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(log_or_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+DEF_OPCODE(log_xor_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(log_xor_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+DEF_OPCODE(log_not_l8, vm::opargs::StackLocal8)
+
 // ========= LOGICAL OPERATIONS ========
 
 DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
