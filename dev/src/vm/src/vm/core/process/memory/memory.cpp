@@ -53,29 +53,30 @@ namespace vm {
 		return createBlock(heap_allocator.allocate(type));
 	}
 
-	auto Memory::dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<Block> {
-		std::lock_guard lock(mutex);
-		auto            inner_type = type->getInnerType().value();
-		return createBlock(heap_allocator.dynTableAllocateN(type, inner_type, n));
-	}
-
 	auto Memory::allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
 		std::lock_guard lock(mutex);
 		return createBlock(dummy_allocator.allocate(type, stack_pointer));
 	}
 
-	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void {
+	auto Memory::dynTableAllocateHeapN(TypeCRef tbl_type, u64 n) -> Ref<Block> {
 		std::lock_guard lock(mutex);
-		auto            inner_type     = type->getInnerType().value();
-		BlockData       new_block_data = heap_allocator.dynTableAllocateN(type, inner_type, n);
-		auto            old_view       = block->data.view;
-		auto            new_view       = new_block_data.view;
-		std::memcpy(
-			new_view.getBegin(), old_view.getBegin(), std::min(old_view.size(), new_view.size())
-		);
+		auto inner_type = tbl_type->getInnerType().value();
+		return createBlock(heap_allocator.dynTableAllocateN(tbl_type, inner_type, n));
+	}
+
+	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void {
+		std::lock_guard lock(mutex);
+		auto tbl_type = block->data.element_type;
+		auto inner_type = tbl_type->getInnerType().value();
+		BlockData new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+		auto old_view = block->data.view;
+		auto new_view = new_block_data.view;
+
+		std::memcpy(new_view.getBegin(), old_view.getBegin(), std::min(new_view.size(), old_view.size()));
 		heap_allocator.deallocate(&block->data);
 		block->data = new_block_data;
 	}
+
 
 	void Memory::freeBlock(Ref<Block> block) {
 		std::lock_guard lock(mutex);

@@ -70,7 +70,10 @@ namespace vm {
 
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
-		// Assumes type is a dynamic table type.
+		/**
+		 * @brief Allocates a contiguous new block of memory for n elements of `type`'s inner type.
+		 * @note Assumes that type is a dynamic table type.
+		 */
 		auto dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<Block>;
 
 		/**
@@ -81,8 +84,9 @@ namespace vm {
 		/**
 		 * @brief Dynamically reallocates block data.
 		 * @note Assumes that type is a dynamic table type and reallocates it to
-		   a table of size n with elements of type equal to type's inner type. */
-		auto dynTableReallocateBlockDataN(Ref<Block> block, TypeCRef type, u64 n) -> void;
+		   a table of size n with elements of type equal to type's inner type.
+		 */
+		auto dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void;
 
 		void freeBlock(Ref<Block> block);
 

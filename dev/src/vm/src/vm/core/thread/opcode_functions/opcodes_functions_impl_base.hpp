@@ -824,19 +824,17 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto& tbl_pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  element_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
+			auto pointed_type = thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto new_elem_count = derefStack<u64>(local_stack, instr[1].arg0);
 
 			if (tbl_pointer.isNull()) {
-				auto new_block
-					= thread.process_memory.dynTableAllocateHeapN(element_type, new_elem_count);
-				thread.process_memory.setPointer(tbl_pointer, { new_block, 0 });
+				auto new_block = thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
+				thread.process_memory.setPointer(tbl_pointer, {new_block, 0});
+				CORE_ASSERT(!tbl_pointer.isNull(), "what the fuck alloc");
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
-				thread.process_memory.dynTableReallocateBlockDataN(
-					tbl_block, element_type, new_elem_count
-				);
+				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
+				CORE_ASSERT(!tbl_pointer.isNull(), "what the fuck realloc");
 			}
 		}
 		FUNCTION_CONT(2);

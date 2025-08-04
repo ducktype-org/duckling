@@ -364,8 +364,7 @@ DEF_OPCODE(
  * @brief Re-allocates dynamic table under `table_ptr` with
  * `new_elem_count` elements. If given nullptr, then it will allocate
  * a new array.
- * `element_type` is type of each element in the array,
- * not the dynamic table itself.
+ * `table_type` is type of the dynamic table itself, not the element type.
  * @note It's counter-intuitive, but if a reallocation has happened, this
  *  instruction will not modify pointer data (unlike in C).
  * @note `ext_l64` is required to tell the count of elements
@@ -373,8 +372,8 @@ DEF_OPCODE(
 DEF_OPCODE(
 	dynTableReAlloc_lptr_type,
 	vm::opargs::StackLocalPtr /* table_ptr */,
-	vm::opargs::Type /* inner type ,
-    vm::opargs::StackLocal64     new elem count*/
+	vm::opargs::Type  		  /* table_type ,
+	vm::opargs::StackLocal64     new elem count */
 )
 
 // ========= TYPE OPERATIONS ========
