@@ -42,6 +42,11 @@ namespace vm::loader::parser {
 			auto next_token = state.tokens().peek();
 			// Consume the type specifier
 			if (next_token.isTypeSpecifier()) state.tokens().next();
+			if (next_token.isIdentifier()) {
+				state.log(makeBox<InvalidLiteral>(
+					token.getPosition(), base::strConcat("NIGGERRR for `", base::typeName<K>(), "`.")
+				));
+			}
 			auto&& str = token.getValue().str();
 			try {
 				if (next_token.isTypeSpecifier()) {
