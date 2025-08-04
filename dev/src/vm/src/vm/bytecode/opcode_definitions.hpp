@@ -137,6 +137,30 @@ DEF_OPCODE(div_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_OPCODE(neg_l64, vm::opargs::StackLocal64)
 DEF_OPCODE(neg_l32, vm::opargs::StackLocal32)
 
+// ========= FLOATING POINT OPERATIONS ========
+DEF_OPCODE(fadd_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(fadd_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_OPCODE(fadd_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(fadd_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_OPCODE(fsub_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(fsub_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_OPCODE(fsub_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(fsub_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_OPCODE(fmul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(fmul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_OPCODE(fmul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(fmul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_OPCODE(fdiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(fdiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_OPCODE(fdiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(fdiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_OPCODE(fneg_l64, vm::opargs::StackLocal64)
+DEF_OPCODE(fneg_l32, vm::opargs::StackLocal32)
+
 DEF_OPCODE(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 

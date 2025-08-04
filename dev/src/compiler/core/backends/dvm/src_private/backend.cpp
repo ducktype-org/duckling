@@ -15,6 +15,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <algorithm>
@@ -323,7 +324,9 @@ namespace compiler::backend_vm {
 			AddLirFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
-				variant_case(i64, value) return vm::opargs::Immediate{ value };
+				variant_case(i64, value) {
+					return vm::opargs::Immediate{ vm::Memory::interpret<const u64>(value) };
+				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LocalRef, local_ref) {
 					auto&& var_type = ctx.lir_local_types[local_ref];
