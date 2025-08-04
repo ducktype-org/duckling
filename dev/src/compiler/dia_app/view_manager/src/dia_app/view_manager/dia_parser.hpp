@@ -14,7 +14,7 @@ namespace dia_file {
     struct ExploreEdgeParams {
         std::string name;
         base::HashMap<std::string, DisplayPtr> params;
-        InfoID handle;
+        InfoID info_id;
 
         ExploreEdgeParams(const json &edge);
     };

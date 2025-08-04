@@ -18,7 +18,6 @@ namespace dia_app {
 		struct ConcatTElement;
 		struct ParamTElement;
 		struct MacroTElement;
-		struct IncludeTElement;
 		struct CaseOfTElement;
 
 		MAKE_VISITOR(TemplateElement,
@@ -26,7 +25,6 @@ namespace dia_app {
 			ConcatTElement,
 			ParamTElement,
 			MacroTElement,
-			IncludeTElement,
 			CaseOfTElement
 		);
 
@@ -115,22 +113,6 @@ namespace dia_app {
 		};
 
 		/**
-		 * @brief A template element representing a link to another,
-		 * non-parametrized, info.
-		 * 
-		 */
-		struct IncludeTElement: public TemplateElement {
-			ShortMetadata include;
-			TemplatePtr           on;
-
-			IncludeTElement(const YAML::Node& elem_node);
-
-			virtual void accept(TemplateElementVisitor &visitor) {
-				visitor.visitIncludeTElement(*this);
-			}
-		};
-
-		/**
 		 * @brief A template element representing a logical branching
 		 * of template evaluation based on the provided pattern.
 		 * 
@@ -183,7 +165,6 @@ namespace dia_app {
 			virtual void visitConcatTElement(const ConcatTElement &el);
 			virtual void visitParamTElement(const ParamTElement &el);
 			virtual void visitMacroTElement(const MacroTElement &el);
-			virtual void visitIncludeTElement(const IncludeTElement &el);
 			virtual void visitCaseOfTElement(const CaseOfTElement &el);
 		};
 	}  // namespace message_template

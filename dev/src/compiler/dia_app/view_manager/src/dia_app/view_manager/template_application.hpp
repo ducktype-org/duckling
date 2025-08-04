@@ -17,9 +17,9 @@ namespace message_template {
         // The description to be displayed at this explore edge.
         dia_file::DisplayPtr description;
         // The id of the info this edge is referring to.
-        InfoID handle;
+        InfoID info_id;
 
-        ExploreEdge(dia_file::DisplayPtr description, InfoID handle);
+        ExploreEdge(dia_file::DisplayPtr description, InfoID info_id);
 
         /**
          * @brief Evaluate the description text of this explore edge.

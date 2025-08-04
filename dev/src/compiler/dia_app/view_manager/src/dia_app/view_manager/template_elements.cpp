@@ -10,7 +10,6 @@ namespace message_template {
         if (msg.IsSequence()) return std::make_shared<ConcatTElement>(msg);
         if (msg["param"]) return std::make_shared<ParamTElement>(msg);
         if (msg["macro"]) return std::make_shared<MacroTElement>(msg);
-        if (msg["include"]) return std::make_shared<IncludeTElement>(msg);
         return std::make_shared<CaseOfTElement>(msg);
     }
 
@@ -29,13 +28,6 @@ namespace message_template {
     MacroTElement::MacroTElement(const YAML::Node& elem_node) {
         assert(elem_node["macro"] && elem_node["macro"].IsScalar());
         macro = elem_node["macro"].as<std::string>();
-    }
-
-    IncludeTElement::IncludeTElement(const YAML::Node& elem_node) {
-        assert(elem_node["include"]);
-        include = elem_node["include"];
-        assert(elem_node["on"]);
-        on = parse(elem_node["on"]);
     }
 
     CaseOfTElement::CaseOfTElement(const YAML::Node& elem_node) {
@@ -98,13 +90,6 @@ namespace message_template {
         info_template.macros.at(el.macro)->accept(*this);
 
         macro_stack.erase(el.macro);
-    }
-    void ToDisplayVisitor::visitIncludeTElement(const IncludeTElement &el) {
-        // @TODO
-        // DisplayPtr res  = on->toDisplay(handle);
-        // InfoID info = InfoParamsHandle::add(include, handle.toDataHandle());
-        // res->assoc_infos.insert(info);
-        // return res;
     }
     void ToDisplayVisitor::visitCaseOfTElement(const CaseOfTElement &el) {
         // Evaluate the pattern.

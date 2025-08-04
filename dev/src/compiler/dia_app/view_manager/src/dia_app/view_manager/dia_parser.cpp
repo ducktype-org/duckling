@@ -6,7 +6,7 @@ namespace dia_file {
 	ExploreEdgeParams::ExploreEdgeParams(const json &edge)  {
 		ASSUME_OBJ(edge);
 		ASSUME_HAS_STR_ASSIGN(edge, name);
-		ASSUME_HAS_UINT_ASSIGN(edge, handle);
+		ASSUME_HAS_UINT_ASSIGN(edge, info_id);
 		ASSUME_HAS(edge, "params");
 		params = from_json<DisplayPtr>(edge["params"], [](const json &el) { return parse(el); });
 	}

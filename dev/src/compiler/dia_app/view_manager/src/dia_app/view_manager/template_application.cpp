@@ -3,8 +3,8 @@
 namespace dia_app {
 namespace message_template {
 
-    ExploreEdge::ExploreEdge(dia_file::DisplayPtr description, InfoID handle)
-        : description(description), handle(handle) {}
+    ExploreEdge::ExploreEdge(dia_file::DisplayPtr description, InfoID info_id)
+        : description(description), info_id(info_id) {}
         
     std::string ExploreEdge::getDescription(ViewConstructor &vc) {
         dia_file::ToTextVisitor v(vc);
@@ -63,7 +63,7 @@ namespace message_template {
             v.res->accept(v_text);
             auto description = v_text.builder;
 
-            explore_edges.emplace_back(description, edge.handle);
+            explore_edges.emplace_back(description, edge.info_id);
         }
     }
 

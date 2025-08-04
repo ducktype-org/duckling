@@ -28,7 +28,7 @@ namespace message_template {
         if (!file.is_open()) {
             std::cerr << "Failed to open message template: " << filename << std::endl;
             // This may not be a bug, but an OS problem on user side,
-            // so do not assert. TODO: Exception must be handled.
+            // so do not assert.
             throw TemplateFileNotFoundException();
         }
 
