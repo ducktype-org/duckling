@@ -20,7 +20,9 @@ namespace vm::loader::parser {
 	namespace opargs_parsers {
 		template<class T, class K>
 		T parseInt(F8ParserState& state) {
-			auto token = state.tokens().next();
+			auto token      = state.tokens().next();
+			auto next_token = state.tokens().peek(1);
+
 			try {
 				usize  pos    = 0;
 				auto&& str    = token.getValue().str();
