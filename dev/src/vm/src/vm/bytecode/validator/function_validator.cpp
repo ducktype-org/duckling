@@ -873,8 +873,7 @@ class FunctionValidator {
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 
 				base::StrID wanted_type = instr.arg1.type_name;
-				if (wanted_type != table_type.name)
-					throw InvalidArgumentTypeError(instr.arg1);
+				if (wanted_type != table_type.name) throw InvalidArgumentTypeError(instr.arg1);
 			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}

@@ -98,9 +98,9 @@ namespace vm {
 	void Type::defineDynamicTable(TypeRef inner) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
-		
-		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ .inner_type = inner };
+
+		kind_type         = Kind::DynamicTable;
+		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
 	}
 

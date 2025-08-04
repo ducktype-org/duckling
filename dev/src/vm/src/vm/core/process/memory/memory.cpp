@@ -60,23 +60,24 @@ namespace vm {
 
 	auto Memory::dynTableAllocateHeapN(TypeCRef tbl_type, u64 n) -> Ref<Block> {
 		std::lock_guard lock(mutex);
-		auto inner_type = tbl_type->getInnerType().value();
+		auto            inner_type = tbl_type->getInnerType().value();
 		return createBlock(heap_allocator.dynTableAllocateN(tbl_type, inner_type, n));
 	}
 
 	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void {
 		std::lock_guard lock(mutex);
-		auto tbl_type = block->data.element_type;
-		auto inner_type = tbl_type->getInnerType().value();
-		BlockData new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-		auto old_view = block->data.view;
-		auto new_view = new_block_data.view;
+		auto            tbl_type       = block->data.element_type;
+		auto            inner_type     = tbl_type->getInnerType().value();
+		BlockData       new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+		auto            old_view       = block->data.view;
+		auto            new_view       = new_block_data.view;
 
-		std::memcpy(new_view.getBegin(), old_view.getBegin(), std::min(new_view.size(), old_view.size()));
+		std::memcpy(
+			new_view.getBegin(), old_view.getBegin(), std::min(new_view.size(), old_view.size())
+		);
 		heap_allocator.deallocate(&block->data);
 		block->data = new_block_data;
 	}
-
 
 	void Memory::freeBlock(Ref<Block> block) {
 		std::lock_guard lock(mutex);
