@@ -397,7 +397,7 @@ DEF_OPCODE(
 	dynTableReAlloc_lptr_type,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::Type /* table_type ,
-vm::opargs::StackLocal64     new elem count */
+vm::opargs::StackLocal64     new_elem_count */
 )
 
 // ========= TYPE OPERATIONS ========
