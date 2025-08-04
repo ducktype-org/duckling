@@ -43,7 +43,6 @@
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
-#include <variant>
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
@@ -238,6 +237,16 @@ namespace vm {
 	DEFINE_DIVISION_OP(div, 64, i64)
 	DEFINE_DIVISION_OP(div, 32, i32)
 
+	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
+	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
+	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
+	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
+	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
+	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
+	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
+	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
+
+
 	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
 	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
 	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
@@ -335,6 +344,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
 		{ derefStack<i32>(local_stack, instr->arg0) *= -1; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l64)(FUNCTION_ARGS) {
+		{ derefStack<double>(local_stack, instr->arg0) *= -1.0; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l32)(FUNCTION_ARGS) {
+		{ derefStack<float>(local_stack, instr->arg0) *= -1.0f; }
 		FUNCTION_CONT(1);
 	}
 

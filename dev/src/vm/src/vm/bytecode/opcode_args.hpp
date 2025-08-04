@@ -39,9 +39,9 @@ namespace vm::opargs {
 
 		Immediate() = default;
 
-		Immediate(const i64 value): value(value) {}
+		Immediate(const u64 value): value(value) {}
 
-		i64 value = 0;
+		u64 value = 0;
 
 		constexpr bool operator==(const Immediate& other) const noexcept {
 			return value == other.value;
