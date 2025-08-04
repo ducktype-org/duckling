@@ -14,6 +14,14 @@ function foo {
 	mov_l64_imm 		a, 1u64;
 	cmpEq_l64_imm       a, 1;
 	jmpIfNot_label 	fail;
+		
+	mov_l64_imm			a, 0xffffffffffffffff;
+	cmpEq_l64_imm 		a, -1;
+	jmpIfNot_label 	fail;
+
+	mov_l64_imm			a, 0b00000000000000000000000000000000000000000000000000000001;
+	cmpEq_l64_imm 		a, 1;
+	jmpIfNot_label 	fail;
 
 
 	mov_l64_l64 		ret_val, a;

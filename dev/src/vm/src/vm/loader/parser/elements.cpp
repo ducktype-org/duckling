@@ -38,6 +38,12 @@ namespace vm::loader::parser {
 
 		template<class T, class K>
 		T parseLiteral(F8ParserState& state) {
+			auto previous_token = state.tokens().peek();
+			i32  sign           = 1;
+			if (previous_token.isOperatorSymbol() && previous_token.getValue().str() == "-") {
+				sign = -1;
+				state.tokens().next();  // Consume the minus operator
+			}
 			auto token      = state.tokens().next();
 			auto next_token = state.tokens().peek();
 			// Consume the type specifier
@@ -48,7 +54,7 @@ namespace vm::loader::parser {
 					auto&& str_type = next_token.getValue().str();
 					if (str_type == "f" || str_type == "F") {
 						usize pos   = 0;
-						float value = std::stof(str, &pos);
+						float value = std::stof(str, &pos) * static_cast<float>(sign);
 						if (pos == str.length()) {
 							if constexpr (sizeof(T) == 4)
 								return std::bit_cast<T>(value);
@@ -64,7 +70,7 @@ namespace vm::loader::parser {
 						return T{ 0 };
 					} else if (str_type == "d" || str_type == "D") {
 						usize  pos   = 0;
-						double value = std::stod(str, &pos);
+						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						if (pos == str.length()) {
 							if constexpr (sizeof(T) == 8) return std::bit_cast<T>(value);
 						}
@@ -75,7 +81,7 @@ namespace vm::loader::parser {
 						return T{ 0 };
 					} else if (str_type == "i32" || str_type == "I32") {
 						usize pos  = 0;
-						u32   bits = std::bit_cast<u32>(std::stoi(str, &pos));
+						u32   bits = std::bit_cast<u32>(std::stoi(str, &pos) * sign);
 						if (pos == str.length()) {
 							if constexpr (sizeof(T) == 4)
 								return std::bit_cast<T>(bits);
@@ -88,8 +94,9 @@ namespace vm::loader::parser {
 						));
 						return T{ 0 };
 					} else if (str_type == "i64" || str_type == "I64") {
-						usize pos  = 0;
-						u64   bits = std::bit_cast<u64>(std::stoull(str, &pos));
+						usize pos = 0;
+						u64   bits
+							= std::bit_cast<u64>(std::stoll(str, &pos) * static_cast<i64>(sign));
 
 						if (pos == str.length())
 							if constexpr (sizeof(T) == 8) return std::bit_cast<T>(bits);
@@ -139,18 +146,24 @@ namespace vm::loader::parser {
 				} else if constexpr (sizeof(T) == 8) {
 					// By default, we assume 64-bit integer or double if it has a dot
 					if (str.find('.') != std::string::npos) {
-						double value  = std::stod(str);
+						double value  = std::stod(str) * static_cast<double>(sign);
 						T      result = std::bit_cast<T>(value);
 						return result;
-					} else {
-						i64 value  = std::stoll(str);
+					} else if (str.starts_with("0b") || str.starts_with("0B")) {
+						// For binary numbers, we parse them as 64-bit integers
+						u64 value  = std::stoull(str.substr(2), nullptr, 2);
 						T   result = std::bit_cast<T>(value);
+						return result;
+					} else {
+						i64 value = std::bit_cast<i64>(std::stoull(str, nullptr, 0))
+						          * static_cast<i64>(sign);
+						T result = std::bit_cast<T>(value);
 						return result;
 					}
 				} else if constexpr (sizeof(T) == 4) {
 					// For 32-bit integers, we check if it has a dot for float or double
 					if (str.find('.') != std::string::npos) {
-						float value  = std::stof(str);
+						float value  = std::stof(str) * static_cast<float>(sign);
 						T     result = std::bit_cast<T>(value);
 						return result;
 					} else {

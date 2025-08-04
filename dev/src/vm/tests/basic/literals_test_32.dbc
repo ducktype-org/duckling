@@ -11,6 +11,14 @@ function foo {
 	cmpEq_l32_imm 		a, 1;
 	jmpIfNot_label 	fail;
 
+	mov_l32_imm			a, 0x00000001;
+	cmpEq_l32_imm 		a, 1;
+	jmpIfNot_label 	fail;
+
+	mov_l32_imm			a, 0b00000000000000000000000000000001;
+	cmpEq_l32_imm 		a, 1;
+	jmpIfNot_label 	fail;
+
 	mov_l32_l32 		ret_val, a;
 	ret;
 
