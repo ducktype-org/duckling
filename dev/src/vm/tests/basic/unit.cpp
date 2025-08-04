@@ -78,6 +78,17 @@ private:
 	}
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
+
+	void checkZeroDivision() {
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("zero_division_i64.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
