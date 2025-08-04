@@ -613,6 +613,30 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
+
+			variant_case_novalue(Op_fadd_l64_l64) {}
+			variant_case_novalue(Op_fadd_l64_imm) {}
+			variant_case_novalue(Op_fadd_l32_l32) {}
+			variant_case_novalue(Op_fadd_l32_imm) {}
+
+			variant_case_novalue(Op_fsub_l64_l64) {}
+			variant_case_novalue(Op_fsub_l64_imm) {}
+			variant_case_novalue(Op_fsub_l32_l32) {}
+			variant_case_novalue(Op_fsub_l32_imm) {}
+
+			variant_case_novalue(Op_fmul_l64_l64) {}
+			variant_case_novalue(Op_fmul_l64_imm) {}
+			variant_case_novalue(Op_fmul_l32_l32) {}
+			variant_case_novalue(Op_fmul_l32_imm) {}
+
+			variant_case_novalue(Op_fdiv_l64_l64) {}
+			variant_case_novalue(Op_fdiv_l64_imm) {}
+			variant_case_novalue(Op_fdiv_l32_l32) {}
+			variant_case_novalue(Op_fdiv_l32_imm) {}
+
+			variant_case_novalue(Op_fneg_l64) {}
+			variant_case_novalue(Op_fneg_l32) {}
+
 			variant_case_novalue(Op_umul_l64_l64) {}
 			variant_case_novalue(Op_umul_l64_imm) {}
 			variant_case_novalue(Op_umul_l32_l32) {}

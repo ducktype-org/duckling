@@ -6,6 +6,8 @@
 
 #include <backends/llvm/llvm_backend.hpp>
 
+#include <base/exceptions.hpp>
+
 #include <iostream>
 
 namespace base::extend {
@@ -60,6 +62,7 @@ namespace compiler::backend_llvm {
 		const std::filesystem::path& output_file, CompilationOutputType output_type
 	) {
 		compileModuleToObject(impl.refMut(), output_file, output_type);
+		CORE_ASSERT(std::filesystem::exists(output_file), "LLVM compilation to file failed!");
 	}
 
 	u64 Module::getFunctionCount(bool including_prototypes) const {

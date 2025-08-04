@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
+		TESTER_ADD_TEST(floatOperationTest);
 	}
 
 private:
@@ -71,7 +72,23 @@ private:
 		);
 	}
 
+	void floatOperationTest() {
+		runTestOnVm("floating_point_arithmetic_32.dbc", "", "1056964608", {});
+		runTestOnVm("floating_point_arithmetic_64.dbc", "", "4602678819172646912", {});
+	}
+
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
+
+	void checkZeroDivision() {
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("zero_division_i64.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/basic/");
