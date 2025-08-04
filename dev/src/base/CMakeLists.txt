@@ -10,7 +10,7 @@ add_library(Base
         src/base/impl/bit256.cpp
 )
 
-# @TODO: unicode dependency might not be optional.
+# @TODO: unicode dependency might not be optimal.
 # Think of a way to "break" it
 make_module(Base USES unicode system_stdcxxexp)
 
