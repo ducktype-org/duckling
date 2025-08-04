@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(functionCallsTest);
 		TESTER_ADD_TEST(builtinFuncsTest);
 		TESTER_ADD_TEST(globalVariablesTest);
+		TESTER_ADD_TEST(booleanOperationsTest);
 	}
 
 protected:
@@ -113,6 +114,8 @@ private:
 	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
 
 	void globalVariablesTest() { runTest("modules/globals", {}, {}, {}, 48); }
+
+	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 };
 
 
