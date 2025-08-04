@@ -41,31 +41,28 @@ namespace vm::loader::parser {
 			auto token      = state.tokens().next();
 			auto next_token = state.tokens().peek();
 			// Consume the type specifier
-			if (next_token.isTypeSpecifier()) state.tokens().next();
-			if (next_token.isIdentifier()) {
-				state.log(makeBox<InvalidLiteral>(
-					token.getPosition(), base::strConcat("NIGGERRR for `", base::typeName<K>(), "`.")
-				));
-			}
 			auto&& str = token.getValue().str();
 			try {
 				if (next_token.isTypeSpecifier()) {
+					state.tokens().next();
 					auto&& str_type = next_token.getValue().str();
-					if (str_type == "f") {
+					if (str_type == "f" || str_type == "F") {
 						usize pos   = 0;
 						float value = std::stof(str, &pos);
 						if (pos == str.length()) {
 							if constexpr (sizeof(T) == 4)
 								return std::bit_cast<T>(value);
-							else if constexpr (sizeof(T) == 8)
-								return std::bit_cast<T>(static_cast<double>(value));
+							else if constexpr (sizeof(T) == 8) {
+								u32 float_bits = std::bit_cast<u32>(value);
+								return std::bit_cast<T>(static_cast<u64>(float_bits));
+							}
 						}
 						state.log(makeBox<InvalidLiteral>(
 							token.getPosition(),
 							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
 						));
 						return T{ 0 };
-					} else if (str_type == "d") {
+					} else if (str_type == "d" || str_type == "D") {
 						usize  pos   = 0;
 						double value = std::stod(str, &pos);
 						if (pos == str.length()) {
@@ -76,7 +73,7 @@ namespace vm::loader::parser {
 							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
 						));
 						return T{ 0 };
-					} else if (str_type == "i32") {
+					} else if (str_type == "i32" || str_type == "I32") {
 						usize pos  = 0;
 						u32   bits = std::bit_cast<u32>(std::stoi(str, &pos));
 						if (pos == str.length()) {
@@ -90,7 +87,7 @@ namespace vm::loader::parser {
 							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
 						));
 						return T{ 0 };
-					} else if (str_type == "i64") {
+					} else if (str_type == "i64" || str_type == "I64") {
 						usize pos  = 0;
 						u64   bits = std::bit_cast<u64>(std::stoull(str, &pos));
 
@@ -102,7 +99,7 @@ namespace vm::loader::parser {
 							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
 						));
 						return T{ 0 };
-					} else if (str_type == "u32") {
+					} else if (str_type == "u32" || str_type == "U32") {
 						usize pos  = 0;
 						u32   bits = static_cast<u32>(std::stoul(str, &pos));
 						if (pos == str.length()) {
@@ -116,7 +113,7 @@ namespace vm::loader::parser {
 							base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
 						));
 						return T{ 0 };
-					} else if (str_type == "u64") {
+					} else if (str_type == "u64" || str_type == "U64") {
 						usize pos  = 0;
 						u64   bits = std::stoull(str, &pos);
 						if (pos == str.length())

@@ -77,6 +77,11 @@ private:
 		runTestOnVm("floating_point_arithmetic_64.dbc", "", "4602678819172646912", {});
 	}
 
+	void literalsTest() {
+		runTestOnVm("literals_test_32.dbc", "", "1", {});
+		runTestOnVm("literals_test_64.dbc", "", "4602678819172646912", {});
+	}
+
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 
 	void checkZeroDivision() {
