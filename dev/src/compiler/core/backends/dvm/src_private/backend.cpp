@@ -489,7 +489,7 @@ namespace compiler::backend_vm {
 			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
 			    || kind == OpKind::div || kind == OpKind::mod || kind == OpKind::log_and
 			    || kind == OpKind::log_or || kind == OpKind::log_xor) {
-				CORE_ASSERT(args.size() == 3, "Invalid arithmetic operation argument count");
+				CORE_ASSERT(args.size() == 3, "Invalid arithmetic/logical operation argument count");
 				if (args[0] == args[1]) {
 					// This resolves e.g. `a = a + b;` by doing `a = b`
 					args.pop_front();
@@ -505,7 +505,11 @@ namespace compiler::backend_vm {
 					args.push_front(output);
 				}
 			} else if (kind == OpKind::neg || kind == OpKind::log_not) {
-				CORE_ASSERT(args.size() == 2, "Invalid argument count for neg");
+				CORE_ASSERT(
+					args.size() == 2,
+					"Invalid argument count for ",
+					kind == OpKind::neg ? "neg" : "not"
+				);
 				if (args[0] == args[1]) {
 					// a = -a;
 					args.pop_back();
