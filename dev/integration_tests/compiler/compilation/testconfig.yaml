@@ -15,3 +15,12 @@ Tests:
         # "sample_duck" is the name of the test case, which is used in
         # run_args variable. "sample_duck" is also the folder which has our duck file.
         ExitCode: 3
+  base:
+    Cases:
+      base:
+        Output:
+          String: "4 \n76 \n94 \n12 \n"
+          # I don't know there is a whitespace at the end of each line.
+          # @TODO: fix trailing space
+        ExitCode: 76
+

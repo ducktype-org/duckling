@@ -1,0 +1,38 @@
+# The unusual style of this test so to use as little of the duckling language 
+# as possible, in order to test only the correctness of the ternary operator
+# and not fail when some other functionality is being worked on.
+
+# Subsequent values are binary, so the binary representation of the error code 
+# has all the information about which cases where evaluated. 
+
+# Each sub-case takes half a byte and has its correct result written in binary
+# in a comment so when looking at the binary error code one can identify the 
+# fallen case. 
+
+fun foo() -> i64 = {
+    return 5 + 7;
+}
+ 
+fun main() -> i64 = {
+    let a: i64 = 0;
+    let b: i64 = 0;
+
+    # Assigning a literal
+    a = 4; 
+
+    # Assigning a local variable
+    b = a;                       # b = 4
+
+    # Assigning an expression
+    a = ( a ) + ( b );           # a = 8
+
+    # Assigning a more complex expression
+    b = (2 * a) + 5 * (a + b); # b = 2 * 8 + 5 * 12 = 16 + 60 = 76
+    
+    builtin_output_i64(4);          # stdout: 4\n
+    builtin_output_i64(b);          # stdout: 76\n
+    builtin_output_i64(a + b + 10); # stdout: 94\n
+    builtin_output_i64(foo());      # stdout: 12\n
+
+    return b;
+}
