@@ -16,6 +16,7 @@
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
+#include "base/ints.hpp"
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
@@ -88,10 +89,13 @@ namespace compiler::helios::code {
 				// Exclude hex or binary prefixes
 				bool is_prefixed = (value.starts_with("0x") || value.starts_with("0b"));
 
-				if (is_float && !is_prefixed)
-					node = makeBox<LiteralNumCTVExpr>(ctx, std::stod(value));
-				else
-					node = makeBox<LiteralNumCTVExpr>(ctx, std::stoll(value));
+				if (is_float && !is_prefixed) {
+					f80 as_ld = std::stold(value);
+					node = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_ld));
+				} else {
+					i64 as_i64 = std::stoll(value);
+					node = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_i64));
+				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {

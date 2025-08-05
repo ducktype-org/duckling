@@ -72,42 +72,48 @@ namespace compiler::helios {
 						using LhsT = decltype(lhs);
 						using RhsT = decltype(rhs);
 
-						// Fallback to a known, safe type promotion if common_type fails
+						// types potentially to big to prevent overflow
 						using ResultT = std::conditional_t<
-							std::is_arithmetic_v<LhsT> && std::is_arithmetic_v<RhsT>,
-							std::common_type_t<LhsT, RhsT>,
+							std::is_integral_v<LhsT> && std::is_integral_v<RhsT>,
+							i64,
 							f80>;
+
+						ResultT result_value;
 
 						if constexpr (std::is_arithmetic_v<ResultT>) {
 							switch (expr.operation) {
 							case code::BuiltinBinary::IntegerAdd:
-								return static_cast<ResultT>(lhs) + static_cast<ResultT>(rhs);
+								result_value
+									= static_cast<ResultT>(lhs) + static_cast<ResultT>(rhs);
+								break;
 
 							case code::BuiltinBinary::IntegerSub:
-								return static_cast<ResultT>(lhs) - static_cast<ResultT>(rhs);
+								result_value
+									= static_cast<ResultT>(lhs) - static_cast<ResultT>(rhs);
+								break;
 
 							case code::BuiltinBinary::IntegerMul:
-								return static_cast<ResultT>(lhs) * static_cast<ResultT>(rhs);
-
+								result_value
+									= static_cast<ResultT>(lhs) * static_cast<ResultT>(rhs);
+								break;
 							case code::BuiltinBinary::IntegerDiv:
-								return static_cast<ResultT>(lhs) / static_cast<ResultT>(rhs);
-
+								result_value
+									= static_cast<ResultT>(lhs) / static_cast<ResultT>(rhs);
+								break;
 							case code::BuiltinBinary::IntegerMod:
-								return static_cast<i64>(lhs) % static_cast<i64>(rhs);
-
+								result_value = static_cast<i64>(lhs) % static_cast<i64>(rhs);
+								break;
 							case code::BuiltinBinary::IntegerPow:
-								return static_cast<ResultT>(std::pow(lhs, rhs));
-
+								result_value = static_cast<ResultT>(std::pow(lhs, rhs));
+								break;
 							case code::BuiltinBinary::BooleanAnd:
 								return static_cast<num_ctv>(
 									static_cast<bool>(lhs) && static_cast<bool>(rhs)
 								);
-
 							case code::BuiltinBinary::BooleanOr:
 								return static_cast<num_ctv>(
 									static_cast<bool>(lhs) || static_cast<bool>(rhs)
 								);
-
 							default:
 								throw base::NotYetImplemented(
 									"Evaluation of other operators is not implemented yet"
@@ -116,6 +122,7 @@ namespace compiler::helios {
 						} else {
 							throw std::runtime_error("Operands must be arithmetic");
 						}
+						return make_minimized_num_ctv(result_value);
 					},
 					lhs_value,
 					rhs_value

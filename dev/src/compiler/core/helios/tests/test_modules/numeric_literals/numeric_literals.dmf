@@ -1,5 +1,5 @@
-const A: i64 = 5.3;
-const B: f80 = 5.3;
-const C: f80 = 5.1 + 0.2;
-const D: f80 = 4.3 + 1;
-const E: f80 = 10.6 - A;
+const A: i64 = 10.125;
+const B: f80 = 10.125;
+const C: f80 = 10.5 - 0.375;
+const D: f80 = 10 + 0.125;
+const E: f80 = 20.25 - B;

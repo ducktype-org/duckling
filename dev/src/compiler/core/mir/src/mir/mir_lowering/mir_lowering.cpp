@@ -401,7 +401,17 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		MutLocalRef addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
-			local_list.emplaceBack(MirLocal{ type });
+			// mock to not have problem with different integral types in operations
+			// @TODO make it better
+			if (type.getType().getKind() == tsh::Kind::Integral) {
+				auto i64_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryIntegralType>({ 64 }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				};
+				local_list.emplaceBack(MirLocal{ i64_type });
+			} else
+				local_list.emplaceBack(MirLocal{ type });
 			auto tmp = local_list.last();
 			tmp->setLifetimeScope(scope);
 			return tmp;

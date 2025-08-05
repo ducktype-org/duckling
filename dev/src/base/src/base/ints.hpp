@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <variant>
 
 STRONG_TYPEDEF_INT(u8, uint8_t);
@@ -29,6 +30,37 @@ using f64 = double;
 using f80 = long double;
 
 using num_ctv = std::variant<i16, i32, i64, f32, f64, f80>;
+
+inline num_ctv make_minimized_num_ctv(i64 val) {
+	if (val >= std::numeric_limits<i16>::min() && val <= std::numeric_limits<i16>::max())
+		return num_ctv{ static_cast<i16>(val) };
+	else if (val >= std::numeric_limits<i32>::min() && val <= std::numeric_limits<i32>::max())
+		return num_ctv{ static_cast<i32>(val) };
+	else
+		return num_ctv{ val };  // i64 is the smallest safe type here
+}
+
+inline num_ctv make_minimized_num_ctv(f80 val) {
+	if (static_cast<f80>(static_cast<f32>(val)) == val)
+		return num_ctv{ static_cast<f32>(val) };
+	else if (static_cast<f80>(static_cast<f64>(val)) == val)
+		return num_ctv{ static_cast<f64>(val) };
+	else
+		return num_ctv{ val };  // Full precision needed
+}
+
+template<typename>
+inline constexpr bool always_false = false;
+
+template<typename T>
+inline num_ctv make_minimized_num_ctv(T val) {
+	if constexpr (std::is_same_v<T, i64>)
+		return make_minimized_num_ctv(static_cast<i64>(val));
+	else if constexpr (std::is_same_v<T, f80>)
+		return make_minimized_num_ctv(static_cast<f80>(val));
+	else
+		static_assert(always_false<T>, "Unsupported type for minimization");
+}
 
 inline bool operator==(const num_ctv& lhs, i64 rhs) {
 	return std::visit(

@@ -108,9 +108,9 @@ private:
 
 		for (auto con = 'A'; con <= 'E'; con++) {
 			auto value = getValue(std::string(1, con), root_scope);
-			ASSERT_TRUE(std::holds_alternative<double>(value));
-			auto* f = std::get_if<double>(&value);
-			ASSERT_EQUAL(5.3, *f);
+			ASSERT_TRUE(std::holds_alternative<f32>(value));
+			auto* f = std::get_if<f32>(&value);
+			ASSERT_EQUAL(10.125, *f);
 		}
 	}
 
@@ -1060,7 +1060,7 @@ private:
 	void testTypeOfConstAndVar() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/type_deduction")));
 
-		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto int64_kind = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed }).getKind();
 		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
 		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
 
@@ -1071,12 +1071,12 @@ private:
 		// @TODO: #925 fix how tuples are deduced
 
 		// Vars
-		ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
+		ASSERT_EQUAL(int64_kind, getTypeOf("EasyInt", foo_body_scope).getKind());
 		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
 
 		// Consts
-		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(int64_kind, getTypeOf("SimpleInt", root_scope).getKind());
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
 	}

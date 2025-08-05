@@ -31,14 +31,12 @@ namespace compiler::helios::code {
 		}
 
 		// Confirm matching sizes and signedness in the case of integers.
-		if (argument_kind == tsh::Kind::Integral) {
+		if (argument_kind == tsh::Kind::Integral
+		    && rhs_type.getType().getKind() == tsh::Kind::Integral) {
 			auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
 			auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
-			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
-			    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
-				return {};
-			}
+			if (lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) return {};
 		}
 
 		// @TODO: change to base::map when possible
