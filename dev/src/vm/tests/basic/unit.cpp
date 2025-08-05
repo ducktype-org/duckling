@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(floatOperationTest);
 		TESTER_ADD_TEST(literalsTest);
+		TESTER_ADD_TEST(checkLiteralErrorHandling);
 	}
 
 private:
@@ -97,6 +98,12 @@ private:
 			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
+	}
+
+	void checkLiteralErrorHandling() {
+		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
+		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
+		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
 	}
 };
 
