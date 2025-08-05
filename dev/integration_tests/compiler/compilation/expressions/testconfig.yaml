@@ -1,8 +1,8 @@
 # Expression tests
 
 Tests:
-  expressions:
+  ternary:
     Cases:
-      ternary:
+      default:
         Output:
           String: "9 \n9 \n9 \n18 \n4 \n"

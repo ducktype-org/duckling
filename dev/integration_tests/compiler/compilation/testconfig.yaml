@@ -3,18 +3,9 @@
 PreCase: "@{clean_cmd} && mkdir build"
 clean_cmd: "rm -rf build"
 Clean: "@{clean_cmd}"
-Run: "@{duck_path} compile_package -a build @{CaseName} && ./build/package_llvm.exe"
-
-SubDirs:
-  - expressions
+Run: "@{duck_path} compile_package -a build @{Name} && ./build/package_llvm.exe"
 
 Tests:
-  compile-simple:
-    Cases:
-      sample_duck:
-        # "sample_duck" is the name of the test case, which is used in
-        # run_args variable. "sample_duck" is also the folder which has our duck file.
-        ExitCode: 3
   base:
     Cases:
       base:
@@ -24,3 +15,6 @@ Tests:
           # @TODO: fix trailing space
         ExitCode: 76
 
+SubDirs:
+  - expressions
+  - samples
