@@ -17,6 +17,12 @@
 #include <vm/core/process/memory/memory.hpp>
 
 namespace vm::loader::parser {
+	/**
+	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type
+	 * specifier like `i32`, `f`, etc., it will adjust the parsing behavior accordingly. By default,
+	 * it assumes 64-bit integer or double if it has a dot (works for hex and binary too). T has to
+	 * be type of size 64bits.
+	 */
 	namespace opargs_parsers {
 		template<class T, class K>
 		T parseLiteral(F8ParserState& state) {
