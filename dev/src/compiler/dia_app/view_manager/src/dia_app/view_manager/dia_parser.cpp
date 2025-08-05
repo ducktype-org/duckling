@@ -6,7 +6,7 @@ namespace dia_file {
 	ExploreEdgeParams::ExploreEdgeParams(const json &edge)  {
 		ASSUME_OBJ(edge);
 		ASSUME_HAS_STR_ASSIGN(edge, name);
-		ASSUME_HAS_UINT_ASSIGN(edge, handle);
+		ASSUME_HAS_UINT_ASSIGN(edge, info_id);
 		ASSUME_HAS(edge, "params");
 		params = from_json<DisplayPtr>(edge["params"], [](const json &el) { return parse(el); });
 	}
@@ -16,7 +16,6 @@ namespace dia_file {
         ASSUME_HAS_STR_ASSIGN(location, file);
         ASSUME_HAS_UINT_ASSIGN(location, line);
         ASSUME_HAS_UINT_ASSIGN(location, column);
-        ASSUME_HAS_UINT_ASSIGN(location, last_modified);
     }
 
     CodeData::CodeData() {}
@@ -54,7 +53,6 @@ namespace dia_file {
 
     Entity::Entity(const json &entity) {
         ASSUME_OBJ(entity);
-        ASSUME_HAS_STR_ASSIGN(entity, kind);
         
         // Parse associated infos.
         ASSUME_HAS(entity, "assoc_infos");

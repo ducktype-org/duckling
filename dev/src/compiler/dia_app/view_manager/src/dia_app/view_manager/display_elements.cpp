@@ -28,11 +28,6 @@ namespace dia_app {
 			ASSUME_HAS(elem_json, "type");
 			ASSUME_VAL(elem_json, "type", "text");
 			ASSUME_HAS_STR_ASSIGN(elem_json, content);
-
-			if (elem_json.contains("groups")) {
-				ASSUME_ARR(elem_json, "groups");
-				groups = elem_json["groups"];
-			}
 		}
 
 		TextDElement::TextDElement(const TextDElement& other):

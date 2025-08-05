@@ -5,13 +5,13 @@ converting the raw diagnostic data
 emitted by the compiler into a human-readable messages.
 
 They offer methods to embed diagnostic data into the message,
-use some basic logic on that data, and, in some cases, even
-attach hyperlinks to other messages.
+potentially using some basic logic on that data to alter the content
+of the diagnostic message.
 
-Thanks to them, the compiler itself can be agnostic of the textual
+Thanks to the templates, the compiler itself can be agnostic of the textual
 representation of diagnostic messages, a decoupling which facilitates
 continuous improvement of said representation independently
-of the compiler's source code.
+from the compiler's source code.
 
 > This document goes through the technicalities of creating and using
 info templates. For more information on guidelines about writing the content
@@ -51,8 +51,18 @@ The `name` identifies the template within a given `family`.
 The whole triple is required to be reflected in the directory structure
 inside the template directory.
 
-@TODO: code, active_from, active_until - do we actually need these and, if so,
-mention them here.
+The metadata also includes information about the range of versions the template
+was (or has been) in use, as well as an *info code* - an integer which,
+along with the aforementioned `type` can also be used to identify the template.
+
+> In diagnostic messages you often see text like `error[E1001]: ...`.
+The `E` in square brackets means an `error` type of the info and the number
+`1001` is the *info code*. Together, they uniquely identify the used info
+template.
+>
+> Note: the mechanism for global assignment of info codes has not yet been
+developed. When you design an info template, manually make sure to pick
+an info code which has not yet been taken.
 
 ~~~~~yaml
 metadata:
@@ -71,7 +81,7 @@ inside the `note/declaration/` directory and be named `variable_decl.yaml`.
 
 Every template can be parameterized by a set of arguments passed down
 by the compiler and each such argument is required to be a *component*
-in a View Manager sense (more on that @TODO).
+in a View Manager sense (more on that in the \ref dia-file document).
 
 In short, a *component* is a piece of text with metadata which can affect
 its display style and introduce interactivity. In particular, a component
@@ -235,8 +245,7 @@ of node types, depending on their purpose:
 - concatenation node,
 - parameter node,
 - macro node,
-- matching node,
-- include node.
+- matching node.
 
 All message templates are evaluated lazily (thanks to the matching node,
 not all branches of the template tree have to be evaluated), which is crucial
@@ -338,23 +347,3 @@ of:
 ~~~~~
 > A scheme for defining a matching node. Any number of cases can be introduced.
 The `[other]` class case is required.
-
-### Include node
-
-The include node introduces a simple interaction on a fragment of the message
-(specified in the `on` field).
-Upon interaction, the UI is supposed to show the user an info
-identified by the `include` field of this node (it acts as a sort
-of hyperlink to that info).
-
-> Note that the scope of included infos is quite limited as it is currently only
-possible to include non-parametrized infos without code fragments.
-
-~~~~~yaml
-on: <message>
-include:
-  type: <type>
-  family: <family>
-  name: <name>
-~~~~~
-> A scheme for defining an include node.

@@ -13,11 +13,11 @@ namespace dia_app {
 
 	namespace dia_file {
 
+		// Forward declarations of display elements and a display visitor.
+
 		// Element which can be displayed as a part of text.
 		struct DisplayElement;
 		using DisplayPtr = std::shared_ptr<DisplayElement>;
-
-		DisplayPtr parse(const json& msg);
 
 		struct TextDElement;
 		struct CodeDElement;
@@ -37,8 +37,48 @@ namespace dia_app {
 			LazyDElement
 		);
 
+		/**
+		 * @brief Parse the `json` representation of a display element.
+		 * 
+		 * @param msg The `json` representation
+		 * @return DisplayPtr 
+		 */
+		DisplayPtr parse(const json& msg);
+
+		/**
+		 * @brief A base class display element.
+		 * 
+		 * A display element represents a message fragment inside a diagnostic
+		 * file or inside the view constructor's internal representation.
+		 * It can define the text or code to be displayed, additional metadata,
+		 * interactive content, or represent a lazily fetched subtree of display
+		 * elements. 
+		 * 
+		 */
 		struct DisplayElement {
+			/**
+			 * @brief Every display element has a set of infos associated
+			 * with it.
+			 * 
+			 * Associated infos are the infos which are supposed to be displayed
+			 * to the user upon a certain interaction with this element, e.g. by
+			 * showing a note with a declaration of a variable that a particular
+			 * display element refers to.
+			 * 
+			 */
 			std::set<InfoID>  assoc_infos;
+			/**
+			 * @brief Every display element has a set of groups it belongs to.
+			 * 
+			 * Display element groups are only used inside the info code
+			 * section's contents.
+			 * 
+			 * They refer to specific pointer messages in that code section.
+			 * An element containing a specific group means that this
+			 * element is to be underlined and pointed to by the corresponding
+			 * pointer message.
+			 * 
+			 */
 			std::set<std::string> groups;
 
 			DisplayElement() = default;
@@ -53,12 +93,11 @@ namespace dia_app {
 			virtual DisplayPtr copy() const = 0;
 
 			// Get all associated infos on this particular element.
-			// Note: this does *not* get all associated infos from
-			//       the entire subtree.
+			// May fetch some entities.
 			virtual std::set<InfoID> getAssocInfos(ViewConstructor &vc) const { return assoc_infos; }
 
-			// Check whether this particular element has
-			// any associated infos. May fetch some entities.
+			// Check whether this particular element has any associated infos.
+			// May fetch some entities.
 			bool hasAssocInfos(ViewConstructor &vc) const { return getAssocInfos(vc).size() > 0; }
 
 			// Accumulation data for to-component conversion.
@@ -94,6 +133,10 @@ namespace dia_app {
 			virtual void accept(DisplayElementVisitor &visitor) = 0;
 		};
 
+		/**
+		 * @brief A display element representing simple text.
+		 * 
+		 */
 		struct TextDElement: public DisplayElement {
 			std::string content;
 
@@ -111,6 +154,11 @@ namespace dia_app {
 			}
 		};
 
+		/**
+		 * @brief A display element representing a concatenation of other
+		 * display elements.
+		 * 
+		 */
 		struct ConcatDElement: public DisplayElement {
 			std::vector<DisplayPtr> elems;
 
@@ -131,6 +179,13 @@ namespace dia_app {
 			}
 		};
 
+		/**
+		 * @brief A display element representing a start of a new line.
+		 * It may optionally contain the new line's number in the source file
+		 * (which is considered only when the element resides within the info's
+		 * code section).
+		 * 
+		 */
 		struct StartLineDElement: public DisplayElement {
 			// Line number.
 			base::Optional<u32> number;
@@ -149,6 +204,11 @@ namespace dia_app {
 			}
 		};
 
+		/**
+		 * @brief A display element representing two pieces of content
+		 * alternating upon user interaction.
+		 * 
+		 */
 		struct InteractDElement: public DisplayElement {
 			DisplayPtr content;
 			DisplayPtr alt_content;
@@ -167,6 +227,19 @@ namespace dia_app {
 			}
 		};
 
+		/**
+		 * @brief A display element representing an initially unfetched element
+		 * subtree.
+		 * 
+		 * Note that since display elements are immutable, lazy elements are
+		 * not removed from the element tree upon fetching their contents.
+		 * Instead, the fetched contents reside inside the corresponding
+		 * view constructor and can be queried by this lazy element.
+		 * 
+		 * Note: if the lazy element has any `assoc_infos` or `groups` data,
+		 * it is ignored upon fetching its the `evaluated` content.
+		 * 
+		 */
 		struct LazyDElement: public DisplayElement {
 			LazyDisplayID id;
 
@@ -186,6 +259,16 @@ namespace dia_app {
 			}
 		};
 
+		/**
+		 * @brief A display element representing content related to a specific
+		 * entity in the info group.
+		 * 
+		 * Calling `getAssocInfos` queries the related entity's contents
+		 * and may add more associated infos to the result than the ones
+		 * present in the `assoc_infos` field of the `DisplayElement` base
+		 * class.
+		 * 
+		 */
 		struct EntityDElement: public DisplayElement {
 			EntityID refers_to;
 			DisplayPtr         content;
@@ -205,6 +288,10 @@ namespace dia_app {
 			}
 		};
 
+		/**
+		 * @brief A display element representing a piece of code.
+		 * 
+		 */
 		struct CodeDElement: public DisplayElement {
 			std::string content;
 
@@ -222,9 +309,16 @@ namespace dia_app {
 			}
 		};
 
-		// Evaluate the pure text content of an element.
-		// Only evaluates the default content (alt_content is ignored).
-		// Used e.g. for "case of" matching in message templates.
+		/**
+		 * @brief A visitor which evaluates the pure text content of a display
+		 * element.
+		 * 
+		 * Only the default content of the element tree is added to the result
+		 * (the alternative content of `InteractiveDElement` is ignored).
+		 * 
+		 * Used e.g. in the `case ... of ...` template element from info
+		 * templates.
+		 */
 		struct ToTextVisitor : public DisplayElementVisitor {
 			ViewConstructor &vc;
 			std::string builder;

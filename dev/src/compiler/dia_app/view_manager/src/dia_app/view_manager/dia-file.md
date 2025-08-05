@@ -10,16 +10,6 @@ to form a message which can be displayed to the user. The diagnostic file
 provides data, the templates provide phrasing and composition of
 the message.
 
-> Note that as of writing this document
-(summer 2025) there is no actual laziness mechanism
-between the compiler and the view manager
-(the module consuming the diagnostic file).
-Nonetheless, this feature *can* be used
-for testing - handles (from `lazy_component`,
-`lazy_entity`, and a lazy `info_handle`) must then
-contain the evaluated content of the object they
-are referring to.
-
 ## Syntax
 
 The baseline syntax of the diagnostic file is JSON.
@@ -41,6 +31,28 @@ be represented as:
 ```
 that is, as an array of info groups.
 
+> Note: there is going to be a lot of tables in the following sections.
+Each of them describes the required (and optional) content of JSON objects
+of a given type. So, for example, the following table:
+>
+> | Key     | Value     | Optional  |
+> | --      | --        | --        |
+> | type    | `"blob"`  | no        |
+> | name    | `<string>`| no        |
+> | hobby   | `<string>`| yes       |
+>
+> describes an object with a required field `type` with value `"blob"`,
+a required field `name` with value of type `string` (so it can be **any** string),
+and an **optional** field `hobby` with value of type `string`.
+>
+> Here's an example of a JSON object which satisfies the above type:
+> ```json
+> {
+>   "type": "blob",
+>   "name": "Bobby"   
+> }
+> ```
+
 ## 1. Infos
 
 ### `info_group`
@@ -56,28 +68,44 @@ related to its content.
 | Key               | Value                 | Optional  |
 | --                | --                    | --        |
 | main_info         | `<main_info>`         | no        |
-| displayed_secondary_infos | `[<info_handle>...]` | no |
-| secondary_infos   | `[<secondary_info>...]` | no      |
+| displayed_secondary_infos | `[<info_id>...]` | no |
+| secondary_infos   | `<secondary_infos>`   | no      |
 | entities          | `<entities>`          | no        |
+
+#### `secondary_infos`
+A dictionary with keys of type `string`
+and values of type `secondary_info`.
+
+> Note: not all secondary infos mentioned within an info group
+must initially be present in this dictionary. Whenever a missing
+secondary info is supposed to be displayed to the user, the view
+manager module communicates with the language server to fetch
+its contents (*).
+
+> (*) This is the goal. Right now there's no integration with
+the language server and laziness, though implemented in the view
+manager, only fetches the missing content from another place
+in the diagnostic file.
 
 #### `entities`
 A dictionary with keys of type `string`
 and values of type [`entity`](#3-entities).
 
-### `info_handle`
-An info handle is a piece of data which identifies a specific info.
-It can either be an index in the `secondary_infos` array in the info group,
-or, if the info has not yet been evaluated, a lazy info handle.
+> Note: not all entities mentioned within an info group
+must initially be present in this dictionary. Whenever a missing
+entity is needed to displayed something to the user, the view
+manager module communicates with the language server to fetch
+its contents (*).
 
-#### Lazy info handle
-A lazy info handle represents an info which has not yet been evaluated.
-It contains a `handle` - a piece of data which can later be used to retrieve
-the evaluated contents of this info.
+> (*) This is the goal. Right now there's no integration with
+the language server and laziness, though implemented in the view
+manager, only fetches the missing content from another place
+in the diagnostic file.
 
-| Key       | Value                 | Optional  |
-| --        | --                    | --        |
-| type      | `"dummy_handle"`      | no        |
-| handle    | `<lazy_info_handle>`  | no        |
+### `info_id`
+An info ID is a piece of data which identifies a specific info.
+It is represented as a `string` value and acts as a key
+in the `secondary_infos` dictionary.
 
 ### `main_info`
 The main info contains the most general description of a diagnostic message.
@@ -98,8 +126,6 @@ and the fact that secondary infos may contain [explore edges](#explore_edge).
 
 > Note: the explore edges are only displayed in infos which have not initially
 been displayed.
-@TODO should it be this way? can't we display them always and potentially
-open up a copy of the info in side panel along with the outgoing edge?
 
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
@@ -149,16 +175,11 @@ the `code` element.
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
 | file      | `<string>`            | no        |
-| last_modified | `<uint>`          | no        |
 | line      | `<uint>`              | no        |
 | column    | `<uint>`              | no        |
 
-@TODO is last_modified needed now? it will be
-important when LS is connected, but will it
-be used here or maybe somewhere else?
-
 ### `explore_edge`
-An explore edge consists of a handle to the info it refers to,
+An explore edge consists of a ID of the info it refers to,
 a class edge `name`, and a set of parameters for that edge.
 
 > For more information about explore edges, see the \ref dia-templates
@@ -166,13 +187,11 @@ document.
 
 | Key       | Value                 | Optional  |
 | --        | --                    | --        |
-| handle    | `<info_handle>`       | no        |
+| info_id   | `<info_id>`           | no        |
 | name      | `<string>`            | no        |
 | params    | `<params>`            | no        |
 
 ## 2. Components
-@TODO `<string>` or `<more_descriptive_type_names>`?
-
 Some components can be annotated with additional
 metadata. Namely, a list of `groups` or an `alt_content`.
 
@@ -200,9 +219,6 @@ It can either be represented as an object of type
 | --        | --                | --        |
 | type      | `"text"`          | no        |
 | content   | `<string>`        | no        |
-| groups    | `[<string>...]`    | yes       |
-
-@TODO do we need groups in a text component?
 
 ### `code_component`
 A simple component representing code.
@@ -211,7 +227,7 @@ A simple component representing code.
 | --        | --                | --        |
 | type      | `"code"`          | no        |
 | content   | `<string>`        | no        |
-| groups    | `[<string>...]`    | yes       |
+| groups    | `[<string>...]`   | yes       |
 
 ### `start_line_component`
 A simple component representing the start of
@@ -278,12 +294,17 @@ The lazy component represents a component
 which has not yet been evaluated. It contains
 a `handle` - a piece of data which can later be used
 to retrieve the evaluated content of this
-component.
+component (*).
 
 | Key       | Value             | Optional  |
 | --        | --                | --        |
 | type      | `"lazy"`          | no        |
-| handle    | `<component_handle>` | no     |
+| handle    | `<string>`        | no        |
+
+> (*) This is the goal. Right now there's no integration with
+the language server and laziness, though implemented in the view
+manager, only fetches the missing content from another place
+in the diagnostic file.
 
 ### `component`
 Finally, a `component` is one of:
@@ -325,18 +346,12 @@ scope.
 
 | Key           | Value         | Optional | Count  |
 | --            | --            | --       | --     |
-| kind          | `<string>`    | no       | one    |
-| assoc_infos   | `[<info_handle>...]` | yes | one  |
+| assoc_infos   | `[<info_id>...]` | yes   | one    |
 | `<entity_key>` | `<json>`     | N/A      | many   |
-
-### Kind
-@TODO is kind really necessary? can't we just
-have a `"lazy": true` flag to represent lazy
-entities and that's it?
 
 ### Associated infos
 The `assoc_infos` field contains a list of info
-handles which will be attached to all components
+ID's which will be attached to all components
 referencing this entity. In practice, it means
 that after a user interaction on any of these
 components, all of these infos will be opened.
@@ -347,12 +362,3 @@ fields which may or may not be used by the view manager.
 
 > For more information about supported fields, see
 the view manager implementation (`display_elements.hpp`).
-
-### Lazy entities
-There is a special kind of entity - `lazy_entity`
-which only contains one field (apart from the `kind`
-field), namely, a `handle`.
-
-A lazy entity is an entity which has not yet been
-evaluated and the `handle` is a piece of data which
-can later be used to retrieve its evaluated content.
