@@ -4,6 +4,15 @@
 
 namespace dia_app {
 namespace dia_file {
+
+    // An explore edge from the diagnostic file.
+    struct ExploreEdgeParams {
+        std::string name;
+        base::HashMap<std::string, DisplayPtr> params;
+        InfoID handle;
+
+        ExploreEdgeParams(const json &edge);
+    };
     
     struct CodeData {
         struct Location {
@@ -11,25 +20,14 @@ namespace dia_file {
             u32 line, column;
             u32 last_modified;
 
-            Location() {}
-            Location(const json &location) {
-                ASSUME_HAS_STR_ASSIGN(location, file);
-                ASSUME_HAS_UINT_ASSIGN(location, line);
-                ASSUME_HAS_UINT_ASSIGN(location, column);
-                ASSUME_HAS_UINT_ASSIGN(location, last_modified);
-            }
+            Location();
+            Location(const json &location);
         };
         Location location;
         DisplayPtr content;
 
-        CodeData() {}
-        CodeData(const json &data) {
-            ASSUME_HAS(data, "location");
-            location = Location(data["location"]);
-            
-            ASSUME_HAS(data, "content");
-            content = parse(data["content"]);
-        }
+        CodeData();
+        CodeData(const json &data);
     };
 
     // Message parameter data (message template identifier and params)
@@ -39,33 +37,9 @@ namespace dia_file {
         base::Optional<CodeData> code;
         std::vector<ExploreEdgeParams> explore_edges;
         
-        InfoParams() {}
-        InfoParams(const json &info) {
-            // Parse required meta
-            ASSUME_HAS(info, "metadata");
-            metadata = ShortMetadata(info["metadata"]);
-            
-            // Parse required params.
-            ASSUME_HAS(info, "params");
-            ASSUME_OBJ(info["params"]);
-            for (auto &[key, val] : info["params"].items()) {
-                params.put(key, parse(val));
-            }
-            
-            // Parse optional code section.
-            if (info.contains("code")) {
-                code = CodeData(info["code"]);
-            }
-            
-            // Parse optional explore edges.
-            if (info.contains("explore_edges")) {
-                for (auto &edge : info["explore_edges"]) {
-                    explore_edges.emplace_back(edge);
-                }
-            }
-        }
-
-        InfoParams(const ShortMetadata &metadata) : metadata(metadata) {}
+        InfoParams();
+        InfoParams(const ShortMetadata &metadata);
+        InfoParams(const json &info);
     };
 
     struct Entity {
@@ -73,24 +47,7 @@ namespace dia_file {
         std::vector<InfoID> assoc_infos;
         base::HashMap<std::string, json> fields;
 
-        Entity(const json &entity) {
-            ASSUME_OBJ(entity);
-            ASSUME_HAS_STR_ASSIGN(entity, kind);
-            
-            // Parse associated infos.
-            ASSUME_HAS(entity, "assoc_infos");
-            ASSUME_ARR(entity, "assoc_infos");
-            for (auto &el : entity["assoc_infos"]) {
-                ASSUME(el.is_string(), "info ID in assoc_infos must be a string");
-                assoc_infos.push_back(el);
-            }
-
-            // Parse other fields.
-            for (auto &[key, val] : entity.items()) {
-                if (key == "assoc_infos") continue;
-                fields.put(key, val);
-            }
-        }
+        Entity(const json &entity);
     };
 } // namespace dia_file
 } // namespace dia_app

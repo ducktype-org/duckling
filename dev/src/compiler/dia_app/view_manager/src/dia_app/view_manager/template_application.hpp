@@ -6,14 +6,114 @@
 
 namespace dia_app {
 namespace message_template {
+    
+    struct ToDisplayVisitor : public TemplateElementVisitor {
+        ViewConstructor &vc;
+        const TemplateData &template_data;
+        const dia_file::InfoParams &info;
 
-    // Apply the message template to message.
-    inline dia_file::DisplayPtr apply(TemplatePtr message, TemplateDataHandle handle) {
-        if (!message) return nullptr;
-        
-        // Evaluate the template.
-        return message->toDisplay(handle);
-    }
+        // Auxiliary parameters for explore edges templates (shadow param_data).
+        base::HashMap<std::string, dia_file::DisplayPtr> aux_params;
+
+        // Macro evaluation stack for detecting infinite recursion.
+        std::set<std::string> macro_stack;
+
+        dia_file::DisplayPtr res;
+
+        ToDisplayVisitor(
+            ViewConstructor &vc,
+            const TemplateData &template_data,
+            const dia_file::InfoParams &info,
+            const base::HashMap<std::string, dia_file::DisplayPtr> aux_params = {}
+        ) : vc(vc),
+            template_data(template_data),
+            info(info),
+            aux_params(aux_params) {}
+
+        virtual void visitTextTElement(const TextTElement &el) {
+            res = std::make_shared<dia_file::TextDElement>(el.text);
+        }
+        virtual void visitConcatTElement(const ConcatTElement &el) {
+            std::vector<dia_file::DisplayPtr> display_elems;
+
+            // Collect results from all children of this element.
+            for (const auto& elem: el.elems) {
+                elem->accept(*this);
+                display_elems.push_back(res);
+            }
+            // Gather children's results into a concat display element.
+            res = std::make_shared<dia_file::ConcatDElement>(display_elems);
+        }
+        virtual void visitParamTElement(const ParamTElement &el) {
+            assert(aux_params.count(el.param) || info.params.count(el.param));
+            
+            // Auxiliary parameters shadow the base ones.
+            if (aux_params.contains(el.param)) {
+                // Deep copy so independent transformations
+                res = aux_params.at(el.param)->copy();
+            } else {
+                res = info.params.at(el.param)->copy();
+            }
+        }
+        virtual void visitMacroTElement(const MacroTElement &el) {
+            assert(template_data.macros.count(el.macro));
+            // If this macro is already being evaluated, an infinite
+            // recursion will occur.
+            assert(!macro_stack.contains(el.macro));
+            macro_stack.insert(el.macro);
+
+            template_data.macros.at(el.macro)->accept(*this);
+
+            macro_stack.erase(el.macro);
+        }
+        virtual void visitIncludeTElement(const IncludeTElement &el) {
+            // @TODO
+            // DisplayPtr res  = on->toDisplay(handle);
+            // InfoID info = InfoParamsHandle::add(include, handle.toDataHandle());
+            // res->assoc_infos.insert(info);
+            // return res;
+        }
+        virtual void visitCaseOfTElement(const CaseOfTElement &el) {
+            // Evaluate the pattern.
+            el.pattern->accept(*this);
+            // Evaluate the standard serialization string of
+            // the given pattern.
+            dia_file::ToTextVisitor v(vc);
+            res->accept(v);
+            auto pattern = v.builder;
+
+            // Match the pattern against exact key matches.
+            for (const auto &[key, val]: el.cases) {
+                if (is_case_exact(key)) {
+                    if (key == pattern) {
+                        // Found a match.
+                        val->accept(*this);
+                        return;
+                    }
+                }
+            }
+            // No exact match found, match against class matches.
+            // @TODO add more class matches here.
+
+            // At last, whean all other matches failed,
+            // match against the default match class.
+            el.cases.at("[other]")->accept(*this);
+        }
+    };
+
+    struct ExploreEdge {
+        dia_file::DisplayPtr description;
+        InfoID handle;
+
+        std::string getDescription(ViewConstructor &vc) {
+            dia_file::ToTextVisitor v(vc);
+            description->accept(v);
+            return v.builder;
+        }
+
+        ExploreEdge(dia_file::DisplayPtr description, InfoID handle) :
+            description(description), handle(handle) {}
+    };
 
     struct DisplayPointerMessage {
         u32 priority;
@@ -21,9 +121,11 @@ namespace message_template {
         dia_file::DisplayPtr message;
 
         DisplayPointerMessage() {}
-        DisplayPointerMessage(const PointerMessage &msg, TemplateDataHandle handle) :
+        DisplayPointerMessage(const PointerMessage &msg, ToDisplayVisitor &v) :
             priority(msg.priority), type(msg.type) {
-            message = apply(msg.message, handle);
+            // Evaluate the attached message.
+            msg.message->accept(v);
+            message = v.res;
             ASSUME(message, "no pointer message after template application");
         }
     };
@@ -38,31 +140,44 @@ namespace message_template {
         dia_file::DisplayPtr description;
         std::vector<ExploreEdge> explore_edges;
 
-        Info(TemplateDataHandle handle) :
-            metadata(handle.template_data.metadata),
-            code(handle.param_data.code) {
+        Info(ViewConstructor &vc,
+            const TemplateData &template_data,
+            const dia_file::InfoParams &info
+        ) :
+            metadata(template_data.metadata),
+            code(info.code) {
 
-            header_message = apply(handle.template_data.header_message, handle);
+            ToDisplayVisitor v(vc, template_data, info);
+
+            // Evaluate the header message template.
+            template_data.header_message->accept(v);
+            header_message = v.res;
             ASSUME(header_message, "no header message after template application");
 
-            for (auto &[key, val] : handle.template_data.pointer_messages) {
-                pointer_messages.put(key, DisplayPointerMessage(val, handle));
+            // Evaluate pointer message templates.
+            for (auto &[key, val] : template_data.pointer_messages) {
+                pointer_messages.put(key, DisplayPointerMessage(val, v));
             }
 
             // Verify code metadata against the template.
             verify_code();
 
-            // Description can be nullptr.
-            description = apply(handle.template_data.description, handle);
+            // Description can be nullptr (optional).
+            if (template_data.description) {
+                template_data.description->accept(v);
+                description = v.res;
+            }
 
-            for (auto &edge : handle.param_data.explore_edges) {
-                auto edge_template = handle.template_data.explore_edges.at(edge.name);
+            // Evaluate explore edge templates.
+            for (auto &edge : info.explore_edges) {
+                auto edge_template = template_data.explore_edges.at(edge.name);
                 // Remember to include auxiliary parameters included in the explore edge.
-                auto description_ptr = apply(edge_template, handle.with_aux_params(edge.params));
+                v.aux_params = edge.params;
+                edge_template->accept(v);
                 // In explore edges only plain text is displayed.
-                dia_file::ToTextVisitor v(handle.vc);
-				description_ptr->accept(v);
-                auto description = v.builder;
+                dia_file::ToTextVisitor v_text(vc);
+				v.res->accept(v_text);
+                auto description = v_text.builder;
 
                 explore_edges.emplace_back(description, edge.handle);
             }
@@ -132,11 +247,11 @@ namespace message_template {
     */
     inline Info apply(
         ViewConstructor &vc,
-        const dia_file::InfoParams &param_data
+        const dia_file::InfoParams &info
     ) {
         try {
-            TemplateData template_data(param_data);
-            return Info(TemplateDataHandle(vc, template_data, param_data));
+            TemplateData template_data(info);
+            return Info(vc, template_data, info);
         } catch (TemplateFileNotFoundException e) {
             ASSUME(false, "message template file was not found on disk");
         }

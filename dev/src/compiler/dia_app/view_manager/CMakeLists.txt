@@ -4,6 +4,7 @@ add_executable(view_manager
     src/dia_app/view_manager/components.cpp
     src/dia_app/view_manager/components.hpp
     src/dia_app/view_manager/dia_parser.hpp
+    src/dia_app/view_manager/dia_parser.cpp
     src/dia_app/view_manager/diagnostics.cpp
     src/dia_app/view_manager/diagnostics.hpp
     src/dia_app/view_manager/display_elements.cpp
@@ -13,10 +14,12 @@ add_executable(view_manager
     src/dia_app/view_manager/side_panel.hpp
     src/dia_app/view_manager/template_application.hpp
     src/dia_app/view_manager/template_elements.hpp
+    src/dia_app/view_manager/template_elements.cpp
     src/dia_app/view_manager/template_parser.hpp
     src/dia_app/view_manager/utils.cpp
     src/dia_app/view_manager/utils.hpp
     src/dia_app/view_manager/view_constructor.hpp
+    src/dia_app/view_manager/view_constructor.cpp
     src/dia_app/view_manager/view_manager.cpp
     src/dia_app/view_manager/view_manager.hpp
 )
@@ -24,28 +27,34 @@ add_executable(view_constructor_test
     src/dia_app/view_manager/components.cpp
     src/dia_app/view_manager/components.hpp
     src/dia_app/view_manager/dia_parser.hpp
+    src/dia_app/view_manager/dia_parser.cpp
     src/dia_app/view_manager/display_elements.cpp
     src/dia_app/view_manager/display_elements.hpp
     src/dia_app/view_manager/template_application.hpp
     src/dia_app/view_manager/template_elements.hpp
+    src/dia_app/view_manager/template_elements.cpp
     src/dia_app/view_manager/template_parser.hpp
     src/dia_app/view_manager/utils.cpp
     src/dia_app/view_manager/utils.hpp
     src/dia_app/view_manager/view_constructor.hpp
+    src/dia_app/view_manager/view_constructor.cpp
     src/dia_app/view_manager/vc_test.cpp
 )
 
 add_executable(yaml_test
     src/dia_app/view_manager/components.cpp
     src/dia_app/view_manager/dia_parser.hpp
+    src/dia_app/view_manager/dia_parser.cpp
     src/dia_app/view_manager/display_elements.cpp
     src/dia_app/view_manager/display_elements.hpp
     src/dia_app/view_manager/template_application.hpp
     src/dia_app/view_manager/template_elements.hpp
+    src/dia_app/view_manager/template_elements.cpp
     src/dia_app/view_manager/template_parser.hpp
     src/dia_app/view_manager/utils.cpp
     src/dia_app/view_manager/utils.hpp
     src/dia_app/view_manager/view_constructor.hpp
+    src/dia_app/view_manager/view_constructor.cpp
     src/dia_app/view_manager/vm_yaml_test.cpp
 )
 
@@ -57,6 +66,7 @@ add_library(VIEW_MANAGER
     src/dia_app/view_manager/components.cpp
     src/dia_app/view_manager/components.hpp
     src/dia_app/view_manager/dia_parser.hpp
+    src/dia_app/view_manager/dia_parser.cpp
     src/dia_app/view_manager/diagnostics.cpp
     src/dia_app/view_manager/diagnostics.hpp
     src/dia_app/view_manager/display_elements.cpp
@@ -65,10 +75,12 @@ add_library(VIEW_MANAGER
     src/dia_app/view_manager/side_panel.hpp
     src/dia_app/view_manager/template_application.hpp
     src/dia_app/view_manager/template_elements.hpp
+    src/dia_app/view_manager/template_elements.cpp
     src/dia_app/view_manager/template_parser.hpp
     src/dia_app/view_manager/utils.cpp
     src/dia_app/view_manager/utils.hpp
     src/dia_app/view_manager/view_constructor.hpp
+    src/dia_app/view_manager/view_constructor.cpp
     src/dia_app/view_manager/view_manager.cpp
     src/dia_app/view_manager/view_manager.hpp
 )

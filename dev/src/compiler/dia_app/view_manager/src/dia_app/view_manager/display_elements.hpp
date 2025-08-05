@@ -187,7 +187,7 @@ namespace dia_app {
 		};
 
 		struct EntityDElement: public DisplayElement {
-			std::string refers_to;
+			EntityID refers_to;
 			DisplayPtr         content;
 
 			EntityDElement(const json& elem_json);

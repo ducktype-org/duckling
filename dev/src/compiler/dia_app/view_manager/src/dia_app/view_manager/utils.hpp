@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <expected>
+#include <functional>
 #include <json/json.hpp>
 #include <yaml-cpp/yaml.h>
 #include <base/optional.hpp>
@@ -17,7 +18,6 @@ auto operator<<(auto&o,auto x)->decltype(x.end(),o){o<<"{";int i=0;for(auto e:x)
 
 namespace dia_app {
     using json = nlohmann::json;
-    using cstrr = const std::string &;
 
     struct TemplateFileNotFoundException : std::exception {};
 
@@ -89,11 +89,11 @@ namespace dia_app {
     }
 
     template<typename V>
-    base::HashMap<std::string, V> from_json(const json& data) {
+    base::HashMap<std::string, V> from_json(const json& data, std::function<V(json)> fun = [](const json &el) { return el; }) {
         ASSUME_OBJ(data);
         base::HashMap<std::string, V> res;
         for (auto &[key, val] : data.items()) {
-            res.put(key, val);
+            res.put(key, fun(val));
         }
         return res;
     }
@@ -106,31 +106,12 @@ namespace dia_app {
         std::string name;
 
         ShortMetadata() {}
-        ShortMetadata(const json &metadata) {
-            ASSUME_HAS_STR(metadata, "type");
-            type = from_string(metadata["type"]);
-            ASSUME_HAS_STR_ASSIGN(metadata, family);
-            ASSUME_HAS_STR_ASSIGN(metadata, name);
-        }
+        ShortMetadata(const json &metadata);
+        ShortMetadata(const YAML::Node &node);
 
-        ShortMetadata(const YAML::Node &node) {
-            // Required fields
-            assert(node["type"] && node["type"].IsScalar());
-            assert(node["family"] && node["family"].IsScalar());
-            assert(node["name"] && node["name"].IsScalar());
+        std::string getPath() const;
 
-            type = from_string(node["type"].as<std::string>());
-            family = node["family"].as<std::string>();
-            name = node["name"].as<std::string>();
-        }
-
-        std::string getPath() const {
-            return MESSAGE_TEMPLATE_PATH + to_string(type) + '/' + family + '/' + name + ".yaml";
-        }
-
-        bool operator==(const ShortMetadata &other) const {
-            return type == other.type && family == other.family && name == other.name;
-        }
+        bool operator==(const ShortMetadata &other) const;
     };
 
     // Message template metadata.
@@ -144,32 +125,9 @@ namespace dia_app {
         std::string active_until;
 
         Metadata() {}
-        Metadata(const YAML::Node &node) {
-            // Required fields
-            assert(node["type"] && node["type"].IsScalar());
-            assert(node["family"] && node["family"].IsScalar());
-            assert(node["name"] && node["name"].IsScalar());
-            assert(node["code"] && node["code"].IsScalar());
-            assert(node["active_from"] && node["active_from"].IsScalar());
-            assert(node["active_until"] && node["active_until"].IsScalar());
+        Metadata(const YAML::Node &node);
 
-            type = from_string(node["type"].as<std::string>());
-            family = node["family"].as<std::string>();
-            name = node["name"].as<std::string>();
-            try {
-                code = std::stoi(node["code"].as<std::string>());
-            } catch (const std::logic_error &e) {
-                ASSUME(false, "message code must be convertible to an integer, instead provided: " << node["code"].as<std::string>());
-            }
-            active_from = node["active_from"].as<std::string>();
-            active_until = node["active_until"].as<std::string>();
-        }
-
-        bool sameAs(const ShortMetadata &metadata) const {
-            return type == metadata.type
-                && family == metadata.family
-                && name == metadata.name;
-        }
+        bool sameAs(const ShortMetadata &metadata) const;
     };
 
     // Check if the "case of" key is an exact match (true) or a class match (false).
@@ -190,51 +148,5 @@ namespace dia_app {
     using EntityID = std::string;
     using LazyDisplayID = std::string;
 
-    using ComponentHandle = json;
-
-    // An explore edge for the state manager (with evaluated description).
-    struct ExploreEdge {
-        std::string description;
-        InfoID handle;
-
-        ExploreEdge(const std::string &description, InfoID handle) :
-            description(description), handle(handle) {}
-    };
-    // An explore edge from the diagnostic file.
-    struct ExploreEdgeParams {
-        std::string name;
-        base::HashMap<std::string, dia_file::DisplayPtr> params;
-        InfoID handle;
-
-        ExploreEdgeParams(const json &edge);
-    };
-
     struct ViewConstructor;
-
-    // A data handle for accessing and modifying the entities, secondary_infos,
-    // and a specific message template of a view constructor instance.
-    // 
-    // Note: this handle contains references to ViewConstructor fields.
-    //       Do not let it escape the ViewConstructor's scope!
-    struct TemplateDataHandle {
-        using TemplateData = message_template::TemplateData;
-        using InfoParams = dia_file::InfoParams;
-
-        ViewConstructor &vc;
-        const TemplateData &template_data;
-        // Auxiliary parameters for explore edges templates (shadow param_data).
-        base::HashMap<std::string, dia_file::DisplayPtr> aux_params;
-        const InfoParams &param_data;
-
-        // Macro evaluation stack for detecting infinite recursion.
-        std::set<std::string> macro_stack;
-
-        TemplateDataHandle(
-            ViewConstructor &vc,
-            const TemplateData &template_data,
-            const InfoParams &param_data
-        );
-        TemplateDataHandle with_aux_params(const base::HashMap<std::string, dia_file::DisplayPtr> &aux_params) const;
-
-    };
 }
