@@ -25,6 +25,8 @@ public:
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
 		TESTER_ADD_TEST(floatOperationTest);
+		TESTER_ADD_TEST(literalsTest);
+		TESTER_ADD_TEST(checkLiteralErrorHandling);
 	}
 
 private:
@@ -78,6 +80,11 @@ private:
 		runTestOnVm("floating_point_arithmetic_64.dbc", "", "4602678819172646912", {});
 	}
 
+	void literalsTest() {
+		runTestOnVm("literals_test_32.dbc", "", "3", {});
+		runTestOnVm("literals_test_64.dbc", "", "3", {});
+	}
+
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
 
 	void verySimpleBooleanTest() { runTestOnVm("very_simple_boolean.dbc", "", "1", {}); }
@@ -91,6 +98,12 @@ private:
 			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
+	}
+
+	void checkLiteralErrorHandling() {
+		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
+		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
+		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
 	}
 };
 
