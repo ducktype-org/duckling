@@ -211,7 +211,7 @@ namespace lexer {
 
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
 
-	bool Token::isTypeSpecifier() const { return type == Type::TypeSpecifier; };
+	bool Token::isTypeSpecifier() const { return type == Type::TypeSpecifier; }
 
 	bool Token::isComment() const { return type == Type::Comment; }
 
