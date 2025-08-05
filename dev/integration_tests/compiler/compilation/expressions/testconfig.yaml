@@ -3,5 +3,6 @@
 Tests:
   expressions:
     Cases:
-      conditional:
-        ExitCode: 99
+      ternary:
+        Output:
+          String: "9 \n9 \n9 \n18 \n4 \n"

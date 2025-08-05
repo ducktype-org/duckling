@@ -969,60 +969,58 @@ namespace compiler::mir {
 			output({ .begin = sub_continuation, .value = target_location });
 		}
 
-		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& expr) override {
+		void visitTernaryOperatorExpr(
+			const helios::code::TernaryOperatorExpr& ternary_expr
+		) override {
 			// Get info about the target.
-			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto result_type     = ternary_expr.expression_type.getSymbolType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
-			// Build "else" block.
-			auto else_block = function.newBlock();
-			else_block->setTerminator(
-				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-			);
-			auto else_construction_hole = else_block->addHole();
-			const auto [else_continuation, else_res]
-				= lowerExpr(*expr.if_true, else_block, function, expr_scope);
-			else_construction_hole.fill(Instruction{
-				Operation::Assign,
-				{ target_location },
-				{ else_res },
-				{ flagConstruct(target_location) },
-				expr_scope,
-			});
+			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
+				auto block = function.newBlock();
+				block->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+				);
+				auto assign_hole = block->addHole();
 
-			// Build "then" block.
-			auto then_block = function.newBlock();
-			then_block->setTerminator(
-				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-			);
-			auto then_construction_hole = then_block->addHole();
-			const auto [then_continuation, then_res]
-				= lowerExpr(*expr.if_false, then_block, function, expr_scope);
-			then_construction_hole.fill(Instruction{
-				Operation::Assign,
-				{ target_location },
-				{ then_res },
-				{ flagConstruct(target_location) },
-				expr_scope,
-			});
+				const auto [first_lowered_block, else_res]
+					= lowerExpr(case_expr, block, function, expr_scope);
+				assign_hole.fill(
+					Instruction{
+						Operation::Assign,
+						{ target_location },
+						{ else_res },
+						{ flagConstruct(target_location) },
+						expr_scope,
+					}
+				);
+				return first_lowered_block;
+			};
+
+			auto else_block = build_case_block(*ternary_expr.if_false);
+			auto then_block = build_case_block(*ternary_expr.if_true);
 
 			// Build branching.
 			auto condition_block = function.newBlock();
 			const auto [condition_continuation, condition_res]
-				= lowerExpr(*expr.condition, condition_block, function, expr_scope);
-			condition_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ condition_res, then_block->getID(), else_block->getID() },
-				{},
-				expr_scope,
-			});
+				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
+			condition_block->setTerminator(
+				{
+					Operation::Branch,
+					{},
+					{ condition_res, then_block->getID(), else_block->getID() },
+					{},
+					expr_scope,
+				}
+			);
 
 			// Return.
-			output(ExprLowerRes{
-				.begin = condition_continuation,
-				.value = target_location,
-			});
+			output(
+				ExprLowerRes{
+					.begin = condition_continuation,
+					.value = target_location,
+				}
+			);
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
