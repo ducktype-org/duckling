@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 
 	// Format and print the static message to the terminal.
 	term_ui::View term_msg(*vm_data);
-	term_msg.print(std::cerr);
+	term_msg.print(std::cerr, true);
 
     return 0;
 }
