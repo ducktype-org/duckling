@@ -16,7 +16,8 @@
 
 namespace compiler::frontend {
 
-	class ModuleTree2;
+	class ModuleTreeModifier;
+	class ModuleTree;
 
 	/**
 	 * @brief Represents a source file in the Duckling compiler.
@@ -25,24 +26,28 @@ namespace compiler::frontend {
 		fs::File                   path;
 		base::StrID                lang_file_name;
 		FileID                     id;
+		base::CRef<ModuleTree>     linked_module;
 		base::Optional<pst::PST<>> parse_tree;
 
 		static base::StableHashMap<FileID, SourceFile> file_map;
 
-		SourceFile(fs::File path);
+		SourceFile(fs::File path, base::CRef<ModuleTree> linked_module);
 
-		void update();
+		void update(bool content_changed = false);
 
-		friend class ModuleTree2;
+		friend class ModuleTreeModifier;
+		friend class ModuleTree;
 	public:
 
-		static Ref<SourceFile> create(fs::File path);
+		static Ref<SourceFile> create(fs::File path, base::CRef<ModuleTree> linked_module);
 
 		static Ref<SourceFile> getSourceFile(FileID id);
 
 		static Ref<SourceFile> getSourceFile(const fs::File& file);
 
 		[[nodiscard]] fs::File getPath() const { return path; }
+
+		[[nodiscard]] base::CRef<ModuleTree> getModule() const { return linked_module; }
 
 		[[nodiscard]] base::StrID getLangFileName() const {
 			return lang_file_name;
