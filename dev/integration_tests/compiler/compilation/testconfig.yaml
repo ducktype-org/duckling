@@ -3,7 +3,7 @@
 PreCase: "@{clean_cmd} && mkdir build"
 clean_cmd: "rm -rf build"
 Clean: "@{clean_cmd}"
-Run: "@{duck_path} compile_package -a build @{Name} && ./build/package_llvm.exe"
+Run: "@{duck_path} compile_package -a build duck_modules/@{Name} && ./build/package_llvm.exe"
 
 Tests:
   base:
