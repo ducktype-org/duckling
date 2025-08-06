@@ -290,7 +290,9 @@ namespace lexer {
 		} else if (peek().isDigit()) {
 			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
 				binLiteralHandler(output);
-			else if (peek().is('0') && peek(1).is('x'))
+			else if (peek().is('0') && (peek(1).is('o') || peek(1).is('O')))
+				octLiteralHandler(output);
+			else if (peek().is('0') && (peek(1).is('x') || peek(1).is('X')))
 				hexLiteralHandler(output);
 			else
 				decLiteralHandler(output);
@@ -409,6 +411,21 @@ namespace lexer {
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 
 		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
+	}
+	
+	void Lexer::octLiteralHandler(Tokens& output) {
+		usize begin = where;
+		usize end{};
+		auto  source_start = currentPosition();
+
+		skip(2);  // 0o
+		while (peek().isOctDigit()) next();
+		end = where - 1;
+
+		dia::SourcePosition source_position(source_start, end);
+
+		addTokenMsg(begin, end, "numLiteral");
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {

@@ -79,6 +79,7 @@ namespace lexer {
 		void typeSpecifierHandler(Tokens& output);
 		void decLiteralHandler(Tokens& output);
 		void binLiteralHandler(Tokens& output);
+		void octLiteralHandler(Tokens& output);
 		void hexLiteralHandler(Tokens& output);
 		/**@}*/
 
