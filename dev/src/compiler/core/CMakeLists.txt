@@ -5,4 +5,4 @@ add_subdirectory(helios)
 add_subdirectory(mir)
 add_subdirectory(lir)
 add_subdirectory(backends)
-
+add_subdirectory(linker)

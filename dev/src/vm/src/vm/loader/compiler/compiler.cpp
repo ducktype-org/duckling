@@ -38,7 +38,7 @@ namespace vm::loader::compiler {
 			usize                                       local_stack_size{};
 		};
 
-		i64 getOpCodeArgValue(
+		u64 getOpCodeArgValue(
 			CompilationContext&      ctx,
 			const usize              instruction_index,
 			const opargs::OpCodeArg& opcode_arg
@@ -49,7 +49,7 @@ namespace vm::loader::compiler {
 				// Every used local variable is guaranteed to exist by static verification.
 #define HANDLE_LOCAL(TYPE)                                                     \
 	variant_case(vm::opargs::TYPE, local_type) {                               \
-		return static_cast<i64>(ctx.local_offset_map.at(local_type.var_name)); \
+		return static_cast<u64>(ctx.local_offset_map.at(local_type.var_name)); \
 	}
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
@@ -57,31 +57,31 @@ namespace vm::loader::compiler {
 #define HANDLE_GLOBAL(TYPE)                         \
 	variant_case(vm::opargs::TYPE, global_data) {   \
 		auto name = global_data.global_data_name;   \
-		return i64(usize(*ctx.globals.idOf(name))); \
+		return u64(usize(*ctx.globals.idOf(name))); \
 	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
 #undef HANDLE_GLOBAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					auto type_obj = ctx.type_map.at(type_arg.type_name);
-					return static_cast<i64>(static_cast<u64>(type_obj->getID()));
+					return static_cast<u64>(static_cast<u64>(type_obj->getID()));
 				}
 				variant_case(vm::opargs::Field, field_arg) {
 					auto type_obj     = ctx.type_map.at(field_arg.type_name);
 					auto field_offset = *type_obj->getFieldOffsetByName(field_arg.field_name);
-					return static_cast<i64>(field_offset);
+					return static_cast<u64>(field_offset);
 				}
 				variant_case(vm::opargs::FunctionName, func) {
-					return i64(*ctx.func_map.idOf(func.function_name));
+					return u64(*ctx.func_map.idOf(func.function_name));
 				}
 				variant_case(vm::opargs::BuiltinFunctionName, func) {
 					auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
-					return base::safeIntConv<i64>(
+					return base::safeIntConv<u64>(
 						static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
 					);
 				}
 				variant_case(vm::opargs::MethodName, method) {
-					return base::safeIntConv<i64>(ctx.method_name_to_id[method.method_name]);
+					return base::safeIntConv<u64>(ctx.method_name_to_id[method.method_name]);
 				}
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
@@ -89,7 +89,7 @@ namespace vm::loader::compiler {
 					// We have to calculate the
 					// difference instead of absolute jump position,
 					// because our instruction counter is a pointer.
-					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
+					return static_cast<u64>(pos) - static_cast<u64>(instruction_index) - 1;
 				}
 				variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 			}
@@ -108,8 +108,8 @@ namespace vm::loader::compiler {
 
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
 				const auto& op    = ctx.function->body[op_idx];
-				i64         arg_0 = 0;
-				i64         arg_1 = 0;
+				u64         arg_0 = 0;
+				u64         arg_1 = 0;
 				variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}

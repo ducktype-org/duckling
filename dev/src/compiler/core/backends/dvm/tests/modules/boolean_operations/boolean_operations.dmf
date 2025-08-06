@@ -1,0 +1,8 @@
+fun main() = {
+	var a: bool = true;
+    var b: bool = false;
+    if (not a) return 0;
+    if (not (a or b)) return 0;
+    if (a and b) return 0;
+    return 1;
+}
