@@ -1,13 +1,10 @@
 # The unusual style of this test so to use as little of the duckling language 
 # as possible, in order to test only the correctness of the ternary operator
 # and not fail when some other functionality is being worked on.
+# Unfortunately had to use printing, as the result was larger then 255.
 
-# Subsequent values are binary, so the binary representation of the error code 
-# has all the information about which cases where evaluated. 
-
-# Each sub-case takes half a byte and has its correct result written in binary
-# in a comment so when looking at the binary error code one can identify the 
-# fallen case. 
+# Subsequent values are binary, so by looking at the binary representation of 
+# the printed values one can deduce which cases where evaluated. 
 
 
 fun localVariableAsCondition() -> i64 = {
@@ -17,7 +14,7 @@ fun localVariableAsCondition() -> i64 = {
     a = false;
     let sub2: i64 = if a then 4   else 8; # sub2 = 8
 
-    return sub1 + sub2; # 9      (1001)
+    return sub1 + sub2; # 9    (1001)
 }
 
 fun literalAsCondition() -> i64 = {
@@ -59,7 +56,7 @@ fun nestedTernaryValue() -> i64 = {
         8
     );
 
-    return sub1;        # 4 (10)
+    return sub1;       # 4 (10)
 }
 
 fun main() -> i64 = {
