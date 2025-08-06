@@ -174,7 +174,7 @@ namespace vm {
 	};
 
 	/**
-	 * @brief A Stable container, that maps an element of type T with a name, and
+	 * @brief Container, that maps an element of type T with a name, and
 	 * assigns an ID to it.
 	 * If T is copyable, then this structure is as well.
 	 * After copy previously stored IDs will map to equal, but copied objects.
