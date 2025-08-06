@@ -36,6 +36,11 @@ namespace pst {
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return false;
+		}
+
 		/**
 		 * @todo implement
 		 */

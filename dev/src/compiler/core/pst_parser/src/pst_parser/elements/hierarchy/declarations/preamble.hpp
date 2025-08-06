@@ -26,10 +26,5 @@ namespace pst {
 		std::string elementType() const override {
 			return "Code Declaration";
 		}
-
-		[[nodiscard]]
-		bool isDeclaration() const final {
-			return false;
-		}
 	};
 }

@@ -34,6 +34,11 @@ namespace pst {
 			return body.give();
 		}
 
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return optional_name.value.has_value();
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }
