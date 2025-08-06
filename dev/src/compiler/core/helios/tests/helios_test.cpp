@@ -515,15 +515,21 @@ private:
 
 		auto& statements = function.content.body->statements;
 
-		auto get_var_ref = [&](usize i) -> decltype(auto) {
-			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i));
+		auto get_var_block = [&](usize i, auto&& code_block) -> decltype(auto) {
+			return dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*code_block.statements.at(i)
+			);
 		};
+
+		auto get_var_ref
+			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function.content.body); };
 
 
 		auto i32_type = query::entryPoint<tsh::QueryIntegralType>(32);
 		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
 		auto i32_or_f32
 			= query::entryPoint<tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
+
 
 		{
 			auto& var = get_var_ref(0);
@@ -551,19 +557,26 @@ private:
 
 		{
 			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
-			auto& var     = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-                *if_stmt.then_body.statements.at(0)
-            );
-			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
-			ASSERT_EQUAL(var.type, st(i32_type));
+			{
+				auto& var1 = get_var_block(0, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
+				ASSERT_EQUAL(var1.type, st(i32_type));
+
+				auto& var2 = get_var_block(1, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
+				ASSERT_EQUAL(var2.type, st(i32_or_f32));
+			}
+			{
+				auto& var = get_var_block(0, if_stmt.else_body);
+				ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "z");
+				ASSERT_EQUAL(var.type, st(i32_type));
+			}
 		}
 
 		{
 			auto& while_stmt
 				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
-			auto& var = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*while_stmt.body.statements.at(0)
-			);
+			auto& var = get_var_block(0, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
 			ASSERT_EQUAL(var.type, st(i32_type));
 		}
@@ -887,16 +900,18 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -957,16 +972,18 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1017,9 +1034,11 @@ private:
 			std::vector<char> globals = { 'A', 'B', 'C' };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
-					ASSERT_TRUE(compiler::helios::isGlobalVar(
-						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
-					));
+					ASSERT_TRUE(
+						compiler::helios::isGlobalVar(
+							ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+						)
+					);
 
 				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
 					&(*hout_unit.functions[0].content.body->statements[0])
