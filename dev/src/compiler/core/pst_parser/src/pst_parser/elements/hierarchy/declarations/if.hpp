@@ -7,10 +7,10 @@ namespace pst {
 	 * @brief If declaration
 	 */
 	class If final: public CodeDecl {
-		AccessInternal<RoundGroupExpr>  condition;
-		tpc::OptionalIdentifier         optional_name;
-		AccessInternal<CodeBlockOrStmt> then_body;
-		AccessInternal<CodeBlockOrStmt> else_body;
+		AccessInternal<RoundGroupExpr>                  condition;
+		tpc::OptionalIdentifier                         optional_name;
+		AccessInternal<CodeBlockOrStmt>                 then_body;
+		base::Optional<AccessInternal<CodeBlockOrStmt>> else_body = {};
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
@@ -35,13 +35,10 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool hasElseBody() const {
-			return else_body.internal();
-		}
-
-		[[nodiscard]]
-		AccessLocked<CodeBlockOrStmt> getElseBody() const {
-			return else_body.give();
+		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const {
+			return else_body.map([](const AccessInternal<CodeBlockOrStmt>& access) {
+				return access.give();
+			});
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
