@@ -175,4 +175,30 @@ namespace clah {
 		}
 	};
 
+	class FilePathParser: public ValueParser {
+		using ValueParser::ValueParser;
+
+		std::regex filepath_regex = std::regex(".*");
+
+	public:
+		explicit FilePathParser(std::regex regex): filepath_regex(std::move(regex)) {}
+
+		FilePathParser(const std::string& name, std::regex regex):
+			  ValueParser(name),
+			  filepath_regex(std::move(regex)) {}
+
+		template<class... Args>
+		static Box<FilePathParser> make(Args&&... args) {
+			return makeBox<FilePathParser>(std::forward<Args>(args)...);
+		}
+
+		[[nodiscard]]
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return getCustomValueName().copyValueOr("filepath");
+		}
+	};
+
 }
