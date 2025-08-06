@@ -851,7 +851,7 @@ namespace vm {
 
 			thread.handleBreakpoint();
 
-			// Restore current registers and flow.
+			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
 			instr       = frame->instr;
