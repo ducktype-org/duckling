@@ -191,7 +191,7 @@ namespace vm {
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {
-		if (block.get() == nullptr) throw exceptions::VMNewReferenceOnNullBlock();
+		if (block->id.isBad()) throw exceptions::VMNewReferenceOnNullBlock();
 		std::lock_guard lock(*block->mutex_ref);
 		block->refcount++;
 		return { block, offset };
