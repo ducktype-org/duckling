@@ -9,7 +9,7 @@ namespace pst {
 	class If final: public CodeDecl {
 		AccessInternal<RoundGroupExpr>  condition;
 		tpc::OptionalIdentifier         optional_name;
-		AccessInternal<CodeBlockOrStmt> body;
+		AccessInternal<CodeBlockOrStmt> then_body;
 		AccessInternal<CodeBlockOrStmt> else_body;
 
 	public:
@@ -30,8 +30,18 @@ namespace pst {
 		AccessLocked<ExprHolder> getCondition() const;
 
 		[[nodiscard]]
-		AccessLocked<CodeBlockOrStmt> getBody() const {
-			return body.give();
+		AccessLocked<CodeBlockOrStmt> getThenBody() const {
+			return then_body.give();
+		}
+
+		[[nodiscard]]
+		bool hasElseBody() const {
+			return else_body.internal();
+		}
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getElseBody() const {
+			return else_body.give();
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

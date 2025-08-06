@@ -542,7 +542,10 @@ namespace compiler::mir {
 			function.addLocal(stmt.helios_symbol);
 		}
 
-		void visitIfStmt(const hc::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
+		void visitIfStmt(const hc::IfStmt& stmt) override {
+			goOverCodeBlock(stmt.then_body);
+			goOverCodeBlock(stmt.else_body);
+		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
@@ -647,71 +650,61 @@ namespace compiler::mir {
 			auto then_scope = function.newScope(parent_scope);
 			auto else_scope = function.newScope(parent_scope);
 
-			// @TODO: else body
 			auto else_block = function.newBlock();
 			else_block->setTerminator(
-				{ Operation::Jump, {}, { continuation->getID() }, {}, else_scope }
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, else_scope }
 			);
+			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
-			// The "then" branch requires a new block,
-			// because otherwise the "else" branch would jump to it.
 			auto then_block = function.newBlock();
 			then_block->setTerminator(
-				{ Operation::Jump, {}, { continuation->getID() }, {}, then_scope }
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, then_scope }
 			);
-			auto then_body = lowerCodeBlock(stmt.body, then_block, function, then_scope);
+			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
-			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
 
 			auto get_condition_return = condition_block->addHole();
 
-			auto expr_result
+			auto [lowered_condition, condition_result]
 				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			if (expr_result.value.isLocal()) {
+			std::optional<MIRValue> condition_variable;
+			if (condition_result.isLocal()) {
 				// we have to "move" the condition result
 				// into special temporary value, so we can use it
 				// after the actual condition result is destroyed.
 				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
 
-				get_condition_return.fill(Instruction{
-					Operation::Assign,
-					{ condition_result_tmp },
-					{ expr_result.value },
-					{ flagConstruct(condition_result_tmp) },
-					condition_scope,
-				});
+				get_condition_return.fill(
+					Instruction{
+						Operation::Assign,
+						{ condition_result_tmp },
+						{ condition_result },
+						{ flagConstruct(condition_result_tmp) },
+						condition_scope,
+					}
+				);
 
-				condition_block->setTerminator({
-					Operation::Branch,
-					{},
-					{ condition_result_tmp, then_body.begin->getID(), else_block->getID() },
-					{},
-					condition_scope,
-				});
-
+				condition_variable = condition_result_tmp;
 			} else {
-				// we can use the result of the expression directly:
-
-				get_condition_return.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					condition_scope,
-				});
-
-				condition_block->setTerminator({
-					Operation::Branch,
-					{},
-					{ expr_result.value, then_body.begin->getID(), else_block->getID() },
-					{},
-					condition_scope,
-				});
+				get_condition_return.fill(
+					Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
+				);
+				condition_variable = condition_result;
 			}
 
-			output({ expr_result.begin });
+			condition_block->setTerminator(
+				Instruction{
+					Operation::Branch,
+					{},
+					{ *condition_variable, then_body->getID(), else_body->getID() },
+					{},
+					condition_scope,
+				}
+			);
+
+			output({ lowered_condition });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {

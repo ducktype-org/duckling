@@ -1,0 +1,7 @@
+# Tests for statements
+
+Tests:
+  conditional: # if, if-else
+    Cases: 
+      default:
+        ExitCode: 99

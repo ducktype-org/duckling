@@ -18,3 +18,4 @@ Tests:
 SubDirs:
   - expressions
   - samples
+  - statements

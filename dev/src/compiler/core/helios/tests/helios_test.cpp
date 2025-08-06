@@ -552,7 +552,7 @@ private:
 		{
 			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
 			auto& var     = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-                *if_stmt.body.statements.at(0)
+                *if_stmt.then_body.statements.at(0)
             );
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
 			ASSERT_EQUAL(var.type, st(i32_type));
