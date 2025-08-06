@@ -36,9 +36,6 @@ namespace pst::expr {
 			return std::ranges::ref_view(expressions) | transform(give_one);
 		}
 
-		/**
-		 * @todo Implement
-		 */
 		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

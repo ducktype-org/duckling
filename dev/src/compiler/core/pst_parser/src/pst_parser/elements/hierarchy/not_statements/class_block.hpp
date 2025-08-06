@@ -34,6 +34,8 @@ namespace pst {
 		/**
 		 * @todo implement
 		 */
-		void calcElementPathsRecursive(const ElementPath&) override;
+		void calcElementPathsRecursive(const ElementPath&) override {
+			CORE_PANIC("not implemented");
+		}
 	};
 }

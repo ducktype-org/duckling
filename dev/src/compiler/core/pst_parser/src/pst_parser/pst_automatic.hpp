@@ -217,10 +217,11 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
-		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El> sub_tree) {
+		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
-				el->addNamedChild(name, sub_tree);
+				std::string str_name(name.value);
+				el->addNamedChild(str_name, sub_tree.refMut());
 				*sink = std::move(sub_tree);
 			}
 			return *this;
@@ -233,11 +234,12 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
-		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El> sub_tree) {
+		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
-				el->addNamedChild(name, sub_tree);
-				*sink = std::move(sub_tree);
+				std::string str_name(name.value);
+				el->addNamedChild(str_name, sub_tree.refMut());
+				sink->emplace(std::move(sub_tree));
 			}
 			return *this;
 		}
@@ -249,7 +251,7 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El>
-		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El> sub_tree) {
+		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -265,11 +267,11 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El>
-		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El> sub_tree) {
+		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
-				*sink = std::move(sub_tree);
+				sink->emplace(std::move(sub_tree));
 			}
 			return *this;
 		}
@@ -281,7 +283,7 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El, typename Sink>
-		PSTAutomatic& assign(Sink* sink, MBox<El> sub_tree) {
+		PSTAutomatic& assign(Sink* sink, MBox<El>&& sub_tree) {
 			if (sub_tree) {
 				*sink = std::move(sub_tree);
 			}

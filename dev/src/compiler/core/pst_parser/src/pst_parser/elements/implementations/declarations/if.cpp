@@ -25,8 +25,10 @@ namespace pst {
 		nullAwareDprint(condition, out);
 		out << ",\"body\":";
 		nullAwareDprint(body, out);
-		out << ", \"else body\": ";
-		nullAwareDprint(else_body, out);
+		if (else_body) {
+			out << ", \"else body\": ";
+			nullAwareDprint(else_body.value(), out);
+		}
 		out << "}";
 	}
 

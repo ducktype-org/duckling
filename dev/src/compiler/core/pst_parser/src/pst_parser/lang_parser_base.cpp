@@ -44,27 +44,19 @@ namespace pst {
 
 	void LangElement::addToken(const tpc::Token& t) { addToken(&t); }
 
-	void LangElement::addChild(Ref<LangElement> el) {
-		sub_elements.emplace_back(el );
-		setLastToken(el->getSourcePosition());
-	}
-
 	void LangElement::addChild(MRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			addChild(opt.value());
+			sub_elements.emplace_back(opt.value() );
+			setLastToken(el->getSourcePosition());
 		}
-	}
-
-	void LangElement::addNamedChild(const std::string& name, Ref<LangElement> el) {
-		sub_elements.emplace_back(InternalNamedChild{name, el});
-		setLastToken(el->getSourcePosition());
 	}
 
 	void LangElement::addNamedChild(const std::string& name, MRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			addNamedChild(name, opt.value());
+			sub_elements.emplace_back(InternalNamedChild{name, opt.value()});
+			setLastToken(el->getSourcePosition());
 		}
 	}
 

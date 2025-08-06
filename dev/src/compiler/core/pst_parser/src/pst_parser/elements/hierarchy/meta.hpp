@@ -68,6 +68,7 @@ namespace pst {
 
 	protected:
 		using AttrList = std::vector<AccessInternalAnonymous<Attribute>>;
+		using AttrBoxList = std::vector<Box<Attribute>>;
 
 		AttrList attributes;
 
@@ -75,12 +76,12 @@ namespace pst {
 			  LangElement(position),
 			  kind(kind) {}
 
-		static AttrList collectAttributes(LangParserState& state);
+		static AttrBoxList collectAttributes(LangParserState& state);
 
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
 		 */
-		void addAttributes(AttrList&& additions);
+		void addAttributes(LangParserState& state, AttrBoxList&& additions);
 
 		void dprintAttributes(std::ostream& out) const;
 

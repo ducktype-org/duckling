@@ -31,24 +31,17 @@ namespace pst {
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		if (code_block) {
 			return code_block.value().internal()->begin();
-		} else {
-			return const_iterator(&stmt.value());
+		} else if (stmt) {
+			return stmt->give();
 		}
-		// variant_match(content) {
-			// variant_case(AccessInternal<Stmt>, stmt) { return const_iterator(&stmt); }
-			// variant_case(AccessInternal<CodeBlock>, code_block) {
-				// return code_block.internal()->begin();
-			// }
-		// }
-		// CORE_UNREACHABLE();
+		CORE_UNREACHABLE();
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
-		variant_match(content) {
-			variant_case(AccessInternal<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
-			variant_case(AccessInternal<CodeBlock>, code_block) {
-				return code_block.internal()->end();
-			}
+		if (code_block) {
+			return code_block.value().internal()->end();
+		} else if (stmt) {
+			return {stmt->give(), 1};
 		}
 		CORE_UNREACHABLE();
 	}

@@ -197,7 +197,7 @@ namespace pst {
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
 
-		using const_iterator = CodeBlock::const_iterator;
+		using const_iterator = CodeBlockOrStmtIterator;
 		[[nodiscard]]
 		const_iterator begin() const;
 		[[nodiscard]]

@@ -42,9 +42,6 @@ namespace pst::expr {
 			return std::ranges::ref_view(chain) | transform(give_one);
 		}
 
-		/**
-		 * @todo Implement
-		 */
 		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

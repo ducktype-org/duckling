@@ -13,6 +13,7 @@
 
 #include <ranges>
 #include <variant>
+#include <iostream>
 
 namespace pst {
 	class Import;
@@ -54,7 +55,7 @@ namespace pst {
 	public:
 		using SubToken = base::CRef<lexer::Token>;
 
-	private:
+	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
 		using InternalChild = Ref<LangElement>;
@@ -126,6 +127,25 @@ namespace pst {
 			access_ref.internalMut()->calcElementPaths(path);
 		}
 
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 */
+		template <typename Element, base::TemplateStringLiteral name>
+		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
+			access_ref.internalMut()->calcElementPaths({path, std::string(name.value)});
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 */
+		template <typename Element>
+		void calcIndexedListChildPath(std::vector<AccessInternalAnonymous<Element>>& vec, const ElementPath& path) const {
+			for(usize i = 0; i < vec.size(); i++) {
+				ElementPath child_path(path, std::format("[%llu]", i));
+				calcChildPath(vec[i], child_path);
+			} 
+		}
+
 	private:
 		/**
 		 * @brief Helper function for filtering variants
@@ -153,12 +173,12 @@ namespace pst {
 
 			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
 				if (std::holds_alternative<InternalChild>(t)) {
-					return std::get<InternalChild>(t);
+					return Child(std::get<InternalChild>(t));
 				} else if (std::holds_alternative<InternalNamedChild>(t)) {
 					auto& [name, inter] = std::get<InternalNamedChild>(t);
 					return NamedChild{name, {inter}};
 				} else {
-					return std::get<SubToken>(t);
+					return SubToken(std::get<SubToken>(t));
 				}
 			};
 
@@ -282,7 +302,6 @@ namespace pst {
 		}
 
 		void addChild(MRef<LangElement> child);
-		void addChild(Ref<LangElement> child);
 
 		template<typename T>
 		void addChild(MBox<T>& child) {
@@ -296,7 +315,6 @@ namespace pst {
 		}
 
 		void addNamedChild(const std::string& name, MRef<LangElement> child);
-		void addNamedChild(const std::string& name, Ref<LangElement> child);
 
 		template<typename T>
 		void addNamedChild(const std::string& name, MBox<T>& child) {

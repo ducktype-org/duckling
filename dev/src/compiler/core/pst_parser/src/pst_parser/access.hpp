@@ -173,6 +173,9 @@ namespace pst {
 		template<typename State>
 		friend class PSTAutomatic;
 
+		template<typename, typename>
+		friend class PST;
+
 		template<typename E>
 		AccessInternalAnonymous& operator=(AccessInternalAnonymous<E>&& oth) noexcept {
 			box = std::move(oth).box;
@@ -185,14 +188,15 @@ namespace pst {
 			return *this;
 		}
 
+		AccessInternalAnonymous(MBox<Element>&& box): box(std::move(box)) {}
+
 	public:
 		AccessInternalAnonymous()                               = default;
 		AccessInternalAnonymous(const AccessInternalAnonymous&) = delete;
-		AccessInternalAnonymous(AccessInternalAnonymous&&)      = delete;
+		AccessInternalAnonymous(AccessInternalAnonymous&&)      = default;
 
 		AccessInternalAnonymous(std::nullptr_t): box(nullptr) {}
 
-		AccessInternalAnonymous(MBox<Element>&& box): box(std::move(box)) {}
 
 		/**
 		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
@@ -261,7 +265,7 @@ namespace pst {
 		/**
 		 * @brief For internal usage of an Element, mutable version
 		 */
-		MRef<Element> internalMut() const { return box.ref_mut(); }
+		MRef<Element> internalMut() const { return box.refMut(); }
 	};
 
 	/**

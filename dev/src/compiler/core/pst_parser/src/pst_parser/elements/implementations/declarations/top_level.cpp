@@ -8,7 +8,10 @@ namespace pst {
 		while (state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
-			out->statements.emplace_back(std::move(stmt));
+			if (stmt) {
+				out->statements.emplace_back(nullptr);
+				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+			}
 		}
 		return out;
 	}

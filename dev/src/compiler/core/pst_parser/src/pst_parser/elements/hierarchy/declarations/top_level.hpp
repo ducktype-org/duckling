@@ -36,6 +36,11 @@ namespace pst {
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 
-		void calcElementPathsRecursive(const ElementPath&) override;
+		/**
+		 * @todo implement
+		 */
+		void calcElementPathsRecursive(const ElementPath&) override {
+			CORE_PANIC("not implemented");
+		}
 	};
 }

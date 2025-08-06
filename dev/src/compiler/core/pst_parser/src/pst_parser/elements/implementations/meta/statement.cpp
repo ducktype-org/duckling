@@ -83,14 +83,16 @@ namespace pst {
 		}
 	}
 
-	Stmt::AttrList Stmt::collectAttributes(LangParserState& state) {
+	Stmt::AttrBoxList Stmt::collectAttributes(LangParserState& state) {
 		auto     as_special = state[0].asSpecial();
-		AttrList attributes;
+		AttrBoxList attributes;
 
 		while (as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
 			auto            opt  = std::move(attr).toOptBox();
-			if (opt) attributes.emplace_back(std::move(opt.value()));
+			if (opt) {
+				attributes.emplace_back(std::move(opt.value()));
+			}
 			as_special = state[0].asSpecial();
 		}
 		return attributes;
@@ -104,7 +106,7 @@ namespace pst {
 		MBox<Stmt> out = internal::chooseStmt(state);
 
 		// Add Attributes
-		if (out) out->addAttributes(std::move(attributes));
+		if (out) out->addAttributes(state, std::move(attributes));
 
 		return out;
 	}
@@ -125,16 +127,13 @@ namespace pst {
 		}
 	}
 
-	void Stmt::addAttributes(AttrList&& additions) {
-		attributes = std::move(additions);
-
-		using namespace std::views;
-		auto borrow = [](AccessInternal<Attribute>& arg) -> Child { return arg.give(); };
-		auto borrowed_additions = attributes | transform(borrow);
-
-		sub_elements.insert(
-			sub_elements.end(), borrowed_additions.begin(), borrowed_additions.end()
-		);
+	void Stmt::addAttributes(LangParserState& state, AttrBoxList&& additions) {
+		attributes.resize(additions.size());
+		usize i = 0;
+		for (auto&& attr_add: additions) {
+			state.parse(Ref(this)).assign(&attributes[i], MBox(std::move(attr_add)));
+			i++;
+		}
 
 		if (attributes.size() > 0)
 			setFirstToken(attributes.front().internal()->getSourcePosition());

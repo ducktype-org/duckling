@@ -41,7 +41,13 @@ struct Handler final {
 		return node;
 	}
 
-	Agedge_t* addEdge(Agnode_t* from, Agnode_t* to, char* name = nullptr) { return agedge(graph, from, to, name, 1); }
+	Agedge_t* addEdge(Agnode_t* from, Agnode_t* to, char* name = nullptr) { 
+		Agedge_t* edge = agedge(graph, from, to, nullptr, 1); 
+		static std::string label_string = "label";
+		static std::string empty_string = "";
+		agsafeset(edge, label_string.data(), name, empty_string.data());
+		return edge;
+	}
 
 	void writeToSVG(const std::string& file_name) {
 		FILE* file = fopen(file_name.c_str(), "w");
@@ -92,9 +98,9 @@ Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 			}
 
 			variant_case(pst::LangElement::NamedChild, named_child) {
-				std::string name = named_child.first;
+				std::string child_name = named_child.first;
 				auto sub_node = dotElement(hdl, named_child.second.illegalAccess().value());
-				hdl.addEdge(self, sub_node, name.data());
+				hdl.addEdge(self, sub_node, child_name.data());
 			}
 		}
 	}
