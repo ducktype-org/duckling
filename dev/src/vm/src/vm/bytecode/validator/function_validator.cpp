@@ -553,8 +553,6 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l64_imm) {}
 			variant_case_novalue(Op_mov_l64_l64) {}
 			variant_case_novalue(Op_cmov_l64_l64) {}
-			variant_case_novalue(Op_mov_l64_r0) {}
-			variant_case_novalue(Op_mov_r0_l64) {}
 			variant_case_novalue(Op_mov_g64_g64) {}
 			variant_case_novalue(Op_mov_g64_l64) {}
 			variant_case_novalue(Op_mov_g64_imm) {}

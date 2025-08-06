@@ -73,10 +73,6 @@ DEF_OPCODE(mov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(cmov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 
 
-DEF_OPCODE(mov_l64_r0, vm::opargs::StackLocal64)
-DEF_OPCODE(mov_r0_l64, vm::opargs::StackLocal64)
-
-
 DEF_OPCODE(mov_g64_g64, vm::opargs::Global64, vm::opargs::Global64)
 DEF_OPCODE(mov_g64_l64, vm::opargs::Global64, vm::opargs::StackLocal64)
 DEF_OPCODE(mov_g64_imm, vm::opargs::Global64, vm::opargs::Immediate)
