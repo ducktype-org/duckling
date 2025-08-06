@@ -8,9 +8,9 @@ Run: "@{duck_path} compile_package -a build @{Name} && ./build/package_llvm.exe"
 Tests:
   base:
     Cases:
-      base:
+      default:
         Output:
-          String: "4 \n76 \n94 \n12 \n"
+          String: "4 \n1 \n23 \n4 \n1 \n4 \n4 \n8 \n4 \n8 \n76 \n"
           # I don't know there is a whitespace at the end of each line.
           # @TODO: fix trailing space
         ExitCode: 76
