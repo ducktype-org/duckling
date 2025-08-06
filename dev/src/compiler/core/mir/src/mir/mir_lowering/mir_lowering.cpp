@@ -651,15 +651,13 @@ namespace compiler::mir {
 			auto else_scope = function.newScope(parent_scope);
 
 			auto else_block = function.newBlock();
-			else_block->setTerminator(
-				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, else_scope }
-			);
+			else_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
 			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
 			auto then_block = function.newBlock();
-			then_block->setTerminator(
-				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, then_scope }
-			);
+			then_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
 			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
 			auto condition_block = function.newBlock();
@@ -676,33 +674,28 @@ namespace compiler::mir {
 				// after the actual condition result is destroyed.
 				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
 
-				get_condition_return.fill(
-					Instruction{
-						Operation::Assign,
-						{ condition_result_tmp },
-						{ condition_result },
-						{ flagConstruct(condition_result_tmp) },
-						condition_scope,
-					}
-				);
+				get_condition_return.fill(Instruction{
+					Operation::Assign,
+					{ condition_result_tmp },
+					{ condition_result },
+					{ flagConstruct(condition_result_tmp) },
+					condition_scope,
+				});
 
 				condition_variable = condition_result_tmp;
 			} else {
-				get_condition_return.fill(
-					Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
+				get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
 				);
 				condition_variable = condition_result;
 			}
 
-			condition_block->setTerminator(
-				Instruction{
-					Operation::Branch,
-					{},
-					{ *condition_variable, then_body->getID(), else_body->getID() },
-					{},
-					condition_scope,
-				}
-			);
+			condition_block->setTerminator(Instruction{
+				Operation::Branch,
+				{},
+				{ *condition_variable, then_body->getID(), else_body->getID() },
+				{},
+				condition_scope,
+			});
 
 			output({ lowered_condition });
 		}
@@ -962,8 +955,7 @@ namespace compiler::mir {
 			output({ .begin = sub_continuation, .value = target_location });
 		}
 
-		void visitTernaryOperatorExpr(
-			const helios::code::TernaryOperatorExpr& ternary_expr
+		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
@@ -978,15 +970,13 @@ namespace compiler::mir {
 
 				const auto [first_lowered_block, else_res]
 					= lowerExpr(case_expr, block, function, expr_scope);
-				assign_hole.fill(
-					Instruction{
-						Operation::Assign,
-						{ target_location },
-						{ else_res },
-						{ flagConstruct(target_location) },
-						expr_scope,
-					}
-				);
+				assign_hole.fill(Instruction{
+					Operation::Assign,
+					{ target_location },
+					{ else_res },
+					{ flagConstruct(target_location) },
+					expr_scope,
+				});
 				return first_lowered_block;
 			};
 
@@ -997,23 +987,19 @@ namespace compiler::mir {
 			auto condition_block = function.newBlock();
 			const auto [condition_continuation, condition_res]
 				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
-			condition_block->setTerminator(
-				{
-					Operation::Branch,
-					{},
-					{ condition_res, then_block->getID(), else_block->getID() },
-					{},
-					expr_scope,
-				}
-			);
+			condition_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ condition_res, then_block->getID(), else_block->getID() },
+				{},
+				expr_scope,
+			});
 
 			// Return.
-			output(
-				ExprLowerRes{
-					.begin = condition_continuation,
-					.value = target_location,
-				}
-			);
+			output(ExprLowerRes{
+				.begin = condition_continuation,
+				.value = target_location,
+			});
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {

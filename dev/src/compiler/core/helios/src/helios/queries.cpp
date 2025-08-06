@@ -201,11 +201,9 @@ namespace compiler::helios {
 				}
 
 
-				output(
-					code::AssignmentStmt(
-						std::move(location_expr), std::move(new_value_coerced.value())
-					)
-				);
+				output(code::AssignmentStmt(
+					std::move(location_expr), std::move(new_value_coerced.value())
+				));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
@@ -236,13 +234,11 @@ namespace compiler::helios {
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 				if (stmt->hasElseBody()) {
-					output(
-						code::IfStmt(
-							std::move(condition),
-							std::move(then_body),
-							queryCodeOfCodeBlock(ctx, stmt->getElseBody())
-						)
-					);
+					output(code::IfStmt(
+						std::move(condition),
+						std::move(then_body),
+						queryCodeOfCodeBlock(ctx, stmt->getElseBody())
+					));
 				} else {
 					output(code::IfStmt(std::move(condition), std::move(then_body)));
 				}
@@ -282,29 +278,25 @@ namespace compiler::helios {
 					auto initial_value_coerced
 						= coerceExpression(std::move(initial_value), symbol_type);
 					if (initial_value_coerced.hasError()) {
-						ctx.log(
-							makeBox<
+						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-								stmt->getValue().value().unlock(ctx)->getSourcePosition(),
-								base::strConcat(
-									"Bad type passed to variable initialization\n",
-									"Expected: ",
-									symbol_type.toString(),
-									"\n",
-									"Got: ",
-									initial_value_type.toString(),
-									"\n"
-								)
+							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
+							base::strConcat(
+								"Bad type passed to variable initialization\n",
+								"Expected: ",
+								symbol_type.toString(),
+								"\n",
+								"Got: ",
+								initial_value_type.toString(),
+								"\n"
 							)
-						);
+						));
 						return;  // fail
 					}
 
-					output(
-						code::VariableStmt(
-							std::move(initial_value_coerced.value()), symbol_type, symbol
-						)
-					);
+					output(code::VariableStmt(
+						std::move(initial_value_coerced.value()), symbol_type, symbol
+					));
 				}
 			}
 		};
