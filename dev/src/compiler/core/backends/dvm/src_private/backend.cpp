@@ -120,9 +120,9 @@ namespace compiler::backend_vm {
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
 			AddLirFuncContext(
-				query::Context&                           ctx,
-				CRef<lir::Function>                       lir_function,
-				const vm::StableObjIdNameMap<TypeOfData>& type_map
+				query::Context&                     ctx,
+				CRef<lir::Function>                 lir_function,
+				const vm::ObjIdNameMap<TypeOfData>& type_map
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),

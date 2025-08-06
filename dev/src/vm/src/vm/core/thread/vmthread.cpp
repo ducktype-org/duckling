@@ -122,9 +122,9 @@ namespace vm {
 		auto called_func_type = executing_program->types->at(func.name);
 		auto i64_type         = executing_program->types->at(base::StrID("i64"));
 
-		u64  i64_type_id        = i64_type->getID().asInt();
-		auto funcs              = executing_program->functions;
-		u64  called_function_id = 0;
+		u64         i64_type_id        = i64_type->getID().asInt();
+		const auto& funcs              = executing_program->functions;
+		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
@@ -203,12 +203,12 @@ namespace vm {
 		auto i64_type           = executing_program->types->at(base::StrID("i64"));
 
 		// TypeIDs to pass to opcodes.
-		u64  func_ret_type_id   = called_return_type->getID().asInt();
-		u64  argv_type_id       = argv_type->getID().asInt();
-		u64  argv_ptr_type_id   = argv_ptr_type->getID().asInt();
-		u64  i64_type_id        = i64_type->getID().asInt();
-		auto funcs              = executing_program->functions;
-		u64  called_function_id = 0;
+		u64         func_ret_type_id   = called_return_type->getID().asInt();
+		u64         argv_type_id       = argv_type->getID().asInt();
+		u64         argv_ptr_type_id   = argv_ptr_type->getID().asInt();
+		u64         i64_type_id        = i64_type->getID().asInt();
+		const auto& funcs              = executing_program->functions;
+		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
