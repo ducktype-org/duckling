@@ -20,14 +20,14 @@ set(TS_INCLUDE ${TS_DIR}/lib/include)
 set(TS_CPP_INCLUDE ${TS_CPP_DIR}/bindings/c)
 
 FetchContent_Declare(
-    fetch_tree_sitter
-    URL ${TS_URL}
+	fetch_tree_sitter
+	URL ${TS_URL}
 	SOURCE_DIR ${TS_DIR}
 )
 
 FetchContent_Declare(
-    fetch_tree_sitter_cpp
-    URL ${TS_CPP_URL}
+	fetch_tree_sitter_cpp
+	URL ${TS_CPP_URL}
 	SOURCE_DIR ${TS_CPP_DIR}
 )
 

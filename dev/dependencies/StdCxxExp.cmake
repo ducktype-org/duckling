@@ -6,5 +6,5 @@ include(FetchContent)
 add_library(system_stdcxxexp INTERFACE)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_link_libraries(system_stdcxxexp INTERFACE "-lstdc++exp")
+	target_link_libraries(system_stdcxxexp INTERFACE "-lstdc++exp")
 endif()
