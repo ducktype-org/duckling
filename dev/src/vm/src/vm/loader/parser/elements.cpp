@@ -16,6 +16,8 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/memory/memory.hpp>
 
+#include <cstddef>
+
 namespace vm::loader::parser {
 	/**
 	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type
@@ -25,7 +27,7 @@ namespace vm::loader::parser {
 	 */
 	namespace opargs_parsers {
 		template<class T, class K>
-		T parseLiteral(F8ParserState& state) {
+		T parseLiteral(F8ParserState& state, size_t& literal_length) {
 			auto previous_token = state.tokens().peek();
 			i32  sign           = 1;
 			if (previous_token.isOperatorSymbol() && previous_token.getValue().str() == "-") {
@@ -43,11 +45,17 @@ namespace vm::loader::parser {
 				));
 				return T{ 0 };
 			}
+
+			if (token.isNumLiteral())
+				literal_length = str.length() + next_token.getValue().str().length();
+			else
+				literal_length = str.length();
+
 			try {
 				T     result;
 				usize pos = 0;
 				if (next_token.isTypeSpecifier()) {
-					state.tokens().next();
+					if (token.isNumLiteral()) state.tokens().next();
 					auto&& str_type = next_token.getValue().str();
 					if (str_type == "f" || str_type == "F") {
 						float value      = std::stof(str, &pos) * static_cast<float>(sign);
@@ -133,12 +141,13 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			auto pos         = state.getPosition();
-			auto value       = parseLiteral<u64, vm::opargs::Immediate>(state);
-			auto arg         = opargs::Immediate{ value };
-			arg.bytecode_pos = dia::SourcePosition(
-				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
-			);
+			auto   pos            = state.getPosition();
+			size_t literal_length = 0;
+			auto   value          = parseLiteral<u64, vm::opargs::Immediate>(state, literal_length);
+			auto   arg            = opargs::Immediate{ value };
+			arg.bytecode_pos      = dia::SourcePosition(
+                pos.getLocation(), pos.getStart(), pos.getStart() + literal_length
+            );
 			return arg;
 		}
 
