@@ -11,7 +11,7 @@ namespace pst {
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->body);
+		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
 
 		if (state.parse(out).tryEat(Keyword::Else)) state.parse(out).one(&out->else_body, true);
 
@@ -23,10 +23,12 @@ namespace pst {
 		nullAwareDprint(optional_name, out);
 		out << ",\"condition\":";
 		nullAwareDprint(condition, out);
-		out << ",\"body\":";
-		nullAwareDprint(body, out);
-		out << ", \"else body\": ";
-		nullAwareDprint(else_body, out);
+		out << ",\"then body\":";
+		nullAwareDprint(then_body, out);
+		if (else_body) {
+			out << ",\"else body\":";
+			nullAwareDprint(else_body.value(), out);
+		}
 		out << "}";
 	}
 

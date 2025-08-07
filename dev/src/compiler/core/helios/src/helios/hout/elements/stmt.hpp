@@ -126,13 +126,18 @@ namespace compiler::helios::code {
 	 */
 	struct IfStmt final: public Stmt {
 		Box<Expr> condition;
-		CodeBlock body;
+		CodeBlock then_body;
+		CodeBlock else_body;
 
-		// @TODO: optional else body
-
-		IfStmt(Box<Expr> condition, CodeBlock body):
+		IfStmt(Box<Expr> condition, CodeBlock then_body, CodeBlock else_body):
 			  condition(std::move(condition)),
-			  body(std::move(body)) {}
+			  then_body(std::move(then_body)),
+			  else_body(std::move(else_body)) {}
+
+		IfStmt(Box<Expr> condition, CodeBlock then_body):
+			  condition(std::move(condition)),
+			  then_body(std::move(then_body)),
+			  else_body({}) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
