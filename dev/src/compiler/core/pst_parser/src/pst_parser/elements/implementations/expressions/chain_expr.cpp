@@ -64,6 +64,7 @@ namespace pst::expr {
 			}
 			if (extension) {
 				out->chain.emplace_back(nullptr);
+				state.parse(out).assign(&out->chain.back(), std::move(extension));
 			}
 			length -= fwd;
 		}

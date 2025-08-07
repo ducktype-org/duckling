@@ -22,11 +22,6 @@ namespace pst {
 			return "Class Destructor";
 		}
 
-		[[nodiscard]]
-		bool isDeclaration() const override {
-			return true;
-		}
-
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

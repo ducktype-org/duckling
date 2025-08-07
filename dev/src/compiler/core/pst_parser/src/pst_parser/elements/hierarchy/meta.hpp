@@ -35,6 +35,19 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
+	/**
+	 * @brief Three declaration options:
+	 *
+	 * None - This statement doesn't introduce any symbols.
+	 * Symbol - This statement introduces a symbol.
+	 * Transparent - This statement contains or links somewhere where there might be introduced symbols.
+	 */
+	enum class DeclKind {
+		None,
+		Symbol,
+		Transparent,
+	};
+
 	enum class StmtKind {
 		Import,
 		Using,
@@ -134,8 +147,13 @@ namespace pst {
 		 * always be equivalent to intuitive thinking about declarations.
 		 */
 		[[nodiscard]]
-		virtual bool isDeclaration() const {
-			return false;
+		virtual DeclKind isDeclaration() const {
+			return DeclKind::None;
+		}
+
+		[[nodiscard]]
+		virtual base::Optional<base::StrID> getDeclSymbol() const {
+			return {};	
 		}
 	};
 

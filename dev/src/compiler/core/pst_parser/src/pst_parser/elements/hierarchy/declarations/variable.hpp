@@ -42,6 +42,11 @@ namespace pst {
 			return is_const;
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return getName();
+		}
+
 		static MBox<Variable> parse(LangParserState& state);
 		~Variable() final = default;
 		void dprint(std::ostream& out) const final;

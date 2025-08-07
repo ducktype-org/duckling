@@ -48,6 +48,11 @@ namespace pst {
 			return "Function";
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return getName();
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

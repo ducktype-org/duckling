@@ -36,8 +36,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const override {
-			return true;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Symbol;
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return getName();
 		}
 
 		[[nodiscard]]

@@ -29,6 +29,11 @@ namespace pst {
 			return "Namespace";
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return getName();
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

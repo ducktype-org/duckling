@@ -34,8 +34,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const final {
-			return optional_name.value.has_value();
+		DeclKind isDeclaration() const final {
+			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return optional_name.value;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

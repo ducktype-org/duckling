@@ -35,5 +35,10 @@ namespace pst {
 		std::string elementType() const override {
 			return "StmtSpecifier";
 		}
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
+		}
 	};
 }

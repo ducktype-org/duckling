@@ -37,6 +37,11 @@ namespace pst {
 			return implements.give();
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return getName();
+		}
+
 		static MBox<Class> parse(LangParserState& state);
 		~Class() final = default;
 		void dprint(std::ostream& out) const final;

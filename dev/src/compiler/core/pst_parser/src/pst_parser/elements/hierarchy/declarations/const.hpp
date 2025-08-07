@@ -37,6 +37,11 @@ namespace pst {
 			return {};
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbol() const final {
+			return getName();
+		}
+
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 

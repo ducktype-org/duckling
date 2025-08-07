@@ -32,8 +32,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const final {
-			return true;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
 		}
 	};
 }

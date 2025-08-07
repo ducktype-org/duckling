@@ -26,11 +26,6 @@ namespace pst {
 			return "Copy Constructor";
 		}
 
-		[[nodiscard]]
-		bool isDeclaration() const override {
-			return true;
-		}
-
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

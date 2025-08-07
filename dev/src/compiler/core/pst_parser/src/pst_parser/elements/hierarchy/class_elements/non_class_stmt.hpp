@@ -29,6 +29,11 @@ namespace pst {
 			return false;
 		}
 
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }
