@@ -49,9 +49,9 @@ namespace compiler::helios::code {
 		condition->debugPrint(out);
 		out << ") {\n";
 		for (const auto& stmt: then_body.statements) stmt->debugPrint(out, indent + 1);
-		addIndent(out, indent);
 		out << "} else {\n";
 		for (const auto& stmt: else_body.statements) stmt->debugPrint(out, indent + 1);
+		addIndent(out, indent);
 		out << "}\n";
 	}
 

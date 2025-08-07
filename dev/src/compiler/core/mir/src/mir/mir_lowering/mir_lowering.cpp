@@ -968,12 +968,12 @@ namespace compiler::mir {
 				);
 				auto assign_hole = block->addHole();
 
-				const auto [first_lowered_block, else_res]
+				const auto [first_lowered_block, expr_res]
 					= lowerExpr(case_expr, block, function, expr_scope);
 				assign_hole.fill(Instruction{
 					Operation::Assign,
 					{ target_location },
-					{ else_res },
+					{ expr_res },
 					{ flagConstruct(target_location) },
 					expr_scope,
 				});

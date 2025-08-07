@@ -235,7 +235,7 @@ namespace compiler::helios {
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 
 				match_optional(stmt->getElseBody()) {
-					opt_some_move(else_body) {
+					opt_some(else_body) {
 						output(code::IfStmt(
 							std::move(condition),
 							std::move(then_body),
