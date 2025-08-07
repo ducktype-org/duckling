@@ -10,9 +10,7 @@ add_library(Base
         src/base/impl/bit256.cpp
 )
 
-set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
-
-# @TODO: unicode dependency might not be optional.
+# @TODO: unicode dependency might not be optimal.
 # Think of a way to "break" it
 make_module(Base USES unicode system_stdcxxexp)
 
