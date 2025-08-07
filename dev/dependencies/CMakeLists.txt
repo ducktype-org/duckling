@@ -3,7 +3,7 @@ include(Base64.cmake)
 include(Crow.cmake)
 include(Graphviz.cmake)
 include(ICU.cmake)
-include(Nlohmann_json.cmake)
+include(NlohmannJson.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 
