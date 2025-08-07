@@ -32,12 +32,14 @@ namespace vm::api {
 	 * @return
 	 */
 	std::expected<response::CodePosition, ApiError> pause(PID pid);
+
 	/** @brief Resumes the execution of the program.
 	 * When this function returns true, the program is running. If false, the state is undefined.
 	 * @return
 	 */
 	std::expected<void, ApiError> resume(PID pid);
 	std::expected<void, ApiError> step(PID pid);
+
 	/**
 	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
@@ -65,7 +67,7 @@ namespace vm::api {
 	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id);
 
 	/**
-	 * @brief Returns an empty VmValue (initialized by zero) of the given type.
+	 * @brief Returns an empty VmValue (initialized by zero bytes) of the given type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);

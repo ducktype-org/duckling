@@ -18,7 +18,7 @@ struct nlohmann::adl_serializer<Ref<T>> {
 	}
 
 	static void from_json(const json&, const Ref<T>&) {
-		CORE_PANIC("Parsing data from JSON into a custom variant is not supported (yet).");
+		CORE_PANIC("Parsing data from JSON into ref is not supported (yet).");
 	}
 };
 

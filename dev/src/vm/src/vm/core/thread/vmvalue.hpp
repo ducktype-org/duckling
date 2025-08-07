@@ -2,6 +2,7 @@
 
 #include <base/raw_view.hpp>
 
+#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -16,15 +17,31 @@ namespace vm {
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
 	 * It is NOT meant to be used by the internal memory module.
 	 * @note Passed data is copied.
-	 * @note VmValue is owned by the process which created it. It can only be created with the
-	 `VMProcess::createVmValue()` function. It's automatically freed when VMProcess is freed.
+	 * @note VmValues can be used only in the processes which where used when initializing them.
+	 *j	They can't be transferred in between different processes.
+	 *
+	 * @note There is two ways to create a VmValue:
+	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. It's
+	 * lifetime is guarded by VMProcess. All VmValues created by this function are deinitialized
+	 * when VmProcess is destroyed.
+	 * 2) with `VMProcess::createOwnedVmValue()` function - creates a
+	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue.
 	 */
 	class VmValue {
 	private:
 		friend class VMProcess;
+
+		/**
+		 * @brief Creates an empty VmValue of the specified type.
+		 */
 		VmValue(VMProcess& process, TypeCRef type);
+
+		/**
+		 * @brief Creates a VmValue of specified type and fills it with the bytes from the `src`
+		 * pointer.
+		 */
 		VmValue(VMProcess& process, TypeCRef type, Pointer src);
-		void freeData();
+
 
 		std::vector<byte> data;        /// data.size() == type.getSize()
 		Ref<VMProcess>    my_process;  /// The process for which the VmValue exists.
@@ -36,8 +53,14 @@ namespace vm {
 		VmValue& operator=(const VmValue&) = delete;
 		VmValue& operator=(VmValue&&)      = default;
 
-
 		~VmValue();
+
+		/**
+		 * @brief Frees the data of the VmValue (deinitializes the blocks in the memory module).
+		 * This function has to be called when using VmValues created with the
+		 * `VMProcess::createOwnedVmValue()` function.
+		 */
+		void freeData();
 
 		void exportData(Pointer dst) const;
 
@@ -51,29 +74,25 @@ namespace vm {
 
 		/**
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
-		 * @warning This operation is unsafe and violates strict alignment rules.
-		 * The caller is expected to know what they are doing. Incorrect usage may lead to UB.
-		 **/
+		 */
 		template<class T>
 		T readBytes(const usize offset = 0) const {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "Out of bounds read");
+			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
 			return vm::safeReadBytes<T>(data.data() + offset);
 		}
 
 		/**
 		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
-		 * @warning This operation is unsafe and violates strict alignment rules.
-		 * The caller is expected to know what they are doing. Incorrect usage may lead to UB.
-		 **/
+		 */
 		template<class T>
 		void writeBytes(const T& value, const usize offset = 0) {
 			CORE_ASSERT(
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "Out of bounds write");
+			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds write");
 			return vm::safeWriteBytes<T>(data.data(), value);
 		}
 

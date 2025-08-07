@@ -319,18 +319,18 @@ namespace vm {
 			auto real_function_type = thread.executing_program->types->at(function_type->name);
 			auto arg_count          = function_type->parameters.size();
 
-			std::vector<Ref<VmValue>> args;
+			std::vector<Box<VmValue>> args;
 			u64                       first_arg_idx = frame->block_stack.size() - arg_count;
 
-			// Create VmValue objects from local arguments
+			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_type->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
 				auto              block     = frame->block_stack[first_arg_idx + i];
-				args.push_back(thread.process.createVmValue(real_type, Pointer(block, 0)));
+				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
-			base::Optional<Ref<VmValue>> return_value = builtins::callBuiltinFunction(
+			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id, real_function_type, thread.process, thread, args
 			);
 
@@ -339,8 +339,10 @@ namespace vm {
 				opt_none {}
 				opt_some(value) {
 					value->exportData(Pointer(frame->block_stack[first_arg_idx - 1], 0));
+					value->freeData();
 				}
 			}
+			for (auto& vm_value: args) vm_value->freeData();
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
@@ -509,7 +511,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			thread.process_memory.freeBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock()
+			thread.process_memory.freeBlock(
+				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
 		FUNCTION_CONT(1);
@@ -744,7 +747,7 @@ namespace vm {
 			auto data_offset = index * i64(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
-			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
 			auto src_block     = frame->block_stack[src_block_idx];
 			auto src_pointer   = Pointer(src_block, 0);
 

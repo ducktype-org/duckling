@@ -72,8 +72,9 @@ namespace vm {
 		loader::Loader loader{};
 
 		/**
-		 * @brief Storage for all VmValue which belong to this process.
-		 * @note This is added to resolve lifetime problems.
+		 * @brief Storage for all VmValues which belong to this process.
+		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
+		 * when process is deinitialized.
 		 */
 		base::StableVector<VmValue> owned_vm_values;
 
@@ -178,12 +179,28 @@ namespace vm {
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
-		 * The VmValue is owned by the VMProcess.
+		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
+		 * the process is deinitialized.
+		 *
+		 * @param type The type of the data stored in the newly created VmValue.
+		 * @param src The pointer to the data used to fill the newly created VmValue. If not
+		 * specified, created VmValue will be empty.
 		 * @return A non-owning, modifiable reference to the new VmValue.
-		 * @note This may change if we decide VmValues are read only.
 		 */
 		Ref<VmValue> createVmValue(TypeCRef type);
 		Ref<VmValue> createVmValue(TypeCRef type, Pointer src);
+
+		/**
+		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
+		 * The caller is expected to free the VmValue.
+		 *
+		 * @param type The type of the data stored in the newly created VmValue.
+		 * @param src The pointer to the data used to fill the newly created VmValue. If not
+		 * specified, created VmValue will be empty.
+		 * @return A Box referencing the newly created VmValue.
+		 */
+		Box<VmValue> createOwnedVmValue(TypeCRef type);
+		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
 

@@ -8,10 +8,12 @@
 namespace vm {
 	/**
 	 * @brief Safely reads an object of type T from a raw byte buffer.
+	 *
 	 * @note This function performs a bitwise copy from the buffer into a new
-	 * object of type T. It is complies with strict aliasing rules and memory alignment.
+	 * object of type T.
 	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
 	 * trivially copyable types.
+	 * @note Type T must be trivially copyable.
 	 *
 	 * @tparam T The target type to construct. Must be trivially copyable.
 	 * @param ptr A pointer to the beginning of the source byte buffer.
@@ -24,28 +26,6 @@ namespace vm {
 		T value;
 		std::memcpy(&value, ptr + offset, sizeof(T));
 		return value;
-	}
-
-	/**
-	 * @brief Safely reinterprets a source object's bytes as a new object of type T.
-	 * @note This function performs a bitwise copy from the buffer into a new
-	 * object of type T. It is complies with strict aliasing rules and memory alignment.
-	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
-	 * trivially copyable types.
-	 *
-	 * @note Both T and U must be trivially copyable.
-	 * @note `sizeof(T)` must be less than or equal to `sizeof(U)`.
-	 * @tparam T The target type to construct.
-	 * @tparam U The type of the source object.
-	 * @param source_object The object whose bytes will be read.
-	 * @return A new object of type T, constructed from the bytes of `source_object`.
-	 *
-	 */
-	template<typename T, typename U>
-	[[nodiscard]] inline T safeReadBytes(const U& source_object) requires(
-		std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> && sizeof(T) <= sizeof(U)
-	) {
-		return safeReadBytes<T>(reinterpret_cast<const byte*>(&source_object));
 	}
 
 	/**
@@ -64,5 +44,27 @@ namespace vm {
 	inline void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
 		requires(std::is_trivially_copyable_v<T>) {
 		std::memcpy(dest + offset, &value, sizeof(T));
+	}
+
+	/**
+	 * @brief Safely reinterprets a source object's bytes as a new object of type T.
+	 *
+	 * @note This function performs a bitwise copy from the buffer into a new
+	 * object of type T. The `memcpy` operation is optimized by compilers to a single machine
+	 * instruction for trivially copyable types.
+	 * @note Both T and U must be trivially copyable.
+	 * @note `sizeof(T)` must be less than or equal to `sizeof(U)`.
+	 *
+	 * @tparam T The target type to construct.
+	 * @tparam U The type of the source object.
+	 * @param source_object The object whose bytes will be read.
+	 * @return A new object of type T, constructed from the bytes of `source_object`.
+	 *
+	 */
+	template<typename T, typename U>
+	[[nodiscard]] inline T safeReadBytes(const U& source_object) requires(
+		std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> && sizeof(T) <= sizeof(U)
+	) {
+		return safeReadBytes<T>(reinterpret_cast<const byte*>(&source_object));
 	}
 }

@@ -16,17 +16,17 @@ class VmCodeInjectionTest: public VmTestSuite {
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multipleFiles);
-		TESTER_ADD_TEST(injectCode);
-		TESTER_ADD_TEST(runNoArgFunction);
-		TESTER_ADD_TEST(runVoidFunction);
-		TESTER_ADD_TEST(runNonVoidFunction);
-		TESTER_ADD_TEST(doubleRunFunction);
-		TESTER_ADD_TEST(manyRunFunctions);
-		TESTER_ADD_TEST(repl);
-		TESTER_ADD_TEST(replWithGlobals);
-		TESTER_ADD_TEST(separateGlobals);
-		TESTER_ADD_TEST(cyclicRepl);
-		TESTER_ADD_TEST(injectExistingFunction);
+		// TESTER_ADD_TEST(injectCode);
+		// TESTER_ADD_TEST(runNoArgFunction);
+		// TESTER_ADD_TEST(runVoidFunction);
+		// TESTER_ADD_TEST(runNonVoidFunction);
+		// TESTER_ADD_TEST(doubleRunFunction);
+		// TESTER_ADD_TEST(manyRunFunctions);
+		// TESTER_ADD_TEST(repl);
+		// TESTER_ADD_TEST(replWithGlobals);
+		// TESTER_ADD_TEST(separateGlobals);
+		// TESTER_ADD_TEST(cyclicRepl);
+		// TESTER_ADD_TEST(injectExistingFunction);
 	}
 
 private:

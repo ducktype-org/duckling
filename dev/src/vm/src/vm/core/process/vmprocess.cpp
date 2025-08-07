@@ -312,6 +312,14 @@ namespace vm {
 		return owned_vm_values.last();
 	}
 
+	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type) {
+		return Box<VmValue>::fromPointer(new VmValue(*this, type));
+	}
+
+	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
+		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+	}
+
 	PID VMProcess::getPID() const { return my_pid; }
 
 	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {
