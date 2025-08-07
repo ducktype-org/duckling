@@ -1,5 +1,10 @@
-const A: i64 = 10.125;
-const B: f80 = 10.125;
-const C: f80 = 10.5 - 0.375;
-const D: f80 = 10 + 0.125;
-const E: f80 = 20.25 - B;
+const A: f32 = 10.125;
+const B: f32 = 10.125;
+const C: f32 = 10.5 - 0.375;
+const D: f32 = 20.25 - B;
+const E: f32 = 1.25e-1 + 10.0;
+const F: f32 = 1e1 + 0.125;
+
+const hex: i64 = 0x1A;
+const oct: i64 = 0o17;
+const bin: i64 = 0b10101;

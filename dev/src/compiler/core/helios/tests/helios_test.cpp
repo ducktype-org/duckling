@@ -106,12 +106,16 @@ private:
 	void testNumericLiterals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/numeric_literals")));
 
-		for (auto val_name = 'A'; val_name <= 'E'; val_name++) {
+		for (auto val_name = 'A'; val_name <= 'F'; val_name++) {
 			auto value = getValue(std::string(1, val_name), root_scope);
 			ASSERT_TRUE(std::holds_alternative<f32>(value));
 			auto* f = std::get_if<f32>(&value);
 			ASSERT_EQUAL(10.125, *f);
 		}
+
+		ASSERT_EQUAL(26, getValue("hex", root_scope));
+		ASSERT_EQUAL(15, getValue("oct", root_scope));
+		ASSERT_EQUAL(21, getValue("bin", root_scope));
 	}
 
 	void testClassSymbolData() {
