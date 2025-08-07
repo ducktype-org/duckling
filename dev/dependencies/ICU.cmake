@@ -1,8 +1,15 @@
+set(ICU_VERSION_REQUIRED "74.1")
+set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
+set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
+
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
 # With Windows building removed because it's very dependent on version
 # @TODO: It might be possible to add include directory automatically from target
 
 include(ExternalProject)
+include(FetchContent)
+
+set(ICU_IS_EXTERNAL FALSE)
 
 # Searches the system using find_package for an ICU version that is greater
 # or equal to the minimum version specified via the VERSION argument to the
@@ -15,81 +22,66 @@ include(ExternalProject)
 #
 # This function requires at least CMake version 3.2.0 for the
 # BUILD_BYPRODUCTS argument to ExternalProject_Add
-function(FindOrBuildICU)
-	set(oneValueArgs VERSION URL URL_HASH)
-	cmake_parse_arguments(FindOrBuildICU "" "${oneValueArgs}" "" ${ARGN})
 
-	if (NOT FindOrBuildICU_VERSION)
-		message(FATAL_ERROR "You must provide a minimum version")
-	endif()
+if(NOT BUILD_STATIC_ICU)
+    find_package(ICU ${ICU_VERSION_REQUIRED} COMPONENTS data i18n uc io)
+endif()
 
-	if (NOT FindOrBuildICU_URL)
-		message(FATAL_ERROR "You must provide a download url to the ICU sources")
-	endif()
-
-	message("-- Searching for ICU ${FindOrBuildICU_VERSION}")
-
-	if (NOT BUILD_STATIC_ICU)
-		find_package(ICU ${FindOrBuildICU_VERSION} COMPONENTS data i18n uc io)
-	endif()
-
-	if (BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL "${FindOrBuildICU_VERSION}")
-		# for some reason, ICU_FOUND seems to always be set...
-		if (BUILD_STATIC_ICU)
-			message("-- Building a static ICU was forced")
-		else()
-			if (NOT ICU_VERSION)
-			message("-- ICU not found; attempting to build it...")
-			else()
-			message("-- ICU version found is ${ICU_VERSION}, expected ${FindOrBuildICU_VERSION}; attempting to build ICU from scratch...")
-			endif()
-		endif()
-		if (WIN32)
-			# not going to attempt to build ICU if we're on Windows for now
-			# probably could, but it's more trouble than it's worth I think
-			message("-- ICU building not supported on Windows.")
-			message(FATAL_ERROR "   -- Please download the latest ICU binaries from http://site.icu-project.org/download")
-		elseif(DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
-			# Be careful this is mostly for github actions
-			message("-- Downloading ubuntu icu build for ubuntu 22.04")
-
-			set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-2/icu4c-74_2-Ubuntu22.04-x64.tgz")
-			set(ICU_CONTROL "MD5=6786f210e101e0440582ba2d9a057aed")
-
-			FetchContent_Declare(
-				ubuntu-icu
-				URL ${ICU_RELEASE}
-				URL_HASH ${ICU_CONTROL}
-				SYSTEM
-			)
-
-			FetchContent_MakeAvailable(ubuntu-icu)
-
-			set(ICU_PREFIX ${PROJECT_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local)
-
-			set(ICU_INCLUDE_DIRS ${ICU_PREFIX}/include)
-
-			set(ICU_DATA_LIBRARY ${ICU_PREFIX}/lib/libicudata.so.74)
-			set(ICU_I18N_LIBRARY ${ICU_PREFIX}/lib/libicui18n.so.74)
-			set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
-			set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
-
-			add_library(icudata IMPORTED SHARED GLOBAL)
-			set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
-			target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
-
-			add_library(icu18n IMPORTED SHARED GLOBAL)
-			set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
-			target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
-
-			add_library(icuuc IMPORTED SHARED GLOBAL)
-			set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
-			target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
-
-			add_library(icuio IMPORTED SHARED GLOBAL)
-			set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
-			target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
-
+if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL "${ICU_VERSION_REQUIRED}")
+	# for some reason, ICU_FOUND seems to always be set...
+    if(BUILD_STATIC_ICU)
+        message("-- Building a static ICU was forced")
+    else()
+        if(NOT ICU_VERSION)
+            message("-- ICU not found; attempting to build it...")
+        else()
+            message("-- ICU version found is ${ICU_VERSION}, expected ${ICU_VERSION_REQUIRED}; attempting to build ICU from scratch...")
+        endif()
+    endif()
+    if(WIN32)
+    	# not going to attempt to build ICU if we're on Windows for now
+		# probably could, but it's more trouble than it's worth I think
+        message(FATAL_ERROR "-- ICU building not supported on Windows. Please download the latest ICU binaries from http://site.icu-project.org/download")
+    elseif(DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
+    	# Be careful this is mostly for github actions
+        message("-- Downloading ubuntu icu build for ubuntu 22.04")
+        
+        set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-2/icu4c-74_2-Ubuntu22.04-x64.tgz")
+        set(ICU_CONTROL "MD5=6786f210e101e0440582ba2d9a057aed")
+        
+        FetchContent_Declare(
+            ubuntu-icu
+            URL ${ICU_RELEASE}
+            URL_HASH ${ICU_CONTROL}
+            SYSTEM
+        )
+        
+        FetchContent_MakeAvailable(ubuntu-icu)
+        
+        set(ICU_PREFIX ${PROJECT_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local)
+        
+        set(ICU_INCLUDE_DIRS ${ICU_PREFIX}/include)
+        
+        set(ICU_DATA_LIBRARY ${ICU_PREFIX}/lib/libicudata.so.74)
+        set(ICU_I18N_LIBRARY ${ICU_PREFIX}/lib/libicui18n.so.74)
+        set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
+        set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
+        
+        add_library(icudata IMPORTED SHARED GLOBAL)
+        set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
+        target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
+        
+        add_library(icu18n IMPORTED SHARED GLOBAL)
+        set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
+        target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
+        
+        add_library(icuuc IMPORTED SHARED GLOBAL)
+        set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
+        target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
+        
+        add_library(icuio IMPORTED SHARED GLOBAL)
+        set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
+        target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
 
 		elseif(UNIX)
 			set(ICU_CFLAGS "-w")
@@ -209,4 +201,3 @@ function(FindOrBuildICU)
 	if (ICU_IS_EXTERNAL)
 		file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})
 	endif()
-endfunction()
