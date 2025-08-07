@@ -78,7 +78,7 @@ namespace clah {
 	 * A value parser used for a string parsing.
 	 * Creates values of type std::string.
 	 */
-	class StringParser: public ValueParser {
+	class StringParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 	public:
@@ -100,7 +100,7 @@ namespace clah {
 	 * A value parser used for an integer parsing.
 	 * Creates values of type i64.
 	 */
-	class IntParser: public ValueParser {
+	class IntParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 	public:
@@ -122,7 +122,7 @@ namespace clah {
 	 * A value parser used for an integer range parsing. I.e. "-1..5".
 	 * Creates values of type RangeParser::Range.
 	 */
-	class RangeParser: public ValueParser {
+	class RangeParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 	public:
@@ -149,7 +149,7 @@ namespace clah {
 	 * Creates values of type base::FilePath, which are links to valid files.
 	 * Additionally, it accepts std::regex to match only given file extensions or anything else.
 	 */
-	class FileParser: public ValueParser {
+	class FileParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 		std::regex file_regex = std::regex(".*");  // The regex - default matches everything.
@@ -175,7 +175,7 @@ namespace clah {
 		}
 	};
 
-	class FilePathParser: public ValueParser {
+	class FilePathParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 		std::regex filepath_regex = std::regex(".*");
