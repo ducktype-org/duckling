@@ -15,6 +15,12 @@ namespace vm::api {
 		return std::unexpected(WrongResponse{});
 	}
 
+	template<class T>
+	std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
+		if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
+		return std::unexpected(WrongResponse{});
+	}
+
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::StatusRequest()))
@@ -131,7 +137,7 @@ namespace vm::api {
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::VmValue{ type_name }))
-		    .and_then(mapOrWrongResponse<response::VmValue>);
+		    .and_then(mapOrWrongResponseMove<response::VmValue>);
 	}
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/vm.hpp>
 
 #include <string>
@@ -39,6 +40,8 @@
  */
 class DuckVMRepl {
 public:
+	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+
 	static DuckVMRepl get();
 	DuckVMRepl(DuckVMRepl&&)                 = delete;
 	DuckVMRepl& operator=(DuckVMRepl&&)      = delete;
@@ -53,9 +56,10 @@ public:
 	void run();
 
 private:
+
 	struct CallInfo {
-		std::string              func_name;
-		vm::FunctionRunArguments func_args;
+		std::string       func_name;
+		OwnedArgumentList func_args;
 	};
 
 	vm::PID pid{};
@@ -88,7 +92,7 @@ private:
 
 	// VM API Functions
 	bool loadOnVm(const std::string& code);
-	i64  runOnVm(const std::string& func_name, const vm::FunctionRunArguments& func_args = {});
+	i64  runOnVm(const std::string& func_name, OwnedArgumentList& func_args);
 	void loadAndRun(const std::string& code);
 
 	// Process User Requests
@@ -123,3 +127,4 @@ DEFINE_REPL_EXCEPTION(ReplFailedToJoinProcessException, "Failed to join the VM p
 DEFINE_REPL_EXCEPTION(ReplEmptyExitCodeException, "Exit code is empty, cannot continue REPL.");
 DEFINE_REPL_EXCEPTION(ReplFailedToRunCodeException, "Failed to run code in REPL.");
 DEFINE_REPL_EXCEPTION(ReplWrongReturnTypeException, "REPL returned a different type than 'i64'");
+DEFINE_REPL_EXCEPTION(ReplFailedToCreateAVmValue, "Failed to create a VmValue for arguments.");

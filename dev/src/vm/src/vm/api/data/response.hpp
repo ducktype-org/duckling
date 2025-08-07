@@ -26,6 +26,15 @@ struct nlohmann::adl_serializer<vm::BlockID> {
 	}
 };
 
+template<typename T>
+struct nlohmann::adl_serializer<base::Box<T>> {
+	static void to_json(json& j, const base::Box<T>& box) { j = *box; }
+
+	static void from_json(const json&, base::Box<T>&) {
+		CORE_PANIC("Parsing data from JSON into Box<T> not supported (yet).");
+	}
+};
+
 // NOLINTEND(readability-identifier-naming)
 
 namespace vm::api {
@@ -48,7 +57,7 @@ namespace vm::api {
 		};
 
 		struct VmValue {
-			Ref<::vm::VmValue> vm_value;
+			Box<::vm::VmValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
 		};
 

@@ -5,7 +5,6 @@
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -18,7 +17,7 @@ public:
 		TESTER_ADD_TEST(multipleFiles);
 		// TESTER_ADD_TEST(injectCode);
 		// TESTER_ADD_TEST(runNoArgFunction);
-		// TESTER_ADD_TEST(runVoidFunction);
+		TESTER_ADD_TEST(runVoidFunction);
 		// TESTER_ADD_TEST(runNonVoidFunction);
 		// TESTER_ADD_TEST(doubleRunFunction);
 		// TESTER_ADD_TEST(manyRunFunctions);
@@ -30,6 +29,8 @@ public:
 	}
 
 private:
+	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+
 	/**
 	 * @brief Executes a function or a program within a VM process and verifies the results.
 	 *
@@ -88,12 +89,36 @@ private:
 			ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
 	}
 
-	Ref<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	/**
+	 * @brief Create an owned VmValue containing a specified value.
+	 */
+	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
 		ASSERT_TRUE(response.has_value());
-		auto vm_value = response->vm_value;
+		auto vm_value = std::move(response->vm_value);
 		vm_value->writeBytes<i64>(value);
 		return vm_value;
+	}
+
+	/**
+	 * @brief Create a list of owned VmValues containing a specified values.
+	 */
+	OwnedArgumentList getOwnedArgumentList(vm::PID pid, std::vector<i64> values) {
+		return values
+		     | std::views::transform([this, pid](i64 value) { return getIntVmValue(pid, value); })
+		     | std::ranges::to<OwnedArgumentList>();
+	}
+
+	/**
+	 * @brief Create a list of references to owned VmValues which can be passed to the VM.
+	 */
+	vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments) {
+		return arguments | std::views::transform([](auto& value) { return value.refMut(); })
+		     | std::ranges::to<vm::FunctionRunArguments>();
+	}
+
+	void freeArguments(OwnedArgumentList& arguments) {
+		for (auto& arg: arguments) arg->freeData();
 	}
 
 	void multipleFiles() {
@@ -128,8 +153,9 @@ private:
 		fs::File file(path("call_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		vm::FunctionRunArguments args = { getIntVmValue(pid, 1), getIntVmValue(pid, 2) };
-		runAndCheckExitCode(pid, "summer", args, {}, "3", {});
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
+		freeArguments(owned_arguments);
 	}
 
 	void runNonVoidFunction() {
@@ -137,8 +163,9 @@ private:
 		fs::File file(path("call_non_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		vm::FunctionRunArguments args = { getIntVmValue(pid, 695), getIntVmValue(pid, 40) };
-		runAndCheckExitCode(pid, "summer", args, {}, {}, 735);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
+		freeArguments(owned_arguments);
 	}
 
 	void doubleRunFunction() {
@@ -146,10 +173,12 @@ private:
 		fs::File file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 
-		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
-		runAndCheckExitCode(pid, "spring", args, {}, {}, 32);
-		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 4), getIntVmValue(pid, 6) };
-		runAndCheckExitCode(pid, "spring", args2, {}, {}, 24);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
+		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 4, 6 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
+		freeArguments(owned_arguments);
+		freeArguments(owned_arguments2);
 	}
 
 	void manyRunFunctions() {
@@ -158,8 +187,9 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
 		for (i32 i = 0; i < 100; i++) {
-			vm::FunctionRunArguments args = { getIntVmValue(pid, i), getIntVmValue(pid, i) };
-			runAndCheckExitCode(pid, "spring", args, {}, {}, i * i);
+			OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { i, i });
+			runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, i * i);
+			freeArguments(owned_arguments);
 		}
 	}
 
@@ -168,13 +198,15 @@ private:
 
 		fs::File file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
-		runAndCheckExitCode(pid, "spring", args, {}, {}, 32);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
+		freeArguments(owned_arguments);
 
 		fs::File file2(path("repl_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 1), getIntVmValue(pid, 2) };
-		runAndCheckExitCode(pid, "summer", args2, {}, {}, 3);
+		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
+		freeArguments(owned_arguments2);
 	}
 
 	void replWithGlobals() {
@@ -193,13 +225,15 @@ private:
 
 		fs::File file1(path("loaded_func_call_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		vm::FunctionRunArguments args = { getIntVmValue(pid, 4), getIntVmValue(pid, 8) };
-		runAndCheckExitCode(pid, "summer", args, {}, {}, 12);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, {}, 12);
+		freeArguments(owned_arguments);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		vm::FunctionRunArguments args2 = { getIntVmValue(pid, 2), getIntVmValue(pid, 3) };
-		runAndCheckExitCode(pid, "spring", args2, {}, {}, 10);
+		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
+		freeArguments(owned_arguments2);
 	}
 
 	void separateGlobals() {

@@ -2,15 +2,18 @@
 
 #include "core/process/interface_types.hpp"
 
+#include "base/variant.hpp"
+
 #include <format>
 #include <iostream>
 #include <string>
 #include <string_view>
 
 namespace {
-	Ref<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
-		auto vm_value = response->vm_value;
+		if (!response.has_value()) throw ReplFailedToCreateAVmValue();
+		auto vm_value = std::move(response->vm_value);
 		vm_value->writeBytes<i64>(value);
 		return vm_value;
 	}
@@ -24,6 +27,18 @@ namespace {
 	std::string lstrip(std::string string) {
 		string.erase(0, string.find_first_not_of(" \t\n\r"));
 		return string;
+	}
+
+	/**
+	 * @brief Create a list of references to owned VmValues which can be passed to the VM.
+	 */
+	vm::FunctionRunArguments createArgumentList(DuckVMRepl::OwnedArgumentList& arguments) {
+		return arguments | std::views::transform([](auto& value) { return value.refMut(); })
+		     | std::ranges::to<vm::FunctionRunArguments>();
+	}
+
+	void freeArguments(DuckVMRepl::OwnedArgumentList& arguments) {
+		for (auto& arg: arguments) arg->freeData();
 	}
 }
 
@@ -111,8 +126,8 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 	std::string function_name = strip(line.substr(0, paren_open));
 	std::string args_str      = line.substr(paren_open + 1, paren_close - paren_open - 1);
 
-	u64                      start = 0;
-	vm::FunctionRunArguments arguments;
+	u64               start = 0;
+	OwnedArgumentList arguments;
 	while (start < args_str.length()) {
 		u64 end = args_str.find(',', start);
 
@@ -121,7 +136,7 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 
 		std::string arg = strip(args_str.substr(start, end - start));
 		try {
-			if (!arg.empty()) arguments.push_back(getIntVmValue(pid, std::stoi(arg)));
+			if (!arg.empty()) arguments.push_back(getIntVmValue(pid, std::stoll(arg)));
 		} catch (const std::exception& e) {
 			std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
 			return {};
@@ -129,27 +144,27 @@ DuckVMRepl::CallInfo DuckVMRepl::parseFunctionCallLine(const std::string& line) 
 		start = end + 1;
 	}
 
-	return { .func_name = function_name, .func_args = arguments };
+	return { .func_name = function_name, .func_args = std::move(arguments) };
 }
 
 // ============== VM API Functions ==============
 bool DuckVMRepl::loadOnVm(const std::string& code) {
-	bool     bad                 = false;
 	fs::File file                = fs::FileManager::createRandomTempFile(code);
 	auto     load_files_response = vm::api::loadFiles(pid, { file });
 	if (!load_files_response.has_value()) {
 		auto err     = load_files_response.error();
 		auto err_str = std::get<vm::api::LoadProgramError>(err).why;
 		std::cout << "Error: Failed to load a file: " << err_str << "\n";
-		bad = true;
+		return false;
 	}
-	return !bad;
+	return true;
 }
 
-i64 DuckVMRepl::runOnVm(const std::string& func_name, const vm::FunctionRunArguments& func_args) {
-	if (!vm::api::runFunction(pid, func_name, func_args).has_value())
+i64 DuckVMRepl::runOnVm(const std::string& func_name, OwnedArgumentList& func_args) {
+	if (!vm::api::runFunction(pid, func_name, createArgumentList(func_args)).has_value())
 		throw ReplFailedToRunCodeException();
 	if (!vm::api::join(pid).has_value()) throw ReplFailedToJoinProcessException();
+	freeArguments(func_args);
 
 	auto exit_code_response = vm::api::getExitValue(pid);
 	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
@@ -161,7 +176,8 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, const vm::FunctionRunArgum
 
 void DuckVMRepl::loadAndRun(const std::string& code) {
 	if (loadOnVm(code)) {
-		runOnVm(std::format(FORMAT_STEP_FUNC_NAME, step_counter));
+		OwnedArgumentList no_args;
+		runOnVm(std::format(FORMAT_STEP_FUNC_NAME, step_counter), no_args);
 		step_counter++;
 	}
 }

@@ -278,8 +278,8 @@ namespace vm {
 						);
 						match_optional(maybe_type) {
 							opt_some(type) {
-								auto vm_value = createVmValue(type);
-								return api::response::VmValue{ vm_value };
+								auto vm_value = createOwnedVmValue(type);
+								return api::response::VmValue{ std::move(vm_value) };
 							}
 							opt_none {
 								return std::unexpected(api::ApiError{
