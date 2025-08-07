@@ -11,6 +11,7 @@
 #include <pst_parser/generic_query_key.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+#include <ctv/num_ctv.hpp>
 
 #include <base/bit256.hpp>
 #include <base/string_id.hpp>

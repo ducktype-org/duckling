@@ -27,7 +27,7 @@ add_library(HELIOS STATIC
 	src/helios/helios_errors.hpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher ctv)
 
 duck_add_test(compiler helios tests/helios_test.cpp 
 	USES Base TypeSystemHigher PstParser HELIOS

@@ -9,6 +9,7 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - argument_splitter.hpp
 - [exceptions.hpp](@ref base/exceptions.hpp)
 - flag.hpp
+- floats.hpp
 - init_guard.hpp
 - ints.hpp
 - maps.hpp

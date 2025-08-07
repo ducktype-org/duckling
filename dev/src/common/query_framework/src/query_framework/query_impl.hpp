@@ -20,6 +20,7 @@
 #include <base/ref.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
+#include <ctv/num_ctv.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>

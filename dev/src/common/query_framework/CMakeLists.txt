@@ -9,7 +9,7 @@ add_library(QueryFramework
 	src/query_framework/query_result.hpp
 )
 
-make_module(QueryFramework USES Base Diagnostic)
+make_module(QueryFramework USES Base Diagnostic ctv)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 

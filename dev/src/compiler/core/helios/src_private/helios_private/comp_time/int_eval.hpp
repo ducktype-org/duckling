@@ -7,6 +7,8 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <ctv/num_ctv.hpp>
+
 namespace compiler::helios {
 
 	using NumCTVEval_Result = query::QResult<num_ctv, errors::Failed>;

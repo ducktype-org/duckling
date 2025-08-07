@@ -16,7 +16,7 @@
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include "base/ints.hpp"
+#include <base/floats.hpp>
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>

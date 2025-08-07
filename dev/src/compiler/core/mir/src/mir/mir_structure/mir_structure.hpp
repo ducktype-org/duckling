@@ -7,6 +7,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <base/ints.hpp>
+#include <ctv/num_ctv.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
