@@ -5,6 +5,8 @@ const D: f32 = 20.25 - B;
 const E: f32 = 1.25e-1 + 10.0;
 const F: f32 = 1e1 + 0.125;
 
+const neg: f32 = -10.125;
+
 const hex: i64 = 0x1A;
 const oct: i64 = 0o17;
 const bin: i64 = 0b10101;

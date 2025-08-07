@@ -2,13 +2,12 @@
 
 #include "../../scope_symbol_id.hpp"
 
+#include <ctv/num_ctv.hpp>
 #include <helios/utils/symbol_list.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
-
-#include <ctv/num_ctv.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -148,6 +147,14 @@ namespace compiler::helios::code {
 
 		IntegerLt,  //< Less than
 
+		FloatAdd,
+		FloatSub,
+		FloatMul,
+		FloatDiv,
+		FloatPow,
+
+		FloatLt,  //< Less than
+
 		BooleanAnd,
 		BooleanOr,
 	};
@@ -177,6 +184,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		FloatNegation,
 		BooleanNot,
 		Ref,
 		Box,

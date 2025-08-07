@@ -83,20 +83,24 @@ namespace compiler::helios {
 						if constexpr (std::is_arithmetic_v<ResultT>) {
 							switch (expr.operation) {
 							case code::BuiltinBinary::IntegerAdd:
+							case code::BuiltinBinary::FloatAdd:
 								result_value
 									= static_cast<ResultT>(lhs) + static_cast<ResultT>(rhs);
 								break;
 
 							case code::BuiltinBinary::IntegerSub:
+							case code::BuiltinBinary::FloatSub:
 								result_value
 									= static_cast<ResultT>(lhs) - static_cast<ResultT>(rhs);
 								break;
 
 							case code::BuiltinBinary::IntegerMul:
+							case code::BuiltinBinary::FloatMul:
 								result_value
 									= static_cast<ResultT>(lhs) * static_cast<ResultT>(rhs);
 								break;
 							case code::BuiltinBinary::IntegerDiv:
+							case code::BuiltinBinary::FloatDiv:
 								result_value
 									= static_cast<ResultT>(lhs) / static_cast<ResultT>(rhs);
 								break;
@@ -104,6 +108,7 @@ namespace compiler::helios {
 								result_value = static_cast<i64>(lhs) % static_cast<i64>(rhs);
 								break;
 							case code::BuiltinBinary::IntegerPow:
+							case code::BuiltinBinary::FloatPow:
 								result_value = static_cast<ResultT>(std::pow(lhs, rhs));
 								break;
 							case code::BuiltinBinary::BooleanAnd:
@@ -137,11 +142,12 @@ namespace compiler::helios {
 
 				switch (expr.operation) {
 				case code::BuiltinUnary::IntegerNegation:
+				case code::BuiltinUnary::FloatNegation:
 					result = std::visit(
 						[](auto val) -> NumCTVEval_Result {
 							using T = decltype(val);
 							if constexpr (std::is_arithmetic_v<T>)
-								return static_cast<num_ctv>(-val);  // Safe unary minus
+								return static_cast<num_ctv>(-val);
 							else
 								return query::QError(errors::Failed());
 						},

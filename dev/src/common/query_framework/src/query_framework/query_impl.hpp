@@ -13,6 +13,8 @@
 #include "query_hash.hpp"
 #include "query_int.hpp"
 
+#include <ctv/num_ctv.hpp>
+
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -20,7 +22,6 @@
 #include <base/ref.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
-#include <ctv/num_ctv.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>

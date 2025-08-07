@@ -16,9 +16,9 @@
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <base/floats.hpp>
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
+#include <base/floats.hpp>
 #include <base/optional.hpp>
 
 #include <query_framework/query_impl.hpp>
@@ -87,19 +87,26 @@ namespace compiler::helios::code {
 				       || value.find('E') != std::string::npos);
 
 				// Exclude hex, octal or binary prefixes
-				bool is_prefixed = (value.starts_with("0x") || value.starts_with("0o") || value.starts_with("0b"));
+				bool is_prefixed
+					= (value.starts_with("0x") || value.starts_with("0o") || value.starts_with("0b")
+				    );
 
 				if (is_float && !is_prefixed) {
 					f80 as_ld = std::stold(value);
-					node = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_ld));
+					node      = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_ld));
 				} else {
 					int base = 10;
-					int pos = 2;
-					if (value.starts_with("0x")) base = 16;
-					else if(value.starts_with("0o")) base = 8;
-					else if(value.starts_with("0b")) base = 2;
-					else pos = 0;
-					i64 as_i64 = std::stoll(value.substr(pos), nullptr, base);;
+					int pos  = 2;
+					if (value.starts_with("0x"))
+						base = 16;
+					else if (value.starts_with("0o"))
+						base = 8;
+					else if (value.starts_with("0b"))
+						base = 2;
+					else
+						pos = 0;
+					i64 as_i64 = std::stoll(value.substr(pos), nullptr, base);
+					;
 					node = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_i64));
 				}
 			}

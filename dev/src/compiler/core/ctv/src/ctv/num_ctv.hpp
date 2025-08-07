@@ -5,8 +5,8 @@
  */
 #pragma once
 
-#include <base/ints.hpp>
 #include <base/floats.hpp>
+#include <base/ints.hpp>
 
 #include <limits>
 #include <variant>

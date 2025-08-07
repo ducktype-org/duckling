@@ -412,7 +412,7 @@ namespace lexer {
 
 		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
-	
+
 	void Lexer::octLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};

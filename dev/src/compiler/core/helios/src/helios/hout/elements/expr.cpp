@@ -160,8 +160,14 @@ namespace compiler::helios::code {
 		case IntegerDiv:
 		case IntegerMod:
 		case IntegerPow:
+		case FloatAdd:
+		case FloatSub:
+		case FloatMul:
+		case FloatDiv:
+		case FloatPow:
 			return argument_type;
 		case IntegerLt:
+		case FloatLt:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -196,24 +202,30 @@ namespace compiler::helios::code {
 		lhs->debugPrint(out);
 		switch (operation) {
 		case BuiltinBinary::IntegerAdd:
+		case BuiltinBinary::FloatAdd:
 			out << "+";
 			break;
 		case BuiltinBinary::IntegerSub:
+		case BuiltinBinary::FloatSub:
 			out << "-";
 			break;
 		case BuiltinBinary::IntegerMul:
+		case BuiltinBinary::FloatMul:
 			out << "*";
 			break;
 		case BuiltinBinary::IntegerDiv:
+		case BuiltinBinary::FloatDiv:
 			out << "/";
 			break;
 		case BuiltinBinary::IntegerMod:
 			out << "%";
 			break;
 		case BuiltinBinary::IntegerPow:
+		case BuiltinBinary::FloatPow:
 			out << "**";
 			break;
 		case BuiltinBinary::IntegerLt:
+		case BuiltinBinary::FloatLt:
 			out << "<";
 			break;
 		case BuiltinBinary::BooleanAnd:

@@ -20,19 +20,19 @@ namespace compiler::helios::code {
 
 		// Confirm appropriate types.
 		auto argument_kind                   = lhs_type.getType().getKind();
+		bool are_arguments_same_kind         = argument_kind == rhs_type.getType().getKind();
 		bool are_arguments_int_float_or_bool = argument_kind == tsh::Kind::Integral
 		                                    or argument_kind == tsh::Kind::Bool
 		                                    or argument_kind == tsh::Kind::Float;
 
-		if (not are_arguments_int_float_or_bool) {
+		if (not are_arguments_same_kind or not are_arguments_int_float_or_bool) {
 			// @TODO: report an error?
 			// No builtins for types other than ints floats and bools for now.
 			return {};
 		}
 
 		// Confirm matching sizes and signedness in the case of integers.
-		if (argument_kind == tsh::Kind::Integral
-		    && rhs_type.getType().getKind() == tsh::Kind::Integral) {
+		if (argument_kind == tsh::Kind::Integral) {
 			auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
 			auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
@@ -40,19 +40,27 @@ namespace compiler::helios::code {
 		}
 
 		// @TODO: change to base::map when possible
-		const static std::map<base::StrID, BuiltinBinary> operators = {
-			{ base::StrID("+"), BuiltinBinary::IntegerAdd },
-			{ base::StrID("-"), BuiltinBinary::IntegerSub },
-			{ base::StrID("*"), BuiltinBinary::IntegerMul },
-			{ base::StrID("/"), BuiltinBinary::IntegerDiv },
-			{ base::StrID("%"), BuiltinBinary::IntegerMod },
-			{ base::StrID("**"), BuiltinBinary::IntegerPow },
-			{ base::StrID("<"), BuiltinBinary::IntegerLt },
-			{ keywordToStr(lang_def::Keyword::And), BuiltinBinary::BooleanAnd },
-			{ keywordToStr(lang_def::Keyword::Or), BuiltinBinary::BooleanOr },
+		const static std::map<std::pair<lexer::Operator, tsh::Kind>, BuiltinBinary> operators = {
+			{ { base::StrID("+"), tsh::Kind::Integral }, BuiltinBinary::IntegerAdd },
+			{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinBinary::IntegerSub },
+			{ { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
+			{ { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
+			{ { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
+			{ { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
+			{ { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
+
+			{ { base::StrID("+"), tsh::Kind::Float }, BuiltinBinary::FloatAdd },
+			{ { base::StrID("-"), tsh::Kind::Float }, BuiltinBinary::FloatSub },
+			{ { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
+			{ { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
+			{ { base::StrID("**"), tsh::Kind::Float }, BuiltinBinary::FloatPow },
+			{ { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },
+
+			{ { keywordToStr(lang_def::Keyword::And), tsh::Kind::Bool }, BuiltinBinary::BooleanAnd },
+			{ { keywordToStr(lang_def::Keyword::Or), tsh::Kind::Bool }, BuiltinBinary::BooleanOr },
 		};
 
-		if (operators.contains(op)) return operators.at(op);
+		if (operators.contains({ op, argument_kind })) return operators.at({ op, argument_kind });
 		return {};
 	}
 
@@ -67,6 +75,7 @@ namespace compiler::helios::code {
 		static const LookupMap lookup = {
 			// Integral
 			{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
+			{ { base::StrID("-"), tsh::Kind::Float }, BuiltinUnary::FloatNegation },
 			// Boolean
 			{ { keywordToStr(lang_def::Keyword::Not), tsh::Kind::Bool }, BuiltinUnary::BooleanNot },
 			// Meta
