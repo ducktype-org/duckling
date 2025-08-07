@@ -1,10 +1,9 @@
-include(FetchContent)
 include(Asio.cmake)
 include(Base64.cmake)
 include(Crow.cmake)
-include(FindOrBuildICU.cmake)
 include(Graphviz.cmake)
 include(ICU.cmake)
+include(Nlohmann_json.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 

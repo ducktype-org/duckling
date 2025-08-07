@@ -1,3 +1,5 @@
+include(FetchContent)
+
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 
 FetchContent_Declare(

@@ -12,16 +12,13 @@ include(FetchContent)
 set(ICU_IS_EXTERNAL FALSE)
 
 # Searches the system using find_package for an ICU version that is greater
-# or equal to the minimum version specified via the VERSION argument to the
-# function. If find_package does not find a suitable version, ICU is added
+# or equal to the minimum version (ICU_VERSION_REQUIRED).
+# If find_package does not find a suitable version, ICU is added
 # as an external project to be downloaded form the specified URL and
 # validated with the specified URL_HASH.
 
-# The function sets the variables ICU_LIBRARIES and ICU_INCLUDE_DIRS
+# ICU_LIBRARIES and ICU_INCLUDE_DIRS variables are set
 # for use by targets that wish to use ICU headers or ICU library functions.
-#
-# This function requires at least CMake version 3.2.0 for the
-# BUILD_BYPRODUCTS argument to ExternalProject_Add
 
 if(NOT BUILD_STATIC_ICU)
     find_package(ICU ${ICU_VERSION_REQUIRED} COMPONENTS data i18n uc io)

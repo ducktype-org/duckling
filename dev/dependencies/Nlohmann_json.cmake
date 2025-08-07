@@ -1,3 +1,5 @@
+include(FetchContent)
+
 set(NLOHMANN_JSON_TAG "v3.11.3")
 
 FetchContent_Declare(

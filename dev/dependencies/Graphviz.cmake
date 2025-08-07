@@ -1,3 +1,5 @@
+include(FetchContent)
+
 find_library(GVC_LIBRARY gvc)
 find_library(CGRAPH_LIBRARY cgraph)
 find_library(CDT_LIBRARY cdt)

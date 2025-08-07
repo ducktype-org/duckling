@@ -1,3 +1,5 @@
+include(FetchContent)
+
 set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
 
 FetchContent_Declare(base64)
