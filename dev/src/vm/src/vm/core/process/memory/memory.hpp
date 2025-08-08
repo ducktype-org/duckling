@@ -147,7 +147,9 @@ namespace vm {
 
 		auto destroyBlockReference(Pointer pointer) -> void;
 
-		auto setPointer(Pointer& dst, Pointer src) -> void;
+		// auto setPointer(Pointer& dst, Pointer src) -> void;
+
+		auto setPointer(std::byte* dst_location, Pointer src) -> void;
 
 		// ======================== Requests ========================
 

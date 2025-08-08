@@ -5,6 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
+#include "vm/utils/interpret.hpp"
 #include <vm/core/process/exceptions.hpp>
 
 #include <mutex>
@@ -143,7 +144,7 @@ namespace vm {
 			freeBlock(iter->second);
 		}
 
-		auto copy_blocks_recursivly
+		auto copy_blocks_recursively
 			= [this](const auto& self, Ref<Block> block_dst, Ref<Block> block_src) -> void {
 			for (auto nested: block_src->children_blocks) {
 				Pointer new_pointer(block_dst, nested.first);
@@ -160,8 +161,8 @@ namespace vm {
 			auto    offset      = dst.offset + iter->first - src.offset;
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
 			setNestedViewBlock(new_pointer, iter->second->data.element_type);
-			copy_blocks_recursivly(
-				copy_blocks_recursivly, new_pointer.getBlock()->children_blocks[offset], iter->second
+			copy_blocks_recursively(
+				copy_blocks_recursively, new_pointer.getBlock()->children_blocks[offset], iter->second
 			);
 		}
 
@@ -178,7 +179,21 @@ namespace vm {
 		}
 	}
 
-	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
+	// auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
+	// 	if_opt_some(dst.block.toOpt(), block) {
+	// 		std::lock_guard lock(*block->mutex_ref);
+	// 		destroyBlockReference(dst);
+	// 	}
+	// 	if_opt_some(src.block.toOpt(), block) {
+	// 		std::lock_guard lock(*block->mutex_ref);
+	// 		block->refcount++;
+	// 	}
+	// 	dst = src;
+	// }
+
+	auto Memory::setPointer(std::byte* dst_location, Pointer src) -> void {
+		const auto dst = vm::safeReadBytes<Pointer>(dst_location);
+
 		if_opt_some(dst.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
 			destroyBlockReference(dst);
@@ -187,7 +202,8 @@ namespace vm {
 			std::lock_guard lock(*block->mutex_ref);
 			block->refcount++;
 		}
-		dst = src;
+
+		vm::safeWriteBytes<Pointer>(dst_location, src);
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {
