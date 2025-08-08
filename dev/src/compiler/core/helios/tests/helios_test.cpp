@@ -113,6 +113,15 @@ private:
 			ASSERT_EQUAL(10.125, *f);
 		}
 
+		auto value = getValue("tr_dot", root_scope);
+		ASSERT_TRUE(std::holds_alternative<f32>(value));
+		auto* f = std::get_if<f32>(&value);
+		ASSERT_EQUAL(5., *f);
+
+		auto value = getValue("lead_dot", root_scope);
+		ASSERT_TRUE(std::holds_alternative<f32>(value));
+		auto* f = std::get_if<f32>(&value);
+		ASSERT_EQUAL(.5, *f);
 
 		auto value = getValue("neg", root_scope);
 		ASSERT_TRUE(std::holds_alternative<f32>(value));
