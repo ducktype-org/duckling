@@ -205,10 +205,9 @@ namespace compiler::backend_llvm {
 		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
 		if (lir_global.inital_value.has_value()) {
+			// @TODO change it when global value converted to more general type
 			i64 value = std::visit(
-				[](auto val) -> i64 {
-					return static_cast<i64>(val);  // Fallback for other types
-				},
+				[](auto val) -> i64 { return static_cast<i64>(val); },
 				lir_global.inital_value.value()
 			);
 
