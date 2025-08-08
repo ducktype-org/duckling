@@ -13,7 +13,7 @@ namespace init {
 		 * This is essentially a duplication of
 		 * InitState::was_init, but defined in a way
 		 * that should make it safe to call after main,
-		 * and more precisely, during static initialization
+		 * and more precisely, during static deinitialization
 		 * of init_verifier static object defined bellow.
 		 *
 		 * It is used for sanity check that init was used
@@ -134,4 +134,6 @@ namespace init {
 
 		for (auto& function: state->deinit_function_list) function();
 	}
+
+	bool wasInitObject() { return getInitState()->was_init; }
 }

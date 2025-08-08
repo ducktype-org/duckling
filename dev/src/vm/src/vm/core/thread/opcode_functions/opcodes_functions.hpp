@@ -32,10 +32,12 @@ namespace vm {
 #define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
 #include <vm/bytecode/opcode_definitions.hpp>
 
+
 #undef HANDLE_OPCODE
 
 #define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
 #include <vm/bytecode/opcode_definitions.hpp>
+
 
 #undef HANDLE_OPCODE
 
@@ -54,6 +56,7 @@ namespace vm {
 #define HANDLE_OPCODE(opcode) op_##opcode,
 #include <vm/bytecode/opcode_definitions.hpp>
 
+
 #undef HANDLE_OPCODE
 		};
 
@@ -63,6 +66,7 @@ namespace vm {
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_OPCODE(opcode) op_debug_##opcode,
 #include <vm/bytecode/opcode_definitions.hpp>
+
 
 #undef HANDLE_OPCODE
 		};
@@ -156,6 +160,30 @@ namespace vm {
 				// since a new init (after returning from a called function) to the same
 				// offset/block_idx will overwrite the old values.
 			}
+		}
+
+		static __attribute__((always_inline)) void performInit(
+			[[maybe_unused]] const MicroInstruction*& instr,
+			std::byte*&                               local_stack,
+			Frame*&                                   frame,
+			VMThread&                                 thread,
+			TypeID                                    type_id
+		) {
+			auto type     = thread.executing_program->types->at(type_id);
+			auto data_ptr = local_stack + frame->local_stack_head;
+			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
+			// local_offset mappings from the frame when we call a function. In the call, we just
+			// move the local_stack_head and new inits (which will happen after we return from a
+			// called function) will overwrite the old mappings.
+			frame->local_offset_to_block_idx.insert_or_assign(
+				frame->local_stack_head, frame->block_stack.size()
+			);
+			frame->block_idx_to_local_offset.insert_or_assign(
+				frame->block_stack.size(), frame->local_stack_head
+			);
+			frame->block_stack.push_back(block);
+			frame->local_stack_head += type->getSize();
 		}
 	};
 }  // namespace vm

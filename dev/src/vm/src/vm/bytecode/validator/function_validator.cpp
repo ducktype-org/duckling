@@ -114,9 +114,7 @@ namespace {
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
-		const PointerType&                    pointer,
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		Args&&... error_args
+		const PointerType& pointer, const ObjIdNameMap<TypeOfData>& tod_map, Args&&... error_args
 	) {
 		const auto& pointed_type = tod_map.at(pointer.inner);
 		if (!std::holds_alternative<ExpectedT>(*pointed_type))
@@ -158,7 +156,7 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<StableObjIdNameMap<TypeOfData>>         tod_map;
+	CRef<ObjIdNameMap<TypeOfData>>               tod_map;
 	[[maybe_unused]] CRef<TypeMetadata>          type_metadata;
 	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
 
@@ -169,9 +167,9 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const FuncSignature&                  signature,
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                   type_metadata
+		const FuncSignature&            signature,
+		const ObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&             type_metadata
 	):
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
@@ -230,11 +228,11 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const StableObjIdNameMap<TypeOfData>&            tod_map;
-	const base::HashMap<base::StrID, FuncSignature>& signatures;
-	const TypeMetadata&                              type_metadata;
-	const StableObjIdNameMap<GlobalData>&            globals;
-	const Function&                                  function;
+	const ObjIdNameMap<TypeOfData>& tod_map;
+  const base::HashMap<base::StrID, FuncSignature>& signatures;
+	const TypeMetadata&             type_metadata;
+	const ObjIdNameMap<GlobalData>& globals;
+	const Function&                 function;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -603,6 +601,30 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
+
+			variant_case_novalue(Op_fadd_l64_l64) {}
+			variant_case_novalue(Op_fadd_l64_imm) {}
+			variant_case_novalue(Op_fadd_l32_l32) {}
+			variant_case_novalue(Op_fadd_l32_imm) {}
+
+			variant_case_novalue(Op_fsub_l64_l64) {}
+			variant_case_novalue(Op_fsub_l64_imm) {}
+			variant_case_novalue(Op_fsub_l32_l32) {}
+			variant_case_novalue(Op_fsub_l32_imm) {}
+
+			variant_case_novalue(Op_fmul_l64_l64) {}
+			variant_case_novalue(Op_fmul_l64_imm) {}
+			variant_case_novalue(Op_fmul_l32_l32) {}
+			variant_case_novalue(Op_fmul_l32_imm) {}
+
+			variant_case_novalue(Op_fdiv_l64_l64) {}
+			variant_case_novalue(Op_fdiv_l64_imm) {}
+			variant_case_novalue(Op_fdiv_l32_l32) {}
+			variant_case_novalue(Op_fdiv_l32_imm) {}
+
+			variant_case_novalue(Op_fneg_l64) {}
+			variant_case_novalue(Op_fneg_l32) {}
+
 			variant_case_novalue(Op_umul_l64_l64) {}
 			variant_case_novalue(Op_umul_l64_imm) {}
 			variant_case_novalue(Op_umul_l32_l32) {}
@@ -621,6 +643,13 @@ class FunctionValidator {
 			variant_case_novalue(Op_ucmpG_l32_imm) {}
 			variant_case_novalue(Op_ucmpG_l8_l8) {}
 			variant_case_novalue(Op_ucmpG_l8_imm) {}
+			variant_case_novalue(Op_log_and_l8_l8) {}
+			variant_case_novalue(Op_log_and_l8_imm) {}
+			variant_case_novalue(Op_log_or_l8_l8) {}
+			variant_case_novalue(Op_log_or_l8_imm) {}
+			variant_case_novalue(Op_log_xor_l8_l8) {}
+			variant_case_novalue(Op_log_xor_l8_imm) {}
+			variant_case_novalue(Op_log_not_l8) {}
 
 
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
@@ -1008,11 +1037,11 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const StableObjIdNameMap<TypeOfData>&            tod_map,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const TypeMetadata&                              type_metadata,
-		const StableObjIdNameMap<GlobalData>&            globals,
-		const Function&                                  function
+		const ObjIdNameMap<TypeOfData>& tod_map,
+    const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const TypeMetadata&             type_metadata,
+		const ObjIdNameMap<GlobalData>& globals,
+		const Function&                 function
 	):
 		  tod_map(tod_map),
 		  signatures(signatures),
@@ -1033,11 +1062,11 @@ public:
 };
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
-	const StableObjIdNameMap<TypeOfData>&            tod_map,
-	const base::HashMap<base::StrID, FuncSignature>& signatures,
-	const TypeMetadata&                              type_metadata,
-	const StableObjIdNameMap<GlobalData>&            globals_map,
-	const Function&                                  function
+	const ObjIdNameMap<TypeOfData>& tod_map,
+  const base::HashMap<base::StrID, FuncSignature>& signatures,
+	const TypeMetadata&             type_metadata,
+	const ObjIdNameMap<GlobalData>& globals_map,
+	const Function&                 function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 

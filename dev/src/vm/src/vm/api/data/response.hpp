@@ -5,6 +5,8 @@
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
+#include <memory>
+
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
 struct nlohmann::adl_serializer<base::RawView> {
@@ -24,6 +26,15 @@ struct nlohmann::adl_serializer<vm::BlockID> {
 	}
 };
 
+template<typename T>
+struct nlohmann::adl_serializer<base::Box<T>> {
+	static void to_json(json& j, const base::Box<T>& box) { j = *box; }
+
+	static void from_json(const json&, base::Box<T>&) {
+		CORE_PANIC("Parsing data from JSON into Box<T> not supported (yet).");
+	}
+};
+
 // NOLINTEND(readability-identifier-naming)
 
 namespace vm::api {
@@ -38,6 +49,16 @@ namespace vm::api {
 		struct Block {
 			base::RawView data;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
+		};
+
+		struct Type {
+			TypeCRef type;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, type);
+		};
+
+		struct VmValue {
+			Box<::vm::VmValue> vm_value;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
 		};
 
 		struct BlockIDs {
@@ -56,9 +77,10 @@ namespace vm::api {
 		ProcStatus,
 		response::Output,
 		response::Block,
-		TypeCRef,
+		response::Type,
 		response::Empty,
 		response::BlockIDs,
 		response::CodePosition,
-		ExitCode>;
+		response::VmValue,
+		ExitValue>;
 }

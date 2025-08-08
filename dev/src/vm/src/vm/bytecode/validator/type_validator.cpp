@@ -563,7 +563,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 	return metadata;
 }
 
-const vm::StableObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
+const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
 
 void TypeContext::insertType(const TypeOfData& type) {
 	const auto name = typeName(type);

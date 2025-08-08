@@ -18,7 +18,7 @@ namespace vm::code {
 		 */
 		void insertType(const TypeOfData& type);
 
-		const StableObjIdNameMap<TypeOfData>& getCurrentTypes() const;
+		const ObjIdNameMap<TypeOfData>& getCurrentTypes() const;
 
 		/**
 		 * @brief Creates TypeMetadata by building types.
@@ -28,6 +28,6 @@ namespace vm::code {
 		base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
 
 	private:
-		StableObjIdNameMap<TypeOfData> types;
+		ObjIdNameMap<TypeOfData> types;
 	};
 }

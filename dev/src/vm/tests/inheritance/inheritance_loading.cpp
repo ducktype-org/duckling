@@ -18,7 +18,7 @@ private:
 	vm::TypeCRef getType(vm::PID pid, const std::string& name) {
 		auto response = vm::api::getType(pid, name);
 		assertTrue(response.has_value(), "Type query failed for: " + name);
-		return response.value();
+		return response->type;
 	}
 
 	void checkPod(vm::TypeCRef type) {

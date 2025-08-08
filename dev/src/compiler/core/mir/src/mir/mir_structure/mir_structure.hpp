@@ -497,3 +497,5 @@ namespace compiler::mir {
 	};
 
 }
+
+ID_STD_HASH(compiler::mir::LocalID)
