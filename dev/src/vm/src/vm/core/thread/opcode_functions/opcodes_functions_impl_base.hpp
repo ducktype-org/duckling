@@ -44,9 +44,6 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <bit>
-#include <variant>
-
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
@@ -231,12 +228,52 @@ namespace vm {
 	DEFINE_DIVISION_OP(div, 64, i64)
 	DEFINE_DIVISION_OP(div, 32, i32)
 
+	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
+	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
+	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
+	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
+	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
+	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
+	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
+	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
+
+
 	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
 	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
 	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
 	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
 	DEFINE_DIVISION_OP(udiv, 64, u64)
 	DEFINE_DIVISION_OP(udiv, 32, u32)
+
+#define DEFINE_BOOLEAN_OP(NAME, OP)                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                            \
+		{                                                                                       \
+			derefStack<u8>(local_stack, instr->arg0)                                            \
+				= static_cast<u8>((derefStack<u8>(local_stack, instr->arg0) != u8{ 0 })         \
+			                          OP(derefStack<u8>(local_stack, instr->arg1) != u8{ 0 })); \
+		}                                                                                       \
+		FUNCTION_CONT(1);                                                                       \
+	}                                                                                           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                           \
+		{                                                                                       \
+			derefStack<u8>(local_stack, instr->arg0)                                            \
+				= static_cast<u8>((derefStack<u8>(local_stack, instr->arg0) != u8{ 0 })         \
+			                          OP(safeReadBytes<u8>(instr->arg1) != u8{ 0 }));           \
+		}                                                                                       \
+		FUNCTION_CONT(1);                                                                       \
+	}
+
+	DEFINE_BOOLEAN_OP(log_and, &&)
+	DEFINE_BOOLEAN_OP(log_or, ||)
+	DEFINE_BOOLEAN_OP(log_xor, !=)
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_l8)(FUNCTION_ARGS) {
+		{
+			bool result = (derefStack<u8>(local_stack, instr->arg0) == u8{ 0 });
+			derefStack<u8>(local_stack, instr->arg0) = (result ? u8{ 1 } : u8{ 0 });
+		}
+		FUNCTION_CONT(1);
+	}
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                           \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {          \
@@ -298,6 +335,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
 		{ derefStack<i32>(local_stack, instr->arg0) *= -1; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l64)(FUNCTION_ARGS) {
+		{ derefStack<double>(local_stack, instr->arg0) *= -1.0; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l32)(FUNCTION_ARGS) {
+		{ derefStack<float>(local_stack, instr->arg0) *= -1.0f; }
 		FUNCTION_CONT(1);
 	}
 

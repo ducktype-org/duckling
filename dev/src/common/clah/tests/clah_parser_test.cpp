@@ -13,6 +13,7 @@ public:
 		TESTER_ADD_TEST(stringParserTest);
 		TESTER_ADD_TEST(rangeParserTest);
 		TESTER_ADD_TEST(fileParserTest);
+		TESTER_ADD_TEST(filePathParserTest);
 	}
 
 private:
@@ -35,6 +36,12 @@ private:
 
 	static fs::File parseFile(const std::string& str, const std::regex& regex = std::regex(".*")) {
 		return std::any_cast<fs::File>(clah::FileParser::make(regex)->parse(0, str).value);
+	}
+
+	static fs::FilePath parseFilePath(
+		const std::string& str, const std::regex& regex = std::regex(".*")
+	) {
+		return std::any_cast<fs::FilePath>(clah::FilePathParser::make(regex)->parse(0, str).value);
 	}
 
 	void intParserTest() {
@@ -110,6 +117,27 @@ private:
 		);
 
 		std::filesystem::current_path(initial_path);
+	}
+
+	void filePathParserTest() {
+		std::filesystem::path path = __FILE__;
+		path.remove_filename();
+		std::string path_str = path.string();
+
+		ASSERT_EQUAL(
+			"awesome_content\n",
+			fs::File(parseFilePath(path_str + "test_file.txt", std::regex(".*\\.txt")))
+				.getContent()
+				.view()
+				.stdString()
+		);
+
+		parseFilePath(path_str + "no_file.txt", std::regex(".*\\.txt"));
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseFilePath(path_str + "test_file.txt", std::regex(".*\\.cpp")); },
+			"Regex should make it invalid"
+		);
 	}
 };
 

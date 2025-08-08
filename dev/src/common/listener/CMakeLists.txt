@@ -1,8 +1,5 @@
-add_library(Listener
-	src/listener/listener.hpp
-)
-set_target_properties(Listener PROPERTIES LINKER_LANGUAGE CXX)
+add_library(Listener INTERFACE)
 
-make_module(Listener USES)
+target_include_directories(Listener INTERFACE src)
 
 duck_add_test(common listener tests/listener_test.cpp USES Listener)

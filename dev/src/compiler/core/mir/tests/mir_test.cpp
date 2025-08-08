@@ -6,6 +6,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -33,6 +34,7 @@ public:
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(moveValidation);
 	}
 
 private:
@@ -420,6 +422,115 @@ private:
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) })->value();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
+		});
+	}
+
+	void moveValidation() {
+		// @note This test is very fragile and may require hotfixes even after unrelated changes.
+		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
+		// 'else', 'break', 'continue', 'switch' etc..
+		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit->functions;
+
+			for (auto& fun: functions) {
+				if (fun.original_name.str() == "good1") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
+				}
+
+				if (fun.original_name.str() == "good2") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
+				}
+
+				if (fun.original_name.str() == "good3") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[2]].instructions[1].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
+				}
+
+				if (fun.original_name.str() == "good4") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[1].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isOk());
+				}
+
+				if (fun.original_name.str() == "bad1") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+
+					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isBad());
+				}
+
+				if (fun.original_name.str() == "bad2") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isBad());
+				}
+
+				if (fun.original_name.str() == "bad3") {
+					auto& mir_rep = (compiler::mir::Function&) ctx
+					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    ->value();
+
+					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
+						compiler::mir::OperationFlag::Flag::Move, tmp
+					);
+
+					ASSERT_TRUE(validateFunction(mir_rep).isBad());
+				}
+			}
 		});
 	}
 };
