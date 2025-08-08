@@ -6,3 +6,7 @@ const B: i32 = 1;
 const B: i32 = 2;
 
 const C: i32 = B * 2;
+
+# NOTE: This line is invalid under current type rules.
+# TODO: Update once implicit int-to-float coercion is supported.
+const InvalidOp: f32 = 10 + 0.125;

@@ -519,6 +519,13 @@ private:
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
 		}
+
+		try {
+			getValue("InvalidOp", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 	}
 
 	void testHoutVariables() {
