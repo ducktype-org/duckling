@@ -30,9 +30,16 @@ namespace vm::loader::parser {
 		T parseLiteral(F8ParserState& state, size_t& literal_length) {
 			auto previous_token = state.tokens().peek();
 			i32  sign           = 1;
-			if (previous_token.isOperatorSymbol() && previous_token.getValue().str() == "-") {
-				sign = -1;
-				state.tokens().next();  // Consume the minus operator
+			if (previous_token.isOperatorSymbol()) {
+				if (previous_token.getValue().str() == "-") {
+					sign = -1;
+					state.tokens().next();
+					literal_length++;
+				} else if (previous_token.getValue().str() == "+") {
+					sign = 1;
+					state.tokens().next();
+					literal_length++;
+				}
 			}
 			auto token      = state.tokens().next();
 			auto next_token = state.tokens().peek();
@@ -47,9 +54,9 @@ namespace vm::loader::parser {
 			}
 
 			if (token.isNumLiteral())
-				literal_length = str.length() + next_token.getValue().str().length();
+				literal_length += str.length() + next_token.getValue().str().length();
 			else
-				literal_length = str.length();
+				literal_length += str.length();
 
 			try {
 				T     result;
