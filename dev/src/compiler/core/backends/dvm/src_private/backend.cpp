@@ -17,6 +17,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/utils/interpret.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -55,7 +56,7 @@ namespace compiler::backend_vm {
 		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
 			variant_match(layout()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
-					return vm::code::PrimitiveType(base::StrID("void"), 0);
+					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout.getSize());
@@ -120,9 +121,9 @@ namespace compiler::backend_vm {
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
 			AddLirFuncContext(
-				query::Context&                           ctx,
-				CRef<lir::Function>                       lir_function,
-				const vm::StableObjIdNameMap<TypeOfData>& type_map
+				query::Context&                     ctx,
+				CRef<lir::Function>                 lir_function,
+				const vm::ObjIdNameMap<TypeOfData>& type_map
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
@@ -325,7 +326,7 @@ namespace compiler::backend_vm {
 		) {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) {
-					return vm::opargs::Immediate{ vm::Memory::interpret<const u64>(value) };
+					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LocalRef, local_ref) {

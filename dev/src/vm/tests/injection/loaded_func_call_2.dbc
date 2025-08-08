@@ -4,7 +4,7 @@ type fun: spring { i64, i64 } i64
 
 function spring {
 	# For given a, b calculates a * (a+b)
-
+	
 	mov_l64_l64 ret_val, arg0;
 	init_lany_type sum_ret_val, i64;
 	init_lany_type sum_a0, i64;
