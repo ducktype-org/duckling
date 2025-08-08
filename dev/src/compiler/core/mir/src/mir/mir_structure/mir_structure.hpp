@@ -280,8 +280,6 @@ namespace compiler::mir {
 
 		MIRValue(MirGlobal value): value(value) {}
 
-		MIRValue(num_ctv value): value(MirIntegerConst(value)) {}
-
 		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;

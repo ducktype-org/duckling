@@ -1,7 +1,7 @@
 /**
  * @file floats.hpp
  *
- * @attention `<stdfloat>` should not be used, unless necessary. Ints should be used instead.
+ * @attention `<stdfloat>` should not be used, unless necessary. Floats should be used instead.
  *
  * @brief Floats is a library analogous to `<stdfloat>` with generally shorter type names
  */
