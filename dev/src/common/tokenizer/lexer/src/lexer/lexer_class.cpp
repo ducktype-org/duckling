@@ -288,11 +288,11 @@ namespace lexer {
 		} else if (peek().is(Class::special)) {
 			specialHandler(output);
 		} else if (peek().isDigit()) {
-			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
+			if (peek().is('0') && peek(1).is('b'))
 				binLiteralHandler(output);
-			else if (peek().is('0') && (peek(1).is('o') || peek(1).is('O')))
+			else if (peek().is('0') && peek(1).is('o'))
 				octLiteralHandler(output);
-			else if (peek().is('0') && (peek(1).is('x') || peek(1).is('X')))
+			else if (peek().is('0') && peek(1).is('x'))
 				hexLiteralHandler(output);
 			else
 				decLiteralHandler(output);
