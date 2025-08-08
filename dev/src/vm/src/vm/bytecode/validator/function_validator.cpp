@@ -228,11 +228,11 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const ObjIdNameMap<TypeOfData>& tod_map;
-  const base::HashMap<base::StrID, FuncSignature>& signatures;
-	const TypeMetadata&             type_metadata;
-	const ObjIdNameMap<GlobalData>& globals;
-	const Function&                 function;
+	const ObjIdNameMap<TypeOfData>&                  tod_map;
+	const base::HashMap<base::StrID, FuncSignature>& signatures;
+	const TypeMetadata&                              type_metadata;
+	const ObjIdNameMap<GlobalData>&                  globals;
+	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -1037,11 +1037,11 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const ObjIdNameMap<TypeOfData>& tod_map,
-    const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const TypeMetadata&             type_metadata,
-		const ObjIdNameMap<GlobalData>& globals,
-		const Function&                 function
+		const ObjIdNameMap<TypeOfData>&                  tod_map,
+		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const TypeMetadata&                              type_metadata,
+		const ObjIdNameMap<GlobalData>&                  globals,
+		const Function&                                  function
 	):
 		  tod_map(tod_map),
 		  signatures(signatures),
@@ -1062,17 +1062,15 @@ public:
 };
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
-	const ObjIdNameMap<TypeOfData>& tod_map,
-  const base::HashMap<base::StrID, FuncSignature>& signatures,
-	const TypeMetadata&             type_metadata,
-	const ObjIdNameMap<GlobalData>& globals_map,
-	const Function&                 function
+	const ObjIdNameMap<TypeOfData>&                  tod_map,
+	const base::HashMap<base::StrID, FuncSignature>& signatures,
+	const TypeMetadata&                              type_metadata,
+	const ObjIdNameMap<GlobalData>&                  globals_map,
+	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	FunctionValidator validator(
-		tod_map, signatures, type_metadata, globals_map, function
-	);
+	FunctionValidator validator(tod_map, signatures, type_metadata, globals_map, function);
 
 	Function new_function;
 	new_function.name         = function.name;

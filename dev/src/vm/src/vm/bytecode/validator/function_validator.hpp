@@ -8,10 +8,10 @@ namespace vm::code {
 	 * @brief Performs function code validation in the given context and extracts reachable code.
 	 */
 	Function validateAndExtractReachableCode(
-		const ObjIdNameMap<TypeOfData>& type_context,
-    const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const TypeMetadata&             type_metadata,
-		const ObjIdNameMap<GlobalData>& globals_map,
-		const Function&                 function
+		const ObjIdNameMap<TypeOfData>&                  type_context,
+		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const TypeMetadata&                              type_metadata,
+		const ObjIdNameMap<GlobalData>&                  globals_map,
+		const Function&                                  function
 	);
 }

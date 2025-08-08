@@ -118,9 +118,7 @@ namespace vm {
 		start_function.arg_size = 0;
 		start_function.ret_size = 0;
 
-		// @note All the following are guaranteed to exist or their existence was checked earlier.
-		auto called_func_type = executing_program->types->at(func.name);
-		auto result_type      = called_func_type->getResultType().value();
+		auto result_type = executing_program->types->at(func.result_type);
 
 		u64  result_type_id     = result_type->getID().asInt();
 		auto funcs              = executing_program->functions;
@@ -138,7 +136,7 @@ namespace vm {
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
-			auto arg_type      = executing_program->types->at(func.parameters[i]);
+			auto        arg_type  = executing_program->types->at(func.parameters[i]);
 			CORE_ASSERT(
 				arg_value->getPID() == process.getPID(), "VmValue comes from a different process"
 			);
