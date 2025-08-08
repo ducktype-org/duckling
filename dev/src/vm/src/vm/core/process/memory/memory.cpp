@@ -179,18 +179,32 @@ namespace vm {
 		}
 	}
 
-	// auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
-	// 	if_opt_some(dst.block.toOpt(), block) {
-	// 		std::lock_guard lock(*block->mutex_ref);
-	// 		destroyBlockReference(dst);
-	// 	}
-	// 	if_opt_some(src.block.toOpt(), block) {
-	// 		std::lock_guard lock(*block->mutex_ref);
-	// 		block->refcount++;
-	// 	}
-	// 	dst = src;
-	// }
+	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
+		if_opt_some(dst.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			destroyBlockReference(dst);
+		}
+		if_opt_some(src.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			block->refcount++;
+		}
+		dst = src;
+	}
+	
+	// TODOP: Temporary, remove that. Rename to setPointer.
+	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
+		if_opt_some(dst.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			destroyBlockReference(dst);
+		}
+		if_opt_some(src.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			block->refcount++;
+		}
+		return src;
+	}
 
+	// TODOP: Experimental, remove that.
 	auto Memory::setPointer(std::byte* dst_location, Pointer src) -> void {
 		const auto dst = vm::safeReadBytes<Pointer>(dst_location);
 

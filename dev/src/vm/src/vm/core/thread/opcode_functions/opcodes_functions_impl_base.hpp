@@ -36,6 +36,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/memory/pointer.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -174,18 +175,20 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto  src_ptr      = READ_FROM_GLOBAL(Pointer, instr->arg1);
-			thread.process_memory.setPointer(dst_location, src_ptr);
+			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
 		{
-			auto dst_ptr = READ_FROM_GLOBAL_VIEW_BEGIN(Pointer, instr->arg0);
-			auto src_ptr = readFromStack<Pointer>(local_stack, instr->arg1);
-			thread.process_memory.setPointer(dst_ptr, src_ptr);
+			const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
+			auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
 		}
 
 		FUNCTION_CONT(1);
@@ -573,11 +576,12 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto type
+			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
-			auto  block        = thread.process_memory.allocateHeap(type);
-			byte* dst_location = local_stack + instr->arg0;
-			thread.process_memory.setPointer(dst_location, { block, 0 });
+			auto       block   = thread.process_memory.allocateHeap(type);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -593,19 +597,21 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto  block_idx    = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
-			auto  block        = frame->block_stack[block_idx];
-			thread.process_memory.setPointer(dst_location, { block, 0 });
+			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto       block     = frame->block_stack[block_idx];
+			const auto new_dst   = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+			writeToStack(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto src = readFromStack<Pointer>(local_stack, instr->arg1);
-			thread.process_memory.setPointer(dst_location, src);
+			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -637,10 +643,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
-			auto parent_block        = frame->block_stack[variant_block_index];
-			auto wanted_type
+			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
+			auto       parent_block        = frame->block_stack[variant_block_index];
+			auto       wanted_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			auto view_block_ref
@@ -648,11 +654,16 @@ namespace vm {
 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
-					thread.process_memory.setPointer(
-						dst_location, thread.process_memory.newBlockReference(view_block, 0)
+					const auto new_dst = thread.process_memory.updatePointerAssignment(
+						dst, thread.process_memory.newBlockReference(view_block, 0)
 					);
+					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 				}
-				opt_none { thread.process_memory.setPointer(dst_location, Pointer::null()); }
+				opt_none {
+					const auto new_dst
+						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+				}
 			}
 		}
 		FUNCTION_CONT(2);
@@ -670,9 +681,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto variant_pointer     = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto wanted_type
+			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto       wanted_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			auto view_block_ref
@@ -680,11 +691,16 @@ namespace vm {
 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
-					thread.process_memory.setPointer(
-						dst_location, Memory::newBlockReference(view_block, 0)
+					const auto new_dst = thread.process_memory.updatePointerAssignment(
+						dst, thread.process_memory.newBlockReference(view_block, 0)
 					);
+					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 				}
-				opt_none { thread.process_memory.setPointer(dst_location, Pointer::null()); }
+				opt_none {
+					const auto new_dst
+						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+				}
 			}
 		}
 		FUNCTION_CONT(2);
@@ -693,27 +709,31 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			// Same as move_lptr_lptr, treated differently by static analysis.
-			byte* dst_location = local_stack + instr->arg0;
-			auto src = readFromStack<Pointer>(local_stack, instr->arg1);
-			thread.process_memory.setPointer(dst_location, src);
+			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto src = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
 
 			auto dst_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
-			auto        view    = thread.process_memory.getPointerData(src, sizeof(Type*));
-			const Type* src_ptr = readFromView<const Type*>(view);
-			auto cast_allowed = src_ptr->inheritsFrom(dst_type);
+			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
+			const Type* src_ptr      = readFromView<const Type*>(view);
+			auto        cast_allowed = src_ptr->inheritsFrom(dst_type);
 
-			thread.process_memory.setPointer(dst_location, cast_allowed ? src : Pointer::null());
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, cast_allowed ? src : Pointer::null()
+			);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -750,11 +770,13 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto src    = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto offset = static_cast<usize>(instr[1].arg0);
+			const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       src    = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto       offset = static_cast<usize>(instr[1].arg0);
 
-			thread.process_memory.setPointer(dst_location, { src.getBlock(), offset });
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { src.getBlock(), offset });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -795,14 +817,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			byte* dst_location = local_stack + instr->arg0;
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto element_type
+			const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto  tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto  element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
 			auto data_offset = usize(index * i64(element_type->getSize()));
 
-			thread.process_memory.setPointer(dst_location, { tbl_pointer.getBlock(), data_offset });
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { tbl_pointer.getBlock(), data_offset });
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}

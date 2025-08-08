@@ -32,6 +32,18 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 	return vm::safeWriteBytes<T>(view.getBegin(), value);
 }
 
+// TODOP: Temporary, remove that.
+template<typename T>
+[[gnu::always_inline]]
+inline static T& derefStack(std::byte* stack, u64 position) {
+	return *(reinterpret_cast<T*>(&stack[position]));
+}
+
+template<typename T>
+inline static T& derefView(base::ModRawView view) {
+	return *(reinterpret_cast<T*>(view.getBegin()));
+}
+
 /**
  * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
  */
@@ -53,9 +65,15 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 #define WRITE_TO_GLOBAL(TYPE, GLOBAL_ID, VALUE)                                                \
 	do {                                                                                       \
 		auto view = thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(GLOBAL_ID))); \
-		writeToView<TYPE>(view, value);                                                        \
+		writeToView<TYPE>(view, VALUE);                                                        \
 	} while (false)
 
+
+/**
+ * Returns a reference of type TYPE (eg. int, i64, usize. etc) to a global data with id ID.
+ */
+#define DEREF_GLOBAL_RAW_UNSAFE(TYPE, ID) \
+	derefView<TYPE>(thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(ID))))
 
 /**
  * Returns a reference (Ref) to the block corresponding to global data with id ID.
