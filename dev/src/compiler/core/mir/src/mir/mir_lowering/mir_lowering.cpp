@@ -938,7 +938,7 @@ namespace compiler::mir {
 
 			// Fill the hole with the unary operation.
 			const auto      result_type     = expr.expression_type.getSymbolType();
-			const auto      target_location = function.addTmp(result_type, expr_scope);
+			const auto      target_location = result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -955,7 +955,7 @@ namespace compiler::mir {
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
-			const auto target_location = function.addTmp(result_type, expr_scope);
+			const auto target_location = result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
 
 			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
 				auto block = function.newBlock();
@@ -1021,7 +1021,7 @@ namespace compiler::mir {
 		void visitCallExpr(const hc::CallExpr& expr) override {
 			auto       call = continuation->addHole();
 			const auto call_result
-				= function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+				= result.has_value() ? result.value() : function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
