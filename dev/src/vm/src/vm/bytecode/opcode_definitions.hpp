@@ -438,6 +438,14 @@ DEF_OPCODE(exit)
 
 DEF_OPCODE(breakpoint)
 
+/**
+ * @brief This is a very internal instruction, that should not be used in regular bytecode.
+ * It is a helper for start functions.
+ * @arg0 - pointer to a VmValue.
+ * @arg1 - n/a.
+ */
+DEF_OPCODE(initFromVmValue)
+
 #ifdef DEFAULT_HANDLE_OPCODE
 #undef DEFAULT_HANDLE_OPCODE
 #undef HANDLE_OPCODE
