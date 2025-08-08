@@ -28,6 +28,7 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <iostream>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -100,7 +101,8 @@ namespace compiler::mir {
 		const hc::Expr&  expr,
 		BlockBuilderRef  continuation,
 		FunctionBuilder& function,
-		ScopeRef         expr_scope
+		ScopeRef         expr_scope,
+		base::Optional<MutLocalRef> result_place = std::nullopt // TODO wariant globalne/lokalne
 	);
 
 	/**
@@ -772,7 +774,6 @@ namespace compiler::mir {
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			auto optional_local = function.findLocal(stmt.helios_symbol);
-
 			CORE_ASSERT(
 				optional_local.has_value(),
 				"Variable statement refers to local variable that is not defined in the "
@@ -784,21 +785,12 @@ namespace compiler::mir {
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
 
-			auto local_construction_hole = continuation->addHole();
+			//auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto assignment_scope = function.newScope(parent_scope);
-					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
-
-					local_construction_hole.fill(Instruction{
-						Operation::Assign,
-						{ local },
-						{ expr_result.value },
-						{ flagConstruct(local) },
-						assignment_scope,
-					});
-
+					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope, optional_local);
 					output({ expr_result.begin });
 					return;
 				}
@@ -809,8 +801,8 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
+			std::cout<<"ASGSTMT\n";
 			// TODO: #448 Search for location in global scope as well.
-
 			auto assignment_scope = function.newScope(parent_scope);
 
 			auto target_construction_hole = continuation->addHole();
@@ -850,7 +842,7 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Visitor that implements actual logic of lowering expression.
-	 * @note The result of the visitor is stored in out member.
+	 * @note The result of the visitor is stored in out member or saved in result (if provided).
 	 */
 	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
@@ -859,16 +851,18 @@ namespace compiler::mir {
 
 		FunctionBuilder& function;
 
+		base::Optional<MutLocalRef> result;
 		/**
 		 * The scope of the expression, where it and its result should live in.
 		 */
 		ScopeRef expr_scope;
 
 		ExprBlockVisitor(
-			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope, base::Optional<MutLocalRef> result
 		):
 			  continuation(continuation),
 			  function(function),
+			  result(result),
 			  expr_scope(expr_scope) {}
 
 		void output(ExprLowerRes lowering_result) {
@@ -923,7 +917,7 @@ namespace compiler::mir {
 				"Binary operator with different argument types"
 			);
 			const auto      result_type     = expr.expression_type.getSymbolType();
-			const auto      target_location = function.addTmp(result_type, expr_scope);
+			const auto      target_location = result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -1146,9 +1140,10 @@ namespace compiler::mir {
 		const hc::Expr&  expr,
 		BlockBuilderRef  continuation,
 		FunctionBuilder& function,
-		ScopeRef         expr_scope
+		ScopeRef         expr_scope,
+		base::Optional<MutLocalRef> result
 	) {
-		ExprBlockVisitor visitor{ continuation, function, expr_scope };
+		ExprBlockVisitor visitor{ continuation, function, expr_scope, result };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
