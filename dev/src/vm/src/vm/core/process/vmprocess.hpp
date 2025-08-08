@@ -76,7 +76,7 @@ namespace vm {
 		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		base::StableVector<VmValue> owned_vm_values;
+		std::vector<Box<VmValue>> owned_vm_values;
 
 		// @TODO: Improve this....
 		std::deque<VMThread> vm_threads;

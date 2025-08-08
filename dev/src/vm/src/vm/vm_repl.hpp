@@ -1,6 +1,5 @@
 #pragma once
 
-#include "vm/core/thread/vmvalue.hpp"
 #include <vm/api/vm.hpp>
 
 #include <string>
@@ -56,7 +55,6 @@ public:
 	void run();
 
 private:
-
 	struct CallInfo {
 		std::string       func_name;
 		OwnedArgumentList func_args;

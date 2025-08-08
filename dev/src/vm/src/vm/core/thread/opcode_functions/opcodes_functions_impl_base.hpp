@@ -334,13 +334,10 @@ namespace vm {
 				builtin_id, real_function_type, thread.process, thread, args
 			);
 
-
-			match_optional(return_value) {
-				opt_none {}
-				opt_some(value) {
-					value->exportData(Pointer(frame->block_stack[first_arg_idx - 1], 0));
-					value->freeData();
-				}
+			if (return_value.has_value()) {
+				auto value = std::move(return_value.value());
+				value->exportData(Pointer(frame->block_stack[first_arg_idx - 1], 0));
+				value->freeData();
 			}
 			for (auto& vm_value: args) vm_value->freeData();
 
@@ -511,8 +508,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			thread.process_memory.freeBlock(
-				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
+			thread.process_memory.freeBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
 		FUNCTION_CONT(1);

@@ -59,7 +59,13 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
 
-	std::expected<Ref<VmValue>, ApiError> getExitValue(PID pid);
+	/**
+	 * @brief Returns a VmValue containing the return value of the last ran function on DVM.
+	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
+	 * will be automatically freed when the process is destructed.
+	 * @return The VmValue containing the return value of the last called function.
+	 */
+	std::expected<ExitValue, ApiError> getExitValue(PID pid);
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
@@ -68,6 +74,9 @@ namespace vm::api {
 
 	/**
 	 * @brief Returns an empty VmValue (initialized by zero bytes) of the given type.
+	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
+	 * responsibility to call `VmValue::freeData()` on the VmValue.
+	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);

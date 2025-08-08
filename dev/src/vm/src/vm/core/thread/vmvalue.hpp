@@ -2,7 +2,6 @@
 
 #include <base/raw_view.hpp>
 
-#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -18,7 +17,7 @@ namespace vm {
 	 * It is NOT meant to be used by the internal memory module.
 	 * @note Passed data is copied.
 	 * @note VmValues can be used only in the processes which where used when initializing them.
-	 *j	They can't be transferred in between different processes.
+	 * They can't be transferred in between different processes.
 	 *
 	 * @note There is two ways to create a VmValue:
 	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. It's
@@ -41,7 +40,6 @@ namespace vm {
 		 * pointer.
 		 */
 		VmValue(VMProcess& process, TypeCRef type, Pointer src);
-
 
 		std::vector<byte> data;        /// data.size() == type.getSize()
 		Ref<VMProcess>    my_process;  /// The process for which the VmValue exists.
