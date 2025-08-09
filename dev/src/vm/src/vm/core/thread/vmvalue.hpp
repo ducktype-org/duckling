@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+// TODOP: Move that out of here. This is not thread specific.
 namespace vm {
 	class VMProcess;
 

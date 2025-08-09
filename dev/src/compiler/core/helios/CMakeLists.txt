@@ -11,6 +11,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/expressions/coercions.cpp
 	src_private/helios_private/comp_time/type_eval.cpp
 	src_private/helios_private/comp_time/int_eval.cpp
+	src_private/helios_private/comp_time/query.cpp
 	
 	src/helios/queries.cpp
 	src/helios/hout/hout.cpp
@@ -25,9 +26,10 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
+	src/helios/ctv/ctv.hpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher LibVM)
 
 duck_add_test(compiler helios tests/helios_test.cpp 
 	USES Base TypeSystemHigher PstParser HELIOS
