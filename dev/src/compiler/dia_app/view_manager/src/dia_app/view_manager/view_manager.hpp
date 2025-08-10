@@ -11,19 +11,31 @@ namespace dia_app {
 
 		using nlohmann::json;
 
+		/**
+		 * `ViewManager` holds the state of one client.
+		 * It contains multiple `ViewConstructors`, as a single `ViewConstructor` is responsible for
+		 * one `Diagnostic`.
+		 * The `ViewManager` has to handle interactions with every `Component` inside it,
+		 * so it has to maintain a mapping from `componentId` to `Component`s (and similar data,
+		 * such as what `ViewConstructor` created such `Component`).
+		 *
+		 * The UI sends only that an interaction happened with some component/side_info
+		 * and what type of interaction it was, so I don't have to care much about
+		 * reusing id's. I can just assure that id's are unique globally.
+		 *
+		 * I'm NOT going to free memory from `Components` that are not visible,
+		 * but were visible before - just reset them to initial state.
+		 */
 		class ViewManager {
 		private:
 			std::vector<Diagnostic>                                diagnostics;
 			std::vector<SidePath>                                  side_paths;
-			std::vector<std::shared_ptr<ViewConstructor>> view_constructors;
-            std::shared_ptr<CreationContext> creation_context;
+			base::HashMap<component_id_t, component_context_t> id_to_component_context;
 
 		public:
 			ViewManager(
 				std::vector<Diagnostic>                                diagnostics,
 				std::vector<SidePath>                                  side_paths,
-				std::vector<std::shared_ptr<ViewConstructor>> view_constructors,
-                std::shared_ptr<CreationContext> creation_context
 			);
 
 			static ViewManager createFromJson(const json& input);
