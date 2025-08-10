@@ -11,7 +11,7 @@ namespace pst {
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition).withDef(&out->body, CodeBlock::CodeBlockType::Ordered);;
+		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition).withDef(&out->then_body, CodeBlock::CodeBlockType::Ordered);;
 
 		if (state.parse(out).tryEat(Keyword::Else)) state.parse(out).withDef(&out->else_body, CodeBlock::CodeBlockType::Ordered);
 
@@ -23,10 +23,10 @@ namespace pst {
 		nullAwareDprint(optional_name, out);
 		out << ",\"condition\":";
 		nullAwareDprint(condition, out);
-		out << ",\"body\":";
-		nullAwareDprint(body, out);
+		out << ",\"then body\":";
+		nullAwareDprint(then_body, out);
 		if (else_body) {
-			out << ", \"else body\": ";
+			out << ",\"else body\":";
 			nullAwareDprint(else_body.value(), out);
 		}
 		out << "}";

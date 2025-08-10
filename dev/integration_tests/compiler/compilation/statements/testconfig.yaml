@@ -1,0 +1,14 @@
+# Tests for statements
+
+Tests:
+  conditional: # if, if-else
+    Cases: 
+      default:
+        ExitCode: 99
+  loops: # while
+    Cases:
+      default:
+        Output:
+          String: "20 \n100000001 \n"
+        ExitCode: 0
+        TimeOut: 1 # 10^8/3 loops should definitely be done in this time.

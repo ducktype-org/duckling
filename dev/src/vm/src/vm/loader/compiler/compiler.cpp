@@ -20,9 +20,8 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
+#include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
-
-#include <expected>
 
 namespace vm::loader::compiler {
 	namespace {
@@ -127,8 +126,8 @@ namespace vm::loader::compiler {
 
 				func_data.bc.emplace_back(makeLowInstruction(
 					low::fix8FromInstr(op),
-					Memory::interpret<u64>(arg_0),
-					Memory::interpret<u64>(arg_1)
+					vm::safeReadBytes<u64>(arg_0),
+					vm::safeReadBytes<u64>(arg_1)
 				));
 			}
 			return func_data;

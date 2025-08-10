@@ -232,9 +232,18 @@ namespace compiler::helios {
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet");
 
-				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
+				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 
-				output(code::IfStmt(std::move(condition), std::move(body)));
+				match_optional(stmt->getElseBody()) {
+					opt_some(else_body) {
+						output(code::IfStmt(
+							std::move(condition),
+							std::move(then_body),
+							queryCodeOfCodeBlock(ctx, else_body)
+						));
+					}
+					opt_none { output(code::IfStmt(std::move(condition), std::move(then_body))); }
+				}
 			}
 
 			void visitWhile(pst::Access<pst::While> stmt) override {
@@ -347,8 +356,8 @@ namespace compiler::helios {
 							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
 
 						if (initial_value.hasError()) {
-							// we just fail here, because we can't continue without correct initial
-							// expression
+							// we just fail here, because we can't continue without correct
+							// initial expression
 							return;
 						}
 

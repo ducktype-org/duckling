@@ -9,7 +9,7 @@ namespace pst {
 	class If final: public CodeDecl {
 		NAMED_CHILD(condition, RoundGroupExpr);
 		tpc::OptionalIdentifier         optional_name;
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(then_body, CodeBlockOrStmt);
 		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
 
 	public:
@@ -30,8 +30,15 @@ namespace pst {
 		AccessLocked<ExprHolder> getCondition() const;
 
 		[[nodiscard]]
-		AccessLocked<CodeBlockOrStmt> getBody() const {
-			return body.give();
+		AccessLocked<CodeBlockOrStmt> getThenBody() const {
+			return then_body.give();
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const {
+			return else_body.map([](const auto& access) {
+				return access.give();
+			});
 		}
 
 		[[nodiscard]]
