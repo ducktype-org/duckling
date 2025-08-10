@@ -96,7 +96,7 @@ private:
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto run_result = driver::runModuleOnDVM(ctx, module, true);
+			auto run_result = driver::runModuleOnDVM(ctx, module, false);
 
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);

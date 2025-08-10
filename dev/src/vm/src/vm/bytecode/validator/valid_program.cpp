@@ -7,6 +7,7 @@
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 
 #include <unordered_set>
 
@@ -16,6 +17,12 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program         = ValidProgram();
 	program.type_context = getBuiltinTypes();
 	return program;
+}
+
+vm::code::ValidProgram vm::code::ValidProgram::withStdlib() {
+	auto program = withBuiltins();
+	auto code    = *builtins::getStdlibModule().get();
+	return program.newInsertCode(code);
 }
 
 Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {

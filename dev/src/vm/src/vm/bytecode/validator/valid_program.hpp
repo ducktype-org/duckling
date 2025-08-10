@@ -41,6 +41,12 @@ namespace vm::code {
 		static ValidProgram withBuiltins();
 
 		/**
+		 * @brief Creates a new ValidProgram object with builtin types and builtin functions
+		 * pre-inserted.
+		 */
+		static ValidProgram withStdlib();
+
+		/**
 		 * @brief Produces valid CodeCollection.
 		 */
 		CodeCollection produceValidCodeCollection() const;

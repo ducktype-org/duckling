@@ -35,7 +35,7 @@ protected:
 	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
 
 private:
-	auto getModuleFromPath(std::string module_path) {
+	auto getModuleFromPath(std::string module_path, bool add_stdlib) {
 		using namespace compiler;
 
 		std::vector<CRef<lir::Function>>                    funcs;
@@ -85,7 +85,7 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
-			backend_vm::Module m{ ctx, module_name, funcs, globals };
+			backend_vm::Module m{ ctx, module_name, funcs, globals, add_stdlib };
 			code = m.build();
 		});
 		return code;
@@ -100,11 +100,11 @@ private:
 		bool                               add_stdlib = true
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
+		auto code = getModuleFromPath(std::move(module_path), add_stdlib);
 
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
-		runTestOnVm(code, input, output, args, exit_code, add_stdlib);
+		runTestOnVm(code, input, output, args, exit_code, false);
 	}
 
 	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }

@@ -622,10 +622,13 @@ namespace compiler::backend_vm {
 		query::Context&                         query_ctx,
 		base::StrID                             module_id,
 		const std::vector<CRef<lir::Function>>& functions,
-		const std::vector<BackendDVMGlobal>&    globals
+		const std::vector<BackendDVMGlobal>&    globals,
+		bool                                    add_builtin_library
 	):
 		  module_id(module_id),
-		  valid_program(ValidProgram::withBuiltins()) {
+		  valid_program(
+			  add_builtin_library ? ValidProgram::withStdlib() : ValidProgram::withBuiltins()
+		  ) {
 		CodeCollection                   compiled_types;
 		CodeCollection                   compiled_collection;
 		std::vector<CRef<lir::Function>> ctors;
