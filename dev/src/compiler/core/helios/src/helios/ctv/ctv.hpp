@@ -1,7 +1,5 @@
 #pragma once
 
-// TODOP: Fix this import.
-#include "../../../vm/src/vm/core/thread/vmvalue.hpp"
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <typesystem/higher/symbol_type.hpp>

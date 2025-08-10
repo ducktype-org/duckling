@@ -21,17 +21,59 @@ namespace {
 	using namespace compiler::helios;
 
 	// TODOP: Checks if the whole subtree is a simple expression.
-	struct IsSimpleVisitor final: public code::HoutExprVisitor {
+	struct IsSimpleVisitor final: public code::HoutExprVisitorEmpty {
 		bool is_simple = true;
 
-		void visitCallExpr(const code::CallExpr&) final { is_simple = false; }
-
-		void visitAccessExpr(const code::AccessExpr&) final { is_simple = false; }
-
-		void defaultVisit(const code::Expr& expr) final {
+		void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
 			if (!is_simple) return;
-			compiler::helios::code::HoutExprVisitor::defaultVisit(expr);
+			expr.lhs->acceptVisitor(*this);
+			expr.rhs->acceptVisitor(*this);
 		}
+
+		void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+			if (!is_simple) return;
+			expr.expr->acceptVisitor(*this);
+		}
+
+		void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) override {
+			if (!is_simple) return;
+			expr.condition->acceptVisitor(*this);
+			expr.if_true->acceptVisitor(*this);
+			expr.if_false->acceptVisitor(*this);
+		}
+
+		void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+			if (!is_simple) return;
+			expr.inner->acceptVisitor(*this);
+		}
+
+		void visitSequenceExpr(const code::SequenceExpr& expr) override {
+			if (!is_simple) return;
+			for (const auto& sub_expr: expr.expressions) {
+				sub_expr->acceptVisitor(*this);
+				if (!is_simple) return;
+			}
+		}
+
+		void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+			if (!is_simple) return;
+			for (const auto& sub_expr: expr.elements) {
+				sub_expr->acceptVisitor(*this);
+				if (!is_simple) return;
+			}
+		}
+
+		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) override {
+			if (!is_simple) return;
+			for (const auto& sub_expr: expr.subtypes) {
+				sub_expr->acceptVisitor(*this);
+				if (!is_simple) return;
+			}
+		}
+
+		void visitCallExpr(const code::CallExpr&) override { is_simple = false; }
+
+		void visitAccessExpr(const code::AccessExpr&) override { is_simple = false; }
 	};
 
 	struct TreeEvalVisitor final: public code::HoutExprVisitor {
@@ -43,7 +85,7 @@ namespace {
 		static CompTimeEvalResult evaluateWithTreeEval(query::Context& ctx, const code::Expr& expr) {
 			TreeEvalVisitor visitor(ctx);
 			expr.acceptVisitor(visitor);
-			return visitor.result;
+			return std::move(visitor.result);
 		}
 
 		// TODOP: Triage if the expression is simple enough for tree eval.
@@ -65,7 +107,7 @@ namespace {
 			throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
 		}
 
-		void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
+		void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
 			throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
 			// result = CompileTimeValue{ expr.value_type };
 		}
@@ -286,15 +328,15 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateWithTreeEval(query::Context& ctx, const code::Expr& expr) {
 			TreeEvalVisitor visitor(ctx);
 			expr.acceptVisitor(visitor);
-			return visitor.result;
+			return std::move(visitor.result);
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (eval.hasError()) return query::QError(errors::Failed());
 
-			if (isSimpleEnoughForTreeEval(*hout.value()))
-				return evaluateWithTreeEval(ctx, *hout.value());
+			if (isSimpleEnoughForTreeEval(*eval.value()))
+				return evaluateWithTreeEval(ctx, *eval.value());
 
 			// TODOP: Add VM eval here
 			return query::QError(errors::Failed());
