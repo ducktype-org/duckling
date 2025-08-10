@@ -41,8 +41,8 @@ struct Handler final {
 		return node;
 	}
 
-	Agedge_t* addEdge(Agnode_t* from, Agnode_t* to, char* name = nullptr) { 
-		Agedge_t* edge = agedge(graph, from, to, nullptr, 1); 
+	Agedge_t* addEdge(Agnode_t* from, Agnode_t* to, char* name = nullptr) {
+		Agedge_t*          edge         = agedge(graph, from, to, nullptr, 1);
 		static std::string label_string = "label";
 		static std::string empty_string = "";
 		agsafeset(edge, label_string.data(), name, empty_string.data());
@@ -77,8 +77,9 @@ std::string stringPosition(dia::SourcePosition pos) {
  * @note Adds information about position and element class
  */
 Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
-	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType() + "\n\"" + el->getElementPath().str() + "\"";
-	auto        self = hdl.addNode(name);
+	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType() + "\n\""
+	                 + el->getElementPath().str() + "\"";
+	auto self = hdl.addNode(name);
 
 	for (auto sub: el->viewSubElements()) {
 		variant_match(sub) {
@@ -99,7 +100,7 @@ Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 
 			variant_case(pst::LangElement::NamedChild, named_child) {
 				std::string child_name = named_child.first;
-				auto sub_node = dotElement(hdl, named_child.second.illegalAccess().value());
+				auto        sub_node = dotElement(hdl, named_child.second.illegalAccess().value());
 				hdl.addEdge(self, sub_node, child_name.data());
 			}
 		}

@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Alias statement.
 	 */
 	class Alias final: public Stmt {
-		tpc::Identifier            name;
+		tpc::Identifier name;
 		NAMED_CHILD(points_to, DottedName);
 
 	public:

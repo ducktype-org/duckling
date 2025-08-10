@@ -23,12 +23,10 @@ namespace pst {
 
 	bool checkUniqueElementPaths(AccessLocked<pst::LangElement> root) {
 		std::set<std::string> paths;
-		auto elements = viewAllSubTreeElements(root);
-		for(auto& element: elements) {
+		auto                  elements = viewAllSubTreeElements(root);
+		for (auto& element: elements) {
 			std::string path = element.illegalAccess().value()->getElementPath().str();
-			if (paths.contains(path)) {
-				return false;
-			}
+			if (paths.contains(path)) return false;
 			paths.insert(path);
 		}
 		return true;

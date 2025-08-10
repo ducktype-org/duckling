@@ -7,7 +7,7 @@ namespace pst::expr {
 	 * @brief Element that represents an identifier literal in an expression
 	 */
 	class IdentifierLiteral final: public ExprElement {
-		tpc::Identifier                             name;
+		tpc::Identifier name;
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:

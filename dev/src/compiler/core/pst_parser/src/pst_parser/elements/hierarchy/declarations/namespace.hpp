@@ -4,7 +4,7 @@
 
 namespace pst {
 	class Namespace final: public Decl {
-		tpc::Identifier           name;
+		tpc::Identifier name;
 		NAMED_CHILD(body, CodeBlock);
 
 	public:

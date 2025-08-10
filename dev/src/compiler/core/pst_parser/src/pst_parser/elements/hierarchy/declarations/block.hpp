@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Block declaration
 	 */
 	class Block final: public CodeDecl {
-		tpc::OptionalIdentifier   optional_name;
+		tpc::OptionalIdentifier optional_name;
 		NAMED_CHILD(code_block, CodeBlock);
 
 	public:

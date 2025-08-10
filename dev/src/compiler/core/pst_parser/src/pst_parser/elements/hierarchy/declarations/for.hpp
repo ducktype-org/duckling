@@ -7,8 +7,8 @@ namespace pst {
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier           optional_name;
-		tpc::Identifier                   iterator;
+		tpc::OptionalIdentifier optional_name;
+		tpc::Identifier         iterator;
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);

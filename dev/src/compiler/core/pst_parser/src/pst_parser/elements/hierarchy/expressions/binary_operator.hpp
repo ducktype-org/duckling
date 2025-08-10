@@ -9,7 +9,7 @@ namespace pst::expr {
 	class BinaryOperator: public ExprElement {
 	protected:
 		NAMED_CHILD(left, ExprElement);
-		Operator                    op;
+		Operator op;
 		NAMED_CHILD(right, ExprElement);
 
 	public:

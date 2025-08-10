@@ -40,7 +40,8 @@ namespace pst {
 	 *
 	 * None - This statement doesn't introduce any symbols.
 	 * Symbol - This statement introduces a symbol.
-	 * Transparent - This statement contains or links somewhere where there might be introduced symbols.
+	 * Transparent - This statement contains or links somewhere where there might be introduced
+	 * symbols.
 	 */
 	enum class DeclKind {
 		None,
@@ -80,7 +81,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<AccessInternalAnonymous<Attribute>>;
+		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
 		using AttrBoxList = std::vector<Box<Attribute>>;
 
 		AttrList attributes;
@@ -155,7 +156,7 @@ namespace pst {
 
 		[[nodiscard]]
 		virtual base::Optional<base::StrID> getDeclSymbol() const {
-			return {};	
+			return {};
 		}
 	};
 

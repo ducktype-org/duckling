@@ -9,7 +9,7 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier                                 name;
+		tpc::Identifier name;
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlock);

@@ -104,7 +104,8 @@ namespace pst::internal {
 
 		ForwardBorrowIterator(const internal_iterator& other): it(other) {}
 
-		explicit ForwardBorrowIterator(const AccessInternalAnonymous<ParserElement>* ptr): it(ptr) {}
+		explicit ForwardBorrowIterator(const AccessInternalAnonymous<ParserElement>* ptr):
+			  it(ptr) {}
 
 		value_type operator*() const { return it->give(); }
 

@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Const compile time variable declaration.
 	 */
 	class Const final: public Decl {
-		tpc::Identifier                                 name;
+		tpc::Identifier name;
 		NAMED_CHILD_OPT(type, CommaExprHolder);
 		NAMED_CHILD_OPT(value, CommaExprHolder);
 

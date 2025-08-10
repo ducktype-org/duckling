@@ -12,7 +12,7 @@ namespace pst::expr {
 		using Lower = Comma;
 
 		NAMED_CHILD(variables, ExprElement);
-		base::StrID                 type;
+		base::StrID type;
 		NAMED_CHILD(value, ExprElement);
 
 	public:

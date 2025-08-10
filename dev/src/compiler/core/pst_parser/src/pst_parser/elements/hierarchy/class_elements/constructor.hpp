@@ -10,9 +10,9 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
-		NAMED_CHILD(params, ParamList);	
-		NAMED_CHILD(inits, InitList);	
-		NAMED_CHILD(body, CodeBlock);	
+		NAMED_CHILD(params, ParamList);
+		NAMED_CHILD(inits, InitList);
+		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);

@@ -8,8 +8,8 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
-		bool                                            is_mutable = true;
-		tpc::Identifier                                 name;
+		bool            is_mutable = true;
+		tpc::Identifier name;
 		NAMED_CHILD(type, CommaExprHolder);
 		NAMED_CHILD_OPT(init, CommaExprHolder);
 

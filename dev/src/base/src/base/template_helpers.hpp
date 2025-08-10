@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 
 namespace base {
 	/**
@@ -9,10 +9,8 @@ namespace base {
 	 */
 	template<std::size_t N>
 	struct TemplateStringLiteral {
-    	constexpr TemplateStringLiteral(const char (&str)[N]) {
-        	std::copy_n(str, N, value);
-    	}
-    
-    	char value[N];
+		constexpr TemplateStringLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
+
+		char value[N];
 	};
 }

@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class While final: public CodeDecl {
 		NAMED_CHILD(condition, RoundGroupExpr);
-		tpc::OptionalIdentifier         optional_name;
+		tpc::OptionalIdentifier optional_name;
 		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:

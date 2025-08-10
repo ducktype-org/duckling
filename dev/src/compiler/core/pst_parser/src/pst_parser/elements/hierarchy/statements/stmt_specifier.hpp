@@ -12,7 +12,7 @@ namespace pst {
 	 *  - public { stmt1; stmt2; }
 	 */
 	class StmtSpecifier final: public Stmt {
-		Keyword                         specifier = Keyword::NotAKeyword;
+		Keyword specifier = Keyword::NotAKeyword;
 		NAMED_CHILD(code_block_or_stmt, CodeBlockOrStmt);
 
 	public:

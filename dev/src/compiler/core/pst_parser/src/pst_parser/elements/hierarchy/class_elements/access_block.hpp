@@ -16,8 +16,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword          specifier = lang_def::Keyword::NotAKeyword;
-		NAMED_CHILD(block, ClassBlock);	
+		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
+		NAMED_CHILD(block, ClassBlock);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);

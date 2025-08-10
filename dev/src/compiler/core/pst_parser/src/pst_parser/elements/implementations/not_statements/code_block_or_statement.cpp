@@ -3,7 +3,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state, CodeBlock::CodeBlockType code_block_order_type) {
+	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(
+		LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
+	) {
 		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
 			MBox<CodeBlock> block;
@@ -21,28 +23,25 @@ namespace pst {
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {
-		if (code_block) {
+		if (code_block)
 			nullAwareDprint(code_block.value(), out);
-		} else {
+		else
 			nullAwareDprint(stmt.value(), out);
-		}
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
-		if (code_block) {
+		if (code_block)
 			return code_block.value().internal()->begin();
-		} else if (stmt) {
+		else if (stmt)
 			return stmt->give();
-		}
 		CORE_UNREACHABLE();
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
-		if (code_block) {
+		if (code_block)
 			return code_block.value().internal()->end();
-		} else if (stmt) {
-			return {stmt->give(), 1};
-		}
+		else if (stmt)
+			return { stmt->give(), 1 };
 		CORE_UNREACHABLE();
 	}
 }

@@ -16,7 +16,9 @@ namespace pst {
 		if (!assertStmtChoice<StmtSpecifier>(state, SPECIFIERS.contains(out->specifier)))
 			return nullptr;
 
-		state.parse(out).one(out->specifier).withDef(&out->code_block_or_stmt, CodeBlock::CodeBlockType::Unordered);
+		state.parse(out)
+			.one(out->specifier)
+			.withDef(&out->code_block_or_stmt, CodeBlock::CodeBlockType::Unordered);
 
 		return out;
 	}

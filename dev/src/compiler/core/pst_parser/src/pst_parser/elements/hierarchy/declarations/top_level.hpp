@@ -10,8 +10,8 @@ namespace pst {
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
 
 		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
-		std::vector<AccessLocked<Stmt>> no_symbol;
-		std::vector<AccessLocked<Stmt>> transparent;
+		std::vector<AccessLocked<Stmt>>                         no_symbol;
+		std::vector<AccessLocked<Stmt>>                         transparent;
 
 		void fillSymbols();
 
@@ -43,8 +43,8 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
-		
-		
+
+
 		DeclKind isDeclaration() const final {
 			return DeclKind::Transparent;
 		}

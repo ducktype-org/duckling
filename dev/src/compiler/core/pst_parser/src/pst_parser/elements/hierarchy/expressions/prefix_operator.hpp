@@ -9,7 +9,7 @@ namespace pst::expr {
 	class PrefixOperator: public ExprElement {
 	protected:
 		NAMED_CHILD(expr, ExprElement);
-		Operator                    op;
+		Operator op;
 
 	public:
 		explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):

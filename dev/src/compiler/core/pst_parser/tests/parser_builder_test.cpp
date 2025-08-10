@@ -53,10 +53,10 @@ class PSTBuilderTest: public tester::TestSuite {
 		assertTrue(example(), example.message());
 	}
 
-	Example<pst::TopLevel, true>   empty_top_level{ "" };
-	Example<pst::Block, true>      empty_block{ "block {}" };
-	Example<pst::While, false>     bad_choice{ "block {}" };
-	Example<pst::Block, false> no_brackets{ "const x:i32=3;" };
+	Example<pst::TopLevel, true> empty_top_level{ "" };
+	Example<pst::Block, true>    empty_block{ "block {}" };
+	Example<pst::While, false>   bad_choice{ "block {}" };
+	Example<pst::Block, false>   no_brackets{ "const x:i32=3;" };
 
 	void exampleTests() {
 		testExample(empty_top_level);

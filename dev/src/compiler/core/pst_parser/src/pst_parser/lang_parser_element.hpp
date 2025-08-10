@@ -2,8 +2,8 @@
 
 #include "access.hpp"
 #include "element_kind.hpp"
-#include "pst_id.hpp"
 #include "elements/elements_list.hpp"
+#include "pst_id.hpp"
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
@@ -12,9 +12,9 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 
+#include <iostream>
 #include <ranges>
 #include <variant>
-#include <iostream>
 
 namespace pst {
 	class Import;
@@ -25,9 +25,11 @@ namespace pst {
 	class PstVisitor;
 
 	/**
-	 * @brief This is a simple text implementation of element path that might still have some conflicts
+	 * @brief This is a simple text implementation of element path that might still have some
+	 * conflicts
 	 *
-	 * It's supposed to uniquely identify elements in a parsed tree while ignoring some changes(mostly symbols with different names changing).
+	 * It's supposed to uniquely identify elements in a parsed tree while ignoring some
+	 * changes(mostly symbols with different names changing).
 	 *
 	 * The path is constructed from words periods and brackets:
 	 *  - Capitalized words signify element type
@@ -41,7 +43,8 @@ namespace pst {
 	struct ElementPath final {
 		ElementPath() = default;
 
-		ElementPath(const ElementPath& parent, const std::string& ext): elements(parent.elements.begin(), parent.elements.end()) {
+		ElementPath(const ElementPath& parent, const std::string& ext):
+			  elements(parent.elements.begin(), parent.elements.end()) {
 			elements.push_back(ext);
 		}
 
@@ -66,13 +69,13 @@ namespace pst {
 	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
-		using InternalChild = Ref<LangElement>;
+		using InternalChild      = Ref<LangElement>;
 		using InternalNamedChild = std::pair<std::string, Ref<LangElement>>;
 
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
 	public:
-		using Child = AccessLocked<LangElement>;
+		using Child      = AccessLocked<LangElement>;
 		using NamedChild = std::pair<std::string, AccessLocked<LangElement>>;
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
@@ -107,7 +110,8 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Calls the Element paths for children of a given element, has to be overriden for elements that have unnamed children.
+		 * @brief Calls the Element paths for children of a given element, has to be overriden for
+		 * elements that have unnamed children.
 		 */
 		virtual void calcElementPathsRecursive(const ElementPath& path);
 
@@ -115,49 +119,52 @@ namespace pst {
 		 * @brief Calculates Element paths for this Element and children.
 		 */
 		void calcElementPaths(const ElementPath& path) {
-			element_path = {path, elementType()};
+			element_path = { path, elementType() };
 			calcElementPathsRecursive(element_path.value());
 		}
 
 		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements
 		 */
-		template <typename Element, base::TemplateStringLiteral name>
+		template<typename Element, base::TemplateStringLiteral name>
 		void calcChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
-			if (auto ref = access_ref.internalMut()) {
-				ref->calcElementPaths(path);
-			}
+			if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
 		}
 
 		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements
 		 */
-		template <typename Element>
-		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path) const {
-			if (auto ref = access_ref.internalMut()) {
-				ref->calcElementPaths(path);
-			}
+		template<typename Element>
+		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path)
+			const {
+			if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
 		}
 
 		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements
 		 */
-		template <typename Element, base::TemplateStringLiteral name>
-		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
-			if (auto ref = access_ref.internalMut()) {
-				ref->calcElementPaths({path, std::string(name.value)});
-			}
+		template<typename Element, base::TemplateStringLiteral name>
+		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path)
+			const {
+			if (auto ref = access_ref.internalMut())
+				ref->calcElementPaths({ path, std::string(name.value) });
 		}
 
 		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible from other elements
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements
 		 */
-		template <typename Element>
-		void calcIndexedListChildPath(std::vector<AccessInternalAnonymous<Element>>& vec, const ElementPath& path) const {
-			for(usize i = 0; i < vec.size(); i++) {
+		template<typename Element>
+		void calcIndexedListChildPath(
+			std::vector<AccessInternalAnonymous<Element>>& vec, const ElementPath& path
+		) const {
+			for (usize i = 0; i < vec.size(); i++) {
 				ElementPath child_path(path, std::format("[{}]", i));
 				calcChildPath(vec[i], child_path);
-			} 
+			}
 		}
 
 		void calcUnorderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
@@ -192,7 +199,7 @@ namespace pst {
 					return Child(std::get<InternalChild>(t));
 				} else if (std::holds_alternative<InternalNamedChild>(t)) {
 					auto& [name, inter] = std::get<InternalNamedChild>(t);
-					return NamedChild{name, {inter}};
+					return NamedChild{ name, { inter } };
 				} else {
 					return SubToken(std::get<SubToken>(t));
 				}
@@ -212,15 +219,13 @@ namespace pst {
 				return std::holds_alternative<Child>(t) || std::holds_alternative<NamedChild>(t);
 			};
 			constexpr auto strip_name = [](const SubElement& t) -> const Child& {
-				if (std::holds_alternative<NamedChild>(t)) {
-					return std::get<NamedChild>(t).second;	
-				} else {
+				if (std::holds_alternative<NamedChild>(t))
+					return std::get<NamedChild>(t).second;
+				else
 					return std::get<Child>(t);
-				}
 			};
 
-			return viewSubElements() | filter(is_child)
-			     | transform(strip_name);
+			return viewSubElements() | filter(is_child) | transform(strip_name);
 		}
 
 		/**
@@ -302,9 +307,9 @@ namespace pst {
 
 	protected:
 		dia::SourcePosition                       source_position;
-		std::vector<InternalSubElement>                   sub_elements;
+		std::vector<InternalSubElement>           sub_elements;
 		base::Optional<AccessLocked<LangElement>> parent;
-		base::Optional<ElementPath> element_path;
+		base::Optional<ElementPath>               element_path;
 
 		/**
 		 * @brief Kind of the element.

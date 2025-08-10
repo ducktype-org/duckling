@@ -185,7 +185,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		PSTAutomatic& one(AccessInternalAnonymous<T>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(
+			AccessInternalAnonymous<T>* result, [[maybe_unused]] bool ignorable = false
+		) {
 			with(result, T::parse);
 			return *this;
 		}
@@ -205,7 +207,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
-		PSTAutomatic& one(base::Optional<AccessInternal<T, name>>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(
+			base::Optional<AccessInternal<T, name>>* result, [[maybe_unused]] bool ignorable = false
+		) {
 			with(result, T::parse);
 			return *this;
 		}
@@ -284,9 +288,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename Sink>
 		PSTAutomatic& assign(Sink* sink, MBox<El>&& sub_tree) {
-			if (sub_tree) {
-				*sink = std::move(sub_tree);
-			}
+			if (sub_tree) *sink = std::move(sub_tree);
 			return *this;
 		}
 

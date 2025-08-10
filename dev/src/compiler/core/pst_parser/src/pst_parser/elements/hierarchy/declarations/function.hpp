@@ -8,7 +8,7 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class Fun final: public Decl {
-		tpc::Identifier                                 name;
+		tpc::Identifier name;
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);

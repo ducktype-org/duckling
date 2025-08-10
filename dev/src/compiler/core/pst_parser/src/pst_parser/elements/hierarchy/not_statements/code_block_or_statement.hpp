@@ -9,14 +9,17 @@ namespace pst {
 	class CodeBlockOrStmtIterator {
 	private:
 		using code_block_iterator = typename CodeBlock::const_iterator;
-		using stmt_iterator = std::pair<AccessLocked<Stmt>, long>;
+		using stmt_iterator       = std::pair<AccessLocked<Stmt>, long>;
 		std::variant<code_block_iterator, stmt_iterator> it;
 
 		void checkDifferent(const CodeBlockOrStmtIterator& other) const {
-			if ((std::holds_alternative<code_block_iterator>(it) && std::holds_alternative<stmt_iterator>(other.it)) || (std::holds_alternative<code_block_iterator>(other.it) && std::holds_alternative<stmt_iterator>(it))) {
+			if ((std::holds_alternative<code_block_iterator>(it)
+			     && std::holds_alternative<stmt_iterator>(other.it))
+			    || (std::holds_alternative<code_block_iterator>(other.it)
+			        && std::holds_alternative<stmt_iterator>(it))) {
 				CORE_PANIC("Bad code block operation");
 			}
-		} 
+		}
 
 	public:
 		using value_type        = AccessLocked<Stmt>;
@@ -29,35 +32,31 @@ namespace pst {
 		CodeBlockOrStmtIterator(const CodeBlockOrStmtIterator& other) = default;
 
 		CodeBlockOrStmtIterator(const code_block_iterator& other): it(other) {}
-		CodeBlockOrStmtIterator(AccessLocked<Stmt> other, int diff = 0): it(stmt_iterator{other, diff}) {}
 
-		value_type operator*() const { 
+		CodeBlockOrStmtIterator(AccessLocked<Stmt> other, int diff = 0):
+			  it(stmt_iterator{ other, diff }) {}
+
+		value_type operator*() const {
 			variant_match(it) {
-				variant_case(code_block_iterator, cb_it) {
-					return *cb_it;
-				}
+				variant_case(code_block_iterator, cb_it) { return *cb_it; }
 				variant_case(stmt_iterator, stmt_it) {
-					if (stmt_it.second != 0) {
+					if (stmt_it.second != 0)
 						CORE_PANIC("Bad code block iterator dereference");
-					} else {
+					else
 						return stmt_it.first;
-					}
 				}
 			}
 			CORE_UNREACHABLE();
 		}
 
-		value_type operator[](difference_type diff) const { 
+		value_type operator[](difference_type diff) const {
 			variant_match(it) {
-				variant_case(code_block_iterator, cb_it) {
-					return *(cb_it + diff);
-				}
+				variant_case(code_block_iterator, cb_it) { return *(cb_it + diff); }
 				variant_case(stmt_iterator, stmt_it) {
-					if (stmt_it.second + diff == 0) {
+					if (stmt_it.second + diff == 0)
 						return stmt_it.first;
-					} else {
+					else
 						CORE_PANIC("Bad code block iterator dereference");
-					}
 				}
 			}
 			CORE_UNREACHABLE();
@@ -77,7 +76,7 @@ namespace pst {
 			CORE_UNREACHABLE();
 		}
 
-		CodeBlockOrStmtIterator operator++(int) { 
+		CodeBlockOrStmtIterator operator++(int) {
 			CodeBlockOrStmtIterator cpy = *this;
 			return ++cpy;
 		}
@@ -96,7 +95,7 @@ namespace pst {
 			CORE_UNREACHABLE();
 		}
 
-		CodeBlockOrStmtIterator operator--(int) { 
+		CodeBlockOrStmtIterator operator--(int) {
 			CodeBlockOrStmtIterator cpy = *this;
 			return --cpy;
 		}
@@ -115,9 +114,9 @@ namespace pst {
 			CORE_UNREACHABLE();
 		}
 
-		CodeBlockOrStmtIterator operator+(const difference_type diff) const { 
+		CodeBlockOrStmtIterator operator+(const difference_type diff) const {
 			CodeBlockOrStmtIterator cpy = *this;
-			return cpy += diff; 
+			return cpy += diff;
 		}
 
 		friend CodeBlockOrStmtIterator operator+(
@@ -126,11 +125,9 @@ namespace pst {
 			return iter + diff;
 		}
 
-		CodeBlockOrStmtIterator& operator-=(difference_type diff) {
-			return (*this) += -diff;
-		}
+		CodeBlockOrStmtIterator& operator-=(difference_type diff) { return (*this) += -diff; }
 
-		CodeBlockOrStmtIterator operator-(const difference_type diff) const { 
+		CodeBlockOrStmtIterator operator-(const difference_type diff) const {
 			CodeBlockOrStmtIterator cpy = *this;
 			return cpy -= diff;
 		}
@@ -193,7 +190,9 @@ namespace pst {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 
-		static MBox<CodeBlockOrStmt> parse(LangParserState& state, CodeBlock::CodeBlockType code_block_order_type);
+		static MBox<CodeBlockOrStmt> parse(
+			LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
+		);
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
 

@@ -34,10 +34,11 @@ namespace pst {
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
-	template<typename Element = TopLevel, typename Parser  = Element>
+	template<typename Element = TopLevel, typename Parser = Element>
 	class PST {
 		static_assert(std::derived_from<Element, LangElement>, "Bad PST root element");
 		static_assert(std::derived_from<Parser, LangElement>, "Bad PST parser element");
+
 	public:
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.
@@ -47,9 +48,9 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		Box<tokenizer::TokenSource> file;
-		AccessInternalAnonymous<Element>     element;
-		std::vector<ImportType>     imports;
+		Box<tokenizer::TokenSource>      file;
+		AccessInternalAnonymous<Element> element;
+		std::vector<ImportType>          imports;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -94,9 +95,7 @@ namespace pst {
 		}
 
 		void calcElementPaths() {
-			if (auto ref = element.internalMut()) {
-				ref->calcElementPaths({});
-			}
+			if (auto ref = element.internalMut()) ref->calcElementPaths({});
 		}
 
 	public:

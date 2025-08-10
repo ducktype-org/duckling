@@ -10,7 +10,9 @@ namespace pst {
 
 		if (!assertStmtChoice<Namespace>(state, state[0].is(Keyword::Namespace))) return nullptr;
 
-		state.parse(out).all(Keyword::Namespace, &out->name).withDef(&out->body, CodeBlock::CodeBlockType::Unordered);
+		state.parse(out)
+			.all(Keyword::Namespace, &out->name)
+			.withDef(&out->body, CodeBlock::CodeBlockType::Unordered);
 
 		return out;
 	}

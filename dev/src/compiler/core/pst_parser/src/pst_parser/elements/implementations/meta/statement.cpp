@@ -84,15 +84,13 @@ namespace pst {
 	}
 
 	Stmt::AttrBoxList Stmt::collectAttributes(LangParserState& state) {
-		auto     as_special = state[0].asSpecial();
+		auto        as_special = state[0].asSpecial();
 		AttrBoxList attributes;
 
 		while (as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
 			auto            opt  = std::move(attr).toOptBox();
-			if (opt) {
-				attributes.emplace_back(std::move(opt.value()));
-			}
+			if (opt) attributes.emplace_back(std::move(opt.value()));
 			as_special = state[0].asSpecial();
 		}
 		return attributes;
@@ -112,13 +110,17 @@ namespace pst {
 	}
 
 	void Stmt::calcElementPathsRecursive(const ElementPath& path) {
-		ElementPath attrs_path = {path, "attributes"};
+		ElementPath attrs_path = { path, "attributes" };
 		calcIndexedListChildPath(attributes, attrs_path);
-		for(auto& el: sub_elements) {
+		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
 					if (child->element_kind == ElementKind::Attribute) continue;
-					CORE_PANIC("Default implementation of calculating element paths cannot handle unnamed sub-elements. Encountered while calculating for: " + elementType());
+					CORE_PANIC(
+						"Default implementation of calculating element paths cannot handle unnamed "
+					    "sub-elements. Encountered while calculating for: "
+						+ elementType()
+					);
 				}
 				variant_case(InternalNamedChild, named_child) {
 					ElementPath child_path(path, named_child.first);

@@ -12,7 +12,7 @@ namespace pst {
 	 */
 	class Import final: public Stmt {
 		NAMED_CHILD(names, DottedName);
-		tpc::Identifier            alias;
+		tpc::Identifier alias;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import, ElementKind::Import);

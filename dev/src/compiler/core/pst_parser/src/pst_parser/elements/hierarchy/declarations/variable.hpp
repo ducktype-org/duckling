@@ -7,10 +7,10 @@ namespace pst {
 	 * @brief Variable declaration
 	 */
 	class Variable final: public Decl {
-		tpc::Identifier                                 name;
+		tpc::Identifier name;
 		NAMED_CHILD_OPT(type, CommaExprHolder);
 		NAMED_CHILD_OPT(value, CommaExprHolder);
-		bool                                            is_const = true;
+		bool is_const = true;
 
 		template<typename T, lang_def::Keyword key>
 		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);

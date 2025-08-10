@@ -11,21 +11,22 @@ namespace pst {
 		/**
 		 * @brief Type of code block
 		 *
-		 * Relevant for some behaviors, for example path to node as different blocks can be ordered like in a function or more unordered like in the global scope.
+		 * Relevant for some behaviors, for example path to node as different blocks can be ordered
+		 * like in a function or more unordered like in the global scope.
 		 */
 		enum CodeBlockType {
-			Unordered, 
+			Unordered,
 			Ordered,
 			Undefined,
 		};
 
 	private:
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
-		CodeBlockType type = Undefined;
+		CodeBlockType                              type = Undefined;
 
 		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
-		std::vector<AccessLocked<Stmt>> no_symbol;
-		std::vector<AccessLocked<Stmt>> transparent;
+		std::vector<AccessLocked<Stmt>>                         no_symbol;
+		std::vector<AccessLocked<Stmt>>                         transparent;
 
 		void fillSymbols();
 

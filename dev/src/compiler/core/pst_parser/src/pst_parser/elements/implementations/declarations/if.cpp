@@ -11,9 +11,13 @@ namespace pst {
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition).withDef(&out->then_body, CodeBlock::CodeBlockType::Ordered);;
+		state.parse(out)
+			.all(Keyword::If, &out->optional_name, &out->condition)
+			.withDef(&out->then_body, CodeBlock::CodeBlockType::Ordered);
+		;
 
-		if (state.parse(out).tryEat(Keyword::Else)) state.parse(out).withDef(&out->else_body, CodeBlock::CodeBlockType::Ordered);
+		if (state.parse(out).tryEat(Keyword::Else))
+			state.parse(out).withDef(&out->else_body, CodeBlock::CodeBlockType::Ordered);
 
 		return out;
 	}

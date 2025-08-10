@@ -1,7 +1,7 @@
 #include "access.hpp"
+#include "elements/includes/basic.hpp"
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
-#include "elements/includes/basic.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
@@ -23,10 +23,14 @@ namespace pst {
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 
 	void LangElement::calcElementPathsRecursive(const ElementPath& path) {
-		for(auto& el: sub_elements) {
+		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
-					CORE_PANIC("Default implementation of calculating element paths cannot handle unnamed sub-elements. Encountered while calculating for: " + elementType());
+					CORE_PANIC(
+						"Default implementation of calculating element paths cannot handle unnamed "
+					    "sub-elements. Encountered while calculating for: "
+						+ elementType()
+					);
 				}
 				variant_case(InternalNamedChild, named_child) {
 					ElementPath child_path(path, named_child.first);
@@ -36,20 +40,22 @@ namespace pst {
 		}
 	}
 
-	void LangElement::calcUnorderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>& statements, const ElementPath& path) { 
-		auto no_symbol_path = ElementPath(path, "no_symbol");
-		usize no_symbol_count = 0;
-		auto by_symbol_path = ElementPath(path, "by_symbol");
+	void LangElement::calcUnorderedListChildPath(
+		std::vector<AccessInternalAnonymous<Stmt>>& statements, const ElementPath& path
+	) {
+		auto                          no_symbol_path  = ElementPath(path, "no_symbol");
+		usize                         no_symbol_count = 0;
+		auto                          by_symbol_path  = ElementPath(path, "by_symbol");
 		base::Map<base::StrID, usize> by_symbol_count;
-		usize symbol_count = 0;
-		auto transparent_path = ElementPath(path, "transparent");
-		usize transparent_count = 0;
+		usize                         symbol_count      = 0;
+		auto                          transparent_path  = ElementPath(path, "transparent");
+		usize                         transparent_count = 0;
 
 		ElementPath id_path = no_symbol_path;
 
 		for (auto& stmt: statements) {
 			base::StrID symbol;
-			switch(stmt.internal()->isDeclaration()) {
+			switch (stmt.internal()->isDeclaration()) {
 			case DeclKind::None:
 				id_path = ElementPath(no_symbol_path, std::format("[{}]", no_symbol_count));
 				calcChildPath(stmt, id_path);
@@ -63,7 +69,8 @@ namespace pst {
 					by_symbol_count.put(symbol);
 					symbol_count = 0;
 				}
-				id_path = ElementPath(by_symbol_path, std::format("{}[{}]", symbol.str(), symbol_count));
+				id_path
+					= ElementPath(by_symbol_path, std::format("{}[{}]", symbol.str(), symbol_count));
 				calcChildPath(stmt, id_path);
 				by_symbol_count[symbol]++;
 				break;
@@ -88,7 +95,7 @@ namespace pst {
 	void LangElement::addChild(MRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			sub_elements.emplace_back(opt.value() );
+			sub_elements.emplace_back(opt.value());
 			setLastToken(el->getSourcePosition());
 		}
 	}
@@ -96,7 +103,7 @@ namespace pst {
 	void LangElement::addNamedChild(const std::string& name, MRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			sub_elements.emplace_back(InternalNamedChild{name, opt.value()});
+			sub_elements.emplace_back(InternalNamedChild{ name, opt.value() });
 			setLastToken(el->getSourcePosition());
 		}
 	}

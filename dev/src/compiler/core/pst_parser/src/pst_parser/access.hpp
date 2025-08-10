@@ -197,7 +197,6 @@ namespace pst {
 
 		AccessInternalAnonymous(std::nullptr_t): box(nullptr) {}
 
-
 		/**
 		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
 		 * return locked accesses.
@@ -244,7 +243,7 @@ namespace pst {
 		}
 
 	public:
-		AccessInternal()                               = default;
+		AccessInternal()                      = default;
 		AccessInternal(const AccessInternal&) = default;
 		AccessInternal(AccessInternal&&)      = default;
 
@@ -283,8 +282,8 @@ namespace pst {
 	}
 }
 
-#define NAMED_CHILD(name, Type) AccessInternal<Type, #name > name
-#define NAMED_CHILD_OPT(name, Type) base::Optional<AccessInternal<Type, #name >> name
+#define NAMED_CHILD(name, Type)     AccessInternal<Type, #name> name
+#define NAMED_CHILD_OPT(name, Type) base::Optional<AccessInternal<Type, #name>> name
 
 #define VISITOR_ACCESS_METHOD_INTERFACE(type) void visit##type(pst::Access<type>)
 

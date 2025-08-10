@@ -13,7 +13,7 @@ namespace pst::expr {
 		using Lower = GeneralBinary;
 
 		std::vector<AccessInternalAnonymous<ExprElement>> sub_expr;
-		std::vector<Operator>                    operators;
+		std::vector<Operator>                             operators;
 
 		static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 

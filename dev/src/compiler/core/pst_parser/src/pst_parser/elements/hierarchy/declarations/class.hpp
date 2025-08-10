@@ -9,7 +9,7 @@ namespace pst {
 	 */
 	class Class final: public Decl {
 	private:
-		tpc::Identifier                name;
+		tpc::Identifier name;
 		NAMED_CHILD(base, ExprElement);
 		NAMED_CHILD(implements, ImplementsList);
 		NAMED_CHILD(body, ClassBlock);

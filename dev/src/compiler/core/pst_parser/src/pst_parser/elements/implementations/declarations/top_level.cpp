@@ -21,15 +21,13 @@ namespace pst {
 	void TopLevel::fillSymbols() {
 		for (auto& stmt: statements) {
 			base::StrID symbol;
-			switch(stmt.internal()->isDeclaration()) {
+			switch (stmt.internal()->isDeclaration()) {
 			case DeclKind::None:
 				no_symbol.push_back(stmt.give());
 				break;
 			case DeclKind::Symbol:
 				symbol = stmt.internal()->getDeclSymbol().value();
-				if (!by_symbol.atMaybe(symbol)) {
-					by_symbol.put(symbol);
-				}
+				if (!by_symbol.atMaybe(symbol)) by_symbol.put(symbol);
 				by_symbol[symbol].push_back(stmt.give());
 				break;
 			case DeclKind::Transparent:

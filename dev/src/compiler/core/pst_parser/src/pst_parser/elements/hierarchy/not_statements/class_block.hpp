@@ -10,8 +10,8 @@ namespace pst {
 		std::vector<AccessInternalAnonymous<ClassStmt>> statements;
 
 		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
-		std::vector<AccessLocked<Stmt>> no_symbol;
-		std::vector<AccessLocked<Stmt>> transparent;
+		std::vector<AccessLocked<Stmt>>                         no_symbol;
+		std::vector<AccessLocked<Stmt>>                         transparent;
 
 		void fillSymbols();
 

@@ -48,8 +48,8 @@ namespace pst {
 	namespace internal {
 		template<base::TemplateStringLiteral name>
 		void simpleActionDprint(
-			std::ostream&                                          out,
-			const std::string&                                     kind,
+			std::ostream&                                                out,
+			const std::string&                                           kind,
 			const base::Optional<AccessInternal<CommaExprHolder, name>>* expr
 		) {
 			out << "{";

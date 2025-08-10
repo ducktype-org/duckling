@@ -8,7 +8,7 @@ namespace pst::expr {
 	 */
 	class SuffixOperator: public ExprElement {
 	protected:
-		Operator                    op;
+		Operator op;
 		NAMED_CHILD(expr, ExprElement);
 
 	public:

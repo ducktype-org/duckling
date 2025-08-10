@@ -3,9 +3,9 @@
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
@@ -126,8 +126,10 @@ private:
 	void testJson(
 		const std::string& duckling_file, const std::string& json_file, bool no_errors = true
 	) {
-		pst::PST<>        pst = prepare(duckling_file);
-		assertTrue(pst::checkUniqueElementPaths(pst.getRootElement()), "Element paths are not unique");
+		pst::PST<> pst = prepare(duckling_file);
+		assertTrue(
+			pst::checkUniqueElementPaths(pst.getRootElement()), "Element paths are not unique"
+		);
 		std::stringstream ss;
 		pst.dprint(ss);
 
