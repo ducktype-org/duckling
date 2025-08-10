@@ -23,7 +23,7 @@ public:
 private:
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
-		auto mt  = ModuleTree::create(pth, test_regex, test_regex);
+		auto mt  = ModuleTreeBuilder::create(pth, test_regex, test_regex);
 
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().size());
@@ -39,7 +39,7 @@ private:
 		ASSERT_EQUAL(2, another_module->getOtherFiles()[base::StrID(".txt")].size());
 		ASSERT_EQUAL(1, another_module->getOtherFiles()[base::StrID("")].size());
 		ASSERT_EQUAL(1, another_module->getSubmodules().size());
-		ASSERT_EQUAL("whoa.duck", another_module->getSourceFiles().front().path.name());
+		ASSERT_EQUAL("whoa.duck", another_module->getSourceFiles().front()->getFile().name());
 
 		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("awe")));
 		auto awe_module = mt->getSubmodules()[base::StrID("awe")];
@@ -47,22 +47,27 @@ private:
 		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
 		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
 		ASSERT_EQUAL(true, awe_module->hasMainSourceFile());
-		ASSERT_EQUAL("awe.dmf", awe_module->getMainSourceFile().path.name());
+		ASSERT_EQUAL("awe.dmf", awe_module->getMainSourceFile()->getFile().name());
 	}
 
-	void testModuleIDInSourceFile(const ModuleTree& module) {
-		auto id = module.getID();
-		ASSERT_EQUAL(id, module.getMainSourceFile().linked_module);
-		for (auto& file: module.getSourceFiles()) ASSERT_EQUAL(id, file.linked_module);
+	void testModuleIDInSourceFile(base::CRef<ModuleTree> module) {
+		std::cerr << "Testing module ID in source files for module: " << module->getName().strView()
+				  << '\n';
+		std::cerr << "Module ID: " << module->getID().asInt() << '\n';
+		auto id = module->getID();
+		std::cerr << "Main source file Module ID: "
+				  << module->getMainSourceFile()->getModule()->getID().asInt() << '\n';
+		ASSERT_EQUAL(id, module->getMainSourceFile()->getModule()->getID());
+		for (auto& file: module->getSourceFiles()) ASSERT_EQUAL(id, file->getModule()->getID());
 	}
 
 	void testOtherFeatures() {
 		auto pth = fs::File(path("test_module"));
-		auto mt  = ModuleTree::create(pth);
+		auto mt  = ModuleTreeBuilder::create(pth);
 
 		ASSERT_EQUAL("test_module", mt->getName());
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
-		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
+		ASSERT_EQUAL("content123\n", mt->getMainSourceFile()->getFile().getContent().view());
 		ASSERT_EQUAL(true, mt->getParentModule().empty());
 		ASSERT_EQUAL(
 			mt->getName(),
@@ -74,11 +79,13 @@ private:
 		auto awesome_module = another_module->getSubmodules()[base::StrID("awesome_module")];
 		auto mod_module     = awesome_module->getSubmodules()[base::StrID("mod")];
 
-		testModuleIDInSourceFile(*awe_module);
-		testModuleIDInSourceFile(*another_module);
-		testModuleIDInSourceFile(*awesome_module);
-		testModuleIDInSourceFile(*mod_module);
-		testModuleIDInSourceFile(*mt);
+
+		testModuleIDInSourceFile(awe_module);
+		std::cerr << mt->prettyPrint() << '\n';
+		testModuleIDInSourceFile(another_module);
+		testModuleIDInSourceFile(awesome_module);
+		testModuleIDInSourceFile(mod_module);
+		testModuleIDInSourceFile(mt);
 
 		assertTrue(not mt->getParentModule().has_value(), "Root module has a parent");
 		assertTrue(

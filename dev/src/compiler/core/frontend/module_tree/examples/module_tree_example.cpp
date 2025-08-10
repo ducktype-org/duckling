@@ -11,7 +11,7 @@ int main() {
 
 	// First argument is some kind of a path to a module we want to parse.
 	// It returns a std::shared_ptr.
-	std::shared_ptr<ModuleTree> module_tree = ModuleTree::create("../tests/test_module");
+	std::shared_ptr<ModuleTree> module_tree = ModuleTreeBuilder::create("../tests/test_module");
 
 	// Print main source file's content.
 	if (module_tree->hasMainSourceFile())

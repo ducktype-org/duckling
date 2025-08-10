@@ -4,11 +4,11 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/stable_hashmap.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
+#include <base/stable_hashmap.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -33,27 +33,26 @@ namespace compiler::frontend {
 
 		SourceFile(fs::File path, base::CRef<ModuleTree> linked_module);
 
-		void update(bool content_changed = false);
+		void update();
 
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
-	public:
 
+	public:
 		static Ref<SourceFile> create(fs::File path, base::CRef<ModuleTree> linked_module);
 
 		static Ref<SourceFile> getSourceFile(FileID id);
 
 		static Ref<SourceFile> getSourceFile(const fs::File& file);
 
-		[[nodiscard]] fs::File getPath() const { return path; }
+		[[nodiscard]] fs::File getFile() const { return path; }
 
 		[[nodiscard]] base::CRef<ModuleTree> getModule() const { return linked_module; }
 
-		[[nodiscard]] base::StrID getLangFileName() const {
-			return lang_file_name;
-		}
+		[[nodiscard]] base::StrID getLangFileName() const { return lang_file_name; }
 
 		[[nodiscard]] FileID getID() const { return id; }
+
 		/**
 		 * @brief Lazily parses the source file and returns PST
 		 * @return CRef<pst::PST>
