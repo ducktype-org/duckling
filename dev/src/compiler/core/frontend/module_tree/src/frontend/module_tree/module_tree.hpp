@@ -43,6 +43,10 @@ namespace compiler::frontend {
 		static base::StableHashMap<ModuleID, ModuleTree> module_map;
 
 	public:
+		/**
+		 * Returns a reference to the ModuleTree with the given ModuleID.
+		 * Asserts if the module does not exist.
+		 */
 		static Ref<ModuleTree> getModule(ModuleID id);
 
 		/**
@@ -55,7 +59,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Checks if a module contains main source file.
-		 * @return True if pointer is valid, false otherwise.
+		 * @return True if the main source file exists, false otherwise.
 		 */
 		[[nodiscard]]
 		bool hasMainSourceFile() const;
@@ -70,13 +74,13 @@ namespace compiler::frontend {
 
 		/**
 		 * Accesses the source files of the module.
-		 * @return A std::vector<SourceFile> with source files to iterate over.
+		 * @return A const reference to a vector of SourceFile references.
 		 */
 		[[nodiscard]]
 		const std::vector<base::Ref<SourceFile>>& getSourceFiles() const;
 
 		/**
-		 * Accesses the submodules located in this submodule. Submodules are indexed by their name.
+		 * Accesses the submodules located in this module. Submodules are indexed by their name.
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
@@ -115,6 +119,9 @@ namespace compiler::frontend {
 		// ModuleTree& operator=(const ModuleTree&) = delete;
 
 	private:
+		/**
+		 * Constructs a ModuleTree with a new unique ModuleID.
+		 */
 		ModuleTree();
 
 
@@ -142,12 +149,15 @@ namespace compiler::frontend {
 	public:
 		/**
 		 * Creates a new builder instance.
+		 * @return Boxed ModuleTreeBuilder.
 		 */
 		static base::Box<ModuleTreeBuilder> create();
 
 		/**
 		 * Factory method to create ModuleTree from filesystem tree.
 		 * @param root Pre-constructed fs::File with a module structure.
+		 * @param file_reject Regex for rejecting files.
+		 * @param dir_reject Regex for rejecting directories.
 		 * @return A valid pointer with the root.
 		 */
 		static Ref<ModuleTree> create(
@@ -158,31 +168,43 @@ namespace compiler::frontend {
 
 		/**
 		 * Adds a source file to the module being built.
+		 * @param file The source file to add.
+		 * @return True if added successfully.
 		 */
 		bool addSourceFile(const fs::File& file);
 
 		/**
 		 * Sets the main source file for the module.
+		 * @param file The main source file.
+		 * @return True if set successfully.
 		 */
 		bool setMainSourceFile(const fs::File& file);
 
 		/**
 		 * Adds a submodule to the module being built.
+		 * @param submodule The submodule to add.
+		 * @return True if added successfully.
 		 */
 		bool addSubmodule(base::Ref<ModuleTree> submodule);
 
 		/**
 		 * Adds an other file to the module being built.
+		 * @param file The file to add.
+		 * @return True if added successfully.
 		 */
 		bool addOtherFile(const fs::File& file);
 
 		/**
 		 * Sets the name of the module.
+		 * @param name The name to set.
+		 * @return True if set successfully.
 		 */
 		bool setName(base::StrID name);
 
 		/**
 		 * Sets the parent module.
+		 * @param parent The parent module.
+		 * @return True if set successfully.
 		 */
 		bool setParent(base::Ref<ModuleTree> parent);
 
@@ -190,6 +212,8 @@ namespace compiler::frontend {
 		 * Builds the module tree from a directory structure.
 		 * This will recursively traverse the directory and build the module tree.
 		 * @param directory The root directory to build the module tree from.
+		 * @param file_reject Regex for rejecting files.
+		 * @param dir_reject Regex for rejecting directories.
 		 */
 		void buildFromDirectory(
 			const fs::File&   directory,
@@ -197,11 +221,15 @@ namespace compiler::frontend {
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
+		/**
+		 * Builds the module tree from a single file (single-file module).
+		 * @param file The file to build from.
+		 */
 		void buildFromSingleFile(const fs::File& file);
 
 		/**
 		 * Validates the current state of the builder.
-		 * @return True if valid, false otherwise.
+		 * @return True if valid (not finalized), false otherwise.
 		 */
 		[[nodiscard]]
 		bool isValid() const;
@@ -214,14 +242,31 @@ namespace compiler::frontend {
 		base::Ref<ModuleTree> finalize();
 
 	private:
+		/**
+		 * Constructs a ModuleTreeBuilder.
+		 */
 		ModuleTreeBuilder();
 
+		/**
+		 * Handles a new file found during directory traversal.
+		 * @param file The file to handle.
+		 */
 		void handleNewFile(const fs::File& file);
 
 		/**
-		 * File/directory name validation helpers.
+		 * Checks if a file name is valid according to the reject regex.
+		 * @param filename The file name to check.
+		 * @param reject_file_regex The regex to use for rejection.
+		 * @return True if valid, false otherwise.
 		 */
 		static bool isFileNameValid(const std::string& filename, const std::regex& reject_file_regex);
+
+		/**
+		 * Checks if a directory name is valid according to the reject regex.
+		 * @param dirname The directory name to check.
+		 * @param reject_directory_regex The regex to use for rejection.
+		 * @return True if valid, false otherwise.
+		 */
 		static bool isDirectoryNameValid(
 			const std::string& dirname, const std::regex& reject_directory_regex
 		);
@@ -239,36 +284,111 @@ namespace compiler::frontend {
 	class ModuleTreeModifier final {
 	public:
 		/**
-		 * Modification operations - private to ensure controlled access.
+		 * Adds a source file to the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to add.
+		 * @return True if added successfully.
 		 */
 		static bool addSourceFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
+
+		/**
+		 * Removes a source file from its module by FileID.
+		 * @param ctx Query context.
+		 * @param file_id The FileID to remove.
+		 * @return True if removed successfully.
+		 */
 		static bool removeSourceFile(query::Context& ctx, FileID file_id);
+
+		/**
+		 * Sets the main source file for the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to set as main source file.
+		 * @return True if set successfully.
+		 */
 		static bool setMainSourceFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
+
+		/**
+		 * Adds a submodule to the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param submodule The submodule to add.
+		 * @return True if added successfully.
+		 */
 		static bool addSubmodule(
 			query::Context& ctx, base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 		);
+
+		/**
+		 * Adds an "other" file to the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to add.
+		 * @return True if added successfully.
+		 */
 		static bool addOtherFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
+
+		/**
+		 * Removes an "other" file from the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to remove.
+		 * @return True if removed successfully.
+		 */
 		static bool removeOtherFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
+
+		/**
+		 * Sets the parent of the given module.
+		 * If parent is set, adds this module as a submodule to the parent.
+		 * If parent is not set, removes the current parent.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param parent The new parent module (optional).
+		 * @return True if operation succeeded.
+		 */
 		static bool setParent(
 			query::Context&                       ctx,
 			base::Ref<ModuleTree>                 module,
 			base::Optional<base::Ref<ModuleTree>> parent
 		);
+
+		/**
+		 * Removes the parent from the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @return True if removed successfully.
+		 */
 		static bool removeParent(query::Context& ctx, base::Ref<ModuleTree> module);
 
+		/**
+		 * Removes the module with the given ModuleID from the module map.
+		 * Also removes it from its parent's submodules and deletes associated source files.
+		 * @param ctx Query context.
+		 * @param module_id The ModuleID to remove.
+		 * @return True if removed successfully.
+		 */
 		static bool removeModule(query::Context& ctx, ModuleID module_id);
 
+		/**
+		 * Notifies that a file has been modified and updates its SourceFile.
+		 * @param ctx Query context.
+		 * @param file The file that was modified.
+		 */
 		static void fileModified(query::Context& ctx, const fs::File& file);
 
 	private:
+		/**
+		 * Private constructor to prevent instantiation.
+		 */
 		ModuleTreeModifier() = default;
 	};
 }
