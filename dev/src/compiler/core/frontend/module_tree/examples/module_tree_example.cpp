@@ -11,15 +11,17 @@ int main() {
 
 	// First argument is some kind of a path to a module we want to parse.
 	// It returns a std::shared_ptr.
-	std::shared_ptr<ModuleTree> module_tree = ModuleTreeBuilder::create("../tests/test_module");
+	Ref<ModuleTree> module_tree
+		= compiler::frontend::ModuleTreeBuilder::create(fs::File("../tests/test_module"));
 
 	// Print main source file's content.
 	if (module_tree->hasMainSourceFile())
-		std::cout << module_tree->getMainSourceFile().path.getContent().view().stringView() << '\n';
+		std::cout << module_tree->getMainSourceFile()->getFile().getContent().view().stringView()
+				  << '\n';
 
 	// Print content of source files.
 	for (auto&& file: module_tree->getSourceFiles())
-		std::cout << file.path.getContent().view().stringView() << '\n';
+		std::cout << file->getFile().getContent().view().stringView() << '\n';
 
 	// Print names of other modules.
 	//
