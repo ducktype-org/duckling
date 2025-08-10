@@ -2,7 +2,10 @@
 
 #include "helios/ctv/ctv.hpp"
 #include "helios/helios_errors.hpp"
+#include "helios/queries.hpp"
+#include "helios_private/comp_time/vm_evaluator.hpp"
 
+#include <backends/dvm/backend.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -11,11 +14,15 @@
 #include <pst_parser/elements/includes/basic.hpp>
 
 #include "base/exceptions.hpp"
+#include "base/string_id.hpp"
 #include "base/variant.hpp"
 
 #include "query_framework/context.hpp"
 #include "query_framework/query_cache_macros.hpp"
+#include "query_framework/query_result.hpp"
 #include <query_framework/query_impl.hpp>
+
+#include "vm/bytecode/bytecode.hpp"
 
 namespace {
 	using namespace compiler::helios;
@@ -331,6 +338,47 @@ namespace compiler::helios {
 			return std::move(visitor.result);
 		}
 
+		static CompTimeEvalResult evaluateWithVm(query::Context& ctx, const code::Expr& expr) {
+			const auto* call_expr = dynamic_cast<const code::CallExpr*>(&expr);
+			// TODOP: For now VM is only used for function call evaluation.
+			if (!call_expr) return query::QError(errors::Failed());
+
+			// auto pst_function =
+			// auto fun_hout_result = ctx.query<helios::QueryModuleHOUT>(const typename
+			// OthQuery::QKey &key)
+			//j
+
+			auto mir_func_result
+				= ctx.query<mir::LowerToMirFunctionResult>({ fun_hout_result.value() });
+			if (mir_func_result.hasError()) { /* ... */ }
+
+			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_result.value() });
+			if (lir_func_result.hasError()) { /* ... */ }
+
+			// Get code of the called function.
+			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
+			backend_vm::Module m{ ctx, base::StrID("COMP_TIME"), { lir_func_result.value() }, {} };
+			vm::code::CodeCollection code = m.build();
+
+			std::vector<CTV> ctv_arguments;
+			for (const auto& arg_expr: call_expr->arguments) {
+				auto arg_result = ctx.query<EvaluateAtCompileTime>({ arg_expr });
+				if (arg_result.hasError()) return arg_result;
+				ctv_arguments.push_back(std::move(arg_result));
+			}
+			
+			const auto* callee_ident = dynamic_cast<code::IdentifierExpr*>(call_expr->callee);
+			auto function_name = callee_ident.symbol.getName();
+
+			return CompileTimeEvaluator::get().executeInVm(
+					// Is the compiler return type needed here?
+					code,
+					function_name,
+					ctv_arguments
+			);
+
+		}
+
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (eval.hasError()) return query::QError(errors::Failed());
@@ -338,7 +386,7 @@ namespace compiler::helios {
 			if (isSimpleEnoughForTreeEval(*eval.value()))
 				return evaluateWithTreeEval(ctx, *eval.value());
 
-			// TODOP: Add VM eval here
+			evaluateWithVm(ctx, *eval.value());
 			return query::QError(errors::Failed());
 		}
 
