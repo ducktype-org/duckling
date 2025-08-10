@@ -29,4 +29,9 @@ namespace pst {
 		}
 		return result;
 	}
+
+	/**
+	 * @brief Check if none of the Element paths repeat for different elements
+	 */
+	bool checkUniqueElementPaths(AccessLocked<pst::LangElement> root);
 }

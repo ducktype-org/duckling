@@ -1,6 +1,7 @@
 #include "access.hpp"
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
+#include "elements/includes/basic.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
@@ -9,7 +10,7 @@
 #include <ranges>
 
 namespace pst {
-	std::string ElementPath::str() {
+	std::string ElementPath::str() const {
 		using namespace std::ranges;
 		using namespace std::views;
 		return elements | join_with('.') | to<std::string>();
@@ -31,6 +32,46 @@ namespace pst {
 					ElementPath child_path(path, named_child.first);
 					named_child.second->calcElementPaths(child_path);
 				}
+			}
+		}
+	}
+
+	void LangElement::calcUnorderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>& statements, const ElementPath& path) { 
+		auto no_symbol_path = ElementPath(path, "no_symbol");
+		usize no_symbol_count = 0;
+		auto by_symbol_path = ElementPath(path, "by_symbol");
+		base::Map<base::StrID, usize> by_symbol_count;
+		usize symbol_count = 0;
+		auto transparent_path = ElementPath(path, "transparent");
+		usize transparent_count = 0;
+
+		ElementPath id_path = no_symbol_path;
+
+		for (auto& stmt: statements) {
+			base::StrID symbol;
+			switch(stmt.internal()->isDeclaration()) {
+			case DeclKind::None:
+				id_path = ElementPath(no_symbol_path, std::format("[{}]", no_symbol_count));
+				calcChildPath(stmt, id_path);
+				no_symbol_count++;
+				break;
+			case DeclKind::Symbol:
+				symbol = stmt.internal()->getDeclSymbol().value();
+				if (by_symbol_count.atMaybe(symbol)) {
+					symbol_count = by_symbol_count[symbol];
+				} else {
+					by_symbol_count.put(symbol);
+					symbol_count = 0;
+				}
+				id_path = ElementPath(by_symbol_path, std::format("{}[{}]", symbol.str(), symbol_count));
+				calcChildPath(stmt, id_path);
+				by_symbol_count[symbol]++;
+				break;
+			case DeclKind::Transparent:
+				id_path = ElementPath(transparent_path, std::format("[{}]", transparent_count));
+				calcChildPath(stmt, id_path);
+				transparent_count++;
+				break;
 			}
 		}
 	}

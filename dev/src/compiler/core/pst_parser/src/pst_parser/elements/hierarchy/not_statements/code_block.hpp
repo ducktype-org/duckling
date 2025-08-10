@@ -23,6 +23,12 @@ namespace pst {
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
 		CodeBlockType type = Undefined;
 
+		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
+		std::vector<AccessLocked<Stmt>> no_symbol;
+		std::vector<AccessLocked<Stmt>> transparent;
+
+		void fillSymbols();
+
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
@@ -44,11 +50,6 @@ namespace pst {
 			return true;
 		}
 
-		/**
-		 * @todo implement
-		 */
-		void calcElementPathsRecursive(const ElementPath&) override {
-			CORE_PANIC("not implemented");
-		}
+		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

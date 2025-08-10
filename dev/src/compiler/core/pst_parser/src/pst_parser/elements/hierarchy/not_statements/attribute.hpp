@@ -12,7 +12,9 @@ namespace pst {
 		NAMED_CHILD(args, AtrArgList);
 
 	public:
-		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
+		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {
+			this->element_kind = ElementKind::Attribute;
+		}
 
 		static MBox<Attribute> parse(LangParserState& state);
 		~Attribute() final = default;

@@ -69,6 +69,7 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
+			calcElementPaths();
 		}
 
 		/**
@@ -90,6 +91,12 @@ namespace pst {
 			  : file(tokenizer::makeTokenSource(pos, content)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
+		}
+
+		void calcElementPaths() {
+			if (auto ref = element.internalMut()) {
+				ref->calcElementPaths({});
+			}
 		}
 
 	public:

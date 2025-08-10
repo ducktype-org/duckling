@@ -100,6 +100,8 @@ namespace pst {
 
 		void dprintPrefix(std::ostream& out) const override;
 
+		void calcElementPathsRecursive(const ElementPath& path) override;
+
 	public:
 		[[nodiscard]]
 		StmtKind getStmtKind() const {

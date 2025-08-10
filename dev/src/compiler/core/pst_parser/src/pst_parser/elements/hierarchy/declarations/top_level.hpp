@@ -9,6 +9,12 @@ namespace pst {
 	class TopLevel final: public Decl {
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
 
+		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
+		std::vector<AccessLocked<Stmt>> no_symbol;
+		std::vector<AccessLocked<Stmt>> transparent;
+
+		void fillSymbols();
+
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel, ElementKind::TopLevel);
 
@@ -43,11 +49,6 @@ namespace pst {
 			return DeclKind::Transparent;
 		}
 
-		/**
-		 * @todo implement
-		 */
-		void calcElementPathsRecursive(const ElementPath&) override {
-			CORE_PANIC("not implemented");
-		}
+		void calcElementPathsRecursive(const ElementPath&) override;
 	};
 }

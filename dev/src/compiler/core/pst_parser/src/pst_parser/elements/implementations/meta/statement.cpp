@@ -111,6 +111,23 @@ namespace pst {
 		return out;
 	}
 
+	void Stmt::calcElementPathsRecursive(const ElementPath& path) {
+		ElementPath attrs_path = {path, "attributes"};
+		calcIndexedListChildPath(attributes, attrs_path);
+		for(auto& el: sub_elements) {
+			variant_match(el) {
+				variant_case(InternalChild, child) {
+					if (child->element_kind == ElementKind::Attribute) continue;
+					CORE_PANIC("Default implementation of calculating element paths cannot handle unnamed sub-elements. Encountered while calculating for: " + elementType());
+				}
+				variant_case(InternalNamedChild, named_child) {
+					ElementPath child_path(path, named_child.first);
+					named_child.second->calcElementPaths(child_path);
+				}
+			}
+		}
+	}
+
 	void Stmt::dprintPrefix(std::ostream& out) const {
 		LangElement::dprintPrefix(out);
 		dprintAttributes(out);

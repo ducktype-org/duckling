@@ -3,6 +3,7 @@
 #include "access.hpp"
 #include "element_kind.hpp"
 #include "pst_id.hpp"
+#include "elements/elements_list.hpp"
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
@@ -38,11 +39,13 @@ namespace pst {
 	 * @todo Add source information, and specify what is in the path
 	 */
 	struct ElementPath final {
+		ElementPath() = default;
+
 		ElementPath(const ElementPath& parent, const std::string& ext): elements(parent.elements.begin(), parent.elements.end()) {
 			elements.push_back(ext);
 		}
 
-		std::string str();
+		std::string str() const;
 
 	private:
 		std::vector<std::string> elements;
@@ -54,6 +57,11 @@ namespace pst {
 	class LangElement: public tpc::Element {
 	public:
 		using SubToken = base::CRef<lexer::Token>;
+
+		template<typename Element, typename Parser>
+		friend class PST;
+
+		friend class Stmt;
 
 	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
@@ -116,7 +124,9 @@ namespace pst {
 		 */
 		template <typename Element, base::TemplateStringLiteral name>
 		void calcChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
-			access_ref.internalMut()->calcElementPaths(path);
+			if (auto ref = access_ref.internalMut()) {
+				ref->calcElementPaths(path);
+			}
 		}
 
 		/**
@@ -124,7 +134,9 @@ namespace pst {
 		 */
 		template <typename Element>
 		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path) const {
-			access_ref.internalMut()->calcElementPaths(path);
+			if (auto ref = access_ref.internalMut()) {
+				ref->calcElementPaths(path);
+			}
 		}
 
 		/**
@@ -132,7 +144,9 @@ namespace pst {
 		 */
 		template <typename Element, base::TemplateStringLiteral name>
 		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
-			access_ref.internalMut()->calcElementPaths({path, std::string(name.value)});
+			if (auto ref = access_ref.internalMut()) {
+				ref->calcElementPaths({path, std::string(name.value)});
+			}
 		}
 
 		/**
@@ -141,10 +155,12 @@ namespace pst {
 		template <typename Element>
 		void calcIndexedListChildPath(std::vector<AccessInternalAnonymous<Element>>& vec, const ElementPath& path) const {
 			for(usize i = 0; i < vec.size(); i++) {
-				ElementPath child_path(path, std::format("[%llu]", i));
+				ElementPath child_path(path, std::format("[{}]", i));
 				calcChildPath(vec[i], child_path);
 			} 
 		}
+
+		void calcUnorderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
 
 	private:
 		/**
@@ -272,6 +288,11 @@ namespace pst {
 				base::strConcat("Element kind not set. Element type: ", elementType())
 			);
 			return element_kind;
+		}
+
+		[[nodiscard]]
+		const ElementPath& getElementPath() const {
+			return element_path.value();
 		}
 
 		virtual void acceptVisitor(PstVisitor& visitor) const;

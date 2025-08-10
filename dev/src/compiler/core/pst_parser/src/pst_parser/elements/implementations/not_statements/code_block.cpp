@@ -27,7 +27,40 @@ namespace pst {
 		}
 
 		state.parse(out).goUpAndSkip();
+
+		out->fillSymbols();
+
 		return out;
+	}
+
+	void CodeBlock::fillSymbols() {
+		for (auto& stmt: statements) {
+			base::StrID symbol;
+			switch(stmt.internal()->isDeclaration()) {
+			case DeclKind::None:
+				no_symbol.push_back(stmt.give());
+				break;
+			case DeclKind::Symbol:
+				symbol = stmt.internal()->getDeclSymbol().value();
+				if (!by_symbol.atMaybe(symbol)) {
+					by_symbol.put(symbol);
+				}
+				by_symbol[symbol].push_back(stmt.give());
+				break;
+			case DeclKind::Transparent:
+				transparent.push_back(stmt.give());
+				break;
+			}
+		}
+	}
+
+	void CodeBlock::calcElementPathsRecursive(const ElementPath& path) {
+		if (type == Ordered) {
+			auto ordered = ElementPath(path, "ordered");
+			calcIndexedListChildPath(statements, ordered);	
+		} else if (type == Unordered) {
+			calcUnorderedListChildPath(statements, path);
+		}
 	}
 
 	void CodeBlock::dprint(std::ostream& out) const {
