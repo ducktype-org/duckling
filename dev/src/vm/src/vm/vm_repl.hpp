@@ -35,10 +35,12 @@
  * >>> ${name} 				-> Output a global variable with a specified name.
  * =========================================
  * @todo: Currently REPL only supports passing and returning arguments of type i64.
- * This should change after: https://github.com/ducktype-org/duckling/issues/776
+ * This should change after #1132
  */
 class DuckVMRepl {
 public:
+	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+
 	static DuckVMRepl get();
 	DuckVMRepl(DuckVMRepl&&)                 = delete;
 	DuckVMRepl& operator=(DuckVMRepl&&)      = delete;
@@ -54,8 +56,8 @@ public:
 
 private:
 	struct CallInfo {
-		std::string      func_name;
-		std::vector<i64> func_args;
+		std::string       func_name;
+		OwnedArgumentList func_args;
 	};
 
 	vm::PID pid{};
@@ -83,15 +85,12 @@ private:
 
 	DuckVMRepl();
 	// Helper methods
-	[[nodiscard]] static std::string strip(std::string string);
-	[[nodiscard]] static std::string lstrip(std::string string);
-	[[nodiscard]] static std::string rstrip(std::string string);
-	std::string                      loadCodeLinesUntil(const std::string& until);
-	[[nodiscard]] CallInfo           parseFunctionCallLine(const std::string& line) const;
+	std::string            loadCodeLinesUntil(const std::string& until);
+	[[nodiscard]] CallInfo parseFunctionCallLine(const std::string& line) const;
 
 	// VM API Functions
 	bool loadOnVm(const std::string& code);
-	i64  runOnVm(const std::string& func_name, const std::vector<i64>& func_args = {});
+	i64  runOnVm(const std::string& func_name, OwnedArgumentList& func_args);
 	void loadAndRun(const std::string& code);
 
 	// Process User Requests
@@ -125,3 +124,5 @@ DEFINE_REPL_EXCEPTION(
 DEFINE_REPL_EXCEPTION(ReplFailedToJoinProcessException, "Failed to join the VM process for REPL.");
 DEFINE_REPL_EXCEPTION(ReplEmptyExitCodeException, "Exit code is empty, cannot continue REPL.");
 DEFINE_REPL_EXCEPTION(ReplFailedToRunCodeException, "Failed to run code in REPL.");
+DEFINE_REPL_EXCEPTION(ReplWrongReturnTypeException, "REPL returned a different type than 'i64'");
+DEFINE_REPL_EXCEPTION(ReplFailedToCreateAVmValue, "Failed to create a VmValue for arguments.");
