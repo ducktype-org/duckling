@@ -1,60 +1,69 @@
 #pragma once
 
+#include <vm/core/thread/vmvalue.hpp>
+
 #include <json/json.hpp>
 
 #include <variant>
 
 namespace vm::api {
-	struct ExecutionNotStarted {};
+	struct Running {};
 
-	struct Parsing {};
+	struct Paused {};
 
-	struct TypeAnalysis {};
+	struct WaitingForInput {};
+
+	struct NotStarted {};
+
+	using ExitValue = Ref<::vm::VmValue>;
+
+	struct ExecutionCompleted {
+		ExitValue exit_value;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionCompleted, exit_value);
+	};
+
+	struct ExecutionStopped {};
 
 	struct ExecutionPanicked {
 		std::string error_message;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
 	};
 
-	struct Paused {};
+	struct ExecutionNotStarted {};
 
-	struct Running {};
+	struct Parsing {};
 
-	struct WaitingForInput {};
+	struct TypeAnalysis {};
 
-	struct NotStarted {};
-
-	using ExitCode = i64;
-
-	struct ExecutionCompleted {
-		ExitCode exit_code;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::ExecutionCompleted, exit_code);
-	};
-
-	struct ExecutionStopped {};
-
-	using ExecStatus = std::variant<
+	using ProcStatus = std::variant<
 		Running,
 		Paused,
 		WaitingForInput,
 		NotStarted,
 		ExecutionCompleted,
 		ExecutionStopped,
-		ExecutionPanicked>;
+		ExecutionPanicked,
+		ExecutionNotStarted,
+		Parsing,
+		TypeAnalysis>;
 
-	constexpr bool isStatusTerminal(const ExecStatus& status) {
+	constexpr bool isStatusTerminal(const ProcStatus& status) {
 		return std::holds_alternative<ExecutionCompleted>(status)
 		    || std::holds_alternative<ExecutionStopped>(status)
 		    || std::holds_alternative<ExecutionPanicked>(status);
 	}
 
-	struct Executing {
-		ExecStatus exec_status;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
-	};
+	constexpr bool executingStarted(const ProcStatus& status) {
+		return !(
+			std::holds_alternative<ExecutionNotStarted>(status)
+			|| std::holds_alternative<Parsing>(status)
+			|| std::holds_alternative<TypeAnalysis>(status)
+		);
+	}
 
-	using ProcStatus = std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
-
+	constexpr bool isExecuting(const ProcStatus& status) {
+		return !isStatusTerminal(status) && executingStarted(status);
+	}
 }
 
 
@@ -66,7 +75,6 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "interface_types.hpp"
+
 #include <base/optional.hpp>
 
 #include <listener/listener.hpp>
@@ -7,13 +9,10 @@
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
-#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
@@ -34,10 +33,6 @@ namespace vm::loader {
 }
 
 namespace vm {
-	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
-	using ProgramRunArguments  = std::vector<std::string>;
-	using FunctionRunArguments = std::vector<i64>;
-	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -48,7 +43,7 @@ namespace vm {
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
 	 * It is responsible for loading and parsing of the program,
-	 * creating and reseting the Execution Thread,
+	 * creating and resetting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
 	 *
@@ -56,7 +51,11 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class VMProcess final: public Listener<api::ProcStatus> {
+		friend class VmValue;
+
 	private:
+		PID my_pid;
+
 		std::shared_mutex rw_global;
 
 		api::ProcStatus             status;
@@ -73,35 +72,14 @@ namespace vm {
 		loader::Loader loader{};
 
 		/**
-		 * @brief Performs external execution request on the VCPU.
-		 *
-		 * This method is called by the supervisor. The possible requests include
-		 * io operations, start/stop the Execution Thread or communicate with the Execution Thread.
-		 *
-		 * @param request Request that performs action on the Execution Thread.
-		 * @return std::expected<api::Response, api::CoreOperationError>
+		 * @brief Storage for all VmValues which belong to this process.
+		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
+		 * when process is deinitialized.
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::ExecutorRequest& request
-		);
+		std::vector<Box<VmValue>> owned_vm_values;
 
-		/**
-		 * @brief Performs external data request on the VCPU.
-		 *
-		 * This method is called by the supervisor.
-		 * Only valid state of the VCPU for data requests is "Executing",
-		 * but the executor has to be paused in some way to perform the request.
-		 * It inspects the VM's memory stored in the DataManager.
-		 *
-		 * @param request
-		 * @return std::expected<api::Response, api::CoreOperationError>
-		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::DataRequest& request
-		);
-
-		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
-		);
+		// @TODO: Improve this....
+		std::deque<VMThread> vm_threads;
 
 		/**
 		 * @brief Loads the program from a given source into the current loader program state,
@@ -114,35 +92,36 @@ namespace vm {
 		/**
 		 * @brief Creates new thread that runs a function in the Executor service.
 		 */
-		std::expected<api::Response, api::CoreOperationError> runFunction(
+		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
 		);
 
 		/**
 		 * @brief Joins the executing thread.
 		 */
-		std::expected<api::Response, api::CoreOperationError> join();
+		std::expected<api::Response, api::ApiError> join();
 
 		/**
 		 * @brief Stops the executing thread (by joining it).
 		 * After this method is called, the thread is removed.
 		 */
-		std::expected<api::Response, api::CoreOperationError> stop();
+		std::expected<api::Response, api::ApiError> stop();
 
 		/**
 		 * @brief Passes the input string to the executing thread.
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
-		);
+		std::expected<api::Response, api::ApiError> input(const api::request::Input& request);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
 		 * If the output stream is empty, it waits until it is not.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> output();
+		std::expected<api::Response, api::ApiError> output();
+
+		base::Optional<api::ApiError> validateMemoryRequest();
 
 		/**
 		 * @brief Gets the status of the process (memory-safe).
@@ -170,16 +149,14 @@ namespace vm {
 		 * @brief Attaching means all IO is interactive, input is read from stdin, output
 		 * @brief is automatically forwarded to stdout.
 		 */
-		std::expected<api::Response, api::CoreOperationError> attach(
+		std::expected<api::Response, api::ApiError> attach(
 			std::istream& istream = std::cin, std::ostream& ostream = std::cout
 		);
 
-		std::expected<api::Response, api::CoreOperationError> detach();
-
-		// @TODO: Improve this....
-		std::deque<VMThread> vm_threads;
+		std::expected<api::Response, api::ApiError> detach();
 
 		VMThread& getMainVMThread();
+
 
 	public:
 		void onEvent(const api::ProcStatus& event) noexcept override;
@@ -193,16 +170,40 @@ namespace vm {
 
 		ProcIO& getIO();
 
-
-		// Each of the following methods can be called concurrently, so they should synchronize
-		// resources.
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
-		VMProcess();
+		PID getPID() const;
 
-		~VMProcess() final;
+		/**
+		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
+		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
+		 * the process is deinitialized.
+		 *
+		 * @param type The type of the data stored in the newly created VmValue.
+		 * @param src The pointer to the data used to fill the newly created VmValue. If not
+		 * specified, created VmValue will be empty.
+		 * @return A non-owning, modifiable reference to the new VmValue.
+		 */
+		Ref<VmValue> createVmValue(TypeCRef type);
+		Ref<VmValue> createVmValue(TypeCRef type, Pointer src);
+
+		/**
+		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
+		 * The caller is expected to free the VmValue.
+		 *
+		 * @param type The type of the data stored in the newly created VmValue.
+		 * @param src The pointer to the data used to fill the newly created VmValue. If not
+		 * specified, created VmValue will be empty.
+		 * @return A Box referencing the newly created VmValue.
+		 */
+		Box<VmValue> createOwnedVmValue(TypeCRef type);
+		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
+
+		VMProcess(PID my_pid);
+
+		~VMProcess() override;
 	};
 }

@@ -114,4 +114,25 @@ namespace clah {
 
 		return { .value = file, .raw_source = result.raw_source, .position = result.position };
 	}
+
+	ValueParsingResult FilePathParser::parse(usize start, std::string_view raw_input) const {
+		auto result = StringParser::make()->parse(start, raw_input);
+		auto str    = std::any_cast<std::string>(result.value);
+
+		std::smatch r_match;
+		if (!std::regex_match(str, r_match, filepath_regex))
+			throw clah::exceptions::ValueParsingException(
+				getTypeName().c_str(),
+				start,
+				result.position,
+				raw_input,
+				"argument does not match regex"
+			);
+
+		std::filesystem::path path = str;
+
+		fs::FilePath filepath(path);
+
+		return { .value = filepath, .raw_source = result.raw_source, .position = result.position };
+	}
 }

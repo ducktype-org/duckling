@@ -88,7 +88,7 @@ namespace fs {
 	 * auto virtualFile = virtualDir.createSubFile("Virtual content");
 	 * ```
 	 */
-	class File {
+	class File final {
 		using FileHash = std::hash<std::filesystem::path>;
 
 		FilePath path;

@@ -1,0 +1,8 @@
+function main {
+    init_lany_type a, i32;
+    init_lany_type b, i32;
+    mov_l32_imm a, 13;
+    mov_l32_imm b, 0;
+    div_l32_l32 a, b;
+    ret;
+}
