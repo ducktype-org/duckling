@@ -12,8 +12,8 @@
 #include <base/ref.hpp>
 
 #include <filesystem/file.hpp>
-#include <filesystem/fs_tree.hpp>
 
+#include <regex>
 #include <string>
 
 namespace compiler::frontend {

@@ -18,6 +18,8 @@ public:
 		TESTER_ADD_TEST(parseModule);
 		TESTER_ADD_TEST(testOtherFeatures);
 		TESTER_ADD_TEST(testQueries);
+		TESTER_ADD_TEST(testParseDirectoryLikeFsTree);    // moved from FsTree test
+		TESTER_ADD_TEST(testVirtualFilesLikeModuleTree);  // moved from FsTree test
 	}
 
 private:
@@ -122,6 +124,123 @@ private:
 		auto main_id = sources->at(0);
 
 		[[maybe_unused]] auto pst = query::entryPoint<QueryFilePST>(main_id);
+	}
+
+	void testParseDirectoryLikeFsTree() {
+		// This test is adapted from the old FsTree parseDirectory test.
+		const auto root = fs::File(path("test_directory_tree"));
+		auto       mt   = ModuleTreeBuilder::create(root, test_regex, test_regex);
+
+		// Only files with valid names/extensions are included as source or other files.
+		// Check that only the correct files and directories are present as submodules or files.
+		// Since ModuleTree does not expose raw file names, we check via submodules and files.
+
+		// Check submodules (directories)
+		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("another_directory")));
+		ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID(".skipped_directory")));
+
+		// Check files (source/other)
+		bool found_file = false, found_file_txt = false, found_skipped = false;
+		for (const auto& [ext, files]: mt->getOtherFiles()) {
+			for (const auto& file: files) {
+				if (file.name() == "file") found_file = true;
+				if (file.name() == "file.txt") found_file_txt = true;
+				if (file.name() == ".skipped_file") found_skipped = true;
+			}
+		}
+		// Also check in source files (if any)
+		for (const auto& src: mt->getSourceFiles()) {
+			if (src->getFile().name() == "file") found_file = true;
+			if (src->getFile().name() == "file.txt") found_file_txt = true;
+			if (src->getFile().name() == ".skipped_file") found_skipped = true;
+		}
+
+		ASSERT_EQUAL(true, found_file);
+		ASSERT_EQUAL(true, found_file_txt);
+		ASSERT_EQUAL(false, found_skipped);
+
+		// Check content of file.txt
+		bool checked_content = false;
+		for (const auto& [ext, files]: mt->getOtherFiles()) {
+			for (const auto& file: files) {
+				if (file.name() == "file.txt") {
+					ASSERT_EQUAL("content\n", file.getContent().view());
+					checked_content = true;
+				}
+			}
+		}
+		ASSERT_EQUAL(true, checked_content);
+
+		// Check submodule's files
+		auto another_dir = mt->getSubmodules().at(base::StrID("another_directory"));
+		ASSERT_EQUAL(0, another_dir->getSourceFiles().size());
+		ASSERT_EQUAL(0, another_dir->getOtherFiles().size());
+	}
+
+	void testVirtualFilesLikeModuleTree() {
+		// This test is adapted from the old FsTree virtual files test.
+		// Create a virtual root directory
+		auto root = fs::FileManager::createRandomVirtualDirectory();
+
+		// Create subdirectories and files
+		auto sub_dir1 = root.createSubDirectory("subDir1");
+		auto sub_dir2 = root.createSubDirectory("subDir2");
+		auto file1    = root.createSubFile("File1 content", "file1.txt");
+		auto file4    = sub_dir1.createSubFile("File2 content", "subDir1.dmf");
+		auto file2    = sub_dir1.createSubFile("File2 content", "file2.txt");
+		auto file3    = sub_dir2.createSubFile("File2 content", "subDir2.dmf");
+
+		// Create ModuleTree from the virtual root directory
+		auto mt = ModuleTreeBuilder::create(root);
+
+		// Test root module name
+		ASSERT_EQUAL(root.name(), mt->getName().strView());
+
+		// Test submodules (directories)
+		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("subDir1")));
+		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("subDir2")));
+
+		// Test files in root (should be in other files or source files)
+		bool found_file1 = false;
+		for (const auto& [ext, files]: mt->getOtherFiles()) {
+			for (const auto& file: files) {
+				if (file.name() == "file1.txt") {
+					ASSERT_EQUAL("File1 content", file.getContent().view());
+					found_file1 = true;
+				}
+			}
+		}
+		for (const auto& src: mt->getSourceFiles()) {
+			if (src->getFile().name() == "file1.txt") {
+				ASSERT_EQUAL("File1 content", src->getFile().getContent().view());
+				found_file1 = true;
+			}
+		}
+		ASSERT_EQUAL(true, found_file1);
+
+		// Test files in subDir1
+		auto sub1        = mt->getSubmodules().at(base::StrID("subDir1"));
+		bool found_file2 = false;
+		for (const auto& [ext, files]: sub1->getOtherFiles()) {
+			for (const auto& file: files) {
+				if (file.name() == "file2.txt") {
+					ASSERT_EQUAL("File2 content", file.getContent().view());
+					found_file2 = true;
+				}
+			}
+		}
+		for (const auto& src: sub1->getSourceFiles()) {
+			if (src->getFile().name() == "file2.txt") {
+				ASSERT_EQUAL("File2 content", src->getFile().getContent().view());
+				found_file2 = true;
+			}
+		}
+		ASSERT_EQUAL(true, found_file2);
+
+		// Test prettyPrint() (just check output contains expected names)
+		auto tree_representation = mt->prettyPrint();
+		ASSERT_EQUAL(true, tree_representation.find("subDir1") != std::string::npos);
+		ASSERT_EQUAL(true, tree_representation.find("file1.txt") != std::string::npos);
 	}
 };
 
