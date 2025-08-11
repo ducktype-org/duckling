@@ -95,16 +95,14 @@ namespace compiler::mir {
 	 * @param continuation Block that should be executed after this expression.
 	 * @param function Function that we are lowering this expression in.
 	 * @param expr_scope Lifetime Scope this expression should be in.
-	 * @param result_place Optional local where result should be saved (in case of expr it's always
-	 * local)
 	 * @return ExprLowerRes
 	 */
 	ExprLowerRes lowerExpr(
-		const hc::Expr&             expr,
-		BlockBuilderRef             continuation,
-		FunctionBuilder&            function,
-		ScopeRef                    expr_scope,
-		base::Optional<MutLocalRef> result_place = std::nullopt
+		const hc::Expr&  expr,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         expr_scope,
+		base::Optional<MutLocalRef> result_place = std::nullopt // TODO wariant globalne/lokalne
 	);
 
 	/**
@@ -640,7 +638,6 @@ namespace compiler::mir {
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
-			std::cout << "HERE2137\n";
 			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
@@ -776,7 +773,7 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			std::cout << "VARIABLE STATEMENT\n";
+			std::cout<<"VARIABLE STATEMENT\n";
 			auto optional_local = function.findLocal(stmt.helios_symbol);
 			CORE_ASSERT(
 				optional_local.has_value(),
@@ -789,14 +786,12 @@ namespace compiler::mir {
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
 
-			// auto local_construction_hole = continuation->addHole();
+			//auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto assignment_scope = function.newScope(parent_scope);
-					auto expr_result      = lowerExpr(
-                        *value, continuation, function, assignment_scope, optional_local
-                    );
+					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope, optional_local);
 					output({ expr_result.begin });
 					return;
 				}
@@ -807,7 +802,7 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
-			std::cout << "ASGSTMT\n";
+			std::cout<<"ASGSTMT\n";
 			// TODO: #448 Search for location in global scope as well.
 			auto assignment_scope = function.newScope(parent_scope);
 
@@ -864,10 +859,7 @@ namespace compiler::mir {
 		ScopeRef expr_scope;
 
 		ExprBlockVisitor(
-			BlockBuilderRef             continuation,
-			FunctionBuilder&            function,
-			ScopeRef                    expr_scope,
-			base::Optional<MutLocalRef> result
+			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope, base::Optional<MutLocalRef> result
 		):
 			  continuation(continuation),
 			  function(function),
@@ -880,30 +872,10 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			if (result.has_value()) {
-				auto hole = continuation->addHole();
-				hole.fill(Instruction{
-					Operation::Assign,
-					{ result.value() },
-					{ MirIntegerConst{ expr.value } },
-					{ flagConstruct(result.value()) },
-					expr_scope,
-				});
-			}
 			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			if (result.has_value()) {
-				auto hole = continuation->addHole();
-				hole.fill(Instruction{
-					Operation::Assign,
-					{ result.value() },
-					{ MirIntegerConst{ expr.value } },
-					{ flagConstruct(result.value()) },
-					expr_scope,
-				});
-			}
 			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
 		}
 
@@ -945,10 +917,9 @@ namespace compiler::mir {
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different argument types"
 			);
-			const auto result_type = expr.expression_type.getSymbolType();
-			const auto target_location
-				= result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
-			const Operation operation = builtinBinaryToOperation(expr.operation);
+			const auto      result_type     = expr.expression_type.getSymbolType();
+			const auto      target_location = result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
+			const Operation operation       = builtinBinaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
 				{ target_location },
@@ -966,10 +937,9 @@ namespace compiler::mir {
 				= lowerExpr(*expr.expr, continuation, function, expr_scope);
 
 			// Fill the hole with the unary operation.
-			const auto result_type = expr.expression_type.getSymbolType();
-			const auto target_location
-				= result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
-			const Operation operation = builtinUnaryToOperation(expr.operation);
+			const auto      result_type     = expr.expression_type.getSymbolType();
+			const auto      target_location = result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
+			const Operation operation       = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
 				{ target_location },
@@ -984,9 +954,8 @@ namespace compiler::mir {
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
-			const auto result_type = ternary_expr.expression_type.getSymbolType();
-			const auto target_location
-				= result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
+			const auto result_type     = ternary_expr.expression_type.getSymbolType();
+			const auto target_location = result.has_value() ? result.value() : function.addTmp(result_type, expr_scope);
 
 			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
 				auto block = function.newBlock();
@@ -1052,9 +1021,7 @@ namespace compiler::mir {
 		void visitCallExpr(const hc::CallExpr& expr) override {
 			auto       call = continuation->addHole();
 			const auto call_result
-				= result.has_value()
-			        ? result.value()
-			        : function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+				= result.has_value() ? result.value() : function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
@@ -1171,10 +1138,10 @@ namespace compiler::mir {
 	}
 
 	ExprLowerRes lowerExpr(
-		const hc::Expr&             expr,
-		BlockBuilderRef             continuation,
-		FunctionBuilder&            function,
-		ScopeRef                    expr_scope,
+		const hc::Expr&  expr,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         expr_scope,
 		base::Optional<MutLocalRef> result
 	) {
 		ExprBlockVisitor visitor{ continuation, function, expr_scope, result };
