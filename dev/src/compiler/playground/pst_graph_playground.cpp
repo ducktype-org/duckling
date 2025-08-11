@@ -77,9 +77,10 @@ std::string stringPosition(dia::SourcePosition pos) {
  * @note Adds information about position and element class
  */
 Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
-	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType() + "\n\""
-	                 + el->getElementPath().str() + "\"";
-	auto self = hdl.addNode(name);
+	// std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType() + "\n\""
+	// + el->getElementPath().str() + "\"";
+	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
+	auto        self = hdl.addNode(name);
 
 	for (auto sub: el->viewSubElements()) {
 		variant_match(sub) {
@@ -96,12 +97,18 @@ Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 			variant_case(pst::LangElement::Child, child) {
 				auto sub_node = dotElement(hdl, child.illegalAccess().value());
 				hdl.addEdge(self, sub_node);
+				// if (&*el !=
+				// &*child.illegalAccess().value()->getParent().value().illegalAccess().value())
+				// std::cerr << "Non matching parent\n";
 			}
 
 			variant_case(pst::LangElement::NamedChild, named_child) {
 				std::string child_name = named_child.first;
 				auto        sub_node = dotElement(hdl, named_child.second.illegalAccess().value());
 				hdl.addEdge(self, sub_node, child_name.data());
+				// if (&*el !=
+				// &*named_child.second.illegalAccess().value()->getParent().value().illegalAccess().value())
+				// std::cerr << "Non matching parent\n";
 			}
 		}
 	}
