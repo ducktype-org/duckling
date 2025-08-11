@@ -126,7 +126,7 @@ def _handle_quackpack_error(console: Console, e: QuackPackError, code: int = 1) 
     """
     for note in getattr(e, "__notes__", []):
         console.print(note)
-    console.error(e)
+    console.error(str(e))
     sys.exit(code)
 
 
