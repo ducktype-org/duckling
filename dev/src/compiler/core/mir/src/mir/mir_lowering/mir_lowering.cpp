@@ -773,7 +773,6 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			std::cout<<"VARIABLE STATEMENT\n";
 			auto optional_local = function.findLocal(stmt.helios_symbol);
 			CORE_ASSERT(
 				optional_local.has_value(),
