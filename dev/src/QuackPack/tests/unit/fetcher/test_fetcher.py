@@ -111,7 +111,7 @@ class TestFetcher:
                 assert f.read() == b"bar-2.5.6"
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
-    async def test_clone(self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path):
+    async def test_clone(self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
             await fetcher.clone(url, mock_filepath)
@@ -120,7 +120,7 @@ class TestFetcher:
             assert (mock_filepath / "test_file.txt").read_text() == "Hello, Git!"
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
-    async def test_clone_with_branch(self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path):
+    async def test_clone_with_branch(self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
             branch = "test-branch"
@@ -130,7 +130,7 @@ class TestFetcher:
             assert cloned_repo.active_branch.name == branch
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
-    async def test_clone_with_tag(self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path):
+    async def test_clone_with_tag(self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
             tag = "v1.0.0"
@@ -140,7 +140,7 @@ class TestFetcher:
             assert cloned_repo.git.describe("--tags") == tag
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
-    async def test_clone_with_rev(self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path):
+    async def test_clone_with_rev(self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
             repo = Repo(local_git_repo)
@@ -164,7 +164,7 @@ class TestFetcher:
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
     async def test_clone_git_command_error(
-        self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path
+        self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path
     ):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
@@ -175,7 +175,7 @@ class TestFetcher:
                 await fetcher.clone(url, mock_filepath)
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
-    async def test_clone_checkout_error(self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path):
+    async def test_clone_checkout_error(self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
             rev = "invalid-revision"
@@ -185,7 +185,7 @@ class TestFetcher:
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
     async def test_clone_branch_and_tag_error(
-        self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path
+        self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path
     ):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
