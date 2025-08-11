@@ -1,6 +1,6 @@
 #include "num_ctv.hpp"
 
-num_ctv make_minimized_num_ctv(i64 val) {
+num_ctv makeMinimizedNumCtv(i64 val) {
 	if (val >= std::numeric_limits<i16>::min() && val <= std::numeric_limits<i16>::max())
 		return num_ctv{ static_cast<i16>(val) };
 	else if (val >= std::numeric_limits<i32>::min() && val <= std::numeric_limits<i32>::max())
@@ -9,7 +9,7 @@ num_ctv make_minimized_num_ctv(i64 val) {
 		return num_ctv{ val };  // i64 is the smallest safe type here
 }
 
-num_ctv make_minimized_num_ctv(f80 val) {
+num_ctv makeMinimizedNumCtv(f80 val) {
 	if (static_cast<f80>(static_cast<f32>(val)) == val)
 		return num_ctv{ static_cast<f32>(val) };
 	else if (static_cast<f80>(static_cast<f64>(val)) == val)

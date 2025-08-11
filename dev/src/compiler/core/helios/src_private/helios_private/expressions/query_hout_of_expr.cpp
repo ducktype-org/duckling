@@ -93,10 +93,10 @@ namespace compiler::helios::code {
 
 				if (is_float && !is_prefixed) {
 					f80 as_ld = std::stold(value);
-					node      = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_ld));
+					node      = makeBox<LiteralNumCTVExpr>(ctx, makeMinimizedNumCtv(as_ld));
 				} else {
-					int base = 10;
-					int pos  = 2;
+					int   base = 10;
+					usize pos  = 2;
 					if (value.starts_with("0x"))
 						base = 16;
 					else if (value.starts_with("0o"))
@@ -107,7 +107,7 @@ namespace compiler::helios::code {
 						pos = 0;
 					i64 as_i64 = std::stoll(value.substr(pos), nullptr, base);
 					;
-					node = makeBox<LiteralNumCTVExpr>(ctx, make_minimized_num_ctv(as_i64));
+					node = makeBox<LiteralNumCTVExpr>(ctx, makeMinimizedNumCtv(as_i64));
 				}
 			}
 

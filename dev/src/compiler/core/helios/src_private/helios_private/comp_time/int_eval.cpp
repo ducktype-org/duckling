@@ -127,7 +127,7 @@ namespace compiler::helios {
 						} else {
 							throw std::runtime_error("Operands must be arithmetic");
 						}
-						return make_minimized_num_ctv(result_value);
+						return makeMinimizedNumCtv(result_value);
 					},
 					lhs_value,
 					rhs_value
