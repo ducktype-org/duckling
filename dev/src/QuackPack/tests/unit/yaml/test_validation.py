@@ -27,7 +27,7 @@ key2:
         _ = load_and_validate(tmp_path, ProperValidationModel)
 
 
-def test_invalid_discrimnator_should_fail(tmp_path: Path):
+def test_invalid_discriminator_should_fail(tmp_path: Path):
     DATA = """key1: lorem_ipsum"""
 
     def discriminate_fail(v: Any) -> str | None:
