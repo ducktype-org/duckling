@@ -153,7 +153,7 @@ class TestFetcher:
 
     @pytest.mark.skip(reason="TODO: fetcher git interface changed")
     async def test_clone_directory_exists(
-        self, ctx: GlobalContext, local_git_repo: Path, mock_filepaht: Path
+        self, ctx: GlobalContext, local_git_repo: Path, mock_filepath: Path
     ):
         with FetcherContext(ctx) as fetcher:  # pyright: ignore[reportArgumentType]; mocked GlobalContext
             url = str(local_git_repo)
