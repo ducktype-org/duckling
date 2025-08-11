@@ -9,7 +9,9 @@ namespace base {
 	 */
 	template<std::size_t N>
 	struct TemplateStringLiteral {
-		constexpr TemplateStringLiteral(const char (&str)[N]): value() { std::copy_n(str, N, value); }
+		constexpr TemplateStringLiteral(const char (&str)[N]): value() {
+			std::copy_n(str, N, value);
+		}
 
 		char value[N];
 	};
