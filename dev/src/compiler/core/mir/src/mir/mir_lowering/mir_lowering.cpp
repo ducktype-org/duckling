@@ -28,6 +28,7 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <iostream>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -53,15 +54,7 @@ namespace compiler::mir {
 	// during building phase
 	using BlockBuilderRef = Ref<BlockBuilder>;
 
-	/**
-	 * @brief Represents result of expression lowering, which is
-	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
-	 * that holds the result of the expression.
-	 */
-	struct ExprLowerRes final {
-		BlockBuilderRef begin;
-		MIRValue        value;
-	};
+	struct ExprLowerRes;
 
 	/**
 	 * @brief Represents result of statement lowering, which is
@@ -100,7 +93,8 @@ namespace compiler::mir {
 		const hc::Expr&  expr,
 		BlockBuilderRef  continuation,
 		FunctionBuilder& function,
-		ScopeRef         expr_scope
+		ScopeRef         expr_scope,
+		base::Optional<std::variant<LocalRef, MirGlobal>> = std::nullopt
 	);
 
 	/**
@@ -163,6 +157,7 @@ namespace compiler::mir {
 		std::vector<base::Optional<Instruction>> reversed_instruction;
 		base::Optional<Instruction>              terminator;
 
+	public:
 		/**
 		 * @brief Structure representing a hole in the block, that is
 		 * empty instruction that has to be filled, before the block will be builded.
@@ -192,7 +187,6 @@ namespace compiler::mir {
 			}
 		};
 
-	public:
 		BlockBuilder(usize vector_index): id(vector_index) {}
 
 		[[nodiscard]]
@@ -490,6 +484,66 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Represents result of expression lowering, which is
+	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
+	 * that holds the result of the expression.
+	 */
+	struct ExprLowerRes final {
+		BlockBuilderRef begin;
+
+		BlockBuilder::InstructionHole hole;
+
+		std::variant<MIRValue, Instruction> value;
+
+		ExprLowerRes(
+			BlockBuilderRef                     begin,
+			BlockBuilder::InstructionHole       hole,
+			std::variant<MIRValue, Instruction> value
+		):
+			  begin{ begin },
+			  hole{ hole },
+			  value{ value } {}
+
+		/**
+		 * @brief If MirValue exists returns it.
+		 */
+		base::Optional<MIRValue> getResultIfDone() {
+			variant_match(value) {
+				variant_case(MIRValue, val) { return val; }
+				variant_default{
+					return std::nullopt;
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Assigns result to target.
+		 * @note uses hole (part of structure), can be called only once.
+		 * @return if in-place construction succeded. 
+		 * If no, MIRValue is storing number or bool, access it using getResultIfDone.
+		 **/
+		bool getResultToTarget(std::variant<LocalRef, MirGlobal> target) {
+			variant_match(value) {
+				variant_case(Instruction, finalizer) {
+					std::visit(
+						[&](auto&& val) { finalizer.output.emplace(val); }, target
+					);
+					hole.fill(finalizer);
+					std::visit(
+						[&](auto&& val) { value = val; }, target
+					);
+					return true;
+				}
+				variant_default{
+					return false;
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+	};
+
+	/**
 	 * @brief Visitor that collects all local variables in the function and adds them directly
 	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
 	 * other local variables. Scope of other local variables is set when visiting VariableStmt
@@ -590,187 +644,194 @@ namespace compiler::mir {
 		}
 
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			auto return_block = function.newBlock();
-			auto return_scope = function.newScope(parent_scope);
+			/*	auto return_block = function.newBlock();
+			    auto return_scope = function.newScope(parent_scope);
 
-			auto retrieve_value = return_block->addHole();
+			    auto retrieve_value = return_block->addHole();
 
-			// lower expr:
-			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope);
+			    // lower expr:
+			    auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope);
 
-			if (expr_res.value.isLocal()) {
-				// we need to store the result of the expression
-				// in additional variable, so it doesn't get destroyed:
-				auto return_value = function.addNoLifetimeTmp(expr_res.value.get<LocalRef>()->type);
-				retrieve_value.fill(Instruction{
-					Operation::Assign,
-					{ return_value },
-					{ expr_res.value },
-					{ flagConstruct(return_value), flagMove(expr_res.value.get<LocalRef>()) },
-					return_scope,
-				});
-				return_block->setTerminator(
-					Instruction(Operation::ReturnValue, {}, { return_value }, {}, return_scope)
-				);
-			} else {
-				retrieve_value.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					return_scope,
-				});
-				return_block->setTerminator(
-					Instruction(Operation::ReturnValue, {}, { expr_res.value }, {}, return_scope)
-				);
-			}
+			    if (expr_res.value.isLocal()) {
+			        // we need to store the result of the expression
+			        // in additional variable, so it doesn't get destroyed:
+			        auto return_value =
+			   function.addNoLifetimeTmp(expr_res.value.get<LocalRef>()->type);
+			        retrieve_value.fill(Instruction{
+			            Operation::Assign,
+			            { return_value },
+			            { expr_res.value },
+			            { flagConstruct(return_value), flagMove(expr_res.value.get<LocalRef>())
+			   }, return_scope,
+			        });
+			        return_block->setTerminator(
+			            Instruction(Operation::ReturnValue, {}, { return_value }, {},
+			   return_scope)
+			        );
+			    } else {
+			        retrieve_value.fill(Instruction{
+			            Operation::Nop,
+			            {},
+			            {},
+			            {},
+			            return_scope,
+			        });
+			        return_block->setTerminator(
+			            Instruction(Operation::ReturnValue, {}, { expr_res.value }, {},
+			   return_scope)
+			        );
+			    }
 
-			output({ expr_res.begin });
+			    output({ expr_res.begin });*/
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
-			auto return_block = function.newBlock();
+			/*auto return_block = function.newBlock();
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator({ Operation::ReturnVoid, {}, {}, {}, return_scope });
-			output({ return_block });
+			output({ return_block });*/
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
-			auto expr_scope  = function.newScope(parent_scope);
+			/*auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
-			output({ expr_result.begin });
+			output({ expr_result.begin });*/
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
-			auto condition_scope = function.newScope(parent_scope);
+			/*	auto condition_scope = function.newScope(parent_scope);
 
-			// I'm not sure if we need these scopes,
-			// maybe we could just pass parent_scope as-is.
-			// But this way it for sure works.
-			auto then_scope = function.newScope(parent_scope);
-			auto else_scope = function.newScope(parent_scope);
+			    // I'm not sure if we need these scopes,
+			    // maybe we could just pass parent_scope as-is.
+			    // But this way it for sure works.
+			    auto then_scope = function.newScope(parent_scope);
+			    auto else_scope = function.newScope(parent_scope);
 
-			auto else_block = function.newBlock();
-			else_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
-			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
+			    auto else_block = function.newBlock();
+			    else_block->setTerminator(Instruction{
+			        Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
+			    auto else_body = lowerCodeBlock(stmt.else_body, else_block, function,
+			   else_scope).begin;
 
-			auto then_block = function.newBlock();
-			then_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
-			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
+			    auto then_block = function.newBlock();
+			    then_block->setTerminator(Instruction{
+			        Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
+			    auto then_body = lowerCodeBlock(stmt.then_body, then_block, function,
+			   then_scope).begin;
 
-			auto condition_block = function.newBlock();
+			    auto condition_block = function.newBlock();
 
-			auto get_condition_return = condition_block->addHole();
+			    auto get_condition_return = condition_block->addHole();
 
-			auto [lowered_condition, condition_result]
-				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+			    auto [lowered_condition, condition_result]
+			        = lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			std::optional<MIRValue> condition_variable;
-			if (condition_result.isLocal()) {
-				// we have to "move" the condition result
-				// into special temporary value, so we can use it
-				// after the actual condition result is destroyed.
-				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+			    std::optional<MIRValue> condition_variable;
+			    if (condition_result.isLocal()) {
+			        // we have to "move" the condition result
+			        // into special temporary value, so we can use it
+			        // after the actual condition result is destroyed.
+			        auto condition_result_tmp = function.addNoLifetimeBoolTmp();
 
-				get_condition_return.fill(Instruction{
-					Operation::Assign,
-					{ condition_result_tmp },
-					{ condition_result },
-					{ flagConstruct(condition_result_tmp) },
-					condition_scope,
-				});
+			        get_condition_return.fill(Instruction{
+			            Operation::Assign,
+			            { condition_result_tmp },
+			            { condition_result },
+			            { flagConstruct(condition_result_tmp) },
+			            condition_scope,
+			        });
 
-				condition_variable = condition_result_tmp;
-			} else {
-				get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
-				);
-				condition_variable = condition_result;
-			}
+			        condition_variable = condition_result_tmp;
+			    } else {
+			        get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {},
+			   condition_scope }
+			        );
+			        condition_variable = condition_result;
+			    }
 
-			condition_block->setTerminator(Instruction{
-				Operation::Branch,
-				{},
-				{ *condition_variable, then_body->getID(), else_body->getID() },
-				{},
-				condition_scope,
-			});
+			    condition_block->setTerminator(Instruction{
+			        Operation::Branch,
+			        {},
+			        { *condition_variable, then_body->getID(), else_body->getID() },
+			        {},
+			        condition_scope,
+			    });
 
-			output({ lowered_condition });
+			    output({ lowered_condition });*/
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
-			auto condition_scope = function.newScope(parent_scope);
+			/*	auto condition_scope = function.newScope(parent_scope);
 
-			auto condition_continuation_block = function.newBlock();
+			    auto condition_continuation_block = function.newBlock();
 
-			auto get_condition_return = condition_continuation_block->addHole();
+			    auto get_condition_return = condition_continuation_block->addHole();
 
-			auto expr_result = lowerExpr(
-				*stmt.condition, condition_continuation_block, function, condition_scope
-			);
+			    auto expr_result = lowerExpr(
+			        *stmt.condition, condition_continuation_block, function, condition_scope
+			    );
 
-			auto loop_scope = function.newScope(parent_scope);
+			    auto loop_scope = function.newScope(parent_scope);
 
-			auto loop_continuation_block = function.newBlock();
+			    auto loop_continuation_block = function.newBlock();
 
-			loop_continuation_block->setTerminator(
-				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
-			);
+			    loop_continuation_block->setTerminator(
+			        { Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
+			    );
 
-			auto loop_body
-				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
+			    auto loop_body
+			        = lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
 
-			auto entry_block = function.newBlock();
+			    auto entry_block = function.newBlock();
 
-			entry_block->setTerminator(
-				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
-			);
+			    entry_block->setTerminator(
+			        { Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
+			    );
 
-			if (expr_result.value.isLocal()) {
-				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+			    if (expr_result.value.isLocal()) {
+			        auto condition_result_tmp = function.addNoLifetimeBoolTmp();
 
-				get_condition_return.fill(Instruction{
-					Operation::Assign,
-					{ condition_result_tmp },
-					{ expr_result.value },
-					{ flagConstruct(condition_result_tmp) },
-					condition_scope,
-				});
+			        get_condition_return.fill(Instruction{
+			            Operation::Assign,
+			            { condition_result_tmp },
+			            { expr_result.value },
+			            { flagConstruct(condition_result_tmp) },
+			            condition_scope,
+			        });
 
-				condition_continuation_block->setTerminator({
-					Operation::Branch,
-					{},
-					{ condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
-					{},
-					condition_scope,
-				});
+			        condition_continuation_block->setTerminator({
+			            Operation::Branch,
+			            {},
+			            { condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
+			            {},
+			            condition_scope,
+			        });
 
-			} else {
-				// we can use the result of the expression directly:
+			    } else {
+			        // we can use the result of the expression directly:
 
-				get_condition_return.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					condition_scope,
-				});
+			        get_condition_return.fill(Instruction{
+			            Operation::Nop,
+			            {},
+			            {},
+			            {},
+			            condition_scope,
+			        });
 
-				condition_continuation_block->setTerminator({
-					Operation::Branch,
-					{},
-					{ expr_result.value, loop_body.begin->getID(), continuation->getID() },
-					{},
-					condition_scope,
-				});
-			}
-			output({ entry_block });
+			        condition_continuation_block->setTerminator({
+			            Operation::Branch,
+			            {},
+			            { expr_result.value, loop_body.begin->getID(), continuation->getID() },
+			            {},
+			            condition_scope,
+			        });
+			    }
+			    output({ entry_block });*/
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			std::cout << "VAR STMT" << std::endl;
 			auto optional_local = function.findLocal(stmt.helios_symbol);
 
 			CORE_ASSERT(
@@ -790,14 +851,7 @@ namespace compiler::mir {
 				opt_some(value) {
 					auto assignment_scope = function.newScope(parent_scope);
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
-
-					local_construction_hole.fill(Instruction{
-						Operation::Assign,
-						{ local },
-						{ expr_result.value },
-						{ flagConstruct(local) },
-						assignment_scope,
-					});
+					// expr_result.finalize(local);
 
 					output({ expr_result.begin });
 					return;
@@ -809,48 +863,48 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
-			// TODO: #448 Search for location in global scope as well.
+			/*	// TODO: #448 Search for location in global scope as well.
 
-			auto assignment_scope = function.newScope(parent_scope);
+			    auto assignment_scope = function.newScope(parent_scope);
 
-			auto target_construction_hole = continuation->addHole();
+			    auto target_construction_hole = continuation->addHole();
 
-			auto [r_continuation, new_value]
-				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
+			    auto [r_continuation, new_value]
+			        = lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
 
-			auto [l_continuation, location_value_result]
-				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
+			    auto [l_continuation, location_value_result]
+			        = lowerExpr(*stmt.location_expr, r_continuation, function,
+			   assignment_scope);
 
-			CORE_ASSERT(
-				location_value_result.isLocal() || location_value_result.isGlobal(),
-				"Left side of assignment statement doesn't contain reference to local "
-				"variable or "
-				"a global variable."
-			);
-			std::visit(
-				[&](auto&& ref) {
-					using T = std::decay_t<decltype(ref)>;
-					if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T, MirGlobal>) {
-						target_construction_hole.fill(Instruction{
-							Operation::Assign,
-							{ ref },
-							{ new_value },
-							{},
-							assignment_scope,
-						});
-						output({ l_continuation });
-					} else {
-						CORE_PANIC("Assignment to unsupported MIRValue type");
-					}
-				},
-				location_value_result.getVariant()
-			);
+			    CORE_ASSERT(
+			        location_value_result.isLocal() || location_value_result.isGlobal(),
+			        "Left side of assignment statement doesn't contain reference to local "
+			        "variable or "
+			        "a global variable."
+			    );
+			    std::visit(
+			        [&](auto&& ref) {
+			            using T = std::decay_t<decltype(ref)>;
+			            if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T,
+			   MirGlobal>) { target_construction_hole.fill(Instruction{ Operation::Assign, { ref
+			   }, { new_value },
+			                    {},
+			                    assignment_scope,
+			                });
+			                output({ l_continuation });
+			            } else {
+			                CORE_PANIC("Assignment to unsupported MIRValue type");
+			            }
+			        },
+			        location_value_result.getVariant()
+			    );*/
 		}
 	};
 
 	/**
 	 * @brief Visitor that implements actual logic of lowering expression.
-	 * @note The result of the visitor is stored in out member.
+	 * @note The result of the visitor is stored in out member. To store expr
+	 * result somewhere, call finalize with place to store it
 	 */
 	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
@@ -877,11 +931,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
+			// output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
+			// output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
 		}
 
 		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
@@ -893,25 +947,26 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+			std::cout << "IDENT" << std::endl;
 			auto optional_local = function.findLocal(expr.symbol);
 
-			if (optional_local.has_value()) {
-				output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
+			/*if (optional_local.has_value()) {
+			    output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
 			} else {
-				//@TODO: chack if the symbol is a real global variable.
-				output({ .begin = continuation,
-				         .value = MIRValue{
-							 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) } });
-			}
+			    //@TODO: chack if the symbol is a real global variable.
+			    output({ .begin = continuation,
+			             .value = MIRValue{
+			                 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+			});
+			}*/
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			auto target_construction_hole = continuation->addHole();
-			const auto [r_continuation, right_res]
-				= lowerExpr(*expr.rhs, continuation, function, expr_scope);
-			const auto [l_continuation, left_res]
-				= lowerExpr(*expr.lhs, r_continuation, function, expr_scope);
+			auto       target_construction_hole = continuation->addHole();
+			const auto lowered_right = lowerExpr(*expr.rhs, continuation, function, expr_scope);
+			const auto lowered_left
+			    = lowerExpr(*expr.lhs, lowered_right.begin, function, expr_scope);
 
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
@@ -919,88 +974,95 @@ namespace compiler::mir {
 			const auto argument_type       = locationType(right_res, function.getContext());
 			const auto other_argument_type = locationType(left_res, function.getContext());
 			CORE_ASSERT(
-				argument_type.getType() == other_argument_type.getType(),
-				"Binary operator with different argument types"
+			    argument_type.getType() == other_argument_type.getType(),
+			    "Binary operator with different argument types"
 			);
 			const auto      result_type     = expr.expression_type.getSymbolType();
 			const auto      target_location = function.addTmp(result_type, expr_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{
-				operation,
-				{ target_location },
-				{ left_res, right_res },
-				{ flagConstruct(target_location) },
-				expr_scope,
-			});
-			output({ .begin = l_continuation, .value = target_location });
+			
+			Instruction tmp(
+			    operation,
+			    { target_location },
+			    { left_res, right_res },
+			    { flagConstruct(target_location) },
+			    expr_scope)
+			//output({ .begin = l_continuation, .hole = target_construction_hole, .value=Instruction});
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
+			std::cout << "UNARY" << std::endl;
 			// Construct the result of the expression in reverse.
-			auto target_construction_hole = continuation->addHole();
+			/*auto target_construction_hole = continuation->addHole();
 			const auto [sub_continuation, sub_res]
-				= lowerExpr(*expr.expr, continuation, function, expr_scope);
+			    = lowerExpr(*expr.expr, continuation, function, expr_scope);
 
 			// Fill the hole with the unary operation.
 			const auto      result_type     = expr.expression_type.getSymbolType();
 			const auto      target_location = function.addTmp(result_type, expr_scope);
-			const Operation operation       = builtinUnaryToOperation(expr.operation);
+			const Operation operation    					hole.fill(Instruction{
+			            finalizer.operation,
+			            hint,
+			            finalizer.arguments,
+			            finalizer.flags,
+			            finalizer.scope,
+			        });   = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
-				operation,
-				{ target_location },
-				{ sub_res },
-				{ flagConstruct(target_location) },
-				expr_scope,
+			    operation,
+			    { target_location },
+			    { sub_res },
+			    { flagConstruct(target_location) },
+			    expr_scope,
 			});
 
-			output({ .begin = sub_continuation, .value = target_location });
+			output({ .begin = sub_continuation, .value = target_location });*/
 		}
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
-			const auto result_type     = ternary_expr.expression_type.getSymbolType();
-			const auto target_location = function.addTmp(result_type, expr_scope);
+			/*	const auto result_type     = ternary_expr.expression_type.getSymbolType();
+			    const auto target_location = function.addTmp(result_type, expr_scope);
 
-			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
-				auto block = function.newBlock();
-				block->setTerminator(
-					{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-				);
-				auto assign_hole = block->addHole();
+			    auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
+			        auto block = function.newBlock();
+			        block->setTerminator(
+			            { Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			        );
+			        auto assign_hole = block->addHole();
 
-				const auto [first_lowered_block, expr_res]
-					= lowerExpr(case_expr, block, function, expr_scope);
-				assign_hole.fill(Instruction{
-					Operation::Assign,
-					{ target_location },
-					{ expr_res },
-					{ flagConstruct(target_location) },
-					expr_scope,
-				});
-				return first_lowered_block;
-			};
+			        const auto [first_lowered_block, expr_res]
+			            = lowerExpr(case_expr, block, function, expr_scope);
+			        assign_hole.fill(Instruction{
+			            Operation::Assign,
+			            { target_location },
+			            { expr_res },
+			            { flagConstruct(target_location) },
+			            expr_scope,
+			        });
+			        return first_lowered_block;
+			    };
 
-			auto else_block = build_case_block(*ternary_expr.if_false);
-			auto then_block = build_case_block(*ternary_expr.if_true);
+			    auto else_block = build_case_block(*ternary_expr.if_false);
+			    auto then_block = build_case_block(*ternary_expr.if_true);
 
-			// Build branching.
-			auto condition_block = function.newBlock();
-			const auto [condition_continuation, condition_res]
-				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
-			condition_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ condition_res, then_block->getID(), else_block->getID() },
-				{},
-				expr_scope,
-			});
+			    // Build branching.
+			    auto condition_block = function.newBlock();
+			    const auto [condition_continuation, condition_res]
+			        = lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
+			    condition_block->setTerminator({
+			        Operation::Branch,
+			        {},
+			        { condition_res, then_block->getID(), else_block->getID() },
+			        {},
+			        expr_scope,
+			    });
 
-			// Return.
-			output(ExprLowerRes{
-				.begin = condition_continuation,
-				.value = target_location,
-			});
+			    // Return.
+			    output(ExprLowerRes{
+			        .begin = condition_continuation,
+			        .value = target_location,
+			    });*/
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -1024,41 +1086,41 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			auto       call = continuation->addHole();
-			const auto call_result
-				= function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+			/*	auto       call = continuation->addHole();
+			    const auto call_result
+			        = function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
 
-			auto                  sub_continuation = continuation;
-			std::vector<MIRValue> args;
+			    auto                  sub_continuation = continuation;
+			    std::vector<MIRValue> args;
 
-			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
-			if (not function_symid.has_value()) {
-				CORE_PANIC(
-					"Call expression where callee is not an identifier expression is currently not "
-					"supported."
-				);
-			}
-			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
-			for (const auto& arg: expr.arguments) {
-				auto [expr_continuation, sub_res]
-					= lowerExpr(*arg, sub_continuation, function, expr_scope);
-				args.push_back(sub_res);
-				sub_continuation = expr_continuation;
-			}
+			    auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
+			    if (not function_symid.has_value()) {
+			        CORE_PANIC(
+			            "Call expression where callee is not an identifier expression is
+			   currently not " "supported."
+			        );
+			    }
+			    args.emplace_back(MirFunctionLiteral{ function_symid.value() });
+			    for (const auto& arg: expr.arguments) {
+			        auto [expr_continuation, sub_res]
+			            = lowerExpr(*arg, sub_continuation, function, expr_scope);
+			        args.push_back(sub_res);
+			        sub_continuation = expr_continuation;
+			    }
 
-			// @TODO: #505 here in the future we (probably) will have to handle
-			// move operations related to the passing of the arguments to the function
+			    // @TODO: #505 here in the future we (probably) will have to handle
+			    // move operations related to the passing of the arguments to the function
 
-			call.fill(Instruction{
-				Operation::Call,
-				{ call_result },
-				args,
-				{ flagConstruct(call_result) },
-				expr_scope,
-			});
+			    call.fill(Instruction{
+			        Operation::Call,
+			        { call_result },
+			        args,
+			        { flagConstruct(call_result) },
+			        expr_scope,
+			    });
 
 
-			return output({ .begin = sub_continuation, .value = call_result });
+			    return output({ .begin = sub_continuation, .value = call_result });*/
 		}
 
 	private:
@@ -1143,11 +1205,13 @@ namespace compiler::mir {
 	}
 
 	ExprLowerRes lowerExpr(
-		const hc::Expr&  expr,
-		BlockBuilderRef  continuation,
-		FunctionBuilder& function,
-		ScopeRef         expr_scope
+		const hc::Expr&                                   expr,
+		BlockBuilderRef                                   continuation,
+		FunctionBuilder&                                  function,
+		ScopeRef                                          expr_scope,
+		base::Optional<std::variant<LocalRef, MirGlobal>> result
 	) {
+		std::cout << "START" << std::endl;
 		ExprBlockVisitor visitor{ continuation, function, expr_scope };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
@@ -1333,13 +1397,13 @@ namespace compiler::mir {
 				function_builder.getTopLevelScope()
 			);
 
-			assing_instr.fill(Instruction{
-				Operation::Assign,
-				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
-				{ lowerexpr_res.value },
-				{},
-				function_builder.getTopLevelScope(),
-			});
+			/*assing_instr.fill(Instruction{
+			    Operation::Assign,
+			    { MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+			    { lowerexpr_res.value },
+			    {},
+			    function_builder.getTopLevelScope(),
+			});*/
 
 			function_builder.setEntry(lowerexpr_res.begin);
 
