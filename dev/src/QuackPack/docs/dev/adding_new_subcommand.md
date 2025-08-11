@@ -12,7 +12,7 @@ All parser related code lives in [`src/quackpack/cli/subcommands/`](../../src/qu
 By convention, file for `foo` subcommand should be named `_foo_parser.py`.
 
 Parser should be provided by `get_parser` function, which type is `Function() -> Parser`.
-`Parser` is our internal wrapper around `argparse`, and it lives in [`src/quackpack/cli/_parser.py`](../../src/quackpack/cli/_parser.py).
+`Parser` is our internal wrapper around `argparse`, and it lives in [`src/quackpack/cli/subcommands/_parser.py`](../../src/quackpack/cli/subcommands/_parser.py).
 It allows us to create parsers in OOP manner, without necessity of local variables, and should make any future porting a lot easier,
 since we'd need to update only one file.
 
