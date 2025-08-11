@@ -4,6 +4,7 @@
 #include "allocator/dummy_allocator.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "block.hpp"
+#include "frame.hpp"
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
@@ -17,6 +18,7 @@
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 
+#include <cstring>
 #include <deque>
 #include <mutex>
 
@@ -59,6 +61,8 @@ namespace vm {
 
 	public:
 		Memory() = default;
+
+		using error = std::string;
 
 		// =================== Used by executor ===================
 
@@ -162,5 +166,12 @@ namespace vm {
 
 		[[nodiscard]]
 		auto requestBlockType(BlockID id) -> TypeCRef;
+
+		// ======================== Utility =========================
+
+		template<typename T, typename U>
+		requires(sizeof(T) <= sizeof(U)) constexpr static T& interpret(U& value) {
+			return *(reinterpret_cast<T*>(&value));
+		}
 	};
 }

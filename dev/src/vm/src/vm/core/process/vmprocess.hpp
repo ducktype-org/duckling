@@ -1,7 +1,5 @@
 #pragma once
 
-#include "interface_types.hpp"
-
 #include <base/optional.hpp>
 
 #include <listener/listener.hpp>
@@ -10,9 +8,11 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
@@ -33,6 +33,10 @@ namespace vm::loader {
 }
 
 namespace vm {
+	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ProgramRunArguments  = std::vector<std::string>;
+	using FunctionRunArguments = std::vector<i64>;
+	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -43,7 +47,7 @@ namespace vm {
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
 	 * It is responsible for loading and parsing of the program,
-	 * creating and resetting the Execution Thread,
+	 * creating and reseting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
 	 *
@@ -51,11 +55,7 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class VMProcess final: public Listener<api::ProcStatus> {
-		friend class VmValue;
-
 	private:
-		PID my_pid;
-
 		std::shared_mutex rw_global;
 
 		api::ProcStatus             status;
@@ -70,16 +70,6 @@ namespace vm {
 		Memory memory;
 
 		loader::Loader loader{};
-
-		/**
-		 * @brief Storage for all VmValues which belong to this process.
-		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
-		 * when process is deinitialized.
-		 */
-		std::vector<Box<VmValue>> owned_vm_values;
-
-		// @TODO: Improve this....
-		std::deque<VMThread> vm_threads;
 
 		/**
 		 * @brief Loads the program from a given source into the current loader program state,
@@ -155,8 +145,10 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> detach();
 
-		VMThread& getMainVMThread();
+		// @TODO: Improve this....
+		std::deque<VMThread> vm_threads;
 
+		VMThread& getMainVMThread();
 
 	public:
 		void onEvent(const api::ProcStatus& event) noexcept override;
@@ -175,35 +167,8 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
-		PID getPID() const;
+		VMProcess();
 
-		/**
-		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
-		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
-		 * the process is deinitialized.
-		 *
-		 * @param type The type of the data stored in the newly created VmValue.
-		 * @param src The pointer to the data used to fill the newly created VmValue. If not
-		 * specified, created VmValue will be empty.
-		 * @return A non-owning, modifiable reference to the new VmValue.
-		 */
-		Ref<VmValue> createVmValue(TypeCRef type);
-		Ref<VmValue> createVmValue(TypeCRef type, Pointer src);
-
-		/**
-		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
-		 * The caller is expected to free the VmValue.
-		 *
-		 * @param type The type of the data stored in the newly created VmValue.
-		 * @param src The pointer to the data used to fill the newly created VmValue. If not
-		 * specified, created VmValue will be empty.
-		 * @return A Box referencing the newly created VmValue.
-		 */
-		Box<VmValue> createOwnedVmValue(TypeCRef type);
-		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
-
-		VMProcess(PID my_pid);
-
-		~VMProcess() override;
+		~VMProcess() final;
 	};
 }

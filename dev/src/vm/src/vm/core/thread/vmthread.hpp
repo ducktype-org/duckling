@@ -2,7 +2,6 @@
 
 #include "blocking_queue.hpp"
 #include "low_program/instruction.hpp"
-#include "vmvalue.hpp"
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
@@ -12,7 +11,6 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -46,7 +44,7 @@ namespace vm {
 
 	/**
 	 * @brief Number of fixed and preallocated stack bytes.
-	 * 256 - a magic number - it means if frames take on average 256 bytes
+	 * 256 - a magic number - it means if all of the frames take on average 256 bytes
 	 * of stack space, then there can be at most FRAME_COUNT frames
 	 * on the stack, but if functions on average take more than 256 bytes of space
 	 * then fewer frames will be able to fit.
@@ -122,12 +120,6 @@ namespace vm {
 		std::atomic<bool> execution_request_break = false;
 
 		/**
-		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
-		 * store a reference to this object.
-		 */
-		base::Optional<Ref<VmValue>> exit_value_storage{};
-
-		/**
 		 * @brief Message queue to send responses to the VMProcess.
 		 * @todo rewrite this to C++ futures
 		 */
@@ -148,9 +140,9 @@ namespace vm {
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		[[nodiscard]] low::FuncData createProgramStartFunction(
-			const low::FuncData& func, const ProgramRunArguments& args
-		) const;
+		low::FuncData createProgramStartFunction(
+			const low::FuncData& func, const std::vector<std::string>& args
+		);
 
 		/**
 		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
@@ -158,14 +150,25 @@ namespace vm {
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
 		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
 		 */
-		[[nodiscard]] low::FuncData createStartFunctionFor(
-			const low::FuncData& func, const FunctionRunArguments& func_args
-		) const;
-
+		low::FuncData createStartFunctionFor(
+			const low::FuncData& func, const std::vector<i64>& func_args
+		);
 		/**
-		 * @brief Holds the currently executed program
+		 * @brief @TODO:
+		 * get loaded code from VCPU when possible
 		 */
 		MCRef<low::LowVMProgram> executing_program = nullptr;
+
+		/**
+		 * @TODO:
+		 * following modifications should be made in the future:
+		 * - Error handling done by throwing (for efficiency)
+		 * - Setup for execution recovery
+		 * - This functions currently can deref only simple pointers, and always return
+		 * view to data pointed by pointer. This does not take into consideration possibility
+		 * of derefing only part of a block with given type from given offset.
+		 */
+		base::ModRawView internalDerefPointer(Pointer);
 
 		/**
 		 * @brief This is the primary function to call to start execution on the VM.
@@ -174,16 +177,15 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Mutable reference to a value returned by the program
+		 * @return value returned by the program
 		 */
-		Ref<VmValue> executeFunction(const low::FuncData& start_function, const low::FuncData& func);
+		i64 executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 
 		void setProcessStatus(const vm::api::ProcStatus& status);
 
 		void handleBreakpoint();
 
 		void handlePausedExecution(std::unique_lock<std::mutex>&);
-
 
 	public:
 		VMThread(VMProcess& process);
@@ -196,18 +198,18 @@ namespace vm {
 		 *
 		 * @param program - program for the thread to run,
 		 * @param func_name - name of the function to run,
-		 * @param run_arguments - if running a function (not a whole program), these are the
-		 * arguments to pass as parameters to the function,
-		 * @param run_arguments - if running a program, these are the command line arguments passed
+		 * @param func_args - if running a function (not a whole program), these are the arguments
+		 * to pass as parameters to the function,
+		 * @param program_args - if running a program, these are the command line arguments passed
 		 * to the program (argv equivalent).
 		 *
 		 * @return true if the thread was successfully created and the program is running, false if
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
-			CRef<low::LowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
 		);
 
 		/**
@@ -246,14 +248,13 @@ namespace vm {
 		 * @brief Run a single function with given parameters.
 		 */
 		void run(
-			CRef<low::LowVMProgram> program,
-			const std::string&      func_name,
-			const RunArguments&     run_arguments
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
 		);
 
 		/**
-		 * @brief Function to be called when the VMProcess is destroyed. Call GlobalData's
-		 * destructor functions.
+		 * @brief Run destructors of global variables.
 		 */
 		void execGlobalDestructors(CRef<low::LowVMProgram> program);
 
@@ -269,7 +270,6 @@ namespace vm {
 		void notifyPaused();
 
 		bool isPauseRequested();
-
 		bool isTerminateRequested();
 
 		friend class VMProcess;

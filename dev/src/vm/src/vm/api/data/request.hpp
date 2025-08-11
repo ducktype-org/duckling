@@ -5,10 +5,8 @@
 #include <filesystem/file.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
-#include <vm/core/thread/vmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -36,12 +34,14 @@ namespace vm::api {
 		struct Stop {};
 
 		struct Run {
-			ProgramRunArguments program_args;
+			std::vector<std::string> program_args;
 		};
 
 		struct RunFunction {
-			std::string          func_name;
-			FunctionRunArguments func_args;
+			std::string func_name;
+			// @todo: This should be a vector of any VM type, not just u64.
+			// This should change after: https://github.com/ducktype-org/duckling/issues/721
+			std::vector<i64> func_args;
 		};
 
 		struct Join {};
@@ -53,10 +53,6 @@ namespace vm::api {
 		struct ExecutionPosition {};
 
 		struct TypeMetadata {
-			std::string type_name;
-		};
-
-		struct VmValue {
 			std::string type_name;
 		};
 
@@ -96,7 +92,6 @@ namespace vm::api {
 		request::WaitForBreakpoint,
 		request::ExecutionPosition,
 		request::TypeMetadata,
-		request::VmValue,
 		request::Block,
 		request::StatusRequest,
 		request::Input,

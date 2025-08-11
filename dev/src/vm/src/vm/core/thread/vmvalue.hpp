@@ -2,47 +2,22 @@
 
 #include <base/raw_view.hpp>
 
-#include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/utils/interpret.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 
 #include <iostream>
 
 namespace vm {
-	class VMProcess;
-
 	/**
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
 	 * It is NOT meant to be used by the internal memory module.
 	 * @note Passed data is copied.
-	 * @note VmValues can be used only in the processes which where used when initializing them.
-	 * They can't be transferred in between different processes.
-	 *
-	 * @note There is two ways to create a VmValue:
-	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. It's
-	 * lifetime is guarded by VMProcess. All VmValues created by this function are deinitialized
-	 * when VmProcess is destroyed.
-	 * 2) with `VMProcess::createOwnedVmValue()` function - creates a
-	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue.
+	 * @note User of VmValue is responsible for releasing the held blocks.
 	 */
-	class VmValue {
+	struct VmValue {
 	private:
-		friend class VMProcess;
-
-		/**
-		 * @brief Creates an empty VmValue of the specified type.
-		 */
-		VmValue(VMProcess& process, TypeCRef type);
-
-		/**
-		 * @brief Creates a VmValue of specified type and fills it with the bytes from the `src`
-		 * pointer.
-		 */
-		VmValue(VMProcess& process, TypeCRef type, Pointer src);
-
-		std::vector<byte> data;        /// data.size() == type.getSize()
-		Ref<VMProcess>    my_process;  /// The process for which the VmValue exists.
+		std::vector<byte> data;  // data.size() == type.getSize()
 		Ref<Memory>       memory;
 
 	public:
@@ -51,75 +26,40 @@ namespace vm {
 		VmValue& operator=(const VmValue&) = delete;
 		VmValue& operator=(VmValue&&)      = default;
 
-		~VmValue();
+		VmValue(TypeCRef type, Memory& memory):
+			  data(type->getSize()),
+			  memory(&memory),
+			  type(type),
+			  pointer(memory.allocateDummy(type, data.data()), 0) {}
 
-		/**
-		 * @brief Frees the data of the VmValue (deinitializes the blocks in the memory module).
-		 * This function has to be called when using VmValues created with the
-		 * `VMProcess::createOwnedVmValue()` function.
-		 */
-		void freeData();
+		VmValue(TypeCRef type, Memory& memory, Pointer src): VmValue(type, memory) {
+			importData(src);
+		}
 
-		void exportData(Pointer dst) const;
+		~VmValue() {
+			if (!pointer.isNull()) std::cerr << "VmValue not freed!\n";
+		}
 
-		void importData(Pointer src);
+		void exportData(Pointer dst) { memory->copyPointedData(dst, pointer, type); }
 
+		void importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
-		[[nodiscard]] PID getPID() const;
+		void freeData() {
+			memory->freeBlock(pointer.getBlock());
+			pointer = Pointer::null();
+		}
 
 		TypeCRef type;
 		Pointer  pointer;
 
-		/**
-		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
-		 */
 		template<class T>
-		T readBytes(const usize offset = 0) const {
-			CORE_ASSERT(
-				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
-			);
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
-			return vm::safeReadBytes<T>(data.data() + offset);
+		constexpr T& interpret(usize offset = 0) {
+			return *reinterpret_cast<T*>(data.data() + offset);
 		}
 
-		/**
-		 * @brief Interprets a constant raw byte buffer pointed to by `ptr` as an object of type T.
-		 */
 		template<class T>
-		void writeBytes(const T& value, const usize offset = 0) {
-			CORE_ASSERT(
-				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
-			);
-			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds write");
-			return vm::safeWriteBytes<T>(data.data(), value);
+		constexpr const T& interpret(usize offset = 0) const {
+			return *reinterpret_cast<const T*>(data.data() + offset);
 		}
-
-		[[nodiscard]] byte* getBytes();
-
-		[[nodiscard]] const byte* getBytes() const;
 	};
 }
-
-JSON_REGISTER_TYPE_WITH_NAME(vm::VmValue, "VmValue");
-
-// NOLINTBEGIN(readability-identifier-naming)
-template<>
-struct nlohmann::adl_serializer<vm::VmValue> {
-	static void to_json(json& j, const vm::VmValue& v) {
-		j["type"]        = std::string(TypeParseTraits<vm::VmValue>::name.data());
-		j["data_type"]   = v.type->getName().str();
-		j["data_length"] = v.type->getSize();
-		// Convert VmValue's bytes to HEX string
-		std::stringstream ss;
-		ss << std::hex;
-		for (size_t i = 0; i < v.type->getSize(); ++i)
-			ss << std::setw(2) << std::setfill('0') << static_cast<int>(v.getBytes()[i]);
-		j["data"] = ss.str();
-	}
-
-	static void from_json(const json&, const vm::VmValue&) {
-		CORE_PANIC("Parsing data from JSON into a VmValue is not supported (yet).");
-	}
-};
-
-// NOLINTEND(readability-identifier-naming)

@@ -139,11 +139,10 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 		    .and_then([&] { return vm::api::run(pid); })
 		    .and_then([&] { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
+		    .and_then([&] { return vm::api::getExitCode(pid); })
 		    .transform_error(vm::api::errorToString)
-		    .transform([](Ref<vm::VmValue> exit_value) {
-				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
+		    .transform([](auto exit_code) {
+				return RunOutput{ .exit_code = base::safeIntConv<int>(exit_code) };
 			});
 	}
 

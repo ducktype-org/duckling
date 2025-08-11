@@ -25,7 +25,7 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
 	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "VM stack overflow");
-	VM_RUNTIME_EXCEPTION(VMResumedWithPausedStatusException, "Resumed with paused status");
+	VM_RUNTIME_EXCEPTION(VMResuemedWithPausedStatusException, "Resumed with paused status");
 	VM_RUNTIME_EXCEPTION(VMNegativeOffsetException, "Moving offset to negative value");
 	VM_RUNTIME_EXCEPTION(
 		VMUnreferencedBlockDeletionException, "Tried deleting a reference to an unreferenced block"
