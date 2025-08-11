@@ -68,10 +68,17 @@ inline static T& derefView(base::ModRawView view) {
 		writeToView<TYPE>(view, VALUE);                                                        \
 	} while (false)
 
+/**
+ * Returns a reference (Ref) to the block corresponding to global data with id ID.
+ * Should be preferred over DEREF_GLOBAL_RAW_UNSAFE in general.
+ */
+// TODOP: Temporary. Remove that.
+#define DEREF_GLOBAL(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
 
 /**
  * Returns a reference of type TYPE (eg. int, i64, usize. etc) to a global data with id ID.
  */
+// TODOP: Temporary. Remove that.
 #define DEREF_GLOBAL_RAW_UNSAFE(TYPE, ID) \
 	derefView<TYPE>(thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(ID))))
 

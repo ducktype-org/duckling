@@ -88,17 +88,11 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{                                                                                         \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, value);                                  \
-		}                                                                                         \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = safeReadBytes<TYPE>(instr->arg1); }        \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{                                                                                         \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                  \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
-		}                                                                                         \
+		{ DEREF_GLOBAL_RAW_UNSAFE(TYPE, instr->arg0) = safeReadBytes<TYPE>(instr->arg1); }        \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
@@ -113,8 +107,8 @@ namespace vm {
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
 		{                                                                                         \
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                       \
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                       \
+			auto dst_block = DEREF_GLOBAL(instr->arg0);                                           \
+			auto src_block = DEREF_GLOBAL(instr->arg1);                                           \
 			thread.process_memory.copyPointedData(                                                \
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
 			);                                                                                    \
@@ -123,7 +117,7 @@ namespace vm {
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
 		{                                                                                         \
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                       \
+			auto dst_block = DEREF_GLOBAL(instr->arg0);                                           \
 			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];   \
 			thread.process_memory.copyPointedData(                                                \
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
@@ -134,7 +128,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
 		{                                                                                         \
 			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];   \
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                       \
+			auto src_block = DEREF_GLOBAL(instr->arg1);                                           \
 			thread.process_memory.copyPointedData(                                                \
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
 			);                                                                                    \
@@ -158,83 +152,223 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                         \
 	}
 
+	/*
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
+	    {                                                                                         \
+	        const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                  \
+	        writeToStack<TYPE>(local_stack, instr->arg0, value);                                  \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
+	    {                                                                                         \
+	        const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                  \
+	        WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
+	    {                                                                                         \
+	        auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];   \
+	        auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];   \
+	        thread.process_memory.copyPointedData(                                                \
+	            { dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
+	        );                                                                                    \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
+	    {                                                                                         \
+	        auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                       \
+	        auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                       \
+	        thread.process_memory.copyPointedData(                                                \
+	            { dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
+	        );                                                                                    \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
+	    {                                                                                         \
+	        auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                       \
+	        auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];   \
+	        thread.process_memory.copyPointedData(                                                \
+	            { dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
+	        );                                                                                    \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
+	    {                                                                                         \
+	        auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];   \
+	        auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                       \
+	        thread.process_memory.copyPointedData(                                                \
+	            { dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
+	        );                                                                                    \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {            \
+	    {                                                                                         \
+	        if (frame->flags.flag) {                                                              \
+	            auto dst_block                                                                    \
+	                = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];          \
+	            auto src_block                                                                    \
+	                = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];          \
+	            thread.process_memory.copyPointedData(                                            \
+	                { dst_block, 0 },                                                             \
+	                { src_block, 0 },                                                             \
+	                thread.process_memory.getBlockType(dst_block)                                 \
+	            );                                                                                \
+	        }                                                                                     \
+	    }                                                                                         \
+	    FUNCTION_CONT(1);                                                                         \
+	}
+*/
 	DEFINE_MOVE_OPS(64, i64)
 	DEFINE_MOVE_OPS(32, i32)
 	DEFINE_MOVE_OPS(16, i16)
 	DEFINE_MOVE_OPS(8, std::int8_t)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
-		{ writeToStack<i64>(local_stack, instr->arg0, frame->regs.p64_reg_0); }
+		{ derefStack<i64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
+	// 	{ writeToStack<i64>(local_stack, instr->arg0, frame->regs.p64_reg_0); }
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
-		{ frame->regs.p64_reg_0 = readFromStack<i64>(local_stack, instr->arg0); }
+		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
+	// 	{ frame->regs.p64_reg_0 = readFromStack<i64>(local_stack, instr->arg0); }
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
-			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			auto& dst_ptr = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src_ptr = DEREF_GLOBAL_RAW_UNSAFE(Pointer, instr->arg1);
+			thread.process_memory.setPointer(dst_ptr, src_ptr);
 		}
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
+	// 		const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
-			auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
+			auto& dst_ptr = DEREF_GLOBAL_RAW_UNSAFE(Pointer, instr->arg0);
+			auto  src_ptr = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process_memory.setPointer(dst_ptr, src_ptr);
 		}
-
 		FUNCTION_CONT(1);
 	}
 
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
-			lhs OP     rhs;                                                              \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = safeReadBytes<TYPE>(local_stack, instr->arg1);              \
-			lhs OP     rhs;                                                              \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
+	// 		auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+	// 		WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
+	// 	}
+
+	// 	FUNCTION_CONT(1);
+	// }
+
+
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                   \
+			derefStack<TYPE>(local_stack, instr->arg0)                                      \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                              \
+		}                                                                                   \
+		FUNCTION_CONT(1);                                                                   \
+	}                                                                                       \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
+		{ derefStack<TYPE>(local_stack, instr->arg0) OP safeReadBytes<TYPE>(instr->arg1); } \
+		FUNCTION_CONT(1);                                                                   \
 	}
+
+	/*
+	#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	    RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+	        {                                                                                \
+	            TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+	            const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+	            lhs OP     rhs;                                                              \
+	            writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+	        }                                                                                \
+	        FUNCTION_CONT(1);                                                                \
+	    }                                                                                    \
+	    RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+	        {                                                                                \
+	            TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+	            const TYPE rhs = safeReadBytes<TYPE>(local_stack, instr->arg1);              \
+	            lhs OP     rhs;                                                              \
+	            writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+	        }                                                                                \
+	        FUNCTION_CONT(1);                                                                \
+	    }
+	*/
+
 
 #define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+			auto& lhs = derefStack<TYPE>(local_stack, instr->arg0);                      \
+			auto& rhs = derefStack<TYPE>(local_stack, instr->arg1);                      \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
 			lhs /= rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			TYPE lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
-			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
+			auto& lhs = derefStack<TYPE>(local_stack, instr->arg0);                      \
+			auto  rhs = safeReadBytes<TYPE>(instr->arg1);                                \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
 			lhs /= rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
+
+	/*
+	#define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
+	    RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+	        {                                                                                \
+	            TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+	            const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+	            if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
+	            lhs /= rhs;                                                                  \
+	            writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+	        }                                                                                \
+	        FUNCTION_CONT(1);                                                                \
+	    }                                                                                    \
+	    RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+	        {                                                                                \
+	            TYPE lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
+	            auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
+	            if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
+	            lhs /= rhs;                                                                  \
+	            writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+	        }                                                                                \
+	        FUNCTION_CONT(1);                                                                \
+	    }
+	*/
 
 
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
@@ -265,23 +399,44 @@ namespace vm {
 	DEFINE_DIVISION_OP(udiv, 64, u64)
 	DEFINE_DIVISION_OP(udiv, 32, u32)
 
-#define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
+#define DEFINE_BOOLEAN_OP(NAME, OP)                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                            \
+		{                                                                                       \
+			derefStack<u8>(local_stack, instr->arg0)                                            \
+				= static_cast<u8>((derefStack<u8>(local_stack, instr->arg0) != u8{ 0 })         \
+			                          OP(derefStack<u8>(local_stack, instr->arg1) != u8{ 0 })); \
+		}                                                                                       \
+		FUNCTION_CONT(1);                                                                       \
+	}                                                                                           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                           \
+		{                                                                                       \
+			derefStack<u8>(local_stack, instr->arg0)                                            \
+				= static_cast<u8>((derefStack<u8>(local_stack, instr->arg0) != u8{ 0 })         \
+			                          OP(safeReadBytes<u8>(instr->arg1) != u8{ 0 }));           \
+		}                                                                                       \
+		FUNCTION_CONT(1);                                                                       \
+	}
+
+	/*
+	#define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                   \
-		{                                                                              \
-			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (readFromStack<u8>(local_stack, instr->arg1) != u8{ 0 }); \
-			writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
-		}                                                                              \
-		FUNCTION_CONT(1);                                                              \
+	    {                                                                              \
+	        const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
+	        const bool rhs = (readFromStack<u8>(local_stack, instr->arg1) != u8{ 0 }); \
+	        writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
+	    }                                                                              \
+	    FUNCTION_CONT(1);                                                              \
 	}                                                                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                  \
-		{                                                                              \
-			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (safeReadBytes<u8>(instr->arg1) != u8{ 0 });              \
-			writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
-		}                                                                              \
-		FUNCTION_CONT(1);                                                              \
+	    {                                                                              \
+	        const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
+	        const bool rhs = (safeReadBytes<u8>(instr->arg1) != u8{ 0 });              \
+	        writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
+	    }                                                                              \
+	    FUNCTION_CONT(1);                                                              \
 	}
+	*/
+
 
 	DEFINE_BOOLEAN_OP(log_and, &&)
 	DEFINE_BOOLEAN_OP(log_or, ||)
@@ -289,27 +444,53 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_l8)(FUNCTION_ARGS) {
 		{
-			bool result = (readFromStack<u8>(local_stack, instr->arg0) == u8{ 0 });
-			writeToStack<u8>(local_stack, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
+			bool result = (derefStack<u8>(local_stack, instr->arg0) == u8{ 0 });
+			derefStack<u8>(local_stack, instr->arg0) = (result ? u8{ 1 } : u8{ 0 });
 		}
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(log_not_l8)(FUNCTION_ARGS) {
+	// 	{
+	// 		bool result = (readFromStack<u8>(local_stack, instr->arg0) == u8{ 0 });
+	// 		writeToStack<u8>(local_stack, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
+#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {          \
+		{                                                                                         \
+			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)                        \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                                    \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
+		{                                                                                         \
+			frame->flags.flag                                                                     \
+				= derefStack<TYPE>(local_stack, instr->arg0) OP safeReadBytes<TYPE>(instr->arg1); \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}
+
+	/*
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
-				OP readFromStack<TYPE>(local_stack, instr->arg1);                        \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+	    {                                                                                \
+	        frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
+	            OP readFromStack<TYPE>(local_stack, instr->arg1);                        \
+	    }                                                                                \
+	    FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
-				OP safeReadBytes<TYPE>(instr->arg1);                                     \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+	    {                                                                                \
+	        frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
+	            OP safeReadBytes<TYPE>(instr->arg1);                                     \
+	    }                                                                                \
+	    FUNCTION_CONT(1);                                                                \
 	}
+	*/
 
 	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
 	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
@@ -323,11 +504,19 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
-			auto pointer      = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointer      = derefStack<Pointer>(local_stack, instr->arg0);
 			frame->flags.flag = pointer.isNull();
 		}
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto pointer      = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		frame->flags.flag = pointer.isNull();
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
@@ -349,36 +538,56 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
-		{
-			i64 value = readFromStack<i64>(local_stack, instr->arg0);
-			writeToStack<i64>(local_stack, instr->arg0, value * -1);
-		}
+		{ derefStack<i64>(local_stack, instr->arg0) *= -1; }
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
+	// 	{
+	// 		i64 value = readFromStack<i64>(local_stack, instr->arg0);
+	// 		writeToStack<i64>(local_stack, instr->arg0, value * -1);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
-		{
-			i32 value = readFromStack<i32>(local_stack, instr->arg0);
-			writeToStack<i32>(local_stack, instr->arg0, value * -1);
-		}
+		{ derefStack<i32>(local_stack, instr->arg0) *= -1; }
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
+	// 	{
+	// 		i32 value = readFromStack<i32>(local_stack, instr->arg0);
+	// 		writeToStack<i32>(local_stack, instr->arg0, value * -1);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l64)(FUNCTION_ARGS) {
-		{
-			double value = readFromStack<double>(local_stack, instr->arg0);
-			writeToStack<double>(local_stack, instr->arg0, value * -1.0);
-		}
+		{ derefStack<double>(local_stack, instr->arg0) *= -1.0; }
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l64)(FUNCTION_ARGS) {
+	// 	{
+	// 		double value = readFromStack<double>(local_stack, instr->arg0);
+	// 		writeToStack<double>(local_stack, instr->arg0, value * -1.0);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l32)(FUNCTION_ARGS) {
-		{
-			float value = readFromStack<float>(local_stack, instr->arg0);
-			writeToStack<float>(local_stack, instr->arg0, value * -1.0f);
-		}
+		{ derefStack<float>(local_stack, instr->arg0) *= -1.0f; }
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l32)(FUNCTION_ARGS) {
+	// 	{
+	// 		float value = readFromStack<float>(local_stack, instr->arg0);
+	// 		writeToStack<float>(local_stack, instr->arg0, value * -1.0f);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
 		// TODOP: UB
@@ -437,11 +646,12 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
-			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
 			// This is verified by static verification.
-			auto            view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
-			const vm::Type* inh_meta_pointer = readFromView<const vm::Type*>(view);
+			const vm::Type* inh_meta_pointer = *reinterpret_cast<const vm::Type**>(
+				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
+			);
 			const vm::InheritanceMetadata& inh_metadata
 				= *inh_meta_pointer->getInheritanceMetadata().value();
 
@@ -453,6 +663,25 @@ namespace vm {
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
+	// 		// This is verified by static verification.
+	// 		auto            view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+	// 		const vm::Type* inh_meta_pointer = readFromView<const vm::Type*>(view);
+	// 		const vm::InheritanceMetadata& inh_metadata
+	// 			= *inh_meta_pointer->getInheritanceMetadata().value();
+
+	// 		auto  method_name         = thread.executing_program->method_name_pool[instr->arg1];
+	// 		auto  implementation_name = inh_metadata.vtable[method_name]->getName();
+	// 		usize function_id = *thread.executing_program->functions.idOf(implementation_name);
+
+	// 		performFunctionCall(instr, local_stack, frame, thread, function_id);
+	// 	}
+	// 	FUNCTION_CONT_CHECK_STRATEGY(0);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
@@ -525,32 +754,63 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::WaitingForInput{});
-			i64 io_value = thread.process.getIO().getInput<i64>(thread);
-			writeToStack<i64>(local_stack, instr->arg0, io_value);
+			derefStack<i64>(local_stack, instr->arg0)
+				= thread.process.getIO().getInput<i64>(thread);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
+	// 	{
+	// 		thread.setProcessStatus(api::WaitingForInput{});
+	// 		i64 io_value = thread.process.getIO().getInput<i64>(thread);
+	// 		writeToStack<i64>(local_stack, instr->arg0, io_value);
+	// 		thread.setProcessStatus(api::Running{});
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
-		{ thread.process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
+		{ thread.process.getIO().writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
+	// 	{ thread.process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::WaitingForInput{});
-			i32 io_value = thread.process.getIO().getInput<i32>(thread);
-			writeToStack<i32>(local_stack, instr->arg0, io_value);
+			derefStack<i64>(local_stack, instr->arg0)
+				= thread.process.getIO().getInput<i32>(thread);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
+	// 	{
+	// 		thread.setProcessStatus(api::WaitingForInput{});
+	// 		i32 io_value = thread.process.getIO().getInput<i32>(thread);
+	// 		writeToStack<i32>(local_stack, instr->arg0, io_value);
+	// 		thread.setProcessStatus(api::Running{});
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
-		{ thread.process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
+		{ thread.process.getIO().writeOutput(derefStack<u32>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
+	// 	{ thread.process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
+	// 	FUNCTION_CONT(1);
+	// }
+
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
@@ -576,58 +836,113 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       type
+			auto type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
-			auto       block   = thread.process_memory.allocateHeap(type);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			auto  block       = thread.process_memory.allocateHeap(type);
+			auto& dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			thread.process_memory.setPointer(dst_pointer, { block, 0 });
 		}
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       type
+	// 			= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
+	// 		auto       block   = thread.process_memory.allocateHeap(type);
+	// 		const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
 			thread.process_memory.freeBlock(
-				readFromStack<Pointer>(local_stack, instr->arg0).getBlock()
+				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		thread.process_memory.freeBlock(
+	// 			readFromStack<Pointer>(local_stack, instr->arg0).getBlock()
+	// 		);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
-			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
-			auto       block     = frame->block_stack[block_idx];
-			const auto new_dst   = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			writeToStack(local_stack, instr->arg0, new_dst);
+			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto  block     = frame->block_stack[block_idx];
+			thread.process_memory.setPointer(pointer, { block, 0 });
 		}
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+	// 		auto       block     = frame->block_stack[block_idx];
+	// 		const auto new_dst   = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+	// 		writeToStack(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process_memory.setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto type
 				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
 
-			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
-			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
-			writeToView<const Type*>(view, type.get());
+			// Objects are guaranteed to hold vtable pointer as their first field
+			// by static verification.
+			auto vt_pointer = reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
+			);
+			*vt_pointer = type.get();
 		}
 		FUNCTION_CONT(1);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto type
+	// 			= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+
+	// 		// Objects are guaranteed to hold vtable pointer as their first field by static
+	// verification. 		auto view = thread.process_memory.getPointerData(pointer,
+	// sizeof(Type*)); 		writeToView<const Type*>(view, type.get());
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lvnt_type)(FUNCTION_ARGS) {
 		{
@@ -643,10 +958,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
 		{
-			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
-			auto       parent_block        = frame->block_stack[variant_block_index];
-			auto       wanted_type
+			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
+			auto  parent_block        = frame->block_stack[variant_block_index];
+			auto  wanted_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			auto view_block_ref
@@ -654,24 +969,47 @@ namespace vm {
 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
-					const auto new_dst = thread.process_memory.updatePointerAssignment(
-						dst, thread.process_memory.newBlockReference(view_block, 0)
+					thread.process_memory.setPointer(
+						destination_pointer, thread.process_memory.newBlockReference(view_block, 0)
 					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 				}
-				opt_none {
-					const auto new_dst
-						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
+				opt_none { thread.process_memory.setPointer(destination_pointer, Pointer::null()); }
 			}
 		}
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
+	// 		auto       parent_block        = frame->block_stack[variant_block_index];
+	// 		auto       wanted_type
+	// 			= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+	// 		auto view_block_ref
+	// 			= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
+
+	// 		match_optional(view_block_ref.toOpt()) {
+	// 			opt_some(view_block) {
+	// 				const auto new_dst = thread.process_memory.updatePointerAssignment(
+	// 					dst, thread.process_memory.newBlockReference(view_block, 0)
+	// 				);
+	// 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 			}
+	// 			opt_none {
+	// 				const auto new_dst
+	// 					= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+	// 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 			}
+	// 		}
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto variant_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			thread.process_memory.setNestedViewBlock(
 				variant_pointer, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
 			);
@@ -679,11 +1017,21 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		thread.process_memory.setNestedViewBlock(
+	// 			variant_pointer, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+	// 		);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       wanted_type
+			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  variant_pointer     = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  wanted_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			auto view_block_ref
@@ -691,56 +1039,107 @@ namespace vm {
 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
-					const auto new_dst = thread.process_memory.updatePointerAssignment(
-						dst, thread.process_memory.newBlockReference(view_block, 0)
+					thread.process_memory.setPointer(
+						destination_pointer, Memory::newBlockReference(view_block, 0)
 					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 				}
-				opt_none {
-					const auto new_dst
-						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
+				opt_none { thread.process_memory.setPointer(destination_pointer, Pointer::null()); }
 			}
 		}
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		auto       wanted_type
+	// 			= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+	// 		auto view_block_ref
+	// 			= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
+
+	// 		match_optional(view_block_ref.toOpt()) {
+	// 			opt_some(view_block) {
+	// 				const auto new_dst = thread.process_memory.updatePointerAssignment(
+	// 					dst, thread.process_memory.newBlockReference(view_block, 0)
+	// 				);
+	// 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 			}
+	// 			opt_none {
+	// 				const auto new_dst
+	// 					= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+	// 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 			}
+	// 		}
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			// Same as move_lptr_lptr, treated differently by static analysis.
-			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process_memory.setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		// Same as move_lptr_lptr, treated differently by static analysis.
+	// 		const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
 
 			auto dst_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
-			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
-			const Type* src_ptr      = readFromView<const Type*>(view);
-			auto        cast_allowed = src_ptr->inheritsFrom(dst_type);
-
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, cast_allowed ? src : Pointer::null()
+			TypeCRef real_src_type = *reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(src, sizeof(Type*)).getBegin()
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			auto cast_allowed = real_src_type->inheritsFrom(dst_type);
+
+			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
 		}
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
+
+	// 		auto dst_type
+	// 			= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+	// 		// Classes are guaranteed to hold vtable pointer as their first field.
+	// 		auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
+	// 		const Type* src_ptr      = readFromView<const Type*>(view);
+	// 		auto        cast_allowed = src_ptr->inheritsFrom(dst_type);
+
+	// 		const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+	// 			dst, cast_allowed ? src : Pointer::null()
+	// 		);
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto src_block     = frame->block_stack[src_block_idx];
@@ -753,13 +1152,28 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+
+	// 		auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+	// 		auto src_block     = frame->block_stack[src_block_idx];
+	// 		auto src_pointer   = Pointer(src_block, 0);
+
+	// 		auto type = Memory::getBlockType(src_block);
+
+	// 		thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
 			auto dst_block     = frame->block_stack[dst_block_idx];
 			auto dst_pointer   = Pointer(dst_block, 0);
 
-			auto src_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto src_pointer = derefStack<Pointer>(local_stack, instr->arg1);
 
 			auto type = Memory::getBlockType(dst_block);
 
@@ -768,22 +1182,48 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+	// 		auto dst_block     = frame->block_stack[dst_block_idx];
+	// 		auto dst_pointer   = Pointer(dst_block, 0);
+
+	// 		auto src_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+
+	// 		auto type = Memory::getBlockType(dst_block);
+
+	// 		thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+	// 	}
+	// 	FUNCTION_CONT(1);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       src    = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       offset = static_cast<usize>(instr[1].arg0);
+			auto& dst    = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src    = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  offset = static_cast<usize>(instr[1].arg0);
 
-			const Pointer new_dst
-				= thread.process_memory.updatePointerAssignment(dst, { src.getBlock(), offset });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			thread.process_memory.setPointer(dst, { src.getBlock(), offset });
 		}
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       src    = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		auto       offset = static_cast<usize>(instr[1].arg0);
+
+	// 		const Pointer new_dst
+	// 			= thread.process_memory.updatePointerAssignment(dst, { src.getBlock(), offset });
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto dst_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
 			auto field_offset = safeReadBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
@@ -798,13 +1238,30 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto dst_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto field_offset = safeReadBytes<i64>(instr[1].arg0);
+	// 		dst_pointer.movePointer(field_offset);
+
+	// 		auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+	// 		auto src_block     = frame->block_stack[src_block_idx];
+	// 		auto src_pointer   = Pointer(src_block, 0);
+
+	// 		auto type = Memory::getBlockType(src_block);
+
+	// 		thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
 			auto dst_block     = frame->block_stack[dst_block_idx];
 			auto dst_pointer   = Pointer(dst_block, 0);
 
-			auto src_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto src_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
 			auto field_offset = safeReadBytes<i64>(instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
@@ -815,28 +1272,60 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+	// 		auto dst_block     = frame->block_stack[dst_block_idx];
+	// 		auto dst_pointer   = Pointer(dst_block, 0);
+
+	// 		auto src_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		auto field_offset = safeReadBytes<i64>(instr[1].arg0);
+	// 		src_pointer.movePointer(field_offset);
+
+	// 		auto type = Memory::getBlockType(dst_block);
+
+	// 		thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto  tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto& dst         = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
 			auto  element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
 			auto data_offset = usize(index * i64(element_type->getSize()));
 
-			const Pointer new_dst
-				= thread.process_memory.updatePointerAssignment(dst, { tbl_pointer.getBlock(), data_offset });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			thread.process_memory.setPointer(dst, { tbl_pointer.getBlock(), data_offset });
 		}
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		const auto dst         = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto       tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+	// 		auto       element_type
+	// 			= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
+	// 		auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
+	// 		auto data_offset = usize(index * i64(element_type->getSize()));
+
+	// 		const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+	// 			dst, { tbl_pointer.getBlock(), data_offset }
+	// 		);
+	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
 			auto data_offset = index * i64(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
@@ -849,15 +1338,33 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	// RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_lany)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+	// 		auto element_type
+	// 			= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
+	// 		auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
+	// 		auto data_offset = index * i64(element_type->getSize());
+	// 		tbl_pointer.movePointer(data_offset);
+
+	// 		auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
+	// 		auto src_block     = frame->block_stack[src_block_idx];
+	// 		auto src_pointer   = Pointer(src_block, 0);
+
+	// 		thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_lany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
 			auto dst_block     = frame->block_stack[dst_block_idx];
 			auto dst_pointer   = Pointer(dst_block, 0);
 
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
 
-			auto index = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto index = derefStack<i64>(local_stack, instr[1].arg0);
 			auto element_type
 				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
 			tbl_pointer.movePointer(index * i64(element_type->getSize()));
@@ -866,6 +1373,24 @@ namespace vm {
 		}
 		FUNCTION_CONT(2);
 	}
+
+	// RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_lany_lptr)(FUNCTION_ARGS) {
+	// 	{
+	// 		auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+	// 		auto dst_block     = frame->block_stack[dst_block_idx];
+	// 		auto dst_pointer   = Pointer(dst_block, 0);
+
+	// 		auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+
+	// 		auto index = readFromStack<i64>(local_stack, instr[1].arg0);
+	// 		auto element_type
+	// 			= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
+	// 		tbl_pointer.movePointer(index * i64(element_type->getSize()));
+
+	// 		thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+	// 	}
+	// 	FUNCTION_CONT(2);
+	// }
 
 	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
 #define CAST_PRIMITIVE(SIZE) \
