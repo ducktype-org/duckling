@@ -26,11 +26,9 @@ class FetchVersion(Enum):
 
 
 class NewDependencySource:
-    # FIXME(stach): Lepszy return zamiast Schema?
     @abstractmethod
     def make_entry(self, ctx: GlobalContext, root: Package) -> DependencySchema: ...
 
-    # FIXME(stach): Move to async.
     @abstractmethod
     def get_summary(self, ctx: GlobalContext) -> Summary: ...
 
