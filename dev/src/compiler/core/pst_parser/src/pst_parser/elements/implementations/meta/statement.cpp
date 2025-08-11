@@ -149,7 +149,7 @@ namespace pst {
 	void Stmt::addAttributes(LangParserState& state, AttrBoxList&& additions) {
 		attributes.resize(additions.size());
 		usize i = 0;
-		for (auto&& attr_add: additions) {
+		for (auto&& attr_add: std::move(additions)) {
 			state.parse(Ref(this)).assign(&attributes[i], MBox(std::move(attr_add)));
 			i++;
 		}

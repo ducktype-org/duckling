@@ -48,6 +48,7 @@ namespace pst {
 			elements.push_back(ext);
 		}
 
+		[[nodiscard]]
 		std::string str() const;
 
 	private:
