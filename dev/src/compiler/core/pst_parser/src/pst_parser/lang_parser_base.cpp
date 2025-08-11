@@ -28,7 +28,7 @@ namespace pst {
 				variant_case(InternalChild, child) {
 					CORE_PANIC(
 						"Default implementation of calculating element paths cannot handle unnamed "
-					    "sub-elements. Encountered while calculating for: "
+						"sub-elements. Encountered while calculating for: "
 						+ elementType()
 					);
 				}

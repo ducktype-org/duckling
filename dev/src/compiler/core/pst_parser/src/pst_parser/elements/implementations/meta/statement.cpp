@@ -118,7 +118,7 @@ namespace pst {
 					if (child->element_kind == ElementKind::Attribute) continue;
 					CORE_PANIC(
 						"Default implementation of calculating element paths cannot handle unnamed "
-					    "sub-elements. Encountered while calculating for: "
+						"sub-elements. Encountered while calculating for: "
 						+ elementType()
 					);
 				}
