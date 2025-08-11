@@ -93,8 +93,7 @@ namespace compiler::mir {
 		const hc::Expr&  expr,
 		BlockBuilderRef  continuation,
 		FunctionBuilder& function,
-		ScopeRef         expr_scope,
-		base::Optional<std::variant<LocalRef, MirGlobal>> = std::nullopt
+		ScopeRef         expr_scope
 	);
 
 	/**
@@ -193,8 +192,9 @@ namespace compiler::mir {
 		Block build() const {
 			std::vector<Instruction> instructions;
 			for (const auto& instruction: reversed_instruction | std::views::reverse) {
-				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
-				instructions.emplace_back(instruction.value());
+				//CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
+				if (!instructions.empty())
+					instructions.emplace_back(instruction.value());
 			}
 			return {
 				.id           = id,
@@ -491,18 +491,19 @@ namespace compiler::mir {
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 
-		BlockBuilder::InstructionHole hole;
+		struct finalizer {
+			BlockBuilder::InstructionHole hole;
+			Instruction                   instr;
+			std::function<MutLocalRef()>  getDefaultLocal;  // czy konieczne??
+		};
 
-		std::variant<MIRValue, Instruction> value;
+		std::variant<MIRValue, finalizer> value;
 
-		ExprLowerRes(
-			BlockBuilderRef                     begin,
-			BlockBuilder::InstructionHole       hole,
-			std::variant<MIRValue, Instruction> value
-		):
+		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, finalizer> value):
 			  begin{ begin },
-			  hole{ hole },
 			  value{ value } {}
+
+		bool storesValue() { return std::holds_alternative<MIRValue>(value); }
 
 		/**
 		 * @brief If MirValue exists returns it.
@@ -510,8 +511,23 @@ namespace compiler::mir {
 		base::Optional<MIRValue> getResultIfDone() {
 			variant_match(value) {
 				variant_case(MIRValue, val) { return val; }
-				variant_default{
-					return std::nullopt;
+				variant_default { return std::nullopt; }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		MIRValue getExistingOrDefault() {
+			variant_match(value) {
+				variant_case(MIRValue, val) { return val; }
+				variant_case(finalizer, res_data) {
+					/*std::visit(
+					    [&](auto&& val) { res_data.instr.output.emplace(val); }, target
+					);
+					hole.fill(finalizer);
+					std::visit(
+					    [&](auto&& val) { value = val; }, target
+					);
+					return true;*/
 				}
 			}
 			CORE_UNREACHABLE();
@@ -519,24 +535,17 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Assigns result to target.
-		 * @note uses hole (part of structure), can be called only once.
-		 * @return if in-place construction succeded. 
-		 * If no, MIRValue is storing number or bool, access it using getResultIfDone.
+		 * @note uses hole (part of structure), can be called only once. Asserts value is not in any
+		 ** * variable yet.
+		 * @return if in-place construction succeded.
 		 **/
-		bool getResultToTarget(std::variant<LocalRef, MirGlobal> target) {
+		void getResultToTarget(std::variant<LocalRef, MirGlobal> target) {
 			variant_match(value) {
-				variant_case(Instruction, finalizer) {
-					std::visit(
-						[&](auto&& val) { finalizer.output.emplace(val); }, target
-					);
-					hole.fill(finalizer);
-					std::visit(
-						[&](auto&& val) { value = val; }, target
-					);
-					return true;
-				}
-				variant_default{
-					return false;
+				variant_case(finalizer, res_data) {
+					std::visit([&](auto&& val) { res_data.instr.output.emplace(val); }, target);
+					res_data.hole.fill(res_data.instr);
+					std::visit([&](auto&& val) { value = val; }, target);
+					return;
 				}
 			}
 			CORE_UNREACHABLE();
@@ -686,10 +695,10 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
-			/*auto return_block = function.newBlock();
+			auto return_block = function.newBlock();
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator({ Operation::ReturnVoid, {}, {}, {}, return_scope });
-			output({ return_block });*/
+			output({ return_block });
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
@@ -831,7 +840,6 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			std::cout << "VAR STMT" << std::endl;
 			auto optional_local = function.findLocal(stmt.helios_symbol);
 
 			CORE_ASSERT(
@@ -852,7 +860,6 @@ namespace compiler::mir {
 					auto assignment_scope = function.newScope(parent_scope);
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 					// expr_result.finalize(local);
-
 					output({ expr_result.begin });
 					return;
 				}
@@ -863,41 +870,61 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
-			/*	// TODO: #448 Search for location in global scope as well.
+			// TODO: #448 Search for location in global scope as well.
+			auto assignment_scope = function.newScope(parent_scope);
 
-			    auto assignment_scope = function.newScope(parent_scope);
+			auto target_construction_hole = continuation->addHole();
 
-			    auto target_construction_hole = continuation->addHole();
+			auto right_result
+				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
 
-			    auto [r_continuation, new_value]
-			        = lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
+			auto left_result
+				= lowerExpr(*stmt.location_expr, right_result.begin, function, assignment_scope);
 
-			    auto [l_continuation, location_value_result]
-			        = lowerExpr(*stmt.location_expr, r_continuation, function,
-			   assignment_scope);
+			CORE_ASSERT(
+				left_result.getResultIfDone().has_value()
+					&& (left_result.getResultIfDone().value().isLocal()
+			            || left_result.getResultIfDone().value().isGlobal()),
+				"Left side of assignment statement doesn't contain reference to local "
+				"variable or "
+				"a global variable."
+			);
 
-			    CORE_ASSERT(
-			        location_value_result.isLocal() || location_value_result.isGlobal(),
-			        "Left side of assignment statement doesn't contain reference to local "
-			        "variable or "
-			        "a global variable."
-			    );
-			    std::visit(
-			        [&](auto&& ref) {
-			            using T = std::decay_t<decltype(ref)>;
-			            if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T,
-			   MirGlobal>) { target_construction_hole.fill(Instruction{ Operation::Assign, { ref
-			   }, { new_value },
-			                    {},
-			                    assignment_scope,
-			                });
-			                output({ l_continuation });
-			            } else {
-			                CORE_PANIC("Assignment to unsupported MIRValue type");
-			            }
-			        },
-			        location_value_result.getVariant()
-			    );*/
+			std::visit(
+				[&](auto&& ref) {
+					using T = std::decay_t<decltype(ref)>;
+					if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T, MirGlobal>) {
+						if (right_result.storesValue()) {  // Fill left_result by either implicit
+						                                   // assign or in-place construction.
+							target_construction_hole.fill(Instruction{
+								Operation::Assign,
+								{ ref },
+								{ right_result.getResultIfDone().value() },
+								{},
+								assignment_scope,
+							});
+						} else {
+							right_result.getResultToTarget(std::visit(
+								[](auto&& left_val) -> std::variant<LocalRef, MirGlobal> {
+									using U = std::decay_t<decltype(left_val)>;
+									if constexpr (std::is_same_v<U, LocalRef>
+							                      || std::is_same_v<U, MirGlobal>) {
+										return left_val;
+									} else {
+										CORE_UNREACHABLE();
+									}
+								},
+								left_result.getResultIfDone().value().getVariant()
+							));
+						}
+
+						output({ left_result.begin });
+					} else {
+						CORE_PANIC("Assignment to unsupported MIRValue type");
+					}
+				},
+				left_result.getResultIfDone().value().getVariant()
+			);
 		}
 	};
 
@@ -930,6 +957,23 @@ namespace compiler::mir {
 			this->out.emplace(lowering_result);
 		}
 
+		void valueOutput(BlockBuilderRef begin, MIRValue value) {
+			CORE_ASSERT(this->out.empty(), "Output already set.");
+			this->out.emplace(ExprLowerRes(begin, value));
+		}
+
+		void noValueOutput(
+			BlockBuilderRef               begin,
+			BlockBuilder::InstructionHole hole,
+			Instruction                   instr,
+			std::function<MutLocalRef()>  getDefaultLocal
+		) {
+			CORE_ASSERT(this->out.empty(), "Output already set.");
+			this->out.emplace(
+				ExprLowerRes(begin, ExprLowerRes::finalizer(hole, instr, getDefaultLocal))
+			);
+		}
+
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			// output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
@@ -947,26 +991,27 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			std::cout << "IDENT" << std::endl;
 			auto optional_local = function.findLocal(expr.symbol);
 
-			/*if (optional_local.has_value()) {
-			    output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
+			if (optional_local.has_value()) {
+				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-			    //@TODO: chack if the symbol is a real global variable.
-			    output({ .begin = continuation,
-			             .value = MIRValue{
-			                 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
-			});
-			}*/
+				//@TODO: chack if the symbol is a real global variable.
+				valueOutput(
+					continuation,
+					MIRValue{ MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+				);
+			}
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			auto       target_construction_hole = continuation->addHole();
-			const auto lowered_right = lowerExpr(*expr.rhs, continuation, function, expr_scope);
-			const auto lowered_left
-			    = lowerExpr(*expr.lhs, lowered_right.begin, function, expr_scope);
+			auto target_construction_hole = continuation->addHole();
+
+			auto       lowered_right = lowerExpr(*expr.rhs, continuation, function, expr_scope);
+			const auto right_res     = lowered_right.getExistingOrDefault();
+			auto lowered_left   = lowerExpr(*expr.lhs, lowered_right.begin, function, expr_scope);
+			const auto left_res = lowered_left.getExistingOrDefault();
 
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
@@ -974,24 +1019,26 @@ namespace compiler::mir {
 			const auto argument_type       = locationType(right_res, function.getContext());
 			const auto other_argument_type = locationType(left_res, function.getContext());
 			CORE_ASSERT(
-			    argument_type.getType() == other_argument_type.getType(),
-			    "Binary operator with different argument types"
+				argument_type.getType() == other_argument_type.getType(),
+				"Binary operator with different argument types"
 			);
 			const auto      result_type     = expr.expression_type.getSymbolType();
 			const auto      target_location = function.addTmp(result_type, expr_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
-			
+
 			Instruction tmp(
-			    operation,
-			    { target_location },
-			    { left_res, right_res },
-			    { flagConstruct(target_location) },
-			    expr_scope)
-			//output({ .begin = l_continuation, .hole = target_construction_hole, .value=Instruction});
+				operation,
+				{ target_location },
+				{ left_res, right_res },
+				{ flagConstruct(target_location) },
+				expr_scope
+			);
+			noValueOutput(lowered_left.begin, target_construction_hole, tmp, [&]() {
+				return function.addTmp(result_type, expr_scope);
+			});
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
-			std::cout << "UNARY" << std::endl;
 			// Construct the result of the expression in reverse.
 			/*auto target_construction_hole = continuation->addHole();
 			const auto [sub_continuation, sub_res]
@@ -1205,13 +1252,11 @@ namespace compiler::mir {
 	}
 
 	ExprLowerRes lowerExpr(
-		const hc::Expr&                                   expr,
-		BlockBuilderRef                                   continuation,
-		FunctionBuilder&                                  function,
-		ScopeRef                                          expr_scope,
-		base::Optional<std::variant<LocalRef, MirGlobal>> result
+		const hc::Expr&  expr,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         expr_scope
 	) {
-		std::cout << "START" << std::endl;
 		ExprBlockVisitor visitor{ continuation, function, expr_scope };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
