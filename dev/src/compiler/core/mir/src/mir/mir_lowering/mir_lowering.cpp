@@ -640,6 +640,7 @@ namespace compiler::mir {
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
+			std::cout << "HERE2137\n";
 			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
@@ -775,8 +776,8 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			std::cout << "VARIABLE STATEMENT\n";
 			auto optional_local = function.findLocal(stmt.helios_symbol);
-
 			CORE_ASSERT(
 				optional_local.has_value(),
 				"Variable statement refers to local variable that is not defined in the "
@@ -787,6 +788,8 @@ namespace compiler::mir {
 			// we set the lifetime scope of the local variable here
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
+
+			// auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
@@ -804,6 +807,7 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
+			std::cout << "ASGSTMT\n";
 			// TODO: #448 Search for location in global scope as well.
 			auto assignment_scope = function.newScope(parent_scope);
 
@@ -844,8 +848,7 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Visitor that implements actual logic of lowering expression.
-	 * @note The result of the visitor is stored in out member. Result is also saved in result
-	 * variable (if provided).
+	 * @note The result of the visitor is stored in out member or saved in result (if provided).
 	 */
 	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
