@@ -1151,7 +1151,7 @@ namespace compiler::mir {
 			);
 
 			using namespace std::views;
-			
+
 			auto prev_cmp_hole = continuation->addHole();
 
 			auto boolean_output
@@ -1183,6 +1183,7 @@ namespace compiler::mir {
 					{},
 					expr_scope });
 
+				std::cout << base::enumToStr(comp).str() << '\n';
 				prev_cmp_hole.fill(Instruction{
 					comp, { boolean_output }, { expr_result, prev_value }, flags, expr_scope });
 				flags.clear();
