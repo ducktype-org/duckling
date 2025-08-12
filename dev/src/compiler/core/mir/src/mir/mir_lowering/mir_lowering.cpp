@@ -489,12 +489,12 @@ namespace compiler::mir {
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
-
+		// TODO const final etc
 		struct finalizer {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
 			tsh::SymbolType<>             type;
-			ScopeRef                      scope;
+			ScopeRef                      scope; // TODO scope jest w instrukcji - niepotrzebny
 		};
 
 		std::variant<MIRValue, finalizer> value;
@@ -502,6 +502,34 @@ namespace compiler::mir {
 		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, finalizer> value):
 			  begin{ begin },
 			  value{ value } {}
+
+		/*tsh::SymbolType<> getResultType(){
+		    variant_match(value) {
+		        variant_case(MIRValue, val) {
+		            variant_match(val.getVariant()){
+		                variant_case_novalue(MirIntegerConst){
+
+		                }
+		                variant_case_novalue(MirBoolConst){
+
+		                }
+		                variant_case(LocalRef, local){
+
+		                }
+		                variant_case(MirGlobal, global){
+
+		                }
+		                variant_default{
+		                    CORE_PANIC("unhandled expression result type");
+		                }
+		            }
+		        }
+		        variant_case(finalizer, res_data) {
+		            return res_data.type;
+		        }
+		    }
+		    CORE_UNREACHABLE();
+		}*/
 
 		base::Optional<MIRValue> getResultIfDone() {
 			variant_match(value) {
@@ -681,14 +709,15 @@ namespace compiler::mir {
 					{},
 					return_scope,
 				});
-				return_block->setTerminator(
-					Instruction(Operation::ReturnValue, {}, { possible_result.value() }, {}, return_scope)
-				);
-			}else{
+				return_block->setTerminator(Instruction(
+					Operation::ReturnValue, {}, { possible_result.value() }, {}, return_scope
+				));
+			} else {
+				CORE_UNREACHABLE();
 				// we need to store the result of the expression
-			    // in additional variable, so it doesn't get destroyed.
+				// in additional variable, so it doesn't get destroyed.
 				// Construct global in-place or make extra assigments.
-				expr_res.storeResultInGivenVariable()
+				// expr_res.storeResultInGivenVariable() TODO
 			}
 
 			/*if (expr_res.value.isLocal()) {
@@ -732,13 +761,14 @@ namespace compiler::mir {
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
-			/*auto expr_scope  = function.newScope(parent_scope);
+			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
-			output({ expr_result.begin });*/
+			output({ expr_result.begin });
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
+			CORE_UNREACHABLE();
 			/*	auto condition_scope = function.newScope(parent_scope);
 
 			    // I'm not sure if we need these scopes,
@@ -801,6 +831,7 @@ namespace compiler::mir {
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
+			CORE_UNREACHABLE();
 			/*	auto condition_scope = function.newScope(parent_scope);
 
 			    auto condition_continuation_block = function.newBlock();
@@ -1045,33 +1076,29 @@ namespace compiler::mir {
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			/*auto target_construction_hole = continuation->addHole();
-			const auto [sub_continuation, sub_res]
-			    = lowerExpr(*expr.expr, continuation, function, expr_scope);
+			auto target_construction_hole = continuation->addHole();
+			auto lowered = lowerExpr(*expr.expr, continuation, function, expr_scope);
+			const auto res_lowered = lowered.getResult(function);
 
-			// Fill the hole with the unary operation.
 			const auto      result_type     = expr.expression_type.getSymbolType();
-			const auto      target_location = function.addTmp(result_type, expr_scope);
-			const Operation operation    					hole.fill(Instruction{
-			            finalizer.operation,
-			            hint,
-			            finalizer.arguments,
-			            finalizer.flags,
-			            finalizer.scope,
-			        });   = builtinUnaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{
-			    operation,
-			    { target_location },
-			    { sub_res },
-			    { flagConstruct(target_location) },
-			    expr_scope,
-			});
+	
+			const Operation operation       = builtinUnaryToOperation(expr.operation);
+			
+			auto tmp = Instruction{
+				operation,
+				{},
+				{ res_lowered },
+				{},
+				expr_scope};
 
-			output({ .begin = sub_continuation, .value = target_location });*/
+			noValueOutput(
+				lowered.begin, target_construction_hole, tmp, result_type, expr_scope
+			);
 		}
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
+			CORE_UNREACHABLE();
 			// Get info about the target.
 			/*	const auto result_type     = ternary_expr.expression_type.getSymbolType();
 			    const auto target_location = function.addTmp(result_type, expr_scope);
@@ -1138,41 +1165,38 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			/*	auto       call = continuation->addHole();
-			    const auto call_result
-			        = function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+			auto       call = continuation->addHole();
 
-			    auto                  sub_continuation = continuation;
-			    std::vector<MIRValue> args;
+			auto                  sub_continuation = continuation;
+			std::vector<MIRValue> args;
 
-			    auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
-			    if (not function_symid.has_value()) {
-			        CORE_PANIC(
-			            "Call expression where callee is not an identifier expression is
-			   currently not " "supported."
-			        );
-			    }
-			    args.emplace_back(MirFunctionLiteral{ function_symid.value() });
-			    for (const auto& arg: expr.arguments) {
-			        auto [expr_continuation, sub_res]
-			            = lowerExpr(*arg, sub_continuation, function, expr_scope);
-			        args.push_back(sub_res);
-			        sub_continuation = expr_continuation;
-			    }
+			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
+			if (not function_symid.has_value()) {
+				CORE_PANIC(
+					"Call expression where callee is not an identifier expression is currently not "
+					" supported."
+				);
+			}
+			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
+			for (const auto& arg: expr.arguments) {
+				auto arg_parsed = lowerExpr(*arg, sub_continuation, function, expr_scope);
 
-			    // @TODO: #505 here in the future we (probably) will have to handle
-			    // move operations related to the passing of the arguments to the function
+				args.push_back(arg_parsed.getResult(function));
+				sub_continuation = arg_parsed.begin;
+			}
 
-			    call.fill(Instruction{
-			        Operation::Call,
-			        { call_result },
-			        args,
-			        { flagConstruct(call_result) },
-			        expr_scope,
-			    });
+			// @TODO: #505 here in the future we (probably) will have to handle
+			// move operations related to the passing of the arguments to the function
 
+			auto tmp = Instruction{
+				Operation::Call,
+				{},
+				args,
+				{},
+				expr_scope,
+			};
 
-			    return output({ .begin = sub_continuation, .value = call_result });*/
+			return noValueOutput(sub_continuation, call, tmp, expr.expression_type.getSymbolType(), expr_scope);
 		}
 
 	private:
