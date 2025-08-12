@@ -797,7 +797,7 @@ namespace compiler::mir {
 				// after the actual condition result is destroyed. Create extra temporary and assign
 				// to it in-place or with extra move.
 				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
-				condition_variable = condition_result_tmp;
+				condition_variable        = condition_result_tmp;
 
 				lowered_condition.storeResultInGivenVariable(
 					condition_result_tmp,
