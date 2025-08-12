@@ -35,12 +35,15 @@ class SoftwareFileLock(BaseFileLock):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         while True:
             with suppress(FileExistsError):
-                # We use zero mode, as that does not prevent deleting the
-                # file programmatically (that only needs write permissions
-                # to directory), but may be checked by external tools, such
-                # as `rm` command (it might ask when trying to remove
-                # write-protected file).
-                self.path.touch(mode=0, exist_ok=False)
+                # NOTE: on posix we intuitively would want to use zero mode,
+                # as it does not prevent deleting the file programmatically
+                # (that only needs write permissions to directory),
+                # but may be checked by external tools, such as `rm` command
+                # (it might ask when trying to remove write-protected file).
+                # However for portability we do not set the mode. For example
+                # when testing software file lock on Windows, the zero mode
+                # made it impossible to release (delete) the lock.
+                self.path.touch(exist_ok=False)
                 break
             if not self.blocking:
                 raise LockWouldBlock from None
