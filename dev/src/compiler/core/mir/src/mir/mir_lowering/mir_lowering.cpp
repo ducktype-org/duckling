@@ -502,33 +502,15 @@ namespace compiler::mir {
 			  begin{ begin },
 			  value{ value } {}
 
-		/*tsh::SymbolType<> getResultType(){
-		    variant_match(value) {
-		        variant_case(MIRValue, val) {
-		            variant_match(val.getVariant()){
-		                variant_case_novalue(MirIntegerConst){
-
-		                }
-		                variant_case_novalue(MirBoolConst){
-
-		                }
-		                variant_case(LocalRef, local){
-
-		                }
-		                variant_case(MirGlobal, global){
-
-		                }
-		                variant_default{
-		                    CORE_PANIC("unhandled expression result type");
-		                }
-		            }
-		        }
-		        variant_case(finalizer, res_data) {
-		            return res_data.type;
-		        }
-		    }
-		    CORE_UNREACHABLE();
-		}*/
+		tsh::SymbolType<> getResultType() {
+			variant_match(value) {
+				variant_case(finalizer, res_data) { return res_data.type; }
+				variant_default {
+					CORE_PANIC("Function can be run only if MIRValue is not stored");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
 
 		base::Optional<MIRValue> getResultIfDone() {
 			variant_match(value) {
@@ -584,6 +566,12 @@ namespace compiler::mir {
 					res_data.hole.fill(res_data.instr);
 					std::visit([&](auto&& val) { value = val; }, target);
 				}
+			}
+		}
+
+		void performInstructon() {
+			variant_match(value) {
+				variant_case(finalizer, res_data) { res_data.hole.fill(res_data.instr); }
 			}
 		}
 	};
@@ -712,42 +700,31 @@ namespace compiler::mir {
 					Operation::ReturnValue, {}, { possible_result.value() }, {}, return_scope
 				));
 			} else {
-				CORE_UNREACHABLE();
 				// we need to store the result of the expression
 				// in additional variable, so it doesn't get destroyed.
 				// Construct global in-place or make extra assigments.
-				// expr_res.storeResultInGivenVariable() TODO
-			}
 
-			/*if (expr_res.value.isLocal()) {
-			    // we need to store the result of the expression
-			    // in additional variable, so it doesn't get destroyed:
-			    auto return_value =
-		   function.addNoLifetimeTmp(expr_res.value.get<LocalRef>()->type);
-			    retrieve_value.fill(Instruction{
-			        Operation::Assign,
-			        { return_value },
-			        { expr_res.value },
-			        { flagConstruct(return_value), flagMove(expr_res.value.get<LocalRef>())
-		   }, return_scope,
-			    });
-			    return_block->setTerminator(
-			        Instruction(Operation::ReturnValue, {}, { return_value }, {},
-		   return_scope)
-			    );
-			} else {
-			    retrieve_value.fill(Instruction{
-			        Operation::Nop,
-			        {},
-			        {},
-			        {},
-			        return_scope,
-			    });
-			    return_block->setTerminator(
-			        Instruction(Operation::ReturnValue, {}, { expr_res.value }, {},
-		   return_scope)
-			    );
-			}*/
+				// Retrieve type: if res is value It is local, otherwise get it from instruction
+				// finalizer.
+				auto res_type = possible_result.has_value()
+				                  ? possible_result.value().get<LocalRef>()->type
+				                  : expr_res.getResultType();
+
+				auto return_value = function.addNoLifetimeTmp(res_type);
+
+				// Set move flag only if value exists.
+				std::vector<OperationFlag> flags = { flagConstruct(return_value) };
+				if (possible_result.has_value())
+					flags.push_back(flagMove(possible_result.value().get<LocalRef>()));
+
+
+				expr_res.storeResultInGivenVariable(
+					return_value, retrieve_value, flags, return_scope
+				);
+				return_block->setTerminator(
+					Instruction(Operation::ReturnValue, {}, { return_value }, {}, return_scope)
+				);
+			}
 
 			output({ expr_res.begin });
 		}
@@ -762,6 +739,7 @@ namespace compiler::mir {
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
 			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
+			expr_result.performInstructon();
 
 			output({ expr_result.begin });
 		}
@@ -1082,9 +1060,9 @@ namespace compiler::mir {
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
-			CORE_UNREACHABLE();
+
 			// Get info about the target.
-			/*	const auto result_type     = ternary_expr.expression_type.getSymbolType();
+				const auto result_type     = ternary_expr.expression_type.getSymbolType();
 			    const auto target_location = function.addTmp(result_type, expr_scope);
 
 			    auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
@@ -1094,8 +1072,10 @@ namespace compiler::mir {
 			        );
 			        auto assign_hole = block->addHole();
 
-			        const auto [first_lowered_block, expr_res]
-			            = lowerExpr(case_expr, block, function, expr_scope);
+			        auto lowered_block = lowerExpr(case_expr, block, function, expr_scope);
+					
+					//const auto [first_lowered_block, expr_res]
+			        //    = lowerExpr(case_expr, block, function, expr_scope);
 			        assign_hole.fill(Instruction{
 			            Operation::Assign,
 			            { target_location },
@@ -1103,10 +1083,10 @@ namespace compiler::mir {
 			            { flagConstruct(target_location) },
 			            expr_scope,
 			        });
-			        return first_lowered_block;
+			        return lowered_block.begin;
 			    };
 
-			    auto else_block = build_case_block(*ternary_expr.if_false);
+			    /*auto else_block = build_case_block(*ternary_expr.if_false);
 			    auto then_block = build_case_block(*ternary_expr.if_true);
 
 			    // Build branching.
