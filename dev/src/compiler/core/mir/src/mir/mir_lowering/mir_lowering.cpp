@@ -985,16 +985,16 @@ namespace compiler::mir {
 			this->out.emplace(lowering_result);
 		}
 
-		void valueOutput(BlockBuilderRef begin, MIRValue value) {
+		void valueOutput(BlockBuilderRef begin, const MIRValue& value) {
 			CORE_ASSERT(this->out.empty(), "Output already set.");
 			this->out.emplace(ExprLowerRes(begin, value));
 		}
 
 		void noValueOutput(
-			BlockBuilderRef               begin,
-			BlockBuilder::InstructionHole hole,
-			Instruction                   instr,
-			tsh::SymbolType<>             type
+			BlockBuilderRef                      begin,
+			const BlockBuilder::InstructionHole& hole,
+			const Instruction&                   instr,
+			const tsh::SymbolType<>&             type
 		) {
 			CORE_ASSERT(this->out.empty(), "Output already set.");
 			this->out.emplace(ExprLowerRes(begin, ExprLowerRes::finalizer(hole, instr, type)));
