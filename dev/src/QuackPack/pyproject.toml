@@ -36,7 +36,7 @@ dev = [
     "ducknest>=0.1.0",
     "pyright>=1.1.395",
     "pytest>=8.3.4",
-    "pytest-asyncio>=0.25.3",
+    "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.0.0",
     "ruff>=0.9.7",
     "sphinx>=8.2.3",
@@ -124,4 +124,4 @@ quote-style = "double"
 skip-magic-trailing-comma = true
 
 [tool.uv.sources]
-ducknest = { git = "https://gitlab.mimuw.edu.pl/duckling-package-manager/ducknest.git" }
+ducknest = { git = "ssh://git@github.com/ducktype-org/duck-nest.git" }

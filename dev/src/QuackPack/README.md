@@ -13,7 +13,7 @@ An 🚀 *extremely fast* 📦 package manager for 🦆 Duckling programming lang
 
 ### With `pip`
 
-You can just run:
+You can just run in virtual environment:
 
 ```bash
 pip install .
