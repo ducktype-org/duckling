@@ -20,7 +20,7 @@ from quackpack.util.types.version import Version
 
 logger = get_logger(__name__)
 
-
+# Dumb tag, which tells us to fetch newest version of a package, instead of a specified one.
 class FetchVersion(Enum):
     Tag = auto()
 
