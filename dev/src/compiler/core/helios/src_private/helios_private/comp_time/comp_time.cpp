@@ -20,6 +20,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <cmath>
+#include <ranges>
 #include <type_traits>
 
 namespace compiler::helios {
@@ -252,6 +253,57 @@ namespace compiler::helios {
 					result = evalHoutExpr(ctx, expr.if_false.ref());
 			}
 
+			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) {
+				auto evaluated = evalHoutExpr(ctx, chain_expr.expressions.front().ref());
+				if (evaluated.hasError()) {
+					result = query::QError(errors::Failed(evaluated.error()));
+					return;
+				}
+				auto prev_value = evaluated.value();
+
+				auto evaluated_exprs
+					= chain_expr.expressions
+				    | std::views::transform([this](const base::Box<code::Expr>& expr) {
+						  return evalHoutExpr(ctx, expr.ref());
+					  });
+
+				auto compare = [](i64 first, i64 second, code::BuiltinBinary operation) {
+					switch (operation) {
+					case code::BuiltinBinary::IntegerLt:
+						return first < second;
+					case code::BuiltinBinary::IntegerGt:
+						return first > second;
+					case code::BuiltinBinary::IntegerLteq:
+						return first <= second;
+					case code::BuiltinBinary::IntegerGteq:
+						return first >= second;
+					case code::BuiltinBinary::IntegerEq:
+						return first == second;
+					case code::BuiltinBinary::IntegerNeq:
+						return first != second;
+					default:
+						CORE_UNREACHABLE();
+					}
+				};
+
+				for (auto [next_expr, comp]:
+				     std::views::zip(evaluated_exprs, chain_expr.operators)) {
+					if (next_expr.hasError()) {
+						result = query::QError(errors::Failed(evaluated.error()));
+						return;
+					}
+
+					auto next_value = next_expr.value();
+					if (!compare(*prev_value.asI64(), *next_value.asI64(), comp)) {
+						result = CompileTimeValue{ false };
+						return;
+					}
+
+					prev_value = next_value;
+				}
+				result = CompileTimeValue{ true };
+			}
+
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
 				result = evalHoutExpr(ctx, expr.inner.ref());
 			}
@@ -279,8 +331,7 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?

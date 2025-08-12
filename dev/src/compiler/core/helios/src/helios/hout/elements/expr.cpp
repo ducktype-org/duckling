@@ -27,6 +27,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
 	EXPR_VISITOR(TernaryOperatorExpr)
+	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
@@ -381,4 +382,25 @@ namespace compiler::helios::code {
 		}
 	}
 
+	ChainComparisonExpr::ChainComparisonExpr(
+		query::Context& ctx, std::vector<Box<Expr>> expressions, std::vector<BuiltinBinary> operators
+	):
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Immutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  expressions{ std::move(expressions) },
+		  operators{ std::move(operators) } {}
+
+	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
+		for (bool add_less = false; auto&& expr: expressions) {
+			if (add_less) out << " < ";
+			expr->debugPrint(out);
+			add_less = true;
+		}
+	}
 }

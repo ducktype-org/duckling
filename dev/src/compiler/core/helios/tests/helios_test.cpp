@@ -460,8 +460,11 @@ private:
 		auto get_cmp  = getChain("CMP", root_scope).back();
 		auto expr_cmp = getExprOfConst(get_cmp);
 		Ref  expr_cmp_casted
-			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
-		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
+			= dynamic_cast<const compiler::helios::code::ChainComparisonExpr*>(&*expr_cmp);
+		ASSERT_EQUAL(
+			std::vector{ compiler::helios::code::BuiltinBinary::IntegerLt },
+			expr_cmp_casted->operators
+		);
 
 		auto get_str  = getChain("STR", root_scope).back();
 		auto expr_str = getExprOfConst(get_str);

@@ -9,4 +9,12 @@ Tests:
   single-comparison: # Any type of comparison between two values.
     Cases:
       default:
+        Output:
+          String: ""
         ExitCode: 100
+  comparison-chain:
+    Cases:
+      default:
+        Output:
+          String: ""
+        ExitCode: 0

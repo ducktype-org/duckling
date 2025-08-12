@@ -28,6 +28,7 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <ranges>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -1138,6 +1139,69 @@ namespace compiler::mir {
 
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
 			throw base::NotYetImplemented("sequence expr lowering");
+		}
+
+		void visitChainComparisonExpr(const hc::ChainComparisonExpr& chain_expr) override {
+			CORE_ASSERT(!chain_expr.expressions.empty(), "Empty chain comparison");
+			CORE_ASSERT(chain_expr.expressions.size() != 1, "Single element chain comparison");
+			CORE_ASSERT(
+				chain_expr.operators.size() == chain_expr.expressions.size() - 1,
+				"Operands: " + std::to_string(chain_expr.operators.size()) + " expressions: "
+					+ std::to_string(chain_expr.expressions.size()) + ", but expected equal counts."
+			);
+
+			using namespace std::views;
+			
+			auto prev_cmp_hole = continuation->addHole();
+
+			auto boolean_output
+				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
+
+			auto last_lowered
+				= lowerExpr(*chain_expr.expressions.back(), continuation, function, expr_scope);
+
+			auto prev_value    = last_lowered.getResult(function);
+			auto prev_block    = last_lowered.begin;
+
+			auto mir_ops     = chain_expr.operators | transform(builtinBinaryToOperation);
+			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);
+			auto comparisons = mir_ops | drop(1) | reverse;
+
+			// Construct the boolean output during the first comparison.
+			std::vector<mir::OperationFlag> flags = { flagConstruct(boolean_output) };
+
+			for (const auto& [expr, comp]: zip(expressions, comparisons)) {
+				BlockBuilderRef new_jump_block = function.newBlock();
+				auto            cmp_hole       = new_jump_block->addHole();
+				auto lowered_block = lowerExpr(*expr, new_jump_block, function, expr_scope);
+				auto expr_result   = lowered_block.getResult(function);
+
+				new_jump_block->setTerminator(Instruction{
+					Operation::Branch,
+					{},
+					{ boolean_output, prev_block->getID(), continuation->getID() },
+					{},
+					expr_scope });
+
+				prev_cmp_hole.fill(Instruction{
+					comp, { boolean_output }, { expr_result, prev_value }, flags, expr_scope });
+				flags.clear();
+
+				prev_value    = expr_result;
+				prev_cmp_hole = cmp_hole;
+			}
+
+			auto first_lowered
+				= lowerExpr(*chain_expr.expressions.front(), prev_block, function, expr_scope);
+			auto first_value = first_lowered.getResult(function);
+			auto first_block = first_lowered.begin;
+
+			static_assert(std::same_as<decltype(mir_ops.front()), mir::Operation>);
+			prev_cmp_hole.fill(Instruction{
+				mir_ops.front(), { boolean_output }, { first_value, prev_value }, flags, expr_scope }
+			);
+
+			valueOutput(first_block, boolean_output);
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {

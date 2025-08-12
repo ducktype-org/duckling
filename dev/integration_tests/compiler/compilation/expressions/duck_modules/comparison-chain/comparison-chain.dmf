@@ -1,0 +1,25 @@
+fun main() -> i64 = {
+    let c = 3;
+
+    if (3 >= c < 4 >= c == c <= c >= c) {}
+    else {
+        builtin_output_i64(1);
+    }
+
+    let d: bool = 5 < c;
+    if (d) {
+        builtin_output_i64(2);
+    }
+
+    let e: bool = (c != c) + (2 < c <= 3 <= c < 7);
+    if (e) {
+        let f = 5;
+        let g: bool = (f == f);
+    }
+    else {
+        let f = 3;
+        let g: bool = (f != f);
+        builtin_output_i64(3);
+    }
+    return 0;
+}
