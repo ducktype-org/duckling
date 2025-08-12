@@ -106,8 +106,7 @@ namespace compiler::helios::code {
 					else
 						pos = 0;
 					i64 as_i64 = std::stoll(value.substr(pos), nullptr, base);
-					;
-					node = makeBox<LiteralNumCTVExpr>(ctx, makeMinimizedNumCtv(as_i64));
+					node       = makeBox<LiteralNumCTVExpr>(ctx, makeMinimizedNumCtv(as_i64));
 				}
 			}
 
