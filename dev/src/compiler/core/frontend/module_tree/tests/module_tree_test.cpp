@@ -2,6 +2,7 @@
 #include <frontend/module_tree/queries.hpp>
 
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::frontend;
@@ -20,6 +21,8 @@ public:
 		TESTER_ADD_TEST(testQueries);
 		TESTER_ADD_TEST(testParseDirectoryLikeFsTree);    // moved from FsTree test
 		TESTER_ADD_TEST(testVirtualFilesLikeModuleTree);  // moved from FsTree test
+		TESTER_ADD_TEST(testModuleTreeModifierVariants);  // new test
+		TESTER_ADD_TEST(testManualModuleTreeBuilder);     // new test
 	}
 
 private:
@@ -27,14 +30,14 @@ private:
 		auto pth = fs::File(path("test_module"));
 		auto mt  = ModuleTreeBuilder::create(pth, test_regex, test_regex);
 
-		ASSERT_EQUAL(true, mt->hasMainSourceFile());
+		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().size());
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 		ASSERT_EQUAL(1, mt->getSourceFiles().size());
 
 		auto another_module = mt->getSubmodules()[base::StrID("another")];
 		ASSERT_EQUAL(1, another_module->getSourceFiles().size());
-		ASSERT_EQUAL(true, another_module->hasMainSourceFile());
+		ASSERT_TRUE(another_module->hasMainSourceFile());
 		ASSERT_EQUAL(
 			2, another_module->getOtherFiles().size()
 		);  // 2, because there are 2 different file extensions
@@ -43,12 +46,12 @@ private:
 		ASSERT_EQUAL(1, another_module->getSubmodules().size());
 		ASSERT_EQUAL("whoa.duck", another_module->getSourceFiles().front()->getFile().name());
 
-		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("awe")));
+		ASSERT_TRUE(mt->getSubmodules().contains(base::StrID("awe")));
 		auto awe_module = mt->getSubmodules()[base::StrID("awe")];
 		ASSERT_EQUAL(0, awe_module->getSubmodules().size());
 		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
 		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
-		ASSERT_EQUAL(true, awe_module->hasMainSourceFile());
+		ASSERT_TRUE(awe_module->hasMainSourceFile());
 		ASSERT_EQUAL("awe.dmf", awe_module->getMainSourceFile()->getFile().name());
 	}
 
@@ -68,9 +71,9 @@ private:
 		auto mt  = ModuleTreeBuilder::create(pth);
 
 		ASSERT_EQUAL("test_module", mt->getName());
-		ASSERT_EQUAL(true, mt->hasMainSourceFile());
+		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL("content123\n", mt->getMainSourceFile()->getFile().getContent().view());
-		ASSERT_EQUAL(true, mt->getParentModule().empty());
+		ASSERT_TRUE(mt->getParentModule().empty());
 		ASSERT_EQUAL(
 			mt->getName(),
 			mt->getSubmodules()[base::StrID("awe")]->getParentModule().value()->getName()
@@ -136,7 +139,7 @@ private:
 		// Since ModuleTree does not expose raw file names, we check via submodules and files.
 
 		// Check submodules (directories)
-		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("another_directory")));
+		ASSERT_TRUE(mt->getSubmodules().contains(base::StrID("another_directory")));
 		ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID(".skipped_directory")));
 
 		// Check files (source/other)
@@ -155,8 +158,8 @@ private:
 			if (src->getFile().name() == ".skipped_file") found_skipped = true;
 		}
 
-		ASSERT_EQUAL(true, found_file);
-		ASSERT_EQUAL(true, found_file_txt);
+		ASSERT_TRUE(found_file);
+		ASSERT_TRUE(found_file_txt);
 		ASSERT_EQUAL(false, found_skipped);
 
 		// Check content of file.txt
@@ -169,7 +172,7 @@ private:
 				}
 			}
 		}
-		ASSERT_EQUAL(true, checked_content);
+		ASSERT_TRUE(checked_content);
 
 		// Check submodule's files
 		auto another_dir = mt->getSubmodules().at(base::StrID("another_directory"));
@@ -197,8 +200,8 @@ private:
 		ASSERT_EQUAL(root.name(), mt->getName().strView());
 
 		// Test submodules (directories)
-		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("subDir1")));
-		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("subDir2")));
+		ASSERT_TRUE(mt->getSubmodules().contains(base::StrID("subDir1")));
+		ASSERT_TRUE(mt->getSubmodules().contains(base::StrID("subDir2")));
 
 		// Test files in root (should be in other files or source files)
 		bool found_file1 = false;
@@ -216,7 +219,7 @@ private:
 				found_file1 = true;
 			}
 		}
-		ASSERT_EQUAL(true, found_file1);
+		ASSERT_TRUE(found_file1);
 
 		// Test files in subDir1
 		auto sub1        = mt->getSubmodules().at(base::StrID("subDir1"));
@@ -235,12 +238,187 @@ private:
 				found_file2 = true;
 			}
 		}
-		ASSERT_EQUAL(true, found_file2);
+		ASSERT_TRUE(found_file2);
 
 		// Test prettyPrint() (just check output contains expected names)
 		auto tree_representation = mt->prettyPrint();
-		ASSERT_EQUAL(true, tree_representation.find("subDir1") != std::string::npos);
-		ASSERT_EQUAL(true, tree_representation.find("file1.txt") != std::string::npos);
+		ASSERT_TRUE(tree_representation.find("subDir1") != std::string::npos);
+		ASSERT_TRUE(tree_representation.find("file1.txt") != std::string::npos);
+	}
+
+	void testModuleTreeModifierVariants() {
+		// Create a virtual root directory and files for testing
+		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto file1    = root_dir.createSubFile("main content", "main.dmf");
+		auto file2    = root_dir.createSubFile("src content", "src1.duck");
+		auto file3    = root_dir.createSubFile("other content", "other.txt");
+		auto file4    = root_dir.createSubFile("other2 content", "other2.md");
+
+		// Build initial module tree
+		auto mt = ModuleTreeBuilder::create(root_dir);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// Test addSourceFile
+			auto new_src = root_dir.createSubFile("new src", "newsrc.duck");
+			ModuleTreeModifier::addSourceFile(ctx, mt, new_src);
+			bool found_newsrc = false;
+			for (auto& sf: mt->getSourceFiles())
+				if (sf->getFile().name() == "newsrc.duck") found_newsrc = true;
+			ASSERT_TRUE(found_newsrc);
+
+			// Test removeSourceFile
+			auto src_to_remove = mt->getSourceFiles().front();
+			ModuleTreeModifier::removeSourceFile(ctx, src_to_remove->getID());
+			bool still_present = false;
+			for (auto& sf: mt->getSourceFiles())
+				if (sf->getID() == src_to_remove->getID()) still_present = true;
+			ASSERT_EQUAL(false, still_present);
+
+			// Test setMainSourceFile (remove first if exists)
+			if (mt->hasMainSourceFile()) {
+				ModuleTreeModifier::removeMainSourceFile(ctx, mt);
+				ASSERT_EQUAL(false, mt->hasMainSourceFile());
+			}
+			auto new_main = root_dir.createSubFile("main2", "main2.dmf");
+			ModuleTreeModifier::setMainSourceFile(ctx, mt, new_main);
+			ASSERT_EQUAL("main2.dmf", mt->getMainSourceFile()->getFile().name());
+
+			// Test removeMainSourceFile explicitly
+			ModuleTreeModifier::removeMainSourceFile(ctx, mt);
+			ASSERT_EQUAL(false, mt->hasMainSourceFile());
+
+			// Test addOtherFile
+			auto other_file = root_dir.createSubFile("other3", "other3.txt");
+			ModuleTreeModifier::addOtherFile(ctx, mt, other_file);
+			bool found_other3 = false;
+			for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
+				if (f.name() == "other3.txt") found_other3 = true;
+			ASSERT_TRUE(found_other3);
+
+			// Test removeOtherFile
+			ModuleTreeModifier::removeOtherFile(ctx, mt, other_file);
+			bool still_other3 = false;
+			for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
+				if (f.name() == "other3.txt") still_other3 = true;
+			ASSERT_EQUAL(false, still_other3);
+
+			// Test addSubmodule and setParent/removeParent
+			auto sub_dir = root_dir.createSubDirectory("submod");
+			auto sub_mod = ModuleTreeBuilder::create(sub_dir);
+			ModuleTreeModifier::addSubmodule(ctx, mt, sub_mod);
+			ASSERT_TRUE(mt->getSubmodules().contains(sub_mod->getName()));
+			// Remove parent
+			ModuleTreeModifier::removeParent(ctx, sub_mod);
+			ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
+			// Set parent again
+			ModuleTreeModifier::setParent(ctx, sub_mod, mt);
+			ASSERT_EQUAL(mt->getID(), sub_mod->getParentModule().value()->getID());
+
+			// Test removeModule
+			auto sub_mod_id = sub_mod->getID();
+			ModuleTreeModifier::removeModule(ctx, sub_mod_id);
+			ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("submod")));
+
+			// Test fileModified (should not throw)
+			auto src_file
+				= mt->getSourceFiles().empty() ? new_src : mt->getSourceFiles().front()->getFile();
+			ModuleTreeModifier::fileModified(ctx, src_file);
+
+			// Test removeModule with a module that has source files and main source file
+			{
+				// Use unique variable names to avoid shadowing
+				auto removable_sub_dir   = root_dir.createSubDirectory("removable");
+				auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dmf");
+				auto removable_src_file1 = removable_sub_dir.createSubFile("src1", "src1.duck");
+				auto removable_src_file2 = removable_sub_dir.createSubFile("src2", "src2.duck");
+				auto removable_sub_mod   = ModuleTreeBuilder::create(removable_sub_dir);
+
+				// Add as submodule
+				ModuleTreeModifier::addSubmodule(ctx, mt, removable_sub_mod);
+				ASSERT_TRUE(mt->getSubmodules().contains(removable_sub_mod->getName()));
+
+				// Check that main and source files exist in SourceFile::file_map
+				ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
+				auto removable_main_id = removable_sub_mod->getMainSourceFile()->getID();
+				ASSERT_TRUE(
+					SourceFile::getSourceFile(removable_main_id)->getModule()->getID()
+					== removable_sub_mod->getID()
+				);
+				for (auto& sf: removable_sub_mod->getSourceFiles())
+					ASSERT_TRUE(
+						SourceFile::getSourceFile(sf->getID())->getModule()->getID()
+						== removable_sub_mod->getID()
+					);
+
+				// Remove the submodule
+				auto removable_sub_mod_id = removable_sub_mod->getID();
+				ModuleTreeModifier::removeModule(ctx, removable_sub_mod_id);
+				ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("removable")));
+			}
+		});
+	}
+
+	void testManualModuleTreeBuilder() {
+		// Manually build a module tree using ModuleTreeBuilder (not from filesystem)
+		auto builder = ModuleTreeBuilder::create();
+
+		// Set name
+		builder->setName(base::StrID("manual_mod"));
+
+		// Create virtual files
+		auto root_dir   = fs::FileManager::createRandomVirtualDirectory();
+		auto main_file  = root_dir.createSubFile("main", "manual_mod.dmf");
+		auto src_file1  = root_dir.createSubFile("src1", "src1.duck");
+		auto src_file2  = root_dir.createSubFile("src2", "src2.duck");
+		auto other_file = root_dir.createSubFile("other", "other.txt");
+
+		// Set main source file
+		builder->setMainSourceFile(main_file);
+		// Add source files
+		builder->addSourceFile(src_file1);
+		builder->addSourceFile(src_file2);
+		// Add other file
+		builder->addOtherFile(other_file);
+
+		// Add submodule
+		auto sub_dir     = root_dir.createSubDirectory("subdir");
+		auto sub_builder = ModuleTreeBuilder::create();
+		sub_builder->setName(base::StrID("subdir"));
+		auto sub_main = sub_dir.createSubFile("submain", "subdir.dmf");
+		sub_builder->setMainSourceFile(sub_main);
+
+		// Test isValid before finalize
+		ASSERT_TRUE(builder->isValid());
+		ASSERT_TRUE(sub_builder->isValid());
+
+		auto sub_mod = sub_builder->finalize();
+		ASSERT_EQUAL(false, sub_builder->isValid());
+
+		builder->addSubmodule(sub_mod);
+
+		// Test setParent
+		auto parent_builder = ModuleTreeBuilder::create();
+		parent_builder->setName(base::StrID("parent_mod"));
+		auto parent_file = root_dir.createSubFile("parent", "parent_mod.dmf");
+		parent_builder->setMainSourceFile(parent_file);
+		auto parent_mod = parent_builder->finalize();
+		builder->setParent(parent_mod);
+
+		// Finalize
+		auto mt = builder->finalize();
+		ASSERT_EQUAL(false, builder->isValid());
+
+		// Check structure
+		ASSERT_EQUAL("manual_mod", mt->getName().strView());
+		ASSERT_TRUE(mt->hasMainSourceFile());
+		ASSERT_EQUAL(2, mt->getSourceFiles().size());
+		ASSERT_EQUAL(1, mt->getOtherFiles().size());
+		ASSERT_EQUAL(1, mt->getSubmodules().size());
+		ASSERT_EQUAL("subdir", mt->getSubmodules().begin()->first.strView());
+		ASSERT_TRUE(mt->getSubmodules().begin()->second->hasMainSourceFile());
+		// Check parent
+		ASSERT_TRUE(mt->getParentModule().has_value());
+		ASSERT_EQUAL("parent_mod", mt->getParentModule().value()->getName().strView());
 	}
 };
 

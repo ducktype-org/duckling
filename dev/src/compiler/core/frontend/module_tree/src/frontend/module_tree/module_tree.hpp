@@ -169,44 +169,38 @@ namespace compiler::frontend {
 		/**
 		 * Adds a source file to the module being built.
 		 * @param file The source file to add.
-		 * @return True if added successfully.
 		 */
-		bool addSourceFile(const fs::File& file);
+		void addSourceFile(const fs::File& file);
 
 		/**
 		 * Sets the main source file for the module.
 		 * @param file The main source file.
-		 * @return True if set successfully.
 		 */
-		bool setMainSourceFile(const fs::File& file);
+		void setMainSourceFile(const fs::File& file);
 
 		/**
 		 * Adds a submodule to the module being built.
 		 * @param submodule The submodule to add.
-		 * @return True if added successfully.
 		 */
-		bool addSubmodule(base::Ref<ModuleTree> submodule);
+		void addSubmodule(base::Ref<ModuleTree> submodule);
 
 		/**
 		 * Adds an other file to the module being built.
 		 * @param file The file to add.
-		 * @return True if added successfully.
 		 */
-		bool addOtherFile(const fs::File& file);
+		void addOtherFile(const fs::File& file);
 
 		/**
 		 * Sets the name of the module.
 		 * @param name The name to set.
-		 * @return True if set successfully.
 		 */
-		bool setName(base::StrID name);
+		void setName(base::StrID name);
 
 		/**
 		 * Sets the parent module.
 		 * @param parent The parent module.
-		 * @return True if set successfully.
 		 */
-		bool setParent(base::Ref<ModuleTree> parent);
+		void setParent(base::Ref<ModuleTree> parent);
 
 		/**
 		 * Builds the module tree from a directory structure.
@@ -288,9 +282,8 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to add.
-		 * @return True if added successfully.
 		 */
-		static bool addSourceFile(
+		static void addSourceFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
 
@@ -298,29 +291,33 @@ namespace compiler::frontend {
 		 * Removes a source file from its module by FileID.
 		 * @param ctx Query context.
 		 * @param file_id The FileID to remove.
-		 * @return True if removed successfully.
 		 */
-		static bool removeSourceFile(query::Context& ctx, FileID file_id);
+		static void removeSourceFile(query::Context& ctx, FileID file_id);
 
 		/**
 		 * Sets the main source file for the given module.
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to set as main source file.
-		 * @return True if set successfully.
 		 */
-		static bool setMainSourceFile(
+		static void setMainSourceFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
+
+		/**
+		 * Removes the main source file from the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 */
+		static void removeMainSourceFile(query::Context& ctx, base::Ref<ModuleTree> module);
 
 		/**
 		 * Adds a submodule to the given module.
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param submodule The submodule to add.
-		 * @return True if added successfully.
 		 */
-		static bool addSubmodule(
+		static void addSubmodule(
 			query::Context& ctx, base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 		);
 
@@ -329,9 +326,8 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to add.
-		 * @return True if added successfully.
 		 */
-		static bool addOtherFile(
+		static void addOtherFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
 
@@ -340,9 +336,8 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to remove.
-		 * @return True if removed successfully.
 		 */
-		static bool removeOtherFile(
+		static void removeOtherFile(
 			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
 		);
 
@@ -353,9 +348,8 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param parent The new parent module (optional).
-		 * @return True if operation succeeded.
 		 */
-		static bool setParent(
+		static void setParent(
 			query::Context&                       ctx,
 			base::Ref<ModuleTree>                 module,
 			base::Optional<base::Ref<ModuleTree>> parent
@@ -365,18 +359,16 @@ namespace compiler::frontend {
 		 * Removes the parent from the given module.
 		 * @param ctx Query context.
 		 * @param module The module to modify.
-		 * @return True if removed successfully.
 		 */
-		static bool removeParent(query::Context& ctx, base::Ref<ModuleTree> module);
+		static void removeParent(query::Context& ctx, base::Ref<ModuleTree> module);
 
 		/**
 		 * Removes the module with the given ModuleID from the module map.
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param ctx Query context.
 		 * @param module_id The ModuleID to remove.
-		 * @return True if removed successfully.
 		 */
-		static bool removeModule(query::Context& ctx, ModuleID module_id);
+		static void removeModule(query::Context& ctx, ModuleID module_id);
 
 		/**
 		 * Notifies that a file has been modified and updates its SourceFile.
