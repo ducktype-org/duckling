@@ -489,12 +489,13 @@ namespace compiler::mir {
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
+
 		// TODO const final etc
 		struct finalizer {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
 			tsh::SymbolType<>             type;
-			ScopeRef                      scope; // TODO scope jest w instrukcji - niepotrzebny
+			ScopeRef                      scope;  // TODO scope jest w instrukcji - niepotrzebny
 		};
 
 		std::variant<MIRValue, finalizer> value;
@@ -768,66 +769,61 @@ namespace compiler::mir {
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
-			CORE_UNREACHABLE();
-			/*	auto condition_scope = function.newScope(parent_scope);
+			auto condition_scope = function.newScope(parent_scope);
 
-			    // I'm not sure if we need these scopes,
-			    // maybe we could just pass parent_scope as-is.
-			    // But this way it for sure works.
-			    auto then_scope = function.newScope(parent_scope);
-			    auto else_scope = function.newScope(parent_scope);
+			// I'm not sure if we need these scopes,
+			// maybe we could just pass parent_scope as-is.
+			// But this way it for sure works.
+			auto then_scope = function.newScope(parent_scope);
+			auto else_scope = function.newScope(parent_scope);
 
-			    auto else_block = function.newBlock();
-			    else_block->setTerminator(Instruction{
-			        Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
-			    auto else_body = lowerCodeBlock(stmt.else_body, else_block, function,
-			   else_scope).begin;
+			auto else_block = function.newBlock();
+			else_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
+			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
-			    auto then_block = function.newBlock();
-			    then_block->setTerminator(Instruction{
-			        Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
-			    auto then_body = lowerCodeBlock(stmt.then_body, then_block, function,
-			   then_scope).begin;
+			auto then_block = function.newBlock();
+			then_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
+			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
-			    auto condition_block = function.newBlock();
+			auto condition_block = function.newBlock();
 
-			    auto get_condition_return = condition_block->addHole();
+			auto get_condition_return = condition_block->addHole();
 
-			    auto [lowered_condition, condition_result]
-			        = lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+			auto lowered_condition
+				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			    std::optional<MIRValue> condition_variable;
-			    if (condition_result.isLocal()) {
-			        // we have to "move" the condition result
-			        // into special temporary value, so we can use it
-			        // after the actual condition result is destroyed.
-			        auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+			std::optional<MIRValue> condition_variable;
 
-			        get_condition_return.fill(Instruction{
-			            Operation::Assign,
-			            { condition_result_tmp },
-			            { condition_result },
-			            { flagConstruct(condition_result_tmp) },
-			            condition_scope,
-			        });
+			auto possible_result = lowered_condition.getResultIfDone();
 
-			        condition_variable = condition_result_tmp;
-			    } else {
-			        get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {},
-			   condition_scope }
-			        );
-			        condition_variable = condition_result;
-			    }
+			if (possible_result.has_value() && !possible_result.value().isLocal()) {
+				get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
+				);
+				condition_variable = possible_result.value();
+			} else {
+				// Condition result must be stored in special temporary value, so we can use it
+				// after the actual condition result is destroyed. Create extra temporary and assign
+				// to it in-place or with extra move.
+				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+				lowered_condition.storeResultInGivenVariable(
+					condition_result_tmp,
+					get_condition_return,
+					{ flagConstruct(condition_result_tmp) },
+					condition_scope
+				);
+			}
 
-			    condition_block->setTerminator(Instruction{
-			        Operation::Branch,
-			        {},
-			        { *condition_variable, then_body->getID(), else_body->getID() },
-			        {},
-			        condition_scope,
-			    });
+			condition_block->setTerminator(Instruction{
+				Operation::Branch,
+				{},
+				{ *condition_variable, then_body->getID(), else_body->getID() },
+				{},
+				condition_scope,
+			});
 
-			    output({ lowered_condition });*/
+			output({ lowered_condition.begin });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -1076,24 +1072,17 @@ namespace compiler::mir {
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			auto target_construction_hole = continuation->addHole();
-			auto lowered = lowerExpr(*expr.expr, continuation, function, expr_scope);
+			auto       target_construction_hole = continuation->addHole();
+			auto       lowered     = lowerExpr(*expr.expr, continuation, function, expr_scope);
 			const auto res_lowered = lowered.getResult(function);
 
-			const auto      result_type     = expr.expression_type.getSymbolType();
-	
-			const Operation operation       = builtinUnaryToOperation(expr.operation);
-			
-			auto tmp = Instruction{
-				operation,
-				{},
-				{ res_lowered },
-				{},
-				expr_scope};
+			const auto result_type = expr.expression_type.getSymbolType();
 
-			noValueOutput(
-				lowered.begin, target_construction_hole, tmp, result_type, expr_scope
-			);
+			const Operation operation = builtinUnaryToOperation(expr.operation);
+
+			auto tmp = Instruction{ operation, {}, { res_lowered }, {}, expr_scope };
+
+			noValueOutput(lowered.begin, target_construction_hole, tmp, result_type, expr_scope);
 		}
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
@@ -1165,7 +1154,7 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			auto       call = continuation->addHole();
+			auto call = continuation->addHole();
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
@@ -1189,14 +1178,12 @@ namespace compiler::mir {
 			// move operations related to the passing of the arguments to the function
 
 			auto tmp = Instruction{
-				Operation::Call,
-				{},
-				args,
-				{},
-				expr_scope,
+				Operation::Call, {}, args, {}, expr_scope,
 			};
 
-			return noValueOutput(sub_continuation, call, tmp, expr.expression_type.getSymbolType(), expr_scope);
+			return noValueOutput(
+				sub_continuation, call, tmp, expr.expression_type.getSymbolType(), expr_scope
+			);
 		}
 
 	private:
