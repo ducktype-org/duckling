@@ -15,7 +15,6 @@ from .types import AddOptions, NewDependencyType, NewFlags
 logger = get_logger(__name__)
 
 
-# FIXME: Support dry run.
 def add(opts: AddOptions) -> None:
     deps = make_deps(opts.packages, opts.type)
     root_manifest = opts.source.manifest
@@ -26,7 +25,6 @@ def add(opts: AddOptions) -> None:
     for dep in deps:
         entry = dep.make_entry(opts.ctx, opts.source)
         flags = list(opts.flags.global_)
-        # FIXME: To można wrzucić w async i zrobić jakąś mapę z asyncio.gather_all (czy jak to się nazywa).
         summary = dep.get_summary(opts.ctx)
         name = summary.name
 
@@ -42,7 +40,6 @@ def add(opts: AddOptions) -> None:
         new_entries.append((name, entry))
         all_flags = set(summary.features)
         not_enabled_flags = all_flags.difference(flags)
-        # FIXME: We want to fully expand features. Implement it somewhere in manifest.
         enabled_flags = summary.features.expand_features(flags)
         print_add_info(opts.ctx.console, name, enabled_flags, not_enabled_flags)
 
@@ -100,7 +97,6 @@ def check_if_has_flags(summary: Summary, flags: NewFlags):
             raise QuackPackError(f"dependency `{summary.name!s}` doesn't have flag `{flag}`")
 
 
-# FIXME: Print also version/source/metadata...
 def print_add_info(
     console: Console,
     name: Identifier,

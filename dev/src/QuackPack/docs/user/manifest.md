@@ -76,7 +76,7 @@ This is the only obligatory section of the manifest. It contains following keys:
 - `name`: this is package's name; it's used as an identifier in the code and for searching. Should be a valid Duckling identifier. It is one of the two obligatory keys.
 - `version`: this denotes current package's version. It is second obligatory key.
 - `authors`: [OPTIONAL] package's authors. Should be a list.
-- `description`: [OPTIONAL] short package's description. It's visible on [**FIXME:** insert here default ducknest URL].
+- `description`: [OPTIONAL] short package's description.
 - `license`: [OPTIONAL] license used in the package. Note, that it is **REQUIRED**, when package is about to be published.
 - `language_edition`: [OPTIONAL] Language version required by this package.
 

@@ -37,8 +37,6 @@ class Summary:
         self._profiles = profiles
         self._targets = targets
 
-        # FIXME(finest_touches): Czy powinniśmy tu sprawdzać, że `package_features` w `deps.features.conds` jest w `features`?
-
     @property
     def spec(self) -> RootSpec:
         return self._spec

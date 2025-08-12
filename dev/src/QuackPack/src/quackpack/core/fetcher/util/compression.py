@@ -4,8 +4,6 @@ from pathlib import Path
 
 from quackpack.util.types.errors import QuackPackError
 
-# FIXME: Asyncify these functions.
-
 
 def unpack_to_file(*, source: Path, destination: Path) -> None:
     """

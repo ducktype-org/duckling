@@ -98,7 +98,6 @@ class RegistrySource(NewDependencySource):
     @override
     def get_summary(self, ctx: GlobalContext) -> Summary:
         _ = ctx
-        # FIXME: Chyba gdy mamy podaną wersję, to chcemy sprawdzić, czy istnieje taka na serwerze.
         if isinstance(self.version, FetchVersion):
             return self.get_summary_for_newest_package(ctx)
         return self.get_summary_match(ctx, self.version)

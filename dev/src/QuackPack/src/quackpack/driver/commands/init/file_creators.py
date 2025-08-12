@@ -102,7 +102,7 @@ class BasicPackage:
         self.file.execute()
         VenvConfigCreator(options=self.options).execute()
 
-        logger.debug("[bold red]FIXME[/]: initialize git repo")
+        # Should we also initialize git repo?
 
     def execute(self) -> None:
         self.execute_impl()

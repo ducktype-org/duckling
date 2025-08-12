@@ -15,7 +15,6 @@ def get_parser() -> CliParser:
     :rtype: quackpack.cli._parser.CliParser
     """
 
-    # FIXME: Package templates.
     return (
         CliParser.subcommand(name="init", description="Initialize a new package")
         .add_path(long_name="path", help="Path to the new package", argument_count=ArgumentCount.Optional)

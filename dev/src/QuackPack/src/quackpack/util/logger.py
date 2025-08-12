@@ -38,8 +38,6 @@ class QuackPackDebugFilter(logging.Filter):
         return self._cached_filter
 
 
-# FIXME: Should RichHandler take console, so console settings propagate to the loggers?
-#        And if yes, then which one?
 def setup_logger(debug_env_value: str | None) -> None:
     """
     Setup logger for debug printing.

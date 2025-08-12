@@ -32,14 +32,12 @@ def run(ctx: GlobalContext) -> int | None:
     # We execute script, but arguments are missing.
 
     parser = get_parser()
-    # FIXME: Perform some clever checks, that we don't have cycle.
     cli_commands = parser.subcommands.copy()
     cli_commands += list(ctx.aliases())
     for x in builtin_aliases().values():
         cli_commands += x
     fix_user_typos(ctx, qp_args, cli_commands)
     # NOTE: We use `list` to preserve the order.
-    # FIXME: Something like OrderedSet would be better.
     already_expanded_aliases: list[str] = []
     expand_user_aliases(ctx, qp_args, already_expanded_aliases)
     # Extra args are for foreign subcommands.
@@ -51,11 +49,6 @@ def run(ctx: GlobalContext) -> int | None:
         ctx.console.set_verbose()
         ctx.error_console.set_verbose()
 
-    # FIXME: We can't set `color_system` after constructing, so, theoretically, we ignore `--color=auto`.
-    #
-    #        I see one workaround: in `setup_and_run` we create like really early console (only to catch parser exceptions),
-    #        then we create `ctx.console` and `ctx.error_console` here, providing `color_system`. But this approach has one downside:
-    #        error handling is done both in `setup_and_run` and `run`, and here we'd have big `try-except` block.
     if known_args.color == "never":
         ctx.console.no_color = True
         ctx.error_console.no_color = True
@@ -87,7 +80,7 @@ def run(ctx: GlobalContext) -> int | None:
         action(ctx, args)
 
 
-# FIXME: Idealnie zamiast na `list[str]`, operowalibyśmy na `argparse.Namespace` i wywoływali parser, żeby doparsować matche z aliasów.
+# NOTE: Idealnie zamiast na `list[str]`, operowalibyśmy na `argparse.Namespace` i wywoływali parser, żeby doparsować matche z aliasów.
 # Tylko wtedy trzeba ręcznie handlować `--help` i bawić się z unknown_commands.
 # Chociaż i tak w Pythonie się nie da, bo argparse jest ułomny.
 def fix_user_typos(ctx: GlobalContext, qp_args: list[str], cli_commands: list[str]) -> None:
@@ -171,7 +164,7 @@ def expand_user_aliases(ctx: GlobalContext, qp_args: list[str], already_expanded
         return expand_user_aliases(ctx, qp_args, already_expanded_aliases)
 
 
-# FIXME: This is ugly hack.
+# NOTE: This is ugly hack.
 # Problem: Levenshtein i aliasy patrzą na pierwszy argument bez `-` na początku, a powinny patrzyć na pierwszą komendę (argument traktowany jako komenda).
 #
 # Dlaczego: jeśli odpalimy `qp -C dir build`, to levenshtein i aliasy będą targetować `dir`, a nie `build`.

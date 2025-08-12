@@ -30,7 +30,6 @@ def create_at(options: InitOptions) -> None:
             f"`{options.name}` is not a valid package name\nhint: use `--name` to override"
         ) from None
     if options.ctx.console.quiet and options.type is NewVenvType.Full:
-        # FIXME: If console is --quiet, then user won't see this message xD.
         raise QuackPackError("don't pass '--quiet' with '--full'")
     logger.debug(f"Creating new package '{options.name}' at '{options.destination}' of type {options.type!s}")
     try:
@@ -56,7 +55,6 @@ def create_at(options: InitOptions) -> None:
             f"Successfully created new package `{options.name}` at `{options.destination}`"
         )
         return
-    # FIXME: Should we rollback from errors after this points? Meaning we don't leave partially initialized venv...
     with chdir(options.destination):
         _populate_package_files(options, manifest)
 

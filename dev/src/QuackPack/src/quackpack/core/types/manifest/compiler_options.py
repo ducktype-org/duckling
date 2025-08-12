@@ -43,7 +43,6 @@ class Profiles(ProfileAndTargetCommon):
 
 class Targets(ProfileAndTargetCommon):
     def __init__(self, targets: dict[str, ManifestExtraOpts]):
-        # FIXME: Validate targets key are valid.
         super().__init__(targets)
 
     @classmethod

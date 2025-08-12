@@ -426,12 +426,7 @@ def parse_dep_features(
             result.append(DependencyFeature(Identifier(feature), None))
             context_stack.pop()
             continue
-        # FIXME(finest touches): Czy na pewno to chcemy?
-        # NOTE: Propozycje Tymka: jeden słownik albo jeden klucz per słownik.
-        # if len(feature.root) != 1:
-        #     raise QuackPackError(
-        #         f"key `{context_stack.format()}` contains multiple detailed features, which is not allowed"
-        #     )
+        # Should we support one dictionary with multiple keys or multiple dictionaries with one key per dictionary, or does it really matter?
         for name, conds in feature.root.items():
             context_stack.push(name)
             if not is_valid_identifier(name):

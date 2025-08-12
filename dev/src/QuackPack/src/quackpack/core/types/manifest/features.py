@@ -16,7 +16,7 @@ class Features:
 
     def _check(self):
         self._check_valid_values()
-        # FIXME(finest touches): Check for cycles?
+        # TODO: Check for cycles?
 
     def _check_valid_values(self):
         for root, features in self._impl.items():
