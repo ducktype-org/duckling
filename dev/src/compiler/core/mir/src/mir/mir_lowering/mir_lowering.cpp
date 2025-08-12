@@ -484,16 +484,15 @@ namespace compiler::mir {
 	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
 	 * that holds the result of the expression. For complete lowering call special function, saving
 	 * result in desired place and avoiding creating unnecessery temporaries.
+	 * @note If storing last instruction, it doesn't have output set.
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 
-		// TODO const final etc
 		struct finalizer final {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
 			tsh::SymbolType<>             type;
-			ScopeRef                      scope;  // TODO scope jest w instrukcji - niepotrzebny
 		};
 
 		std::variant<MIRValue, finalizer> value;
@@ -513,7 +512,7 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief returns MIRvalue if value is already assigned to it.
+		 * @brief returns MIRvalue if it is already stored in structure.
 		 */
 		base::Optional<MIRValue> getResultIfDone() {
 			variant_match(value) {
@@ -532,7 +531,7 @@ namespace compiler::mir {
 			variant_match(value) {
 				variant_case(MIRValue, val) { return val; }
 				variant_case(finalizer, res_data) {
-					auto result = function.addTmp(res_data.type, res_data.scope);
+					auto result = function.addTmp(res_data.type, res_data.instr.scope);
 					res_data.instr.output.emplace(result);
 					res_data.instr.flags.push_back(flagConstruct(result));
 					res_data.hole.fill(res_data.instr);
@@ -993,12 +992,10 @@ namespace compiler::mir {
 			BlockBuilderRef               begin,
 			BlockBuilder::InstructionHole hole,
 			Instruction                   instr,
-			tsh::SymbolType<>             type,
-			ScopeRef                      scope
+			tsh::SymbolType<>             type
 		) {
 			CORE_ASSERT(this->out.empty(), "Output already set.");
-			this->out.emplace(ExprLowerRes(begin, ExprLowerRes::finalizer(hole, instr, type, scope))
-			);
+			this->out.emplace(ExprLowerRes(begin, ExprLowerRes::finalizer(hole, instr, type)));
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
@@ -1053,9 +1050,7 @@ namespace compiler::mir {
 			const Operation operation   = builtinBinaryToOperation(expr.operation);
 
 			Instruction tmp(operation, {}, { res_left, res_right }, {}, expr_scope);
-			noValueOutput(
-				lowered_left.begin, target_construction_hole, tmp, result_type, expr_scope
-			);
+			noValueOutput(lowered_left.begin, target_construction_hole, tmp, result_type);
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
@@ -1070,7 +1065,7 @@ namespace compiler::mir {
 
 			auto tmp = Instruction{ operation, {}, { res_lowered }, {}, expr_scope };
 
-			noValueOutput(lowered.begin, target_construction_hole, tmp, result_type, expr_scope);
+			noValueOutput(lowered.begin, target_construction_hole, tmp, result_type);
 		}
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
@@ -1165,9 +1160,7 @@ namespace compiler::mir {
 				Operation::Call, {}, args, {}, expr_scope,
 			};
 
-			return noValueOutput(
-				sub_continuation, call, tmp, expr.expression_type.getSymbolType(), expr_scope
-			);
+			return noValueOutput(sub_continuation, call, tmp, expr.expression_type.getSymbolType());
 		}
 
 	private:
