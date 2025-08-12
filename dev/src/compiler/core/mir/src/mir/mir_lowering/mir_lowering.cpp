@@ -28,7 +28,6 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
-#include <iostream>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -54,8 +53,6 @@ namespace compiler::mir {
 	// during building phase
 	using BlockBuilderRef = Ref<BlockBuilder>;
 
-	struct ExprLowerRes;
-
 	/**
 	 * @brief Represents result of statement lowering, which is
 	 * a BlockBuilderRef that is the beginning of the lowered statement.
@@ -79,6 +76,8 @@ namespace compiler::mir {
 		FunctionBuilder& function,
 		ScopeRef         parent_scope
 	);
+
+	struct ExprLowerRes;
 
 	/**
 	 * @brief Lowers expression.
@@ -481,15 +480,16 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Represents result of expression lowering, which is
+	 * @brief Represents partial result of expression lowering, which is
 	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
-	 * that holds the result of the expression.
+	 * that holds the result of the expression. For complete lowering call special function, saving
+	 * result in desired place and avoiding creating unnecessery temporaries.
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 
 		// TODO const final etc
-		struct finalizer {
+		struct finalizer final {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
 			tsh::SymbolType<>             type;
@@ -512,6 +512,9 @@ namespace compiler::mir {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief returns MIRvalue if value is already assigned to it.
+		 */
 		base::Optional<MIRValue> getResultIfDone() {
 			variant_match(value) {
 				variant_case(MIRValue, val) { return val; }
@@ -521,9 +524,9 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief If result of expr is value already (for example bool or number const) returns it,
+		 * @brief If result of expr is value already returns it,
 		 * Otherwise creates temporary, makes last instruction save res there and returns it.
-		 * @note Can be used once, uses hole.
+		 * @note may use InstructionHole stored in sturcture, probably use only once.
 		 */
 		MIRValue getResult(FunctionBuilder& function) {
 			variant_match(value) {
@@ -541,9 +544,10 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief If result of exapr is value already (for example bool or number const) creates
-		 * instruction assigning result to it. Otherwise makes last instruction save res.
-		 * @note Can be used once, uses hole. TODO opis dobry
+		 * @brief If result of expr is value already creates
+		 * instruction assigning result to it. Otherwise makes last instruction save res directly to
+		 * target.
+		 * @note may use InstructionHole stored in sturcture, probably use only once.
 		 */
 		void storeResultInGivenVariable(
 			std::variant<LocalRef, MirGlobal> target,
@@ -569,6 +573,13 @@ namespace compiler::mir {
 			}
 		}
 
+		/**
+		 * @brief If structure stores incomplete instruction fills hole with it (without saving
+		 * result).
+		 * @note Use when there is no need to save instruction result, but instruction still may
+		 * have side effects (for example call). Currently unused, that kind of instruction are not
+		 * supported yet.
+		 */
 		void performInstructon() {
 			variant_match(value) {
 				variant_case(finalizer, res_data) { res_data.hole.fill(res_data.instr); }
