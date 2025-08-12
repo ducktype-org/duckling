@@ -27,7 +27,7 @@ def tcp_port():
 
 
 # NOTE: Just usual pytest_asyncio magic - *simply* override event_loop_policy fixture.
-@pytest_asyncio.fixture(scope="module")  # pyright: ignore[reportArgumentType]
+@pytest.fixture(scope="module")  # pyright: ignore[reportArgumentType]
 def event_loop_policy():
     policy = asyncio.DefaultEventLoopPolicy()
     if os.name == "posix":
