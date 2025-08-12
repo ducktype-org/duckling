@@ -191,10 +191,8 @@ namespace compiler::mir {
 		[[nodiscard]]
 		Block build() const {
 			std::vector<Instruction> instructions;
-			for (const auto& instruction: reversed_instruction | std::views::reverse) {
-				// CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
+			for (const auto& instruction: reversed_instruction | std::views::reverse)
 				if (instruction.has_value()) instructions.emplace_back(instruction.value());
-			}
 			return {
 				.id           = id,
 				.instructions = std::move(instructions),
@@ -827,73 +825,70 @@ namespace compiler::mir {
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
-			CORE_UNREACHABLE();
-			/*	auto condition_scope = function.newScope(parent_scope);
+			auto condition_scope = function.newScope(parent_scope);
 
-			    auto condition_continuation_block = function.newBlock();
+			auto condition_continuation_block = function.newBlock();
 
-			    auto get_condition_return = condition_continuation_block->addHole();
+			auto get_condition_return = condition_continuation_block->addHole();
 
-			    auto expr_result = lowerExpr(
-			        *stmt.condition, condition_continuation_block, function, condition_scope
-			    );
+			auto expr_result = lowerExpr(
+				*stmt.condition, condition_continuation_block, function, condition_scope
+			);
 
-			    auto loop_scope = function.newScope(parent_scope);
+			auto loop_scope = function.newScope(parent_scope);
 
-			    auto loop_continuation_block = function.newBlock();
+			auto loop_continuation_block = function.newBlock();
 
-			    loop_continuation_block->setTerminator(
-			        { Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
-			    );
+			loop_continuation_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
+			);
 
-			    auto loop_body
-			        = lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
+			auto loop_body
+				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
 
-			    auto entry_block = function.newBlock();
+			auto entry_block = function.newBlock();
 
-			    entry_block->setTerminator(
-			        { Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
-			    );
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
+			);
 
-			    if (expr_result.value.isLocal()) {
-			        auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+			auto possible_result = expr_result.getResultIfDone();
 
-			        get_condition_return.fill(Instruction{
-			            Operation::Assign,
-			            { condition_result_tmp },
-			            { expr_result.value },
-			            { flagConstruct(condition_result_tmp) },
-			            condition_scope,
-			        });
+			if (possible_result.has_value() and !possible_result.value().isLocal()) {
+				get_condition_return.fill(Instruction{
+					Operation::Nop,
+					{},
+					{},
+					{},
+					condition_scope,
+				});
 
-			        condition_continuation_block->setTerminator({
-			            Operation::Branch,
-			            {},
-			            { condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
-			            {},
-			            condition_scope,
-			        });
+				condition_continuation_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
+					{},
+					condition_scope,
+				});
+			} else {
+				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+				expr_result.storeResultInGivenVariable(
+					condition_result_tmp,
+					get_condition_return,
+					{ flagConstruct(condition_result_tmp) },
+					condition_scope
+				);
 
-			    } else {
-			        // we can use the result of the expression directly:
+				condition_continuation_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
+					{},
+					condition_scope,
+				});
+			}
 
-			        get_condition_return.fill(Instruction{
-			            Operation::Nop,
-			            {},
-			            {},
-			            {},
-			            condition_scope,
-			        });
-
-			        condition_continuation_block->setTerminator({
-			            Operation::Branch,
-			            {},
-			            { expr_result.value, loop_body.begin->getID(), continuation->getID() },
-			            {},
-			            condition_scope,
-			        });
-			    }
-			    output({ entry_block });*/
+			output({ entry_block });
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
