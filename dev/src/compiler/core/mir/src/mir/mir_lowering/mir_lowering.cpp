@@ -499,7 +499,7 @@ namespace compiler::mir {
 
 		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, finalizer> value):
 			  begin{ begin },
-			  value{ value } {}
+			  value{ std::move(value) } {}
 
 		tsh::SymbolType<> getResultType() {
 			variant_match(value) {
@@ -549,10 +549,10 @@ namespace compiler::mir {
 		 * @note may use InstructionHole stored in sturcture, probably use only once.
 		 */
 		void storeResultInGivenVariable(
-			std::variant<LocalRef, MirGlobal> target,
-			BlockBuilder::InstructionHole     hole,
-			std::vector<OperationFlag>        flags,
-			ScopeRef                          scope
+			const std::variant<LocalRef, MirGlobal>& target,
+			BlockBuilder::InstructionHole&           hole,
+			const std::vector<OperationFlag>&        flags,
+			ScopeRef                                 scope
 		) {
 			variant_match(value) {
 				variant_case(MIRValue, val) {
