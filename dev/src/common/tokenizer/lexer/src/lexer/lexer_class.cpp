@@ -269,6 +269,15 @@ namespace lexer {
 		dia::SourcePosition source_start = currentPosition();
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
+		} else if (peek().isDigit() || (peek().is('.') && peek(1).isDigit())) {
+			if (peek().is('0') && peek(1).is('b'))
+				binLiteralHandler(output);
+			else if (peek().is('0') && peek(1).is('o'))
+				octLiteralHandler(output);
+			else if (peek().is('0') && peek(1).is('x'))
+				hexLiteralHandler(output);
+			else
+				decLiteralHandler(output);
 		}
 		// @TODO: for now comments aren't saved as tokens
 		else if (isBlockCommentBegin()) {
@@ -287,15 +296,6 @@ namespace lexer {
 			bracketHandler(output);
 		} else if (peek().is(Class::special)) {
 			specialHandler(output);
-		} else if (peek().isDigit()) {
-			if (peek().is('0') && peek(1).is('b'))
-				binLiteralHandler(output);
-			else if (peek().is('0') && peek(1).is('o'))
-				octLiteralHandler(output);
-			else if (peek().is('0') && peek(1).is('x'))
-				hexLiteralHandler(output);
-			else
-				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
 				logger->log(makeBox<TokenStartError>(source_start));

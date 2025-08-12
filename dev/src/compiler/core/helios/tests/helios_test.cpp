@@ -106,7 +106,7 @@ private:
 	void testNumericLiterals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/numeric_literals")));
 
-		for (auto val_name = 'A'; val_name <= 'F'; val_name++) {
+		for (auto val_name = 'A'; val_name <= 'G'; val_name++) {
 			auto value = getValue(std::string(1, val_name), root_scope);
 			ASSERT_TRUE(std::holds_alternative<f32>(value));
 			auto* f = std::get_if<f32>(&value);
@@ -122,6 +122,17 @@ private:
 		ASSERT_TRUE(std::holds_alternative<f32>(value));
 		f = std::get_if<f32>(&value);
 		ASSERT_EQUAL(.5, *f);
+
+		value = getValue("tr_e_dot", root_scope);
+		ASSERT_TRUE(std::holds_alternative<f32>(value));
+		f = std::get_if<f32>(&value);
+		ASSERT_EQUAL(0.125, *f);
+
+		value = getValue("lead_e_dot", root_scope);
+		ASSERT_TRUE(std::holds_alternative<f32>(value));
+		f = std::get_if<f32>(&value);
+		ASSERT_EQUAL(2., *f);
+
 
 		value = getValue("neg", root_scope);
 		ASSERT_TRUE(std::holds_alternative<f32>(value));

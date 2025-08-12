@@ -4,9 +4,13 @@ const C: f32 = 10.5 - 0.375;
 const D: f32 = 20.25 - B;
 const E: f32 = 1.25e-1 + 10.0;
 const F: f32 = 1e1 + 0.125;
+const G: f32 = 1.0125e+1;
 
 const tr_dot: f32 = 5.;
-const lead_dot: f32 = 0.5;
+const lead_dot: f32 = .5;
+
+const tr_e_dot = .00125e2;
+const lead_e_dot = 2.e0;
 
 const neg: f32 = -10.125;
 
