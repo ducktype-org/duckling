@@ -739,7 +739,11 @@ namespace compiler::mir {
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
 			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
-			expr_result.performInstructon();
+
+			// @TODO just call perform instruction, dont create any temporary.
+			// that type of instruction requires support in LIR, LLVM, DVM
+			expr_result.getResult(function);
+			// expr_result.performInstructon();
 
 			output({ expr_result.begin });
 		}
@@ -1060,52 +1064,46 @@ namespace compiler::mir {
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
-
 			// Get info about the target.
-				const auto result_type     = ternary_expr.expression_type.getSymbolType();
-			    const auto target_location = function.addTmp(result_type, expr_scope);
+			const auto result_type     = ternary_expr.expression_type.getSymbolType();
+			const auto target_location = function.addTmp(result_type, expr_scope);
 
-			    auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
-			        auto block = function.newBlock();
-			        block->setTerminator(
-			            { Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-			        );
-			        auto assign_hole = block->addHole();
+			auto build_case_block = [this, &target_location](hc::Expr& case_expr) {
+				auto block = function.newBlock();
+				block->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+				);
+				auto assign_hole = block->addHole();
 
-			        auto lowered_block = lowerExpr(case_expr, block, function, expr_scope);
-					
-					//const auto [first_lowered_block, expr_res]
-			        //    = lowerExpr(case_expr, block, function, expr_scope);
-			        assign_hole.fill(Instruction{
-			            Operation::Assign,
-			            { target_location },
-			            { expr_res },
-			            { flagConstruct(target_location) },
-			            expr_scope,
-			        });
-			        return lowered_block.begin;
-			    };
+				auto lowered_block = lowerExpr(case_expr, block, function, expr_scope);
 
-			    /*auto else_block = build_case_block(*ternary_expr.if_false);
-			    auto then_block = build_case_block(*ternary_expr.if_true);
+				lowered_block.storeResultInGivenVariable(
+					target_location, assign_hole, { flagConstruct(target_location) }, expr_scope
+				);
 
-			    // Build branching.
-			    auto condition_block = function.newBlock();
-			    const auto [condition_continuation, condition_res]
-			        = lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
-			    condition_block->setTerminator({
-			        Operation::Branch,
-			        {},
-			        { condition_res, then_block->getID(), else_block->getID() },
-			        {},
-			        expr_scope,
-			    });
 
-			    // Return.
-			    output(ExprLowerRes{
-			        .begin = condition_continuation,
-			        .value = target_location,
-			    });*/
+				return lowered_block.begin;
+			};
+
+			auto else_block = build_case_block(*ternary_expr.if_false);
+			auto then_block = build_case_block(*ternary_expr.if_true);
+
+			// Build branching.
+			auto condition_block = function.newBlock();
+			auto lowered_condition
+				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
+
+
+			condition_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
+				{},
+				expr_scope,
+			});
+
+			// Return (always value).
+			valueOutput(lowered_condition.begin, target_location);
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -1433,13 +1431,13 @@ namespace compiler::mir {
 				function_builder.getTopLevelScope()
 			);
 
-			/*assing_instr.fill(Instruction{
-			    Operation::Assign,
-			    { MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
-			    { lowerexpr_res.value },
-			    {},
-			    function_builder.getTopLevelScope(),
-			});*/
+			assing_instr.fill(Instruction{
+				Operation::Assign,
+				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+				{ lowerexpr_res.getResult(function_builder) },
+				{},
+				function_builder.getTopLevelScope(),
+			});
 
 			function_builder.setEntry(lowerexpr_res.begin);
 
