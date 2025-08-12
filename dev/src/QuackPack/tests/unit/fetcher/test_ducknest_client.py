@@ -14,9 +14,8 @@ from test_http_client import (
     tcp_port,  # noqa: F401  # pyright: ignore[reportUnusedImport]; needed for fixtures...
 )
 
-from quackpack.fetcher.api_types import MultiMetadata, Package, SingleMetadata
-from quackpack.fetcher.client.ducknest_client import DucknestClientContext
-from quackpack.fetcher.fetcher import DucknestClient
+from quackpack.core.fetcher.api_types import MultiMetadata, Package, SingleMetadata
+from quackpack.core.fetcher.client.ducknest_client import DucknestClient, DucknestClientContext
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
 

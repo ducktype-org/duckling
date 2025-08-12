@@ -18,7 +18,7 @@ from win32file import (
     LockFileEx,  # type: ignore[attr-defined]
 )
 
-from quackpack.signals import EnableInterrupt
+from quackpack.core.signals import EnableInterrupt
 from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
 if TYPE_CHECKING:

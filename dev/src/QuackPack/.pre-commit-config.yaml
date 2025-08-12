@@ -1,6 +1,7 @@
 repos:
   - repo: local
     hooks:
+      # Run code formatter.
       - id: format
         name: Run formatter
         entry: uv
@@ -8,7 +9,7 @@ repos:
         types: [ python ]
         stages: [ pre-push ]
         language: system
-
+      # Run code linter.
       - id: lint
         name: Run linter
         entry: uv
@@ -16,7 +17,7 @@ repos:
         types: [ python ]
         stages: [ pre-push ]
         language: system
-
+      # Run static type-checker.
       - id: pyright
         name: Run pyright
         entry: uv

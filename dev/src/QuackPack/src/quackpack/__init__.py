@@ -1,17 +1,18 @@
+# Configuration constants are in core/constants.py.
 __all__ = ["main"]
 
 
 def main() -> None:
-    from quackpack.signals import SignalInterrupt
+    from quackpack.core.signals import SignalInterrupt
 
     try:
         from signal import SIGINT, SIGTERM, signal
 
-        from quackpack.signals import raising_signal_handler
+        from quackpack.core.signals import raising_signal_handler
 
         signal(SIGINT, raising_signal_handler)
         signal(SIGTERM, raising_signal_handler)
-        from quackpack.cli.setup_and_run import setup_and_run
+        from quackpack.driver.cli.setup_and_run import setup_and_run
 
         setup_and_run()
     except SignalInterrupt as e:

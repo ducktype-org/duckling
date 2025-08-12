@@ -5,26 +5,26 @@ from unittest.mock import mock_open
 
 import pytest
 
-from quackpack.global_context import GlobalContext
-from quackpack.manifest.parse import parse_manifest
-from quackpack.manifest.summary import Summary
-from quackpack.solver.gathering import GatheredInfo
-from quackpack.solver.solving.build_rules_constructor import construct_build_rules
-from quackpack.solver.solving.solver_engine import run_engine
-from quackpack.solver.types.flag_type import FeatureId
-from quackpack.solver.types.packages_by_id import PackagesById
-from quackpack.solver.types.resolved_id import ResolvedIdGit, ResolvedIdLocal, ResolvedIdRegistry
-from quackpack.solver.types.resolved_package import (
+from quackpack.core.solver.gathering import GatheredInfo
+from quackpack.core.solver.solving.build_rules_constructor import construct_build_rules
+from quackpack.core.solver.solving.solver_engine import run_engine
+from quackpack.core.solver.types.flag_type import FeatureId
+from quackpack.core.solver.types.packages_by_id import PackagesById
+from quackpack.core.solver.types.resolved_id import ResolvedIdGit, ResolvedIdLocal, ResolvedIdRegistry
+from quackpack.core.solver.types.resolved_package import (
     ResolvedPackage,
     ResolvedPackageLocal,
     ResolvedPackageRegistry,
 )
-from quackpack.solver.types.unresolved_id import (
+from quackpack.core.solver.types.unresolved_id import (
     IdResolvents,
     UnresolvedIdGit,
     UnresolvedIdLocal,
     UnresolvedIdRegistry,
 )
+from quackpack.core.types.manifest.parse import parse_manifest
+from quackpack.core.types.manifest.summary import Summary
+from quackpack.util.global_context import GlobalContext
 from quackpack.util.types.pkgid import Identifier
 from quackpack.util.types.version import Version
 

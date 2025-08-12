@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from quackpack.global_context import GlobalContext
-from quackpack.package_loader import PackageLoader
+from quackpack.core.package_loader import PackageLoader
+from quackpack.util.global_context import GlobalContext
 from quackpack.util.types.errors import QuackPackError
 
 BASIC_MANIFEST = """

@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, RootModel, field_serializer, field_validator
 from pydantic.config import ExtraValues
 
-from quackpack.manifest.source import SourceKind
+from quackpack.core.types.manifest.source import SourceKind
 from quackpack.util.duckling_compatibility import is_valid_identifier
 from quackpack.util.types.version import Version
 

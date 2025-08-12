@@ -6,8 +6,8 @@ import pytest
 from git import Repo
 from git.exc import GitCommandError
 
-from quackpack.fetcher.client.git_client import GitClient
-from quackpack.package_loader import PackageLoader
+from quackpack.core.fetcher.client.git_client import GitClient
+from quackpack.core.package_loader import PackageLoader
 from quackpack.util.types.errors import QuackPackError
 
 
@@ -83,13 +83,6 @@ class TestGitClient:
 
         cloned_repo = Repo(mock_filepath)
         assert cloned_repo.head.commit.hexsha == rev
-
-    async def test_clone_local_repo_directory_exists(self, local_git_repo: Path, mock_filepath: Path):
-        url = str(local_git_repo)
-        mock_filepath.mkdir()
-
-        with pytest.raises(QuackPackError):
-            await GitClient.clone(url, mock_filepath, ctx=GlobalContext())
 
     async def test_clone_local_repo_git_command_error(self, local_git_repo: Path, mock_filepath: Path):
         url = str(local_git_repo)

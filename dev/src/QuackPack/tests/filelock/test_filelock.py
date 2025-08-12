@@ -12,7 +12,7 @@ from time import monotonic, sleep
 
 import pytest
 
-from quackpack.signals import RobustSignalHandler, SignalInterrupt, consume_signal
+from quackpack.core.signals import RobustSignalHandler, SignalInterrupt, consume_signal
 from quackpack.util.lock import BaseFileLock, LockType, LockWouldBlock
 
 

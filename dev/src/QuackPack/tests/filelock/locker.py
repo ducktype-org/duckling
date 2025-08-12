@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from time import sleep
 
-from quackpack.signals import RobustSignalHandler
+from quackpack.core.signals import RobustSignalHandler
 from quackpack.util.lock import BaseFileLock, LockType
 from quackpack.util.lock.software import SoftwareFileLock
 

@@ -11,8 +11,8 @@ from ducknest import FastAPIFactory
 from fastapi import FastAPI
 from hypercorn.config import Config
 
-from quackpack.fetcher.client import CurlHTTPClient
-from quackpack.fetcher.util import HTTPRequest
+from quackpack.core.fetcher.client.curl_http_client import CurlHTTPClient
+from quackpack.core.fetcher.util import HTTPRequest
 from quackpack.util.types.errors import QuackPackError
 
 

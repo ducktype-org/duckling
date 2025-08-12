@@ -2,14 +2,15 @@ from io import BytesIO
 
 import pytest
 
-from quackpack.fetcher.util.http_errors import HTTPError, HTTPInputError
-from quackpack.fetcher.util.http_headers import (
+from quackpack.core.fetcher.util import (
+    HTTPError,
     HTTPHeaders,
+    HTTPInputError,
     ResponseStartLine,
     parse_http1_response_start_line,
 )
-from quackpack.fetcher.util.http_request import HTTPRequest, HTTPRequestProxy
-from quackpack.fetcher.util.http_response import HTTPResponse
+from quackpack.core.fetcher.util.http_request import HTTPRequest, HTTPRequestProxy
+from quackpack.core.fetcher.util.http_response import HTTPResponse
 
 
 class TestHTTPError:

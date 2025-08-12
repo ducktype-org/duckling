@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from quackpack.global_context import GlobalContext
-from quackpack.manifest.parse import parse_manifest
+from quackpack.core.types.manifest.parse import parse_manifest
+from quackpack.util.global_context import GlobalContext
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
 from quackpack.util.types.version import Version

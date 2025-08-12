@@ -9,7 +9,7 @@ from types import FrameType
 
 import pytest
 
-from quackpack.signals import (
+from quackpack.core.signals import (
     EnableInterrupt,
     ForcedSignal,
     RobustSignalHandler,

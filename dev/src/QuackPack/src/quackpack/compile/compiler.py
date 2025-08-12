@@ -7,7 +7,7 @@ from typing import Never, override
 from pydantic import BaseModel
 
 from quackpack.compile.code_sink import CodeSink, CodeSinkConnection, Continuation
-from quackpack.storage.files import VenvFreeze
+from quackpack.core.storage.files import VenvFreeze
 from quackpack.util.types.pkgid import PackageId
 
 

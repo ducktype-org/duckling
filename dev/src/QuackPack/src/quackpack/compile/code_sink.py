@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Never
 
-from quackpack.storage.files import VenvFreeze
+from quackpack.core.storage.files import VenvFreeze
 from quackpack.util.types.pkgid import PackageId
 
 

@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from quackpack.fetcher.api_types import Package, SingleMetadata
-from quackpack.fetcher.cache import MetadataCache, MetadataCacheContext, SQLiteDatabase
+from quackpack.core.fetcher.api_types import Package, SingleMetadata
+from quackpack.core.fetcher.cache.metadata_cache import MetadataCache, MetadataCacheContext
+from quackpack.core.fetcher.cache.sqlite_database import SQLiteDatabase
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from quackpack.global_context import GlobalContext
-from quackpack.package_loader import PackageLoader
+from quackpack.core.package_loader import PackageLoader
+from quackpack.util.global_context import GlobalContext
 from quackpack.util.types.pkgid import Identifier
 from quackpack.util.types.version import Version
 

@@ -1,5 +1,3 @@
-# TODO: move this file into integration tests
-
 # fixtures magic
 # ruff: noqa: ARG002, F811
 # pyright: reportUnknownMemberType = false, reportAttributeAccessIssue = false, reportOperatorIssue = false
@@ -23,14 +21,13 @@ from test_ducknest_client import (
 )
 from test_git_client import (
     local_git_repo,  # noqa: F401  # pyright: ignore[reportUnusedImport]; needed for fixtures...
-    mock_filepath,
 )
 from test_http_client import (
     tcp_port,  # noqa: F401  # pyright: ignore[reportUnusedImport]; needed for fixtures...
 )
 
-from quackpack.fetcher import FetcherContext
-from quackpack.fetcher.api_types import MultiMetadata, Package, SingleMetadata
+from quackpack.core.fetcher.api_types import MultiMetadata, Package, SingleMetadata
+from quackpack.core.fetcher.fetcher import FetcherContext
 from quackpack.util.types.errors import QuackPackError
 from quackpack.util.types.pkgid import Identifier
 

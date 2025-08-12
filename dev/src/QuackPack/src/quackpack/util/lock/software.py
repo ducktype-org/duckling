@@ -4,7 +4,7 @@ from time import sleep
 from types import TracebackType
 from typing import Final, override
 
-from quackpack.signals import EnableInterrupt
+from quackpack.core.signals import EnableInterrupt
 from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
 PROBE_INTERVAL: Final[float] = 0.25

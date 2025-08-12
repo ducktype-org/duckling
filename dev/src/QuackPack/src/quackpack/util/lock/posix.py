@@ -6,7 +6,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import override
 
-from quackpack.signals import EnableInterrupt
+from quackpack.core.signals import EnableInterrupt
 from quackpack.util.context_managers import OsFdContext, UMaskContext
 from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
