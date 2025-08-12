@@ -1197,6 +1197,16 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Exponentiation on variables");
 			case IntegerLt:
 				return Operation::IntegerLt;
+			case IntegerGt:
+				return Operation::IntegerGt;
+			case IntegerLteq:
+				return Operation::IntegerLteq;
+			case IntegerGteq:
+				return Operation::IntegerGteq;
+			case IntegerEq:
+				return Operation::IntegerEq;
+			case IntegerNeq:
+				return Operation::IntegerNeq;
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:

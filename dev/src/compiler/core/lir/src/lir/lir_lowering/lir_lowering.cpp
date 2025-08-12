@@ -131,8 +131,20 @@ namespace compiler::lir {
 			return signed_version ? Operation::IntegerSDiv : Operation::IntegerUDiv;
 		case mir::Operation::IntegerMod:
 			return signed_version ? Operation::IntegerSMod : Operation::IntegerUMod;
+
 		case mir::Operation::IntegerLt:
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
+		case mir::Operation::IntegerGt:
+			return signed_version ? Operation::IntegerSGt : Operation::IntegerUGt;
+		case mir::Operation::IntegerLteq:
+			return signed_version ? Operation::IntegerSLteq : Operation::IntegerULteq;
+		case mir::Operation::IntegerGteq:
+			return signed_version ? Operation::IntegerSGteq : Operation::IntegerUGteq;
+		case mir::Operation::IntegerEq:
+			return Operation::IntegerEq;
+		case mir::Operation::IntegerNeq:
+			return Operation::IntegerNeq;
+
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
 		case mir::Operation::BooleanAnd:
@@ -366,12 +378,17 @@ namespace compiler::lir {
 				}
 				case mir::Operation::Assign:
 				case mir::Operation::IntegerAdd:
+				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
 				case mir::Operation::IntegerMul:
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
 				case mir::Operation::IntegerLt:
-				case mir::Operation::IntegerNeg:
+				case mir::Operation::IntegerGt:
+				case mir::Operation::IntegerLteq:
+				case mir::Operation::IntegerGteq:
+				case mir::Operation::IntegerEq:
+				case mir::Operation::IntegerNeq:
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
 				case mir::Operation::BooleanNot: {

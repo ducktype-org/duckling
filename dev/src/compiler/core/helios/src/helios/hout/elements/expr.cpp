@@ -132,6 +132,11 @@ namespace compiler::helios::code {
 		case IntegerPow:
 			return argument_type;
 		case IntegerLt:
+		case IntegerGt:
+		case IntegerLteq:
+		case IntegerGteq:
+		case IntegerEq:
+		case IntegerNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -164,32 +169,49 @@ namespace compiler::helios::code {
 		// note: this might get more complex in the future
 
 		lhs->debugPrint(out);
+
+		using enum BuiltinBinary;
 		switch (operation) {
-		case BuiltinBinary::IntegerAdd:
+		case IntegerAdd:
 			out << "+";
 			break;
-		case BuiltinBinary::IntegerSub:
+		case IntegerSub:
 			out << "-";
 			break;
-		case BuiltinBinary::IntegerMul:
+		case IntegerMul:
 			out << "*";
 			break;
-		case BuiltinBinary::IntegerDiv:
+		case IntegerDiv:
 			out << "/";
 			break;
-		case BuiltinBinary::IntegerMod:
+		case IntegerMod:
 			out << "%";
 			break;
-		case BuiltinBinary::IntegerPow:
+		case IntegerPow:
 			out << "**";
 			break;
-		case BuiltinBinary::IntegerLt:
+		case IntegerLt:
 			out << "<";
 			break;
-		case BuiltinBinary::BooleanAnd:
+		case IntegerLteq:
+			out << "<=";
+			break;
+		case IntegerGt:
+			out << ">";
+			break;
+		case IntegerGteq:
+			out << ">=";
+			break;
+		case IntegerEq:
+			out << "==";
+			break;
+		case IntegerNeq:
+			out << "==";
+			break;
+		case BooleanAnd:
 			out << " and ";
 			break;
-		case BuiltinBinary::BooleanOr:
+		case BooleanOr:
 			out << " or ";
 			break;
 		}

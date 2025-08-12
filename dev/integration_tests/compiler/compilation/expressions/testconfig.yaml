@@ -6,3 +6,7 @@ Tests:
       default:
         Output:
           String: "9 \n9 \n9 \n18 \n4 \n"
+  single-comparison: # Any type of comparison between two values.
+    Cases:
+      default:
+        ExitCode: 100

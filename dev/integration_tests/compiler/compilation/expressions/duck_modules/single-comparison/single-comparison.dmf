@@ -1,0 +1,62 @@
+
+
+fun main() -> i64 = {
+    if (4 < 4) {
+        builtin_output_i64(1);
+    }
+    if (3 < 4) {
+    } else {
+        builtin_output_i64(2);
+    }
+
+    if (0 > 0) {
+        builtin_output_i64(3);
+    }
+    if (2 > 1) {
+    } else {
+        builtin_output_i64(4);
+    } 
+
+    if (5 <= 4) {
+        builtin_output_i64(5);
+    }
+    if (3 <= 4) {
+    } else {
+        builtin_output_i64(6);
+    }
+
+    if (-3 >= -2) {
+        builtin_output_i64(7);
+    }
+    if (2 >= -1) {
+    } else {
+        builtin_output_i64(8);
+    }
+
+    if (-1 == 1) {
+        builtin_output_i64(9);
+    }
+    if (1 == 1) {
+    } else {
+        builtin_output_i64(10);
+    }
+
+    if (4 != 4) {
+        builtin_output_i64(11);
+    }
+    if (-1 != 1) {
+    } else {
+        builtin_output_i64(12);
+    }
+
+    let a: i32 = 6;
+    let b: i32 = 5;
+
+    let c: bool = b < a;
+    if (c) {
+    } else {
+        builtin_output_i64(13);
+    }
+
+    return 100;
+}
