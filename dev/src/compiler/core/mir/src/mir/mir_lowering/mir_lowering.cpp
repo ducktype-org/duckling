@@ -183,7 +183,7 @@ namespace compiler::mir {
 				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 			}
 
-			friend class BlockBuilder;
+			friend struct BlockBuilder;
 		};
 
 		BlockBuilder(usize vector_index): id(vector_index) {}
