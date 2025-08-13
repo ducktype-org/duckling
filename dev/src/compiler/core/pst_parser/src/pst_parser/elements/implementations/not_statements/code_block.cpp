@@ -35,5 +35,4 @@ namespace pst {
 	}
 
 	void CodeBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitCodeBlock(*this); }
-
 }
