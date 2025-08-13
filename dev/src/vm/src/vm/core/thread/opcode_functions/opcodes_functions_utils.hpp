@@ -5,50 +5,48 @@
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
 
-#include "vm/core/thread/vmthread.hpp"
 #include <vm/utils/interpret.hpp>
 
+/**
+ * @brief Reads a value of a given TYPE from the specified location on the stack.
+ */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromStack(std::byte* stack, u64 position) {
 	return vm::safeReadBytes<T>(stack, position);
 }
 
+/**
+ * @brief Writes a value of a given TYPE to a specified location on the stack.
+ */
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToStack(std::byte* stack, u64 position, const T& value) {
 	return vm::safeWriteBytes<T>(stack, value, position);
 }
 
+/**
+ * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
+ */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromView(base::ModRawView view) {
 	return vm::safeReadBytes<T>(view.getBegin());
 }
 
+/**
+ * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
+ */
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToView(base::ModRawView view, const T& value) {
 	return vm::safeWriteBytes<T>(view.getBegin(), value);
 }
 
-// TODOP: Temporary, remove that.
-template<typename T>
-[[gnu::always_inline]]
-inline static T& derefStack(std::byte* stack, u64 position) {
-	return *(reinterpret_cast<T*>(&stack[position]));
-}
-
-template<typename T>
-inline static T& derefView(base::ModRawView view) {
-	return *(reinterpret_cast<T*>(view.getBegin()));
-}
-
 /**
- * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
+ * @brief Returns a block containing the data of the global specified by the ID.
  */
-#define READ_FROM_GLOBAL_VIEW_BEGIN(TYPE, GLOBAL_ID) \
-	thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(GLOBAL_ID))).getBegin()
+#define GET_GLOBAL_BLOCK(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
 
 /**
  * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
@@ -67,26 +65,6 @@ inline static T& derefView(base::ModRawView view) {
 		auto view = thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(GLOBAL_ID))); \
 		writeToView<TYPE>(view, VALUE);                                                        \
 	} while (false)
-
-/**
- * Returns a reference (Ref) to the block corresponding to global data with id ID.
- * Should be preferred over DEREF_GLOBAL_RAW_UNSAFE in general.
- */
-// TODOP: Temporary. Remove that.
-#define DEREF_GLOBAL(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
-
-/**
- * Returns a reference of type TYPE (eg. int, i64, usize. etc) to a global data with id ID.
- */
-// TODOP: Temporary. Remove that.
-#define DEREF_GLOBAL_RAW_UNSAFE(TYPE, ID) \
-	derefView<TYPE>(thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(ID))))
-
-/**
- * Returns a reference (Ref) to the block corresponding to global data with id ID.
- * Should be preferred over DEREF_GLOBAL_RAW_UNSAFE in general.
- */
-#define GET_GLOBAL_BLOCK(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
 
 #if defined(__clang__)
 	#define CLANG_MUST_TAIL [[clang::musttail]]

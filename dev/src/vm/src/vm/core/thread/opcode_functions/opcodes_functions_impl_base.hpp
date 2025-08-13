@@ -173,44 +173,27 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
-			auto& dst_ptr = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  src_ptr = DEREF_GLOBAL_RAW_UNSAFE(Pointer, instr->arg1);
-			thread.process_memory.setPointer(dst_ptr, src_ptr);
+			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
-	// 	{
-	// 		const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-	// 		auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
-	// 		const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-	// 		writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-	// 	}
-	// 	FUNCTION_CONT(1);
-	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
 		{
-			auto& dst_ptr = DEREF_GLOBAL_RAW_UNSAFE(Pointer, instr->arg0);
-			auto  src_ptr = derefStack<Pointer>(local_stack, instr->arg1);
-			thread.process_memory.setPointer(dst_ptr, src_ptr);
+			const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
+			auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
+			WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
-
-	// RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
-	// 	{
-	// 		const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
-	// 		auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
-	// 		const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-	// 		WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
-	// 	}
-
-	// 	FUNCTION_CONT(1);
-	// }
 
 
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \

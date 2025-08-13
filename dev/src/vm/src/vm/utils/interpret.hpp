@@ -25,10 +25,19 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] inline T safeReadBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		alignas(T) byte buffer[sizeof(T)];
-		std::memcpy(buffer, ptr + offset, sizeof(T));
-		return *std::launder(reinterpret_cast<T*>(buffer));
-		// return value;
+		// @note: We create a byte array aligned as type T to prevent alignement-related UBs.
+		// Doing it like below makes it impossible to "reinterpret" values of type T with private
+		// constructors, thus the workaround:
+		// T value;
+		// std::memcpy(&value, ptr + offset, sizeof(T));
+		
+		alignas(T) std::array<byte, sizeof(T)> buffer;
+		std::memcpy(buffer.data(), ptr + offset, sizeof(T));
+
+		// @note: Reinterpret the buffer as a pointer to T and dereference it.
+		// std::launder is necessary to tell the compiler that the object's lifetime
+		// has begun at this memory location, and it can safely access the new value.
+		return *std::launder(reinterpret_cast<T*>(buffer.data()));
 	}
 
 	/**
