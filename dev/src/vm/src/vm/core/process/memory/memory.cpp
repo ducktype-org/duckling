@@ -4,6 +4,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
+
 #include <vm/core/process/exceptions.hpp>
 
 #include <mutex>
@@ -160,7 +161,9 @@ namespace vm {
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
 			setNestedViewBlock(new_pointer, iter->second->data.element_type);
 			copy_blocks_recursively(
-				copy_blocks_recursively, new_pointer.getBlock()->children_blocks[offset], iter->second
+				copy_blocks_recursively,
+				new_pointer.getBlock()->children_blocks[offset],
+				iter->second
 			);
 		}
 
@@ -176,7 +179,7 @@ namespace vm {
 			destroyReference(block);
 		}
 	}
-	
+
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		if_opt_some(dst.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);

@@ -2,10 +2,9 @@
 
 #include <base/ints.hpp>
 
-#include <cctype>
+#include <array>
 #include <cstring>
 #include <new>
-#include <print>
 #include <type_traits>
 
 namespace vm {
@@ -30,7 +29,7 @@ namespace vm {
 		// constructors, thus the workaround:
 		// T value;
 		// std::memcpy(&value, ptr + offset, sizeof(T));
-		
+
 		alignas(T) std::array<byte, sizeof(T)> buffer;
 		std::memcpy(buffer.data(), ptr + offset, sizeof(T));
 
@@ -78,22 +77,5 @@ namespace vm {
 		std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> && sizeof(T) <= sizeof(U)
 	) {
 		return safeReadBytes<T>(reinterpret_cast<const byte*>(&source_object));
-	}
-
-	inline void hexdump(void* ptr, int buflen) {
-		auto* buf = (unsigned char*) ptr;
-		int   i = 0, j = 0;
-		for (i = 0; i < buflen; i += 16) {
-			std::print("{:06x}: ", i);
-			for (j = 0; j < 16; j++)
-				if (i + j < buflen)
-					std::print("{:02x} ", buf[i + j]);
-				else
-					std::print("   ");
-			std::print(" ");
-			for (j = 0; j < 16; j++)
-				if (i + j < buflen) std::print("{:c}", isprint(buf[i + j]) ? buf[i + j] : '.');
-			std::println("");
-		}
 	}
 }

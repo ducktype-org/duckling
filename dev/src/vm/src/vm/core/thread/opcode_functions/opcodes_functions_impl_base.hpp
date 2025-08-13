@@ -172,7 +172,6 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
 			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -183,7 +182,6 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
 		{
 			const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
@@ -193,7 +191,6 @@ namespace vm {
 		}
 		FUNCTION_CONT(1);
 	}
-
 
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
