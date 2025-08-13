@@ -4,8 +4,6 @@
 
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
-
-#include "vm/utils/interpret.hpp"
 #include <vm/core/process/exceptions.hpp>
 
 #include <mutex>
@@ -178,20 +176,7 @@ namespace vm {
 			destroyReference(block);
 		}
 	}
-
-	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
-		if_opt_some(dst.block.toOpt(), block) {
-			std::lock_guard lock(*block->mutex_ref);
-			destroyBlockReference(dst);
-		}
-		if_opt_some(src.block.toOpt(), block) {
-			std::lock_guard lock(*block->mutex_ref);
-			block->refcount++;
-		}
-		dst = src;
-	}
 	
-	// TODOP: Temporary, remove that. Rename to setPointer.
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		if_opt_some(dst.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
@@ -202,22 +187,6 @@ namespace vm {
 			block->refcount++;
 		}
 		return src;
-	}
-
-	// TODOP: Experimental, remove that.
-	auto Memory::setPointer(std::byte* dst_location, Pointer src) -> void {
-		const auto dst = vm::safeReadBytes<Pointer>(dst_location);
-
-		if_opt_some(dst.block.toOpt(), block) {
-			std::lock_guard lock(*block->mutex_ref);
-			destroyBlockReference(dst);
-		}
-		if_opt_some(src.block.toOpt(), block) {
-			std::lock_guard lock(*block->mutex_ref);
-			block->refcount++;
-		}
-
-		vm::safeWriteBytes<Pointer>(dst_location, src);
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {

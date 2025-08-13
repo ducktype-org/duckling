@@ -36,7 +36,6 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/memory/pointer.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
