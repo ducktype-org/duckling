@@ -646,42 +646,21 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
-			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+
 			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
 			// This is verified by static verification.
-			const vm::Type* inh_meta_pointer = *reinterpret_cast<const vm::Type**>(
-				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
-			);
-			const vm::InheritanceMetadata& inh_metadata
-				= *inh_meta_pointer->getInheritanceMetadata().value();
-
+			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
+			const auto inh_metadata = (*inh_meta_pointer)->getInheritanceMetadata().value();
 			auto  method_name         = thread.executing_program->method_name_pool[instr->arg1];
-			auto  implementation_name = inh_metadata.vtable[method_name]->getName();
+			auto  implementation_name = inh_metadata->vtable[method_name]->getName();
 			usize function_id = *thread.executing_program->functions.idOf(implementation_name);
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
-
-	// RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
-	// 	{
-	// 		auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-	// 		// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
-	// 		// This is verified by static verification.
-	// 		auto            view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
-	// 		const vm::Type* inh_meta_pointer = readFromView<const vm::Type*>(view);
-	// 		const vm::InheritanceMetadata& inh_metadata
-	// 			= *inh_meta_pointer->getInheritanceMetadata().value();
-
-	// 		auto  method_name         = thread.executing_program->method_name_pool[instr->arg1];
-	// 		auto  implementation_name = inh_metadata.vtable[method_name]->getName();
-	// 		usize function_id = *thread.executing_program->functions.idOf(implementation_name);
-
-	// 		performFunctionCall(instr, local_stack, frame, thread, function_id);
-	// 	}
-	// 	FUNCTION_CONT_CHECK_STRATEGY(0);
-	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
@@ -917,32 +896,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto pointer   = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto type
 				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
 
-			// Objects are guaranteed to hold vtable pointer as their first field
-			// by static verification.
-			auto vt_pointer = reinterpret_cast<const Type**>(
-				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
-			);
-			*vt_pointer = type.get();
+			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
+			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			writeToView<const Type*>(view, type.get());
 		}
 		FUNCTION_CONT(1);
 	}
-
-	// RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
-	// 	{
-	// 		auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-	// 		auto type
-	// 			= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
-
-	// 		// Objects are guaranteed to hold vtable pointer as their first field by static
-	// verification. 		auto view = thread.process_memory.getPointerData(pointer,
-	// sizeof(Type*)); 		writeToView<const Type*>(view, type.get());
-	// 	}
-	// 	FUNCTION_CONT(1);
-	// }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lvnt_type)(FUNCTION_ARGS) {
 		{

@@ -2,8 +2,10 @@
 
 #include <base/ints.hpp>
 
+#include <cctype>
 #include <cstring>
 #include <new>
+#include <print>
 #include <type_traits>
 
 namespace vm {
@@ -23,7 +25,6 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] inline T safeReadBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		
 		alignas(T) byte buffer[sizeof(T)];
 		std::memcpy(buffer, ptr + offset, sizeof(T));
 		return *std::launder(reinterpret_cast<T*>(buffer));
@@ -68,5 +69,22 @@ namespace vm {
 		std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> && sizeof(T) <= sizeof(U)
 	) {
 		return safeReadBytes<T>(reinterpret_cast<const byte*>(&source_object));
+	}
+
+	inline void hexdump(void* ptr, int buflen) {
+		auto* buf = (unsigned char*) ptr;
+		int   i = 0, j = 0;
+		for (i = 0; i < buflen; i += 16) {
+			std::print("{:06x}: ", i);
+			for (j = 0; j < 16; j++)
+				if (i + j < buflen)
+					std::print("{:02x} ", buf[i + j]);
+				else
+					std::print("   ");
+			std::print(" ");
+			for (j = 0; j < 16; j++)
+				if (i + j < buflen) std::print("{:c}", isprint(buf[i + j]) ? buf[i + j] : '.');
+			std::println("");
+		}
 	}
 }
