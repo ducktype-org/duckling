@@ -106,7 +106,7 @@ namespace compiler::helios {
 	}
 
 	struct PstVisitor_getName final: public pst::PstVisitorEmpty {
-		std::string name = "";
+		base::Optional<std::string> name;
 
 	public:
 		void visitConst(pst::Access<pst::Const> stmt) final { name = stmt->getName().str(); }
@@ -129,7 +129,7 @@ namespace compiler::helios {
 
 		void visitFunParam(pst::Access<pst::FunParam> stmt) final { name = stmt->getName().str(); }
 
-		std::string& getName() { return name; }
+		base::Optional<std::string> getName() { return name; }
 	};
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
@@ -144,17 +144,21 @@ namespace compiler::helios {
 		std::string                                         out = "";
 		base::Optional<pst::AccessLocked<pst::LangElement>> pst = symbolPst(sym);
 		do {
+			if (!pst.value().unlock(ctx)->getParent()) break;
 			PstVisitor_getName name_visitor;
 			pst.value().unlock(ctx)->acceptVisitor(name_visitor);
 			auto name = name_visitor.getName();
+			if (!name.has_value()) continue;
 
 			if (!out.empty())
-				out = base::strConcat(name, " -> ", out);
+				out = base::strConcat(name.value(), " -> ", out);
 			else
-				out = name;
+				out = name.value();
 
 			// Get the parent of the current pst element
 		} while ((pst = pst.value().unlock(ctx)->getParent()));
+		auto module_name = compiler::frontend::moduleName(module(scope(sym)));
+		out              = base::strConcat(module_name.str(), " -> ", out);
 
 		return out;
 	}
