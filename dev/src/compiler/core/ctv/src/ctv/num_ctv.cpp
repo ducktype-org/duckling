@@ -33,3 +33,7 @@ bool operator==(const num_ctv& lhs, i64 rhs) {
 bool operator==(i64 lhs, const num_ctv& rhs) {
 	return rhs == lhs;  // Reuse the logic above
 }
+
+void print(num_ctv value, std::ostream& output) {
+	std::visit([&output](auto&& val) { output << val; }, value);
+}

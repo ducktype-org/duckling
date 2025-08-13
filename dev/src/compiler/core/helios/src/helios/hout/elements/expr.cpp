@@ -66,20 +66,7 @@ namespace compiler::helios::code {
 		  )),
 		  value(value) {}
 
-	void LiteralNumCTVExpr::debugPrint(std::ostream& out) const {
-		std::visit(
-			[&](auto val) {
-				using T = std::decay_t<decltype(val)>;
-				if constexpr (std::is_arithmetic_v<T>) {
-					out << std::to_string(static_cast<i64>(val)
-				    );  // or static_cast<int>(val) if you want integer output
-				} else {
-					out << "<non-numeric>";
-				}
-			},
-			value
-		);
-	}
+	void LiteralNumCTVExpr::debugPrint(std::ostream& out) const { print(value, out); }
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
 		  Expr(
