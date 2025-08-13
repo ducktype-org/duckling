@@ -9,9 +9,10 @@
 #include <base/ints.hpp>
 
 #include <limits>
+#include <ostream>
 #include <variant>
 
-using num_ctv = std::variant<i16, i32, i64, f32, f64, f80>;
+using num_ctv = std::variant<i16, i32, i64, f16, f32, f64, f80>;
 
 num_ctv makeMinimizedNumCtv(i64 val);
 
@@ -30,3 +31,5 @@ inline num_ctv makeMinimizedNumCtv(T val) {
 bool operator==(const num_ctv& lhs, i64 rhs);
 
 bool operator==(i64 lhs, const num_ctv& rhs);
+
+void print(num_ctv value, std::ostream& output);
