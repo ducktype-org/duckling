@@ -17,8 +17,6 @@ namespace vm {
 		Profiler(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
 	public:
-		~Profiler() noexcept = default;
-
 		void onEvent(const MemoryEvent& event) noexcept;
 		void onEvent(const FunctionCallEvent& event) noexcept;
 
