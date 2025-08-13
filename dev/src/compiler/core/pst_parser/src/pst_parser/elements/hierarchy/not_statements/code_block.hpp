@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../meta.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	/**
