@@ -156,6 +156,10 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassMethod:
 			return ElementScopeKind::Standard;
 
+		case pst::ElementKind::ClassConstructor:
+		case pst::ElementKind::ClassDestructor:
+			return ElementScopeKind::Standard; // @todo taw3e8 consult
+
 		case pst::ElementKind::ExprStmt:
 			return ElementScopeKind::Transparent;
 

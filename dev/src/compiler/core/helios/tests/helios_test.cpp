@@ -61,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
@@ -983,6 +984,14 @@ private:
 
 		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+	}
+
+	void testManglerSpecialMembers() {
+		auto [module, _] = getModule(fs::File(path("test_modules/mangling_special_mem")));
+		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+
+		std::cerr << "HOUT unit:\n";
+		std::cerr << hout_unit.debugPrint() << '\n';
 	}
 
 	void testGlobalVariableExpressions() {

@@ -230,6 +230,37 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
+		 * @brief Returns mangled name of a special member (ctor, dtor, etc.)
+		 * @note: See mangling-scheme.md for details
+		 */
+		std::string specialMemberType(query::Context& ctx, SymID symbol_id) {
+			std::cerr << "HALO:\tIn specialMemberType\n";
+
+			// get pst element kind
+			auto pst_element_kind = symbolPst(symbol_id).unlock(ctx)->getElementKind();
+			std::cerr << "HALO:\tPST element kind: " << (int)pst_element_kind << '\n';
+
+			std::string ret;
+			
+			if (kind(symbol_id) == SymbolKind::Constructor) {
+				ret = "C";
+				// auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
+				// std::cerr << type.toString() << '\n';
+				
+				ret += "E";
+			} else if (kind(symbol_id) == SymbolKind::Destructor) {
+				ret = "D";
+
+				ret += "E";
+			} else {
+				// @future: implement mangling for other special members
+				ret = "Mangling_of_this_special_member_is_not_implemented_yet";
+			}
+
+			return ret;
+		}
+
+		/**
 		 * @brief Determines what type of symbol we are mangling to choose the right encoding
 		 * @note: See mangling-scheme.md for details
 		 */
@@ -248,10 +279,7 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor:
-				// special symbols
-				throw base::NotYetImplemented(
-					"Mangling for special entities will be added in the future"
-				);
+				return path(ctx, symbol_id) + specialMemberType(ctx, symbol_id);
 				break;
 
 			default:
@@ -288,7 +316,7 @@ namespace compiler::helios::mangler {
 				return compiler::helios::name(key.symbol);
 			case internal::ManglingKind::StandardMangling: {
 				// note: global identifiers starting with underscore and a capital letter are
-				// reserved in C Q seems to be free and stands for both query and quack
+				// reserved in C. Q seems to be free and stands for both query and quack
 				constexpr auto language_prefix = "_Q"sv;
 
 				const auto mangling_scheme_version

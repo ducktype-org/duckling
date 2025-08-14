@@ -121,7 +121,7 @@ either in the scheme or it's implementation, they should be reflected here.
               | <back-reference>
 
 <unscoped-name> ::= <identifier>                            // actual name of a (typical) symbol
-                  | <special-member-name>
+                  | <special-member-name>                   // ctors, dtors, etc.
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
                   | <special-symbol-encoding>               // special symbols that are created by the compiler
