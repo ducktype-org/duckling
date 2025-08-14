@@ -224,7 +224,10 @@ namespace compiler::backend_llvm {
 					[](auto val) -> f128 { return static_cast<f128>(val); },
 					lir_global.inital_value.value()
 				);
-				global->setInitializer(llvm::ConstantFP::get(global->getValueType(), value));
+
+				global->setInitializer(
+					llvm::ConstantFP::get(global->getValueType(), static_cast<double>(value))
+				);
 			} else {
 				i64 value = std::visit(
 					[](auto val) -> i64 { return static_cast<i64>(val); },
