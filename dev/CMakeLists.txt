@@ -39,7 +39,7 @@ add_custom_test_pack(common)
 add_custom_test_pack(compiler)
 
 
-insertLLVM()
+insertDependencies()
 
 add_subdirectory(src/base)
 add_subdirectory(src/common)
