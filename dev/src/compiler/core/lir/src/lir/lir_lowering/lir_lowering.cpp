@@ -135,6 +135,18 @@ namespace compiler::lir {
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
+		case mir::Operation::FloatAdd:
+			return Operation::FloatAdd;
+		case mir::Operation::FloatSub:
+			return Operation::FloatSub;
+		case mir::Operation::FloatMul:
+			return Operation::FloatMul;
+		case mir::Operation::FloatDiv:
+			return Operation::FloatDiv;
+		case mir::Operation::FloatLt:
+			return Operation::FloatLt;
+		case mir::Operation::FloatNeg:
+			return Operation::FloatNeg;
 		case mir::Operation::BooleanAnd:
 			return Operation::BooleanAnd;
 		case mir::Operation::BooleanOr:
@@ -211,9 +223,7 @@ namespace compiler::lir {
 			 */
 			LIRValue getLocation(const mir::MIRValue& loc) {
 				variant_match(loc.getVariant()) {
-					variant_case(mir::MirIntegerConst, integer) {
-						return LIRValue{ integer.value };
-					}
+					variant_case(mir::MirNumCTVConst, num_ctv) { return LIRValue{ num_ctv.value }; }
 					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
 					variant_case(mir::LocalRef, local) { return LIRValue{ getLocal(local) }; }
 					variant_case(mir::MirGlobal, global) { return LIRValue{ getGlobal(global) }; }
@@ -330,7 +340,7 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
-					variant_case_novalue(mir::MirIntegerConst) { return true; }
+					variant_case_novalue(mir::MirNumCTVConst) { return true; }
 					variant_case(mir::LocalRef, local) {
 						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
@@ -372,6 +382,12 @@ namespace compiler::lir {
 				case mir::Operation::IntegerMod:
 				case mir::Operation::IntegerLt:
 				case mir::Operation::IntegerNeg:
+				case mir::Operation::FloatAdd:
+				case mir::Operation::FloatSub:
+				case mir::Operation::FloatMul:
+				case mir::Operation::FloatDiv:
+				case mir::Operation::FloatLt:
+				case mir::Operation::FloatNeg:
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
 				case mir::Operation::BooleanNot: {

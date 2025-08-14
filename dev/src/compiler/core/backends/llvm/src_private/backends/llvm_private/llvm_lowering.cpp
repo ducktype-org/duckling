@@ -87,6 +87,18 @@ namespace compiler::backend_llvm {
 
 	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
 
+	auto i16Type(llvm::LLVMContext& context) { return llvm::Type::getInt16Ty(context); }
+
+	auto f128Type(llvm::LLVMContext& context) { return llvm::Type::getFP128Ty(context); }
+
+	auto f80Type(llvm::LLVMContext& context) { return llvm::Type::getX86_FP80Ty(context); }
+
+	auto f64Type(llvm::LLVMContext& context) { return llvm::Type::getDoubleTy(context); }
+
+	auto f32Type(llvm::LLVMContext& context) { return llvm::Type::getFloatTy(context); }
+
+	auto f16Type(llvm::LLVMContext& context) { return llvm::Type::getHalfTy(context); }
+
 	/**
 	 * @note bools in LLVM are just i1 (i8 when stored in memory)
 	 */
@@ -206,13 +218,20 @@ namespace compiler::backend_llvm {
 		// Initialise the global variable to null, sice it will be initialised in the constructor
 		if (lir_global.inital_value.has_value()) {
 			// @TODO change it when global value converted to more general type
-			i64 value = std::visit(
-				[](auto val) -> i64 { return static_cast<i64>(val); },
-				lir_global.inital_value.value()
-			);
 
-
-			global->setInitializer(llvm::ConstantInt::getSigned(global->getValueType(), value));
+			if (global->getValueType()->isFloatingPointTy()) {
+				f128 value = std::visit(
+					[](auto val) -> f128 { return static_cast<f128>(val); },
+					lir_global.inital_value.value()
+				);
+				global->setInitializer(llvm::ConstantFP::get(global->getValueType(), value));
+			} else {
+				i64 value = std::visit(
+					[](auto val) -> i64 { return static_cast<i64>(val); },
+					lir_global.inital_value.value()
+				);
+				global->setInitializer(llvm::ConstantInt::getSigned(global->getValueType(), value));
+			}
 		} else {
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}
@@ -319,6 +338,54 @@ namespace compiler::backend_llvm {
 		}
 
 		/**
+		 * @brief Converts a numeric constant value (`num_ctv`) into an LLVM constant.
+		 *
+		 * This function takes a `num_ctv` variant and returns an appropriate
+		 * `llvm::Constant` representation based on its type. Integer types (`i16`, `i32`, `i64`)
+		 * are currently all converted to signed 64-bit LLVM integers (`i64Type`) for uniformity.
+		 * Floating-point types (`f16`, `f32`, `f64`, `f80`) are converted to their respective
+		 * LLVM floating-point constants.
+		 *
+		 * @note The conversion for `f128` is currently commented out and not implemented.
+		 * @note Integer types are temporarily unified under `i64Type` until proper type-specific
+		 *       conversions are implemented.
+		 *
+		 * @param value The numeric constant value to convert, represented as a `num_ctv` variant.
+		 * @return A pointer to the corresponding `llvm::Constant` object.
+		 *
+		 * @throws CORE_PANIC if the `num_ctv` type is unrecognized or unsupported.
+		 */
+
+		llvm::Constant* constLLVMFromNumCTV(num_ctv value) {
+			variant_match(value) {
+				// @TODO change it to respective i**Type when conversion is implemented
+				// now using only one type of integer allow to have same type of arguments
+				variant_case(i16, value) {
+					return llvm::ConstantInt::getSigned(i64Type(context), value);
+				}
+				variant_case(i32, value) {
+					return llvm::ConstantInt::getSigned(i64Type(context), value);
+				}
+				variant_case(i64, value) {
+					return llvm::ConstantInt::getSigned(i64Type(context), value);
+				}
+				variant_case(f16, value) { return llvm::ConstantFP::get(f16Type(context), value); }
+				variant_case(f32, value) { return llvm::ConstantFP::get(f32Type(context), value); }
+				variant_case(f64, value) { return llvm::ConstantFP::get(f64Type(context), value); }
+				variant_case(f80, value) {
+					// llvm::ConstantFP::get requires a double, so f80 values are cast accordingly.
+					// This may lose precision if f80 exceeds double's representable range.
+					return llvm::ConstantFP::get(f80Type(context), static_cast<double>(value));
+				}
+				// variant_case(f128, value) {
+				// 	return llvm::ConstantFP::get(f128Type(context), value);
+				// }
+			}
+			CORE_PANIC("Unhandled num_ctv type in constLLVMFromNumCTV");
+			return nullptr;
+		}
+
+		/**
 		 * @brief Maps LIRValue to LLVM Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
@@ -336,9 +403,7 @@ namespace compiler::backend_llvm {
 		auto lirValue2LLVM(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
-				variant_case(i64, value) {
-					return llvm::ConstantInt::getSigned(i64Type(context), value);
-				}
+				variant_case(num_ctv, value) { return constLLVMFromNumCTV(value); }
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LocalRef, lir_local) {
 					// We store local values behind pointers to stack-allocated memory.

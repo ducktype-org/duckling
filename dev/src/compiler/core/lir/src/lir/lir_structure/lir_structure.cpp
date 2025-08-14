@@ -110,7 +110,7 @@ namespace compiler::lir {
 
 		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
-				variant_case(i64, value) { output << value; }
+				variant_case(num_ctv, value) { print(value, output); }
 				variant_case(bool, value) { output << (value ? "true" : "false"); }
 				variant_case(LocalRef, local) { printLocal(local, output); }
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }

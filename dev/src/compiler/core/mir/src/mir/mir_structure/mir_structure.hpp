@@ -46,6 +46,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerLt,
 	IntegerNeg,
 
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatLt,
+	FloatNeg,
+
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
@@ -90,24 +97,13 @@ namespace compiler::mir {
 	 */
 	bool isTerminating(Operation);
 
-	struct MirIntegerConst final {
+	struct MirNumCTVConst final {
 		// @TODO change to ctv
-		i64 value;
+		num_ctv value;
 
-		MirIntegerConst(num_ctv value) {
-			std::visit(
-				[&](auto&& val) {
-					using T = std::decay_t<decltype(val)>;
-					if constexpr (std::is_convertible_v<T, i64>)
-						this->value = static_cast<i64>(val);
-					else
-						throw std::runtime_error("Cannot convert to i64");
-				},
-				value
-			);
-		}
+		MirNumCTVConst(num_ctv value): value(value) {}
 
-		bool operator==(const MirIntegerConst& other) const = default;
+		bool operator==(const MirNumCTVConst& other) const = default;
 	};
 
 	struct MirBoolConst final {
@@ -261,12 +257,12 @@ namespace compiler::mir {
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
 		using ValueType
-			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
+			= std::variant<MirNumCTVConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
 
 		ValueType value;
 
 	public:
-		MIRValue(MirIntegerConst value): value(value) {}
+		MIRValue(MirNumCTVConst value): value(value) {}
 
 		MIRValue(MirBoolConst value): value(value) {}
 

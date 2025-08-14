@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
+		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(arithmeticTest);
 		TESTER_ADD_TEST(comparisonTest);
 		TESTER_ADD_TEST(functionCalls);
@@ -135,6 +136,8 @@ private:
 	}
 
 	void booleansTest() { runTestForModule("modules/booleans", 2); }
+
+	void numericLiteralsTest() { runTestForModule("modules/numeric_literals"); }
 
 	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
 

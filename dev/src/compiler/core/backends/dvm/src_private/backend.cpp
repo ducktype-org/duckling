@@ -1,4 +1,5 @@
 #include <backends/dvm/backend.hpp>
+#include <ctv/num_ctv.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -325,7 +326,7 @@ namespace compiler::backend_vm {
 			AddLirFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
-				variant_case(i64, value) {
+				variant_case(num_ctv, value) {
 					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
@@ -372,20 +373,25 @@ namespace compiler::backend_vm {
 			case lir::Operation::Assign:
 				return OpKind::mov;
 			case lir::Operation::IntegerAdd:
+			case lir::Operation::FloatAdd:
 				return OpKind::add;
 			case lir::Operation::IntegerSub:
+			case lir::Operation::FloatSub:
 				return OpKind::sub;
 			case lir::Operation::IntegerMul:
+			case lir::Operation::FloatMul:
 				return OpKind::mul;
 			case lir::Operation::IntegerUDiv:
 				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSDiv:
+			case lir::Operation::FloatDiv:
 				return OpKind::div;
 			case lir::Operation::IntegerUMod:
 				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSMod:
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
+			case lir::Operation::FloatNeg:
 				return OpKind::neg;
 			case lir::Operation::Call:
 				return OpKind::call;
@@ -396,8 +402,8 @@ namespace compiler::backend_vm {
 			case lir::Operation::BooleanNot:
 				return OpKind::log_not;
 			case lir::Operation::IntegerULt:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSLt:
+			case lir::Operation::FloatLt:
 				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			default:
 				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

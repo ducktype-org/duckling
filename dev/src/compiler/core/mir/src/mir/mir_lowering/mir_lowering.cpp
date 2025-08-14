@@ -887,7 +887,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralNumCTVExpr(const hc::LiteralNumCTVExpr& expr) override {
-			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirNumCTVConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
@@ -1090,6 +1090,19 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Exponentiation on variables");
 			case IntegerLt:
 				return Operation::IntegerLt;
+			case FloatAdd:
+				return Operation::FloatAdd;
+			case FloatSub:
+				return Operation::FloatSub;
+			case FloatMul:
+				return Operation::FloatMul;
+			case FloatDiv:
+				return Operation::FloatDiv;
+			case FloatPow:
+				// @fixme: Implement exponentiation as a function call.
+				throw base::NotYetImplemented("Exponentiation on variables");
+			case FloatLt:
+				return Operation::FloatLt;
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:
@@ -1119,12 +1132,29 @@ namespace compiler::mir {
 		 */
 		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
-				variant_case_novalue(MirIntegerConst) {
-					return tsh::SymbolType<>{
-						ctx.query<tsh::QueryIntegralType>({ 64 }),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
+				variant_case(MirNumCTVConst, cons) {
+					return std::visit(
+						[&](auto&& val) -> tsh::SymbolType<> {
+							using T                 = std::decay_t<decltype(val)>;
+							constexpr bool is_float = std::is_floating_point_v<T>;
+							usize          bits     = sizeof(T) * 8;
+
+							if constexpr (is_float) {
+								return tsh::SymbolType<>{
+									ctx.query<tsh::QueryFloatType>({ bits }),
+									tsh::ReferenceKind::Direct,
+									tsh::Mutability::Immutable,
+								};
+							} else {
+								return tsh::SymbolType<>{
+									ctx.query<tsh::QueryIntegralType>({ 64 }),
+									tsh::ReferenceKind::Direct,
+									tsh::Mutability::Immutable,
+								};
+							}
+						},
+						cons.value
+					);
 				}
 				variant_case_novalue(MirBoolConst) {
 					return tsh::SymbolType<>{

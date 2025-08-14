@@ -2,6 +2,7 @@
 
 #include "function_forward.hpp"
 
+#include <ctv/num_ctv.hpp>
 #include <helios/hout/hout.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -41,6 +42,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerULt,
 	IntegerSLt,
 	IntegerNeg,
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatLt,
+	FloatNeg,
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
@@ -129,11 +136,12 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
+		using ValueType
+			= std::variant<num_ctv, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
 		ValueType value;
 
 	public:
-		LIRValue(i64 value): value(value) {}
+		LIRValue(num_ctv value): value(value) {}
 
 		LIRValue(bool value): value(value) {}
 
