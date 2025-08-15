@@ -1160,10 +1160,10 @@ namespace compiler::mir {
 			}
 			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
-				auto arg_parsed = lowerExpr(*arg, sub_continuation, function, expr_scope);
+				auto arg_lowered = lowerExpr(*arg, sub_continuation, function, expr_scope);
 
-				args.push_back(arg_parsed.getResult(function));
-				sub_continuation = arg_parsed.begin;
+				args.push_back(arg_lowered.getResult(function));
+				sub_continuation = arg_lowered.begin;
 			}
 
 			// @TODO: #505 here in the future we (probably) will have to handle
