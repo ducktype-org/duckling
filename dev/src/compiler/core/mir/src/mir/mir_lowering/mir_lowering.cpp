@@ -714,11 +714,8 @@ namespace compiler::mir {
 
 				// Retrieve type: if res is value It is local, otherwise only last instruction is
 				// stored.
-				// auto res_type = possible_result.has_value() ?
-				// possible_result->get<LocalRef>()->type
-				//                                            : expr_res.getResultType();
-
-				auto res_type = expr_res.getResultType();
+				auto res_type = possible_result.has_value() ? possible_result->get<LocalRef>()->type
+				                                            : expr_res.getResultType();
 
 				auto return_value = function.addNoLifetimeTmp(res_type);
 
@@ -783,9 +780,9 @@ namespace compiler::mir {
 			auto lowered_condition
 				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			auto condition_variable = lowered_condition.getResultIfStored();
+			auto possible_condition_res = lowered_condition.getResultIfStored();
 
-			if (condition_variable.has_value() && !condition_variable->isLocal()) {
+			if (possible_condition_res.has_value() && !possible_condition_res->isLocal()) {
 				get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
 				);
 
@@ -793,12 +790,12 @@ namespace compiler::mir {
 				// Condition result must be stored in special temporary value, so we can use it
 				// after the actual condition result is destroyed. Create extra temporary and assign
 				// to it in-place or with extra move.
-				condition_variable = function.addNoLifetimeBoolTmp();
+				possible_condition_res = function.addNoLifetimeBoolTmp();
 
 				lowered_condition.storeResultInGivenVariable(
-					condition_variable->get<LocalRef>(),
+					possible_condition_res->get<LocalRef>(),
 					get_condition_return,
-					{ flagConstruct(condition_variable->get<LocalRef>()) },
+					{ flagConstruct(possible_condition_res->get<LocalRef>()) },
 					condition_scope
 				);
 			}
@@ -806,7 +803,7 @@ namespace compiler::mir {
 			condition_block->setTerminator(Instruction{
 				Operation::Branch,
 				{},
-				{ *condition_variable, then_body->getID(), else_body->getID() },
+				{ *possible_condition_res, then_body->getID(), else_body->getID() },
 				{},
 				condition_scope,
 			});
