@@ -857,7 +857,7 @@ namespace compiler::mir {
 
 			auto possible_result = expr_result.getResultIfStored();
 
-			if (possible_result.has_value() and !possible_result.value().isLocal()) {
+			if (possible_result.has_value() and !possible_result->isLocal()) {
 				get_condition_return.fill(Instruction{
 					Operation::Nop,
 					{},
