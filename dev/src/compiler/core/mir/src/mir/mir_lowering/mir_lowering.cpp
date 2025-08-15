@@ -497,6 +497,12 @@ namespace compiler::mir {
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 
+		/**
+		 * @brief Represents a finalizer instruction that saves the result of an expression.
+		 * Stores hole where instruction will be saved, instruction without output and type of
+		 * result. This instruction can be performed on provided varaible
+		 * (storeResultInGivenVariable) or generated temporary (getResult).
+		 */
 		struct Finalizer final {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
