@@ -557,8 +557,8 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief If result of expr is value already creates
-		 * instruction assigning result to it. Otherwise makes last instruction save res directly to
+		 * @brief If result of expr is value it creates
+		 * instruction that will assign result to it. Otherwise it makes the last instruction of the expression save result directly to the
 		 * target.
 		 * @note may use InstructionHole stored in sturcture, probably use only once.
 		 */
