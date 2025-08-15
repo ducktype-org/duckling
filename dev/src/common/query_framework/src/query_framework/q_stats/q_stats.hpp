@@ -10,7 +10,7 @@ namespace query {
      * RAII-like object to collect statistics about query calls.
      * Should be used in a way that encapsulates the entire call to a query function. 
      */
-    struct CallStatsObject {
+    struct CallStatsObject final {
         /**
          * Call when query call starts 
          */
