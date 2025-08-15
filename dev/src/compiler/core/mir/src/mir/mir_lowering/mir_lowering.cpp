@@ -558,8 +558,8 @@ namespace compiler::mir {
 
 		/**
 		 * @brief If result of expr is value it creates
-		 * instruction that will assign result to it. Otherwise it makes the last instruction of the expression save result directly to the
-		 * target.
+		 * instruction that will assign result to it. Otherwise it makes the last instruction of the
+		 * expression save result directly to the target.
 		 * @note may use InstructionHole stored in sturcture, probably use only once.
 		 */
 		void storeResultInGivenVariable(
@@ -725,9 +725,13 @@ namespace compiler::mir {
 				// we need to store the result of the expression
 				// in additional variable, so it doesn't get destroyed.
 
-				// Retrieve type: if res is value It is local, otherwise only last instruction is stored.
-				auto res_type = possible_result.has_value() ? possible_result->get<LocalRef>()->type
-				                                            : expr_res.getResultType();
+				// Retrieve type: if res is value It is local, otherwise only last instruction is
+				// stored.
+				// auto res_type = possible_result.has_value() ?
+				// possible_result->get<LocalRef>()->type
+				//                                            : expr_res.getResultType();
+
+				auto res_type = expr_res.getResultType();
 
 				auto return_value = function.addNoLifetimeTmp(res_type);
 
