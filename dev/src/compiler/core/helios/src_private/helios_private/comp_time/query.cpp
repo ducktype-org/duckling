@@ -10,6 +10,9 @@
 #include <helios/hout/visitors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 
@@ -24,10 +27,13 @@
 
 #include "vm/bytecode/bytecode.hpp"
 
+#include <cmath>
+
 namespace {
 	using namespace compiler::helios;
 
 	// TODOP: Checks if the whole subtree is a simple expression.
+	// TODOP: Remove that.
 	struct IsSimpleVisitor final: public code::HoutExprVisitorEmpty {
 		bool is_simple = true;
 
@@ -83,6 +89,7 @@ namespace {
 		void visitAccessExpr(const code::AccessExpr&) override { is_simple = false; }
 	};
 
+	// TODOP: Hout walker
 	struct TreeEvalVisitor final: public code::HoutExprVisitor {
 		query::Context&    ctx;
 		CompTimeEvalResult result;
@@ -124,18 +131,22 @@ namespace {
 		}
 
 		void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-			result = ctx.query<QueryConstValueOf>(expr.symbol);
+			result = ctx.query<QueryConstValueOf>({ expr.symbol });
 			// result = ctx.query<EvaluateAtCompileTime>({ expr.symbol_data->definition });
 		}
 
 		void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
-			auto lhs_result = ctx.query<compiler::helios::EvaluateAtCompileTime>({ *expr.lhs });
+			auto lhs_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+				{ expr.lhs.operator->() }
+			);
 			if (lhs_result.hasError()) {
 				result = lhs_result;
 				return;
 			}
 
-			auto rhs_result = ctx.query<compiler::helios::EvaluateAtCompileTime>({ *expr.rhs });
+			auto rhs_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+				{ expr.rhs.operator->() }
+			);
 			if (rhs_result.hasError()) {
 				result = rhs_result;
 				return;
@@ -213,16 +224,18 @@ namespace {
 						}
 					}
 				}
-				variant_case(const VmHeldValue&, lhs_value) {
-					result = query::QError(errors::Failed());
-					CORE_PANIC("Tree eval encountered a VM-held value. This should not happen");
-				}
+				// variant_case(const VmHeldValue&, lhs_value) {
+				// 	result = query::QError(errors::Failed());
+				// 	CORE_PANIC("Tree eval encountered a VM-held value. This should not happen");
+				// }
 				variant_default { result = query::QError(compiler::helios::errors::Failed()); }
 			}
 		}
 
 		void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
-			auto expr_result = ctx.query<compiler::helios::EvaluateAtCompileTime>({ *expr.expr });
+			auto expr_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+				{ expr.expr.operator->() }
+			);
 
 			if (expr_result.hasError()) {
 				result = expr_result;
@@ -275,8 +288,9 @@ namespace {
 		}
 
 		void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
-			auto cond_result
-				= ctx.query<compiler::helios::EvaluateAtCompileTime>({ *expr.condition });
+			auto cond_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+				{ expr.condition.operator->() }
+			);
 			if (cond_result.hasError()) {
 				result = cond_result;
 				return;
@@ -294,13 +308,19 @@ namespace {
 			}
 
 			if (condition_is_true)
-				result = ctx.query<compiler::helios::EvaluateAtCompileTime>({ expr.if_true });
+				result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+					{ expr.if_true.operator->() }
+				);
 			else
-				result = ctx.query<compiler::helios::EvaluateAtCompileTime>({ expr.if_false });
+				result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+					{ expr.if_false.operator->() }
+				);
 		}
 
 		void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
-			result = ctx.query<compiler::helios::EvaluateAtCompileTime>({ *expr.inner });
+			result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+				{ expr.inner.operator->() }
+			);
 		}
 
 		void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr&) final {
@@ -316,8 +336,9 @@ namespace {
 		}
 
 		void visitSequenceExpr(const code::SequenceExpr& seq) final {
-			result
-				= ctx.query<compiler::helios::EvaluateAtCompileTime>({ *seq.expressions.back() });
+			result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
+				{ seq.expressions.back().operator->() }
+			);
 		}
 	};
 
@@ -325,7 +346,7 @@ namespace {
 
 namespace compiler::helios {
 
-	struct IMPLEMENT_QUERY(EvaluateAtCompileTime, CompTimeEvalResult) {
+	struct IMPLEMENT_QUERY(QueryEvaluateHoutExpressionCT, CompTimeEvalResult) {
 		static bool isSimpleEnoughForTreeEval(const code::Expr& expr) {
 			IsSimpleVisitor visitor;
 			expr.acceptVisitor(visitor);
@@ -343,56 +364,76 @@ namespace compiler::helios {
 			// TODOP: For now VM is only used for function call evaluation.
 			if (!call_expr) return query::QError(errors::Failed());
 
-			// auto pst_function =
-			// auto fun_hout_result = ctx.query<helios::QueryModuleHOUT>(const typename
-			// OthQuery::QKey &key)
-			//j
+			const auto* callee_ident
+				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.operator->());
+			if (!callee_ident) return query::QError(errors::Failed());
 
-			auto mir_func_result
-				= ctx.query<mir::LowerToMirFunctionResult>({ fun_hout_result.value() });
-			if (mir_func_result.hasError()) { /* ... */ }
+			const SymID function_sym_id = callee_ident->symbol;
 
-			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_result.value() });
-			if (lir_func_result.hasError()) { /* ... */ }
+			auto fun_hout_result = ctx.query<QueryCodeOFFun>(function_sym_id);
+			// TODOP: Error checking here?
+
+			auto mir_func_result = ctx.query<mir::LowerToMirFunction>({ fun_hout_result });
+			// TODOP: Error checking here?
+
+			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_result });
+			// TODOP: Error checking here?
 
 			// Get code of the called function.
 			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
-			backend_vm::Module m{ ctx, base::StrID("COMP_TIME"), { lir_func_result.value() }, {} };
+			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 			vm::code::CodeCollection code = m.build();
 
 			std::vector<CTV> ctv_arguments;
 			for (const auto& arg_expr: call_expr->arguments) {
-				auto arg_result = ctx.query<EvaluateAtCompileTime>({ arg_expr });
+				auto arg_result
+					= ctx.query<QueryEvaluateHoutExpressionCT>({ arg_expr.operator->() });
 				if (arg_result.hasError()) return arg_result;
-				ctv_arguments.push_back(std::move(arg_result));
+				ctv_arguments.push_back(arg_result.value());
 			}
-			
-			const auto* callee_ident = dynamic_cast<code::IdentifierExpr*>(call_expr->callee);
-			auto function_name = callee_ident.symbol.getName();
 
-			return CompileTimeEvaluator::get().executeInVm(
-					// Is the compiler return type needed here?
-					code,
-					function_name,
-					ctv_arguments
+
+			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
+				// Is the compiler return type needed here?
+				callee_ident->expression_type
+					.getSymbolType(),  // TODOP: Thats wrong. How to get a return type of the
+			                           // function from somewhere?
+				code,
+				fun_hout_result.original_name.str(),
+				ctv_arguments
 			);
 
+			if (vm_eval_result.has_value())
+				return vm_eval_result.value();
+			else
+				return query::QError(vm_eval_result.error());
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (eval.hasError()) return query::QError(errors::Failed());
+			// TODOP: This can be optimized. Always try to eval with TreeEval and only use VM eval
+			// when failed.
+			if (isSimpleEnoughForTreeEval(*key.expr)) return evaluateWithTreeEval(ctx, *key.expr);
 
-			if (isSimpleEnoughForTreeEval(*eval.value()))
-				return evaluateWithTreeEval(ctx, *eval.value());
-
-			evaluateWithVm(ctx, *eval.value());
+			evaluateWithVm(ctx, *key.expr);
 			return query::QError(errors::Failed());
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(EvaluateAtCompileTime);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateHoutExpressionCT);
+
+	struct IMPLEMENT_QUERY(QueryEvaluateExpressionCT, CompTimeEvalResult) {
+		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			// TODOP: Simple query just to initialise the recursion.
+			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
+			if (eval.hasError()) return query::QError(errors::Failed());
+			return ctx.query<QueryEvaluateHoutExpressionCT>({ eval.value().operator->() });
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateExpressionCT);
 
 }

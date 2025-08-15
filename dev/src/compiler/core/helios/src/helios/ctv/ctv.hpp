@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vm/core/thread/vmvalue.hpp>
+// #include <vm/core/thread/vmvalue.hpp>
 
 #include <typesystem/higher/symbol_type.hpp>
 
@@ -9,11 +9,12 @@
 #include <variant>
 
 namespace compiler::helios {
-	struct VmHeldValue {
-		tsh::SymbolType<> type;
-		MBox<vm::VmValue> value{};
-	};
+	// struct VmHeldValue {
+	// 	tsh::SymbolType<> type;
+	// 	MBox<vm::VmValue> value{};
+	// };
 
-	using CompileTimeValue = std::variant<i64, i32, u64, bool, tsh::SymbolType<>, VmHeldValue>;
-	using CTV              = CompileTimeValue;
+	using CompileTimeValue = std::variant<i64, bool, tsh::SymbolType<>>;
+	// using CompileTimeValue = std::variant<i64, tsh::SymbolType<>, VmHeldValue>;
+	using CTV = CompileTimeValue;
 }

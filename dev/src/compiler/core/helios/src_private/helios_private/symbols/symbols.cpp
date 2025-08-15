@@ -581,6 +581,7 @@ namespace compiler::helios {
 				);
 
 			// @TODO: Handle potential lack of value
+			// TODOP: Change that to use the new query.
 			return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
 		}
 

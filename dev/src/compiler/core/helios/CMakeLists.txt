@@ -29,7 +29,7 @@ add_library(HELIOS STATIC
 	src/helios/ctv/ctv.hpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher LibVM)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp 
 	USES Base TypeSystemHigher PstParser HELIOS
