@@ -290,7 +290,7 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		instr->tc_opfun(instr, local_stack, frame, *this);
 
-#elif USE_COMPUTED_GOTO
+#elif defined (USE_COMPUTED_GOTO)
 		// We use computed-gotos here,
 		// so we turn off pedantic warnings
 		// for this case
@@ -327,7 +327,7 @@ namespace vm {
 	End:
 
 		POP_DIAGNOSTIC
-#elif USE_SWITCH_CASE
+#elif defined (USE_SWITCH_CASE)
 		while (true) {
 			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
 	#define HANDLE_OPCODE(opcode_name)                                                              \
