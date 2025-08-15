@@ -585,19 +585,6 @@ namespace compiler::mir {
 				}
 			}
 		}
-
-		/**
-		 * @brief If structure stores incomplete instruction fills hole with it (without saving
-		 * result).
-		 * @note Use when there is no need to save instruction result, but instruction still may
-		 * have side effects (for example call). Currently unused, that kind of instruction are not
-		 * supported yet.
-		 */
-		void performInstructon() {
-			variant_match(value) {
-				variant_case(Finalizer, res_data) { res_data.hole.fill(res_data.instr); }
-			}
-		}
 	};
 
 	/**
@@ -766,11 +753,7 @@ namespace compiler::mir {
 			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
-			// @TODO just call perform instruction, dont create any temporary.
-			// that type of instruction requires support in LIR.
 			std::ignore = expr_result.getResult(function);
-			// expr_result.performInstructon();
-
 			output({ expr_result.begin });
 		}
 
