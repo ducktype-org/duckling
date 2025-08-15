@@ -486,7 +486,7 @@ namespace compiler::mir {
 	 * This consists of a BlockBuilderRef marking the beginning of the lowered
 	 * expression and either:
 	 *  - a MIRValue holding the result of the expression, OR
-	 *  - a finalizer representing the last instruction that saves the result
+	 *  - a Finalizer representing the last instruction that saves the result
 	 *    without specifying its target.
 	 *
 	 * For complete lowering, call the dedicated function that stores the result
@@ -497,15 +497,15 @@ namespace compiler::mir {
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 
-		struct finalizer final {
+		struct Finalizer final {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
 			tsh::SymbolType<>             type;
 		};
 
-		std::variant<MIRValue, finalizer> value;
+		std::variant<MIRValue, Finalizer> value;
 
-		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, finalizer> value):
+		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value):
 			  begin{ begin },
 			  value{ std::move(value) } {}
 
@@ -515,7 +515,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		tsh::SymbolType<> getResultType() {
 			variant_match(value) {
-				variant_case(finalizer, res_data) { return res_data.type; }
+				variant_case(Finalizer, res_data) { return res_data.type; }
 				variant_default {
 					CORE_PANIC("Function can be run only if MIRValue is not stored");
 				}
@@ -530,7 +530,7 @@ namespace compiler::mir {
 		base::Optional<MIRValue> getResultIfStored() {
 			variant_match(value) {
 				variant_case(MIRValue, val) { return val; }
-				variant_case_novalue(finalizer) { return std::nullopt; }
+				variant_case_novalue(Finalizer) { return std::nullopt; }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -544,7 +544,7 @@ namespace compiler::mir {
 		MIRValue getResult(FunctionBuilder& function) {
 			variant_match(value) {
 				variant_case(MIRValue, val) { return val; }
-				variant_case(finalizer, res_data) {
+				variant_case(Finalizer, res_data) {
 					auto result = function.addTmp(res_data.type, res_data.instr.scope);
 					res_data.instr.output.emplace(result);
 					res_data.instr.flags.push_back(flagConstruct(result));
@@ -578,7 +578,7 @@ namespace compiler::mir {
 						scope,
 					});
 				}
-				variant_case(finalizer, res_data) {
+				variant_case(Finalizer, res_data) {
 					std::visit([&](auto&& val) { res_data.instr.output.emplace(val); }, target);
 					res_data.hole.fill(res_data.instr);
 					std::visit([&](auto&& val) { value = val; }, target);
@@ -595,7 +595,7 @@ namespace compiler::mir {
 		 */
 		void performInstructon() {
 			variant_match(value) {
-				variant_case(finalizer, res_data) { res_data.hole.fill(res_data.instr); }
+				variant_case(Finalizer, res_data) { res_data.hole.fill(res_data.instr); }
 			}
 		}
 	};
@@ -1001,7 +1001,7 @@ namespace compiler::mir {
 		) {
 			CORE_ASSERT(out.empty(), "Output already set.");
 			CORE_ASSERT(instr.output.empty(), "instruction shouldn't have output set.");
-			out.emplace(ExprLowerRes(begin, ExprLowerRes::finalizer(hole, instr, type)));
+			out.emplace(ExprLowerRes(begin, ExprLowerRes::Finalizer(hole, instr, type)));
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
@@ -1155,7 +1155,7 @@ namespace compiler::mir {
 			if (not function_symid.has_value()) {
 				CORE_PANIC(
 					"Call expression where callee is not an identifier expression is currently not "
-					" supported."
+					"supported."
 				);
 			}
 			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
