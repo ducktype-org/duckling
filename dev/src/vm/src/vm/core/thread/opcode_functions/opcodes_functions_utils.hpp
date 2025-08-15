@@ -28,7 +28,7 @@ inline static T& derefView(base::ModRawView view) {
 #define DEREF_GLOBAL_RAW_UNSAFE(TYPE, ID) \
 	derefView<TYPE>(thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(ID))))
 
-#if defined(__clang__) && __clang__ >=13
+#if defined(__clang__) && __clang__ >= 13
 	#define MUST_TAIL [[clang::musttail]]
 #elif defined(__GNUG__) && __GNUG__ >= 15
 	#define MUST_TAIL [[gnu::musttail]]
@@ -36,7 +36,8 @@ inline static T& derefView(base::ModRawView view) {
 	#define MUST_TAIL
 
 	#ifdef USE_TAIL_CALLS
-		#warning "USE_TAIL_CALLS without support from compiler can cause stack-overflow."
+		#warning \
+			"USE_TAIL_CALLS without support from compiler. This can potentially cause stack-overflow."
 	#endif
 #endif
 
@@ -46,7 +47,7 @@ inline static T& derefView(base::ModRawView view) {
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                           \
+#define OPFUN_CONT(i)                                                                     \
 	IF_TC({ MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
