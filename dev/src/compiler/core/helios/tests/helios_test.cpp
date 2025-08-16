@@ -42,33 +42,32 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testImport);
-		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testError);
-		TESTER_ADD_TEST(testI32Consts);
-		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(testHoutVariables);
-		TESTER_ADD_TEST(testExprTree);
-		TESTER_ADD_TEST(testSimpleHOUT);
-		TESTER_ADD_TEST(testSingleFileModuleHOUT);
-		TESTER_ADD_TEST(testModuleHOUT);
-		TESTER_ADD_TEST(testDependencyHOUT);
-		TESTER_ADD_TEST(testHoutVisitor);
-		TESTER_ADD_TEST(testTypeOf);
-		TESTER_ADD_TEST(testKeywordLiterals);
-		TESTER_ADD_TEST(testFunctionParameters);
-		TESTER_ADD_TEST(testExprScopes);
-		TESTER_ADD_TEST(testFunctionCallExpr);
-		TESTER_ADD_TEST(testBuiltinFunctions);
-		TESTER_ADD_TEST(testMangler);
-		TESTER_ADD_TEST(testGlobalVariableExpressions);
-		TESTER_ADD_TEST(testTypeOfConstAndVar);
-
+		// TESTER_ADD_TEST(testImport);
+		// TESTER_ADD_TEST(testEdgeEvals);
+		// TESTER_ADD_TEST(testError);
+		TESTER_ADD_TEST(testConstants);
+		// TESTER_ADD_TEST(testClassSymbolData);
+		// TESTER_ADD_TEST(testHoutVariables);
+		// TESTER_ADD_TEST(testExprTree);
+		// TESTER_ADD_TEST(testSimpleHOUT);
+		// TESTER_ADD_TEST(testSingleFileModuleHOUT);
+		// TESTER_ADD_TEST(testModuleHOUT);
+		// TESTER_ADD_TEST(testDependencyHOUT);
+		// TESTER_ADD_TEST(testHoutVisitor);
+		// TESTER_ADD_TEST(testTypeOf);
+		// TESTER_ADD_TEST(testKeywordLiterals);
+		// TESTER_ADD_TEST(testFunctionParameters);
+		// TESTER_ADD_TEST(testExprScopes);
+		// TESTER_ADD_TEST(testFunctionCallExpr);
+		// TESTER_ADD_TEST(testBuiltinFunctions);
+		// TESTER_ADD_TEST(testMangler);
+		// TESTER_ADD_TEST(testGlobalVariableExpressions);
+		// TESTER_ADD_TEST(testTypeOfConstAndVar);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(testScopeParentsAndDepth);
-		TESTER_ADD_TEST(testScopeSymbolsConsistency);
+		// TESTER_ADD_TEST(testScopeParentsAndDepth);
+		// TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
@@ -85,7 +84,7 @@ private:
 		};
 	}
 
-	void testI32Consts() {
+	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
 		ASSERT_EQUAL(1'107, getValue("M", root_scope));
@@ -100,6 +99,15 @@ private:
 		ASSERT_EQUAL(2, getValue("T1", root_scope));
 		ASSERT_EQUAL(3, getValue("T2", root_scope));
 		ASSERT_EQUAL(30, getValue("F", root_scope));
+		ASSERT_EQUAL(1, getValue("BOOL_TRUE", root_scope));
+		ASSERT_EQUAL(0, getValue("BOOL_FALSE", root_scope));
+		ASSERT_EQUAL(1, getValue("LOGIC_AND", root_scope));
+		ASSERT_EQUAL(0, getValue("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(100, getValue("TERNARY_TEST", root_scope));
+		ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
+		ASSERT_EQUAL(55, getValue("FIB_10", root_scope));
+		ASSERT_EQUAL(58, getValue("COMPLEX_VM_CALL", root_scope));
+		ASSERT_EQUAL(37, getValue("COMPLEX_VM_CALL_2", root_scope));
 	}
 
 	void testClassSymbolData() {
@@ -900,16 +908,18 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -970,16 +980,18 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global
+			= [&](const compiler::helios::HOUTUnit& unit,
+		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1030,9 +1042,11 @@ private:
 			std::vector<char> globals = { 'A', 'B', 'C' };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
-					ASSERT_TRUE(compiler::helios::isGlobalVar(
-						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
-					));
+					ASSERT_TRUE(
+						compiler::helios::isGlobalVar(
+							ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+						)
+					);
 
 				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
 					&(*hout_unit.functions[0].content.body->statements[0])

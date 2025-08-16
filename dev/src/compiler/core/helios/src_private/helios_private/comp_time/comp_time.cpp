@@ -1,9 +1,10 @@
-#include "query.hpp"
+#include "comp_time.hpp"
 
 #include "helios/ctv/ctv.hpp"
 #include "helios/helios_errors.hpp"
 #include "helios/queries.hpp"
 #include "helios_private/comp_time/vm_evaluator.hpp"
+#include "mir/mir_structure/mir_structure.hpp"
 
 #include <backends/dvm/backend.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -341,7 +342,6 @@ namespace {
 			);
 		}
 	};
-
 }
 
 namespace compiler::helios {
@@ -354,12 +354,15 @@ namespace compiler::helios {
 		}
 
 		static CompTimeEvalResult evaluateWithTreeEval(query::Context& ctx, const code::Expr& expr) {
+			std::cout << "Hello from evaluateWithTreeEval\n";
+
 			TreeEvalVisitor visitor(ctx);
 			expr.acceptVisitor(visitor);
 			return std::move(visitor.result);
 		}
 
 		static CompTimeEvalResult evaluateWithVm(query::Context& ctx, const code::Expr& expr) {
+			std::cout << "Hello from evaluateWithVm\n";
 			const auto* call_expr = dynamic_cast<const code::CallExpr*>(&expr);
 			// TODOP: For now VM is only used for function call evaluation.
 			if (!call_expr) return query::QError(errors::Failed());
@@ -374,9 +377,14 @@ namespace compiler::helios {
 			// TODOP: Error checking here?
 
 			auto mir_func_result = ctx.query<mir::LowerToMirFunction>({ fun_hout_result });
+			if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
 			// TODOP: Error checking here?
 
-			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_result });
+			const mir::Function& mir_func = mir_func_result->value();
+			// TODOP: This may be unsafe? But the function stays in the query's cache so maybe not.
+			CRef<mir::Function>  mir_func_cref{ &mir_func };
+
+			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_cref });
 			// TODOP: Error checking here?
 
 			// Get code of the called function.
@@ -410,6 +418,7 @@ namespace compiler::helios {
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			std::cout << "Hello from QueryEvaluateHoutExpressionCT\n";
 			// TODOP: This can be optimized. Always try to eval with TreeEval and only use VM eval
 			// when failed.
 			if (isSimpleEnoughForTreeEval(*key.expr)) return evaluateWithTreeEval(ctx, *key.expr);
@@ -425,6 +434,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryEvaluateExpressionCT, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			std::cout << "Hello from QueryEvaluateExpressionCT\n";
 			// TODOP: Simple query just to initialise the recursion.
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (eval.hasError()) return query::QError(errors::Failed());

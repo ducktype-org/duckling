@@ -1,6 +1,4 @@
-#pragma once
-
-#include "helios_private/comp_time/vm_evaluator.hpp"
+#include "vm_evaluator.hpp"
 
 #include "helios/ctv/ctv.hpp"
 #include "helios/helios_errors.hpp"
@@ -20,7 +18,7 @@ namespace {
 	// TODOP: This may be moved to a separate module in the future since it will get much more
 	// complicated.
 	std::expected<Box<vm::VmValue>, compiler::helios::errors::Failed> ctvToVmValue(
-		vm::PID pid, const CTV& ctv
+		vm::PID pid, const compiler::helios::CTV& ctv
 	) {
 		variant_match(ctv) {
 			variant_case(i64, val) {
@@ -28,18 +26,20 @@ namespace {
 				if (!vm_value_response.has_value()) {}
 				auto res = std::move(vm_value_response->vm_value);
 				res->writeBytes<i64>(val);
-				return std::move(res);
+				return res;
 			}
 			variant_default {
-				throw base::NotYetImplemented(
-					"Conversion from ctv to VmValue for this type is not implemented yet"
-				);
+				// throw base::NotYetImplemented(
+				// 	"Conversion from ctv to VmValue for this type is not implemented yet"
+				// );
 				return std::unexpected(compiler::helios::errors::Failed());
 			}
 		}
+		// TODOP: Remove
+		return std::unexpected(compiler::helios::errors::Failed());
 	}
 
-	std::expected<CTV, compiler::helios::errors::Failed> vmValueToCtv(
+	std::expected<compiler::helios::CTV, compiler::helios::errors::Failed> vmValueToCtv(
 		const tsh::SymbolType<>&, Ref<vm::VmValue>
 	) {
 		throw base::NotYetImplemented("Conversion from VmValue to CTV is not yet implemented");
@@ -75,7 +75,7 @@ namespace compiler::helios {
 		for (const auto& ctv_arg: args) {
 			auto res = ctvToVmValue(pid, ctv_arg);
 			if (!res) return std::unexpected(errors::Failed());
-			owned_arguments.push_back(std::move(res));
+			owned_arguments.push_back(std::move(*res));
 		}
 
 		vm::FunctionRunArguments vm_args
@@ -96,9 +96,9 @@ namespace compiler::helios {
 		// TODOP: Maybe it would be nice if getExitValue() returned a Box as well so we could free it?
 		// TODOP: Maybe add a separate endpoint for CompTimeGetExitValue() which returns the Box to
 		// avoid memory bloat.
-		auto res = vmValueToCtv(return_type, exit_value.value());
+		auto ctv_res = vmValueToCtv(return_type, exit_value.value());
 		if (auto res = vm::api::kill(pid); !res) return std::unexpected(errors::Failed());
 
-		return res;
+		return ctv_res;
 	}
 }

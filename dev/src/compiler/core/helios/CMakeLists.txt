@@ -11,7 +11,8 @@ add_library(HELIOS STATIC
 	src_private/helios_private/expressions/coercions.cpp
 	src_private/helios_private/comp_time/type_eval.cpp
 	src_private/helios_private/comp_time/int_eval.cpp
-	src_private/helios_private/comp_time/query.cpp
+	src_private/helios_private/comp_time/comp_time.cpp
+	src_private/helios_private/comp_time/vm_evaluator.cpp
 	
 	src/helios/queries.cpp
 	src/helios/hout/hout.cpp

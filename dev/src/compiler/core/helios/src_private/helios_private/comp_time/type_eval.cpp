@@ -148,6 +148,7 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::cout << "Hello From TYPE_EVAL\n";
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (parsed.hasError()) return query::QError(parsed.error());
 

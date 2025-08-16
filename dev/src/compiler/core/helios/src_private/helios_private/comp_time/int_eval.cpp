@@ -27,29 +27,29 @@ namespace compiler::helios {
 				return visitor.result;
 			}
 
-			// void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
-			// 	result = expr.value;
-			// }
+			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
+				result = expr.value;
+			}
 
-			// void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
-			// 	throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
-			// }
+			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
+				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
+			}
 
-			// void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
-			// 	throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
-			// }
+			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
+				throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
+			}
 
-			// void visitCallExpr(const code::CallExpr&) final {
-			// 	throw base::NotYetImplemented("Evaluation of calls");
-			// }
+			void visitCallExpr(const code::CallExpr&) final {
+				throw base::NotYetImplemented("Evaluation of calls");
+			}
 
-			// void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
-			// 	throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
-			// }
+			void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
+				throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
+			}
 
-			// void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-			// 	result = ctx.query<QueryConstValueOf>(expr.symbol);
-			// }
+			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
+				result = ctx.query<QueryConstValueOf>(expr.symbol);
+			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
 				auto lhs_result = evaluateExpr(ctx, *expr.lhs);
@@ -160,6 +160,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::cout << "Hello From INT_EVAL\n";
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (eval.hasError()) return query::QError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
