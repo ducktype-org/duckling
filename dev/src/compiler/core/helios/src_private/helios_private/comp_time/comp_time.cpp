@@ -389,7 +389,7 @@ namespace compiler::helios {
 
 			std::cout << "Query Code of fun\n";
 
-
+			// https://github.com/ducktype-org/duckling/issues/826
 			auto fun_hout_result = ctx.query<QueryCodeOFFun>(function_sym_id);
 			// TODOP: Error checking here?
 
@@ -408,6 +408,8 @@ namespace compiler::helios {
 			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
 			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 			vm::code::CodeCollection code = m.build();
+			
+			// TODOP: Problem. What with functions which invoke other functions? We should loop recursively through the whole function to look for subfunctions?
 
 			std::cout << "Got code collection\n";
 
