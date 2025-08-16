@@ -97,6 +97,7 @@ private:
 		// std::cout << "Passed 4\n";
 		// ASSERT_EQUAL(-1, getValue("D", root_scope));
 		// std::cout << "Passed 5\n";
+		// std::cout << "\nE Value:" << getValue("E", root_scope) << '\n';
 		// ASSERT_EQUAL(6, getValue("E", root_scope));
 		// std::cout << "Passed 6\n";
 		// ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
@@ -111,6 +112,7 @@ private:
 		// std::cout << "Passed 2\n";
 		// ASSERT_EQUAL(30, getValue("F", root_scope));
 		// std::cout << "Passed 3\n";
+
 		// ASSERT_EQUAL(true, getValue("BOOL_TRUE", root_scope));
 		// std::cout << "Passed 4\n";
 		// ASSERT_EQUAL(0, getValue("BOOL_FALSE", root_scope));
@@ -119,13 +121,12 @@ private:
 		// std::cout << "Passed 6\n";
 		// ASSERT_EQUAL(0, getValue("LOGIC_OR", root_scope));
 		// std::cout << "Passed 7\n";
-		// ASSERT_EQUAL(100, getValue("TERNARY_TEST", root_scope));
-		// std::cout << "Passed 8\n";
+		// // ASSERT_EQUAL(100, getValue("TERNARY_TEST", root_scope));
+		// // std::cout << "Passed 8\n";
 		// ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
 		// std::cout << "Passed 9\n";
-
 		// std::cout << '\n' << getValue("VM_SIMPLE_CALL_2", root_scope) << '\n';
-		// ASSERT_EQUAL(1137, getValue("VM_SIMPLE_CALL_2", root_scope));
+		// ASSERT_EQUAL(1129, getValue("VM_SIMPLE_CALL_2", root_scope));
 		// std::cout << "Passed 9\n";
 		ASSERT_EQUAL(55, getValue("FIB_10", root_scope));
 		std::cout << "Passed 1\n";

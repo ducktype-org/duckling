@@ -29,6 +29,7 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
+			// TODOP: This does not work. The hashes collide.
 			static base::Map<HoutExprKey, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

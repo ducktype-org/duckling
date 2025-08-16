@@ -597,7 +597,29 @@ namespace compiler::helios {
 			return 0;
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		static inline base ::HashMap<UKHash, query ::CacheEntry<PResult>> cache;
+
+		static auto load(UKHash key_hash) -> LoadResult {
+			if (const auto& value = cache.atMaybe(key_hash)) {
+				std::cout << "Got value from cache\n";
+				return QResWithACD{ (*value)->data, (*value)->acd };
+			}
+			return {};
+		}
+
+		static auto store(UKHash key_hash, PResult res, query ::ACD acd) -> QResult {
+			cache.put(key_hash, { std ::move(res), acd });
+			return cache.at(key_hash).data;
+		}
+
+		static_assert(
+			std ::is_same_v<PResult, QResult>,
+			"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"
+		);
+		static_assert(
+			std ::is_copy_constructible_v<PResult>,
+			"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"
+		);
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
