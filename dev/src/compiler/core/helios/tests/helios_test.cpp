@@ -123,7 +123,7 @@ private:
 		// std::cout << "Passed 8\n";
 		// ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
 		// std::cout << "Passed 9\n";
-					
+
 		// std::cout << '\n' << getValue("VM_SIMPLE_CALL_2", root_scope) << '\n';
 		// ASSERT_EQUAL(1137, getValue("VM_SIMPLE_CALL_2", root_scope));
 		// std::cout << "Passed 9\n";
@@ -933,18 +933,16 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		auto find_function
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1005,18 +1003,16 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto find_function
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1067,11 +1063,9 @@ private:
 			std::vector<char> globals = { 'A', 'B', 'C' };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
-					ASSERT_TRUE(
-						compiler::helios::isGlobalVar(
-							ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
-						)
-					);
+					ASSERT_TRUE(compiler::helios::isGlobalVar(
+						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+					));
 
 				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
 					&(*hout_unit.functions[0].content.body->statements[0])

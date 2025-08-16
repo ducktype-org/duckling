@@ -49,7 +49,7 @@ namespace {
 		// std::cout << type.toString() << '\n';
 		// std::cout << base::enumToStr(type.getType().getKind()).str() << '\n';
 		// // TODOP: Legit conversion using the return type.
-		
+
 		if (vm_value->type->getName() != base::StrID("i64")) {
 			throw base::NotYetImplemented("Conversion from vmValue to CTV for types other than i64");
 		}
@@ -113,9 +113,7 @@ namespace compiler::helios {
 		if (!exit_value) return std::unexpected(errors::Failed());
 
 		std::cout << "Got exit value\n";
-		if (!exit_value.has_value()) {
-			CORE_PANIC("Empty VmValue response");
-		}
+		if (!exit_value.has_value()) CORE_PANIC("Empty VmValue response");
 		// TODOP: Remove that.
 		auto vm_value = exit_value.value();
 		vm_value->dprint();
@@ -126,7 +124,7 @@ namespace compiler::helios {
 		// TODOP: Maybe add a separate endpoint for CompTimeGetExitValue() which returns the Box to
 		// avoid memory bloat.
 		auto ctv_res = vmValueToCtv(return_type, exit_value.value());
-		
+
 		std::cout << "Converted\n";
 
 		// if (auto res = vm::api::kill(pid); !res) return std::unexpected(errors::Failed());

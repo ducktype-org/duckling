@@ -408,7 +408,7 @@ namespace compiler::helios {
 			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
 			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 			vm::code::CodeCollection code = m.build();
-			
+
 			std::cout << "Got code collection\n";
 
 			std::vector<CTV> ctv_arguments;
@@ -424,11 +424,11 @@ namespace compiler::helios {
 
 			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
 				// Is the compiler return type needed here?
-				callee_ident->expression_type
-					.getSymbolType(),  // TODOP: Thats wrong. How to get a return type of the
-			                           // function from somewhere?
+				callee_ident->expression_type.getSymbolType(
+				),  // TODOP: Thats wrong. How to get a return type of the
+			        // function from somewhere?
 				code,
-				lir_func_result->mangled_name.str(),	
+				lir_func_result->mangled_name.str(),
 				ctv_arguments
 			);
 
@@ -449,7 +449,6 @@ namespace compiler::helios {
 
 			std::cout << "Expression complicated: Evaluate with VM\n";
 			return evaluateWithVm(ctx, *key.expr);
-
 		}
 
 		QUERY_AUTO_CACHE_COPY
