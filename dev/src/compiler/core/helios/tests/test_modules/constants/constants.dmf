@@ -45,18 +45,20 @@ const BOOL_TRUE = true;
 const BOOL_FALSE = not BOOL_TRUE;
 const LOGIC_AND = BOOL_TRUE and not BOOL_FALSE;
 const LOGIC_OR = not BOOL_TRUE and BOOL_FALSE;
-const TERNARY_TEST = LOGIC_AND ? 100 : 200;
+# const TERNARY_TEST = LOGIC_AND ? 100 : 200;
 
-fun add(a: i64, b: i64) -> i64 {
+fun add(a: i64, b: i64) -> i64 = {
     return a + b;
 }
-const VM_SIMPLE_CALL = add(20, 22);
+const M: i64 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
+const VM_SIMPLE_CALL: i64 = add(20, 22);
+const VM_SIMPLE_CALL_2: i64 = add(M, 22);
 
-fun fib(n: i64) -> i64 {
-   if (n == 0) return 0;
-   if (n == 1) return 1;
+fun fib(n: i64) -> i64 = {
+   if (n == 0) { return 0; }
+   if (n == 1) { return 1; }
    return fib(n - 1) + fib(n - 2);
 }
-const FIB_10 = fib(10); // 55
-const COMPLEX_VM_CALL = add(FIB_10, T2); // 55 + 3 = 58
-const COMPLEX_VM_CALL_2 = add(fib(9), T2); // 34 + 3 = 37
+const FIB_10 = fib(10); # 55
+const COMPLEX_VM_CALL: i64 = add(FIB_10, T2); # 55 + 3 = 58
+const COMPLEX_VM_CALL_2: i64 = add(fib(9), T2); # 34 + 3 = 37

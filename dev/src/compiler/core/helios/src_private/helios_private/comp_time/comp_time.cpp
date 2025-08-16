@@ -39,17 +39,20 @@ namespace {
 		bool is_simple = true;
 
 		void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
+			std::cout << "visitBinaryOperatorExpr\n";
 			if (!is_simple) return;
 			expr.lhs->acceptVisitor(*this);
 			expr.rhs->acceptVisitor(*this);
 		}
 
 		void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+			std::cout << "visitUnaryOperatorExpr\n";
 			if (!is_simple) return;
 			expr.expr->acceptVisitor(*this);
 		}
 
 		void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) override {
+			std::cout << "visitTernaryOperatorExpr\n";
 			if (!is_simple) return;
 			expr.condition->acceptVisitor(*this);
 			expr.if_true->acceptVisitor(*this);
@@ -57,11 +60,13 @@ namespace {
 		}
 
 		void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+			std::cout << "visitParenthesisExpr\n";
 			if (!is_simple) return;
 			expr.inner->acceptVisitor(*this);
 		}
 
 		void visitSequenceExpr(const code::SequenceExpr& expr) override {
+			std::cout << "visitSequenceExpr\n";
 			if (!is_simple) return;
 			for (const auto& sub_expr: expr.expressions) {
 				sub_expr->acceptVisitor(*this);
@@ -70,6 +75,7 @@ namespace {
 		}
 
 		void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+			std::cout << "visitTupleTypeConstructorExpr\n";
 			if (!is_simple) return;
 			for (const auto& sub_expr: expr.elements) {
 				sub_expr->acceptVisitor(*this);
@@ -78,6 +84,7 @@ namespace {
 		}
 
 		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) override {
+			std::cout << "visitVariantTypeConstructorExpr\n";
 			if (!is_simple) return;
 			for (const auto& sub_expr: expr.subtypes) {
 				sub_expr->acceptVisitor(*this);
@@ -85,9 +92,15 @@ namespace {
 			}
 		}
 
-		void visitCallExpr(const code::CallExpr&) override { is_simple = false; }
+		void visitCallExpr(const code::CallExpr&) override {
+			is_simple = false;
+			std::cout << "visitCallExpr\n";
+		}
 
-		void visitAccessExpr(const code::AccessExpr&) override { is_simple = false; }
+		void visitAccessExpr(const code::AccessExpr&) override {
+			is_simple = false;
+			std::cout << "visitAccessExpr\n";
+		}
 	};
 
 	// TODOP: Hout walker
@@ -97,46 +110,40 @@ namespace {
 
 		TreeEvalVisitor(query::Context& ctx): ctx(ctx) {}
 
-		static CompTimeEvalResult evaluateWithTreeEval(query::Context& ctx, const code::Expr& expr) {
-			TreeEvalVisitor visitor(ctx);
-			expr.acceptVisitor(visitor);
-			return std::move(visitor.result);
-		}
-
-		// TODOP: Triage if the expression is simple enough for tree eval.
-		bool isSimpleEnoughForTreeEval(const code::Expr& expr) {
-			IsSimpleVisitor visitor;
-			expr.acceptVisitor(visitor);
-			return visitor.is_simple;
-		}
-
 		void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
+			std::cout << "LiteralIntExpr\n";
 			result = CompileTimeValue{ expr.value };
 		}
 
 		void visitLiteralBoolExpr(const code::LiteralBoolExpr& expr) final {
+			std::cout << "visitLiteralBoolExpr\n";
 			result = CompileTimeValue{ expr.value };
 		}
 
 		void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
+			std::cout << "visitLiteralStringExpr\n";
 			throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
 		}
 
 		void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
+			std::cout << "visitLiteralTypeExpr\n";
 			throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
 			// result = CompileTimeValue{ expr.value_type };
 		}
 
 		void visitCallExpr(const code::CallExpr&) final {
+			std::cout << "visitCallExpr\n";
 			throw base::NotYetImplemented("Evaluation of calls");
 		}
 
 		void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
+			std::cout << "visitIdentifierExpr\n";
 			result = ctx.query<QueryConstValueOf>({ expr.symbol });
 			// result = ctx.query<EvaluateAtCompileTime>({ expr.symbol_data->definition });
 		}
 
 		void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
+			std::cout << "visitBinaryOperatorExpr\n";
 			auto lhs_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
 				{ expr.lhs.operator->() }
 			);
@@ -234,6 +241,7 @@ namespace {
 		}
 
 		void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
+			std::cout << "visitUnaryOperatorExpr\n";
 			auto expr_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
 				{ expr.expr.operator->() }
 			);
@@ -289,6 +297,7 @@ namespace {
 		}
 
 		void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
+			std::cout << "visitTernaryOperatorExpr\n";
 			auto cond_result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
 				{ expr.condition.operator->() }
 			);
@@ -319,24 +328,29 @@ namespace {
 		}
 
 		void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
+			std::cout << "visitParenthesisExpr\n";
 			result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
 				{ expr.inner.operator->() }
 			);
 		}
 
 		void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr&) final {
+			std::cout << "visitTupleTypeConstructorExpr\n";
 			throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 		}
 
 		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr&) final {
+			std::cout << "visitVariantTypeConstructorExpr\n";
 			throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 		}
 
 		void visitAccessExpr(const code::AccessExpr&) final {
+			std::cout << "visitAccessExpr\n";
 			throw base::NotYetImplemented("Evaluation of access expressions is not implemented yet");
 		}
 
 		void visitSequenceExpr(const code::SequenceExpr& seq) final {
+			std::cout << "visitSequenceExpr\n";
 			result = ctx.query<compiler::helios::QueryEvaluateHoutExpressionCT>(
 				{ seq.expressions.back().operator->() }
 			);
@@ -373,6 +387,9 @@ namespace compiler::helios {
 
 			const SymID function_sym_id = callee_ident->symbol;
 
+			std::cout << "Query Code of fun\n";
+
+
 			auto fun_hout_result = ctx.query<QueryCodeOFFun>(function_sym_id);
 			// TODOP: Error checking here?
 
@@ -382,7 +399,7 @@ namespace compiler::helios {
 
 			const mir::Function& mir_func = mir_func_result->value();
 			// TODOP: This may be unsafe? But the function stays in the query's cache so maybe not.
-			CRef<mir::Function>  mir_func_cref{ &mir_func };
+			CRef<mir::Function> mir_func_cref{ &mir_func };
 
 			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_cref });
 			// TODOP: Error checking here?
@@ -391,6 +408,8 @@ namespace compiler::helios {
 			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
 			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 			vm::code::CodeCollection code = m.build();
+			
+			std::cout << "Got code collection\n";
 
 			std::vector<CTV> ctv_arguments;
 			for (const auto& arg_expr: call_expr->arguments) {
@@ -400,6 +419,8 @@ namespace compiler::helios {
 				ctv_arguments.push_back(arg_result.value());
 			}
 
+			auto function_type = callee_ident->expression_type.getType();
+
 
 			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
 				// Is the compiler return type needed here?
@@ -407,7 +428,7 @@ namespace compiler::helios {
 					.getSymbolType(),  // TODOP: Thats wrong. How to get a return type of the
 			                           // function from somewhere?
 				code,
-				fun_hout_result.original_name.str(),
+				lir_func_result->mangled_name.str(),	
 				ctv_arguments
 			);
 
@@ -419,12 +440,16 @@ namespace compiler::helios {
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			std::cout << "Hello from QueryEvaluateHoutExpressionCT\n";
+			key.expr->debugPrint(std::cout);
+			std::cout << '\n';
 			// TODOP: This can be optimized. Always try to eval with TreeEval and only use VM eval
 			// when failed.
 			if (isSimpleEnoughForTreeEval(*key.expr)) return evaluateWithTreeEval(ctx, *key.expr);
+			// return evaluateWithTreeEval(ctx, *key.expr);
 
-			evaluateWithVm(ctx, *key.expr);
-			return query::QError(errors::Failed());
+			std::cout << "Expression complicated: Evaluate with VM\n";
+			return evaluateWithVm(ctx, *key.expr);
+
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -434,6 +459,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryEvaluateExpressionCT, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			std::cout << "===========================================\n";
 			std::cout << "Hello from QueryEvaluateExpressionCT\n";
 			// TODOP: Simple query just to initialise the recursion.
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });

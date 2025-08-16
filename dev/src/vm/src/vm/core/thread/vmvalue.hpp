@@ -65,6 +65,8 @@ namespace vm {
 
 		void importData(Pointer src);
 
+		void dprint() const;
+
 
 		[[nodiscard]] PID getPID() const;
 
