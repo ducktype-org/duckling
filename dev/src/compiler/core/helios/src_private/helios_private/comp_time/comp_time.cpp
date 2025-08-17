@@ -1,37 +1,26 @@
 #include "comp_time.hpp"
 
-#include "helios/ctv/ctv.hpp"
-#include "helios/helios_errors.hpp"
-#include "helios/queries.hpp"
-#include "helios/symbols/query_type_from_definition.hpp"
-#include "helios_private/comp_time/vm_evaluator.hpp"
-#include "mir/mir_structure/mir_structure.hpp"
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <backends/dvm/backend.hpp>
-#include <helios/hout/elements/expr.hpp>
+#include <helios/ctv/ctv.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/queries.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
+#include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
-#include "base/exceptions.hpp"
-#include "base/string_id.hpp"
-#include "base/variant.hpp"
-
-#include "query_framework/context.hpp"
-#include "query_framework/query_cache_macros.hpp"
-#include "query_framework/query_result.hpp"
+#include <query_framework/context.hpp>
+#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
+#include <vm/bytecode/bytecode.hpp>
 
 #include <cmath>
+#include <iostream>
 
 namespace {
 	using namespace compiler::helios;
@@ -487,9 +476,9 @@ namespace compiler::helios {
 
 			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
 				// Is the compiler return type needed here?
-				callee_ident->expression_type
-					.getSymbolType(),  // TODOP: Thats wrong. How to get a return type of the
-			                           // function from somewhere?
+				callee_ident->expression_type.getSymbolType(
+				),  // TODOP: Thats wrong. How to get a return type of the
+			        // function from somewhere?
 				code,
 				lir_func_result->mangled_name.str(),
 				ctv_arguments

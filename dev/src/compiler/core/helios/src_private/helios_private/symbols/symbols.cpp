@@ -3,8 +3,6 @@
 #include "helios_private/comp_time/comp_time.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios_private/comp_time/int_eval.hpp>
-#include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -25,6 +23,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "query_framework/query_cache_macros.hpp"
 #include <query_framework/query_impl.hpp>
 
 #include <functional>
@@ -597,29 +596,7 @@ namespace compiler::helios {
 			return 0;
 		}
 
-		static inline base ::HashMap<UKHash, query ::CacheEntry<PResult>> cache;
-
-		static auto load(UKHash key_hash) -> LoadResult {
-			if (const auto& value = cache.atMaybe(key_hash)) {
-				std::cout << "Got value from cache\n";
-				return QResWithACD{ (*value)->data, (*value)->acd };
-			}
-			return {};
-		}
-
-		static auto store(UKHash key_hash, PResult res, query ::ACD acd) -> QResult {
-			cache.put(key_hash, { std ::move(res), acd });
-			return cache.at(key_hash).data;
-		}
-
-		static_assert(
-			std ::is_same_v<PResult, QResult>,
-			"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"
-		);
-		static_assert(
-			std ::is_copy_constructible_v<PResult>,
-			"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"
-		);
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);

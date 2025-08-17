@@ -6,7 +6,7 @@
 
 namespace {
 	void hexdump(const byte* ptr, usize buflen) {
-		auto* buf = (unsigned char*) ptr;
+		auto* buf = reinterpret_cast<const unsigned char*>(ptr);
 		int   i = 0, j = 0;
 		for (i = 0; i < buflen; i += 16) {
 			std::print("{:06x}: ", i);

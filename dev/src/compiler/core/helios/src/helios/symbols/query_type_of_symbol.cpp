@@ -2,7 +2,6 @@
 
 #include "helios_private/comp_time/comp_time.hpp"
 
-#include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -44,9 +43,9 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
-				auto tp = ctx.query<QueryEvaluateExpressionCT>(
-					pst::AccessLocked<pst::ExprElement>(expr)
-				);
+				auto tp
+					= ctx.query<QueryEvaluateExpressionCT>(pst::AccessLocked<pst::ExprElement>(expr)
+				    );
 				if (tp.hasValue()) {
 					variant_match(tp.value()) {
 						variant_case(tsh::SymbolType<>, type) { setTypeOfSymbol(type); }

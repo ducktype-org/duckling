@@ -126,7 +126,7 @@ private:
 		ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
 		std::cout << "Passed 9\n";
 		std::cout << '\n' << getValue("VM_SIMPLE_CALL_2", root_scope) << '\n';
-		ASSERT_EQUAL(1129, getValue("VM_SIMPLE_CALL_2", root_scope));
+		ASSERT_EQUAL(1'129, getValue("VM_SIMPLE_CALL_2", root_scope));
 		std::cout << "Passed 9\n";
 		// ASSERT_EQUAL(55, getValue("FIB_10", root_scope));
 		// std::cout << "Passed 1\n";

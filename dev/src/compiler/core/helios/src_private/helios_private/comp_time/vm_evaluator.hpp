@@ -19,10 +19,11 @@ namespace compiler::helios {
 			const std::vector<CTV>&         args
 		);
 
+		CompileTimeEvaluator(const CompileTimeEvaluator&)            = delete;
+		CompileTimeEvaluator& operator=(const CompileTimeEvaluator&) = delete;
+
 	private:
 		CompileTimeEvaluator();
 		~CompileTimeEvaluator();
-		CompileTimeEvaluator(const CompileTimeEvaluator&)            = delete;
-		CompileTimeEvaluator& operator=(const CompileTimeEvaluator&) = delete;
 	};
 }

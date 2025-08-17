@@ -1,21 +1,7 @@
 #include "vm_evaluator.hpp"
 
-#include "helios/ctv/ctv.hpp"
-#include "helios/helios_errors.hpp"
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
-#include "base/exceptions.hpp"
-#include "base/str_utils.hpp"
-#include "base/string_id.hpp"
-#include "base/variant.hpp"
-
-#include "vm/api/vm.hpp"
-#include "vm/core/process/interface_types.hpp"
-#include "vm/core/thread/vmvalue.hpp"
-
-#include <expected>
-#include <string>
+#include <vm/api/vm.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 namespace {
 	// TODOP: This may be moved to a separate module in the future since it will get much more
@@ -43,7 +29,7 @@ namespace {
 
 	// TODOP: Cast `vm_value` into `type`.
 	std::expected<compiler::helios::CTV, compiler::helios::errors::Failed> vmValueToCtv(
-		const tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
+		const tsh::SymbolType<>&, Ref<vm::VmValue> vm_value
 	) {
 		// std::cout << type.getType().toString() << '\n';
 		// std::cout << type.toString() << '\n';
@@ -67,8 +53,6 @@ namespace compiler::helios {
 	}
 
 	CompileTimeEvaluator::CompileTimeEvaluator() = default;
-
-	CompileTimeEvaluator::~CompileTimeEvaluator() {}
 
 	std::expected<CTV, errors::Failed> CompileTimeEvaluator::executeInVm(
 		const tsh::SymbolType<>&        return_type,

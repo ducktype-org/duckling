@@ -6,7 +6,6 @@
 #include "symbol_kind.hpp"
 #include "typesystem/higher/symbol_type.hpp"
 
-#include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/hierarchy/declarations/class.hpp>
@@ -65,13 +64,9 @@ namespace compiler::helios {
 					class_info.members.push_back(sym);
 					break;
 				default:
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"Using ",
-							typeid(kind(sym)).name(),
-							" inside a class is not yet implemented."
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
+					));
 				}
 			}
 			// Find the name
