@@ -96,20 +96,20 @@ namespace vm::loader::compiler {
 		}
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
-			low::FuncData func_data;
-			func_data.name = ctx.function->name.str;
+			std::optional<low::FuncData> func_data;
+			func_data->name = ctx.function->name.str;
 			// This is guaranteed to exist by builders.
 			code::FuncSignature signature       = ctx.function->signature;
 			u64                 parameters_size = 0;
 			for (const auto& param: signature.parameters) {
-				func_data.parameters.emplace_back(param.str);
+				func_data->parameters.emplace_back(ctx.type_map.at(param.str));
 				auto type = ctx.type_map.at(param.str);
 				parameters_size += type->getSize();
 			}
-			func_data.arg_size         = parameters_size;
-			func_data.ret_size         = ctx.type_map.at(signature.result_type.str)->getSize();
-			func_data.result_type      = signature.result_type.str;
-			func_data.local_stack_size = ctx.local_stack_size;
+			func_data->arg_size         = parameters_size;
+			func_data->ret_size         = ctx.type_map.at(signature.result_type.str)->getSize();
+			func_data->result_type      = ctx.type_map.at(signature.result_type.str);
+			func_data->local_stack_size = ctx.local_stack_size;
 
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
 				const auto& op    = ctx.function->body[op_idx];
@@ -130,13 +130,13 @@ namespace vm::loader::compiler {
 #include <vm/bytecode/opcode_definitions.hpp>
 				}
 
-				func_data.bc.emplace_back(makeLowInstruction(
+				func_data->bc.emplace_back(makeLowInstruction(
 					low::fix8FromInstr(op),
 					vm::safeReadBytes<u64>(arg_0),
 					vm::safeReadBytes<u64>(arg_1)
 				));
 			}
-			return func_data;
+			return *func_data;
 		}
 
 		void splitCodeAndLabels(CompilationContext& ctx) {

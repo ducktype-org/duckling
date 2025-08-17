@@ -19,13 +19,13 @@ namespace vm::low {
 	 * @brief Function data.
 	 */
 	struct FuncData {
-		base::StrID              name;
-		ByteCode                 bc;
-		usize                    local_stack_size;
-		usize                    arg_size;
-		usize                    ret_size;
-		std::vector<base::StrID> parameters;
-		base::StrID              result_type;
+		base::StrID           name;
+		ByteCode              bc;
+		usize                 local_stack_size;
+		usize                 arg_size;
+		usize                 ret_size;
+		std::vector<TypeCRef> parameters;
+		TypeCRef              result_type;
 	};
 
 	/**
