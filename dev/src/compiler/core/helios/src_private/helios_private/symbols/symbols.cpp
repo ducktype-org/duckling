@@ -23,7 +23,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "query_framework/query_cache_macros.hpp"
 #include <query_framework/query_impl.hpp>
 
 #include <functional>
@@ -582,8 +581,6 @@ namespace compiler::helios {
 				);
 
 			// @TODO: Handle potential lack of value
-			// TODOP: Change that to use the new query.
-			// return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
 			auto new_value = ctx.query<QueryEvaluateExpressionCT>(
 				const_symbol->getValue().value().unlock(ctx)->getExpr()
 			);

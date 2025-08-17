@@ -4,7 +4,6 @@
 #include "helios_private/comp_time/comp_time.hpp"
 #include "simple.hpp"
 #include "symbol_kind.hpp"
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -13,11 +12,7 @@
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
-#include "base/variant.hpp"
-
 #include <query_framework/query_impl.hpp>
-
-#include <variant>
 
 namespace compiler::helios {
 

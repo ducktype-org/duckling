@@ -60,19 +60,13 @@ namespace compiler::helios {
 		const std::string&              func_name,
 		const std::vector<CTV>&         args
 	) {
-		std::cout << "Hello from Execute in VM\n";
 		auto spawn_result = vm::api::spawn();
 		if (!spawn_result) return std::unexpected(errors::Failed());
-		std::cout << "VM: Spawned\n";
-
-
 		const vm::PID pid = spawn_result->pid;
 
 		if (auto res = vm::api::loadCode(pid, { code }); !res)
 			return std::unexpected(errors::Failed());
-		std::cout << "VM: Code Loaded\n";
 
-		std::cout << "Converting to VmValue\n";
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
@@ -96,7 +90,6 @@ namespace compiler::helios {
 		auto exit_value = vm::api::getExitValue(pid);
 		if (!exit_value) return std::unexpected(errors::Failed());
 
-		std::cout << "Got exit value\n";
 		if (!exit_value.has_value()) CORE_PANIC("Empty VmValue response");
 		// TODOP: Remove that.
 		auto vm_value = exit_value.value();

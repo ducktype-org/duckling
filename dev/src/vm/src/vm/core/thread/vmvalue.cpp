@@ -5,6 +5,7 @@
 #include <print>
 
 namespace {
+	// TODOP: Remove that.
 	void hexdump(const byte* ptr, usize buflen) {
 		auto* buf = reinterpret_cast<const unsigned char*>(ptr);
 		int   i = 0, j = 0;
@@ -53,6 +54,7 @@ byte* vm::VmValue::getBytes() { return data.data(); }
 
 const byte* vm::VmValue::getBytes() const { return data.data(); }
 
+// TODOP: Remove that.
 void vm::VmValue::dprint() const {
 	std::cout << "VmValue of type: " << type->getName().str() << '\n';
 	std::cout << "Bytes: \n";

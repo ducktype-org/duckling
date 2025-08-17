@@ -24,6 +24,5 @@ namespace compiler::helios {
 
 	private:
 		CompileTimeEvaluator();
-		~CompileTimeEvaluator();
 	};
 }

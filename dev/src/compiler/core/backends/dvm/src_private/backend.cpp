@@ -149,8 +149,7 @@ namespace compiler::backend_vm {
 
 		void initLocals(AddLirFuncContext& ctx) {
 			CORE_ASSERT(
-				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)
-			    ),
+				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)),
 				"Type not functional"
 			);
 			auto func_type_tod
@@ -270,13 +269,15 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
-						throw base::NotYetImplemented(base::strConcat(
-							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
-							"supported YET, name: ",
-							primitive.name,
-							", size: ",
-							primitive.size
-						));
+						throw base::NotYetImplemented(
+							base::strConcat(
+								"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
+								"supported YET, name: ",
+								primitive.name,
+								", size: ",
+								primitive.size
+							)
+						);
 					if (is_global) {
 						if (primitive.size == 8) return vm::opargs::Global64{ name };
 						if (primitive.size == 4) return vm::opargs::Global32{ name };
@@ -396,9 +397,9 @@ namespace compiler::backend_vm {
 			case lir::Operation::BooleanNot:
 				return OpKind::log_not;
 			case lir::Operation::IntegerULt:
-				return OpKind::ucmpG;
+				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSLt:
-				return OpKind::cmpG;
+				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			default:
 				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 			}
@@ -473,9 +474,12 @@ namespace compiler::backend_vm {
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
 				ctx.bytecode_func,
-				vm::code::instructions::Comment(base::StrID(
-					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
-				))
+				vm::code::instructions::Comment(
+					base::StrID(
+						base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
+							.data()
+					)
+				)
 			);
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
@@ -545,9 +549,11 @@ namespace compiler::backend_vm {
 
 		pushInstruction(
 			ctx.bytecode_func,
-			instructions::Comment(base::StrID(
-				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-			))
+			instructions::Comment(
+				base::StrID(
+					base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+				)
+			)
 		);
 
 		if (terminator.operation == lir::Operation::Branch) {
@@ -633,8 +639,10 @@ namespace compiler::backend_vm {
 			}
 
 			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
-			compiled_collection.global_data.push_back(GlobalData{
-				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
+			compiled_collection.global_data.push_back(
+				GlobalData{
+					{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name }
+			);
 		}
 
 		// Insert and validate types:
