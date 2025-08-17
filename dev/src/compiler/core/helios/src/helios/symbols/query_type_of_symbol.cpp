@@ -1,5 +1,7 @@
 #include "query_type_of_symbol.hpp"
 
+#include "helios_private/comp_time/comp_time.hpp"
+
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -11,6 +13,8 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include "base/exceptions.hpp"
 
 #include <query_framework/query_impl.hpp>
 
@@ -40,8 +44,17 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
-				auto tp = ctx.query<EvalExprToType>(pst::AccessLocked<pst::ExprElement>(expr));
-				if (tp.hasValue()) setTypeOfSymbol(tp.value());
+				auto tp = ctx.query<QueryEvaluateExpressionCT>(
+					pst::AccessLocked<pst::ExprElement>(expr)
+				);
+				if (tp.hasValue()) {
+					variant_match(tp.value()) {
+						variant_case(tsh::SymbolType<>, type) { setTypeOfSymbol(type); }
+						variant_default {
+							CORE_PANIC("QueryEvaluateExpressionCT returned not a type");
+						}
+					}
+				}
 			}
 
 		public:
@@ -127,9 +140,15 @@ namespace compiler::helios {
 				};
 
 				if (ret.has_value()) {
-					auto parsed = ctx.query<EvalExprToType>(ret.value().unlock(ctx)->getExpr());
+					auto parsed
+						= ctx.query<QueryEvaluateExpressionCT>(ret.value().unlock(ctx)->getExpr());
 					if (parsed.hasValue()) {
-						ret_type = parsed.value();
+						variant_match(parsed.value()) {
+							variant_case(tsh::SymbolType<>, type) { ret_type = type; }
+							variant_default {
+								CORE_PANIC("QueryEvaluateExpressionCT didn't return a type");
+							}
+						}
 					} else {
 						// we just fail here, because we can't continue without type
 						return;

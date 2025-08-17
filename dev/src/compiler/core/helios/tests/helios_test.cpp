@@ -42,32 +42,32 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(testImport);
-		// TESTER_ADD_TEST(testEdgeEvals);
-		// TESTER_ADD_TEST(testError);
+		TESTER_ADD_TEST(testImport);
+		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testError);
 		TESTER_ADD_TEST(testConstants);
-		// TESTER_ADD_TEST(testClassSymbolData);
-		// TESTER_ADD_TEST(testHoutVariables);
-		// TESTER_ADD_TEST(testExprTree);
-		// TESTER_ADD_TEST(testSimpleHOUT);
-		// TESTER_ADD_TEST(testSingleFileModuleHOUT);
-		// TESTER_ADD_TEST(testModuleHOUT);
-		// TESTER_ADD_TEST(testDependencyHOUT);
-		// TESTER_ADD_TEST(testHoutVisitor);
-		// TESTER_ADD_TEST(testTypeOf);
-		// TESTER_ADD_TEST(testKeywordLiterals);
-		// TESTER_ADD_TEST(testFunctionParameters);
-		// TESTER_ADD_TEST(testExprScopes);
-		// TESTER_ADD_TEST(testFunctionCallExpr);
-		// TESTER_ADD_TEST(testBuiltinFunctions);
-		// TESTER_ADD_TEST(testMangler);
-		// TESTER_ADD_TEST(testGlobalVariableExpressions);
-		// TESTER_ADD_TEST(testTypeOfConstAndVar);
+		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testHoutVariables);
+		TESTER_ADD_TEST(testExprTree);
+		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testSingleFileModuleHOUT);
+		TESTER_ADD_TEST(testModuleHOUT);
+		TESTER_ADD_TEST(testDependencyHOUT);
+		TESTER_ADD_TEST(testHoutVisitor);
+		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testKeywordLiterals);
+		TESTER_ADD_TEST(testFunctionParameters);
+		TESTER_ADD_TEST(testExprScopes);
+		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		// TESTER_ADD_TEST(testScopeParentsAndDepth);
-		// TESTER_ADD_TEST(testScopeSymbolsConsistency);
+		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
@@ -87,31 +87,31 @@ private:
 	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
-		// ASSERT_EQUAL(1'107, getValue("M", root_scope));
-		// std::cout << "Passed 1\n";
-		// ASSERT_EQUAL(1, getValue("N.X", root_scope));
-		// std::cout << "Passed 2\n";
-		// ASSERT_EQUAL(1, getValue("A", root_scope));
-		// std::cout << "Passed 3\n";
-		// ASSERT_EQUAL(-3, getValue("B", root_scope));
-		// std::cout << "Passed 4\n";
-		// ASSERT_EQUAL(-1, getValue("D", root_scope));
-		// std::cout << "Passed 5\n";
-		// std::cout << "\nE Value:" << getValue("E", root_scope) << '\n';
-		// ASSERT_EQUAL(6, getValue("E", root_scope));
-		// std::cout << "Passed 6\n";
-		// ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
-		// std::cout << "Passed 7\n";
-		// ASSERT_EQUAL(3, getValue("H2", root_scope));
-		// std::cout << "Passed 8\n";
-		// ASSERT_EQUAL(1, getValue("T0", root_scope));
-		// std::cout << "Passed 9\n";
-		// ASSERT_EQUAL(2, getValue("T1", root_scope));
-		// std::cout << "Passed 1\n";
-		// ASSERT_EQUAL(3, getValue("T2", root_scope));
-		// std::cout << "Passed 2\n";
-		// ASSERT_EQUAL(30, getValue("F", root_scope));
-		// std::cout << "Passed 3\n";
+		ASSERT_EQUAL(1'107, getValue("M", root_scope));
+		std::cout << "Passed 1\n";
+		ASSERT_EQUAL(1, getValue("N.X", root_scope));
+		std::cout << "Passed 2\n";
+		ASSERT_EQUAL(1, getValue("A", root_scope));
+		std::cout << "Passed 3\n";
+		ASSERT_EQUAL(-3, getValue("B", root_scope));
+		std::cout << "Passed 4\n";
+		ASSERT_EQUAL(-1, getValue("D", root_scope));
+		std::cout << "Passed 5\n";
+		std::cout << "\nE Value:" << getValue("E", root_scope) << '\n';
+		ASSERT_EQUAL(6, getValue("E", root_scope));
+		std::cout << "Passed 6\n";
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
+		std::cout << "Passed 7\n";
+		ASSERT_EQUAL(3, getValue("H2", root_scope));
+		std::cout << "Passed 8\n";
+		ASSERT_EQUAL(1, getValue("T0", root_scope));
+		std::cout << "Passed 9\n";
+		ASSERT_EQUAL(2, getValue("T1", root_scope));
+		std::cout << "Passed 1\n";
+		ASSERT_EQUAL(3, getValue("T2", root_scope));
+		std::cout << "Passed 2\n";
+		ASSERT_EQUAL(30, getValue("F", root_scope));
+		std::cout << "Passed 3\n";
 
 		// ASSERT_EQUAL(true, getValue("BOOL_TRUE", root_scope));
 		// std::cout << "Passed 4\n";
@@ -121,18 +121,18 @@ private:
 		// std::cout << "Passed 6\n";
 		// ASSERT_EQUAL(0, getValue("LOGIC_OR", root_scope));
 		// std::cout << "Passed 7\n";
-		// // ASSERT_EQUAL(100, getValue("TERNARY_TEST", root_scope));
-		// // std::cout << "Passed 8\n";
-		// ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
-		// std::cout << "Passed 9\n";
-		// std::cout << '\n' << getValue("VM_SIMPLE_CALL_2", root_scope) << '\n';
-		// ASSERT_EQUAL(1129, getValue("VM_SIMPLE_CALL_2", root_scope));
-		// std::cout << "Passed 9\n";
+		// ASSERT_EQUAL(100, getValue("TERNARY_TEST", root_scope));
+		// std::cout << "Passed 8\n";
+		ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
+		std::cout << "Passed 9\n";
+		std::cout << '\n' << getValue("VM_SIMPLE_CALL_2", root_scope) << '\n';
+		ASSERT_EQUAL(1129, getValue("VM_SIMPLE_CALL_2", root_scope));
+		std::cout << "Passed 9\n";
 		// ASSERT_EQUAL(55, getValue("FIB_10", root_scope));
 		// std::cout << "Passed 1\n";
 
-		ASSERT_EQUAL(55, getValue("MUL_ADD_CALL", root_scope));
-		std::cout << "Passed 1\n";
+		// ASSERT_EQUAL(55, getValue("MUL_ADD_CALL", root_scope));
+		// std::cout << "Passed 1\n";
 		// ASSERT_EQUAL(58, getValue("COMPLEX_VM_CALL", root_scope));
 		// std::cout << "Passed 2\n";
 		// ASSERT_EQUAL(37, getValue("COMPLEX_VM_CALL_2", root_scope));

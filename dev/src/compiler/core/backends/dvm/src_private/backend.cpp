@@ -396,9 +396,9 @@ namespace compiler::backend_vm {
 			case lir::Operation::BooleanNot:
 				return OpKind::log_not;
 			case lir::Operation::IntegerULt:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				return OpKind::ucmpG;
 			case lir::Operation::IntegerSLt:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				return OpKind::cmpG;
 			default:
 				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 			}

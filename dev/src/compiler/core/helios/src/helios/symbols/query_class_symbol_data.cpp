@@ -1,8 +1,10 @@
 
 #include "query_class_symbol_data.hpp"
 
+#include "helios_private/comp_time/comp_time.hpp"
 #include "simple.hpp"
 #include "symbol_kind.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -12,7 +14,11 @@
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
+#include "base/variant.hpp"
+
 #include <query_framework/query_impl.hpp>
+
+#include <variant>
 
 namespace compiler::helios {
 
@@ -59,9 +65,13 @@ namespace compiler::helios {
 					class_info.members.push_back(sym);
 					break;
 				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"Using ",
+							typeid(kind(sym)).name(),
+							" inside a class is not yet implemented."
+						)
+					);
 				}
 			}
 			// Find the name
@@ -70,26 +80,36 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto tp = ctx.query<EvalExprToType>({ base });
+				auto tp = ctx.query<QueryEvaluateExpressionCT>({ base });
 				if (tp.hasValue()) {
 					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 					// the base class is given with any specifiers apart from the abstract type.
-					class_info.base = tp.value().getType();
+					// TODOP: Improve that.
+					variant_match(tp.value()) {
+						variant_case(tsh::SymbolType<>, type) { class_info.base = type.getType(); }
+						variant_default { return query::QError(errors::Failed()); }
+					}
 				} else {
-					// We just fail here, error should be reported by EvalExprToType
+					// We just fail here, error should be reported by QueryEvaluateExpressionCT.
 					return query::QError(errors::Failed());
 				}
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					auto tp = ctx.query<EvalExprToType>(interface.unlock(ctx)->getExpr());
+					auto tp
+						= ctx.query<QueryEvaluateExpressionCT>(interface.unlock(ctx)->getExpr());
 					if (tp.hasValue()) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the interface is given with any specifiers apart from the abstract type.
-						class_info.implements.push_back(tp.value().getType());
+						variant_match(tp.value()) {
+							variant_case(tsh::SymbolType<>, type) {
+								class_info.implements.push_back(type.getType());
+							}
+							variant_default { return query::QError(errors::Failed()); }
+						}
 					} else {
-						// We just fail here, error should be reported by EvalExprToType
+						// We just fail here, error should be reported by QueryEvaluateExpressionCT.
 						return query::QError(errors::Failed());
 					}
 				}

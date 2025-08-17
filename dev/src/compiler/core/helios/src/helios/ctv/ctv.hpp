@@ -11,7 +11,7 @@
 namespace compiler::helios {
 	// struct VmHeldValue {
 	// 	tsh::SymbolType<> type;
-	// 	MBox<vm::VmValue> value{};
+	// 	MBox<vm::VmValue> value{}; // Optional will solve the issues?
 	// };
 
 	using CompileTimeValue = std::variant<i64, bool, tsh::SymbolType<>>;

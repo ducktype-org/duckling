@@ -3,8 +3,11 @@
 #include "helios/ctv/ctv.hpp"
 #include "helios/helios_errors.hpp"
 #include "helios/queries.hpp"
+#include "helios/symbols/query_type_from_definition.hpp"
 #include "helios_private/comp_time/vm_evaluator.hpp"
 #include "mir/mir_structure/mir_structure.hpp"
+#include "typesystem/higher/queries/types.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <backends/dvm/backend.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -32,6 +35,12 @@
 
 namespace {
 	using namespace compiler::helios;
+
+	/**
+	 * @brief Representing a compile time evaluation which couldn't be evaluated with tree eval.
+	 */
+	// TODOP: Use that.
+	struct CouldNotShortPath {};
 
 	// TODOP: Checks if the whole subtree is a simple expression.
 	// TODOP: Remove that.
@@ -122,24 +131,34 @@ namespace {
 
 		void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
 			std::cout << "visitLiteralStringExpr\n";
-			throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
+			throw base::NotYetImplemented("Evaluation of string values in compile time");
 		}
 
-		void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
+		void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
 			std::cout << "visitLiteralTypeExpr\n";
-			throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
-			// result = CompileTimeValue{ expr.value_type };
+			result = CompileTimeValue{ expr.value_type };
 		}
 
 		void visitCallExpr(const code::CallExpr&) final {
 			std::cout << "visitCallExpr\n";
-			throw base::NotYetImplemented("Evaluation of calls");
+			// TODOP: return not able to short path or sth.
+			result = query::QError(errors::Failed());
+			throw base::NotYetImplemented("Tree Evaluation of call expressions");
 		}
 
 		void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
 			std::cout << "visitIdentifierExpr\n";
-			result = ctx.query<QueryConstValueOf>({ expr.symbol });
-			// result = ctx.query<EvaluateAtCompileTime>({ expr.symbol_data->definition });
+			// Type Evaluation.
+			if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
+				auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
+				if (type->hasValue())
+					result = CTV{ type->value() };
+				else
+					result = query::QError(errors::Failed());
+			} else {
+				// Constant Evaluation.
+				result = ctx.query<QueryConstValueOf>({ expr.symbol });
+			}
 		}
 
 		void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
@@ -283,15 +302,15 @@ namespace {
 						result = CTV{ type_val.withReferenceKind(tsh::ReferenceKind::Box) };
 						break;
 					default:
-						result = query::QError(errors::Failed());
-						break;
+						CORE_PANIC(
+							"TreeEvalVisitor encountered unsupported unary operation: ",
+							static_cast<std::uint8_t>(expr.operation)
+						);
 					}
 				}
 				variant_default {
 					result = query::QError(compiler::helios::errors::Failed());
-					throw base::NotYetImplemented(
-						"Unary operators for other types are not implemented"
-					);
+					throw base::NotYetImplemented("Evaluation of unary operators for other types.");
 				}
 			}
 		}
@@ -334,14 +353,54 @@ namespace {
 			);
 		}
 
-		void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr&) final {
+		void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) final {
 			std::cout << "visitTupleTypeConstructorExpr\n";
-			throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
+			std::vector<tsh::SymbolType<>> subtypes;
+
+			for (auto& sub_type: expr.elements) {
+				auto sub_type_result
+					= ctx.query<QueryEvaluateHoutExpressionCT>({ sub_type.operator->() });
+				if (sub_type_result.hasError()) {
+					result = query::QError(errors::Failed(sub_type_result.error()));
+					return;
+				}
+
+				variant_match(sub_type_result.value()) {
+					variant_case(tsh::SymbolType<>, type) { subtypes.emplace_back(type); }
+					variant_default { CORE_PANIC("Type evaluation returned not a type\n"); }
+				}
+			}
+
+			result = CTV{ tsh::SymbolType<>{
+				ctx.query<tsh::QueryTupleType>({ subtypes }),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			} };
 		}
 
-		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr&) final {
+		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
 			std::cout << "visitVariantTypeConstructorExpr\n";
-			throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
+			std::vector<tsh::SymbolType<>> subtypes;
+			for (auto& sub_type: expr.subtypes) {
+				// should we here short-path or not?
+				auto sub_type_result
+					= ctx.query<QueryEvaluateHoutExpressionCT>({ sub_type.operator->() });
+				if (sub_type_result.hasError()) {
+					result = query::QError(errors::Failed(sub_type_result.error()));
+					return;
+				}
+
+				variant_match(sub_type_result.value()) {
+					variant_case(tsh::SymbolType<>, type) { subtypes.emplace_back(type); }
+					variant_default { CORE_PANIC("Type evaluation returned not a type\n"); }
+				}
+			}
+
+			result = CTV{ tsh::SymbolType<>{
+				ctx.query<tsh::QueryVariantType>({ subtypes }),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			} };
 		}
 
 		void visitAccessExpr(const code::AccessExpr&) final {
@@ -359,7 +418,6 @@ namespace {
 }
 
 namespace compiler::helios {
-
 	struct IMPLEMENT_QUERY(QueryEvaluateHoutExpressionCT, CompTimeEvalResult) {
 		static bool isSimpleEnoughForTreeEval(const code::Expr& expr) {
 			IsSimpleVisitor visitor;
@@ -375,7 +433,9 @@ namespace compiler::helios {
 			return std::move(visitor.result);
 		}
 
-		static CompTimeEvalResult evaluateWithVm(query::Context& ctx, const code::Expr& expr) {
+		static CompTimeEvalResult evaluateFunctionWithVm(
+			query::Context& ctx, const code::Expr& expr
+		) {
 			std::cout << "Hello from evaluateWithVm\n";
 			const auto* call_expr = dynamic_cast<const code::CallExpr*>(&expr);
 			// TODOP: For now VM is only used for function call evaluation.
@@ -403,13 +463,17 @@ namespace compiler::helios {
 
 			auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func_cref });
 			// TODOP: Error checking here?
+			std::cout << "LIR dump:\n";
+			lir_func_result->debugPrint(ctx, std::cout);
+			std::cout << "\n";
 
 			// Get code of the called function.
 			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
 			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 			vm::code::CodeCollection code = m.build();
-			
-			// TODOP: Problem. What with functions which invoke other functions? We should loop recursively through the whole function to look for subfunctions?
+
+			// TODOP: Problem. What with functions which invoke other functions? We should loop
+			// recursively through the whole function to look for subfunctions?
 
 			std::cout << "Got code collection\n";
 
@@ -441,13 +505,13 @@ namespace compiler::helios {
 			std::cout << "Hello from QueryEvaluateHoutExpressionCT\n";
 			key.expr->debugPrint(std::cout);
 			std::cout << '\n';
-			// TODOP: This can be optimized. Always try to eval with TreeEval and only use VM eval
-			// when failed.
+			// TODOP: This can be optimized. Always try to eval with TreeEval and only use VM
+			// eval when failed.
 			if (isSimpleEnoughForTreeEval(*key.expr)) return evaluateWithTreeEval(ctx, *key.expr);
 			// return evaluateWithTreeEval(ctx, *key.expr);
 
 			std::cout << "Expression complicated: Evaluate with VM\n";
-			return evaluateWithVm(ctx, *key.expr);
+			return evaluateFunctionWithVm(ctx, *key.expr);
 		}
 
 		// TODOP: No cache because im broken.
@@ -466,34 +530,10 @@ namespace compiler::helios {
 			return ctx.query<QueryEvaluateHoutExpressionCT>({ eval.value().operator->() });
 		}
 
-		static inline base ::HashMap<UKHash, query ::CacheEntry<PResult>> cache;
-
+		//
 		// TODOP: No cache because im broken.
 		QUERY_AUTO_NO_CACHE
-		// static auto load(UKHash key_hash) -> LoadResult {
-		// 	if (const auto& value = cache.atMaybe(key_hash)) {
-		// 		std::cout << "QueryEvaluateExpresion got value from cache\n";
-		// 		return QResWithACD{ (*value)->data, (*value)->acd };
-		// 	}
-		// 	return {};
-		// }
-
-		// static auto store(UKHash key_hash, PResult res, query ::ACD acd) -> QResult {
-		// 	std::cout << "QueryEvaluateExpresion store in cache\n";
-		// 	cache.put(key_hash, { std ::move(res), acd });
-		// 	return cache.at(key_hash).data;
-		// }
-
-		// static_assert(
-		// 	std ::is_same_v<PResult, QResult>,
-		// 	"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"
-		// );
-		// static_assert(
-		// 	std ::is_copy_constructible_v<PResult>,
-		// 	"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"
-		// );
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateExpressionCT);
-
 }
