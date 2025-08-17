@@ -12,6 +12,7 @@
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_hash.hpp"
 #include "query_int.hpp"
+#include "q_stats/q_stats.hpp"
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
@@ -40,6 +41,10 @@ namespace query::internal {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
 		const auto unstable_hash = unstableHashKey(key);
+
+		[[maybe_unused]]
+		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{QueryImplType::QueryType::getID()};
+
 
 		if (auto v = QueryImplType::load(unstable_hash)) {
 			// @FUTURE: Add ACD check here...
@@ -71,6 +76,10 @@ namespace query::internal {
 			// epilog:
 			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
 
+			if constexpr (USE_STATS) {
+				stat_object.was_provide_call = true;
+			}
+			
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
 			return QueryImplType::store(unstable_hash, QueryImplType::provide(context, key), acd);

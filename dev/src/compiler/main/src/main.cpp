@@ -24,6 +24,7 @@
 #include <printer/stream_printer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
 
@@ -249,6 +250,8 @@ clah::Clah getClahForMain() {
 					defer(printContextErrors());
 
 					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
+
+					query::printStats();
 
 					return 0;
 				})

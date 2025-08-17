@@ -11,6 +11,9 @@ namespace query {
      * Should be used in a way that encapsulates the entire call to a query function. 
      */
     struct CallStatsObject final {
+        internal::QueryID query_id;
+        bool was_provide_call = false;
+
         /**
          * Call when query call starts 
          */
@@ -21,5 +24,14 @@ namespace query {
          */
         ~CallStatsObject();
     };
+
+    struct NoStats final {
+        NoStats(internal::QueryID) {}
+    };
+
+    /**
+     * Print collected statistics to the cerr.
+     */
+    void printStats();
 }
 
