@@ -183,6 +183,16 @@ namespace compiler::mir {
 				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 			}
 
+			void fillNop(ScopeRef scope) {
+				fill(Instruction{
+					Operation::Nop,
+					{},
+					{},
+					{},
+					scope,
+				});
+			}
+
 			friend struct BlockBuilder;
 		};
 
@@ -191,8 +201,10 @@ namespace compiler::mir {
 		[[nodiscard]]
 		Block build() const {
 			std::vector<Instruction> instructions;
-			for (const auto& instruction: reversed_instruction | std::views::reverse)
-				if (instruction.has_value()) instructions.emplace_back(instruction.value());
+			for (const auto& instruction: reversed_instruction | std::views::reverse) {
+				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
+				instructions.emplace_back(instruction.value());
+			}
 			return {
 				.id           = id,
 				.instructions = std::move(instructions),
@@ -544,7 +556,7 @@ namespace compiler::mir {
 		/**
 		 * @brief If result of expr is value already returns it,
 		 * Otherwise creates temporary, makes last instruction save res there and returns it.
-		 * @note may use InstructionHole stored in sturcture, probably use only once.
+		 * @note may use InstructionHole stored in structure, probably use only once.
 		 */
 		[[nodiscard]]
 		MIRValue getResult(FunctionBuilder& function) {
@@ -566,7 +578,7 @@ namespace compiler::mir {
 		 * @brief If result of expr is value it creates
 		 * instruction that will assign result to it. Otherwise it makes the last instruction of the
 		 * expression save result directly to the target.
-		 * @note may use InstructionHole stored in sturcture, probably use only once.
+		 * @note may use InstructionHole stored in stucture, probably use only once.
 		 */
 		void storeResultInGivenVariable(
 			const std::variant<LocalRef, MirGlobal>& target,
@@ -585,8 +597,14 @@ namespace compiler::mir {
 					});
 				}
 				variant_case(Finalizer, res_data) {
+					CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
+
+					hole.fillNop(scope);
 					std::visit([&](auto&& val) { res_data.instr.output.emplace(val); }, target);
 					res_data.hole.fill(res_data.instr);
+					res_data.instr.flags.insert(
+						res_data.instr.flags.end(), flags.begin(), flags.end()
+					);
 					std::visit([&](auto&& val) { value = val; }, target);
 				}
 			}
@@ -706,13 +724,7 @@ namespace compiler::mir {
 
 			if (possible_result.has_value() and !possible_result->isLocal()) {
 				// Value is ready to return.
-				retrieve_value.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					return_scope,
-				});
+				retrieve_value.fillNop(return_scope);
 
 			} else {
 				// we need to store the result of the expression
@@ -789,8 +801,7 @@ namespace compiler::mir {
 			auto possible_condition_res = lowered_condition.getResultIfStored();
 
 			if (possible_condition_res.has_value() && !possible_condition_res->isLocal()) {
-				get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
-				);
+				get_condition_return.fillNop(condition_scope);
 
 			} else {
 				// Condition result must be stored in special temporary value, so we can use it
@@ -848,13 +859,7 @@ namespace compiler::mir {
 			auto possible_result = expr_result.getResultIfStored();
 
 			if (possible_result.has_value() and !possible_result->isLocal()) {
-				get_condition_return.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					condition_scope,
-				});
+				get_condition_return.fillNop(condition_scope);
 
 			} else {
 				possible_result = function.addNoLifetimeBoolTmp();
