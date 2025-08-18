@@ -1,5 +1,7 @@
 #include "helios_test_utils.hpp"
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -15,11 +17,15 @@
 #include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
+#include "base/exceptions.hpp"
+#include "base/str_utils.hpp"
 #include <base/anycast.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+
+#include <type_traits>
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
@@ -54,8 +60,26 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	i64 getValue(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
+	template<typename T>
+	T getValueAs(const std::string_view chain, ScopeID scope) {
+		auto ctv_result
+			= query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
+
+		base::Optional<T> maybe_value{};
+		if constexpr (std::is_same_v<T, i64>)
+			maybe_value = ctv_result.asI64();
+		else if constexpr (std::is_same_v<T, bool>)
+			maybe_value = ctv_result.asBool();
+		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
+			maybe_value = ctv_result.asType();
+		else
+			static_assert(!std::is_same_v<T, T>, "Unsupported type for getConstValueAs");
+
+		CORE_ASSERT(
+			maybe_value.has_value(),
+			base::strConcat("Constant '", chain, "' has a different type than expected")
+		);
+		return maybe_value.value();
 	}
 
 	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope) {

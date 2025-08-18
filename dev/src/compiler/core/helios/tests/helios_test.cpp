@@ -87,39 +87,33 @@ private:
 	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
-		ASSERT_EQUAL(1'107, getValue("M", root_scope));
-		ASSERT_EQUAL(1, getValue("N.X", root_scope));
-		ASSERT_EQUAL(1, getValue("A", root_scope));
-		ASSERT_EQUAL(-3, getValue("B", root_scope));
-		ASSERT_EQUAL(-1, getValue("D", root_scope));
-		ASSERT_EQUAL(6, getValue("E", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
-		ASSERT_EQUAL(3, getValue("H2", root_scope));
-		ASSERT_EQUAL(1, getValue("T0", root_scope));
-		ASSERT_EQUAL(2, getValue("T1", root_scope));
-		ASSERT_EQUAL(3, getValue("T2", root_scope));
-		ASSERT_EQUAL(30, getValue("F", root_scope));
+		ASSERT_EQUAL(1'107, getValueAs<i64>("M", root_scope));
+		ASSERT_EQUAL(1, getValueAs<i64>("N.X", root_scope));
+		ASSERT_EQUAL(1, getValueAs<i64>("A", root_scope));
+		ASSERT_EQUAL(-3, getValueAs<i64>("B", root_scope));
+		ASSERT_EQUAL(-1, getValueAs<i64>("D", root_scope));
+		ASSERT_EQUAL(6, getValueAs<i64>("E", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValueAs<i64>("MAX_I32", root_scope));
+		ASSERT_EQUAL(3, getValueAs<i64>("H2", root_scope));
+		ASSERT_EQUAL(1, getValueAs<i64>("T0", root_scope));
+		ASSERT_EQUAL(2, getValueAs<i64>("T1", root_scope));
+		ASSERT_EQUAL(3, getValueAs<i64>("T2", root_scope));
+		ASSERT_EQUAL(30, getValueAs<i64>("F", root_scope));
 
-		// ASSERT_EQUAL(true, getValue("BOOL_TRUE", root_scope));
-		// std::cout << "Passed 4\n";
-		// ASSERT_EQUAL(0, getValue("BOOL_FALSE", root_scope));
-		// std::cout << "Passed 5\n";
-		// ASSERT_EQUAL(1, getValue("LOGIC_AND", root_scope));
-		// std::cout << "Passed 6\n";
-		// ASSERT_EQUAL(0, getValue("LOGIC_OR", root_scope));
-		// std::cout << "Passed 7\n";
-		// ASSERT_EQUAL(100, getValue("TERNARY_TEST", root_scope));
-		// std::cout << "Passed 8\n";
-		ASSERT_EQUAL(42, getValue("VM_SIMPLE_CALL", root_scope));
-		ASSERT_EQUAL(1'129, getValue("VM_SIMPLE_CALL_2", root_scope));
+		ASSERT_EQUAL(true, getValueAs<bool>("BOOL_TRUE", root_scope));
+		ASSERT_EQUAL(false, getValueAs<bool>("BOOL_FALSE", root_scope));
+		ASSERT_EQUAL(true, getValueAs<bool>("LOGIC_AND", root_scope));
+		ASSERT_EQUAL(false, getValueAs<bool>("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(42, getValueAs<i64>("VM_SIMPLE_CALL", root_scope));
+		ASSERT_EQUAL(1'129, getValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
 
-		// ASSERT_EQUAL(55, getValue("FIB_10", root_scope));
+		// ASSERT_EQUAL(55, getValueAs<i64>("FIB_10", root_scope));
 		// std::cout << "Passed 1\n";
-		// ASSERT_EQUAL(55, getValue("MUL_ADD_CALL", root_scope));
+		// ASSERT_EQUAL(55, getValueAs<i64>("MUL_ADD_CALL", root_scope));
 		// std::cout << "Passed 1\n";
-		// ASSERT_EQUAL(58, getValue("COMPLEX_VM_CALL", root_scope));
+		// ASSERT_EQUAL(58, getValueAs<i64>("COMPLEX_VM_CALL", root_scope));
 		// std::cout << "Passed 2\n";
-		// ASSERT_EQUAL(37, getValue("COMPLEX_VM_CALL_2", root_scope));
+		// ASSERT_EQUAL(37, getValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 		// std::cout << "Passed 3\n";
 	}
 
@@ -223,11 +217,12 @@ private:
 
 	void testEdgeEvals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/edge_evals")));
-		ASSERT_EQUAL(1, getValue("M1", root_scope));
-		ASSERT_EQUAL(6, getValue("M2", root_scope));
-		ASSERT_EQUAL(7, getValue("O1", root_scope));
-		ASSERT_EQUAL(7, getValue("O2", root_scope));
+		ASSERT_EQUAL(1, getValueAs<i64>("M1", root_scope));
+		ASSERT_EQUAL(6, getValueAs<i64>("M2", root_scope));
+		ASSERT_EQUAL(7, getValueAs<i64>("O1", root_scope));
+		ASSERT_EQUAL(7, getValueAs<i64>("O2", root_scope));
 		// These do not work anymore.
+		// TODOP: Make these work.
 		// ASSERT_EQUAL(7, getValue("O3", root_scope));
 		// ASSERT_EQUAL(7, getValue("O4", root_scope));
 	}
@@ -430,19 +425,19 @@ private:
 	void testExprTree() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
-		ASSERT_EQUAL(1, getValue("V1", root_scope));
+		ASSERT_EQUAL(1, getValueAs<i64>("V1", root_scope));
 		auto              sym_v1  = getChain("V1", root_scope).back();
 		auto              tree_v1 = getExprOfConst(sym_v1);
 		std::stringstream out_v1;
 		tree_v1->debugPrint(out_v1);
 
-		ASSERT_EQUAL(-1, getValue("VM1", root_scope));
+		ASSERT_EQUAL(-1, getValueAs<i64>("VM1", root_scope));
 		auto              sym_vm1  = getChain("VM1", root_scope).back();
 		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
 
-		ASSERT_EQUAL(256, getValue("V256", root_scope));
+		ASSERT_EQUAL(256, getValueAs<i64>("V256", root_scope));
 
 		auto              sym_v256 = getChain("V256", root_scope).back();
 		std::stringstream out_v256;
@@ -450,7 +445,7 @@ private:
 		tree_v256->debugPrint(out_v256);
 		ASSERT_EQUAL("(3+4-4*16/5%7)**8", out_v256.str());
 
-		ASSERT_EQUAL(12, getValue("V12", root_scope));
+		ASSERT_EQUAL(12, getValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
 		auto              tree_v12 = getExprOfConst(sym_v12);
 		std::stringstream out_v12;
@@ -499,21 +494,21 @@ private:
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
 
 		try {
-			getValue("InvalidExpr", root_scope);
+			getValueAs<i64>("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (base::NotYetImplemented& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
-			getValue("InvalidSym", root_scope);
+			getValueAs<i64>("InvalidSym", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
-			getValue("C", root_scope);
+			getValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
@@ -1009,7 +1004,7 @@ private:
 
 		{  // General global variable checks.
 
-			auto [module, _] = getModule(fs::File(path("test_modules/global_viariables/general")));
+			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/general")));
 			auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
@@ -1043,7 +1038,7 @@ private:
 
 		{  // Global variable detections check (isGlobalVar function).
 			auto [module, _]
-				= getModule(fs::File(path("test_modules/global_viariables/detection")));
+				= getModule(fs::File(path("test_modules/global_variables/detection")));
 			auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);

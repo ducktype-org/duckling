@@ -1,6 +1,7 @@
 #pragma once
 
 #include "function_forward.hpp"
+#include "helios/ctv/ctv.hpp"
 
 #include <helios/hout/hout.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
@@ -93,8 +94,7 @@ namespace compiler::lir {
 
 		LirGlobalType type;
 
-		//@TODO: change it to CTV
-		base::Optional<u64> inital_value;
+		base::Optional<helios::CompileTimeValue> initial_value;
 
 	private:
 		LirGlobal(
@@ -102,13 +102,13 @@ namespace compiler::lir {
 			const tsl::TypeLayout& layout,
 			const base::StrID&     mangled_name,
 			const LirGlobalType    type         = LirGlobalType::Variable,
-			base::Optional<u64>    inital_value = {}
+			base::Optional<helios::CompileTimeValue>    initial_value = {}
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),
 			  mangled_name(mangled_name),
 			  type(type),
-			  inital_value(inital_value) {}
+			  initial_value(initial_value) {}
 
 		friend Function;
 

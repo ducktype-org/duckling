@@ -2,8 +2,10 @@
 
 #include <typesystem/higher/symbol_type.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
+#include <string>
 #include <variant>
 
 namespace compiler::helios {
@@ -19,39 +21,41 @@ namespace compiler::helios {
 		Storage value;
 
 	public:
-		CompileTimeValue() = default;
+		CompileTimeValue();
+		CompileTimeValue(i64 val);
+		CompileTimeValue(bool val);
+		CompileTimeValue(tsh::SymbolType<> val);
 
-		CompileTimeValue(i64 val): value(val) {}
+		/**
+		 * @brief Retruns a constant reference to the CTVs internal value storage.
+		 * @return A constant reference to the CTV value storage.
+		 */
+		[[nodiscard]] const Storage& getStorage() const;
 
-		CompileTimeValue(bool val): value(val) {}
+		/**
+		 * @brief Transforms the value stored in the CTV to a string representation. Used for debug
+		 * purposes.
+		 * @return A string representation of the value stored in the CTV.
+		 */
+		[[nodiscard]] std::string toString() const;
 
-		CompileTimeValue(tsh::SymbolType<> val): value(val) {}
+		/**
+		 * @brief Retrieves the value of type i64 from the CTV.
+		 * @return A i64 value or an empty optional if the CTV didn't store a value of type i64.
+		 */
+		[[nodiscard]] base::Optional<i64> asI64() const;
 
-		[[nodiscard]] base::Optional<i64> asI64() const {
-			variant_match(value) {
-				variant_case(i64, val) { return val; }
-				// TODOP: Case for VmValue?
-			}
-			return {};
-		}
+		/**
+		 * @brief Retrieves the value of type bool from the CTV.
+		 * @return A bool value or an empty optional if the CTV didn't store a value of type bool.
+		 */
+		[[nodiscard]] base::Optional<bool> asBool() const;
 
-		[[nodiscard]] base::Optional<bool> asBool() const {
-			variant_match(value) {
-				variant_case(bool, val) { return val; }
-				// TODOP: Case for VmValue?
-			}
-			return {};
-		}
-
-		[[nodiscard]] base::Optional<tsh::SymbolType<>> asType() const {
-			variant_match(value) {
-				variant_case(tsh::SymbolType<>, val) { return val; }
-				// TODOP: Case for VmValue?
-			}
-			return {};
-		}
-
-		[[nodiscard]] const Storage& getStorage() const { return value; }
+		/**
+		 * @brief Retrieves the value of type from the CTV.
+		 * @return A type value or an empty optional if the CTV didn't store a type.
+		 */
+		[[nodiscard]] base::Optional<tsh::SymbolType<>> asType() const;
 	};
 
 
