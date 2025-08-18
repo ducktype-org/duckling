@@ -1234,6 +1234,8 @@ namespace compiler::mir {
 			switch (builtin) {
 			case IntegerNegation:
 				return Operation::IntegerNeg;
+			case FloatNegation:
+				return Operation::FloatNeg;
 			case BooleanNot:
 				return Operation::BooleanNot;
 			default:
