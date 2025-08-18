@@ -28,6 +28,19 @@ namespace vm {
 			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
 		}
 
+		/**
+		 * @brief Allocates a contiguous data portion for a dynamic table with n elements of type
+		 * `inner_type`.
+		 * @note Assumes that `table_type` is a dynamic table type with inner type `inner_type`,
+		 *  to assign the correct type to the new `BlockData` object.
+		 */
+		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
+			auto size = inner_type->getSize() * n;
+			auto ptr  = new std::byte[size];
+			allocated.emplace_back(ptr, size);
+			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>(this) };
+		}
+
 		void deallocate(Ref<BlockData> data) final {
 			auto ptr = data->view.getBegin();
 			for (auto it = allocated.begin(); it != allocated.end(); ++it) {
