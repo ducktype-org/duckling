@@ -18,8 +18,6 @@ namespace compiler::helios {
 	/**
 	 * @brief Main query for evaluating PST expressions at compile time.
 	 */
-	DECLARE_QUERY(
-		QueryCompTime, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult
-	)
+	DECLARE_QUERY(QueryCompTime, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult)
 
 }

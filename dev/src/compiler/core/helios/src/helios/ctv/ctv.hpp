@@ -15,5 +15,5 @@ namespace compiler::helios {
 	// };
 
 	using CompileTimeValue = std::variant<i64, bool, tsh::SymbolType<>>;
-	using CTV = CompileTimeValue;
+	using CTV              = CompileTimeValue;
 }

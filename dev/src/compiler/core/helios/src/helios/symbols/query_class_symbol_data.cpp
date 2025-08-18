@@ -87,8 +87,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					auto tp
-						= ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
+					auto tp = ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
 					if (tp.hasValue()) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the interface is given with any specifiers apart from the abstract type.

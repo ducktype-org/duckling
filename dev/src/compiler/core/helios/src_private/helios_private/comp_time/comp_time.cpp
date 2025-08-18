@@ -357,9 +357,9 @@ struct IMPLEMENT_QUERY(QueryCompTime, CompTimeEvalResult) {
 		auto mir_func_result = ctx.query<mir::LowerToMirFunction>({ fun_hout_result });
 		if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
 
-		CRef<mir::Function> mir_func = &mir_func_result->value();
-		auto lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func });
-		
+		CRef<mir::Function> mir_func        = &mir_func_result->value();
+		auto                lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func });
+
 		// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
 		backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 		vm::code::CodeCollection code = m.build();
@@ -376,8 +376,9 @@ struct IMPLEMENT_QUERY(QueryCompTime, CompTimeEvalResult) {
 
 		auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
 			// Is the compiler return type needed here?
-			callee_ident->expression_type.getSymbolType(),  // TODOP: Thats wrong. How to get a return
-		                                                    // type of the function from somewhere?
+			callee_ident->expression_type.getSymbolType(
+			),  // TODOP: Thats wrong. How to get a return
+		        // type of the function from somewhere?
 			code,
 			lir_func_result->mangled_name.str(),
 			ctv_arguments
