@@ -101,7 +101,21 @@ namespace compiler::mir {
 		// @TODO change to ctv
 		num_ctv value;
 
-		MirNumCTVConst(num_ctv value): value(value) {}
+		MirNumCTVConst(num_ctv value) {
+			this->value = std::visit(
+				[](auto&& val) -> num_ctv {
+					using T = std::decay_t<decltype(val)>;
+					if constexpr (std::is_integral_v<T>)
+						// Force all integral types to i64 for uniformity in operations
+						// @TODO: Replace with proper type conversion when implemented
+
+						return static_cast<i64>(val);
+					else
+						return val;
+				},
+				value
+			);
+		}
 
 		bool operator==(const MirNumCTVConst& other) const = default;
 	};

@@ -1147,7 +1147,7 @@ namespace compiler::mir {
 								};
 							} else {
 								return tsh::SymbolType<>{
-									ctx.query<tsh::QueryIntegralType>({ 64 }),
+									ctx.query<tsh::QueryIntegralType>({ bits }),
 									tsh::ReferenceKind::Direct,
 									tsh::Mutability::Immutable,
 								};
