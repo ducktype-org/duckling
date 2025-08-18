@@ -154,16 +154,6 @@ namespace vm {
 	DEFINE_MOVE_OPS(16, i16)
 	DEFINE_MOVE_OPS(8, std::int8_t)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
-		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
 			auto& dst_ptr = derefStack<Pointer>(local_stack, instr->arg0);
@@ -896,7 +886,7 @@ namespace vm {
 
 			thread.handleBreakpoint();
 
-			// Restore current registers and flow.
+			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
 			instr       = frame->instr;
