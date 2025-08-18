@@ -17,7 +17,6 @@ namespace vm {
 		Profiler(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
 	public:
-
 		/**
 		 * @note This function is not implemented yet. If we decide on a different implementation
 		 * of the profiler or events, it should be deleted.

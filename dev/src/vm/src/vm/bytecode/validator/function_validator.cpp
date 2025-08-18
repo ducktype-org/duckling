@@ -747,7 +747,12 @@ class FunctionValidator {
 			variant_case_novalue(Op_output_l64) {}
 			variant_case_novalue(Op_input_l32) {}
 			variant_case_novalue(Op_output_l32) {}
-			variant_case_novalue(Op_setVTable_lptr_type) {}
+			variant_case(Op_setVTable_lptr_type, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				if (pointer_type.inner != instr.arg1.type_name)
+					throw VTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_downcast_lptr_lptr) {}
 			variant_case_novalue(Op_free_lptr) {}
 			variant_case(Op_store_lptr_lany, instr) {
