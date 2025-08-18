@@ -2,7 +2,7 @@
 
 #include <base/strongly_typed_id.hpp>
 
-#include <functional>  // IWYU pragma: export
+#include <utility>  // IWYU pragma: export
 
 namespace compiler::frontend {
 
