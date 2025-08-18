@@ -757,27 +757,55 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			auto& dst         = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto  element_type
-				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset = usize(index * i64(element_type->getSize()));
+			auto& dst          = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  tbl_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto  index        = derefStack<u64>(local_stack, instr[1].arg0);
+			auto  data_offset  = usize(index * element_type->getSize());
 
 			thread.process_memory.setPointer(dst, { tbl_pointer.getBlock(), data_offset });
 		}
 		FUNCTION_CONT(2);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& dst          = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  tbl_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto  index        = derefStack<u64>(local_stack, instr[1].arg0);
+			auto  data_offset  = usize(index * element_type->getSize());
+
+			thread.process_memory.setPointer(dst, { tbl_pointer.getBlock(), data_offset });
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_lptr_lany)(FUNCTION_ARGS) {
+		{
+			auto tbl_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
+			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
+			tbl_pointer.movePointer(data_offset);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer{ src_block, 0 };
+
+			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto element_type
-				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset = index * i64(element_type->getSize());
+			auto tbl_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
+			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
@@ -785,6 +813,23 @@ namespace vm {
 			auto src_pointer   = Pointer(src_block, 0);
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_lany_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
+
+			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
+
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -797,12 +842,32 @@ namespace vm {
 
 			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
 
-			auto index = derefStack<i64>(local_stack, instr[1].arg0);
-			auto element_type
-				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * i64(element_type->getSize()));
+			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto& tbl_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  pointed_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
+			auto new_elem_count = derefStack<u64>(local_stack, instr[1].arg0);
+
+			if (tbl_pointer.isNull()) {
+				auto new_block
+					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
+				thread.process_memory.setPointer(tbl_pointer, { new_block, 0 });
+				CORE_ASSERT(!tbl_pointer.isNull(), "what the fuck alloc");
+			} else {
+				auto tbl_block = tbl_pointer.getBlock();
+				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
+				CORE_ASSERT(!tbl_pointer.isNull(), "what the fuck realloc");
+			}
 		}
 		FUNCTION_CONT(2);
 	}

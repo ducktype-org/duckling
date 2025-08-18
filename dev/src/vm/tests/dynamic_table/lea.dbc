@@ -1,0 +1,41 @@
+type dynamic_table: dtablei64 i64
+type pointer: dptr_i64 dtablei64
+
+function main {
+
+    init_lany_type iter, i64;
+    init_lany_type val, i64;
+    init_lany_type table_ptr, dptr_i64;
+    init_lany_type other_ptr, ptr_i64;
+    mov_l64_imm val, 5;
+    dynTableReAlloc_lptr_type table_ptr, dtablei64;
+    ext_l64 val;
+    mov_l64_imm iter, 5;
+    
+
+    label Loop1;
+        sub_l64_imm iter, 1;
+        dynTableStore_lptr_lany table_ptr, val;
+        ext_l64 iter;
+        cmpEq_l64_imm iter, 0;
+        jmpIfNot_label Loop1;
+
+    dynTableLea_lptr_lptr other_ptr, table_ptr;
+    ext_l64 iter;
+    mov_l64_imm val, 4;
+    store_lptr_lany other_ptr, val;
+
+    mov_l64_imm iter, 0;
+    dynTableLoad_lany_lptr val, table_ptr;
+    ext_l64 iter;
+
+    output_l64 val;
+
+    deinit; # other_ptr
+    deinit; # table_ptr
+    deinit; # val
+    deinit; # iter
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

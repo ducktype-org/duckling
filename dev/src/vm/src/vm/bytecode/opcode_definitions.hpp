@@ -314,32 +314,6 @@ DEF_OPCODE(alloc_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 // frees block under pointer
 DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
 
-// /**
-//  * @brief Allocates new dynamic table and stores pointer to it under `destination`.
-//  * `element_type` is type of each element in the array, not the dynamic table itself.
-//  * @note `ext_l64` is required to tell the count of elements
-//  */
-// DEF_OPCODE(
-// 	dynTableAlloc_lptr_type,
-// 	vm::opargs::StackLocalPtr /* destination */,
-// 	vm::opargs::Type /* 		 element_type,
-//     vm::opargs::StackLocal64 	 element_count*/
-// )
-
-// /**
-//  * @brief Re-allocates dynamic table from under `source` by changing its element count to
-//  `element_count`.
-//  * `element_type` is type of each element in the array, not the dynamic table itself.
-//  * @note It's counter-intuitive, but this instruction does not modify pointer data. (unline in C)
-//  * @note `ext_l64` is required to tell the count of elements
-//  */
-// DEF_OPCODE(
-// 	dynTableReAlloc_lptr_type,
-// 	vm::opargs::StackLocalPtr /* source */,
-// 	vm::opargs::Type /* 		 element_type,
-//     vm::opargs::StackLocal64 	 element_count*/
-// )
-
 
 // stores local data at pointer
 DEF_OPCODE(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
@@ -400,11 +374,43 @@ DEF_OPCODE(
 )
 
 // expects `ext_l64` to be the next instruction
-// DEF_OPCODE(pointerTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
-// expects `ext_type_l64` to be the next instruction
-// DEF_OPCODE(pointerTableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
-// expects `ext_type_l64` to be the next instruction
-// DEF_OPCODE(pointerTableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_OPCODE(
+	dynTableLea_lptr_lptr,
+	vm::opargs::StackLocalPtr /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocal64 	 index */
+)
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableLoad_lany_lptr,
+	vm::opargs::StackLocalAny /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocal64 	 index */
+)
+
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableStore_lptr_lany,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::StackLocalAny /* source,
+    vm::opargs::StackLocal64 	 index */
+)
+
+/**
+ * @brief Re-allocates dynamic table under `table_ptr` with
+ * `new_elem_count` elements. If given nullptr, then it will allocate
+ * a new array.
+ * `table_type` is type of the dynamic table itself, not the element type.
+ * @note It's counter-intuitive, but if a reallocation has happened, this
+ *  instruction will not modify pointer data (unlike in C).
+ * @note `ext_l64` is required to tell the count of elements
+ */
+DEF_OPCODE(
+	dynTableReAlloc_lptr_type,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::Type /* table_type ,
+vm::opargs::StackLocal64     new_elem_count */
+)
 
 // ========= TYPE OPERATIONS ========
 
