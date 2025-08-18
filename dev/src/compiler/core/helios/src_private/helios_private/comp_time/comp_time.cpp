@@ -74,8 +74,9 @@ namespace compiler::helios {
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->hasValue() ? CompTimeEvalResult{ CompileTimeValue{ type->value() } }
-					                             : query::QError(errors::Failed());
+					result    = type->hasValue()
+					              ? CompTimeEvalResult{ CompileTimeValue{ type->value() } }
+					              : query::QError(errors::Failed());
 				} else {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
@@ -124,8 +125,9 @@ namespace compiler::helios {
 									result = CompileTimeValue{ lhs_value % rhs_value };
 									break;
 								case code::BuiltinBinary::IntegerPow:
-									result
-										= CompileTimeValue{ static_cast<i64>(std::pow(lhs_value, rhs_value)) };
+									result = CompileTimeValue{
+										static_cast<i64>(std::pow(lhs_value, rhs_value))
+									};
 									break;
 								case code::BuiltinBinary::BooleanAnd:
 									result = CompileTimeValue{ lhs_value and rhs_value };
@@ -210,10 +212,14 @@ namespace compiler::helios {
 					variant_case(tsh::SymbolType<>, type_val) {
 						switch (expr.operation) {
 						case code::BuiltinUnary::Ref:
-							result = CompileTimeValue{ type_val.withReferenceKind(tsh::ReferenceKind::Ref) };
+							result = CompileTimeValue{
+								type_val.withReferenceKind(tsh::ReferenceKind::Ref)
+							};
 							break;
 						case code::BuiltinUnary::Box:
-							result = CompileTimeValue{ type_val.withReferenceKind(tsh::ReferenceKind::Box) };
+							result = CompileTimeValue{
+								type_val.withReferenceKind(tsh::ReferenceKind::Box)
+							};
 							break;
 						default:
 							CORE_PANIC(
@@ -282,7 +288,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
@@ -353,9 +360,9 @@ namespace compiler::helios {
 
 			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
 				// TODOP: Is the compiler return type needed here?
-				callee_ident->expression_type
-					.getSymbolType(),  // TODOP: Thats wrong. How to get a return
-			                           // type of the function from somewhere?
+				callee_ident->expression_type.getSymbolType(
+				),  // TODOP: Thats wrong. How to get a return
+			        // type of the function from somewhere?
 				code,
 				lir_func_result->mangled_name.str(),
 				ctv_arguments
@@ -369,8 +376,8 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Evaluates a HOUT expression using TreeEval.
-		 * @return The calculated result represented by CompileTimeValue, a CouldNotShortPath error if the
-		 * expresion was to complicated for tree eval or a Failed error.
+		 * @return The calculated result represented by CompileTimeValue, a CouldNotShortPath error
+		 * if the expresion was to complicated for tree eval or a Failed error.
 		 */
 		static auto evaluateWithTreeEval(query::Context& ctx, CRef<code::Expr> expr)
 			-> TreeEvalResult {
