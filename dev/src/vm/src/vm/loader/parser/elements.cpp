@@ -26,10 +26,11 @@ namespace vm::loader::parser {
 	 * be type of size 64bits.
 	 */
 	namespace opargs_parsers {
-		template<class T, class K>
-		T parseLiteral(F8ParserState& state, size_t& literal_length) {
-			auto previous_token = state.tokens().peek();
-			i32  sign           = 1;
+		template<class T>
+		std::pair<T, size_t> parseLiteral(F8ParserState& state) {
+			size_t literal_length = 0;
+			auto   previous_token = state.tokens().peek();
+			i32    sign           = 1;
 			if (previous_token.isOperatorSymbol()) {
 				if (previous_token.getValue().str() == "-") {
 					sign = -1;
@@ -48,9 +49,11 @@ namespace vm::loader::parser {
 			if constexpr (sizeof(T) != 8) {
 				state.log(makeBox<InvalidLiteral>(
 					token.getPosition(),
-					base::strConcat("Unsupported size for `", base::typeName<K>(), "`.")
+					base::strConcat(
+						"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
+					)
 				));
-				return T{ 0 };
+				return { T{ 0 }, 0 };
 			}
 
 			if (token.isNumLiteral())
@@ -91,11 +94,11 @@ namespace vm::loader::parser {
 								"Unknown type specifier `",
 								str_type,
 								"` for `",
-								base::typeName<K>(),
+								base::typeName<vm::opargs::Immediate>(),
 								"`."
 							)
 						));
-						return T{ 0 };
+						return { T{ 0 }, 0 };
 					}
 				} else {
 					// By default, we assume 64-bit integer or double if it has a dot
@@ -114,21 +117,27 @@ namespace vm::loader::parser {
 					}
 				}
 				if (pos == str.length())
-					return result;
+					return std::make_pair(result, literal_length);
 				else {
 					state.log(makeBox<InvalidLiteral>(
 						token.getPosition(),
-						base::strConcat("Number not read fully for `", base::typeName<K>(), "`.")
+						base::strConcat(
+							"Number not read fully for `",
+							base::typeName<vm::opargs::Immediate>(),
+							"`."
+						)
 					));
-					return T{ 0 };
+					return { T{ 0 }, 0 };
 				}
 			} catch (std::logic_error&) {}
 
 			state.log(makeBox<InvalidLiteral>(
 				token.getPosition(),
-				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+				base::strConcat(
+					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+				)
 			));
-			return T{ 0 };
+			return { T{ 0 }, 0 };
 		}
 
 		base::StrID parseStr(F8ParserState& state) {
@@ -148,12 +157,12 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			auto   pos            = state.getPosition();
-			size_t literal_length = 0;
-			auto   value          = parseLiteral<u64, vm::opargs::Immediate>(state, literal_length);
-			auto   arg            = opargs::Immediate{ value };
-			arg.bytecode_pos      = dia::SourcePosition(
-                pos.getLocation(), pos.getStart(), pos.getStart() + literal_length
+			auto pos            = state.getPosition();
+			auto parsed_literal = parseLiteral<u64>(state);
+			auto value          = parsed_literal.first;
+			auto arg            = opargs::Immediate{ value };
+			arg.bytecode_pos    = dia::SourcePosition(
+                pos.getLocation(), pos.getStart(), pos.getStart() + parsed_literal.second
             );
 			return arg;
 		}
