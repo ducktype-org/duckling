@@ -520,6 +520,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_lptr)(FUNCTION_ARGS) {
+		{
+			auto ptr = derefStack<Pointer>(local_stack, instr->arg0);
+			auto block = ptr.getBlock();
+			auto block_id = thread.process_memory.requestBlockID(block);
+			auto block_data = thread.process_memory.requestBlockData(block_id);
+			thread.process.getIO().writeOutput(block_data.stdString());
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {

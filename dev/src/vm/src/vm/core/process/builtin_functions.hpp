@@ -49,7 +49,7 @@ namespace vm::builtins {
 	 * @note Name of the enum case should be the same as the builtin function name
 	 * without the "builtin" prefix.
 	 */
-	enum class BuiltinFunctionID : usize { InputI64, OutputI64 };
+	enum class BuiltinFunctionID : usize { InputI64, OutputI64, OutputString };
 
 	/**
 	 * @brief Class for FunctionHandlers.
@@ -63,7 +63,9 @@ namespace vm::builtins {
 	public:
 		static i64 builtinInputI64(VMThread& process);
 		static i64 builtinOutputI64(VMThread& process, i64 arg);
+		static i64 builtinOutputString(VMThread& process, Pointer ptr);
 	};
+	
 
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
