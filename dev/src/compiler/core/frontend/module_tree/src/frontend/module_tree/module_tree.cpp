@@ -24,11 +24,38 @@ namespace {
 	 * information from this map into PST nodes.
 	 */
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
+
+	/**
+	 * Static map that stores all ModuleTree instances by their ModuleID.
+	 * Used for global access to modules.
+	 */
+	base::StableHashMap<compiler::frontend::ModuleID, compiler::frontend::ModuleTree> module_map;
+
+	/**
+	 * Checks if a file name is valid according to the reject regex.
+	 * @param filename The file name to check.
+	 * @param reject_file_regex The regex to use for rejection.
+	 * @return True if valid, false otherwise.
+	 */
+	bool isFileNameValid(const std::string& filename, const std::regex& reject_file_regex) {
+		std::smatch match;
+		return !std::regex_match(filename, match, reject_file_regex);
+	}
+
+	/**
+	 * Checks if a directory name is valid according to the reject regex.
+	 * @param dirname The directory name to check.
+	 * @param reject_directory_regex The regex to use for rejection.
+	 * @return True if valid, false otherwise.
+	 */
+	bool isDirectoryNameValid(const std::string& dirname, const std::regex& reject_directory_regex) {
+		std::smatch match;
+		return !std::regex_match(dirname, match, reject_directory_regex);
+	}
 }
 
 namespace compiler::frontend {
-	// Define module_map
-	base::StableHashMap<ModuleID, ModuleTree> ModuleTree::module_map;
+
 
 	Ref<ModuleTree> ModuleTree::getModule(ModuleID id) {
 #ifdef DEBUG
@@ -114,20 +141,6 @@ namespace compiler::frontend {
 
 	ModuleID ModuleTree::getID() const { return m_id; }
 
-	bool ModuleTreeBuilder::isFileNameValid(
-		const std::string& filename, const std::regex& reject_file_regex
-	) {
-		std::smatch match;
-		return !std::regex_match(filename, match, reject_file_regex);
-	}
-
-	bool ModuleTreeBuilder::isDirectoryNameValid(
-		const std::string& dirname, const std::regex& reject_directory_regex
-	) {
-		std::smatch match;
-		return !std::regex_match(dirname, match, reject_directory_regex);
-	}
-
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File& directory, const std::regex& file_reject, const std::regex& dir_reject
 	) {
@@ -212,7 +225,7 @@ namespace compiler::frontend {
 	ModuleTreeBuilder::ModuleTreeBuilder(): m_finalized(false) {}
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::create() {
-		return base::makeBox<ModuleTreeBuilder>();
+		return base::makeBox<ModuleTreeBuilder>(ModuleTreeBuilder());
 	}
 
 	void ModuleTreeBuilder::addSourceFile(const fs::File& file) {
@@ -255,7 +268,7 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
-	bool ModuleTreeBuilder::isValid() const { return !m_finalized; }
+	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }
 
 	base::Ref<ModuleTree> ModuleTreeBuilder::finalize() {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
@@ -265,8 +278,8 @@ namespace compiler::frontend {
 		// Create new ModuleTree instance
 		ModuleTree module;
 		ModuleID   module_id = module.getID();
-		ModuleTree::module_map.put(module_id, std::move(module));
-		auto module_ref = ModuleTree::module_map.atMaybe(module_id).value();
+		module_map.put(module_id, std::move(module));
+		auto module_ref = module_map.atMaybe(module_id).value();
 
 		// Set ID and name
 		module_ref->m_name = m_name;
@@ -307,7 +320,7 @@ namespace compiler::frontend {
 		Ref<SourceFile>  file          = SourceFile::getSourceFile(file_id);
 		CRef<ModuleTree> linked_module = file->getModule();
 
-		Ref<ModuleTree> module = ModuleTree::module_map.atMaybe(linked_module->getID()).value();
+		Ref<ModuleTree> module = module_map.atMaybe(linked_module->getID()).value();
 
 		auto& source_files = module->m_source_files;
 		auto  it
@@ -317,7 +330,7 @@ namespace compiler::frontend {
 
 		CORE_ASSERT(it != source_files.end(), "SourceFile not found in module");
 
-		SourceFile::file_map.erase(file_id);
+		SourceFile::getSourceFile(file_id)->erase();
 		source_files.erase(it);
 	}
 
@@ -470,18 +483,17 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeModule([[maybe_unused]] query::Context& ctx, ModuleID module_id) {
-		CORE_ASSERT(ModuleTree::module_map.contains(module_id), "Module must exist");
+		CORE_ASSERT(module_map.contains(module_id), "Module must exist");
 
-		auto module_ref = ModuleTree::module_map.atMaybe(module_id).value();
+		auto module_ref = module_map.atMaybe(module_id).value();
 		auto parent     = module_ref->m_parent;
 
 		// Remove all source files associated with this module
-		for (const auto& file: module_ref->m_source_files)
-			SourceFile::file_map.erase(file->getID());
+		for (const auto& file: module_ref->m_source_files) file->erase();
 
 		// Remove main source file if it exists
 		if (module_ref->m_main_source_file.has_value())
-			SourceFile::file_map.erase(module_ref->m_main_source_file.value()->getID());
+			module_ref->m_main_source_file.value()->erase();
 
 		// Update parent module if it exists
 		if (parent.has_value()) {
@@ -503,7 +515,7 @@ namespace compiler::frontend {
 		}
 
 		// Remove from static map
-		ModuleTree::module_map.erase(module_id);
+		module_map.erase(module_id);
 	}
 
 	void ModuleTreeModifier::fileModified(

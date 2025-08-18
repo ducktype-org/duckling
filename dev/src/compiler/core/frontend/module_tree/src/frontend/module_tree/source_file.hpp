@@ -29,8 +29,6 @@ namespace compiler::frontend {
 		base::CRef<ModuleTree>     linked_module;
 		base::Optional<pst::PST<>> parse_tree;
 
-		static base::StableHashMap<FileID, SourceFile> file_map;
-
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
 		 * @param path The file system file.
@@ -46,6 +44,8 @@ namespace compiler::frontend {
 		 *       The file content is reloaded from disk and the parse tree is cleared.
 		 */
 		void update();
+
+		void erase();
 
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
@@ -111,7 +111,7 @@ namespace compiler::frontend {
 		 * @brief Returns cached content for this SourceFile.
 		 * @note Content is cached during SourceFile construction.
 		 * @return Cached base::SharedView for this SourceFile.
-		 * @throws Assertion if the content is not found in the cache.
+		 * @throws Panics if the content is not found in the cache.
 		 */
 		[[nodiscard]] base::SharedView getCachedContent() const;
 

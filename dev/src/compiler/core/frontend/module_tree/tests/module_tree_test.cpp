@@ -388,11 +388,11 @@ private:
 		sub_builder->setMainSourceFile(sub_main);
 
 		// Test isValid before finalize
-		ASSERT_TRUE(builder->isValid());
-		ASSERT_TRUE(sub_builder->isValid());
+		ASSERT_TRUE(!builder->isFinalized());
+		ASSERT_TRUE(!sub_builder->isFinalized());
 
 		auto sub_mod = sub_builder->finalize();
-		ASSERT_EQUAL(false, sub_builder->isValid());
+		ASSERT_EQUAL(false, !sub_builder->isFinalized());
 
 		builder->addSubmodule(sub_mod);
 
@@ -406,7 +406,7 @@ private:
 
 		// Finalize
 		auto mt = builder->finalize();
-		ASSERT_EQUAL(false, builder->isValid());
+		ASSERT_EQUAL(false, !builder->isFinalized());
 
 		// Check structure
 		ASSERT_EQUAL("manual_mod", mt->getName().strView());

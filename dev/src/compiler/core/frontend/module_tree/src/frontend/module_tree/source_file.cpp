@@ -8,19 +8,26 @@
 #include <filesystem/file.hpp>
 
 namespace {
+	// Content cache for each file path (used for deduplication and fast access)
 	using ContentMap = base::HashMap<std::filesystem::path, base::SharedView>;
 	ContentMap to_content;
 
+	// Maps absolute file paths to their corresponding FileID
 	base::HashMap<std::filesystem::path, compiler::frontend::FileID> file_id_map;
+
 #ifdef DEBUG
+	// Tracks FileIDs of files that have changed (debug only)
 	std::unordered_set<compiler::frontend::FileID> changed_files_ids;
 #endif
+
+	/**
+	 * Static map that stores all SourceFile instances by their FileID.
+	 * Used for global access to source files.
+	 */
+	base::StableHashMap<compiler::frontend::FileID, compiler::frontend::SourceFile> file_map;
 }
 
 namespace compiler::frontend {
-
-	// Define SourceFile::file_map
-	base::StableHashMap<FileID, SourceFile> SourceFile::file_map;
 
 	SourceFile::SourceFile(fs::File path, base::CRef<ModuleTree> linked_module):
 		  path(std::move(path)),
@@ -86,6 +93,15 @@ namespace compiler::frontend {
 		lang_file_name = base::StrID(this->path.getFilePath().stem().c_str());
 		// reset the parse tree
 		parse_tree.reset();
+	}
+
+	void SourceFile::erase() {
+		auto abs_path = this->path.getFilePath().absolute().getPath();
+		// Remove content from cache
+		to_content.erase(abs_path);
+		file_id_map.erase(abs_path);
+		// Remove from file map
+		file_map.erase(id);
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {

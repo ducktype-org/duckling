@@ -2,7 +2,7 @@
 
 #include <base/strongly_typed_id.hpp>
 
-#include <utility>  // IWYU pragma: export
+#include <functional>  // IWYU pragma: export
 
 namespace compiler::frontend {
 	STRONG_TYPEDEF_ID(ModuleID);

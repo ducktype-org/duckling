@@ -36,16 +36,29 @@ namespace compiler::frontend {
 	class ModuleTreeBuilder;
 	class ModuleTreeModifier;
 
-	class ModuleTree {
+	/**
+	 * @brief Represents a single module in the Duckling project tree.
+	 *
+	 * ModuleTree provides a hierarchical, in-memory representation of a module,
+	 * including its source files, submodules, and other files.
+	 * The ModuleTree is the first instance of module in duckling compiling process
+	 * the main use case is to build a module tree form exesting folder, and then
+	 * extract the pst from source files
+	 * But module tree can be also created manually.
+	 *
+	 * - Tracks main source file, additional source files, submodules, and other files.
+	 * - Supports pretty-printing for debugging and inspection.
+	 * - Immutable after construction; use ModuleTreeModifier for changes.
+	 * - Submodules form a tree structure, each with a parent reference.
+	 */
+	class ModuleTree final {
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
-
-		static base::StableHashMap<ModuleID, ModuleTree> module_map;
 
 	public:
 		/**
 		 * Returns a reference to the ModuleTree with the given ModuleID.
-		 * Asserts if the module does not exist.
+		 * Panics if the module does not exist.
 		 */
 		static Ref<ModuleTree> getModule(ModuleID id);
 
@@ -74,7 +87,8 @@ namespace compiler::frontend {
 
 		/**
 		 * Accesses the source files of the module.
-		 * @return A const reference to a vector of SourceFile references.
+		 * Does not contain Main module file (Main source file)
+		 * @return A const reference to a vector of SourceFile references
 		 */
 		[[nodiscard]]
 		const std::vector<base::Ref<SourceFile>>& getSourceFiles() const;
@@ -140,12 +154,10 @@ namespace compiler::frontend {
 	/**
 	 * ModuleTreeBuilder - Builder class for constructing ModuleTree instances.
 	 *
-	 * Allows step-by-step construction of module trees with validation.
+	 * Allows step-by-step construction of module trees with assertions that check the correctness
+	 * of module creation.
 	 */
-	class ModuleTreeBuilder {
-		friend class base::Box<ModuleTreeBuilder>;
-		friend base::Box<ModuleTreeBuilder> base::makeBox<ModuleTreeBuilder>();
-
+	class ModuleTreeBuilder final {
 	public:
 		/**
 		 * Creates a new builder instance.
@@ -222,11 +234,11 @@ namespace compiler::frontend {
 		void buildFromSingleFile(const fs::File& file);
 
 		/**
-		 * Validates the current state of the builder.
-		 * @return True if valid (not finalized), false otherwise.
+		 * Checks if the builder is finalized.
+		 * @return True if finalized, false otherwise.
 		 */
 		[[nodiscard]]
-		bool isValid() const;
+		bool isFinalized() const;
 
 		/**
 		 * Finalizes the construction and returns the built ModuleTree.
@@ -247,24 +259,6 @@ namespace compiler::frontend {
 		 */
 		void handleNewFile(const fs::File& file);
 
-		/**
-		 * Checks if a file name is valid according to the reject regex.
-		 * @param filename The file name to check.
-		 * @param reject_file_regex The regex to use for rejection.
-		 * @return True if valid, false otherwise.
-		 */
-		static bool isFileNameValid(const std::string& filename, const std::regex& reject_file_regex);
-
-		/**
-		 * Checks if a directory name is valid according to the reject regex.
-		 * @param dirname The directory name to check.
-		 * @param reject_directory_regex The regex to use for rejection.
-		 * @return True if valid, false otherwise.
-		 */
-		static bool isDirectoryNameValid(
-			const std::string& dirname, const std::regex& reject_directory_regex
-		);
-
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		std::vector<fs::File>                             m_source_file_paths;
@@ -275,6 +269,15 @@ namespace compiler::frontend {
 		bool        m_finalized;
 	};
 
+	/**
+	 * @brief Modifier class for making changes to ModuleTree instances.
+	 *
+	 * ModuleTreeModifier provides static methods to add, remove, and update source files,
+	 * submodules, parent relationships, and other files within a ModuleTree.
+	 * All modifications are performed in-place and require a query context.
+	 * This class cannot be instantiated.
+	 * If you are using this class you should know what you are doing.
+	 */
 	class ModuleTreeModifier final {
 	public:
 		/**
