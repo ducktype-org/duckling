@@ -153,6 +153,8 @@ namespace vm::builtins {
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
 			code::CodeCollection code_collection;
+			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
+				code_collection.types.emplace_back(func_type);
 
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
 				code::Function builtin_function;
