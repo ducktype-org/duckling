@@ -57,9 +57,18 @@ namespace vm {
 		[[nodiscard]]
 		Ref<Block> getBlock(BlockID id);
 
+		/**
+		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
+		 * hierarchy.
+		 */
 		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
 
-		auto overwritePointedDataSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+		/**
+		 * @brief Copies `byte_size` bytes pointed-to by `src` to `dst`.
+		 * @note Frees *block_dst's nested blocks whose offsets would not fit
+		   inside the new memory area.
+		 */
+		auto copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
 
 	public:
 		Memory() = default;
@@ -160,6 +169,11 @@ namespace vm {
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
+		/**
+		 * @brief Copies data pointed-to by `src` to `dst`.
+		 * @note Assumes that the size of `type` is known at compile time and (implicitly)
+		 * that it is the type of the blocks pointed-to by `dst` and `src`.
+		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void;
 
 		auto destroyBlockReference(Pointer pointer) -> void;

@@ -76,7 +76,7 @@ namespace vm {
 
 		Pointer dst = { &mock_block, 0 };
 		Pointer src = { block, 0 };
-		overwritePointedDataSuffix(dst, src, std::min(old_view_size, new_view_size));
+		copyPointedDataAndEraseSuffix(dst, src, std::min(old_view_size, new_view_size));
 
 		heap_allocator.deallocate(&block->data);
 		block->data = mock_block.data;
@@ -163,7 +163,7 @@ namespace vm {
 		}
 	}
 
-	auto Memory::overwritePointedDataSuffix(Pointer dst, Pointer src, usize byte_size) -> void {
+	auto Memory::copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void {
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst{ *dst.block->mutex_ref };
