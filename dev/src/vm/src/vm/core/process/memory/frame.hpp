@@ -19,12 +19,6 @@
 
 namespace vm {
 
-	// Non-VLA data:
-	struct Registers {
-		i64     p64_reg_0;
-		Pointer pointer_reg_0;
-	};
-
 	struct FlagData {
 		bool flag;
 	};
@@ -46,8 +40,7 @@ namespace vm {
 		 */
 		std::byte* local_stack = nullptr;
 
-		Registers regs;
-		FlagData  flags{};
+		FlagData flags{};
 
 		/**
 		 * @brief Size of arguments that were passed to a function called by this one.
@@ -89,8 +82,6 @@ namespace vm {
 		 * Used when new block is created on the local stack.
 		 */
 		u64 local_stack_head = 0;
-
-		Frame(): regs{ .p64_reg_0 = 0, .pointer_reg_0 = Pointer::null() } {}
 
 		void resetFrameData() { *this = Frame(); }
 	};

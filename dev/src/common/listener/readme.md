@@ -1,3 +1,0 @@
-# Listener
-
-@TODO module description
