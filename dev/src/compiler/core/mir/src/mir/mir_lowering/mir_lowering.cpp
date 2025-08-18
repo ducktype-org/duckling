@@ -1011,6 +1011,7 @@ namespace compiler::mir {
 
 		void visitLiteralNumCTVExpr(const hc::LiteralNumCTVExpr& expr) override {
 			output({continuation, MIRValue{ MirNumCTVConst{ expr.value } } });
+		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
 			valueOutput(continuation, MIRValue{ MirBoolConst{ expr.value } });
