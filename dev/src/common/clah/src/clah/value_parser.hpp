@@ -78,7 +78,7 @@ namespace clah {
 	 * A value parser used for a string parsing.
 	 * Creates values of type std::string.
 	 */
-	class StringParser: public ValueParser {
+	class StringParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 	public:
@@ -100,7 +100,7 @@ namespace clah {
 	 * A value parser used for an integer parsing.
 	 * Creates values of type i64.
 	 */
-	class IntParser: public ValueParser {
+	class IntParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 	public:
@@ -122,7 +122,7 @@ namespace clah {
 	 * A value parser used for an integer range parsing. I.e. "-1..5".
 	 * Creates values of type RangeParser::Range.
 	 */
-	class RangeParser: public ValueParser {
+	class RangeParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 	public:
@@ -149,7 +149,7 @@ namespace clah {
 	 * Creates values of type base::FilePath, which are links to valid files.
 	 * Additionally, it accepts std::regex to match only given file extensions or anything else.
 	 */
-	class FileParser: public ValueParser {
+	class FileParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
 		std::regex file_regex = std::regex(".*");  // The regex - default matches everything.
@@ -172,6 +172,32 @@ namespace clah {
 		[[nodiscard]]
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("file");
+		}
+	};
+
+	class FilePathParser final: public ValueParser {
+		using ValueParser::ValueParser;
+
+		std::regex filepath_regex = std::regex(".*");
+
+	public:
+		explicit FilePathParser(std::regex regex): filepath_regex(std::move(regex)) {}
+
+		FilePathParser(const std::string& name, std::regex regex):
+			  ValueParser(name),
+			  filepath_regex(std::move(regex)) {}
+
+		template<class... Args>
+		static Box<FilePathParser> make(Args&&... args) {
+			return makeBox<FilePathParser>(std::forward<Args>(args)...);
+		}
+
+		[[nodiscard]]
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return getCustomValueName().copyValueOr("filepath");
 		}
 	};
 

@@ -29,18 +29,36 @@ public:
 	}
 
 private:
+	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+
+	/**
+	 * @brief Executes a function or a program within a VM process and verifies the results.
+	 *
+	 * @param pid The Process ID of the target VM process.
+	 * @param func_name An optional name of the function to execute. If empty, the function assumes
+	 * it's running a whole program (the `main` function).
+	 * @param args A variant holding either `vm::FunctionRunArguments` (for `runFunction`) or
+	 * `vm::ProgramRunArguments` (for `run`). The correct type must be provided based on whether
+	 * `func_name` is set.
+	 * @param optional_input An optional string to be passed as standard input to the process.
+	 * @param optional_output An optional string to which the process's standard output will be
+	 * compared.
+	 * @param expected_exit_code An optional expected exit code (`i64`). If provided, the function's
+	 * return value is asserted to be equal to it. If not provided, the function asserts that the
+	 * return type was `void`.
+	 */
 	void runAndCheckExitCode(
-		vm::PID                                                         pid,
-		const base::Optional<std::string>&                              func_name          = {},
-		const std::variant<std::vector<i64>, std::vector<std::string>>& args               = {},
-		const base::Optional<std::string>&                              optional_input     = {},
-		const base::Optional<std::string>&                              optional_output    = {},
-		i64                                                             expected_exit_code = 0
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name          = {},
+		const vm::RunArguments&            args               = {},
+		const base::Optional<std::string>& optional_input     = {},
+		const base::Optional<std::string>& optional_output    = {},
+		const base::Optional<i64>          expected_exit_code = {}
 	) {
 		match_optional(func_name) {
 			opt_some(func_name) {
-				ASSERT_TRUE(std::holds_alternative<std::vector<i64>>(args));
-				auto function_args = std::get<std::vector<i64>>(args);
+				ASSERT_TRUE(std::holds_alternative<vm::FunctionRunArguments>(args));
+				const auto& function_args = std::get<vm::FunctionRunArguments>(args);
 				ASSERT_TRUE(vm::api::runFunction(pid, func_name, function_args).has_value());
 			}
 			opt_none {
@@ -60,9 +78,47 @@ private:
 			ASSERT_EQUAL(output, output_response->output);
 		}
 
-		auto exit_code_response = vm::api::getExitCode(pid);
+		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_TRUE(exit_code_response.has_value());
-		ASSERT_EQUAL_PRINT(expected_exit_code, *exit_code_response);
+		const auto& exit_value = exit_code_response.value();
+		if (expected_exit_code.has_value())
+			ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value->readBytes<i64>());
+		else
+			// @note: If expected_exit_code is an empty optional, it's expected that a called
+			// function is void.
+			ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
+	}
+
+	/**
+	 * @brief Create an owned VmValue containing a specified value.
+	 */
+	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+		auto response = vm::api::getVmValue(pid, "i64");
+		ASSERT_TRUE(response.has_value());
+		auto vm_value = std::move(response->vm_value);
+		vm_value->writeBytes<i64>(value);
+		return vm_value;
+	}
+
+	/**
+	 * @brief Create a list of owned VmValues containing a specified values.
+	 */
+	OwnedArgumentList getOwnedArgumentList(vm::PID pid, std::vector<i64> values) {
+		return values
+		     | std::views::transform([this, pid](i64 value) { return getIntVmValue(pid, value); })
+		     | std::ranges::to<OwnedArgumentList>();
+	}
+
+	/**
+	 * @brief Create a list of references to owned VmValues which can be passed to the VM.
+	 */
+	vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments) {
+		return arguments | std::views::transform([](auto& value) { return value.refMut(); })
+		     | std::ranges::to<vm::FunctionRunArguments>();
+	}
+
+	void freeArguments(OwnedArgumentList& arguments) {
+		for (auto& arg: arguments) arg->freeData();
 	}
 
 	void multipleFiles() {
@@ -71,7 +127,7 @@ private:
 		fs::File file2(path("multiple_files_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
 
-		runAndCheckExitCode(pid, {}, std::vector<std::string>{}, "123", "123", 0);
+		runAndCheckExitCode(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 	}
 
 	void injectCode() {
@@ -81,7 +137,7 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 
-		runAndCheckExitCode(pid, {}, std::vector<std::string>{}, "123", "123", 0);
+		runAndCheckExitCode(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 	}
 
 	void runNoArgFunction() {
@@ -89,7 +145,7 @@ private:
 		fs::File file(path("call_no_arg_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		runAndCheckExitCode(pid, "summer", {}, {}, "735", 0);
+		runAndCheckExitCode(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
 	}
 
 	void runVoidFunction() {
@@ -97,7 +153,9 @@ private:
 		fs::File file(path("call_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, "3", 0);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
+		freeArguments(owned_arguments);
 	}
 
 	void runNonVoidFunction() {
@@ -105,7 +163,9 @@ private:
 		fs::File file(path("call_non_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 695, 40 }, {}, {}, 735);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
+		freeArguments(owned_arguments);
 	}
 
 	void doubleRunFunction() {
@@ -113,8 +173,12 @@ private:
 		fs::File file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 8 }, {}, {}, 32);
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 6 }, {}, {}, 24);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
+		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 4, 6 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
+		freeArguments(owned_arguments);
+		freeArguments(owned_arguments2);
 	}
 
 	void manyRunFunctions() {
@@ -122,8 +186,11 @@ private:
 		fs::File file(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
-		for (i32 i = 0; i < 100; i++)
-			runAndCheckExitCode(pid, "spring", std::vector<i64>{ i, i }, {}, {}, i * i);
+		for (i32 i = 0; i < 100; i++) {
+			OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { i, i });
+			runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, i * i);
+			freeArguments(owned_arguments);
+		}
 	}
 
 	void repl() {
@@ -131,22 +198,26 @@ private:
 
 		fs::File file1(path("repl_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 4, 8 }, {}, {}, 32);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
+		freeArguments(owned_arguments);
 
 		fs::File file2(path("repl_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, {}, 3);
+		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
+		freeArguments(owned_arguments2);
 	}
 
 	void replWithGlobals() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("repl_with_globals_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "1 2", {}, 0);
+		runAndCheckExitCode(pid, "globaler_setter", vm::FunctionRunArguments{}, "1 2", {}, {});
 
 		fs::File file2(path("repl_with_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "globaler_reader", std::vector<i64>{}, {}, "12", 0);
+		runAndCheckExitCode(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
 	}
 
 	void cyclicRepl() {
@@ -154,11 +225,15 @@ private:
 
 		fs::File file1(path("loaded_func_call_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 4, 8 }, {}, {}, 12);
+		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
+		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, {}, 12);
+		freeArguments(owned_arguments);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 2, 3 }, {}, {}, 10);
+		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
+		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
+		freeArguments(owned_arguments2);
 	}
 
 	void separateGlobals() {
@@ -168,7 +243,7 @@ private:
 
 		fs::File file2(path("separate_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
-		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "12", "12", 0);
+		runAndCheckExitCode(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
 	}
 
 	void injectExistingFunction() {

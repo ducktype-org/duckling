@@ -3,7 +3,6 @@
 #include <base/optional.hpp>
 
 #include <filesystem/file.hpp>
-#include <listener/listener.hpp>
 
 #include <vm/api/api.hpp>
 

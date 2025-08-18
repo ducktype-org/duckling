@@ -1,0 +1,50 @@
+fun main() -> i64 = {
+    # Testing using if with a literal value
+    if (true) {}
+    else {
+        return 2;
+    }
+
+    if (false) {
+        return 3;
+    }
+
+    # Testing using if with a local variable
+    let a: bool = true;
+    if (a) {
+    } else {
+        return 4;
+    }
+
+    a = false;
+    if (a) {
+        return 5;
+    } else {}
+
+    # Testing nested if expressions
+    if (true) {
+        if (false) {
+            return 6;
+        } else {
+            if (false) {
+                return 7;
+            } else {}
+        }
+    }
+
+    let output: i64 = 0; 
+    # Non empty both cases
+    if (true) {
+        output = 9;            # output = 9
+    } else {
+        output = 1;
+    }
+
+    if (a) {                   # a = false
+        output = output + 10;
+    } else {
+        output = output + 90;  # output = 99
+    }
+
+    return output;
+}

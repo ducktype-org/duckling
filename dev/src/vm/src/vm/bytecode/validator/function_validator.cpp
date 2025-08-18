@@ -118,9 +118,7 @@ namespace {
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
-		const PointerType&                    pointer,
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		Args&&... error_args
+		const PointerType& pointer, const ObjIdNameMap<TypeOfData>& tod_map, Args&&... error_args
 	) {
 		const auto& pointed_type = tod_map.at(pointer.inner);
 		if (!std::holds_alternative<ExpectedT>(*pointed_type))
@@ -162,7 +160,7 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<StableObjIdNameMap<TypeOfData>>         tod_map;
+	CRef<ObjIdNameMap<TypeOfData>>               tod_map;
 	[[maybe_unused]] CRef<TypeMetadata>          type_metadata;
 	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
 
@@ -173,9 +171,9 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const FunctionType&                   function_type,
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                   type_metadata
+		const FunctionType&             function_type,
+		const ObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&             type_metadata
 	):
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
@@ -234,11 +232,11 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const StableObjIdNameMap<TypeOfData>& tod_map;
-	const TypeMetadata&                   type_metadata;
-	const StableObjIdNameMap<GlobalData>& globals;
-	const Function&                       function;
-	FunctionType                          function_type;
+	const ObjIdNameMap<TypeOfData>& tod_map;
+	const TypeMetadata&             type_metadata;
+	const ObjIdNameMap<GlobalData>& globals;
+	const Function&                 function;
+	FunctionType                    function_type;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -655,6 +653,13 @@ class FunctionValidator {
 			variant_case_novalue(Op_ucmpG_l32_imm) {}
 			variant_case_novalue(Op_ucmpG_l8_l8) {}
 			variant_case_novalue(Op_ucmpG_l8_imm) {}
+			variant_case_novalue(Op_log_and_l8_l8) {}
+			variant_case_novalue(Op_log_and_l8_imm) {}
+			variant_case_novalue(Op_log_or_l8_l8) {}
+			variant_case_novalue(Op_log_or_l8_imm) {}
+			variant_case_novalue(Op_log_xor_l8_l8) {}
+			variant_case_novalue(Op_log_xor_l8_imm) {}
+			variant_case_novalue(Op_log_not_l8) {}
 
 
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
@@ -746,7 +751,12 @@ class FunctionValidator {
 			variant_case_novalue(Op_output_l64) {}
 			variant_case_novalue(Op_input_l32) {}
 			variant_case_novalue(Op_output_l32) {}
-			variant_case_novalue(Op_setVTable_lptr_type) {}
+			variant_case(Op_setVTable_lptr_type, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				if (pointer_type.inner != instr.arg1.type_name)
+					throw VTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_downcast_lptr_lptr) {}
 			variant_case_novalue(Op_free_lptr) {}
 			variant_case(Op_store_lptr_lany, instr) {
@@ -1083,10 +1093,10 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                   type_metadata,
-		const StableObjIdNameMap<GlobalData>& globals,
-		const Function&                       function
+		const ObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&             type_metadata,
+		const ObjIdNameMap<GlobalData>& globals,
+		const Function&                 function
 	):
 		  tod_map(tod_map),
 		  type_metadata(type_metadata),
@@ -1113,10 +1123,10 @@ public:
 };
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
-	const StableObjIdNameMap<TypeOfData>& tod_map,
-	const TypeMetadata&                   type_metadata,
-	const StableObjIdNameMap<GlobalData>& globals_map,
-	const Function&                       function
+	const ObjIdNameMap<TypeOfData>& tod_map,
+	const TypeMetadata&             type_metadata,
+	const ObjIdNameMap<GlobalData>& globals_map,
+	const Function&                 function
 ) {
 	FunctionValidator validator(tod_map, type_metadata, globals_map, function);
 

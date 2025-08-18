@@ -112,7 +112,7 @@ namespace vm {
 	 */
 	low::FuncData VMThread::createStartFunctionFor(
 		const low::FuncData& func, const FunctionRunArguments& func_args
-	) {
+	) const {
 		low::FuncData start_function;
 		start_function.name     = base::StrID("vm_start_function");
 		start_function.arg_size = 0;
@@ -120,37 +120,37 @@ namespace vm {
 
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
 		auto called_func_type = executing_program->types->at(func.name);
-		auto i64_type         = executing_program->types->at(base::StrID("i64"));
+		auto result_type      = called_func_type->getResultType().value();
 
-		u64  i64_type_id        = i64_type->getID().asInt();
+		u64  result_type_id     = result_type->getID().asInt();
 		auto funcs              = executing_program->functions;
 		u64  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
 		u64 stack_top = 0;
-		// @todo: VM functions should be able to return and take as parameters any VM type.
-		// For now we assume we can only pass and return arguments of i64 type.
-		// This should be changed in the issue #721.
 
 		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id));
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, result_type_id));
 
-		stack_top += i64_type->getSize();
+		stack_top += result_type->getSize();
 
 		for (u64 i = 0; i < func_args.size(); i++) {
-			i64  converted_arg = func_args[i];
-			auto arg_type      = called_func_type->getNthParameterType(i).expect(
+			const auto& arg_value = func_args[i];
+			auto        arg_type  = called_func_type->getNthParameterType(i).expect(
                 "Wrong number of passed arguments!"
             );
-			u64 arg_type_id = arg_type->getID().asInt();
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				mov_l64_imm, stack_top, Memory::interpret<u64>(converted_arg)
-			));
+			CORE_ASSERT(
+				arg_value->getPID() == process.getPID(), "VmValue comes from a different process"
+			);
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
+			);
 			stack_top += arg_type->getSize();
 		}
+
+		start_function.local_stack_size = stack_top;
 
 		start_function.bc.insert(
 			start_function.bc.end(),
@@ -188,11 +188,12 @@ namespace vm {
 	 */
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
-	) {
+	) const {
 		low::FuncData start_function;
-		start_function.name     = base::StrID("vm_start_function");
-		start_function.arg_size = 0;
-		start_function.ret_size = 0;
+		start_function.name             = base::StrID("vm_start_function");
+		start_function.arg_size         = 0;
+		start_function.ret_size         = 0;
+		start_function.local_stack_size = 72;
 
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
@@ -203,12 +204,12 @@ namespace vm {
 		auto i64_type           = executing_program->types->at(base::StrID("i64"));
 
 		// TypeIDs to pass to opcodes.
-		u64  func_ret_type_id   = called_return_type->getID().asInt();
-		u64  argv_type_id       = argv_type->getID().asInt();
-		u64  argv_ptr_type_id   = argv_ptr_type->getID().asInt();
-		u64  i64_type_id        = i64_type->getID().asInt();
-		auto funcs              = executing_program->functions;
-		u64  called_function_id = 0;
+		u64         func_ret_type_id   = called_return_type->getID().asInt();
+		u64         argv_type_id       = argv_type->getID().asInt();
+		u64         argv_ptr_type_id   = argv_ptr_type->getID().asInt();
+		u64         i64_type_id        = i64_type->getID().asInt();
+		const auto& funcs              = executing_program->functions;
+		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
@@ -227,7 +228,7 @@ namespace vm {
 
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
-			// to ints. This should change after #722
+			// to ints. This should change after #722.
 			u64 converted_arg = static_cast<u64>(std::stoll(arg));
 			start_function.bc.insert(
 				start_function.bc.end(),
@@ -274,7 +275,9 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	i64 VMThread::executeFunction(const low::FuncData& start_function, const low::FuncData& func) {
+	Ref<VmValue> VMThread::executeFunction(
+		const low::FuncData& start_function, const low::FuncData& func
+	) {
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
@@ -287,7 +290,7 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		instr->tc_opfun(instr, local_stack, frame, *this);
 
-#elif USE_COMPUTED_GOTO
+#elif defined(USE_COMPUTED_GOTO)
 		// We use computed-gotos here,
 		// so we turn off pedantic warnings
 		// for this case
@@ -299,6 +302,7 @@ namespace vm {
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
 	#include <vm/bytecode/opcode_definitions.hpp>
+
 
 	#undef HANDLE_OPCODE
 			};
@@ -317,12 +321,13 @@ namespace vm {
 		}
 	#include <vm/bytecode/opcode_definitions.hpp>
 
+
 	#undef HANDLE_OPCODE
 
 	End:
 
 		POP_DIAGNOSTIC
-#elif USE_SWITCH_CASE
+#elif defined(USE_SWITCH_CASE)
 		while (true) {
 			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
 	#define HANDLE_OPCODE(opcode_name)                                                              \
@@ -344,15 +349,13 @@ namespace vm {
 		}
 	End:
 #endif
-		// @todo: VM functions should should be able to return any VM type, not just i64.
-		// This should be changed in issue #721
 		// @note: The return value is the only block left on the block stack.
-		i64  func_ret_val = derefStack<i64>(local_stack, 0);
-		auto block        = frame->block_stack.back();
+		auto block         = frame->block_stack.back();
+		exit_value_storage = process.createVmValue(called_func_return_type, Pointer(block, 0));
 		process_memory.freeBlock(block);
 		frame->resetFrameData();
 
-		return func_ret_val;
+		return exit_value_storage.value();
 	}
 
 	// executeFunction end
@@ -417,7 +420,7 @@ namespace vm {
 				break;
 			}
 			default:
-				throw exceptions::VMResuemedWithPausedStatusException();
+				throw exceptions::VMResumedWithPausedStatusException();
 			}
 		}
 	}
@@ -455,9 +458,9 @@ namespace vm {
 												+ global->ctor_name.value().str()
 											);
 					low::FuncData start_function;
-					start_function = createStartFunctionFor(func, {});
-					i64 exit_code  = executeFunction(start_function, func);
-					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+					start_function        = createStartFunctionFor(func, {});
+					const auto exit_value = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
@@ -477,16 +480,13 @@ namespace vm {
 				}
 			}
 
-			i64 exit_code = executeFunction(start_function, func);
-			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+			const auto exit_value = executeFunction(start_function, func);
+			respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 		}
 	}
 
-	/**
-	 * @brief Function to be called when the VMProcess is destroyed.
-	 */
 	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
 		executing_program = program;
 		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
@@ -499,9 +499,9 @@ namespace vm {
 												+ global->dtor_name.value().str()
 											);
 					low::FuncData start_function;
-					start_function = createStartFunctionFor(func, {});
-					i64 exit_code  = executeFunction(start_function, func);
-					respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+					start_function        = createStartFunctionFor(func, {});
+					const auto exit_value = executeFunction(start_function, func);
+					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
