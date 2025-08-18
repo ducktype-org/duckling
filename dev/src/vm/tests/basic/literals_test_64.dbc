@@ -3,7 +3,7 @@ type fun: foo {} i64
 function foo {
 	init_lany_type		a, i64;
 
-	mov_l64_imm 		a, 0.5;		# a = 0.5    
+	mov_l64_imm 		a, +0.5;		# a = 0.5    
     cmpEq_l64_imm       a, 4602678819172646912u64;
 	jmpIfNot_label 	fail;
 
