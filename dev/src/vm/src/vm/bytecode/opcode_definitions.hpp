@@ -73,10 +73,6 @@ DEF_OPCODE(mov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(cmov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 
 
-DEF_OPCODE(mov_l64_r0, vm::opargs::StackLocal64)
-DEF_OPCODE(mov_r0_l64, vm::opargs::StackLocal64)
-
-
 DEF_OPCODE(mov_g64_g64, vm::opargs::Global64, vm::opargs::Global64)
 DEF_OPCODE(mov_g64_l64, vm::opargs::Global64, vm::opargs::StackLocal64)
 DEF_OPCODE(mov_g64_imm, vm::opargs::Global64, vm::opargs::Immediate)
@@ -178,6 +174,22 @@ DEF_OPCODE(udiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 
 DEF_OPCODE(udiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(udiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+// ========= BOOLEAN OPERATIONS ========
+
+// Evaluate logical operations (AND, OR, etc.) on operands as booleans (non-zero = true)
+// Result is 0 or 1 stored in the first argument
+
+DEF_OPCODE(log_and_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(log_and_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+DEF_OPCODE(log_or_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(log_or_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+DEF_OPCODE(log_xor_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(log_xor_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+DEF_OPCODE(log_not_l8, vm::opargs::StackLocal8)
 
 // ========= LOGICAL OPERATIONS ========
 
@@ -407,6 +419,43 @@ DEF_OPCODE(
 	strOutput_lptr,
 	vm::opargs::StackLocalPtr /* table_ptr */
 )
+DEF_OPCODE(
+	dynTableLea_lptr_lptr,
+	vm::opargs::StackLocalPtr /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocal64 	 index */
+)
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableLoad_lany_lptr,
+	vm::opargs::StackLocalAny /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocal64 	 index */
+)
+
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(
+	dynTableStore_lptr_lany,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::StackLocalAny /* source,
+    vm::opargs::StackLocal64 	 index */
+)
+
+/**
+ * @brief Re-allocates dynamic table under `table_ptr` with
+ * `new_elem_count` elements. If given nullptr, then it will allocate
+ * a new array.
+ * `table_type` is type of the dynamic table itself, not the element type.
+ * @note It's counter-intuitive, but if a reallocation has happened, this
+ *  instruction will not modify pointer data (unlike in C).
+ * @note `ext_l64` is required to tell the count of elements
+ */
+DEF_OPCODE(
+	dynTableReAlloc_lptr_type,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::Type /* table_type ,
+vm::opargs::StackLocal64     new_elem_count */
+)
 
 // ========= TYPE OPERATIONS ========
 
@@ -435,6 +484,14 @@ DEF_OPCODE(nop)
 DEF_OPCODE(exit)
 
 DEF_OPCODE(breakpoint)
+
+/**
+ * @brief This is a very internal instruction, that should not be used in regular bytecode.
+ * It is a helper for start functions.
+ * @arg0 - pointer to a VmValue.
+ * @arg1 - n/a.
+ */
+DEF_OPCODE(initFromVmValue)
 
 #ifdef DEFAULT_HANDLE_OPCODE
 #undef DEFAULT_HANDLE_OPCODE

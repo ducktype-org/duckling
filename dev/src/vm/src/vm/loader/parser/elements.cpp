@@ -16,26 +16,128 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/memory/memory.hpp>
 
+#include <cstddef>
+
 namespace vm::loader::parser {
+	/**
+	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type
+	 * specifier like `i32`, `f`, etc., it will adjust the parsing behavior accordingly. By default,
+	 * it assumes 64-bit integer or double if it has a dot (works for hex and binary too). T has to
+	 * be type of size 64bits.
+	 */
 	namespace opargs_parsers {
-		template<class T, class K>
-		T parseInt(F8ParserState& state) {
+		template<class T>
+		std::pair<T, size_t> parseLiteral(F8ParserState& state) {
+			size_t literal_length = 0;
+			auto   previous_token = state.tokens().peek();
+			i32    sign           = 1;
+			if (previous_token.isOperatorSymbol()) {
+				if (previous_token.getValue().str() == "-") {
+					sign = -1;
+					state.tokens().next();
+					literal_length++;
+				} else if (previous_token.getValue().str() == "+") {
+					sign = 1;
+					state.tokens().next();
+					literal_length++;
+				}
+			}
 			auto token      = state.tokens().next();
-			auto next_token = state.tokens().peek(1);
+			auto next_token = state.tokens().peek();
+			// Consume the type specifier
+			auto&& str = token.getValue().str();
+			if constexpr (sizeof(T) != 8) {
+				state.log(makeBox<InvalidLiteral>(
+					token.getPosition(),
+					base::strConcat(
+						"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
+					)
+				));
+				return { T{ 0 }, 0 };
+			}
+
+			if (token.isNumLiteral())
+				literal_length += str.length() + next_token.getValue().str().length();
+			else
+				literal_length += str.length();
 
 			try {
-				usize  pos    = 0;
-				auto&& str    = token.getValue().str();
-				T      result = std::stoull(str, &pos);
-				// Check if the number was fully parsed
-				if (pos == str.length()) return result;
+				T     result;
+				usize pos = 0;
+				if (next_token.isTypeSpecifier()) {
+					if (token.isNumLiteral()) state.tokens().next();
+					auto&& str_type = next_token.getValue().str();
+					if (str_type == "f" || str_type == "F") {
+						float value      = std::stof(str, &pos) * static_cast<float>(sign);
+						u32   float_bits = std::bit_cast<u32>(value);
+						result           = std::bit_cast<T>(static_cast<u64>(float_bits));
+					} else if (str_type == "d" || str_type == "D") {
+						double value = std::stod(str, &pos) * static_cast<double>(sign);
+						result       = std::bit_cast<T>(value);
+					} else if (str_type == "i32" || str_type == "I32") {
+						u32 bits = std::bit_cast<u32>(std::stoi(str, &pos) * sign);
+						result   = std::bit_cast<T>(static_cast<u64>(bits));
+					} else if (str_type == "i64" || str_type == "I64") {
+						u64 bits
+							= std::bit_cast<u64>(std::stoll(str, &pos) * static_cast<i64>(sign));
+						result = std::bit_cast<T>(bits);
+					} else if (str_type == "u32" || str_type == "U32") {
+						u32 bits = static_cast<u32>(std::stoul(str, &pos));
+						result   = std::bit_cast<T>(static_cast<u64>(bits));
+					} else if (str_type == "u64" || str_type == "U64") {
+						u64 bits = std::stoull(str, &pos);
+						result   = std::bit_cast<T>(bits);
+					} else {
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Unknown type specifier `",
+								str_type,
+								"` for `",
+								base::typeName<vm::opargs::Immediate>(),
+								"`."
+							)
+						));
+						return { T{ 0 }, 0 };
+					}
+				} else {
+					// By default, we assume 64-bit integer or double if it has a dot
+					if (str.find('.') != std::string::npos) {
+						double value = std::stod(str, &pos) * static_cast<double>(sign);
+						result       = std::bit_cast<T>(value);
+					} else if (str.starts_with("0b") || str.starts_with("0B")) {
+						// For binary numbers, we parse them as 64-bit integers
+						u64 value = std::stoull(str.substr(2), &pos, 2);
+						result    = std::bit_cast<T>(value);
+						pos += 2;
+					} else {
+						i64 value = std::bit_cast<i64>(std::stoull(str, &pos, 0))
+						          * static_cast<i64>(sign);
+						result = std::bit_cast<T>(value);
+					}
+				}
+				if (pos == str.length())
+					return std::make_pair(result, literal_length);
+				else {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Number not read fully for `",
+							base::typeName<vm::opargs::Immediate>(),
+							"`."
+						)
+					));
+					return { T{ 0 }, 0 };
+				}
 			} catch (std::logic_error&) {}
 
 			state.log(makeBox<InvalidLiteral>(
 				token.getPosition(),
-				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+				base::strConcat(
+					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+				)
 			));
-			return T{ 0 };
+			return { T{ 0 }, 0 };
 		}
 
 		base::StrID parseStr(F8ParserState& state) {
@@ -55,12 +157,13 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			auto pos         = state.getPosition();
-			auto value       = parseInt<u64, vm::opargs::Immediate>(state);
-			auto arg         = opargs::Immediate{ value };
-			arg.bytecode_pos = dia::SourcePosition(
-				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
-			);
+			auto pos            = state.getPosition();
+			auto parsed_literal = parseLiteral<u64>(state);
+			auto value          = parsed_literal.first;
+			auto arg            = opargs::Immediate{ value };
+			arg.bytecode_pos    = dia::SourcePosition(
+                pos.getLocation(), pos.getStart(), pos.getStart() + parsed_literal.second
+            );
 			return arg;
 		}
 

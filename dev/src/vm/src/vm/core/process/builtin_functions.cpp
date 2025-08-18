@@ -22,17 +22,18 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<VmValue>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMThread& thread, Memory& memory, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<VmValue>>
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if (std::is_void_v<Ret>) {
-				function(thread, args[Is].interpret<FunArgs>()...);
+				function(thread, args[Is]->readBytes<FunArgs>()...);
 				return {};
 			}
-			auto value = function(thread, args[Is].interpret<FunArgs>()...);
+			auto value = function(thread, args[Is]->readBytes<FunArgs>()...);
 			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
 
-			auto vm_value             = VmValue(vm_return_type, memory);
-			vm_value.interpret<Ret>() = value;
+			auto vm_value = process.createOwnedVmValue(vm_return_type);
+
+			vm_value->writeBytes<Ret>(value);
 			return vm_value;
 		}
 
@@ -54,19 +55,19 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<VmValue> callUnpackArgs(
+		base::Optional<Box<VmValue>> callUnpackArgs(
 			Ret (*function)(VMThread&, FunArgs...),
-			TypeCRef                    vm_return_type,
-			VMThread&                   thread,
-			Memory&                     memory,
-			const std::vector<VmValue>& args
+			TypeCRef                         vm_return_type,
+			VMProcess&                       process,
+			VMThread&                        thread,
+			const std::vector<Box<VmValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
 				"Wrong number of arguments passed to the builtin function"
 			);
 			return callUnpackArgsImpl(
-				function, vm_return_type, thread, memory, args, std::index_sequence_for<FunArgs...>{}
+				function, vm_return_type, process, thread, args, std::index_sequence_for<FunArgs...>{}
 			);
 		}
 	}
@@ -97,12 +98,12 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(block_data.size() + 1);
 	}
 
-	base::Optional<VmValue> callBuiltinFunction(
-		BuiltinFunctionID           id,
-		TypeCRef                    builtin_func_type,
-		VMThread&                   thread,
-		Memory&                     memory,
-		const std::vector<VmValue>& arguments
+	base::Optional<Box<VmValue>> callBuiltinFunction(
+		BuiltinFunctionID                id,
+		TypeCRef                         builtin_func_type,
+		VMProcess&                       process,
+		VMThread&                        thread,
+		const std::vector<Box<VmValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                       \
@@ -110,8 +111,8 @@ namespace vm::builtins {
 		return callUnpackArgs(                   \
 			FunctionHandlers::builtin##ID_NAME,  \
 			*builtin_func_type->getResultType(), \
+			process,                             \
 			thread,                              \
-			memory,                              \
 			arguments                            \
 		);                                       \
 	}

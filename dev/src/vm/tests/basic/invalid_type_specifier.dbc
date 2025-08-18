@@ -1,0 +1,5 @@
+function main {
+    init_lany_type a, i32;
+    mov_l32_imm a, 13JakToJestBycSkrybaDobrze?;
+    ret;
+}
