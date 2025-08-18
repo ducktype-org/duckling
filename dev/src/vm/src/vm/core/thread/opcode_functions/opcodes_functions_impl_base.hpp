@@ -352,23 +352,26 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
-			auto function_type      = builtins::getBuiltinFunctionType(builtin_id);
-			auto real_function_type = thread.executing_program->types->at(function_type->name);
-			auto arg_count          = function_type->parameters.size();
+			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
+			auto arg_count          = function_signature->parameters.size();
 
 			std::vector<Box<VmValue>> args;
 			u64                       first_arg_idx = frame->block_stack.size() - arg_count;
 
 			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type  = function_type->parameters[i];
+				const base::StrID arg_type  = function_signature->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
 				auto              block     = frame->block_stack[first_arg_idx + i];
 				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
-				builtin_id, real_function_type, thread.process, thread, args
+				builtin_id,
+				thread.executing_program->types->at(function_signature->result_type),
+				thread.process,
+				thread,
+				args
 			);
 
 			if (return_value.has_value()) {

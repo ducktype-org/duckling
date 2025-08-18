@@ -70,7 +70,7 @@ namespace vm::builtins {
 	 */
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         builtin_func_type,
+		TypeCRef                         result_type,
 		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
@@ -82,11 +82,11 @@ namespace vm::builtins {
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
 	 */
-	auto getBuiltinFunctionTypes()
-		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>>;
+	auto getBuiltinFunctionSignatures()
+		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
 
-	inline CRef<code::FunctionType> getBuiltinFunctionType(BuiltinFunctionID id) {
-		return &getBuiltinFunctionTypes()->at(id);
+	inline CRef<code::FuncSignature> getBuiltinFunctionSignature(BuiltinFunctionID id) {
+		return &getBuiltinFunctionSignatures()->at(id).second;
 	}
 
 	/**

@@ -92,21 +92,17 @@ namespace vm::builtins {
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         builtin_func_type,
+		TypeCRef                         result_type,
 		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
 	) {
 		switch (id) {
-#define CASE_FUNC(ID_NAME)                       \
-	case BuiltinFunctionID::ID_NAME: {           \
-		return callUnpackArgs(                   \
-			FunctionHandlers::builtin##ID_NAME,  \
-			*builtin_func_type->getResultType(), \
-			process,                             \
-			thread,                              \
-			arguments                            \
-		);                                       \
+#define CASE_FUNC(ID_NAME)                                                              \
+	case BuiltinFunctionID::ID_NAME: {                                                  \
+		return callUnpackArgs(                                                          \
+			FunctionHandlers::builtin##ID_NAME, result_type, process, thread, arguments \
+		);                                                                              \
 	}
 
 			FOR_EACH(CASE_FUNC, InputI64, OutputI64)
@@ -116,20 +112,19 @@ namespace vm::builtins {
 		}
 	}
 
-	auto getBuiltinFunctionTypes()
-		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>> {
-		static const std::unordered_map<BuiltinFunctionID, code::FunctionType> map{
-			{
-				BuiltinFunctionID::InputI64,
-				code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")),
-			},
-			{
-				BuiltinFunctionID::OutputI64,
-				code::FunctionType(
-					base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
-				),
-			}
-		};
+	auto getBuiltinFunctionSignatures()
+		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
+		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
+			map{ {
+					 BuiltinFunctionID::InputI64,
+					 { base::StrID("builtin_input_i64"),
+			           code::FuncSignature(base::StrID("i64"), {}, true) },
+				 },
+			     {
+					 BuiltinFunctionID::OutputI64,
+					 { base::StrID("builtin_output_i64"),
+			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }, true) },
+				 } };
 
 		return &map;
 	}
@@ -140,8 +135,8 @@ namespace vm::builtins {
 			= [] {
 				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
-				  for (const auto& func_tp: *getBuiltinFunctionTypes())
-					  indices.emplace(func_tp.second.name, func_tp.first);
+				  for (const auto& [id, func_pair]: *getBuiltinFunctionSignatures())
+					  indices.emplace(func_pair.first, id);
 				  return indices;
 			  }();
 
@@ -153,21 +148,15 @@ namespace vm::builtins {
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
 			code::CodeCollection code_collection;
-			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
-				code_collection.types.emplace_back(func_type);
 
-			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
+			for (const auto& [id, func_pair]: *getBuiltinFunctionSignatures()) {
 				code::Function builtin_function;
-				builtin_function.name = func_type.name;
+				builtin_function.name = func_pair.first;
 				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(
-					vm::opargs::BuiltinFunctionName(func_type.name)
+					vm::opargs::BuiltinFunctionName(func_pair.first)
 				));
 				builtin_function.body.emplace_back(code::instructions::Op_ret{});
-				builtin_function.signature.is_builtin  = true;
-				builtin_function.signature.result_type = func_type.result;
-				builtin_function.signature.parameters.reserve(func_type.parameters.size());
-				for (const auto& param: func_type.parameters)
-					builtin_function.signature.parameters.emplace_back(param);
+				builtin_function.signature = func_pair.second;
 				code_collection.functions.push_back(builtin_function);
 			}
 			// This is to ensure the produced std library is valid.

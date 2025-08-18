@@ -263,8 +263,9 @@ namespace vm::loader::compiler {
 						index++;
 					}
 					variant_case(Op_call_builtin_func, instr) {
-						for (usize i = 0;
-						     i < ctx.type_map.at(instr.arg0.function_name)->getParameterCount();
+						for (usize i = 0; i < ctx.func_map.at((instr.arg0.function_name))
+						                          .get()
+						                          ->signature.parameters.size();
 						     i++) {
 							pop();
 						}
