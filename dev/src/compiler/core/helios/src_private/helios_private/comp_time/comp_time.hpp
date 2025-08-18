@@ -9,15 +9,12 @@
 #include <query_framework/query_result.hpp>
 
 /**
- * @brief Main query for compile time evaluation. For now evaluates only with TreeEval, in the
- * future it will use VM evaluation as well.
+ * @brief Main query for compile time evaluation of any type.
+ * Tries evaluating with Tree Evaluation (Short Path) and if the expression is to complicated it
+ * evaluates the expression on DVM.
  */
-// TODOP: Fix comment.
 namespace compiler::helios {
 	using CompTimeEvalResult = query::QResult<CompileTimeValue, errors::Failed>;
-	/**
-	 * @brief Main query for evaluating PST expressions at compile time.
-	 */
-	DECLARE_QUERY(QueryCompTime, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult)
 
+	DECLARE_QUERY(QueryCompTime, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult)
 }
