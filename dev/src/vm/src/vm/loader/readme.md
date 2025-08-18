@@ -95,8 +95,7 @@ Initially, in the `ParsedFile` structure, types are represented by the
 names of base types and subtypes as `string`). The next step is conversion to the
 `TypeOfData` type, which stores types as variants (`std::variant`), similar to
 instructions and argument types. After passing through the validator
-<!-- @todo: This should be changed after #1095 -->
-(`TypeContext`), types are transformed and added to the `TypeMetadata`
+(`validateTypes` - see `type_validator.hpp`), types are transformed and added to the `TypeMetadata`
 collection, which stores `Type` objects—fully expanded objects, enriched with all
 the information needed at runtime, such as built virtual method tables
 (v-tables), fields inherited from superclasses, and direct references to
@@ -113,8 +112,7 @@ consistent, high-level representation of the same code in the form of a
 The data flow is initiated by an API request to load code - `loadFile`.
 1.  `VMProcess` receives the request and passes it to its `Loader` object.
 2.  The `Loader` processes the file(s), verifies the code through the
-<!-- @todo: This should be changed after #1095 -->
-    `TypeContext` and `FunctionValidator` modules, and tries to inject it into
+    `TypeContext` (see 'validateTypes' in 'type_validator.hpp') and `FunctionValidator` modules, and tries to inject it into
     its internal state (`ValidProgram`).
 3.  If the operation succeeds, the `Loader` updates its state, compiles a new,
     complete version of the program into the `LowVMProgram` form, and passes it
@@ -188,8 +186,7 @@ translate the high-level, verified program representation into a low-level,
 executable representation of bytecode (`LowVMProgram`). Since it receives a
 program with a guarantee of correctness, the compilation process cannot fail and
 does not need to contain any validation logic, thanks to the guarantees provided
-<!-- @todo: This should be changed after #1095 -->
-by `TypeContext` and `FunctionValidator`. For each function, this process
+by `TypeContext` (see 'validateTypes' in 'type_validator.hpp') and `FunctionValidator`. For each function, this process
 proceeds as follows:
 
 1.  **Function translation:**
