@@ -8,7 +8,8 @@
 namespace vm::code {
 
 	/**
-	 * @brief Validates the types in the given TypeContext.
+	 *   @brief Builds the TypeMetadata from TypeContext without validation, so it must be checked
+	 * beforehand.
 	 */
-	void validateTypes(const TypeContext& ctx);
+	Box<TypeMetadata> buildTypes(const TypeContext& ctx);
 }

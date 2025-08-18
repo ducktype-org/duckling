@@ -2,61 +2,11 @@
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace {
-	using namespace vm::code;
-	using FieldVector = std::vector<std::pair<base::StrID, vm::TypeRef>>;
-
-	template<typename T>
-	concept InheritableTypeConcept
-		= std::is_same_v<T, ClassType> || std::is_same_v<T, InterfaceType>;
-	template<typename T>
-	concept FieldableTypeConcept = std::is_same_v<T, ClassType> || std::is_same_v<T, DataType>;
-	template<typename F>
-	concept ErrorFactoryConcept
-		= std::invocable<F> && std::is_base_of_v<ValidationError, std::invoke_result_t<F>>;
-	template<typename T>
-	concept TypeOfDataConcept = std::is_constructible_v<TypeOfData, T>;
-
-/**
- * @brief Retrieves a type with a given name from the `TypeContext` and checks if it has an
- * expected type. If yes, it retrieves this type from the variant and returns it. If not, throws
- * an error given by the error_factory function.
- *
- * @param ctx type context to retrieve the type from.
- * @param name name of the type to retrieve.
- * @param context_for_error a type needed to throw the UnknownSubtypeError. This is the type for
- * which subtype we're looking for.
- * @param error_factory a function which returns the error to be thrown in case of type
- * mismatch. For example, if a type specified by the name in clazz.extends is not a ClassType,
- * the error_factory should return an InvalidExtendsError.
- *
- * @note This function causes a dangling reference warning, which I strongly believe is a false
- * positive, thus the pragmas.
- */
-#if defined(__GNUG__) || defined(__clang__)
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wdangling-reference"
-#endif
-	template<TypeOfDataConcept ExpectedType, ErrorFactoryConcept ErrorFactory>
-	const ExpectedType& getType(
-		const TypeContext&  ctx,
-		const base::StrID&  name,
-		const TypeOfData&   context_for_error,
-		const ErrorFactory& error_factory
-	) {
-		const TypeOfData& type_of_data
-			= *ctx.getCurrentTypes().atMaybe(name).expect<UnknownSubtypeError>(
-				context_for_error, name
-			);
-		if (const auto* specific_type = std::get_if<ExpectedType>(&type_of_data))
-			return *specific_type;
-		throw error_factory();
-	}
-#if defined(__GNUG__) || defined(__clang__)
-	#pragma GCC diagnostic pop
-#endif
+	using namespace vm::code::detail;
 
 	/**
 	 * @brief Recursively collects fields from a FieldableType (ClassType or DataType) and its
@@ -268,120 +218,6 @@ namespace {
 	}
 
 	/**
-	 * @brief Recursively builds a vtable layout for an InheritableType.
-	 */
-	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
-	void buildVTableRecursive(
-		const InheritableType&                    inh,
-		const ErrorContextType&                   error_context_inh,
-		base::HashMap<base::StrID, vm::TypeCRef>& vtable,
-		vm::TypeMetadata&                         metadata,
-		const TypeContext&                        ctx
-	) {
-		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef {
-			return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
-		};
-
-		for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
-		for (const auto& interface_name: inh.implements) {
-			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(error_context_inh, interface_name); }
-			);
-			buildVTableRecursive(interface, error_context_inh, vtable, metadata, ctx);
-		}
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			if (inh.extends) {
-				const auto& super_class
-					= getType<ClassType>(ctx, *inh.extends, error_context_inh, [&]() {
-						  return InvalidExtendsError(inh, *inh.extends);
-					  });
-				buildVTableRecursive(super_class, error_context_inh, vtable, metadata, ctx);
-			}
-		}
-	}
-
-	/**
-	 * @brief Builds a vector of fields (FieldVector) for an InheritableType. Collects all
-	 * fields from superclasses.
-	 */
-	template<InheritableTypeConcept InheritableType>
-	FieldVector buildFieldVector(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
-	) {
-		auto to_low_type = [&](const TypeOfData& tod) {
-			return metadata.at(VISIT(tod, type, return type.name));
-		};
-		FieldVector fields{ { base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) } };
-
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			std::function<void(const vm::code::ClassType&)> collect_class_fields_recursive
-				= [&](const vm::code::ClassType& clazz) {
-					  if (clazz.extends) {
-						  const auto& super_class_code
-							  = getType<ClassType>(ctx, *clazz.extends, clazz, [&]() {
-									return InvalidExtendsError(clazz, *clazz.extends);
-								});
-						  collect_class_fields_recursive(super_class_code);
-					  }
-
-					  for (const Field& field_code: clazz.fields) {
-						  fields.emplace_back(
-							  field_code.name,
-							  metadata.atMaybe(field_code.type)
-								  .expect<UnknownSubtypeError>(clazz, field_code.name)
-						  );
-					  }
-				  };
-			collect_class_fields_recursive(inh);
-		}
-		return fields;
-	}
-
-	/**
-	 * @brief Builds inheritance metadata for a given inheritable. Builds a field vector and a
-	 * vtable.
-	 */
-	template<InheritableTypeConcept InheritableType>
-	vm::InheritanceMetadata buildInheritanceMetadata(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
-	) {
-		vm::TypeCRef tp            = metadata.at(inh.name);
-		auto         get_type_cref = [&](base::StrID name) -> vm::TypeCRef {
-            return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
-		};
-		auto implements = inh.implements | std::views::transform(get_type_cref)
-		                | std::ranges::to<std::vector>();
-
-		base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
-		for (auto& method: inh.virtual_methods)
-			virtual_methods.put(method.name, get_type_cref(method.type));
-
-		base::HashMap<base::StrID, vm::TypeCRef> implementations;
-		for (auto& method: inh.implementations)
-			implementations.put(method.name, get_type_cref(method.type));
-
-		base::HashMap<base::StrID, vm::TypeCRef> vtable;
-		buildVTableRecursive(inh, inh, vtable, metadata, ctx);
-
-		vm::InheritanceMetadata::Kind kind;
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			kind = vm::InheritanceMetadata::Class{
-				.is_abstract = inh.is_abstract,
-				.extends     = inh.extends.map(get_type_cref),
-			};
-		} else {
-			kind = vm::InheritanceMetadata::Interface{};
-		}
-
-		return {
-			tp, kind, std::move(implements), std::move(virtual_methods), std::move(vtable),
-		};
-	}
-
-	/**
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
 	void validateType(const TypeOfData& type, const TypeContext& ctx) {
@@ -412,150 +248,56 @@ namespace {
 			}
 		}
 	}
+}
 
-	/**
-	 * @brief Throws a builder error if types are invalid in current context.
-	 * Checks each type individually and inheritance
-	 * hierarchy soundness.
-	 */
-	void validateTypes(const TypeContext& ctx) {
-		// Check for cycles in hierarchy.
-		enum Status { Waiting, Visited, Done };
+/**
+ * @brief Throws a builder error if types are invalid in current context.
+ * Checks each type individually and inheritance
+ * hierarchy soundness.
+ */
+void vm::code::validateTypes(const TypeContext& ctx) {
+	// Check for cycles in hierarchy.
+	enum Status { Waiting, Visited, Done };
 
-		auto& types = ctx.getCurrentTypes();
+	auto& types = ctx.getCurrentTypes();
 
-		base::HashMap<base::StrID, Status> status;
-		for (const auto& type: types) status.put(typeName(type), Waiting);
+	base::HashMap<base::StrID, Status> status;
+	for (const auto& type: types) status.put(typeName(type), Waiting);
 
-		// explicit object parameter lambdas don't seem to work with class members, hence the
-		// reference
-		auto& types_ref = types;
-		auto  helper    = [&](this auto self, const auto& type) {
-            auto name = typeName(type);
-            if (status[name] == Visited)
-                throw CycleInHierarchyError(type);
-            else if (status[name] == Done)
-                return;
+	// explicit object parameter lambdas don't seem to work with class members, hence the
+	// reference
+	auto& types_ref = types;
+	auto  helper    = [&](this auto self, const auto& type) {
+        auto name = typeName(type);
+        if (status[name] == Visited)
+            throw CycleInHierarchyError(type);
+        else if (status[name] == Done)
+            return;
 
-            status[name] = Visited;
-            variant_match(type) {
-                variant_case(ClassType, clazz) {
-                    if_opt_some(clazz.extends, superclass) {
-                        if (!types_ref.contains(superclass))
-                            throw InvalidExtendsError(clazz, superclass);
-                        self(*types_ref.at(superclass));
-                    }
-                    for (auto iface: clazz.implements) {
-                        if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz, iface);
-                        self(*types_ref.at(iface));
-                    }
+        status[name] = Visited;
+        variant_match(type) {
+            variant_case(ClassType, clazz) {
+                if_opt_some(clazz.extends, superclass) {
+                    if (!types_ref.contains(superclass))
+                        throw InvalidExtendsError(clazz, superclass);
+                    self(*types_ref.at(superclass));
                 }
-                variant_case(InterfaceType, interface) {
-                    for (auto iface: interface.implements) {
-                        if (!types_ref.contains(iface))
-                            throw InvalidImplementsError(interface, iface);
-                        self(*types_ref.at(iface));
-                    }
+                for (auto iface: clazz.implements) {
+                    if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz, iface);
+                    self(*types_ref.at(iface));
                 }
             }
-            status[name] = Done;
-		};
-		for (const auto& type: types) helper(type);
+            variant_case(InterfaceType, interface) {
+                for (auto iface: interface.implements) {
+                    if (!types_ref.contains(iface)) throw InvalidImplementsError(interface, iface);
+                    self(*types_ref.at(iface));
+                }
+            }
+        }
+        status[name] = Done;
+	};
+	for (const auto& type: types) helper(type);
 
-		// @note: Following validation assumes cycles in class hierarchy where detected.
-		for (const auto& type: types) validateType(type, ctx);
-	}
-}
-
-Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
-	validateTypes(*this);
-	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
-
-	// Declare all types first
-	for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
-
-	// Well-define every type.
-	for (const auto& type: types) {
-		variant_match(type) {
-			variant_case(PrimitiveType, data) {
-				metadata->at(data.name)->definePrimitive(data.size);
-			}
-			variant_case(PointerType, data) {
-				metadata->at(data.name)->definePointer(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
-				);
-			}
-			variant_case(FixedSizeTableType, data) {
-				metadata->at(data.name)->defineFixedSizeTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
-					data.table_size
-				);
-			}
-			variant_case(DynamicTableType, data) {
-				metadata->at(data.name)->defineDynamicTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
-				);
-			}
-			variant_case(DataType, data) {
-				FieldVector fields;
-				fields.reserve(data.fields.size());
-				for (auto& field: data.fields)
-					fields.emplace_back(
-						field.name,
-						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
-					);
-				metadata->at(data.name)->defineData(fields, {});
-			}
-			variant_case(VariantType, data) {
-				std::vector<vm::TypeRef> variants;
-				variants.reserve(data.variant_alternatives.size());
-				for (auto& variant: data.variant_alternatives)
-					variants.emplace_back(
-						metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
-					);
-				metadata->at(data.name)->defineVariant(variants);
-			}
-			variant_case(FunctionType, data) {
-				std::vector<vm::TypeCRef> parameters;
-				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
-				metadata->at(data.name)->defineFunction(
-					parameters,
-					metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
-				);
-			}
-			variant_case(OpaqueType, opaque) {
-				metadata->at(opaque.name)->defineOpaque(opaque.size);
-			}
-			variant_case(ClassType, clazz) {
-				TypeRef                 tp     = metadata->at(clazz.name);
-				FieldVector             fields = buildFieldVector(clazz, *metadata, *this);
-				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(clazz, *metadata, *this);
-				tp->defineData(fields, std::move(inh_metadata));
-			}
-			variant_case(InterfaceType, interface) {
-				TypeRef                 tp     = metadata->at(interface.name);
-				FieldVector             fields = buildFieldVector(interface, *metadata, *this);
-				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(interface, *metadata, *this);
-				tp->defineData(fields, std::move(inh_metadata));
-			}
-			variant_default { CORE_PANIC("bad type"); }
-		}
-	}
-	metadata->finalize();
-	return metadata;
-}
-
-const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
-
-void TypeContext::insertType(const TypeOfData& type) {
-	const auto name = typeName(type);
-	match_optional(types.atMaybe(name)) {
-		opt_some(previous_type) {
-			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);
-		}
-		opt_none { types.insert(type, name); }
-	}
+	// @note: Following validation assumes cycles in class hierarchy where detected.
+	for (const auto& type: types) validateType(type, ctx);
 }
