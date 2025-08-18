@@ -107,7 +107,7 @@ namespace compiler::mir {
 					using T = std::decay_t<decltype(val)>;
 					if constexpr (std::is_integral_v<T>)
 						// Force all integral types to i64 for uniformity in operations
-						// @TODO: Replace with proper type conversion when implemented
+					    // @TODO: Replace with proper type conversion when implemented
 
 						return static_cast<i64>(val);
 					else
