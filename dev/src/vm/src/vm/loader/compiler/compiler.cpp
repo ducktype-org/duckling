@@ -20,22 +20,21 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
+#include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
-
-#include <expected>
 
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableObjIdNameMap<code::Function>&         func_map;
-			const TypeMetadata&                               type_map;
-			const StableObjIdNameMap<TypeCRef, GlobalDataID>& globals;
-			const base::HashMap<u64, base::StrID>&            method_id_to_name;
-			const base::HashMap<base::StrID, u64>&            method_name_to_id;
-			base::Optional<code::Function>                    function{};
-			base::HashMap<base::StrID, usize>                 label_positions{};
-			base::HashMap<base::StrID, usize>                 local_offset_map{};
-			usize                                             local_stack_size{};
+			const ObjIdNameMap<code::Function>&         func_map;
+			const TypeMetadata&                         type_map;
+			const ObjIdNameMap<TypeCRef, GlobalDataID>& globals;
+			const base::HashMap<u64, base::StrID>&      method_id_to_name;
+			const base::HashMap<base::StrID, u64>&      method_name_to_id;
+			base::Optional<code::Function>              function{};
+			base::HashMap<base::StrID, usize>           label_positions{};
+			base::HashMap<base::StrID, usize>           local_offset_map{};
+			usize                                       local_stack_size{};
 		};
 
 		u64 getOpCodeArgValue(
@@ -127,8 +126,8 @@ namespace vm::loader::compiler {
 
 				func_data.bc.emplace_back(makeLowInstruction(
 					low::fix8FromInstr(op),
-					Memory::interpret<u64>(arg_0),
-					Memory::interpret<u64>(arg_1)
+					vm::safeReadBytes<u64>(arg_0),
+					vm::safeReadBytes<u64>(arg_1)
 				));
 			}
 			return func_data;
@@ -305,8 +304,8 @@ namespace vm::loader::compiler {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
-		StableObjIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto                                       ctx = CompilationContext(
+		ObjIdNameMap<TypeCRef, GlobalDataID> globals;
+		auto                                 ctx = CompilationContext(
             program.functions(), *types, globals, method_id_to_name, method_name_to_id
         );
 
