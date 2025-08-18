@@ -78,11 +78,6 @@ namespace {
 			Op_dynTableLoad_lany_lptr,
 			Op_dynTableStore_lptr_lany,
 			Op_dynTableReAlloc_lptr_type>;
-			Op_fixedSizeTableStore_lptr_lany,
-			Op_dynTableLea_lptr_lptr,
-			Op_dynTableLoad_lany_lptr,
-			Op_dynTableStore_lptr_lany,
-			Op_dynTableReAlloc_lptr_type>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -838,18 +833,6 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLea_lptr_lptr, instr) {
-				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
-
-				if (destination.inner != table_type.inner)
-					throw DynamicTableTypeMismatchError(instr);
-			}
 			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
@@ -860,15 +843,6 @@ class FunctionValidator {
 
 				if (typeName(*destination) != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
-			}
-			variant_case(Op_dynTableLoad_lany_lptr, instr) {
-				const auto& destination = current_stack.at(instr.arg0.var_name);
-				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
-				const auto& table_type
-					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
-				if (typeName(*destination) != table_type.inner)
-					throw DynamicTableTypeMismatchError(instr);
 			}
 			variant_case(Op_dynTableLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
