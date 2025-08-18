@@ -42,7 +42,7 @@ namespace compiler::helios {
 
 			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
 				auto tp
-					= ctx.query<QueryEvaluateExpressionCT>(pst::AccessLocked<pst::ExprElement>(expr)
+					= ctx.query<QueryCompTime>(pst::AccessLocked<pst::ExprElement>(expr)
 				    );
 				if (tp.hasValue()) {
 					variant_match(tp.value()) {
@@ -138,7 +138,7 @@ namespace compiler::helios {
 
 				if (ret.has_value()) {
 					auto parsed
-						= ctx.query<QueryEvaluateExpressionCT>(ret.value().unlock(ctx)->getExpr());
+						= ctx.query<QueryCompTime>(ret.value().unlock(ctx)->getExpr());
 					if (parsed.hasValue()) {
 						variant_match(parsed.value()) {
 							variant_case(tsh::SymbolType<>, type) { ret_type = type; }

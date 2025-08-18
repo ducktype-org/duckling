@@ -70,7 +70,7 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto tp = ctx.query<QueryEvaluateExpressionCT>({ base });
+				auto tp = ctx.query<QueryCompTime>({ base });
 				if (tp.hasValue()) {
 					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 					// the base class is given with any specifiers apart from the abstract type.
@@ -88,7 +88,7 @@ namespace compiler::helios {
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
 					auto tp
-						= ctx.query<QueryEvaluateExpressionCT>(interface.unlock(ctx)->getExpr());
+						= ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
 					if (tp.hasValue()) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the interface is given with any specifiers apart from the abstract type.

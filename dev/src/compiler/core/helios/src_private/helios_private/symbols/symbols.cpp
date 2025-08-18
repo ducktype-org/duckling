@@ -581,7 +581,7 @@ namespace compiler::helios {
 				);
 
 			// @TODO: Handle potential lack of value
-			auto new_value = ctx.query<QueryEvaluateExpressionCT>(
+			auto new_value = ctx.query<QueryCompTime>(
 				const_symbol->getValue().value().unlock(ctx)->getExpr()
 			);
 			if (new_value.hasError()) return query::QError(errors::Failed());
