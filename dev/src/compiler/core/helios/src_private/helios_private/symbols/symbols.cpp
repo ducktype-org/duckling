@@ -1,8 +1,7 @@
 #include "symbols.hpp"
 
-#include "helios_private/comp_time/comp_time.hpp"
-
 #include <frontend/module_tree/queries.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -581,15 +580,12 @@ namespace compiler::helios {
 				);
 
 			// @TODO: Handle potential lack of value
-			auto new_value
+			auto ctv
 				= ctx.query<QueryCompTime>(const_symbol->getValue().value().unlock(ctx)->getExpr());
-			if (new_value.hasError()) return query::QError(errors::Failed());
+			if (ctv.hasError()) return query::QError(errors::Failed(ctv.error()));
 
-			variant_match(new_value.value()) {
-				variant_case(i64, value) { return value; }
-				variant_default { std::cout << "Value different than int returned\n"; }
-			}
-			return 0;
+			if_opt_some(ctv.value().asI64(), value) { return value; }
+			CORE_PANIC("Handling types other than I64 is no implemented yet");
 		}
 
 		QUERY_AUTO_CACHE_COPY

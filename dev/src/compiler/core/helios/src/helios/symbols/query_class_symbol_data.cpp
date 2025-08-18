@@ -1,10 +1,10 @@
 
 #include "query_class_symbol_data.hpp"
 
-#include "helios_private/comp_time/comp_time.hpp"
 #include "simple.hpp"
 #include "symbol_kind.hpp"
 
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/hierarchy/declarations/class.hpp>
@@ -74,13 +74,13 @@ namespace compiler::helios {
 				if (tp.hasValue()) {
 					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 					// the base class is given with any specifiers apart from the abstract type.
-					// TODOP: Improve that.
-					variant_match(tp.value()) {
-						variant_case(tsh::SymbolType<>, type) { class_info.base = type.getType(); }
-						variant_default { return query::QError(errors::Failed()); }
-					}
+					auto maybe_type = tp.value().asType();
+					if (maybe_type.has_value())
+						class_info.base = maybe_type.value().getType();
+					else
+						return query::QError(errors::Failed());
 				} else {
-					// We just fail here, error should be reported by QueryEvaluateExpressionCT.
+					// We just fail here, error should be reported by QueryCompTime.
 					return query::QError(errors::Failed());
 				}
 			}
@@ -91,14 +91,13 @@ namespace compiler::helios {
 					if (tp.hasValue()) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the interface is given with any specifiers apart from the abstract type.
-						variant_match(tp.value()) {
-							variant_case(tsh::SymbolType<>, type) {
-								class_info.implements.push_back(type.getType());
-							}
-							variant_default { return query::QError(errors::Failed()); }
-						}
+						auto maybe_type = tp.value().asType();
+						if (maybe_type.has_value())
+							class_info.implements.push_back(maybe_type.value().getType());
+						else
+							return query::QError(errors::Failed());
 					} else {
-						// We just fail here, error should be reported by QueryEvaluateExpressionCT.
+						// We just fail here, error should be reported by QueryCompTime.
 						return query::QError(errors::Failed());
 					}
 				}

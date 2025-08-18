@@ -1,7 +1,5 @@
 #include "comp_time.hpp"
 
-#include "helios/helios_errors.hpp"
-
 #include <backends/dvm/backend.hpp>
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/visitors.hpp>
@@ -104,9 +102,9 @@ namespace compiler::helios {
 				const auto& rhs_ctv = rhs_result.value();
 
 				// TODOP: This is freaking goofy with those n^2 cases. Think of a better way.
-				variant_match(lhs_ctv) {
+				variant_match(lhs_ctv.getStorage()) {
 					variant_case(i64, lhs_value) {
-						variant_match(rhs_ctv) {
+						variant_match(rhs_ctv.getStorage()) {
 							variant_case(i64, rhs_value) {
 								switch (expr.operation) {
 								case code::BuiltinBinary::IntegerAdd:
@@ -149,7 +147,7 @@ namespace compiler::helios {
 						}
 					}
 					variant_case(bool, lhs_value) {
-						variant_match(rhs_ctv) {
+						variant_match(rhs_ctv.getStorage()) {
 							variant_case(bool, rhs_value) {
 								switch (expr.operation) {
 								case code::BuiltinBinary::BooleanAnd:
@@ -188,7 +186,7 @@ namespace compiler::helios {
 
 				const auto& ctv = expr_result.value();
 
-				variant_match(ctv) {
+				variant_match(ctv.getStorage()) {
 					variant_case(i64, val) {
 						switch (expr.operation) {
 						case code::BuiltinUnary::IntegerNegation:
@@ -246,11 +244,11 @@ namespace compiler::helios {
 
 				bool        condition_is_true = false;
 				const auto& cond_ctv          = cond_result.value();
-				variant_match(cond_ctv) {
+				variant_match(cond_ctv.getStorage()) {
 					variant_case(bool, val) { condition_is_true = val; }
 					variant_case(i64, val) { condition_is_true = (val != 0); }
 					variant_default {
-						result = query::QError(compiler::helios::errors::Failed());
+						result = query::QError(errors::Failed());
 						return;
 					}
 				}
@@ -275,7 +273,7 @@ namespace compiler::helios {
 						return;
 					}
 
-					variant_match(sub_type_result.value()) {
+					variant_match(sub_type_result.value().getStorage()) {
 						variant_case(tsh::SymbolType<>, type) { subtypes.emplace_back(type); }
 						variant_default { CORE_PANIC("Type evaluation returned not a type\n"); }
 					}
@@ -299,7 +297,7 @@ namespace compiler::helios {
 						return;
 					}
 
-					variant_match(sub_type_result.value()) {
+					variant_match(sub_type_result.value().getStorage()) {
 						variant_case(tsh::SymbolType<>, type) { subtypes.emplace_back(type); }
 						variant_default { CORE_PANIC("Type evaluation returned not a type\n"); }
 					}
@@ -358,14 +356,17 @@ namespace compiler::helios {
 				ctv_arguments.push_back(arg_result.value());
 			}
 
+			// Retrieve the functions return type.
+			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
+			if (callee_abs_type.getKind() != tsh::Kind::Function) {
+				CORE_PANIC(
+					"Attempting to call a non_function type during VM compile time evaluation"
+				);
+			}
+			tsh::FunctionAbstractType func_type(callee_abs_type);
+
 			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
-				// TODOP: Is the compiler return type needed here?
-				callee_ident->expression_type.getSymbolType(
-				),  // TODOP: Thats wrong. How to get a return
-			        // type of the function from somewhere?
-				code,
-				lir_func_result->mangled_name.str(),
-				ctv_arguments
+				func_type.getResultType(), code, lir_func_result->mangled_name.str(), ctv_arguments
 			);
 
 			if (vm_eval_result.has_value())

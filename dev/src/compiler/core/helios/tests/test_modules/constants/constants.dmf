@@ -73,12 +73,3 @@ fun mul_add(a: i64, b: i64) -> i64 = {
 }
 
 const MUL_ADD_CALL = mul_add(2, 2);
-
-fun bar() -> obj = {
-    return Objcet; 
-}
-fun foo(obj) -> obj = {
-    return  object.costam() 
-}
-
-const ob = foo(bar());
