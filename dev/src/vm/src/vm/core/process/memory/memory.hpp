@@ -57,6 +57,10 @@ namespace vm {
 		[[nodiscard]]
 		Ref<Block> getBlock(BlockID id);
 
+		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
+
+		auto overwritePointedDataSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+
 	public:
 		Memory() = default;
 

@@ -798,7 +798,7 @@ namespace vm {
 			auto tbl_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset  = index * i64(element_type->getSize());
+			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
@@ -815,7 +815,7 @@ namespace vm {
 			auto tbl_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset  = index * i64(element_type->getSize());
+			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
@@ -837,7 +837,7 @@ namespace vm {
 
 			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * i64(element_type->getSize()));
+			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}
@@ -854,7 +854,7 @@ namespace vm {
 
 			auto index        = derefStack<i64>(local_stack, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * i64(element_type->getSize()));
+			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}
