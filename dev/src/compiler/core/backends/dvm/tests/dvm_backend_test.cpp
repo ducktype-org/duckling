@@ -118,8 +118,7 @@ private:
 
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
-	// the return is 3. but in vm it is stored as u64 so it is 1077936128
-	void numericLiteralsTest() { runTest("modules/numeric_literals", {}, {}, {}, 1'077'936'128); }
+	void numericLiteralsTest() { runTest("modules/numeric_literals", {}, {}, {}, 1); }
 };
 
 

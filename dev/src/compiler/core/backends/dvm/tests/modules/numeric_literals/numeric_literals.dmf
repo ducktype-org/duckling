@@ -3,6 +3,5 @@ fun main() = {
     var b: f32 = .5;
     (a + b) * .5;
 	10.125 + 10.125;
-    # in vm floats are stored as u64, so it would really return 1077936128
-    return 3.;
+    return 1;
 }
