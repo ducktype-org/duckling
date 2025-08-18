@@ -129,9 +129,10 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 					function.bytecode_pos = func->position;
 
 					code::Identifier func_name;
-					func_name.str          = func->name.value;
-					func_name.bytecode_pos = func->name.position;
-					function.name          = func_name;
+					func_name.str                 = func->name.value;
+					func_name.bytecode_pos        = func->name.position;
+					function.name                 = func_name;
+					function.signature.is_builtin = false;
 
 					code::Identifier result_type;
 					result_type.str                = func->result_type.value;

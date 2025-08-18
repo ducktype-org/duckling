@@ -41,7 +41,7 @@ void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) 
 	valid = false;
 	for (const auto& [func_ref, id, name]: function_map.allData())
 		type_context.signatures.put(name, func_ref->signature);
-		
+
 	for (const auto& func: collection.functions)
 		type_context.signatures.put(func.name, func.signature);
 	insertTypes(collection.types);

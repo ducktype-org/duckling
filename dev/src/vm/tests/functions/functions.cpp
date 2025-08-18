@@ -74,6 +74,12 @@ private:
 	void testBuiltinFunctions() {
 		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {}, 0, true);
 		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {}, 0, true);
+		loadInvalidDbc(
+			"invalid_builtin_function.dbc",
+			{
+				vm::code::InvalidBuiltinFunctionError::ERR_MSG,
+			}
+		);
 	}
 
 	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }

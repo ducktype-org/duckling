@@ -163,6 +163,7 @@ namespace vm::builtins {
 					vm::opargs::BuiltinFunctionName(func_type.name)
 				));
 				builtin_function.body.emplace_back(code::instructions::Op_ret{});
+				builtin_function.signature.is_builtin  = true;
 				builtin_function.signature.result_type = func_type.result;
 				builtin_function.signature.parameters.reserve(func_type.parameters.size());
 				for (const auto& param: func_type.parameters)

@@ -437,6 +437,8 @@ class FunctionValidator {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
 					if (!signatures.contains(fun_name)) throw UnknownFunctionError(generic_arg);
+					FuncSignature sig = signatures.at(fun_name);
+					if (!sig.is_builtin) throw InvalidBuiltinFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;
