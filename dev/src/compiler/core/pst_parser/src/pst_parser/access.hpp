@@ -5,7 +5,7 @@
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <base/ref.hpp>
-#include <base/template_helpers.hpp>
+#include <base/template_string.hpp>
 
 #include <query_framework/context_fd.hpp>
 #include <token_parser_core/debug_print.hpp>
@@ -244,7 +244,7 @@ namespace pst {
 
 	public:
 		AccessInternal()                      = default;
-		AccessInternal(const AccessInternal&) = default;
+		AccessInternal(const AccessInternal&) = delete;
 		AccessInternal(AccessInternal&&)      = default;
 
 		AccessInternal(MBox<Element>&& box): box(std::move(box)) {}
