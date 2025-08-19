@@ -128,7 +128,7 @@ private:
 	) {
 		pst::PST<> pst = prepare(duckling_file);
 		assertTrue(
-			pst::checkUniqueElementPaths(pst.getRootElement()), "Element paths are not unique"
+			pst::checkUniqueElementPaths(pst.getRootElement()).isOk(), "Element paths are not unique"
 		);
 		std::stringstream ss;
 		pst.dprint(ss);

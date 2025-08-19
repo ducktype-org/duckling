@@ -33,5 +33,5 @@ namespace pst {
 	/**
 	 * @brief Check if none of the Element paths repeat for different elements
 	 */
-	bool checkUniqueElementPaths(AccessLocked<pst::LangElement> root);
+	base::OkBad checkUniqueElementPaths(AccessLocked<pst::LangElement> root);
 }

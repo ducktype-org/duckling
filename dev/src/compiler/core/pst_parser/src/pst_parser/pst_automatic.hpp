@@ -34,8 +34,11 @@ namespace pst {
 	using lang_def::Special;
 	using lexer::Operator;
 
+	/**
+	 * @brief Forces pass by value. Sometimes usefull in parse templates
+	 */
 	template<typename T>
-	inline T fwdVal(T& t) {
+	T fwdVal(T& t) {
 		return t;
 	}
 
