@@ -109,7 +109,8 @@ namespace pst {
 		return out;
 	}
 
-	void Stmt::calcElementPathsRecursive(const ElementPath& path) {
+	void Stmt::calcElementPathsRecursive() {
+		auto        path       = getElementPath();
 		ElementPath attrs_path = { path, "attributes" };
 		calcIndexedListChildPath(attributes, attrs_path);
 		for (auto& el: sub_elements) {

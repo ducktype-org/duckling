@@ -56,7 +56,7 @@ namespace pst::expr {
 		visitor.visitComparisonChain(*this);
 	}
 
-	void ComparisonChain::calcElementPathsRecursive(const ElementPath& path) {
-		calcIndexedListChildPath(sub_expr, path);
+	void ComparisonChain::calcElementPathsRecursive() {
+		calcIndexedListChildPath(sub_expr, getElementPath());
 	}
 }

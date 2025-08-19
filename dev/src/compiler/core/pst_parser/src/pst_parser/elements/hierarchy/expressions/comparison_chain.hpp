@@ -41,6 +41,6 @@ namespace pst::expr {
 		void dprint(std::ostream& out) const final;
 		void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
-		void calcElementPathsRecursive(const ElementPath&) override;
+		void calcElementPathsRecursive() override;
 	};
 }

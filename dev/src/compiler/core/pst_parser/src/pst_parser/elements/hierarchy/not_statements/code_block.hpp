@@ -51,6 +51,6 @@ namespace pst {
 			return true;
 		}
 
-		void calcElementPathsRecursive(const ElementPath&) override;
+		void calcElementPathsRecursive() override;
 	};
 }

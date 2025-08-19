@@ -22,7 +22,7 @@ namespace pst {
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 
-	void LangElement::calcElementPathsRecursive(const ElementPath& path) {
+	void LangElement::calcElementPathsRecursive() {
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
@@ -33,7 +33,7 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ElementPath child_path(path, named_child.name);
+					ElementPath child_path(getElementPath(), named_child.name);
 					named_child.element->calcElementPaths(child_path);
 				}
 			}

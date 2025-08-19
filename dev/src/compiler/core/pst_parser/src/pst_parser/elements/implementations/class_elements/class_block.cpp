@@ -47,7 +47,8 @@ namespace pst {
 		}
 	}
 
-	void ClassBlock::calcElementPathsRecursive(const ElementPath& path) {
+	void ClassBlock::calcElementPathsRecursive() {
+		auto                          path            = getElementPath();
 		auto                          no_symbol_path  = ElementPath(path, "no_symbol");
 		usize                         no_symbol_count = 0;
 		auto                          by_symbol_path  = ElementPath(path, "by_symbol");

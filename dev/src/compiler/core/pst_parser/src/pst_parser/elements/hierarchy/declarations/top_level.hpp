@@ -49,6 +49,6 @@ namespace pst {
 			return DeclKind::Transparent;
 		}
 
-		void calcElementPathsRecursive(const ElementPath&) override;
+		void calcElementPathsRecursive() override;
 	};
 }

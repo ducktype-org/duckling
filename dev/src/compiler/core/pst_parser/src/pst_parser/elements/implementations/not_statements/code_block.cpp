@@ -52,7 +52,8 @@ namespace pst {
 		}
 	}
 
-	void CodeBlock::calcElementPathsRecursive(const ElementPath& path) {
+	void CodeBlock::calcElementPathsRecursive() {
+		auto path = getElementPath();
 		if (type == Ordered) {
 			auto ordered = ElementPath(path, "ordered");
 			calcIndexedListChildPath(statements, ordered);
