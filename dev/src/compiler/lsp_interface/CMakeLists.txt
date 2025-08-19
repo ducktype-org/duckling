@@ -4,4 +4,4 @@ add_executable(lsp_daemon src/lsp_interface/lsp_daemon.cpp
                           src/lsp_interface/go_to_definition.cpp
                           src/lsp_interface/utils.cpp)
 
-target_link_libraries(lsp_daemon PUBLIC base64 Base Lexer PstParser Crow Clah LibVM HELIOS QueryFramework)
+target_link_libraries(lsp_daemon PUBLIC base64 Base Lexer PstParser Crow Clah LibVM HELIOS QueryFramework ModuleTree)

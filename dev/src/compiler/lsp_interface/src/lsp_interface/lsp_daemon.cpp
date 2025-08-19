@@ -20,7 +20,10 @@ POP_DIAGNOSTIC;
 #include "utils.hpp"
 
 #include <filesystem/file.hpp>
-#include <filesystem/vfs.hpp>
+#include <filesystem/file_path.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 
@@ -74,11 +77,10 @@ crow::response toResponse(const std::expected<void, E>& x) {
  * @param port The port number to run the server on.
  */
 void server(i32 port) {
-	crow::SimpleApp                               app;
-	lsp::ExportKeywords                           lsp;
-	std::unordered_map<std::string, fs::FilePath> files;
-	Ref<fs::VFS> vfs = fs::VFS::getInstance();
-	const auto& root = "vfs:";
+    crow::SimpleApp app;
+    lsp::ExportKeywords lsp;    
+    std::unordered_map<std::string, fs::File> files;
+    auto virtual_root = fs::FileManager::createRandomVirtualDirectory();
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -103,38 +105,24 @@ void server(i32 port) {
 	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
-	CROW_ROUTE(app, "/put_file/<string>/<string>")
-	([vfs, root](const std::string& base64_path, const std::string& base64_content) {
-		try {
-			const auto  path    = base64::decode_into<std::string>(base64_path);
-			const auto  content = base64::decode_into<std::string>(base64_content);
-			
-			if (vfs->createFile(root + path)) {
-				// new file
-				vfs->writeFile(root + path, content);
-			} else {
-				// Existing File
-				vfs->writeFile(root + path, content);
-			}
-			
+    CROW_ROUTE(app, "/put_file/<string>/<string>")
+    ([&virtual_root](const std::string& base64_path, const std::string& base64_content) {
+        try {
+            const auto path = base64::decode_into<std::string>(base64_path);
+            const auto content = base64::decode_into<std::string>(base64_content);
+            
+            if (!virtual_root.getFilePath().join(path).exists()) {
+                virtual_root.createSubFile(content, path);
+            } else {
+                auto file = fs::File(virtual_root.getFilePath().join(path));
+                file.writeToFile(content);
+            }
 
-
-
-
-
-
-			
-			
-			
-			const auto& file    = fs::FilePath::createTempFile(content);
-			files.erase(path);
-			files.emplace(path, file);
-			return crow::response(200, "OK");
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
-	});
+            return crow::response(200, "OK");
+        } catch (const std::exception& e) {
+            return crow::response(400, e.what());
+        }
+    });
 
 	/**
 	 * @brief Route to generate diagnostics for a file under the given path in the virtual file
@@ -143,21 +131,25 @@ void server(i32 port) {
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the diagnostics.
 	 */
-	CROW_ROUTE(app, "/get_errors/<string>")
-	([vfs, root](const std::string& base64_path) {
-		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
-			fs::FilePath file(root + path);
-			auto tokens = lexer::tokenizeFile(file);
-			pst::PST<> pst(std::move(tokens));
-			std::stringstream ss;
-			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
-			return crow::response(200, ss.str());
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
-	});
+    CROW_ROUTE(app, "/get_errors/<string>")
+    ([&virtual_root](const std::string& base64_path) {
+        try {
+            const auto path = base64::decode_into<std::string>(base64_path);
+
+            if (!virtual_root.getFilePath().join(path).exists()) {
+                return crow::response(404, "File not found");
+            }
+
+			auto file = fs::File(virtual_root.getFilePath().join(path));
+            auto tokens = lexer::tokenizeFile(file);
+            pst::PST<> pst(std::move(tokens));
+            std::stringstream ss;
+            if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
+            return crow::response(200, ss.str());
+        } catch (const std::exception& e) {
+            return crow::response(400, e.what());
+        }
+    });
 
 	/**
 	 * @brief Route to generate semantic tokens for a file under the given path in the virtual file
@@ -166,26 +158,40 @@ void server(i32 port) {
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */
-	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
-	([vfs, root](const std::string& base64_path) {
-		try {
-			const auto  path   = base64::decode_into<std::string>(base64_path);
-			fs::FilePath file(root + path);
-        	auto tokens = lexer::tokenizeFile(file);
-			pst::PST<>  pst(std::move(tokens));
+    CROW_ROUTE(app, "/get_semantic_tokens/<string>")
+    ([&virtual_root](const std::string& base64_path) {
+        try {
+            const auto path = base64::decode_into<std::string>(base64_path);
 
-			if (pst.getLogger()->bad()) {
-				std::stringstream ss;
-				pst.getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
+			const auto vfs_root_path = virtual_root.getFilePath();
+			// const auto string_res = "{table: [" + vfs_root_path.string() + "," + path + "]}";
+			// return crow::response(200, string_res);
+			const auto vfs_file_path = vfs_root_path.join(path);
+			// return crow::response(200, "line 166\n");
 
-			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
-	});
+            if (!vfs_file_path.exists()) {
+                return crow::response(404, "File not found");
+            }
+
+			// return crow::response(200, "line 168\n");
+            const auto file = virtual_root.getFilePath().join(path);
+
+			const auto pst
+				= query::entryPoint<compiler::frontend::queryPSTFromFilePath>(fs::File(file));
+
+
+
+            if (pst.getLogger()->bad()) {
+                std::stringstream ss;
+                pst.getLogger()->dumpLog(true, ss);
+                return crow::response(200, ss.str());
+            }
+
+            return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
+        } catch (const std::exception& e) {
+            return crow::response(400, e.what());
+        }
+    });
 
 	/**
 	 * @brief Route to get definition location for a symbol defined by a given file and offset.
@@ -194,43 +200,41 @@ void server(i32 port) {
 	 * @param offset The offset of the element
 	 * @return crow::response The HTTP response containing the definition range in JSON format.
 	 */
-	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
-	([vfs, root](const std::string& base64_path, const uint& offset) {
-		try {
-			const auto  path   = base64::decode_into<std::string>(base64_path);
-			fs::FilePath file(root + path);
-        	auto tokens = lexer::tokenizeFile(file);
-			pst::PST<>  pst(std::move(tokens));
+    CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
+    ([&virtual_root](const std::string& base64_path, const uint& offset) {
+        try {
+            const auto path = base64::decode_into<std::string>(base64_path);
 
-			if (pst.getLogger()->bad()) {
-				std::stringstream ss;
-				pst.getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
+            if (!fs::FilePath(virtual_root.getFilePath().join(path)).exists()) {
+                return crow::response(404, "File not found");
+            }
 
-			if (pst.getLogger()->bad()) {
-				std::stringstream ss;
-				pst.getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
-			auto pst_root = pst.getRootElement();
+            auto file = fs::File(virtual_root.getFilePath().join(path));
 
-			auto element = lsp::findElement(pst_root, offset);
+			// TODO: fix PST definition to enable definition finding
+            auto tokens = lexer::tokenizeFile(file);
+            pst::PST<> pst(std::move(tokens));
 
-			auto definition = lsp::findDefinition(element);
+            if (pst.getLogger()->bad()) {
+                std::stringstream ss;
+                pst.getLogger()->dumpLog(true, ss);
+                return crow::response(200, ss.str());
+            }
 
-			if (!definition.has_value()) return crow::response(200, "[]");
+            auto pst_root = pst.getRootElement();
+            auto element = lsp::findElement(pst_root, offset);
+            auto definition = lsp::findDefinition(element);
 
-			std::vector<std::string> out = { definition.value().toJSON() };
+            if (!definition.has_value()) return crow::response(200, "[]");
 
-			return crow::response(200, lsp::jsonList(out));
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
-	});
+            std::vector<std::string> out = { definition.value().toJSON() };
+            return crow::response(200, lsp::jsonList(out));
+        } catch (const std::exception& e) {
+            return crow::response(400, e.what());
+        }
+    });
 
-	app.port(base::safeIntConv<u16>(port)).run();
+    app.port(base::safeIntConv<u16>(port)).run();
 }
 
 /**

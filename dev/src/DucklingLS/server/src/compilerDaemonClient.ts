@@ -32,7 +32,7 @@ export class CompilerDaemonClient {
 	constructor() {
 		this.process = spawn(
 			BINARY_PATH + "lsp_daemon", 
-			["-p", DAEMON_PORT], 
+			["start", "-p", DAEMON_PORT], 
 			{stdio: 'inherit'} // This is necessary for the server to remain responsive
 		);
 	}
@@ -64,9 +64,11 @@ export class CompilerDaemonClient {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
+		console.log(`putfile called: ${uriToFilePath(filePath)}`);
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
-
+		
 		function handleResponse(res: Response) {
+			// console.log(`Response status: ${res.status}`);
 			if (res.status != 200) {
 				throw new Error(`Error: ${res.status}`);
 			}
@@ -101,9 +103,9 @@ export class CompilerDaemonClient {
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
 			}
 
-			// // Read and print the response body as text
-			// const responseBody = await response.text();
-			// console.log(`Response body: ${responseBody}`);
+			// Read and print the response body as text
+			const responseBody = await response.text();
+			console.log(`Response body: ${responseBody}`);
 	
 
 			const jsonResponse = await response.json();
@@ -246,5 +248,6 @@ export interface LSPKeywordData {
 
 // File paths are stored in URIs, this function converts them to file paths
 function uriToFilePath(uri: string): string {
-	return uri.split(":")[1];
+	const filepath = uri.split(":")[1];
+	return filepath.replace("///", "").replace("\\\\\\", "");
 }
