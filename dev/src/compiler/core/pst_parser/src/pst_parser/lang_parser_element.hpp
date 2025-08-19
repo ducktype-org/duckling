@@ -43,11 +43,14 @@ namespace pst {
 	struct ElementPath final {
 		ElementPath() = default;
 
-		ElementPath(const ElementPath& parent, const std::string& ext):
+		ElementPath(const ElementPath& parent, std::string_view ext):
 			  elements(parent.elements.begin(), parent.elements.end()) {
-			elements.push_back(ext);
+			elements.emplace_back(ext);
 		}
 
+		/**
+		 * @brief Return the path as a string by joining with '.'
+		 */
 		[[nodiscard]]
 		std::string str() const;
 
@@ -70,14 +73,22 @@ namespace pst {
 	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
-		using InternalChild      = Ref<LangElement>;
-		using InternalNamedChild = std::pair<std::string, Ref<LangElement>>;
+		using InternalChild = Ref<LangElement>;
+
+		struct InternalNamedChild {
+			std::string      name;
+			Ref<LangElement> element;
+		};
 
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
 	public:
-		using Child      = AccessLocked<LangElement>;
-		using NamedChild = std::pair<std::string, AccessLocked<LangElement>>;
+		using Child = AccessLocked<LangElement>;
+
+		struct NamedChild {
+			std::string               name;
+			AccessLocked<LangElement> element;
+		};
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
@@ -221,7 +232,7 @@ namespace pst {
 			};
 			constexpr auto strip_name = [](const SubElement& t) -> const Child {
 				if (std::holds_alternative<NamedChild>(t))
-					return std::get<NamedChild>(t).second;
+					return std::get<NamedChild>(t).element;
 				else
 					return std::get<Child>(t);
 			};

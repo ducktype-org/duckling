@@ -33,8 +33,8 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ElementPath child_path(path, named_child.first);
-					named_child.second->calcElementPaths(child_path);
+					ElementPath child_path(path, named_child.name);
+					named_child.element->calcElementPaths(child_path);
 				}
 			}
 		}

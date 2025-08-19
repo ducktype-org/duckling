@@ -115,7 +115,7 @@ namespace pst {
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
-					if (child->element_kind == ElementKind::Attribute) continue;
+					if (child->getElementKind() == ElementKind::Attribute) continue;
 					CORE_PANIC(
 						"Default implementation of calculating element paths cannot handle unnamed "
 						"sub-elements. Encountered while calculating for: "
@@ -123,8 +123,8 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ElementPath child_path(path, named_child.first);
-					named_child.second->calcElementPaths(child_path);
+					ElementPath child_path(path, named_child.name);
+					named_child.element->calcElementPaths(child_path);
 				}
 			}
 		}
