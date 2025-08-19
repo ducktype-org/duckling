@@ -38,7 +38,6 @@ namespace pst {
 		std::derived_from<LangElement> Element = TopLevel,
 		std::derived_from<LangElement> Parser  = Element>
 	class PST {
-
 	public:
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.

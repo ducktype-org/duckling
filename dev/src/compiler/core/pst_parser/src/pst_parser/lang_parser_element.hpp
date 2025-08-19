@@ -198,7 +198,7 @@ namespace pst {
 					return Child(std::get<InternalChild>(t));
 				} else if (base::holds<InternalNamedChild>(t)) {
 					auto& [name, inter] = std::get<InternalNamedChild>(t);
-					return NamedChild{ .name=name, .element={ inter } };
+					return NamedChild{ .name = name, .element = { inter } };
 				} else {
 					return SubToken(std::get<SubToken>(t));
 				}
