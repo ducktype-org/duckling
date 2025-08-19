@@ -249,17 +249,17 @@ class FunctionValidator {
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
 		auto generic_arg   = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto func_type     = signatures.at(fun_name);
-		bool check_ret_val = func_type.result_type.str != base::StrID("void");
+		auto signature     = signatures.at(fun_name);
+		bool check_ret_val = signature.result_type.str != base::StrID("void");
 
-		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+		if (signature.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: func_type.parameters | std::views::reverse) {
+		for (auto param: signature.parameters | std::views::reverse) {
 			if (code::typeName(*local_stack.back().type) != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result_type.str)
+		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -282,21 +282,21 @@ class FunctionValidator {
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
                 type.getInheritanceMetadata(), inh_meta
-            ) return inh_meta->virtual_methods.contains(instr.arg1.method_name);
+            ) return inh_meta->vtable.contains(instr.arg1.method_name);
             return false;
         });
 		auto        inh_meta = it->getInheritanceMetadata().value();
-		impl_name            = inh_meta->virtual_methods[instr.arg1.method_name]->getName();
+		impl_name            = inh_meta->vtable[instr.arg1.method_name];
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
-		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
-		bool check_ret_val = func_type.result != base::StrID("void");
+		auto signature     = signatures.at(impl_name);
+		bool check_ret_val = signature.result_type.str != base::StrID("void");
 
-		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+		if (signature.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
-		for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
-			if (code::typeName(*local_stack.back().type) != param)
+		for (auto param: signature.parameters | std::views::drop(1) | std::views::reverse) {
+			if (code::typeName(*local_stack.back().type) != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
@@ -308,7 +308,7 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
