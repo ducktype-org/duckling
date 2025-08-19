@@ -14,6 +14,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -438,7 +439,8 @@ class FunctionValidator {
 					auto generic_arg = opargs::OpCodeArg{ function_value };
 					if (!signatures.contains(fun_name)) throw UnknownFunctionError(generic_arg);
 					FuncSignature sig = signatures.at(fun_name);
-					if (!sig.is_builtin) throw InvalidBuiltinFunctionError(generic_arg);
+					if (!builtins::isBuiltinFunction(fun_name))
+						throw InvalidBuiltinFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;

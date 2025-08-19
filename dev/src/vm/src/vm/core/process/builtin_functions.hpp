@@ -99,6 +99,11 @@ namespace vm::builtins {
 	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name);
 
 	/**
+	 * @brief Returns true if the name is a builtin function name.
+	 */
+	bool isBuiltinFunction(base::StrID name);
+
+	/**
 	 * @brief Get the stdlib module with the builtin functions.
 	 * The builtin functions are regular functions that have simple implementation
 	 * - they call the "real" builtin function with `call_builtin_func`.

@@ -236,11 +236,11 @@ namespace {
 			if (!virtual_methods.contains(implementation.name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
-			const auto& vmethod_name   = virtual_methods[implementation.name];
-			const auto& impl_name = implementation.type;
-			const auto& vmethod_type   = getType<FunctionType>(ctx, vmethod_name, inh, [&]() {
-                return TypeIsNotFunctionalError(vmethod_name);
-            });
+			const auto& vmethod_name = virtual_methods[implementation.name];
+			const auto& impl_name    = implementation.type;
+			const auto& vmethod_type = getType<FunctionType>(ctx, vmethod_name, inh, [&]() {
+				return TypeIsNotFunctionalError(vmethod_name);
+			});
 			if (!ctx.signatures.contains(impl_name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 

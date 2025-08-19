@@ -50,7 +50,6 @@ namespace vm::code {
 	struct FuncSignature final {
 		Identifier              result_type;
 		std::vector<Identifier> parameters;
-		bool                    is_builtin;
 
 		bool operator==(const FuncSignature& other) const noexcept {
 			return result_type == other.result_type && parameters == other.parameters;

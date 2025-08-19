@@ -118,12 +118,12 @@ namespace vm::builtins {
 			map{ {
 					 BuiltinFunctionID::InputI64,
 					 { base::StrID("builtin_input_i64"),
-			           code::FuncSignature(base::StrID("i64"), {}, true) },
+			           code::FuncSignature(base::StrID("i64"), {}) },
 				 },
 			     {
 					 BuiltinFunctionID::OutputI64,
 					 { base::StrID("builtin_output_i64"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }, true) },
+			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
 				 } };
 
 		return &map;
@@ -144,6 +144,8 @@ namespace vm::builtins {
 		if (it != builtin_function_indices.end()) return it->second;
 		return {};
 	}
+
+	bool isBuiltinFunction(base::StrID name) { return getBuiltinFunctionID(name).has_value(); }
 
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
