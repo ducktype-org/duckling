@@ -237,16 +237,16 @@ namespace {
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
 			const auto& vmethod_name   = virtual_methods[implementation.name];
-			const auto& impl_type_name = implementation.type;
+			const auto& impl_name = implementation.type;
 			const auto& vmethod_type   = getType<FunctionType>(ctx, vmethod_name, inh, [&]() {
                 return TypeIsNotFunctionalError(vmethod_name);
             });
-			if (!ctx.signatures.contains(impl_type_name))
+			if (!ctx.signatures.contains(impl_name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
-			const auto& impl_signature = ctx.signatures.at(impl_type_name);
-			validateMethodFirstArgumentImpl(inh, impl_signature, impl_type_name, ctx);
-			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_type_name);
+			const auto& impl_signature = ctx.signatures.at(impl_name);
+			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, ctx);
+			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_name);
 		}
 	}
 
