@@ -122,7 +122,7 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Calls the Element paths for children of a given element, has to be overriden for
+		 * @brief Calculates the Element paths for children of this element, has to be overriden for
 		 * elements that have unnamed children.
 		 */
 		virtual void calcElementPathsRecursive(const ElementPath& path);
