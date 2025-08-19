@@ -40,7 +40,7 @@ namespace pst {
 		}
 	}
 
-	void LangElement::calcUnorderedListChildPath(
+	void LangElement::calcOrderedListChildPath(
 		std::vector<AccessInternalAnonymous<Stmt>>& statements, const ElementPath& path
 	) {
 		auto                          no_symbol_path  = ElementPath(path, "no_symbol");

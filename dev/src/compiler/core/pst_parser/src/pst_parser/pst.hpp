@@ -34,10 +34,10 @@ namespace pst {
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
-	template<typename Element = TopLevel, typename Parser = Element>
+	template<
+		std::derived_from<LangElement> Element = TopLevel,
+		std::derived_from<LangElement> Parser  = Element>
 	class PST {
-		static_assert(std::derived_from<Element, LangElement>, "Bad PST root element");
-		static_assert(std::derived_from<Parser, LangElement>, "Bad PST parser element");
 
 	public:
 		/**

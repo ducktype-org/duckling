@@ -173,7 +173,7 @@ namespace pst {
 		template<typename State>
 		friend class PSTAutomatic;
 
-		template<typename, typename>
+		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
 		friend class PST;
 
 		template<typename E>

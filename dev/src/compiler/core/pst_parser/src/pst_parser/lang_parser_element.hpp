@@ -7,6 +7,7 @@
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
+#include <base/variant.hpp>
 
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -65,7 +66,7 @@ namespace pst {
 	public:
 		using SubToken = base::CRef<lexer::Token>;
 
-		template<typename Element, typename Parser>
+		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
 		friend class PST;
 
 		friend class Stmt;
@@ -179,24 +180,10 @@ namespace pst {
 			}
 		}
 
-		void calcUnorderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
-
-	private:
 		/**
-		 * @brief Helper function for filtering variants
+		 * @brief Calculates Element paths for a completely ordered list of statements.
 		 */
-		template<typename T, typename U>
-		static bool holds(const U& el) {
-			return std::holds_alternative<T>(el);
-		}
-
-		/**
-		 * @brief Helper function for extracting from variants
-		 */
-		template<typename T, typename U>
-		static T choose(const U& el) {
-			return std::get<T>(el);
-		}
+		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
 
 	public:
 		/**
@@ -207,11 +194,11 @@ namespace pst {
 			using namespace std::views;
 
 			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
-				if (std::holds_alternative<InternalChild>(t)) {
+				if (base::holds<InternalChild>(t)) {
 					return Child(std::get<InternalChild>(t));
-				} else if (std::holds_alternative<InternalNamedChild>(t)) {
+				} else if (base::holds<InternalNamedChild>(t)) {
 					auto& [name, inter] = std::get<InternalNamedChild>(t);
-					return NamedChild{ name, { inter } };
+					return NamedChild{ .name=name, .element={ inter } };
 				} else {
 					return SubToken(std::get<SubToken>(t));
 				}
@@ -228,10 +215,10 @@ namespace pst {
 			using namespace std::views;
 
 			constexpr auto is_child = [](const SubElement& t) -> bool {
-				return std::holds_alternative<Child>(t) || std::holds_alternative<NamedChild>(t);
+				return base::holds<Child>(t) || base::holds<NamedChild>(t);
 			};
 			constexpr auto strip_name = [](const SubElement& t) -> const Child {
-				if (std::holds_alternative<NamedChild>(t))
+				if (base::holds<NamedChild>(t))
 					return std::get<NamedChild>(t).element;
 				else
 					return std::get<Child>(t);
@@ -246,8 +233,8 @@ namespace pst {
 		[[nodiscard]]
 		auto viewTokens() const {
 			using namespace std::views;
-			return viewSubElements() | filter(holds<SubToken, SubElement>)
-			     | transform(choose<SubToken, SubElement>);
+			return viewSubElements() | filter(base::holds<SubToken, SubElement>)
+			     | transform(base::choose<SubToken, SubElement>);
 		}
 
 		[[nodiscard]]
