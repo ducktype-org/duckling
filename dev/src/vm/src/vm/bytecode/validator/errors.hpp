@@ -330,6 +330,9 @@ namespace vm::code {
 		FixedSizeTableTypeMismatchError, "Inner fixed size table type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		DynamicTableTypeMismatchError, "Inner dynamic table type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		StructTypeMismatchError, "Inner struct type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
@@ -338,4 +341,8 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
 	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primitive type: ");
+	DEFINE_INSTRUCTION_ERROR(
+		VTableTypeMismatchError, "The vtable type does not match the object pointer type."
+	);
+
 }
