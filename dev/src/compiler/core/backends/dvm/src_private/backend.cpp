@@ -195,36 +195,6 @@ namespace compiler::backend_vm {
 		}
 
 		/**
-		 * @brief Inserts function signature type and types used by the signature.
-		 */
-		void insertFunctionSignatureType(
-			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
-		) {
-			auto param_types
-				= lir_function->parameter_layouts
-			    | std::views::transform([](auto&& layout) { return getTypeFromLayout(layout); });
-
-			std::ranges::for_each(param_types, [&](auto&& type) { types.push_back(type); });
-
-			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
-			types.push_back(result_type);
-
-			if (lir_function->mangled_name != "main") {
-				types.emplace_back(getFunctionTypeFromLayouts(
-					lir_function->mangled_name,
-					lir_function->parameter_layouts,
-					lir_function->return_type_layout
-				));
-			} else {
-				types.emplace_back(FunctionType(
-					base::StrID("main"),
-					{ base::StrID("i64"), base::StrID("ptr_argv") },
-					base::StrID("i64")
-				));
-			}
-		}
-
-		/**
 		 * @brief Inserts types used by function's local variables.
 		 */
 		void insertFunctionLocalTypes(
@@ -261,7 +231,6 @@ namespace compiler::backend_vm {
 		void insertTypesUsedByFunction(
 			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
 		) {
-			insertFunctionSignatureType(types, lir_function);
 			insertFunctionLocalTypes(types, lir_function);
 			insertCalledFunctionTypes(types, lir_function);
 		}
