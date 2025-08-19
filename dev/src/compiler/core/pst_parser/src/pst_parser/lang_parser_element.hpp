@@ -219,7 +219,7 @@ namespace pst {
 			constexpr auto is_child = [](const SubElement& t) -> bool {
 				return std::holds_alternative<Child>(t) || std::holds_alternative<NamedChild>(t);
 			};
-			constexpr auto strip_name = [](const SubElement& t) -> const Child& {
+			constexpr auto strip_name = [](const SubElement& t) -> const Child {
 				if (std::holds_alternative<NamedChild>(t))
 					return std::get<NamedChild>(t).second;
 				else
@@ -298,6 +298,7 @@ namespace pst {
 
 		[[nodiscard]]
 		const ElementPath& getElementPath() const {
+			CORE_ASSERT(element_path.has_value(), "element path not calculated");
 			return element_path.value();
 		}
 
