@@ -152,7 +152,7 @@ namespace vm {
 	DEFINE_MOVE_OPS(64, i64)
 	DEFINE_MOVE_OPS(32, i32)
 	DEFINE_MOVE_OPS(16, i16)
-	DEFINE_MOVE_OPS(8, std::int8_t)
+	DEFINE_MOVE_OPS(8, i8)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
@@ -293,11 +293,11 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpL, 32, i32, <)
 	DEFINE_COMPARISON_OP(ucmpL, 32, u32, <)
 
-	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
-	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
-	DEFINE_COMPARISON_OP(ucmpG, 8, std::uint8_t, >)
-	DEFINE_COMPARISON_OP(cmpL, 8, std::int8_t, <)
-	DEFINE_COMPARISON_OP(ucmpL, 8, std::uint8_t, <)
+	DEFINE_COMPARISON_OP(cmpEq, 8, i8, ==)
+	DEFINE_COMPARISON_OP(cmpG, 8, i8, >)
+	DEFINE_COMPARISON_OP(ucmpG, 8, u8, >)
+	DEFINE_COMPARISON_OP(cmpL, 8, i8, <)
+	DEFINE_COMPARISON_OP(ucmpL, 8, u8, <)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
