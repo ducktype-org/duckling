@@ -284,12 +284,20 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
 	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
 	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
+	DEFINE_COMPARISON_OP(cmpL, 64, i64, <)
+	DEFINE_COMPARISON_OP(ucmpL, 64, u64, <)
+
 	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
 	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
 	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
+	DEFINE_COMPARISON_OP(cmpL, 32, i32, <)
+	DEFINE_COMPARISON_OP(ucmpL, 32, u32, <)
+
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
 	DEFINE_COMPARISON_OP(ucmpG, 8, std::uint8_t, >)
+	DEFINE_COMPARISON_OP(cmpL, 8, std::int8_t, <)
+	DEFINE_COMPARISON_OP(ucmpL, 8, std::uint8_t, <)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
