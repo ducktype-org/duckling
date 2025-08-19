@@ -162,13 +162,7 @@ namespace compiler::backend_vm {
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
-			CORE_ASSERT(
-				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)
-			    ),
-				"Type not functional"
-			);
-			auto func_type_tod
-				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
+			auto func_signature = ctx.bytecode_func.signature;
 
 			// Save locals offset
 			for (const auto& var: ctx.lir_func->local_list) {
@@ -181,7 +175,7 @@ namespace compiler::backend_vm {
 					opt_some(param_idx) {
 						// In this case we are handling a parameter
 						CORE_ASSERT(
-							vm_type == ctx.TYPE_OF_DATA.at(func_type_tod.parameters.at(param_idx)),
+							vm_type == ctx.TYPE_OF_DATA.at(func_signature.parameters.at(param_idx)),
 							"getTypeFromLayout created an invalid type..."
 						);
 
