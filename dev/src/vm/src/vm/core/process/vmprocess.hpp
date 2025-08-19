@@ -4,8 +4,6 @@
 
 #include <base/optional.hpp>
 
-#include <listener/listener.hpp>
-
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
@@ -50,7 +48,7 @@ namespace vm {
 	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class VMProcess final: public Listener<api::ProcStatus> {
+	class VMProcess final {
 		friend class VmValue;
 
 	private:
@@ -159,7 +157,7 @@ namespace vm {
 
 
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept override;
+		void onEvent(const api::ProcStatus& event) noexcept;
 
 		Memory& getMemory();
 
@@ -204,6 +202,6 @@ namespace vm {
 
 		VMProcess(PID my_pid);
 
-		~VMProcess() override;
+		~VMProcess();
 	};
 }
