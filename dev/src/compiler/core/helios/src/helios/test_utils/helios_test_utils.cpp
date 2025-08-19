@@ -21,8 +21,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#include <type_traits>
-
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);

@@ -3,12 +3,6 @@
 namespace compiler::helios {
 	CompileTimeValue::CompileTimeValue() = default;
 
-	CompileTimeValue::CompileTimeValue(i64 val): value(val) {}
-
-	CompileTimeValue::CompileTimeValue(bool val): value(val) {}
-
-	CompileTimeValue::CompileTimeValue(tsh::SymbolType<> val): value(val) {}
-
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
 	std::string CompileTimeValue::toString() const {

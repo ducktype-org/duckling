@@ -11,7 +11,7 @@
 /**
  * @brief Main query for compile time evaluation of any type.
  * Tries evaluating with Tree Evaluation (Short Path) and if the expression is to complicated it
- * evaluates the expression on DVM.
+ * evaluates it on DVM.
  */
 namespace compiler::helios {
 	using CompTimeEvalResult = query::QResult<CompileTimeValue, errors::Failed>;

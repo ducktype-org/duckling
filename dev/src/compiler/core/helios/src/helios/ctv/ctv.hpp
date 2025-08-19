@@ -7,6 +7,18 @@
 #include <string>
 #include <variant>
 
+namespace {
+	template<typename T, typename VariantT>
+	struct is_variant_member;
+
+	template<typename T, typename... Types>
+	struct is_variant_member<T, std::variant<Types...>>:
+		  std::disjunction<std::is_same<T, Types>...> {};
+
+	template<typename T, typename VariantT>
+	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
+}
+
 namespace compiler::helios {
 	// TODOP: What about the VmValue.
 	// using CompileTimeValue = std::variant<i64, bool, tsh::SymbolType<>>;
@@ -20,14 +32,16 @@ namespace compiler::helios {
 		Storage value;
 
 	public:
-		// TODOP: Template constructor?
 		CompileTimeValue();
-		CompileTimeValue(i64 val);
-		CompileTimeValue(bool val);
-		CompileTimeValue(tsh::SymbolType<> val);
 
 		/**
-		 * @brief Retruns a constant reference to the CTVs internal value storage.
+		 * @brief Template constructor of CTV for all types which exist in the Storage variant.
+		 */
+		template<typename T>
+		requires(IS_VARIANT_MEMBER_V<T, Storage>) CompileTimeValue(T val): value(val) {}
+
+		/**
+		 * @brief Returns a constant reference to the CTVs internal value storage.
 		 * @return A constant reference to the CTV value storage.
 		 */
 		[[nodiscard]] const Storage& getStorage() const;

@@ -40,13 +40,16 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
-				auto tp = ctx.query<QueryCompTime>(pst::AccessLocked<pst::ExprElement>(expr));
-				if (tp.hasValue()) {
-					auto maybe_type = tp.value().asType();
-					if (maybe_type.has_value())
+				if (auto ctv = ctx.query<QueryCompTime>(pst::AccessLocked<pst::ExprElement>(expr));
+				    ctv.hasValue()) {
+					if (auto maybe_type = ctv.value().asType(); maybe_type.has_value())
 						setTypeOfSymbol(maybe_type.value());
 					else
 						CORE_PANIC("QueryEvaluateExpressionCT returned not a type");
+					return;
+				} else {
+					// We just fail here, because we can't continue without type.
+					return;
 				}
 			}
 
@@ -133,11 +136,9 @@ namespace compiler::helios {
 				};
 
 				if (ret.has_value()) {
-					auto parsed = ctx.query<QueryCompTime>(ret.value().unlock(ctx)->getExpr());
-
-					if (parsed.hasValue()) {
-						auto maybe_type = parsed.value().asType();
-						if (maybe_type.has_value())
+					if (auto ctv = ctx.query<QueryCompTime>(ret.value().unlock(ctx)->getExpr());
+					    ctv.hasValue()) {
+						if (auto maybe_type = ctv.value().asType(); maybe_type.has_value())
 							ret_type = maybe_type.value();
 						else
 							return;

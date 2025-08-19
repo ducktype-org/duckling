@@ -59,9 +59,13 @@ namespace compiler::helios {
 					class_info.members.push_back(sym);
 					break;
 				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"Using ",
+							typeid(kind(sym)).name(),
+							" inside a class is not yet implemented."
+						)
+					);
 				}
 			}
 			// Find the name
@@ -70,15 +74,14 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto ctv = ctx.query<QueryCompTime>({ base });
-				if (ctv.hasValue()) {
-					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
-					// the base class is given with any specifiers apart from the abstract type.
-					auto maybe_type = ctv.value().asType();
-					if (maybe_type.has_value())
+				if (auto ctv = ctx.query<QueryCompTime>({ base }); ctv.hasValue()) {
+					if (auto maybe_type = ctv.value().asType(); maybe_type.has_value()) {
+						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
+						// the base class is given with any specifiers apart from the abstract type.
 						class_info.base = maybe_type.value().getType();
-					else
+					} else {
 						return query::QError(errors::Failed());
+					}
 				} else {
 					// We just fail here, error should be reported by QueryCompTime.
 					return query::QError(errors::Failed());
@@ -87,15 +90,16 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					auto ctv = ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
-					if (ctv.hasValue()) {
-						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
-						// the interface is given with any specifiers apart from the abstract type.
-						auto maybe_type = ctv.value().asType();
-						if (maybe_type.has_value())
+					if (auto ctv = ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
+					    ctv.hasValue()) {
+						if (auto maybe_type = ctv.value().asType(); maybe_type.has_value()) {
+							// @TODO: Raise errors, here, or preferably earlier, if the symbol type
+							// of the base class is given with any specifiers apart from the
+							// abstract type.
 							class_info.implements.push_back(maybe_type.value().getType());
-						else
+						} else {
 							return query::QError(errors::Failed());
+						}
 					} else {
 						// We just fail here, error should be reported by QueryCompTime.
 						return query::QError(errors::Failed());

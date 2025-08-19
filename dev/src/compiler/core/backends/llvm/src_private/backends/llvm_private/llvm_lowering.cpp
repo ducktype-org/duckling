@@ -42,6 +42,7 @@ namespace {
 	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
 	 * @param ctv The CTV to convert.
 	 * @param llvm_type The expected type.
+	 * @return The created llvm::Constant*.
 	 */
 	auto ctvToLLVMConstant(const compiler::helios::CompileTimeValue& ctv, llvm::Type* llvm_type) {
 		variant_match(ctv.getStorage()) {
@@ -67,8 +68,6 @@ namespace {
 		}
 		CORE_UNREACHABLE();
 	}
-
-
 }
 
 namespace compiler::backend_llvm {
