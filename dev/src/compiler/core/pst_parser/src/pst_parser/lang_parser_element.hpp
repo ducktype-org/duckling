@@ -12,7 +12,6 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 
-#include <iostream>
 #include <ranges>
 #include <variant>
 
@@ -36,9 +35,10 @@ namespace pst {
 	 *  - lowercase words signify accessors such as left, right, block
 	 *  - numbers in brackets signify which element it signifies
 	 *
-	 * @note The current implementation is non-optimal but for now it should suffice.
+	 * @note The current implementation is non-optimal but for now it should suffice. Currently it
+	 * does a lot of copying strings that might get better with some references or something similar.
 	 *
-	 * @todo Add source information, and specify what is in the path
+	 * @todo Add source file/path information
 	 */
 	struct ElementPath final {
 		ElementPath() = default;

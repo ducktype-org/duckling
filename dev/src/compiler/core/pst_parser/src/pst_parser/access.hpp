@@ -218,6 +218,8 @@ namespace pst {
 	/**
 	 * @brief Wrapper for an optional pst box. It should only be used inside of pst as a way to
 	 * store elements.
+	 *
+	 * @tparam name Child name used for automatization.
 	 */
 	template</*std::derived_from<LangElement>*/ typename Element, base::TemplateStringLiteral name>
 	class AccessInternal final {
@@ -282,7 +284,13 @@ namespace pst {
 	}
 }
 
-#define NAMED_CHILD(name, Type)     AccessInternal<Type, #name> name
+/**
+ * @brief Macro that defines a named child field with the name the same as the field name.
+ */
+#define NAMED_CHILD(name, Type) AccessInternal<Type, #name> name
+/**
+ * @brief Macro that defines an optional named child field with the name the same as the field name.
+ */
 #define NAMED_CHILD_OPT(name, Type) base::Optional<AccessInternal<Type, #name>> name
 
 #define VISITOR_ACCESS_METHOD_INTERFACE(type) void visit##type(pst::Access<type>)

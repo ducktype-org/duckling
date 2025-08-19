@@ -154,6 +154,9 @@ namespace pst {
 			return DeclKind::None;
 		}
 
+		/**
+		 * @brief Get the symbol declared by a given statement if it exists.
+		 */
 		[[nodiscard]]
 		virtual base::Optional<base::StrID> getDeclSymbol() const {
 			return {};
