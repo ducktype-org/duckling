@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -17,7 +18,6 @@
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include "helios/ctv/ctv.hpp"
 
 namespace compiler::helios {
 

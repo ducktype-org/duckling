@@ -10,8 +10,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/declarations/variable.hpp>
 
-#include "base/variant.hpp"
-
 #include <query_framework/context.hpp>
 
 #include <memory>
@@ -77,7 +75,8 @@ namespace compiler::helios {
 		std::stringstream out;
 		variant_match(value) {
 			variant_case(HOUTGlobalConst, const_value) {
-				out << "const " << original_name.strView() << " = " << const_value.value.toString() << '\n';
+				out << "const " << original_name.strView() << " = " << const_value.value.toString()
+					<< '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
 				val.initial_value.get()->ref()->debugPrint(out);

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "function_forward.hpp"
-#include "helios/ctv/ctv.hpp"
 
+#include <helios/ctv/ctv.hpp>
 #include <helios/hout/hout.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -98,11 +98,11 @@ namespace compiler::lir {
 
 	private:
 		LirGlobal(
-			const helios::SymID    helios_id,
-			const tsl::TypeLayout& layout,
-			const base::StrID&     mangled_name,
-			const LirGlobalType    type         = LirGlobalType::Variable,
-			base::Optional<helios::CompileTimeValue>    initial_value = {}
+			const helios::SymID                      helios_id,
+			const tsl::TypeLayout&                   layout,
+			const base::StrID&                       mangled_name,
+			const LirGlobalType                      type          = LirGlobalType::Variable,
+			base::Optional<helios::CompileTimeValue> initial_value = {}
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),

@@ -1,5 +1,8 @@
 #include "ctv.hpp"
+
 namespace compiler::helios {
+	CompileTimeValue::CompileTimeValue() = default;
+
 	CompileTimeValue::CompileTimeValue(i64 val): value(val) {}
 
 	CompileTimeValue::CompileTimeValue(bool val): value(val) {}

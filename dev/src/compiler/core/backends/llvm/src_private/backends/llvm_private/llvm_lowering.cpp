@@ -3,6 +3,7 @@
 LLVM_INCLUDE_BEGIN()
 
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
@@ -35,7 +36,40 @@ LLVM_INCLUDE_END()
 
 #include <iostream>
 
-// useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
+// useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
+namespace {
+	/**
+	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
+	 * @param ctv The CTV to convert.
+	 * @param llvm_type The expected type.
+	 */
+	auto ctvToLLVMConstant(const compiler::helios::CompileTimeValue& ctv, llvm::Type* llvm_type) {
+		variant_match(ctv.getStorage()) {
+			variant_case(i64, val) {
+				if (!llvm_type->isIntegerTy()) {
+					CORE_PANIC(
+						"LLVM lowering : Type mismatch. CTV is an integer, but LLVM type is not"
+					);
+				}
+				return llvm::ConstantInt::getSigned(llvm_type, val);
+			}
+			variant_case(bool, val) {
+				if (!llvm_type->isIntegerTy(1)) {
+					CORE_PANIC(
+						"LLVM lowering : Type mismatch. CTV is an boolean, but LLVM type is not"
+					);
+				}
+				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);
+			}
+			variant_default {
+				throw base::NotYetImplemented("Conversion from CTV to LLVM constant for this type.");
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+
+}
 
 namespace compiler::backend_llvm {
 
@@ -204,10 +238,10 @@ namespace compiler::backend_llvm {
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
-		if (lir_global.inital_value.has_value()) {
-			global->setInitializer(llvm::ConstantInt::getSigned(
-				global->getValueType(), static_cast<i64>(lir_global.initial_value.value())
-			));
+		if (lir_global.initial_value.has_value()) {
+			global->setInitializer(
+				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
+			);
 		} else {
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}

@@ -70,11 +70,11 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto tp = ctx.query<QueryCompTime>({ base });
-				if (tp.hasValue()) {
+				auto ctv = ctx.query<QueryCompTime>({ base });
+				if (ctv.hasValue()) {
 					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 					// the base class is given with any specifiers apart from the abstract type.
-					auto maybe_type = tp.value().asType();
+					auto maybe_type = ctv.value().asType();
 					if (maybe_type.has_value())
 						class_info.base = maybe_type.value().getType();
 					else
@@ -87,11 +87,11 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					auto tp = ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
-					if (tp.hasValue()) {
+					auto ctv = ctx.query<QueryCompTime>(interface.unlock(ctx)->getExpr());
+					if (ctv.hasValue()) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the interface is given with any specifiers apart from the abstract type.
-						auto maybe_type = tp.value().asType();
+						auto maybe_type = ctv.value().asType();
 						if (maybe_type.has_value())
 							class_info.implements.push_back(maybe_type.value().getType());
 						else

@@ -8,8 +8,8 @@
 
 #include "../scope_symbol_id.hpp"
 #include "elements/expr.hpp"  // IWYU pragma: export
-#include "helios/ctv/ctv.hpp"
 
+#include <helios/ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>

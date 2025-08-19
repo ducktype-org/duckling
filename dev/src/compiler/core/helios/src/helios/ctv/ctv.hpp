@@ -2,7 +2,6 @@
 
 #include <typesystem/higher/symbol_type.hpp>
 
-#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
 #include <string>
@@ -21,6 +20,7 @@ namespace compiler::helios {
 		Storage value;
 
 	public:
+		// TODOP: Template constructor?
 		CompileTimeValue();
 		CompileTimeValue(i64 val);
 		CompileTimeValue(bool val);
