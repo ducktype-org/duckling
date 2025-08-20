@@ -75,7 +75,7 @@ namespace tsh {
 	 * @return The reference to the proper category, out of the three given.
 	 */
 	std::set<InterfaceElement>& selectMatchCategoryForMethod(
-		const std::vector<AbstractType>& positional_arg_types,
+		const std::vector<SymbolType<>>& positional_arg_types,
 		const std::set<NamedArgument>&   named_args,
 		query::Context&                  ctx,
 		const InterfaceElement&          method,
@@ -95,11 +95,11 @@ namespace tsh {
 
 		// Go over positional arguments.
 		for (usize i = 0; i < positional_arg_types.size(); i++) {
-			AbstractType provided_type = positional_arg_types[i];
-			AbstractType expected_type = parameters[i].type.getType();
+			SymbolType<> provided_type = positional_arg_types[i];
+			SymbolType<> expected_type = parameters[i].type;
 			if (provided_type != expected_type) {
 				// Type mismatch case.
-				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({ provided_type,
+				if (!ctx.query<QueryImplicitCoercibilityOnSymbolType>({ provided_type,
 				                                                          expected_type }))
 					return non_matches;
 				coercion_present = true;
@@ -143,7 +143,7 @@ namespace tsh {
 
 	ResolutionResult TypeInterface::resolve(
 		base::StrID                      name,
-		const std::vector<AbstractType>& positional_arg_types,
+		const std::vector<SymbolType<>>& positional_arg_types,
 		const std::set<NamedArgument>&   named_args,
 		query::Context&                  ctx
 	) {
@@ -183,7 +183,7 @@ namespace tsh {
 	}
 
 	ResolutionResult TypeInterface::resolve(
-		base::StrID name, AbstractType single_arg_type, query::Context& ctx
+		base::StrID name, SymbolType<> single_arg_type, query::Context& ctx
 	) {
 		return resolve(name, { single_arg_type }, {}, ctx);
 	}

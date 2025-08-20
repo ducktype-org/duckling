@@ -350,7 +350,7 @@ namespace tsh {
 		 */
 		ResolutionResult resolve(
 			base::StrID                      name,
-			const std::vector<AbstractType>& positional_arg_types,
+			const std::vector<SymbolType<>>& positional_arg_types,
 			const std::set<NamedArgument>&   named_args,
 			query::Context&                  ctx
 		);
@@ -367,7 +367,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, SymbolType<> single_arg_type, query::Context& ctx);
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.
