@@ -3,7 +3,9 @@
 
 // Extend Error, Warning, or Info.
 class MessageRelevantToThisSituation: public dia::Error {
-	// ...
+public:
+	explicit MessageRelevantToThisSituation(const dia::SourcePosition& position):
+		  dia::Error(position) {}
 
 protected:
 	[[nodiscard]]
