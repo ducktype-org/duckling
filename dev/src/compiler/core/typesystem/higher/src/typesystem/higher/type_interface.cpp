@@ -100,7 +100,7 @@ namespace tsh {
 			if (provided_type != expected_type) {
 				// Type mismatch case.
 				if (!ctx.query<QueryImplicitCoercibilityOnSymbolType>({ provided_type,
-				                                                          expected_type }))
+				                                                        expected_type }))
 					return non_matches;
 				coercion_present = true;
 			}
