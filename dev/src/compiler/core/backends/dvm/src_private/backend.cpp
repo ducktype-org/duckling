@@ -508,6 +508,18 @@ namespace compiler::backend_vm {
 					args.pop_front();
 					args.push_front(output);
 				}
+			} else if (kind == OpKind::cmpL || kind == OpKind::ucmpL || kind == OpKind::cmpG
+			           || kind == OpKind::ucmpG || kind == OpKind::cmpEq) {
+				CORE_ASSERT(args.size() == 3, "Invalid cmp argument count");
+				// This resolves e.g. `x = a < b;`
+				// by splitting it into two instructions:
+				// a < b;
+				// cmov x, 1;
+				pushInstruction(ctx.bytecode_func, { kind, args[1], args[2] });
+				pushInstruction(
+					ctx.bytecode_func, { OpKind::cmov, args[0], vm::opargs::Immediate{ 1 } }
+				);
+				return;
 			} else if (kind == OpKind::neg || kind == OpKind::log_not) {
 				CORE_ASSERT(
 					args.size() == 2,
