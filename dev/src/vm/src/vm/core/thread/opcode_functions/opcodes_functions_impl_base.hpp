@@ -147,6 +147,13 @@ namespace vm {
 			}                                                                                     \
 		}                                                                                         \
 		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                     \
+		{                                                                                         \
+			if (frame->flags.flag)                                                                \
+				derefStack<TYPE>(local_stack, instr->arg0) = safeReadBytes<TYPE>(instr->arg1);    \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
 	}
 
 	DEFINE_MOVE_OPS(64, i64)
