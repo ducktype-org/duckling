@@ -6,7 +6,6 @@
 * [hashing](./hashing/readme.md)
 * [init](./init/readme.md)
 * [json](./json/readme.md)
-* [listener](./listener/readme.md)
 * [printer](./printer/readme.md)
 * [requirements](./printer/requirements.md)
 * [query_framework](./query_framework/readme.md)
