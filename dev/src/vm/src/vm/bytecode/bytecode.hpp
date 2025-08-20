@@ -51,9 +51,7 @@ namespace vm::code {
 		Identifier              result_type;
 		std::vector<Identifier> parameters;
 
-		bool operator==(const FuncSignature& other) const noexcept {
-			return result_type == other.result_type && parameters == other.parameters;
-		}
+		bool operator==(const FuncSignature& other) const noexcept = default;
 	};
 
 	/**
