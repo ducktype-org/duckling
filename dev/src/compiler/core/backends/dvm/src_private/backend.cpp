@@ -224,7 +224,7 @@ namespace compiler::backend_vm {
 			}
 		}
 
-		void insertTypesUsedByFunction(
+		void insertFunctionDependencies(
 			std::vector<TypeOfData>&                   types,
 			base::HashMap<base::StrID, FuncSignature>& signatures,
 			CRef<lir::Function>                        lir_function
@@ -608,7 +608,7 @@ namespace compiler::backend_vm {
 		std::vector<CRef<lir::Function>>                    dtors;
 
 		for (const auto& lir_function: functions)
-			insertTypesUsedByFunction(compiled_types.types, signatures, lir_function);
+			insertFunctionDependencies(compiled_types.types, signatures, lir_function);
 
 		for (const auto& global: globals) {
 			auto global_type = getTypeFromLayout(*global.lir_global.layout);
@@ -618,14 +618,14 @@ namespace compiler::backend_vm {
 			base::Optional<Identifier> dtor_name;
 
 			if (global.global_ctor.has_value()) {
-				insertTypesUsedByFunction(
+				insertFunctionDependencies(
 					compiled_types.types, signatures, global.global_ctor.value()
 				);
 				ctor_name = Identifier(global.global_ctor.value()->mangled_name);
 				ctors.emplace_back(global.global_ctor.value());
 			}
 			if (global.global_dtor.has_value()) {
-				insertTypesUsedByFunction(
+				insertFunctionDependencies(
 					compiled_types.types, signatures, global.global_dtor.value()
 				);
 				dtor_name = Identifier(global.global_dtor.value()->mangled_name);
