@@ -88,6 +88,20 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
+		vm::code::FuncSignature getDVMSignatureFromLayouts(
+			const std::vector<tsl::TypeLayout>& parameter_layouts,
+			const tsl::TypeLayout&              return_layout
+		) {
+			vm::code::FuncSignature signature;
+			signature.parameters.reserve(parameter_layouts.size());
+			for (const auto& layout: parameter_layouts) {
+				auto type = getTypeFromLayout(layout);
+				signature.parameters.emplace_back(typeName(type));
+			}
+			signature.result_type = Identifier(typeName(getTypeFromLayout(return_layout)));
+			return signature;
+		}
+
 		struct AddLirFuncContext final {
 			query::Context&     ctx;
 			CRef<lir::Function> lir_func;
@@ -124,14 +138,9 @@ namespace compiler::backend_vm {
 					bytecode_func.signature.parameters.emplace_back(base::StrID("ptr_argv"));
 					bytecode_func.signature.result_type = Identifier(base::StrID("i64"));
 				} else {
-					bytecode_func.signature.parameters.reserve(lir_function->parameter_layouts.size(
-					));
-					for (const auto& layout: lir_function->parameter_layouts) {
-						auto type = getTypeFromLayout(layout);
-						bytecode_func.signature.parameters.emplace_back(typeName(type));
-					}
-					bytecode_func.signature.result_type
-						= Identifier(typeName(getTypeFromLayout(lir_function->return_type_layout)));
+					bytecode_func.signature = getDVMSignatureFromLayouts(
+						lir_function->parameter_layouts, lir_function->return_type_layout
+					);
 				}
 				variable_to_id = lir_function->getLocalVariableIDs();
 				block_to_id    = lir_function->getBlockIDs();
@@ -204,16 +213,12 @@ namespace compiler::backend_vm {
 					if (lir_instruction.operation == lir::Operation::Call) {
 						auto func_literal
 							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-						FuncSignature signature;
-						signature.parameters.reserve(func_literal.parameter_layouts->size());
-						for (const auto& layout: *func_literal.parameter_layouts) {
-							auto type = getTypeFromLayout(layout);
-							signature.parameters.emplace_back(typeName(type));
-						}
-						signature.result_type = Identifier(
-							typeName(getTypeFromLayout(*func_literal.return_type_layout))
+						signatures.put(
+							func_literal.mangled_name,
+							getDVMSignatureFromLayouts(
+								*func_literal.parameter_layouts, *func_literal.return_type_layout
+							)
 						);
-						signatures.put(func_literal.mangled_name, std::move(signature));
 					}
 				}
 			}
