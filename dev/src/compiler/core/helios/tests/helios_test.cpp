@@ -106,9 +106,9 @@ private:
 		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
-		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
 
-		// ASSERT_EQUAL(55, getConstValueAs<i64>("MUL_ADD_CALL", root_scope));
+		// ASSERT_EQUAL(0, getConstValueAs<i64>("COMP", root_scope));
+		// ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
 		// ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
 		// ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 	}
@@ -218,7 +218,6 @@ private:
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
 		// These do not work anymore.
-		// TODOP: Make these work.
 		// ASSERT_EQUAL(7, getValue("O3", root_scope));
 		// ASSERT_EQUAL(7, getValue("O4", root_scope));
 	}

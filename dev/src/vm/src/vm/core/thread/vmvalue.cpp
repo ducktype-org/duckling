@@ -2,24 +2,27 @@
 
 #include <vm/core/process/vmprocess.hpp>
 
-#include <print>
+#include <ostream>
 
 namespace {
-	// TODOP: Remove that.
-	void hexdump(const byte* ptr, usize buflen) {
-		auto* buf = reinterpret_cast<const unsigned char*>(ptr);
-		int   i = 0, j = 0;
+	void hexdump(std::ostream& out, const byte* ptr, usize buflen, const std::string& indent) {
+		const auto* buf = reinterpret_cast<const unsigned char*>(ptr);
+		int         i = 0, j = 0;
 		for (i = 0; i < buflen; i += 16) {
-			std::print("{:06x}: ", i);
+			out << indent << std::hex << std::setw(6) << std::setfill('0') << i << ": ";
+			for (j = 0; j < 16; j++) {
+				if (i + j < buflen) {
+					out << std::hex << std::setw(2) << std::setfill('0')
+						<< static_cast<int>(buf[i + j]) << " ";
+				} else {
+					out << "   ";
+				}
+			}
+			out << " ";
 			for (j = 0; j < 16; j++)
 				if (i + j < buflen)
-					std::print("{:02x} ", buf[i + j]);
-				else
-					std::print("   ");
-			std::print(" ");
-			for (j = 0; j < 16; j++)
-				if (i + j < buflen) std::print("{:c}", isprint(buf[i + j]) ? buf[i + j] : '.');
-			std::println("");
+					out << (isprint(buf[i + j]) ? static_cast<char>(buf[i + j]) : '.');
+			out << '\n';
 		}
 	}
 }
@@ -54,10 +57,28 @@ byte* vm::VmValue::getBytes() { return data.data(); }
 
 const byte* vm::VmValue::getBytes() const { return data.data(); }
 
-// TODOP: Remove that.
-void vm::VmValue::dprint() const {
-	std::cout << "VmValue of type: " << type->getName().str() << '\n';
-	std::cout << "Bytes: \n";
-	hexdump(data.data(), data.size());
-	std::cout << '\n';
+void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
+	out << indent << "---- VmValue ----\n";
+	out << indent << "Type: " << type->getName().str() << " (Size: " << type->getSize()
+		<< " bytes)\n";
+	out << indent << "Value:";
+
+	const auto type_name = type->getName();
+
+	if (type_name == base::StrID("void"))
+		out << " <void>\n";
+	else if (type_name == base::StrID("i64"))
+		out << " " << readBytes<i64>() << " (as i64)\n";
+	else if (type_name == base::StrID("i32"))
+		out << " " << readBytes<i32>() << " (as i32)\n";
+	else if (type_name == base::StrID("i16"))
+		out << " " << readBytes<i16>() << " (as i16)\n";
+	else if (type_name == base::StrID("byte"))
+		out << " " << readBytes<char>() << " (as byte)\n";
+	else
+		out << " <Unable to interpret>\n";
+
+	out << "Bytes:\n";
+	hexdump(out, data.data(), data.size(), indent);
+	out << indent << "-----------------\n";
 }

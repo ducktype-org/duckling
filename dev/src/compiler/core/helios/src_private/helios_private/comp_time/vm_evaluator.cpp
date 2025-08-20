@@ -83,7 +83,6 @@ namespace compiler::helios {
 		const std::string&                   func_name,
 		const std::vector<CompileTimeValue>& args
 	) {
-		// TODOP: Add timeouts to the VM in the future?
 		// TODOP: Maybe it would be nice if getExitValue() returned a Box as well so we could free it?
 		// TODOP: Maybe add a separate endpoint for CompTimeGetExitValue() which returns the Box to
 		// avoid memory bloat.

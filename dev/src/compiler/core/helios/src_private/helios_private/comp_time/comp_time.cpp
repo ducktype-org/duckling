@@ -286,7 +286,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
@@ -321,9 +322,9 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateFunctionWithVm(query::Context& ctx, CRef<code::Expr> expr) {
 			// TODOP: Make this more generic and work for other things than calls only.
 			// TODOP: For now VM is only used for function call evaluation.
-			// TODOP: https://github.com/ducktype-org/duckling/issues/826
-			// TODOP: Problem. What with functions which invoke other functions? We should loop
-			// recursively through the whole function to look for subfunctions?
+
+			// @todo: For now this works only with functions which don't call any other functions.
+			// This should change in #1203
 			using namespace compiler;
 
 			const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
@@ -336,6 +337,7 @@ namespace compiler::helios {
 			const SymID function_sym_id = callee_ident->symbol;
 
 			// Get code of the called function.
+			// @todo: Change this code to a single query once it gets implemented #826.
 			auto fun_hout_result = ctx.query<QueryCodeOFFun>(function_sym_id);
 
 			auto mir_func_result = ctx.query<mir::LowerToMirFunction>({ fun_hout_result });
@@ -402,7 +404,6 @@ namespace compiler::helios {
 					}
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
-						// TODOP: Generic evaluateWithVM not just function calls.
 						return evaluateFunctionWithVm(ctx, expr);
 					}
 				}
