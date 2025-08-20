@@ -2,6 +2,7 @@
 
 #include <base/ints.hpp>
 
+#include <array>
 #include <cstring>
 #include <type_traits>
 
@@ -14,6 +15,7 @@ namespace vm {
 	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
 	 * trivially copyable types.
 	 * @note Type T must be trivially copyable.
+	 * @warning Well defined iff compiled with C++20 or newer, otherwise UB.
 	 *
 	 * @tparam T The target type to construct. Must be trivially copyable.
 	 * @param ptr A pointer to the beginning of the source byte buffer.
@@ -23,9 +25,10 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] inline T safeReadBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		T value;
-		std::memcpy(&value, ptr + offset, sizeof(T));
-		return value;
+		alignas(T) std::array<byte, sizeof(T)> storage;
+		std::memcpy(storage.data(), ptr + offset, sizeof(T));
+		T* p = std::launder(reinterpret_cast<T*>(storage.data()));
+		return *p;
 	}
 
 	/**

@@ -1,0 +1,13 @@
+function main {
+    init_lany_type str_ptr, ptr_string;
+    init_lany_type ix, i64;
+    mov_l64_imm ix, 0;
+    dynTableLoad_lany_lptr str_ptr, arg1;
+    ext_l64 ix;
+    strOutput_lptr str_ptr;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    ret;
+}

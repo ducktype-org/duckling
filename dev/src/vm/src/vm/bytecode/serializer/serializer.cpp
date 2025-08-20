@@ -166,8 +166,11 @@ namespace vm::code {
 				out << type.table_size;
 			}
 
-			void operator()(const DynamicTableType&) const {
-				throw base::NotYetImplemented("DynamicTableType serialization");
+			void operator()(const DynamicTableType& type) const {
+				// throw base::NotYetImplemented("DynamicTableType serialization");
+				out << "type dynamic_table: ";
+				out << type.name.strView() << " ";
+				out << type.inner.strView();
 			}
 
 			void operator()(const DataType&) const {

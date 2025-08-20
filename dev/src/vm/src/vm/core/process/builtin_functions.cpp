@@ -91,11 +91,24 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinOutputString(VMThread& thread, Pointer ptr) {
-		auto block = ptr.getBlock();
-		auto block_id = thread.process_memory.requestBlockID(block);
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
 		auto block_data = thread.process_memory.requestBlockData(block_id);
 		thread.process.getIO().writeOutput(block_data.stdString() + "\n");
-		return base::safeIntConv<i64>(block_data.size() + 1);
+		return base::safeIntConv<i64>(block_data.size());
+	}
+
+	i64 FunctionHandlers::builtinStoi(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		auto               str_seq = block_data.stdString();
+		i64                val{};
+		std::istringstream iss{ str_seq };
+
+		iss >> val;
+		return val;
 	}
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(
@@ -117,7 +130,7 @@ namespace vm::builtins {
 		);                                       \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -140,7 +153,17 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::OutputString,
 				code::FunctionType(
-					base::StrID("builtin_strOutput_lptr"), {base::StrID("ptr_string")}, base::StrID("i64")
+					base::StrID("builtin_strOutput_lptr"),
+					{ base::StrID("ptr_string") },
+					base::StrID("i64")
+				),
+			},
+			{
+				BuiltinFunctionID::Stoi,
+				code::FunctionType(
+					base::StrID("builtin_stoi_lptr"),
+					{ base::StrID("ptr_string") },
+					base::StrID("i64")
 				),
 			},
 		};
@@ -167,8 +190,12 @@ namespace vm::builtins {
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
 			code::CodeCollection code_collection;
-			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
+			bool                 check{};
+			for (const auto& [id, func_type]: *getBuiltinFunctionTypes()) {
 				code_collection.types.emplace_back(func_type);
+				if (func_type.name == "builtin_stoi_lptr") check = true;
+			}
+			CORE_ASSERT(check, "type list does not contain stoi function type");
 
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
 				code::Function builtin_function;

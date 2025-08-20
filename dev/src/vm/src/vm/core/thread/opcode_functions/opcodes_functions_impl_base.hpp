@@ -512,11 +512,12 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_lptr)(FUNCTION_ARGS) {
 		{
-			auto ptr = derefStack<Pointer>(local_stack, instr->arg0);
-			auto block = ptr.getBlock();
-			auto block_id = thread.process_memory.requestBlockID(block);
+			auto ptr        = derefStack<Pointer>(local_stack, instr->arg0);
+			auto block      = ptr.getBlock();
+			auto block_id   = thread.process_memory.requestBlockID(block);
 			auto block_data = thread.process_memory.requestBlockData(block_id);
-			thread.process.getIO().writeOutput(block_data.stdString());
+			auto str_data   = block_data.stdString();
+			thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -873,11 +874,9 @@ namespace vm {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
 				thread.process_memory.setPointer(tbl_pointer, { new_block, 0 });
-				CORE_ASSERT(!tbl_pointer.isNull(), "what the fuck alloc");
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
-				CORE_ASSERT(!tbl_pointer.isNull(), "what the fuck realloc");
 			}
 		}
 		FUNCTION_CONT(2);
