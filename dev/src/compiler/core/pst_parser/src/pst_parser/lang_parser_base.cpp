@@ -103,7 +103,7 @@ namespace pst {
 	void LangElement::addNamedChild(const std::string& name, MRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			sub_elements.emplace_back(InternalNamedChild{ name, opt.value() });
+			sub_elements.emplace_back(InternalNamedChild{ .name = name, .element = opt.value() });
 			setLastToken(el->getSourcePosition());
 		}
 	}
