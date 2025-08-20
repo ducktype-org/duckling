@@ -36,13 +36,11 @@ namespace vm {
 		 *  to assign the correct type to the new `BlockData` object.
 		 */
 		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
-			auto size = inner_type->getSize() * n;
-			std::byte* ptr = nullptr;
+			auto       size = inner_type->getSize() * n;
+			std::byte* ptr  = nullptr;
 			try {
 				ptr = new std::byte[size];
-			} catch (const std::bad_alloc&) {
-				throw exceptions::VMMemoryAllocationError();
-			}
+			} catch (const std::bad_alloc&) { throw exceptions::VMMemoryAllocationError(); }
 			allocated.emplace_back(ptr, size);
 			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>(this) };
 		}

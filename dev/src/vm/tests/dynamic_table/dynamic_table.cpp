@@ -1,7 +1,7 @@
 #include <vm_tester_utils.hpp>
 
-#include "vm/core/process/exceptions.hpp"
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/exceptions.hpp>
 
 class DynamicTableVmTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -28,7 +28,7 @@ private:
 	}
 
 	void tooLarge() {
-			assertExecutionPanickedWith(
+		assertExecutionPanickedWith(
 			runTestOnVmGetResult("too_large.dbc", "", "9223372036854775808"),
 			vm::exceptions::VMMemoryAllocationError::ERR_MSG
 		);
