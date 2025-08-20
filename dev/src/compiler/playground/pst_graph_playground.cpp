@@ -97,18 +97,12 @@ Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 			variant_case(pst::LangElement::Child, child) {
 				auto sub_node = dotElement(hdl, child.illegalAccess().value());
 				hdl.addEdge(self, sub_node);
-				// if (&*el !=
-				// &*child.illegalAccess().value()->getParent().value().illegalAccess().value())
-				// std::cerr << "Non matching parent\n";
 			}
 
 			variant_case(pst::LangElement::NamedChild, named_child) {
-				std::string child_name = named_child.first;
-				auto        sub_node = dotElement(hdl, named_child.second.illegalAccess().value());
+				std::string child_name = named_child.name;
+				auto        sub_node = dotElement(hdl, named_child.element.illegalAccess().value());
 				hdl.addEdge(self, sub_node, child_name.data());
-				// if (&*el !=
-				// &*named_child.second.illegalAccess().value()->getParent().value().illegalAccess().value())
-				// std::cerr << "Non matching parent\n";
 			}
 		}
 	}
