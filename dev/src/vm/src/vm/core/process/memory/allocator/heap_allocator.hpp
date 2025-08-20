@@ -6,6 +6,7 @@
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
 
+#include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
@@ -36,7 +37,12 @@ namespace vm {
 		 */
 		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
 			auto size = inner_type->getSize() * n;
-			auto ptr  = new std::byte[size];
+			std::byte* ptr = nullptr;
+			try {
+				ptr = new std::byte[size];
+			} catch (const std::bad_alloc&) {
+				throw exceptions::VMMemoryAllocationError();
+			}
 			allocated.emplace_back(ptr, size);
 			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>(this) };
 		}
