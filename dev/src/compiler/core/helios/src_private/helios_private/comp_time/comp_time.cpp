@@ -20,6 +20,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <cmath>
+#include <type_traits>
 
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryCompTime, CompTimeEvalResult) {
@@ -101,7 +102,6 @@ namespace compiler::helios {
 				const auto& lhs_ctv = lhs_result.value();
 				const auto& rhs_ctv = rhs_result.value();
 
-				// TODOP: This is freaking goofy with those n^2 cases. Think of a better way.
 				variant_match(lhs_ctv.getStorage()) {
 					variant_case(i64, lhs_value) {
 						variant_match(rhs_ctv.getStorage()) {
@@ -160,19 +160,12 @@ namespace compiler::helios {
 									result = query::QError(errors::Failed());
 									throw base::NotYetImplemented(
 										"Evaluation of different than '&&, ||' binary operators "
-										"for "
-										"booleans is "
-										"not "
-										"implemented yet"
+										"for booleans is not implemented yet"
 									);
 								}
 							}
 						}
 					}
-					// variant_case(const VmHeldValue&, lhs_value) {
-					// 	result = query::QError(errors::Failed());
-					// 	CORE_PANIC("Tree eval encountered a VM-held value. This should not happen");
-					// }
 					variant_default { result = query::QError(compiler::helios::errors::Failed()); }
 				}
 			}
@@ -316,13 +309,10 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief Evaluates a call HOUT expression using VM Eval.
+		 * @brief Evaluates a HOUT call expression using VM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
 		static CompTimeEvalResult evaluateFunctionWithVm(query::Context& ctx, CRef<code::Expr> expr) {
-			// TODOP: Make this more generic and work for other things than calls only.
-			// TODOP: For now VM is only used for function call evaluation.
-
 			// @todo: For now this works only with functions which don't call any other functions.
 			// This should change in #1203
 			using namespace compiler;
@@ -346,7 +336,6 @@ namespace compiler::helios {
 			CRef<mir::Function> mir_func        = &mir_func_result->value();
 			auto                lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func });
 
-			// TODOP: Maybe add create a backend_vm::Function and don't use Module everywhere?
 			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
 			vm::code::CodeCollection code = m.build();
 

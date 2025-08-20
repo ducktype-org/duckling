@@ -83,10 +83,6 @@ namespace compiler::helios {
 		const std::string&                   func_name,
 		const std::vector<CompileTimeValue>& args
 	) {
-		// TODOP: Maybe it would be nice if getExitValue() returned a Box as well so we could free it?
-		// TODOP: Maybe add a separate endpoint for CompTimeGetExitValue() which returns the Box to
-		// avoid memory bloat.
-
 		auto spawn_result = vm::api::spawn();
 		if (!spawn_result) return std::unexpected(errors::Failed());
 		const vm::PID pid = spawn_result->pid;

@@ -20,9 +20,6 @@ namespace {
 }
 
 namespace compiler::helios {
-	// TODOP: What about the VmValue.
-	// using CompileTimeValue = std::variant<i64, bool, tsh::SymbolType<>>;
-
 	/**
 	 * @brief Represents a value known at compile time.
 	 */

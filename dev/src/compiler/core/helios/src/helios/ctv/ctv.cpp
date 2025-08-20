@@ -20,7 +20,6 @@ namespace compiler::helios {
 	base::Optional<i64> CompileTimeValue::asI64() const {
 		variant_match(value) {
 			variant_case(i64, val) { return val; }
-			// TODOP: Case for VmValue?
 		}
 		return {};
 	}
@@ -28,7 +27,6 @@ namespace compiler::helios {
 	base::Optional<bool> CompileTimeValue::asBool() const {
 		variant_match(value) {
 			variant_case(bool, val) { return val; }
-			// TODOP: Case for VmValue?
 		}
 		return {};
 	}
@@ -36,7 +34,6 @@ namespace compiler::helios {
 	base::Optional<tsh::SymbolType<>> CompileTimeValue::asType() const {
 		variant_match(value) {
 			variant_case(tsh::SymbolType<>, val) { return val; }
-			// TODOP: Case for VmValue?
 		}
 		return {};
 	}
