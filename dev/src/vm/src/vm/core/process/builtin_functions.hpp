@@ -61,10 +61,10 @@ namespace vm::builtins {
 	 */
 	class FunctionHandlers {
 	public:
-		static i64 builtinInputI64(VMThread& process);
-		static i64 builtinOutputI64(VMThread& process, i64 arg);
-		static i64 builtinOutputString(VMThread& process, Pointer ptr);
-		static i64 builtinStoi(VMThread& process, Pointer ptr);
+		static i64  builtinInputI64(VMThread& process);
+		static i64  builtinOutputI64(VMThread& process, i64 arg);
+		static void builtinOutputString(VMThread& process, Pointer ptr);
+		static i64  builtinStoi(VMThread& process, Pointer ptr);
 	};
 
 	/**

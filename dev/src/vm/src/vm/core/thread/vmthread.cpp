@@ -245,16 +245,16 @@ namespace vm {
 			}
 		);
 
-		u64 argv_index = 0;
-
-		for (const auto& arg: args) {
+		for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
 						mov_l64_imm, 24, arg.size() + 1
 					),  // argc_internal := arg.size() + 1 (for the \0 character)
-					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, argv_index),  // ix := argv_index
+					MAKE_BYTECODE_INSTRUCTION(
+						mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
+					),  // ix := argv_index
 					MAKE_BYTECODE_INSTRUCTION(
 						dynTableLoad_lany_lptr, 40, 8
 					),  // ptr_tmp_store := argv_internal[ix]
@@ -288,7 +288,9 @@ namespace vm {
 						dynTableStore_lptr_lany, 40, 56
 					),  // ptr_tmp_store[ix] := char_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, argv_index++),  // ix := argv_index
+					MAKE_BYTECODE_INSTRUCTION(
+						mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
+					),  // ix := argv_index
 					MAKE_BYTECODE_INSTRUCTION(
 						dynTableStore_lptr_lany, 8, 40
 					),  // argv_internal[ix] := ptr_tmp_store

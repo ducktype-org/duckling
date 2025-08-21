@@ -4,6 +4,9 @@ function main {
     mov_l64_imm ix, 0;
     dynTableLoad_lany_lptr str_ptr, arg1;
     ext_l64 ix;
+    init_lany_type builtin_arg, ptr_string;
+    mov_lptr_lptr builtin_arg, str_ptr;
+    call_builtin_func builtin_strOutput_lptr;
     strOutput_lptr str_ptr;
     deinit;
     deinit;

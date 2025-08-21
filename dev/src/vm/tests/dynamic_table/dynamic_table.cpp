@@ -26,7 +26,7 @@ private:
 		loadInvalidDbc("non_instantiable.dbc", { vm::code::UninstantiableValueError::ERR_MSG });
 	}
 
-	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test", { "test" }); }
+	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0, true); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/dynamic_table/");
