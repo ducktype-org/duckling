@@ -68,4 +68,8 @@ namespace compiler::helios {
 	 */
 	pst::AccessLocked<pst::LangElement> symbolPst(SymID);
 
+	/**
+	 * @brief Pretty prints the symbol.
+	 */
+	std::string prettyDebugPrint(SymID, query::Context&);
 }
