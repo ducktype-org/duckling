@@ -9,9 +9,9 @@ namespace vm::code {
 	 */
 	Function validateAndExtractReachableCode(
 		const ObjIdNameMap<TypeOfData>&                  type_context,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const TypeMetadata&                              type_metadata,
 		const ObjIdNameMap<GlobalData>&                  globals_map,
+		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const Function&                                  function
 	);
 }

@@ -112,7 +112,7 @@ namespace vm::builtins {
 		}
 	}
 
-	auto getBuiltinFunctionSignatures()
+	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
 		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
 			map{ {
@@ -135,7 +135,7 @@ namespace vm::builtins {
 			= [] {
 				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
-				  for (const auto& [id, func_pair]: *getBuiltinFunctionSignatures())
+				  for (const auto& [id, func_pair]: *getBuiltinFunctions())
 					  indices.emplace(func_pair.first, id);
 				  return indices;
 			  }();
@@ -151,7 +151,7 @@ namespace vm::builtins {
 		static const code::CodeCollection builtin_module = []() {
 			code::CodeCollection code_collection;
 
-			for (const auto& [id, func_pair]: *getBuiltinFunctionSignatures()) {
+			for (const auto& [id, func_pair]: *getBuiltinFunctions()) {
 				code::Function builtin_function;
 				builtin_function.name = func_pair.first;
 				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(

@@ -75,7 +75,7 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Functio
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = validateAndExtractReachableCode(
-			type_context.getCurrentTypes(), type_context.signatures, *type_metadata, globals_map, func
+			type_context.getCurrentTypes(), *type_metadata, globals_map, type_context.signatures, func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}

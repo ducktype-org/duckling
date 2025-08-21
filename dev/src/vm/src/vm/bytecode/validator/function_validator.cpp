@@ -234,9 +234,9 @@ public:
  */
 class FunctionValidator {
 	const ObjIdNameMap<TypeOfData>&                  tod_map;
-	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const TypeMetadata&                              type_metadata;
 	const ObjIdNameMap<GlobalData>&                  globals;
+	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
@@ -1105,15 +1105,15 @@ class FunctionValidator {
 public:
 	FunctionValidator(
 		const ObjIdNameMap<TypeOfData>&                  tod_map,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const TypeMetadata&                              type_metadata,
 		const ObjIdNameMap<GlobalData>&                  globals,
+		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const Function&                                  function
 	):
 		  tod_map(tod_map),
-		  signatures(signatures),
 		  type_metadata(type_metadata),
 		  globals(globals),
+		  signatures(signatures),
 		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
@@ -1130,14 +1130,14 @@ public:
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
 	const ObjIdNameMap<TypeOfData>&                  tod_map,
-	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
+	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	FunctionValidator validator(tod_map, signatures, type_metadata, globals_map, function);
+	FunctionValidator validator(tod_map, type_metadata, globals_map, signatures, function);
 
 	Function new_function;
 	new_function.name         = function.name;

@@ -82,11 +82,11 @@ namespace vm::builtins {
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
 	 */
-	auto getBuiltinFunctionSignatures()
+	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
 
 	inline CRef<code::FuncSignature> getBuiltinFunctionSignature(BuiltinFunctionID id) {
-		return &getBuiltinFunctionSignatures()->at(id).second;
+		return &getBuiltinFunctions()->at(id).second;
 	}
 
 	/**
