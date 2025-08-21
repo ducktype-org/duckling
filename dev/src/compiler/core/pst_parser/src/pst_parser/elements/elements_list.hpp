@@ -12,6 +12,7 @@ namespace pst {
 	class AtrArgList;
 	class InitList;
 	class CallList;
+	class FlowPatternList;
 	// Not Statements
 	class Param;
 	class DottedName;
@@ -22,6 +23,13 @@ namespace pst {
 	class ClassBlockOrStmt;
 	class RoundGroupExpr;
 	class ExprElement;
+	class FlowPattern;
+	class AnalysisPattern;
+	class DeconstructorPattern;
+	class TuplePattern;
+	class WildcardPattern;
+	class BindingPattern;
+	class ValuePattern;
 	// Statements
 	class Import;
 	class StmtSpecifier;

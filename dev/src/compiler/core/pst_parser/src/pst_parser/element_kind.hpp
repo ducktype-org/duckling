@@ -73,7 +73,18 @@ namespace pst {
 		// others:
 		Param,
 		ParamList,
+		FlowPatternList,
 		DottedName,
+
+		// patterns:
+		FlowPattern,
+		AnalysisPattern,
+		DeconstructorPattern,
+		TuplePattern,
+		WildcardPattern,
+		BindingPattern,
+		ValuePattern,
+
 
 		// for detecting when kind was not set:
 		KindNotSet,

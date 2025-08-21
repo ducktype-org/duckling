@@ -66,6 +66,8 @@ namespace pst::internal {
 
 		static std::string parameterList() { return "function parameter"; }
 
+		static std::string flowPatternList() { return "flow pattern"; }
+
 		static std::string returnList() { return "function return type"; }
 
 		static std::string inheritanceList() { return "inheritance"; }

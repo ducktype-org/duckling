@@ -38,6 +38,13 @@ namespace pst {
 		Destructor,
 		AccessBlock,
 		Param,
+		FlowPattern,
+		AnalysisPattern,
+		DeconstructorPattern,
+		TuplePattern,
+		WildcardPattern,
+		BindingPattern,
+		ValuePattern,
 		Expand
 	);
 }

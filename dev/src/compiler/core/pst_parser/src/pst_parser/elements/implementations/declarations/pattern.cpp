@@ -1,5 +1,4 @@
 #include "../../hierarchy/declarations/pattern.hpp"
-#include "base/box.hpp"
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
@@ -20,7 +19,7 @@ namespace pst {
 
 		PatternArgumentCountError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
-	
+
 	class PatternBracketError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -36,8 +35,7 @@ namespace pst {
 
 		PatternBracketError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
-	
-	// @TODO: make better
+
 	MBox<Pattern> Pattern::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeBox<Pattern>(position);
@@ -58,13 +56,13 @@ namespace pst {
 		if (state.empty()) {
 			state.log(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
-		} 
+		}
 
 		state.parse(out).one(&out->param);
 		if (!state.empty()) {  // More than one argument.
 			state.log(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
-		} 
+		}
 
 		state.parse(out).goUpAndSkip();
 
