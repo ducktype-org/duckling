@@ -6,10 +6,29 @@
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
 
+#include "lang_definitions/key_spec_op.hpp"
 #include "lexer/token.hpp"
 #include "token_parser_core/common_elements.hpp"
 
+#include <cstddef>
+
 namespace pst {
+	class UnrecognizedPatternInCaseError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unrecognized pattern in case error";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		UnrecognizedPatternInCaseError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	/// Flow pattern ///
 	MBox<FlowPattern> FlowPattern::parse(LangParserState& state) {
 		auto position = state.getPosition();
@@ -21,6 +40,7 @@ namespace pst {
 			tpc::Identifier temp_ident;
 			state.parse(out).one(&temp_ident);
 			out->as_identifier = temp_ident;
+			// TODOP: Why doesn't this work.
 			// state.parse(out).one(&out->as_identifier);
 		}
 
@@ -76,7 +96,8 @@ namespace pst {
 
 		// Binding pattern. Identifier which is not a destructor.
 		if (state[0].isIdentifier()) return BindingPattern::parse(state);
-		CORE_PANIC("Parsing of the analysis pattern didn't match any pattern");
+
+		state.log(makeBox<UnrecognizedPatternInCaseError>(state.getPosition()));
 		return nullptr;
 	}
 

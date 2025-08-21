@@ -7,7 +7,7 @@ namespace pst {
 		return ListParsingTemplate::parseList<
 			FlowPattern,
 			FlowPatternList,
-			false,
+			true,
 			lexer::Token::BracketType::Round,
 			internal::Conditions::isComma,
 			internal::Conditions::isSentinel,

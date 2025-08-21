@@ -191,7 +191,7 @@ namespace pst {
 
 	public:
 		explicit ValuePattern(const dia::SourcePosition& position): AnalysisPattern(position) {
-			this->element_kind = ElementKind::ExpressionPattern;
+			this->element_kind = ElementKind::ValuePattern;
 		}
 
 		static MBox<ValuePattern> parse(LangParserState& state);

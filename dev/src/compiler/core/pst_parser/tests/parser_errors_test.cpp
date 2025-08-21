@@ -1,3 +1,5 @@
+#include "pst_parser/elements/hierarchy/not_statements/patterns.hpp"
+
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -41,6 +43,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
+			// parsed.getLogger()->dumpLog(true);
 			return parsed.getLogger()->good() == good;
 		}
 
@@ -142,11 +145,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>  simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
 	Example<pst::Fun, false> bad_function{ "fun foo(x: i32, y) = {}" };
 
-	Example<pst::Pattern, true>  simple_pattern1{ "pattern IsEven(x: i32) = {}" };
-	Example<pst::Pattern, true>  simple_pattern2{ "pattern Point(p: Point) -> (i32, i32) = {return (p.x, p.y);}" };
-	Example<pst::Pattern, false>  no_params_pattern{ "pattern Point() = {}" };
-	Example<pst::Pattern, false>  two_params_pattern{ "pattern Point(a: T, b: T) = {}" };
-	Example<pst::Pattern, false>  trailing_comma_pattern{ "pattern Point(a: T,) = {}" };
+	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
+	Example<pst::Pattern, true> simple_pattern2{
+		"pattern Point(p: Point) -> (i32, i32) = {return (p.x, p.y);}"
+	};
+	Example<pst::Pattern, false> no_params_pattern{ "pattern Point() = {}" };
+	Example<pst::Pattern, false> two_params_pattern{ "pattern Point(a: T, b: T) = {}" };
+	Example<pst::Pattern, false> trailing_comma_pattern{ "pattern Point(a: T,) = {}" };
 
 	Example<pst::If, true> simple_if{ "if (a == b) {c = d;}" };
 	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
@@ -268,6 +273,58 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_template_expr{
 		"(x * t).y:{x, y}.z:{}(4)[3]"
 	};
+
+	Example<pst::FlowPattern, true>  flow_literal_int{ "123" };
+	Example<pst::FlowPattern, true>  flow_literal_string{ "\"hello world\"" };
+	Example<pst::FlowPattern, true>  flow_literal_bool{ "true" };
+	Example<pst::FlowPattern, true>  flow_binding_simple{ "my_variable" };
+	Example<pst::FlowPattern, true>  flow_wildcard{ "_" };
+	Example<pst::FlowPattern, true>  flow_tuple_simple{ "(1, x)" };
+	Example<pst::FlowPattern, true>  flow_tuple_nested{ "(1, (x, _))" };
+	Example<pst::FlowPattern, false> flow_tuple_empty{ "()" };
+	Example<pst::FlowPattern, false> flow_tuple_unclosed{ "(1, x" };
+	Example<pst::FlowPattern, false> flow_tuple_trailing_comma{ "(1, x,)" };
+	Example<pst::FlowPattern, true>  flow_deconstructor_simple{ "Point(x, y)" };
+	Example<pst::FlowPattern, true>  flow_deconstructor_nested{ "Circle(Point(0, 0), r)" };
+	Example<pst::FlowPattern, false> flow_deconstructor_empty_args{ "None()" };
+	Example<pst::FlowPattern, false> flow_deconstructor_unclosed{ "Point(x, y" };
+	Example<pst::FlowPattern, true>  flow_just_literal{ "1" };
+	Example<pst::FlowPattern, true>  flow_just_binding{ "x" };
+	Example<pst::FlowPattern, true>  flow_just_tuple{ "(a, b)" };
+	Example<pst::FlowPattern, true>  flow_just_deconstructor{ "Some(v)" };
+	Example<pst::FlowPattern, true>  flow_as_binding_simple{ "x as my_var" };
+	Example<pst::FlowPattern, true>  flow_as_binding_tuple{ "(a, b) as point" };
+	Example<pst::FlowPattern, true>  flow_as_binding_deconstructor{ "Rectangle(w, h) as rect" };
+	Example<pst::FlowPattern, false> flow_as_binding_no_identifier{ "(a, b) as" };
+	Example<pst::FlowPattern, false> flow_as_binding_keyword{ "_ as if" };
+	Example<pst::FlowPattern, true>  flow_type_constraint_simple{ "x : i32" };
+	Example<pst::FlowPattern, true>  flow_type_constraint_wildcard{ "_ : MyClass" };
+	Example<pst::FlowPattern, true>  flow_type_constraint_variant{ "v : A | B" };
+	Example<pst::FlowPattern, true>  flow_type_constraint_tuple{ "(a, b) : Point" };
+	Example<pst::FlowPattern, false> flow_type_constraint_no_type{ "x :" };
+	Example<pst::FlowPattern, false> flow_type_constraint_no_type_eof{ "x :" };
+	Example<pst::FlowPattern, true>  flow_full_simple{ "x as my_var : i32" };
+	Example<pst::FlowPattern, true>  flow_full_tuple{ "(a, b) as point : Point" };
+	Example<pst::FlowPattern, true>  flow_full_deconstructor{ "Rectangle(w, h) as rect : Shape" };
+	Example<pst::FlowPattern, true>  flow_full_wildcard{ "_ as value : A | B" };
+	Example<pst::FlowPattern, true>  flow_subpattern_simple{ "Tuple(x as inner_x : i32, _)" };
+	Example<pst::FlowPattern, true>  flow_subpattern_complex{
+        "Response(200, Payload(u as user : User, _ as token : Token))"
+	};
+	Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32, y as coord_y : f64)" };
+	Example<pst::FlowPattern, false> analysis_bad_value{ "+" };
+	Example<pst::FlowPattern, false> analysis_binding_is_keyword{ "if" };
+
+	// Example<pst::FlowPattern, false> flow_bad_order{ "x : i32 as my_var" };
+	// Example<pst::FlowPattern, false> flow_double_as{ "x as var1 as var2" };
+	// Example<pst::FlowPattern, false> flow_double_type{ "x : T1 : T2" };
+
+	// TODOP: Fix block expressions.
+	// Example<pst::ValuePattern, true> value_pattern_block_expression{ "{ x + y * z }" }; // TODOP:
+	// Example<pst::ValuePattern, true> value_pattern_block_with_variable{ "{ my_constant }" };
+	// Example<pst::FlowPattern, true>  analysis_block_expr{ "{ x + y * z }" }; // TODOP: Fix
+	// Example<pst::FlowPattern, true>  analysis_block_with_variable{ "{ some_var }" }; // TODOP:
+	// Example<pst::FlowPattern, true> analysis_literal_char{ "'c'" }; // TODOP: Fix
 
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());
