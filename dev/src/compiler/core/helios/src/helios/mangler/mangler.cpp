@@ -173,13 +173,13 @@ namespace compiler::helios::mangler {
 						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
 							path_parts.push_back(identifier(nmsp->getName().str()));
-							current_pst = std::move(ancestor);
+							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
 						if (ancestor->getElementKind() == pst::ElementKind::Class) {
 							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
 							path_parts.push_back(identifier(nmsp->getName().str()));
-							current_pst = std::move(ancestor);
+							current_pst = pst::Access<pst::LangElement>(ancestor);
 							break;
 						}
 
