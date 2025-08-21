@@ -58,7 +58,7 @@ namespace pst::internal {
 	};
 
 	/**
-	 * @brief These are helper static functions returning names that can be  passed to templates.
+	 * @brief These are helper static functions returning names that can be passed to templates.
 	 */
 	class NameGetters {
 	public:

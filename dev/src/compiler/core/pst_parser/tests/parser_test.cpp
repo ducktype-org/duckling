@@ -157,6 +157,7 @@ private:
 	void testFor() { testJsonRelativePath("for.duck", "for.json"); }
 
 	void testFun() { testJsonRelativePath("fun.duck", "fun.json"); }
+	// TODOP: Add tests here.
 
 	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }
 
@@ -226,7 +227,7 @@ private:
 
 			PstParamVisitor(base::StrID expected_name): expected_name(expected_name) {}
 
-			void visitFunParam(pst::Access<pst::FunParam> param) override {
+			void visitParam(pst::Access<pst::Param> param) override {
 				counter++;
 				good_name = param->getName() == expected_name;
 			}

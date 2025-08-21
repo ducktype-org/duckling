@@ -4,25 +4,25 @@
 
 namespace pst {
 	/**
-	 * @brief Declaration of a single function argument.
+	 * @brief Declaration of a single function or pattern argument.
 	 */
-	class FunParam final: public NotStmt {
+	class Param final: public NotStmt {
 		tpc::Identifier                                     name;
 		AccessInternal<UniversalExprHolder>                 type;
 		base::Optional<AccessInternal<UniversalExprHolder>> initial;
 
 	public:
-		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {
-			this->element_kind = ElementKind::FunParam;
+		explicit Param(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::Param;
 		}
 
-		static MBox<FunParam> parse(LangParserState& state);
-		~FunParam() final = default;
+		static MBox<Param> parse(LangParserState& state);
+		~Param() final = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Function Parameter";
+			return "Parameter";
 		}
 
 		[[nodiscard]]

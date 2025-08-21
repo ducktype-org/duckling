@@ -142,6 +142,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>  simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
 	Example<pst::Fun, false> bad_function{ "fun foo(x: i32, y) = {}" };
 
+	Example<pst::Pattern, true>  simple_pattern1{ "pattern IsEven(x: i32) = {}" };
+	Example<pst::Pattern, true>  simple_pattern2{ "pattern Point(p: Point) -> (i32, i32) = {return (p.x, p.y);}" };
+	Example<pst::Pattern, false>  no_params_pattern{ "pattern Point() = {}" };
+	Example<pst::Pattern, false>  two_params_pattern{ "pattern Point(a: T, b: T) = {}" };
+	Example<pst::Pattern, false>  trailing_comma_pattern{ "pattern Point(a: T,) = {}" };
+
 	Example<pst::If, true> simple_if{ "if (a == b) {c = d;}" };
 	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
 	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };

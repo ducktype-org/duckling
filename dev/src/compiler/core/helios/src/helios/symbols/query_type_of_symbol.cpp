@@ -151,7 +151,7 @@ namespace compiler::helios {
 				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
 			}
 
-			void visitFunParam(pst::Access<pst::FunParam> param) final {
+			void visitParam(pst::Access<pst::Param> param) final {
 				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 		};

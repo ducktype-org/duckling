@@ -7,7 +7,7 @@ namespace pst {
 	/**
 	 * @brief Allows for limited non-class statements to be in a class.
 	 *
-	 * Currently allows: using, alias
+	 * Currently allows: using, alias, pattern
 	 */
 	class NonClassStmt: public ClassStmt {
 		AccessInternal<Stmt> inner_stmt;

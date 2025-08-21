@@ -313,7 +313,7 @@ namespace compiler::helios {
 	 * and should be merged with makeSymbolFromStatement.
 	 */
 	CRef<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
-		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
+		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 			auto parameter = parameter_opt.value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{

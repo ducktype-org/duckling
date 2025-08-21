@@ -13,7 +13,7 @@ namespace pst {
 	class InitList;
 	class CallList;
 	// Not Statements
-	class FunParam;
+	class Param;
 	class DottedName;
 	class Attribute;
 	class CodeBlock;
@@ -40,6 +40,7 @@ namespace pst {
 	class Variable;
 	class Const;
 	class Fun;
+	class Pattern;
 	class If;
 	class While;
 	class For;

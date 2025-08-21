@@ -26,6 +26,7 @@ namespace pst {
 		Class,
 		Variable,
 		Fun,
+		Pattern,
 		Block,
 
 		Using,
@@ -70,7 +71,7 @@ namespace pst {
 		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
 
 		// others:
-		FunParam,
+		Param,
 		ParamList,
 		DottedName,
 

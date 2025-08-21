@@ -40,6 +40,7 @@ namespace pst {
 		Using,
 		Alias,
 		Fun,
+		Pattern,
 		Namespace,
 		CodeDecl,
 		StmtSpecifier,
