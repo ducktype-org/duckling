@@ -86,6 +86,8 @@ namespace vm {
 		std::lock_guard lock(mutex);
 		for (auto [offset, child]: block->children_blocks) freeBlock(child);
 
+		runDataDestructor(block);
+
 		// Parents reference their children so that they don't disappear on someone's pointer
 		// destruction.
 		if (block->parent)
@@ -252,5 +254,31 @@ namespace vm {
 	auto Memory::getBlockType(Ref<Block> block) -> TypeCRef {
 		std::lock_guard lock(*block->mutex_ref);
 		return block->data.element_type;
+	}
+
+	void Memory::runDataDestructor(Ref<Block> block) {
+		switch (block->data.element_type->getKind()) {
+		case Type::Kind::None:
+			break;
+		case Type::Kind::Primitive:
+			break;
+		case Type::Kind::Pointer:
+			block.
+			break;
+		case Type::Kind::FixedSizeTable:
+			break;
+		case Type::Kind::DynamicTable:
+			break;
+		case Type::Kind::Data:
+			break;
+		case Type::Kind::Variant:
+			break;
+		case Type::Kind::Function:
+			break;
+		case Type::Kind::Opaque:
+			break;
+		default:
+			CORE_PANIC("Unhandled type of data");
+		}
 	}
 }

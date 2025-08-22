@@ -70,6 +70,14 @@ namespace vm {
 		 */
 		auto copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
 
+		/**
+		 * @brief Based on block's type, performs destruction of the data.
+		 * E.g. in case of a non-null pointer, decreased pointed block's reference count.
+	     */
+		void runDataDestructor(Ref<Block> block);
+
+		void runDataDestructorAt() {}
+
 	public:
 		Memory() = default;
 
