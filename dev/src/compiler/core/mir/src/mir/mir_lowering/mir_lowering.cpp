@@ -44,7 +44,6 @@ namespace compiler::mir {
 		return global_data.helios_symbol.queryUnstablePerfectHash();
 	}
 
-	struct InstructionHole;
 	struct BlockBuilder;
 	struct FunctionBuilder;
 
@@ -52,16 +51,6 @@ namespace compiler::mir {
 	// we will need to add BlockBuilderRef->BlockRef transformation
 	// during building phase
 	using BlockBuilderRef = Ref<BlockBuilder>;
-
-	/**
-	 * @brief Represents result of expression lowering, which is
-	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
-	 * that holds the result of the expression.
-	 */
-	struct ExprLowerRes final {
-		BlockBuilderRef begin;
-		MIRValue        value;
-	};
 
 	/**
 	 * @brief Represents result of statement lowering, which is
@@ -86,6 +75,8 @@ namespace compiler::mir {
 		FunctionBuilder& function,
 		ScopeRef         parent_scope
 	);
+
+	struct ExprLowerRes;
 
 	/**
 	 * @brief Lowers expression.
@@ -163,6 +154,7 @@ namespace compiler::mir {
 		std::vector<base::Optional<Instruction>> reversed_instruction;
 		base::Optional<Instruction>              terminator;
 
+	public:
 		/**
 		 * @brief Structure representing a hole in the block, that is
 		 * empty instruction that has to be filled, before the block will be builded.
@@ -177,11 +169,11 @@ namespace compiler::mir {
 				return block_ref->reversed_instruction.at(position).empty();
 			}
 
-		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
 				  block_ref(block_ref),
 				  position(position) {}
 
+		public:
 			void fill(Instruction instruction) {
 				CORE_ASSERT(isEmpty(), "Hole is already filled");
 				CORE_ASSERT(
@@ -190,9 +182,20 @@ namespace compiler::mir {
 				);
 				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 			}
+
+			void fillNop(ScopeRef scope) {
+				fill(Instruction{
+					Operation::Nop,
+					{},
+					{},
+					{},
+					scope,
+				});
+			}
+
+			friend struct BlockBuilder;
 		};
 
-	public:
 		BlockBuilder(usize vector_index): id(vector_index) {}
 
 		[[nodiscard]]
@@ -490,6 +493,125 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Represents a partial result of expression lowering.
+	 *
+	 * This consists of a BlockBuilderRef marking the beginning of the lowered
+	 * expression and either:
+	 *  - a MIRValue holding the result of the expression, OR
+	 *  - a Finalizer representing the last instruction that saves the result
+	 *    without specifying its target.
+	 *
+	 * For complete lowering, call the dedicated function that stores the result
+	 * in the desired location while (if possible) avoiding the creation of unnecessary temporaries.
+	 *
+	 * In most cases, use getResult() or storeResultInGivenVariable().
+	 */
+	struct ExprLowerRes final {
+		BlockBuilderRef begin;
+
+		/**
+		 * @brief Represents a finalizer instruction that saves the result of an expression.
+		 * Stores hole where instruction will be saved, instruction without output and type of
+		 * result. This instruction can be performed on provided varaible
+		 * (storeResultInGivenVariable) or generated temporary (getResult).
+		 */
+		struct Finalizer final {
+			BlockBuilder::InstructionHole hole;
+			Instruction                   instr;
+			tsh::SymbolType<>             type;
+		};
+
+		std::variant<MIRValue, Finalizer> value;
+
+		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value):
+			  begin{ begin },
+			  value{ std::move(value) } {}
+
+		/**
+		 * @brief helper function returing type of result. Can be used if MIRValue is not stored.
+		 */
+		[[nodiscard]]
+		tsh::SymbolType<> getResultType() {
+			variant_match(value) {
+				variant_case(Finalizer, res_data) { return res_data.type; }
+				variant_default {
+					CORE_PANIC("Function can be run only if MIRValue is not stored");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Helper function that returns MIRvalue if it is already stored in structure.
+		 */
+		[[nodiscard]]
+		base::Optional<MIRValue> getResultIfStored() {
+			variant_match(value) {
+				variant_case(MIRValue, val) { return val; }
+				variant_case_novalue(Finalizer) { return std::nullopt; }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief If result of expr is value already returns it,
+		 * Otherwise creates temporary, makes last instruction save res there and returns it.
+		 * @note may use InstructionHole stored in structure, probably use only once.
+		 */
+		[[nodiscard]]
+		MIRValue getResult(FunctionBuilder& function) {
+			variant_match(value) {
+				variant_case(MIRValue, val) { return val; }
+				variant_case(Finalizer, res_data) {
+					auto result = function.addTmp(res_data.type, res_data.instr.scope);
+					res_data.instr.output.emplace(result);
+					res_data.instr.flags.push_back(flagConstruct(result));
+					res_data.hole.fill(res_data.instr);
+					value = result;
+					return result;
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief If result of expr is value it creates
+		 * instruction that will assign result to it. Otherwise it makes the last instruction of the
+		 * expression save result directly to the target.
+		 * @note may use InstructionHole stored in stucture, probably use only once.
+		 */
+		void storeResultInGivenVariable(
+			const std::variant<LocalRef, MirGlobal>& target,
+			BlockBuilder::InstructionHole&           hole,
+			const std::vector<OperationFlag>&        flags,
+			ScopeRef                                 scope
+		) {
+			variant_match(value) {
+				variant_case(MIRValue, val) {
+					hole.fill(Instruction{
+						Operation::Assign,
+						target,
+						{ val },
+						flags,
+						scope,
+					});
+				}
+				variant_case(Finalizer, res_data) {
+					CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
+
+					hole.fillNop(scope);
+					std::visit([&](auto&& val) { res_data.instr.output.emplace(val); }, target);
+					res_data.hole.fill(res_data.instr);
+					res_data.instr.flags.insert(
+						res_data.instr.flags.end(), flags.begin(), flags.end()
+					);
+					std::visit([&](auto&& val) { value = val; }, target);
+				}
+			}
+		}
+	};
+
+	/**
 	 * @brief Visitor that collects all local variables in the function and adds them directly
 	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
 	 * other local variables. Scope of other local variables is set when visiting VariableStmt
@@ -598,32 +720,39 @@ namespace compiler::mir {
 			// lower expr:
 			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope);
 
-			if (expr_res.value.isLocal()) {
-				// we need to store the result of the expression
-				// in additional variable, so it doesn't get destroyed:
-				auto return_value = function.addNoLifetimeTmp(expr_res.value.get<LocalRef>()->type);
-				retrieve_value.fill(Instruction{
-					Operation::Assign,
-					{ return_value },
-					{ expr_res.value },
-					{ flagConstruct(return_value), flagMove(expr_res.value.get<LocalRef>()) },
-					return_scope,
-				});
-				return_block->setTerminator(
-					Instruction(Operation::ReturnValue, {}, { return_value }, {}, return_scope)
-				);
+			auto possible_result = expr_res.getResultIfStored();
+
+			if (possible_result.has_value() and !possible_result->isLocal()) {
+				// Value is ready to return.
+				retrieve_value.fillNop(return_scope);
+
 			} else {
-				retrieve_value.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					return_scope,
-				});
-				return_block->setTerminator(
-					Instruction(Operation::ReturnValue, {}, { expr_res.value }, {}, return_scope)
+				// we need to store the result of the expression
+				// in additional variable, so it doesn't get destroyed.
+
+				// Retrieve type: if res is value It is local, otherwise only last instruction is
+				// stored.
+				auto res_type = possible_result.has_value() ? possible_result->get<LocalRef>()->type
+				                                            : expr_res.getResultType();
+
+				auto return_value = function.addNoLifetimeTmp(res_type);
+
+				// Set move flag only if value exists.
+				std::vector<OperationFlag> flags = { flagConstruct(return_value) };
+				if (possible_result.has_value())
+					flags.push_back(flagMove(possible_result->get<LocalRef>()));
+
+
+				expr_res.storeResultInGivenVariable(
+					return_value, retrieve_value, flags, return_scope
 				);
+
+				possible_result = return_value;
 			}
+
+			return_block->setTerminator(Instruction(
+				Operation::ReturnValue, {}, { possible_result.value() }, {}, return_scope
+			));
 
 			output({ expr_res.begin });
 		}
@@ -639,6 +768,7 @@ namespace compiler::mir {
 			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
+			std::ignore = expr_result.getResult(function);
 			output({ expr_result.begin });
 		}
 
@@ -665,40 +795,37 @@ namespace compiler::mir {
 
 			auto get_condition_return = condition_block->addHole();
 
-			auto [lowered_condition, condition_result]
+			auto lowered_condition
 				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			std::optional<MIRValue> condition_variable;
-			if (condition_result.isLocal()) {
-				// we have to "move" the condition result
-				// into special temporary value, so we can use it
-				// after the actual condition result is destroyed.
-				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+			auto possible_condition_res = lowered_condition.getResultIfStored();
 
-				get_condition_return.fill(Instruction{
-					Operation::Assign,
-					{ condition_result_tmp },
-					{ condition_result },
-					{ flagConstruct(condition_result_tmp) },
-					condition_scope,
-				});
+			if (possible_condition_res.has_value() && !possible_condition_res->isLocal()) {
+				get_condition_return.fillNop(condition_scope);
 
-				condition_variable = condition_result_tmp;
 			} else {
-				get_condition_return.fill(Instruction{ Operation::Nop, {}, {}, {}, condition_scope }
+				// Condition result must be stored in special temporary value, so we can use it
+				// after the actual condition result is destroyed. Create extra temporary and assign
+				// to it in-place or with extra move.
+				possible_condition_res = function.addNoLifetimeBoolTmp();
+
+				lowered_condition.storeResultInGivenVariable(
+					possible_condition_res->get<LocalRef>(),
+					get_condition_return,
+					{ flagConstruct(possible_condition_res->get<LocalRef>()) },
+					condition_scope
 				);
-				condition_variable = condition_result;
 			}
 
 			condition_block->setTerminator(Instruction{
 				Operation::Branch,
 				{},
-				{ *condition_variable, then_body->getID(), else_body->getID() },
+				{ *possible_condition_res, then_body->getID(), else_body->getID() },
 				{},
 				condition_scope,
 			});
 
-			output({ lowered_condition });
+			output({ lowered_condition.begin });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -729,44 +856,30 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
 			);
 
-			if (expr_result.value.isLocal()) {
-				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+			auto possible_result = expr_result.getResultIfStored();
 
-				get_condition_return.fill(Instruction{
-					Operation::Assign,
-					{ condition_result_tmp },
-					{ expr_result.value },
-					{ flagConstruct(condition_result_tmp) },
-					condition_scope,
-				});
-
-				condition_continuation_block->setTerminator({
-					Operation::Branch,
-					{},
-					{ condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
-					{},
-					condition_scope,
-				});
+			if (possible_result.has_value() and !possible_result->isLocal()) {
+				get_condition_return.fillNop(condition_scope);
 
 			} else {
-				// we can use the result of the expression directly:
+				possible_result = function.addNoLifetimeBoolTmp();
 
-				get_condition_return.fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					condition_scope,
-				});
-
-				condition_continuation_block->setTerminator({
-					Operation::Branch,
-					{},
-					{ expr_result.value, loop_body.begin->getID(), continuation->getID() },
-					{},
-					condition_scope,
-				});
+				expr_result.storeResultInGivenVariable(
+					possible_result->get<LocalRef>(),
+					get_condition_return,
+					{ flagConstruct(possible_result->get<LocalRef>()) },
+					condition_scope
+				);
 			}
+
+			condition_continuation_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
+				{},
+				condition_scope,
+			});
+
 			output({ entry_block });
 		}
 
@@ -791,14 +904,9 @@ namespace compiler::mir {
 					auto assignment_scope = function.newScope(parent_scope);
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 
-					local_construction_hole.fill(Instruction{
-						Operation::Assign,
-						{ local },
-						{ expr_result.value },
-						{ flagConstruct(local) },
-						assignment_scope,
-					});
-
+					expr_result.storeResultInGivenVariable(
+						local, local_construction_hole, { flagConstruct(local) }, assignment_scope
+					);
 					output({ expr_result.begin });
 					return;
 				}
@@ -810,47 +918,46 @@ namespace compiler::mir {
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
-
 			auto assignment_scope = function.newScope(parent_scope);
 
 			auto target_construction_hole = continuation->addHole();
 
-			auto [r_continuation, new_value]
+			auto right_result
 				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
 
-			auto [l_continuation, location_value_result]
-				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
+			auto left_result
+				= lowerExpr(*stmt.location_expr, right_result.begin, function, assignment_scope);
+
+			auto left_val = left_result.getResult(function);
 
 			CORE_ASSERT(
-				location_value_result.isLocal() || location_value_result.isGlobal(),
+				left_val.isLocal() || left_val.isGlobal(),
 				"Left side of assignment statement doesn't contain reference to local "
 				"variable or "
 				"a global variable."
 			);
+
 			std::visit(
 				[&](auto&& ref) {
 					using T = std::decay_t<decltype(ref)>;
 					if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T, MirGlobal>) {
-						target_construction_hole.fill(Instruction{
-							Operation::Assign,
-							{ ref },
-							{ new_value },
-							{},
-							assignment_scope,
-						});
-						output({ l_continuation });
+						right_result.storeResultInGivenVariable(
+							ref, target_construction_hole, {}, assignment_scope
+						);
+						output({ left_result.begin });
 					} else {
 						CORE_PANIC("Assignment to unsupported MIRValue type");
 					}
 				},
-				location_value_result.getVariant()
+				left_val.getVariant()
 			);
 		}
 	};
 
 	/**
 	 * @brief Visitor that implements actual logic of lowering expression.
-	 * @note The result of the visitor is stored in out member.
+	 * @note The result of the visitor is stored in out member. To store expr
+	 * result somewhere, call finalize with place to store it
 	 */
 	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
@@ -872,16 +979,32 @@ namespace compiler::mir {
 			  expr_scope(expr_scope) {}
 
 		void output(ExprLowerRes lowering_result) {
-			CORE_ASSERT(this->out.empty(), "Output already set.");
-			this->out.emplace(lowering_result);
+			CORE_ASSERT(out.empty(), "Output already set.");
+			out.emplace(lowering_result);
+		}
+
+		void valueOutput(BlockBuilderRef begin, const MIRValue& value) {
+			CORE_ASSERT(out.empty(), "Output already set.");
+			out.emplace(ExprLowerRes(begin, value));
+		}
+
+		void noValueOutput(
+			BlockBuilderRef                      begin,
+			const BlockBuilder::InstructionHole& hole,
+			const Instruction&                   instr,
+			const tsh::SymbolType<>&             type
+		) {
+			CORE_ASSERT(out.empty(), "Output already set.");
+			CORE_ASSERT(instr.output.empty(), "instruction shouldn't have output set.");
+			out.emplace(ExprLowerRes(begin, ExprLowerRes::Finalizer(hole, instr, type)));
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
+			valueOutput(continuation, MIRValue{ MirIntegerConst{ expr.value } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
+			valueOutput(continuation, MIRValue{ MirBoolConst{ expr.value } });
 		}
 
 		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
@@ -896,64 +1019,61 @@ namespace compiler::mir {
 			auto optional_local = function.findLocal(expr.symbol);
 
 			if (optional_local.has_value()) {
-				output({ .begin = continuation, .value = MIRValue{ optional_local.value() } });
+				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
 				//@TODO: chack if the symbol is a real global variable.
-				output({ .begin = continuation,
-				         .value = MIRValue{
-							 MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) } });
+				valueOutput(
+					continuation,
+					MIRValue{ MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+				);
 			}
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
 			auto target_construction_hole = continuation->addHole();
-			const auto [r_continuation, right_res]
-				= lowerExpr(*expr.rhs, continuation, function, expr_scope);
-			const auto [l_continuation, left_res]
-				= lowerExpr(*expr.lhs, r_continuation, function, expr_scope);
+
+			auto       lowered_right = lowerExpr(*expr.rhs, continuation, function, expr_scope);
+			const auto res_right     = lowered_right.getResult(function);
+			auto lowered_left   = lowerExpr(*expr.lhs, lowered_right.begin, function, expr_scope);
+			const auto res_left = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type       = locationType(right_res, function.getContext());
-			const auto other_argument_type = locationType(left_res, function.getContext());
+			const auto argument_type       = locationType(res_right, function.getContext());
+			const auto other_argument_type = locationType(res_left, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different argument types"
 			);
-			const auto      result_type     = expr.expression_type.getSymbolType();
-			const auto      target_location = function.addTmp(result_type, expr_scope);
-			const Operation operation       = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{
-				operation,
-				{ target_location },
-				{ left_res, right_res },
-				{ flagConstruct(target_location) },
-				expr_scope,
-			});
-			output({ .begin = l_continuation, .value = target_location });
+			const auto      result_type = expr.expression_type.getSymbolType();
+			const Operation operation   = builtinBinaryToOperation(expr.operation);
+
+			noValueOutput(
+				lowered_left.begin,
+				target_construction_hole,
+				Instruction(operation, {}, { res_left, res_right }, {}, expr_scope),
+				result_type
+			);
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			auto target_construction_hole = continuation->addHole();
-			const auto [sub_continuation, sub_res]
-				= lowerExpr(*expr.expr, continuation, function, expr_scope);
+			auto       target_construction_hole = continuation->addHole();
+			auto       lowered     = lowerExpr(*expr.expr, continuation, function, expr_scope);
+			const auto res_lowered = lowered.getResult(function);
 
-			// Fill the hole with the unary operation.
-			const auto      result_type     = expr.expression_type.getSymbolType();
-			const auto      target_location = function.addTmp(result_type, expr_scope);
-			const Operation operation       = builtinUnaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{
-				operation,
-				{ target_location },
-				{ sub_res },
-				{ flagConstruct(target_location) },
-				expr_scope,
-			});
+			const auto result_type = expr.expression_type.getSymbolType();
 
-			output({ .begin = sub_continuation, .value = target_location });
+			const Operation operation = builtinUnaryToOperation(expr.operation);
+
+			noValueOutput(
+				lowered.begin,
+				target_construction_hole,
+				Instruction(operation, {}, { res_lowered }, {}, expr_scope),
+				result_type
+			);
 		}
 
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
@@ -969,16 +1089,14 @@ namespace compiler::mir {
 				);
 				auto assign_hole = block->addHole();
 
-				const auto [first_lowered_block, expr_res]
-					= lowerExpr(case_expr, block, function, expr_scope);
-				assign_hole.fill(Instruction{
-					Operation::Assign,
-					{ target_location },
-					{ expr_res },
-					{ flagConstruct(target_location) },
-					expr_scope,
-				});
-				return first_lowered_block;
+				auto lowered_block = lowerExpr(case_expr, block, function, expr_scope);
+
+				lowered_block.storeResultInGivenVariable(
+					target_location, assign_hole, { flagConstruct(target_location) }, expr_scope
+				);
+
+
+				return lowered_block.begin;
 			};
 
 			auto else_block = build_case_block(*ternary_expr.if_false);
@@ -986,21 +1104,20 @@ namespace compiler::mir {
 
 			// Build branching.
 			auto condition_block = function.newBlock();
-			const auto [condition_continuation, condition_res]
+			auto lowered_condition
 				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
+
+
 			condition_block->setTerminator({
 				Operation::Branch,
 				{},
-				{ condition_res, then_block->getID(), else_block->getID() },
+				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
 				{},
 				expr_scope,
 			});
 
-			// Return.
-			output(ExprLowerRes{
-				.begin = condition_continuation,
-				.value = target_location,
-			});
+			// Return (always value).
+			valueOutput(lowered_condition.begin, target_location);
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -1024,9 +1141,7 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			auto       call = continuation->addHole();
-			const auto call_result
-				= function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+			auto call = continuation->addHole();
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
@@ -1040,25 +1155,27 @@ namespace compiler::mir {
 			}
 			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
-				auto [expr_continuation, sub_res]
-					= lowerExpr(*arg, sub_continuation, function, expr_scope);
-				args.push_back(sub_res);
-				sub_continuation = expr_continuation;
+				auto arg_lowered = lowerExpr(*arg, sub_continuation, function, expr_scope);
+
+				args.push_back(arg_lowered.getResult(function));
+				sub_continuation = arg_lowered.begin;
 			}
 
 			// @TODO: #505 here in the future we (probably) will have to handle
 			// move operations related to the passing of the arguments to the function
 
-			call.fill(Instruction{
-				Operation::Call,
-				{ call_result },
-				args,
-				{ flagConstruct(call_result) },
-				expr_scope,
-			});
-
-
-			return output({ .begin = sub_continuation, .value = call_result });
+			return noValueOutput(
+				sub_continuation,
+				call,
+				Instruction{
+					Operation::Call,
+					{},
+					args,
+					{},
+					expr_scope,
+				},
+				expr.expression_type.getSymbolType()
+			);
 		}
 
 	private:
@@ -1336,7 +1453,7 @@ namespace compiler::mir {
 			assing_instr.fill(Instruction{
 				Operation::Assign,
 				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
-				{ lowerexpr_res.value },
+				{ lowerexpr_res.getResult(function_builder) },
 				{},
 				function_builder.getTopLevelScope(),
 			});

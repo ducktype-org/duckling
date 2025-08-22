@@ -73,7 +73,11 @@ namespace {
 		using RequiredAfter = std::tuple<
 			Op_fixedSizeTableLea_lptr_lptr,
 			Op_fixedSizeTableLoad_lany_lptr,
-			Op_fixedSizeTableStore_lptr_lany>;
+			Op_fixedSizeTableStore_lptr_lany,
+			Op_dynTableLea_lptr_lptr,
+			Op_dynTableLoad_lany_lptr,
+			Op_dynTableStore_lptr_lany,
+			Op_dynTableReAlloc_lptr_type>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -542,17 +546,19 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_imm) {}
 			variant_case_novalue(Op_mov_l8_l8) {}
 			variant_case_novalue(Op_cmov_l8_l8) {}
+			variant_case_novalue(Op_cmov_l8_imm) {}
 			variant_case_novalue(Op_mov_l16_imm) {}
 			variant_case_novalue(Op_mov_l16_l16) {}
 			variant_case_novalue(Op_cmov_l16_l16) {}
+			variant_case_novalue(Op_cmov_l16_imm) {}
 			variant_case_novalue(Op_mov_l32_imm) {}
 			variant_case_novalue(Op_mov_l32_l32) {}
 			variant_case_novalue(Op_cmov_l32_l32) {}
+			variant_case_novalue(Op_cmov_l32_imm) {}
 			variant_case_novalue(Op_mov_l64_imm) {}
 			variant_case_novalue(Op_mov_l64_l64) {}
 			variant_case_novalue(Op_cmov_l64_l64) {}
-			variant_case_novalue(Op_mov_l64_r0) {}
-			variant_case_novalue(Op_mov_r0_l64) {}
+			variant_case_novalue(Op_cmov_l64_imm) {}
 			variant_case_novalue(Op_mov_g64_g64) {}
 			variant_case_novalue(Op_mov_g64_l64) {}
 			variant_case_novalue(Op_mov_g64_imm) {}
@@ -596,16 +602,34 @@ class FunctionValidator {
 			variant_case_novalue(Op_neg_l32) {}
 			variant_case_novalue(Op_cmpEq_l64_l64) {}
 			variant_case_novalue(Op_cmpEq_l64_imm) {}
-			variant_case_novalue(Op_cmpG_l64_l64) {}
-			variant_case_novalue(Op_cmpG_l64_imm) {}
 			variant_case_novalue(Op_cmpEq_l32_l32) {}
 			variant_case_novalue(Op_cmpEq_l32_imm) {}
-			variant_case_novalue(Op_cmpG_l32_l32) {}
-			variant_case_novalue(Op_cmpG_l32_imm) {}
 			variant_case_novalue(Op_cmpEq_l8_l8) {}
 			variant_case_novalue(Op_cmpEq_l8_imm) {}
+			variant_case_novalue(Op_cmpG_l64_l64) {}
+			variant_case_novalue(Op_cmpG_l64_imm) {}
+			variant_case_novalue(Op_cmpG_l32_l32) {}
+			variant_case_novalue(Op_cmpG_l32_imm) {}
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
+			variant_case_novalue(Op_ucmpG_l64_l64) {}
+			variant_case_novalue(Op_ucmpG_l64_imm) {}
+			variant_case_novalue(Op_ucmpG_l32_l32) {}
+			variant_case_novalue(Op_ucmpG_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l8_l8) {}
+			variant_case_novalue(Op_ucmpG_l8_imm) {}
+			variant_case_novalue(Op_cmpL_l64_l64) {}
+			variant_case_novalue(Op_cmpL_l64_imm) {}
+			variant_case_novalue(Op_cmpL_l32_l32) {}
+			variant_case_novalue(Op_cmpL_l32_imm) {}
+			variant_case_novalue(Op_cmpL_l8_l8) {}
+			variant_case_novalue(Op_cmpL_l8_imm) {}
+			variant_case_novalue(Op_ucmpL_l64_l64) {}
+			variant_case_novalue(Op_ucmpL_l64_imm) {}
+			variant_case_novalue(Op_ucmpL_l32_l32) {}
+			variant_case_novalue(Op_ucmpL_l32_imm) {}
+			variant_case_novalue(Op_ucmpL_l8_l8) {}
+			variant_case_novalue(Op_ucmpL_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
 
 			variant_case_novalue(Op_fadd_l64_l64) {}
@@ -643,12 +667,6 @@ class FunctionValidator {
 			variant_case_novalue(Op_udiv_l64_imm) {}
 			variant_case_novalue(Op_udiv_l32_l32) {}
 			variant_case_novalue(Op_udiv_l32_imm) {}
-			variant_case_novalue(Op_ucmpG_l64_l64) {}
-			variant_case_novalue(Op_ucmpG_l64_imm) {}
-			variant_case_novalue(Op_ucmpG_l32_l32) {}
-			variant_case_novalue(Op_ucmpG_l32_imm) {}
-			variant_case_novalue(Op_ucmpG_l8_l8) {}
-			variant_case_novalue(Op_ucmpG_l8_imm) {}
 			variant_case_novalue(Op_log_and_l8_l8) {}
 			variant_case_novalue(Op_log_and_l8_imm) {}
 			variant_case_novalue(Op_log_or_l8_l8) {}
@@ -747,7 +765,12 @@ class FunctionValidator {
 			variant_case_novalue(Op_output_l64) {}
 			variant_case_novalue(Op_input_l32) {}
 			variant_case_novalue(Op_output_l32) {}
-			variant_case_novalue(Op_setVTable_lptr_type) {}
+			variant_case(Op_setVTable_lptr_type, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				if (pointer_type.inner != instr.arg1.type_name)
+					throw VTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_downcast_lptr_lptr) {}
 			variant_case_novalue(Op_free_lptr) {}
 			variant_case(Op_store_lptr_lany, instr) {
@@ -814,6 +837,18 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
+			variant_case(Op_dynTableLea_lptr_lptr, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+
+				if (destination.inner != table_type.inner)
+					throw DynamicTableTypeMismatchError(instr);
+			}
 			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
@@ -825,6 +860,15 @@ class FunctionValidator {
 				if (typeName(*destination) != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
+			variant_case(Op_dynTableLoad_lany_lptr, instr) {
+				const auto& destination = current_stack.at(instr.arg0.var_name);
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				if (typeName(*destination) != table_type.inner)
+					throw DynamicTableTypeMismatchError(instr);
+			}
 			variant_case(Op_fixedSizeTableStore_lptr_lany, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
@@ -835,6 +879,25 @@ class FunctionValidator {
 
 				if (table_type.inner != typeName(*source))
 					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			variant_case(Op_dynTableStore_lptr_lany, instr) {
+				const auto& source = current_stack.at(instr.arg1.var_name);
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+
+				if (table_type.inner != typeName(*source))
+					throw DynamicTableTypeMismatchError(instr);
+			}
+			variant_case(Op_dynTableReAlloc_lptr_type, instr) {
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+
+				base::StrID wanted_type = instr.arg1.type_name;
+				if (wanted_type != table_type.name) throw InvalidArgumentTypeError(instr.arg1);
 			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}

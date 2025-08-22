@@ -1,0 +1,57 @@
+type dynamic_table: tablei64 i64
+type pointer: ptr_tablei64 tablei64
+
+function main {
+    
+    init_lany_type aggr, i64;
+    init_lany_type iter, i64;
+    init_lany_type val, i64;
+    init_lany_type tbl_ptr, ptr_tablei64;
+    mov_l64_imm val, 5;
+    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
+    ext_l64 val;
+    mov_l64_imm iter, 5;
+
+    label Loop1;
+        sub_l64_imm iter, 1;
+        dynTableStore_lptr_lany tbl_ptr, val;
+        ext_l64 iter;
+        sub_l64_imm val, 1;
+        cmpEq_l64_imm iter, 0;
+        jmpIfNot_label Loop1;
+    
+    mov_l64_imm val, 10;
+    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
+    ext_l64 val;
+
+    mov_l64_imm iter, 10;
+    label Loop2;
+        sub_l64_imm iter, 1;
+        dynTableStore_lptr_lany tbl_ptr, val;
+        ext_l64 iter;
+        sub_l64_imm val, 1;
+        cmpEq_l64_imm iter, 5;
+        jmpIfNot_label Loop2;
+    
+    mov_l64_imm aggr, 0;
+    mov_l64_imm iter, 10;
+    label Loop3;
+        sub_l64_imm iter, 1;
+        dynTableLoad_lany_lptr val, tbl_ptr;
+        ext_l64 iter;
+        add_l64_l64 aggr, val;
+        cmpEq_l64_imm iter, 0;
+        jmpIfNot_label Loop3;
+
+    output_l64 aggr;
+    free_lptr tbl_ptr;
+
+
+    deinit; # *tbl_ptr
+    deinit; # val
+    deinit; # iter
+    deinit; # aggr
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}
