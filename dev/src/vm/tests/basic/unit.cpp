@@ -55,7 +55,7 @@ private:
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
 
-	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5, true); }
+	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5); }
 
 	void globalNoConstructorTest() {
 		loadInvalidDbc(

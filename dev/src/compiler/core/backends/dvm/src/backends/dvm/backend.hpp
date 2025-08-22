@@ -29,8 +29,7 @@ namespace compiler::backend_vm {
 			query::Context&                         ctx,
 			base::StrID                             module_id,
 			const std::vector<CRef<lir::Function>>& functions,
-			const std::vector<BackendDVMGlobal>&    globals,
-			bool                                    add_builtin_library
+			const std::vector<BackendDVMGlobal>&    globals
 		);
 
 		/**

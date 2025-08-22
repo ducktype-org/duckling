@@ -594,13 +594,10 @@ namespace compiler::backend_vm {
 		query::Context&                         query_ctx,
 		base::StrID                             module_id,
 		const std::vector<CRef<lir::Function>>& functions,
-		const std::vector<BackendDVMGlobal>&    globals,
-		bool                                    add_builtin_library
+		const std::vector<BackendDVMGlobal>&    globals
 	):
 		  module_id(module_id),
-		  valid_program(
-			  add_builtin_library ? ValidProgram::withStdlib() : ValidProgram::withBuiltins()
-		  ) {
+		  valid_program(ValidProgram::withStdlib()) {
 		CodeCollection                                      compiled_types;
 		CodeCollection                                      compiled_collection;
 		base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
@@ -669,6 +666,8 @@ namespace compiler::backend_vm {
 	}
 
 	vm::code::CodeCollection Module::build() const {
-		return valid_program.produceValidCodeCollection();
+		auto return_collection            = valid_program.produceValidCodeCollection();
+		return_collection.contains_stdlib = true;
+		return return_collection;
 	}
 }

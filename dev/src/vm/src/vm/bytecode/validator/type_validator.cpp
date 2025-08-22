@@ -156,8 +156,9 @@ namespace {
 	}
 
 	/**
-	* @brief Validates that a method's FunctionType first parameter is a pointer to the 'this' object.
-	*/
+	 * @brief Validates that a method's FunctionType first parameter is a pointer to the 'this'
+	 * object.
+	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateMethodFirstArgument(
 		const InheritableType& inh, const FunctionType& func_type, const TypeContext& ctx
@@ -171,8 +172,8 @@ namespace {
 	}
 
 	/**
-	* @brief Validates that a function signature's first argument is a pointer to the 'this' object.
-	*/
+	 * @brief Validates that a function signature's first argument is a pointer to the 'this' object.
+	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateMethodFirstArgumentImpl(
 		const InheritableType& inh,

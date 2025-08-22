@@ -78,7 +78,7 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data, true);
+				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
 				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
@@ -121,18 +121,17 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id, bool add_builtin_library
+		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
-		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data, add_builtin_library);
+		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
 
 		vm::PID pid{};
 
 		return vm::api::spawn()
 		    .and_then([&](vm::api::ProcessInfo process) {
 				pid = process.pid;
-				if (add_builtin_library) return vm::api::loadStdlib(pid);
 				return std::expected<void, vm::api::ApiError>{};
 			})
 		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection }); })

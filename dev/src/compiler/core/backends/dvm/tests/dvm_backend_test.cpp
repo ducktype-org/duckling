@@ -36,7 +36,7 @@ protected:
 	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
 
 private:
-	auto getModuleFromPath(std::string module_path, bool add_stdlib) {
+	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
 		std::vector<CRef<lir::Function>>                    funcs;
@@ -86,7 +86,7 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
-			backend_vm::Module m{ ctx, module_name, funcs, globals, add_stdlib };
+			backend_vm::Module m{ ctx, module_name, funcs, globals };
 			code = m.build();
 		});
 		return code;
@@ -94,18 +94,16 @@ private:
 
 	void runTest(
 		std::string                        module_path,
-		const base::Optional<std::string>& input      = {},
-		const base::Optional<std::string>& output     = {},
-		const std::vector<std::string>&    args       = {},
-		i64                                exit_code  = 0,
-		bool                               add_stdlib = true
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
+		i64                                exit_code = 0
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path), add_stdlib);
-
+		auto code = getModuleFromPath(std::move(module_path));
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
-		runTestOnVm(code, input, output, args, exit_code, false);
+		runTestOnVm(code, input, output, args, exit_code);
 	}
 
 	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }

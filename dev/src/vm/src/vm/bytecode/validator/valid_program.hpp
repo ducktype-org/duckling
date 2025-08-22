@@ -25,6 +25,8 @@ namespace vm::code {
 		ValidProgram() = default;
 
 	public:
+		bool is_stdlib_included = false;
+
 		ValidProgram(const ValidProgram&)            = default;
 		ValidProgram(ValidProgram&&) noexcept        = default;
 		ValidProgram& operator=(const ValidProgram&) = default;

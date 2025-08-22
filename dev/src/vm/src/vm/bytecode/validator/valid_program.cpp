@@ -20,8 +20,9 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 vm::code::ValidProgram vm::code::ValidProgram::withStdlib() {
-	auto program = withBuiltins();
-	auto code    = *builtins::getStdlibModule().get();
+	auto program               = withBuiltins();
+	program.is_stdlib_included = true;
+	auto code                  = *builtins::getStdlibModule().get();
 	return program.newInsertCode(code);
 }
 
@@ -48,6 +49,7 @@ void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) 
 	insertGlobals(collection.global_data);
 
 	insertFunctions(collection.functions);
+	is_stdlib_included |= collection.contains_stdlib;
 	valid = true;
 }
 
@@ -98,9 +100,9 @@ const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() 
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return {
-		.functions = { function_map.begin(), function_map.end() },
-		.types = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
-		.global_data = { globals_map.begin(), globals_map.end() },
-	};
+	return { .functions = { function_map.begin(), function_map.end() },
+		     .types
+		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
+		     .global_data     = { globals_map.begin(), globals_map.end() },
+		     .contains_stdlib = is_stdlib_included };
 }
