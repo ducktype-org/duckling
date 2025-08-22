@@ -253,6 +253,8 @@ clah::Clah getClahForMain() {
 
 					query::printStats();
 
+					query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
+
 					return 0;
 				})
 		)
