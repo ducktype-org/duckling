@@ -45,6 +45,12 @@ namespace compiler::frontend {
 		 */
 		void update();
 
+		/**
+		 * @brief Removes the file content from cache and deletes the SourceFile.
+		 * @note This should only be called from the Language Server (LS) context.
+		 *       It is not intended for general use.
+		 *       The file content is removed from cache and the SourceFile is erased from all maps.
+		 */
 		void erase();
 
 		friend class ModuleTreeModifier;

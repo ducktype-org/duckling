@@ -1,5 +1,5 @@
 #include "source_file.hpp"
-#ifdef DEBUG
+#if defined(BUILD_TYPE_DEV)
 	#include <unordered_set>
 #endif
 
@@ -15,14 +15,15 @@ namespace {
 	// Maps absolute file paths to their corresponding FileID
 	base::HashMap<std::filesystem::path, compiler::frontend::FileID> file_id_map;
 
-#ifdef DEBUG
+#if defined(BUILD_TYPE_DEV)
 	// Tracks FileIDs of files that have changed (debug only)
-	std::unordered_set<compiler::frontend::FileID> changed_files_ids;
+	std::unordered_set<compiler::frontend::FileID> removed_files_ids;
 #endif
 
 	/**
 	 * Static map that stores all SourceFile instances by their FileID.
 	 * Used for global access to source files.
+	 * @TODO: change this #1209
 	 */
 	base::StableHashMap<compiler::frontend::FileID, compiler::frontend::SourceFile> file_map;
 }
@@ -63,13 +64,11 @@ namespace compiler::frontend {
 	}
 
 	Ref<SourceFile> SourceFile::getSourceFile(FileID id) {
-#ifdef DEBUG
 		CORE_ASSERT(
-			!changed_files_ids.contains(id),
+			!removed_files_ids.contains(id),
 			"SourceFile with ID " + std::to_string(id.asInt())
-				+ " has changed since last query. Please use the new FileID."
+				+ " was removed, please use a different ID or recreate it."
 		);
-#endif
 		CORE_ASSERT(
 			file_map.contains(id),
 			"SourceFile with ID " + std::to_string(id.asInt()) + " does not exist!"
@@ -101,6 +100,9 @@ namespace compiler::frontend {
 		to_content.erase(abs_path);
 		file_id_map.erase(abs_path);
 		// Remove from file map
+#if defined(BUILD_TYPE_DEV)
+		removed_files_ids.insert(id);
+#endif
 		file_map.erase(id);
 	}
 

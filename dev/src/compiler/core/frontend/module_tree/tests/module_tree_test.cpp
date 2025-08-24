@@ -260,7 +260,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// Test addSourceFile
 			auto new_src = root_dir.createSubFile("new src", "newsrc.duck");
-			ModuleTreeModifier::addSourceFile(ctx, mt, new_src);
+			ModuleTreeModifier::addSourceFile(mt, new_src);
 			bool found_newsrc = false;
 			for (auto& sf: mt->getSourceFiles())
 				if (sf->getFile().name() == "newsrc.duck") found_newsrc = true;
@@ -276,27 +276,27 @@ private:
 
 			// Test setMainSourceFile (remove first if exists)
 			if (mt->hasMainSourceFile()) {
-				ModuleTreeModifier::removeMainSourceFile(ctx, mt);
+				ModuleTreeModifier::removeMainSourceFile(mt);
 				ASSERT_EQUAL(false, mt->hasMainSourceFile());
 			}
 			auto new_main = root_dir.createSubFile("main2", "main2.dmf");
-			ModuleTreeModifier::setMainSourceFile(ctx, mt, new_main);
+			ModuleTreeModifier::setMainSourceFile(mt, new_main);
 			ASSERT_EQUAL("main2.dmf", mt->getMainSourceFile()->getFile().name());
 
 			// Test removeMainSourceFile explicitly
-			ModuleTreeModifier::removeMainSourceFile(ctx, mt);
+			ModuleTreeModifier::removeMainSourceFile(mt);
 			ASSERT_EQUAL(false, mt->hasMainSourceFile());
 
 			// Test addOtherFile
 			auto other_file = root_dir.createSubFile("other3", "other3.txt");
-			ModuleTreeModifier::addOtherFile(ctx, mt, other_file);
+			ModuleTreeModifier::addOtherFile(mt, other_file);
 			bool found_other3 = false;
 			for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
 				if (f.name() == "other3.txt") found_other3 = true;
 			ASSERT_TRUE(found_other3);
 
 			// Test removeOtherFile
-			ModuleTreeModifier::removeOtherFile(ctx, mt, other_file);
+			ModuleTreeModifier::removeOtherFile(mt, other_file);
 			bool still_other3 = false;
 			for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
 				if (f.name() == "other3.txt") still_other3 = true;
@@ -305,24 +305,24 @@ private:
 			// Test addSubmodule and setParent/removeParent
 			auto sub_dir = root_dir.createSubDirectory("submod");
 			auto sub_mod = ModuleTreeBuilder::create(sub_dir);
-			ModuleTreeModifier::addSubmodule(ctx, mt, sub_mod);
+			ModuleTreeModifier::addSubmodule(mt, sub_mod);
 			ASSERT_TRUE(mt->getSubmodules().contains(sub_mod->getName()));
 			// Remove parent
-			ModuleTreeModifier::removeParent(ctx, sub_mod);
+			ModuleTreeModifier::removeParent(sub_mod);
 			ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
 			// Set parent again
-			ModuleTreeModifier::setParent(ctx, sub_mod, mt);
+			ModuleTreeModifier::setParent(sub_mod, mt);
 			ASSERT_EQUAL(mt->getID(), sub_mod->getParentModule().value()->getID());
 
 			// Test removeModule
 			auto sub_mod_id = sub_mod->getID();
-			ModuleTreeModifier::removeModule(ctx, sub_mod_id);
+			ModuleTreeModifier::removeModule(sub_mod_id);
 			ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("submod")));
 
 			// Test fileModified (should not throw)
 			auto src_file
 				= mt->getSourceFiles().empty() ? new_src : mt->getSourceFiles().front()->getFile();
-			ModuleTreeModifier::fileModified(ctx, src_file);
+			ModuleTreeModifier::fileModified(src_file);
 
 			// Test removeModule with a module that has source files and main source file
 			{
@@ -334,7 +334,7 @@ private:
 				auto removable_sub_mod   = ModuleTreeBuilder::create(removable_sub_dir);
 
 				// Add as submodule
-				ModuleTreeModifier::addSubmodule(ctx, mt, removable_sub_mod);
+				ModuleTreeModifier::addSubmodule(mt, removable_sub_mod);
 				ASSERT_TRUE(mt->getSubmodules().contains(removable_sub_mod->getName()));
 
 				// Check that main and source files exist in SourceFile::file_map
@@ -352,7 +352,7 @@ private:
 
 				// Remove the submodule
 				auto removable_sub_mod_id = removable_sub_mod->getID();
-				ModuleTreeModifier::removeModule(ctx, removable_sub_mod_id);
+				ModuleTreeModifier::removeModule(removable_sub_mod_id);
 				ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("removable")));
 			}
 		});

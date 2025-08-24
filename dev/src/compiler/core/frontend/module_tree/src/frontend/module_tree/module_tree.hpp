@@ -50,6 +50,9 @@ namespace compiler::frontend {
 	 * - Supports pretty-printing for debugging and inspection.
 	 * - Immutable after construction; use ModuleTreeModifier for changes.
 	 * - Submodules form a tree structure, each with a parent reference.
+	 * - Source files and other files can have any path, including outside the module directory.
+	 *   Files may be virtual or real; their location on disk does not affect their association
+	 *   with the module.
 	 */
 	class ModuleTree final {
 		friend class ModuleTreeBuilder;
@@ -129,6 +132,7 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		ModuleID getID() const;
 
+		// @TODO: fix this when implementing #1209
 		// ModuleTree(const ModuleTree&) = delete;
 		// ModuleTree& operator=(const ModuleTree&) = delete;
 
@@ -286,9 +290,7 @@ namespace compiler::frontend {
 		 * @param module The module to modify.
 		 * @param file The file to add.
 		 */
-		static void addSourceFile(
-			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-		);
+		static void addSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
 
 		/**
 		 * Removes a source file from its module by FileID.
@@ -303,16 +305,14 @@ namespace compiler::frontend {
 		 * @param module The module to modify.
 		 * @param file The file to set as main source file.
 		 */
-		static void setMainSourceFile(
-			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-		);
+		static void setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
 
 		/**
 		 * Removes the main source file from the given module.
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 */
-		static void removeMainSourceFile(query::Context& ctx, base::Ref<ModuleTree> module);
+		static void removeMainSourceFile(base::Ref<ModuleTree> module);
 
 		/**
 		 * Adds a submodule to the given module.
@@ -320,9 +320,7 @@ namespace compiler::frontend {
 		 * @param module The module to modify.
 		 * @param submodule The submodule to add.
 		 */
-		static void addSubmodule(
-			query::Context& ctx, base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
-		);
+		static void addSubmodule(base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule);
 
 		/**
 		 * Adds an "other" file to the given module.
@@ -330,9 +328,7 @@ namespace compiler::frontend {
 		 * @param module The module to modify.
 		 * @param file The file to add.
 		 */
-		static void addOtherFile(
-			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-		);
+		static void addOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
 
 		/**
 		 * Removes an "other" file from the given module.
@@ -340,9 +336,7 @@ namespace compiler::frontend {
 		 * @param module The module to modify.
 		 * @param file The file to remove.
 		 */
-		static void removeOtherFile(
-			query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-		);
+		static void removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
 
 		/**
 		 * Sets the parent of the given module.
@@ -353,9 +347,7 @@ namespace compiler::frontend {
 		 * @param parent The new parent module (optional).
 		 */
 		static void setParent(
-			query::Context&                       ctx,
-			base::Ref<ModuleTree>                 module,
-			base::Optional<base::Ref<ModuleTree>> parent
+			base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
 		);
 
 		/**
@@ -363,7 +355,7 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 */
-		static void removeParent(query::Context& ctx, base::Ref<ModuleTree> module);
+		static void removeParent(base::Ref<ModuleTree> module);
 
 		/**
 		 * Removes the module with the given ModuleID from the module map.
@@ -371,14 +363,14 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param module_id The ModuleID to remove.
 		 */
-		static void removeModule(query::Context& ctx, ModuleID module_id);
+		static void removeModule(ModuleID module_id);
 
 		/**
 		 * Notifies that a file has been modified and updates its SourceFile.
 		 * @param ctx Query context.
 		 * @param file The file that was modified.
 		 */
-		static void fileModified(query::Context& ctx, const fs::File& file);
+		static void fileModified(const fs::File& file);
 
 	private:
 		/**

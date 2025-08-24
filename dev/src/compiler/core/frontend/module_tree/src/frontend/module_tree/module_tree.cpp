@@ -11,7 +11,7 @@
 #include <regex>
 #include <sstream>
 
-#ifdef DEBUG
+#if defined(BUILD_TYPE_DEV)
 	#include <unordered_set>
 #endif
 
@@ -28,6 +28,7 @@ namespace {
 	/**
 	 * Static map that stores all ModuleTree instances by their ModuleID.
 	 * Used for global access to modules.
+	 * @TODO: change this #1209
 	 */
 	base::StableHashMap<compiler::frontend::ModuleID, compiler::frontend::ModuleTree> module_map;
 
@@ -52,19 +53,21 @@ namespace {
 		std::smatch match;
 		return !std::regex_match(dirname, match, reject_directory_regex);
 	}
+
+#if defined(BUILD_TYPE_DEV)
+	std::unordered_set<compiler::frontend::ModuleID> removed_modules_ids;
+#endif
 }
 
 namespace compiler::frontend {
 
 
 	Ref<ModuleTree> ModuleTree::getModule(ModuleID id) {
-#ifdef DEBUG
 		CORE_ASSERT(
-			!changed_modules_ids.contains(id),
+			!removed_modules_ids.contains(id),
 			"Module with ID " + std::to_string(id.asInt())
-				+ " has changed since last query. Please use the new ModuleID."
+				+ " was removed, please use a different ID or recreate it."
 		);
-#endif
 		CORE_ASSERT(
 			module_map.contains(id),
 			"Module with ID " + std::to_string(id.asInt()) + " does not exist!"
@@ -280,6 +283,7 @@ namespace compiler::frontend {
 		ModuleID   module_id = module.getID();
 		module_map.put(module_id, std::move(module));
 		auto module_ref = module_map.atMaybe(module_id).value();
+		CORE_ASSERT(module_ref->getID() == module_id, "Module ID mismatch");
 
 		// Set ID and name
 		module_ref->m_name = m_name;
@@ -293,15 +297,16 @@ namespace compiler::frontend {
 			auto source_file = SourceFile::create(file_path, module_ref);
 			module_ref->m_source_files.push_back(source_file);
 		}
-
 		// Transfer other data from builder to module
 		module_ref->m_submodules  = std::move(m_submodules);
 		module_ref->m_other_files = std::move(m_other_files);
 		module_ref->m_parent      = m_parent;
 
 		// Set parent references for submodules
-		for (const auto& [name, submodule]: module_ref->m_submodules)
+		for (const auto& [name, submodule]: module_ref->m_submodules) {
+			CORE_ASSERT(!submodule->m_parent.has_value(), "Submodule already has a parent");
 			submodule->m_parent = module_ref;
+		}
 
 		return module_ref;
 	}
@@ -310,9 +315,7 @@ namespace compiler::frontend {
 	 * ModuleTreeModifier Implementation
 	 *********************/
 
-	void ModuleTreeModifier::addSourceFile(
-		[[maybe_unused]] query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-	) {
+	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		module->m_source_files.push_back(SourceFile::create(file, module));
 	}
 
@@ -334,9 +337,7 @@ namespace compiler::frontend {
 		source_files.erase(it);
 	}
 
-	void ModuleTreeModifier::setMainSourceFile(
-		[[maybe_unused]] query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-	) {
+	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		CORE_ASSERT(
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
@@ -345,9 +346,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::addSubmodule(
-		[[maybe_unused]] query::Context& ctx,
-		base::Ref<ModuleTree>            module,
-		base::Ref<ModuleTree>            submodule
+		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
 		base::StrID name = submodule->getName();
 		CORE_ASSERT(
@@ -361,6 +360,7 @@ namespace compiler::frontend {
 			)
 		);
 
+
 		module->m_submodules.put(name, submodule);
 
 		CORE_ASSERT(
@@ -370,9 +370,7 @@ namespace compiler::frontend {
 		submodule->m_parent = module;
 	}
 
-	void ModuleTreeModifier::addOtherFile(
-		[[maybe_unused]] query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-	) {
+	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
@@ -397,9 +395,7 @@ namespace compiler::frontend {
 		// module->update();
 	}
 
-	void ModuleTreeModifier::removeMainSourceFile(
-		[[maybe_unused]] query::Context& ctx, base::Ref<ModuleTree> module
-	) {
+	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
 		CORE_ASSERT(
 			module->m_main_source_file.has_value(),
 			base::strConcat(
@@ -409,9 +405,7 @@ namespace compiler::frontend {
 		module->m_main_source_file = {};
 	}
 
-	void ModuleTreeModifier::removeOtherFile(
-		[[maybe_unused]] query::Context& ctx, base::Ref<ModuleTree> module, const fs::File& file
-	) {
+	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
@@ -446,17 +440,13 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::setParent(
-		[[maybe_unused]] query::Context&      ctx,
-		base::Ref<ModuleTree>                 module,
-		base::Optional<base::Ref<ModuleTree>> parent
+		base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
 	) {
 		CORE_ASSERT(parent.has_value(), "Parent module must be specified");
-		addSubmodule(ctx, parent.value(), module);
+		addSubmodule(parent.value(), module);
 	}
 
-	void ModuleTreeModifier::removeParent(
-		[[maybe_unused]] query::Context& ctx, base::Ref<ModuleTree> module
-	) {
+	void ModuleTreeModifier::removeParent(base::Ref<ModuleTree> module) {
 		CORE_ASSERT(
 			module->m_parent.has_value(),
 			base::strConcat("Module ", module->getName().strView(), " does not have a parent")
@@ -482,7 +472,7 @@ namespace compiler::frontend {
 		module->m_parent = {};
 	}
 
-	void ModuleTreeModifier::removeModule([[maybe_unused]] query::Context& ctx, ModuleID module_id) {
+	void ModuleTreeModifier::removeModule(ModuleID module_id) {
 		CORE_ASSERT(module_map.contains(module_id), "Module must exist");
 
 		auto module_ref = module_map.atMaybe(module_id).value();
@@ -515,12 +505,13 @@ namespace compiler::frontend {
 		}
 
 		// Remove from static map
+#if defined(BUILD_TYPE_DEV)
+		removed_modules_ids.insert(module_id);
+#endif
 		module_map.erase(module_id);
 	}
 
-	void ModuleTreeModifier::fileModified(
-		[[maybe_unused]] query::Context& ctx, const fs::File& file
-	) {
+	void ModuleTreeModifier::fileModified(const fs::File& file) {
 		Ref<SourceFile> source_file = SourceFile::getSourceFile(file);
 		source_file->update();
 	}
