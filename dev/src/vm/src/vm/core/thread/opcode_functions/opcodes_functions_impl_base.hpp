@@ -34,6 +34,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/memory/pointer.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -591,6 +592,7 @@ namespace vm {
 			thread.process_memory.freeBlock(
 				readFromStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
+			writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
 		}
 		FUNCTION_CONT(1);
 	}
