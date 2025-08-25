@@ -29,7 +29,6 @@
 
 #include "opcodes_functions_utils.hpp"
 
-#include <unistd.h>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -235,6 +234,7 @@ namespace vm {
 	}
 
 
+	// @TODO: Check for over/under flows. This should be done in #1216.
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
 	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
 	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
@@ -597,7 +597,7 @@ namespace vm {
 			auto       block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto       block     = frame->block_stack[block_idx];
 			const auto new_dst   = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			writeToStack(local_stack, instr->arg0, new_dst);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}

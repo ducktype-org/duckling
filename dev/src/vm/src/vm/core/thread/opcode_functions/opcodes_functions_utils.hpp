@@ -26,7 +26,7 @@ inline static void writeToStack(std::byte* stack, u64 position, const T& value) 
 }
 
 /**
- * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
+ * @brief Reads a value of a given TYPE from the beginning of the given view.
  */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
@@ -35,7 +35,7 @@ inline static T readFromView(base::ModRawView view) {
 }
 
 /**
- * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
+ * @brief Writes a value of a given TYPE to the beginning of the given view.
  */
 template<typename T>
 [[gnu::always_inline]]
