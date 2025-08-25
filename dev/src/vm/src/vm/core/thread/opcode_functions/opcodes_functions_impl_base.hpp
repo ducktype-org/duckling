@@ -29,7 +29,6 @@
 
 #include "opcodes_functions_utils.hpp"
 
-
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
@@ -84,92 +83,89 @@ namespace vm {
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{                                                                                         \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, value);                                  \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{                                                                                         \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                  \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];   \
-			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];   \
-			thread.process_memory.copyPointedData(                                                \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
-			);                                                                                    \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                       \
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                       \
-			thread.process_memory.copyPointedData(                                                \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
-			);                                                                                    \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                       \
-			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];   \
-			thread.process_memory.copyPointedData(                                                \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
-			);                                                                                    \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];   \
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                       \
-			thread.process_memory.copyPointedData(                                                \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block) \
-			);                                                                                    \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {            \
-		{                                                                                         \
-			if (frame->flags.flag) {                                                              \
-				auto dst_block                                                                    \
-					= frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];          \
-				auto src_block                                                                    \
-					= frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];          \
-				thread.process_memory.copyPointedData(                                            \
-					{ dst_block, 0 },                                                             \
-					{ src_block, 0 },                                                             \
-					thread.process_memory.getBlockType(dst_block)                                 \
-				);                                                                                \
-			}                                                                                     \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
+		{                                                                                           \
+			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                    \
+			writeToStack<TYPE>(local_stack, instr->arg0, value);                                    \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
+		{                                                                                           \
+			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                    \
+			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                              \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {               \
+		{                                                                                           \
+			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];     \
+			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];     \
+			thread.process_memory.copyPointedData(                                                  \
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
+			);                                                                                      \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {               \
+		{                                                                                           \
+			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                         \
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                         \
+			thread.process_memory.copyPointedData(                                                  \
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
+			);                                                                                      \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {               \
+		{                                                                                           \
+			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                         \
+			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];     \
+			thread.process_memory.copyPointedData(                                                  \
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
+			);                                                                                      \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {               \
+		{                                                                                           \
+			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];     \
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                         \
+			thread.process_memory.copyPointedData(                                                  \
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
+			);                                                                                      \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {              \
+		{                                                                                           \
+			if (frame->flags.flag) {                                                                \
+				auto dst_block                                                                      \
+					= frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];            \
+				auto src_block                                                                      \
+					= frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];            \
+				thread.process_memory.copyPointedData(                                              \
+					{ dst_block, 0 },                                                               \
+					{ src_block, 0 },                                                               \
+					thread.process_memory.getBlockType(dst_block)                                   \
+				);                                                                                  \
+			}                                                                                       \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
+	}                                                                                               \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                       \
+		{                                                                                           \
+			if (frame->flags.flag)                                                                  \
+				writeToStack<TYPE>(local_stack, instr->arg0, vm::safeReadBytes<TYPE>(instr->arg1)); \
+		}                                                                                           \
+		FUNCTION_CONT(1);                                                                           \
 	}
 
 	DEFINE_MOVE_OPS(64, i64)
 	DEFINE_MOVE_OPS(32, i32)
 	DEFINE_MOVE_OPS(16, i16)
 	DEFINE_MOVE_OPS(8, i8)
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
-		{ writeToStack<i64>(local_stack, instr->arg0, frame->regs.p64_reg_0); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
-		{ frame->regs.p64_reg_0 = readFromStack<i64>(local_stack, instr->arg0); }
-		FUNCTION_CONT(1);
-	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
@@ -312,12 +308,20 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
 	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
 	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
+	DEFINE_COMPARISON_OP(cmpL, 64, i64, <)
+	DEFINE_COMPARISON_OP(ucmpL, 64, u64, <)
+
 	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
 	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
 	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
-	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
-	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
-	DEFINE_COMPARISON_OP(ucmpG, 8, std::uint8_t, >)
+	DEFINE_COMPARISON_OP(cmpL, 32, i32, <)
+	DEFINE_COMPARISON_OP(ucmpL, 32, u32, <)
+
+	DEFINE_COMPARISON_OP(cmpEq, 8, i8, ==)
+	DEFINE_COMPARISON_OP(cmpG, 8, i8, >)
+	DEFINE_COMPARISON_OP(ucmpG, 8, u8, >)
+	DEFINE_COMPARISON_OP(cmpL, 8, i8, <)
+	DEFINE_COMPARISON_OP(ucmpL, 8, u8, <)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
@@ -811,14 +815,13 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
-			const auto dst         = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       element_type
-				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset = usize(index * i64(element_type->getSize()));
+			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
+			auto data_offset  = usize(index * element_type->getSize());
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), data_offset }
@@ -828,13 +831,45 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
+			auto data_offset  = usize(index * element_type->getSize());
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { tbl_pointer.getBlock(), data_offset }
+			);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_lptr_lany)(FUNCTION_ARGS) {
+		{
+			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
+			tbl_pointer.movePointer(data_offset);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer{ src_block, 0 };
+
+			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto element_type
-				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index       = readFromStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset = index * i64(element_type->getSize());
+			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
@@ -842,6 +877,23 @@ namespace vm {
 			auto src_pointer   = Pointer(src_block, 0);
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_lany_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+
+			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
+
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -854,12 +906,32 @@ namespace vm {
 
 			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
 
-			auto index = readFromStack<i64>(local_stack, instr[1].arg0);
-			auto element_type
-				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * i64(element_type->getSize()));
+			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointed_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
+			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
+
+			if (tbl_pointer.isNull()) {
+				auto new_block
+					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
+				const Pointer new_dst
+					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
+				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			} else {
+				auto tbl_block = tbl_pointer.getBlock();
+				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
+			}
 		}
 		FUNCTION_CONT(2);
 	}
@@ -878,7 +950,7 @@ namespace vm {
 
 			thread.handleBreakpoint();
 
-			// Restore current registers and flow.
+			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
 			frame       = thread.runtime_data.frame_stack_current;
 			instr       = frame->instr;

@@ -1,0 +1,8 @@
+type dynamic_table: dtablei64 i64
+
+function main {
+    init_lany_type evil, dtablei64;
+    deinit;
+    deinit;
+    ret;
+}

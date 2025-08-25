@@ -66,10 +66,17 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 		writeToView<TYPE>(view, VALUE);                                                        \
 	} while (false)
 
-#if defined(__clang__)
-	#define CLANG_MUST_TAIL [[clang::musttail]]
+#if defined(__clang__) && __clang__ >= 13
+	#define MUST_TAIL [[clang::musttail]]
+#elif defined(__GNUG__) && __GNUG__ >= 15
+	#define MUST_TAIL [[gnu::musttail]]
 #else
-	#define CLANG_MUST_TAIL  //@todo in the newest GCC version there is a musttail attribute
+	#define MUST_TAIL
+
+	#ifdef USE_TAIL_CALLS
+		#warning \
+			"USE_TAIL_CALLS without support from compiler. This can potentially cause stack-overflow."
+	#endif
 #endif
 
 /**
@@ -78,8 +85,8 @@ inline static void writeToView(base::ModRawView view, const T& value) {
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                           \
-	IF_TC({ CLANG_MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
+#define OPFUN_CONT(i)                                                                     \
+	IF_TC({ MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 

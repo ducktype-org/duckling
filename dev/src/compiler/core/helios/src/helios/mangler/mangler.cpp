@@ -150,6 +150,9 @@ namespace compiler::helios::mangler {
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
 		 * @note: See mangling-scheme.md for details
+		 *
+		 * @todo: This is still a little simplified, there should probably be at least an additional
+		 * layer for things like macros and there will probably be other elements that create scopes.
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
@@ -159,47 +162,31 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_scope  = scope_id;
-				auto current_pst_id = symbolPst(symbol_id).unlock(ctx)->getID();
+				auto current_pst = symbolPst(symbol_id).unlock(ctx);
 				while (true) {
-					auto parent_scope = parent(current_scope);
-					if (!parent_scope.has_value()) break;
+					auto ancestor     = current_pst;
+					auto ancestor_opt = ancestor->getParent();
 
-					auto symbols_in_parent
-						= *ctx.query<compiler::helios::QuerySymbolsInScope>(parent_scope.value())
-					           .get();
-					for (const auto& sym: symbols_in_parent) {
-						auto pst_sym = symbolPst(sym).unlock(ctx);
+					while (ancestor_opt) {
+						ancestor = ancestor_opt.value().unlock(ctx);
 
-						if (pst_sym->getElementKind() == pst::ElementKind::Namespace) {
-							auto nmsp = pst_sym.dynamicCast<pst::Namespace>().value();
-							auto body = nmsp->getBody().unlock(ctx);
-
-							for (auto&& child_lck: body->viewChildren()) {
-								auto child = child_lck.unlock(ctx);
-
-								if (child->getID() == current_pst_id) {
-									path_parts.push_back(identifier(nmsp->getName().str()));
-									current_pst_id = pst_sym->getID();
-								}
-							}
-						} else if (pst_sym->getElementKind() == pst::ElementKind::Class) {
-							auto cls  = pst_sym.dynamicCast<pst::Class>().value();
-							auto body = cls->getBody().unlock(ctx);
-
-							for (auto&& child_lck: body->viewChildren()) {
-								auto child = child_lck.unlock(ctx);
-
-								if (child->getID() == current_pst_id) {
-									path_parts.push_back(identifier(cls->getName().str()));
-									current_pst_id = pst_sym->getID();
-								}
-							}
+						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
+							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
+							path_parts.push_back(identifier(nmsp->getName().str()));
+							current_pst = pst::Access<pst::LangElement>(ancestor);
+							break;
 						}
-						// @future: local classes (mangle enclosing function name)
+						if (ancestor->getElementKind() == pst::ElementKind::Class) {
+							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
+							path_parts.push_back(identifier(nmsp->getName().str()));
+							current_pst = pst::Access<pst::LangElement>(ancestor);
+							break;
+						}
+
+						ancestor_opt = ancestor->getParent();
 					}
 
-					current_scope = parent_scope.value();
+					if (!ancestor_opt) break;
 				}
 
 				std::string ret = "N";
