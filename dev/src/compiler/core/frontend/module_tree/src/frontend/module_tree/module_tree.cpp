@@ -2,6 +2,7 @@
 
 #include "queries.hpp"
 
+#include "base/stable_container.hpp"
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 
@@ -10,10 +11,6 @@
 #include <algorithm>
 #include <regex>
 #include <sstream>
-
-#if defined(BUILD_TYPE_DEV)
-	#include <unordered_set>
-#endif
 
 namespace {
 	/**
@@ -26,11 +23,9 @@ namespace {
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
 
 	/**
-	 * Static map that stores all ModuleTree instances by their ModuleID.
-	 * Used for global access to modules.
-	 * @TODO: change this #1209
+	 * StableVector that stores all ModuleTree instances.
 	 */
-	base::StableHashMap<compiler::frontend::ModuleID, compiler::frontend::ModuleTree> module_map;
+	base::StableVector<compiler::frontend::ModuleTree> modules;
 
 	/**
 	 * Checks if a file name is valid according to the reject regex.
@@ -53,10 +48,6 @@ namespace {
 		std::smatch match;
 		return !std::regex_match(dirname, match, reject_directory_regex);
 	}
-
-#if defined(BUILD_TYPE_DEV)
-	std::unordered_set<compiler::frontend::ModuleID> removed_modules_ids;
-#endif
 }
 
 namespace compiler::frontend {
