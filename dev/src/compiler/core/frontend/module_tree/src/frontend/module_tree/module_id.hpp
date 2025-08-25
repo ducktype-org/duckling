@@ -22,5 +22,11 @@ namespace compiler::frontend {
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
+		friend base::StrID moduleName(ModuleID module);
+		friend std::string printModuleTree(ModuleID module);
+		friend struct ImplementationOf_QueryParentModule;
+		friend struct ImplementationOf_QueryMainSourceFile;
+		friend struct ImplementationOf_QuerySourceFiles;
+		friend struct ImplementationOf_QuerySubmodules;
 	};
 }

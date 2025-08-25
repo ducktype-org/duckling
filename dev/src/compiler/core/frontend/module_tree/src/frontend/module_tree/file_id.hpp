@@ -1,10 +1,13 @@
 #pragma once
 
 #include <base/ref.hpp>
+#include <query_framework/context.hpp>
+#include <pst_parser/access.hpp>
 
 namespace compiler::frontend {
 
 	class SourceFile;
+	struct ModuleID;
 
 	struct FileID final {
 		[[nodiscard]]
@@ -23,5 +26,9 @@ namespace compiler::frontend {
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
+		friend struct ImplementationOf_QueryMainSourceFile;
+		friend struct ImplementationOf_QuerySourceFiles;
+		friend struct ImplementationOf_QueryFilePST;
+		friend ModuleID extendQueryModuleIDOfPST(query::Context& ctx, pst::AccessLocked<pst::LangElement> element);
 	};
 }

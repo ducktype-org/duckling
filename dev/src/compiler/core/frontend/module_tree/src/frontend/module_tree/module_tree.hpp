@@ -122,13 +122,7 @@ namespace compiler::frontend {
 		ModuleTree(const ModuleTree&) = delete;
 		ModuleTree& operator=(const ModuleTree&) = delete;
 	private:
-		/**
-		 * Constructs a ModuleTree with a new unique ModuleID.
-		 */
 		ModuleTree();
-
-
-		ModuleID m_id;
 
 		base::StrID m_name;
 
@@ -355,7 +349,7 @@ namespace compiler::frontend {
 		 * @param ctx Query context.
 		 * @param file The file that was modified.
 		 */
-		static void fileModified(const fs::File& file);
+		static void fileModified(FileID id);
 
 	private:
 		/**

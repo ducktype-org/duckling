@@ -2,7 +2,7 @@
 
 #include "queries.hpp"
 
-#include "base/stable_container.hpp"
+#include <base/stable_container.hpp>
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 
@@ -51,21 +51,6 @@ namespace {
 }
 
 namespace compiler::frontend {
-
-
-	Ref<ModuleTree> ModuleTree::getModule(ModuleID id) {
-		CORE_ASSERT(
-			!removed_modules_ids.contains(id),
-			"Module with ID " + std::to_string(id.asInt())
-				+ " was removed, please use a different ID or recreate it."
-		);
-		CORE_ASSERT(
-			module_map.contains(id),
-			"Module with ID " + std::to_string(id.asInt()) + " does not exist!"
-		);
-		return module_map.atMaybe(id).value();
-	}
-
 	Ref<ModuleTree> ModuleTreeBuilder::create(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
@@ -79,7 +64,7 @@ namespace compiler::frontend {
 		return builder->finalize();
 	}
 
-	ModuleTree::ModuleTree(): m_id(ModuleID::next()) {}
+	ModuleTree::ModuleTree() {}
 
 	base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return m_parent.value();
@@ -114,7 +99,7 @@ namespace compiler::frontend {
 		for (u32 i = 0; i < indentation - (indentation % 3); i++)
 			indent += (i % 3 == 0 ? "│" : " ");
 
-		output << indent << getName().strView() << "/ [id: " << getID().asInt() << "]\n";
+		output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
 		if (hasMainSourceFile())
 			output << indent << "├> " << getMainSourceFile()->getFile().name() << '\n';
@@ -132,8 +117,6 @@ namespace compiler::frontend {
 
 		return output.str();
 	}
-
-	ModuleID ModuleTree::getID() const { return m_id; }
 
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File& directory, const std::regex& file_reject, const std::regex& dir_reject
@@ -270,11 +253,9 @@ namespace compiler::frontend {
 		m_finalized = true;
 
 		// Create new ModuleTree instance
-		ModuleTree module;
-		ModuleID   module_id = module.getID();
-		module_map.put(module_id, std::move(module));
-		auto module_ref = module_map.atMaybe(module_id).value();
-		CORE_ASSERT(module_ref->getID() == module_id, "Module ID mismatch");
+		modules.pushBack(ModuleTree());
+		Ref<ModuleTree> module_ref = modules.last();
+		ModuleID mod_id(module_ref);
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
@@ -283,11 +264,11 @@ namespace compiler::frontend {
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
-				= SourceFile::create(m_main_source_file_path.value(), module_ref);
+				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 		}
 
 		for (const auto& file_path: m_source_file_paths) {
-			auto source_file = SourceFile::create(file_path, module_ref);
+			auto source_file = SourceFile::create(file_path, mod_id);
 			module_ref->m_source_files.push_back(source_file);
 		}
 
@@ -304,25 +285,24 @@ namespace compiler::frontend {
 	 *********************/
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		module->m_source_files.push_back(SourceFile::create(file, module));
+		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
 	}
 
 	void ModuleTreeModifier::removeSourceFile([[maybe_unused]] query::Context& ctx, FileID file_id) {
-		Ref<SourceFile>  file          = SourceFile::getSourceFile(file_id);
-		CRef<ModuleTree> linked_module = file->getModule();
-
-		Ref<ModuleTree> module = module_map.atMaybe(linked_module->getID()).value();
+		Ref<SourceFile> file          = file_id.ref;
+		Ref<ModuleTree> module        = file->getModule().ref;
 
 		auto& source_files = module->m_source_files;
 		auto  it
 			= std::ranges::find_if(source_files, [file_id](const base::Ref<SourceFile>& source_file) {
-				  return source_file->getID() == file_id;
+				  return source_file == file_id.ref;
 			  });
 
 		CORE_ASSERT(it != source_files.end(), "SourceFile not found in module");
 
-		SourceFile::getSourceFile(file_id)->erase();
+		//Delete SourceFiles
 		source_files.erase(it);
+		file->erase();
 	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -330,7 +310,7 @@ namespace compiler::frontend {
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
 		);
-		module->m_main_source_file = SourceFile::create(file, module);
+		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
 	}
 
 	void ModuleTreeModifier::addSubmodule(
@@ -444,13 +424,13 @@ namespace compiler::frontend {
 		auto  parent     = module->m_parent.value();
 		auto& submodules = parent->m_submodules;
 		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-            return pair.second->getID() == module->getID();
+            return pair.second == module;
         });
 		CORE_ASSERT(
 			it != submodules.end(),
 			base::strConcat(
-				"Submodule with ID ",
-				std::to_string(module->getID().asInt()),
+				"Submodule with name ",
+				module->getName(),
 				" does not exist in parent module ",
 				parent->getName().strView()
 			)
@@ -461,9 +441,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeModule(ModuleID module_id) {
-		CORE_ASSERT(module_map.contains(module_id), "Module must exist");
-
-		auto module_ref = module_map.atMaybe(module_id).value();
+		Ref<ModuleTree> module_ref = module_id.ref;
 		auto parent     = module_ref->m_parent;
 
 		// Remove all source files associated with this module
@@ -478,13 +456,13 @@ namespace compiler::frontend {
 			// Remove the submodule from the parent's submodules
 			auto& submodules = parent.value()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module_id](const auto& pair) {
-                return pair.second->getID() == module_id;
+                return pair.second == module_id.ref;
             });
 			CORE_ASSERT(
 				it != submodules.end(),
 				base::strConcat(
 					"Submodule with ID ",
-					std::to_string(module_id.asInt()),
+					module_id.ref->getName(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)
@@ -492,24 +470,20 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// Remove from static map
-#if defined(BUILD_TYPE_DEV)
-		removed_modules_ids.insert(module_id);
-#endif
-		module_map.erase(module_id);
+		// Remove module from vector
 	}
 
-	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		Ref<SourceFile> source_file = SourceFile::getSourceFile(file);
+	void ModuleTreeModifier::fileModified(FileID id) {
+		Ref<SourceFile> source_file = id.ref;
 		source_file->update();
 	}
 
 	// ----------------------
 
-	base::StrID moduleName(ModuleID module) { return ModuleTree::getModule(module)->getName(); }
+	base::StrID moduleName(ModuleID module) { return module.ref->getName(); }
 
 	std::string printModuleTree(ModuleID module) {
-		return ModuleTree::getModule(module)->prettyPrint();
+		return module.ref->prettyPrint();
 	}
 
 	/*********************
@@ -517,9 +491,9 @@ namespace compiler::frontend {
 	 *********************/
 	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = ModuleTree::getModule(key);
+			const auto& module_tree = key.ref;
 			return module_tree->getParentModule().map([](const auto& parent) {
-				return parent->getID();
+				return ModuleID(parent);
 			});
 		}
 
@@ -533,8 +507,8 @@ namespace compiler::frontend {
 	 ***********************/
 	struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = ModuleTree::getModule(key);
-			return module_tree->getMainSourceFile()->getID();
+			const auto& module_tree = key.ref;
+			return {module_tree->getMainSourceFile()};
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -547,10 +521,10 @@ namespace compiler::frontend {
 	 ********************/
 	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = ModuleTree::getModule(key);
+			const auto& module_tree = key.ref;
 
 			std::vector<FileID> out{};
-			for (const auto& file: module_tree->getSourceFiles()) out.push_back(file->getID());
+			for (const auto& file: module_tree->getSourceFiles()) out.push_back(FileID(file));
 			return out;
 		}
 
@@ -564,11 +538,11 @@ namespace compiler::frontend {
 	 *******************/
 	struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = ModuleTree::getModule(key);
+			const auto& module_tree = key.ref;
 
 			PResult out{};
 			for (const auto& [name, module]: module_tree->getSubmodules())
-				out.put(name, module->getID());
+				out.put(name, ModuleID(module));
 			return out;
 		}
 
@@ -582,7 +556,7 @@ namespace compiler::frontend {
 	 ****************/
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto file = SourceFile::getSourceFile(key);
+			Ref<SourceFile> file = key.ref;
 			auto pst  = file->getPST();
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
@@ -611,13 +585,6 @@ namespace compiler::frontend {
 
 		// this access depends of global state that might become a problem in incremental compilation:
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-		auto result  = SourceFile::getSourceFile(file_id)->getModule();
-		CORE_ASSERT(result->getID().isGood(), "Bad module ID in SourceFile");
-
-		return result->getID();
-	}
-
-	CRef<pst::PST<>> queryPSTFromFilePath(query::Context&, const fs::File& file_path) {
-		return SourceFile::getSourceFile(file_path)->getPST();
+		return file_id.ref->getModule();
 	}
 }

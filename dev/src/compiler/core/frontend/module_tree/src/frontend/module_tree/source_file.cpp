@@ -36,7 +36,7 @@ namespace compiler::frontend {
 					"SourceFile with path '",
 					abs_path.string(),
 					"' already exists with different content. "
-					"Delete the existing SourceFile first!"
+					"Delete the existing SourceFile first or call update handler from the ModuleModifier."
 				)
 			);
 		} else {
