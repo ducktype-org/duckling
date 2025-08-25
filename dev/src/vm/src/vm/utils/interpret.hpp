@@ -2,7 +2,9 @@
 
 #include <base/ints.hpp>
 
+#include <array>
 #include <cstring>
+#include <new>
 #include <type_traits>
 
 namespace vm {
@@ -10,9 +12,8 @@ namespace vm {
 	 * @brief Safely reads an object of type T from a raw byte buffer.
 	 *
 	 * @note This function performs a bitwise copy from the buffer into a new
-	 * object of type T.
-	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
-	 * trivially copyable types.
+	 * object of type T. The `memcpy` operation is optimized by compilers to a single machine
+	 * instruction for trivially copyable types.
 	 * @note Type T must be trivially copyable.
 	 *
 	 * @tparam T The target type to construct. Must be trivially copyable.
@@ -23,9 +24,19 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] inline T safeReadBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		T value;
-		std::memcpy(&value, ptr + offset, sizeof(T));
-		return value;
+		// @note: We create a byte array aligned as type T to prevent alignement-related UBs.
+		// Doing it like below makes it impossible to "reinterpret" values of type T with private
+		// constructors, thus the workaround:
+		// T value;
+		// std::memcpy(&value, ptr + offset, sizeof(T));
+
+		alignas(T) std::array<byte, sizeof(T)> buffer;
+		std::memcpy(buffer.data(), ptr + offset, sizeof(T));
+
+		// @note: Reinterpret the buffer as a pointer to T and dereference it.
+		// std::launder is necessary to tell the compiler that the object's lifetime
+		// has begun at this memory location, and it can safely access the new value.
+		return *std::launder(reinterpret_cast<T*>(buffer.data()));
 	}
 
 	/**
