@@ -327,11 +327,6 @@ namespace vm {
 	}
 
 	VMProcess::~VMProcess() {
-		for (auto& t: vm_threads)
-			if (t.exec_thread) (void) (stop());
-		if (loaded_program.has_value())
-			getMainVMThread().execGlobalDestructors(&loaded_program.value());
-		for (auto& vm_value: owned_vm_values) vm_value->freeData();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
@@ -372,5 +367,14 @@ namespace vm {
 			));
 		}
 		CORE_UNREACHABLE();
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::deinitAndValidate() {
+		for (auto& t: vm_threads)
+			if (t.exec_thread) (void) (stop());
+		if (loaded_program.has_value())
+			getMainVMThread().execGlobalDestructors(&loaded_program.value());
+		for (auto& vm_value: owned_vm_values) vm_value->freeData();
+		return memory.validateMemoryState();
 	}
 }

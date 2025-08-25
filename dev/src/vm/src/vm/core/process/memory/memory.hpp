@@ -76,10 +76,24 @@ namespace vm {
 	     */
 		void runDataDestructor(Ref<Block> block);
 
-		void runDataDestructorAt() {}
+		/**
+		 * @brief This function implements the destruction of data.
+	     */
+		void runDataDestructorImpl(base::ModRawView data, TypeCRef type);
 
 	public:
 		Memory() = default;
+
+		/**
+		 * @brief Validates the memory state.
+		 * It can be thought of as a check that is executed after program's exit
+		 * to determine the correctness of memory usage
+		 * (and potentially bugs inside the VM itself as well).
+		 * For the memory to be valid, all the blocks' referenceCount needs to be 0. This means
+		 * no leaks, etc.
+		 * @return True if memory was used correctly, false otherwise.
+		 */
+		bool validateMemoryState() const;
 
 		// =================== Used by executor ===================
 

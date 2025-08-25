@@ -142,8 +142,9 @@ namespace vm::api {
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })
-		    )
+		    .doRequest(
+				SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })
+			)
 		    .transform(ignoreResponse);
 	}
 
@@ -163,5 +164,11 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::ExitCodeRequest{}))
 		    .and_then(mapOrWrongResponse<ExitValue>);
+	}
+
+	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DeinitAndValidate{}))
+		    .and_then(mapOrWrongResponse<response::Boolean>);
 	}
 }

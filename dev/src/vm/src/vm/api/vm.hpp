@@ -21,6 +21,11 @@ namespace vm::api {
 	std::expected<ProcessInfo, ApiError> spawn();
 
 	/**
+	 * @brief Deinit and validate a process
+	 */
+	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
+
+	/**
 	 * @brief Get the execution status of the VM
 	 */
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid);

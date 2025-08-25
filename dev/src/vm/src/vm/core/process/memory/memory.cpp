@@ -5,6 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
+#include <vm/utils/interpret.hpp>
 #include <vm/core/process/exceptions.hpp>
 
 #include <mutex>
@@ -257,28 +258,52 @@ namespace vm {
 	}
 
 	void Memory::runDataDestructor(Ref<Block> block) {
-		switch (block->data.element_type->getKind()) {
-		case Type::Kind::None:
-			break;
+		runDataDestructorImpl(block->data.view, block->data.element_type);
+	}
+
+	void Memory::runDataDestructorImpl(base::ModRawView data, TypeCRef type) {
+		switch (type->getKind()) {
 		case Type::Kind::Primitive:
 			break;
-		case Type::Kind::Pointer:
-			block.
+		case Type::Kind::Pointer: {
+			auto ptr = safeReadBytes<Pointer>(data.getBegin());
+			destroyBlockReference(ptr);
 			break;
-		case Type::Kind::FixedSizeTable:
-			break;
-		case Type::Kind::DynamicTable:
-			break;
-		case Type::Kind::Data:
-			break;
-		case Type::Kind::Variant:
-			break;
+		}
 		case Type::Kind::Function:
 			break;
 		case Type::Kind::Opaque:
 			break;
-		default:
-			CORE_PANIC("Unhandled type of data");
+		case Type::Kind::DynamicTable:
+		case Type::Kind::FixedSizeTable: {
+			auto inner_type = type->getInnerType().value();
+			auto inner_size = inner_type->getSize();
+			for (usize begin = 0; begin < data.size(); begin += inner_size)
+				runDataDestructorImpl(
+					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type
+				);
+			break;
 		}
+		case Type::Kind::Data: {
+			// Iterate over data's fields and run the destructors on the fields
+			const auto& fields = *type->getFields().value();
+			for (auto [offset, tp]: fields) {
+				runDataDestructorImpl(
+					base::ModRawView{ data.getBegin() + offset, tp->getSize() }, tp
+				);
+			}
+			break;
+		}
+		case Type::Kind::Variant:
+			// There is nothing to do with variant, because its should be already deleted thanks to
+			// the nested blocks structure, that deletes the nested block's data first.
+			break;
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
+
+	bool Memory::validateMemoryState() const {
+		return blocks.empty();
 	}
 }

@@ -7,6 +7,7 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/kinds/data.hpp"
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
@@ -14,6 +15,8 @@
 #include <utility>
 
 namespace vm {
+	using std::vector;
+
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
 			variant_match(imd.kind) {
@@ -214,6 +217,12 @@ namespace vm {
 		);
 	}
 
+	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
+		return get<kind::Data>().map([](CRef<kind::Data> data) {
+			return CRef(&data->fields);
+		});
+	}
+
 	// inheritance
 	base::Optional<base::CRef<InheritanceMetadata>> Type::getInheritanceMetadata() const {
 		variant_match(kind) {
@@ -277,4 +286,5 @@ namespace vm {
 			return base::Optional<TypeCRef>(function->result);
 		});
 	}
+
 }
