@@ -234,7 +234,7 @@ namespace vm {
 		}
 	}
 
-	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
+	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		if_opt_some(dst.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
 			destroyBlockReference(dst);
@@ -243,7 +243,7 @@ namespace vm {
 			std::lock_guard lock(*block->mutex_ref);
 			block->refcount++;
 		}
-		dst = src;
+		return src;
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {

@@ -8,6 +8,7 @@
 #include <filesystem/file.hpp>
 #include <hashing/hash.hpp>
 
+#include <cstring>
 #include <type_traits>
 
 namespace artifacts {
@@ -17,15 +18,18 @@ namespace artifacts {
 	 * deserialization as well.
 	 */
 	template<class T>
-	concept SerdeType = std::is_standard_layout_v<T> && std::is_trivial_v<T>;
+	concept SerdeType
+		= std::is_standard_layout_v<T> && std::is_trivial_v<T> && std::is_trivially_copyable_v<T>;
 
 	/**
 	 * @brief Constructs type `T` from bytes.
 	 */
 	template<SerdeType T>
-	const T& deserialize(base::RawView view) {
+	T deserialize(base::RawView view) {
 		CORE_ASSERT(view.size() == sizeof(T), "View\'s size does not match T\'s size");
-		return *reinterpret_cast<const T*>(view.getBegin());
+		alignas(T) std::array<std::byte, sizeof(T)> buffer;
+		std::memcpy(buffer.data(), view.getBegin(), sizeof(T));
+		return *std::launder(reinterpret_cast<T*>(buffer.data()));
 	}
 
 	/**
@@ -84,7 +88,7 @@ namespace artifacts {
 		 * @note Data pointers can be invalidated by calls to `setData`.
 		 */
 		template<SerdeType T>
-		const T& getData() const {
+		const T getData() const {
 			return deserialize<T>(getDataView());
 		}
 	};
@@ -155,7 +159,7 @@ namespace artifacts {
 		base::RawView getBlobDataView(const BlobArtifact& blob) const;
 
 		template<SerdeType T>
-		const T& getBlobData(const BlobArtifact& blob) const {
+		const T getBlobData(const BlobArtifact& blob) const {
 			return deserialize<T>(getBlobDataView(blob));
 		}
 
