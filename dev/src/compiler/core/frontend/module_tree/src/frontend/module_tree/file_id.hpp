@@ -1,15 +1,27 @@
 #pragma once
 
-#include <base/strongly_typed_id.hpp>
-
-#include <functional>  // IWYU pragma: export note: this is needed for std::hash
+#include <base/ref.hpp>
 
 namespace compiler::frontend {
 
-	/**
-	 * @brief Structure holding FileID within SourceFile
-	 */
-	STRONG_TYPEDEF_ID(FileID);
-}
+	class SourceFile;
 
-ID_STD_HASH(::compiler::frontend::FileID);
+	struct FileID final {
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const {
+			return reinterpret_cast<u64>(ref.get());
+		}
+
+		bool operator==(const FileID&) const = default;
+		auto operator<=>(const FileID& other) const { return ref.get() <=> other.ref.get(); }
+
+	private:
+		base::CRef<SourceFile> ref;
+
+		FileID(base::CRef<SourceFile> ref): ref(ref) {}
+		friend class SourceFile;
+		friend class ModuleTree;
+		friend class ModuleTreeBuilder;
+		friend class ModuleTreeModifier;
+	};
+}

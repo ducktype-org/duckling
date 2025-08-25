@@ -1,6 +1,5 @@
 #pragma once
 
-#include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
@@ -12,8 +11,6 @@
 
 #include <filesystem/file.hpp>
 
-#include <expected>
-
 namespace compiler::frontend {
 
 	class ModuleTreeModifier;
@@ -23,19 +20,18 @@ namespace compiler::frontend {
 	 * @brief Represents a source file in the Duckling compiler.
 	 */
 	class SourceFile final {
-		fs::File                   path;
+		fs::File                   file;
 		base::StrID                lang_file_name;
-		FileID                     id;
-		base::CRef<ModuleTree>     linked_module;
+		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
-		 * @param path The file system file.
+		 * @param file The file system file.
 		 * @param linked_module The module this file belongs to.
 		 * @note The file content is cached on construction.
 		 */
-		SourceFile(fs::File path, base::CRef<ModuleTree> linked_module);
+		SourceFile(fs::File file, ModuleID linked_module);
 
 		/**
 		 * @brief Reloads the file content and resets the parse tree.
@@ -56,55 +52,39 @@ namespace compiler::frontend {
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 
+		bool operator==(const SourceFile& other) const {
+			CORE_ASSERT(file != other.file || linked_module != other.linked_module || lang_file_name == other.lang_file_name, "The same source files should have the same language file name");
+			return file == other.file && linked_module == other.linked_module;
+		}
+
 	public:
 		/**
-		 * @brief Creates a new SourceFile or returns an existing one for the given file path.
-		 * @param path The file system file.
+		 * @brief Creates a new SourceFile or returns an existing one for the given file file.
+		 * @param file The file system file.
 		 * @param linked_module The module this file belongs to.
 		 * @return Reference to the created or existing SourceFile.
-		 * @note If a SourceFile for the given path already exists, and the content matches,
+		 * @note If a SourceFile for the given file already exists, and the content matches,
 		 *       the new SourceFile is returned. If the content differs, an assertion fails.
 		 *       A new FileID is always assigned for a new SourceFile.
 		 *       The file content is always hashed and cached.
 		 *       Each fileID has a unique UnstableHash even if it is pointing to the same fs::File
 		 */
-		static Ref<SourceFile> create(fs::File path, base::CRef<ModuleTree> linked_module);
-
-		/**
-		 * @brief Returns a reference to the SourceFile with the given FileID.
-		 * @param id The FileID.
-		 * @return Reference to the SourceFile.
-		 * @throws Assertion if the FileID does not exist.
-		 */
-		static Ref<SourceFile> getSourceFile(FileID id);
-
-		/**
-		 * @brief Returns a reference to the SourceFile for the given file path.
-		 * @param file The file system file.
-		 * @return Reference to the SourceFile.
-		 * @throws Assertion if the file does not exist in the map.
-		 */
-		static Ref<SourceFile> getSourceFile(const fs::File& file);
+		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.
 		 */
-		[[nodiscard]] fs::File getFile() const { return path; }
+		[[nodiscard]] fs::File getFile() const { return file; }
 
 		/**
 		 * @brief Returns the module this SourceFile is linked to.
 		 */
-		[[nodiscard]] base::CRef<ModuleTree> getModule() const { return linked_module; }
+		[[nodiscard]] ModuleID getModule() const { return linked_module; }
 
 		/**
 		 * @brief Returns the language-level file name (stem).
 		 */
 		[[nodiscard]] base::StrID getLangFileName() const { return lang_file_name; }
-
-		/**
-		 * @brief Returns the FileID of this SourceFile.
-		 */
-		[[nodiscard]] FileID getID() const { return id; }
 
 		/**
 		 * @brief Lazily parses the source file and returns the parse tree (PST).
@@ -121,11 +101,7 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] base::SharedView getCachedContent() const;
 
-		/**
-		 * @brief Returns an unstable perfect hash for this SourceFile.
-		 * @details
-		 *   The hash is the hash of FileID.
-		 */
-		u64 queryUnstablePerfectHash();
+		SourceFile(const SourceFile&) = delete;
+		SourceFile& operator=(const SourceFile&) = delete;
 	};
 }

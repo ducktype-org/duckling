@@ -1,7 +1,6 @@
 #pragma once
 
 #include "file_id.hpp"
-#include "module_id.hpp"
 #include "source_file.hpp"
 
 #include <pst_parser/pst.hpp>
@@ -17,6 +16,7 @@
 #include <string>
 
 namespace compiler::frontend {
+
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
@@ -59,12 +59,6 @@ namespace compiler::frontend {
 		friend class ModuleTreeModifier;
 
 	public:
-		/**
-		 * Returns a reference to the ModuleTree with the given ModuleID.
-		 * Panics if the module does not exist.
-		 */
-		static Ref<ModuleTree> getModule(ModuleID id);
-
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -125,17 +119,8 @@ namespace compiler::frontend {
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
 
-		/**
-		 * Fetches the id of the module.
-		 * @return compiler::frontend::ModuleID.
-		 */
-		[[nodiscard]]
-		ModuleID getID() const;
-
-		// @TODO: fix this when implementing #1209
-		// ModuleTree(const ModuleTree&) = delete;
-		// ModuleTree& operator=(const ModuleTree&) = delete;
-
+		ModuleTree(const ModuleTree&) = delete;
+		ModuleTree& operator=(const ModuleTree&) = delete;
 	private:
 		/**
 		 * Constructs a ModuleTree with a new unique ModuleID.
