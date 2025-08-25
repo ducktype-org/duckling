@@ -18,7 +18,7 @@
 namespace {
 	/**
 	 * @brief Map storting FileID of each parsed PST (by root element ID)
-	 * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor for acquiring
+	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
 	 * the root scope via extendQueryModuleIDOfPST.
 	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
 	 * information from this map into PST nodes.
@@ -286,7 +286,9 @@ namespace compiler::frontend {
 		CORE_ASSERT(module_ref->getID() == module_id, "Module ID mismatch");
 
 		// Set ID and name
-		module_ref->m_name = m_name;
+		module_ref->m_name        = m_name;
+		module_ref->m_other_files = std::move(m_other_files);
+
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
@@ -297,16 +299,11 @@ namespace compiler::frontend {
 			auto source_file = SourceFile::create(file_path, module_ref);
 			module_ref->m_source_files.push_back(source_file);
 		}
-		// Transfer other data from builder to module
-		module_ref->m_submodules  = std::move(m_submodules);
-		module_ref->m_other_files = std::move(m_other_files);
-		module_ref->m_parent      = m_parent;
 
-		// Set parent references for submodules
-		for (const auto& [name, submodule]: module_ref->m_submodules) {
-			CORE_ASSERT(!submodule->m_parent.has_value(), "Submodule already has a parent");
-			submodule->m_parent = module_ref;
-		}
+		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
+
+		for (const auto& [name, submodule]: m_submodules)
+			ModuleTreeModifier::addSubmodule(module_ref, submodule);
 
 		return module_ref;
 	}
