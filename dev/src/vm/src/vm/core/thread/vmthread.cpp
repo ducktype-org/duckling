@@ -123,7 +123,7 @@ namespace vm {
 		auto result_type      = called_func_type->getResultType().value();
 
 		u64  result_type_id     = result_type->getID().asInt();
-		auto funcs              = executing_program->functions;
+		const auto& funcs              = executing_program->functions;
 		u64  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
