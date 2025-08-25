@@ -64,7 +64,7 @@ namespace compiler::frontend {
 		return builder->finalize();
 	}
 
-	ModuleTree::ModuleTree() {}
+	ModuleTree::ModuleTree() = default;
 
 	base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return m_parent.value();
@@ -522,7 +522,7 @@ namespace compiler::frontend {
 			const auto& module_tree = key.ref;
 
 			std::vector<FileID> out{};
-			for (const auto& file: module_tree->getSourceFiles()) out.push_back(FileID(file));
+			for (const auto& file: module_tree->getSourceFiles()) out.emplace_back(file);
 			return out;
 		}
 

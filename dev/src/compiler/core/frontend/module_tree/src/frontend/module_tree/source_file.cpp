@@ -35,9 +35,8 @@ namespace compiler::frontend {
 				base::strConcat(
 					"SourceFile with path '",
 					abs_path.string(),
-					"' already exists with different content. "
-					"Delete the existing SourceFile first or call update handler from the "
-			        "ModuleModifier."
+					"' already exists with different content. Delete the existing SourceFile first "
+			        "or call update handler from the ModuleModifier."
 				)
 			);
 		} else {
