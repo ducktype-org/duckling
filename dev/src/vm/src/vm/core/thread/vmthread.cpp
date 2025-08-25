@@ -229,12 +229,12 @@ namespace vm {
 					init_lany_type, 24, i64_type_id
 				),  // [24, 32) argc_internal
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),  // [32, 40) ix
-				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 40, str_ptr_type_id
-				),  // [40, 56) ptr_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 56, byte_type_id
-				),  // [56, 57) char_tmp_store
+				// MAKE_BYTECODE_INSTRUCTION(
+		        // 	init_lany_type, 40, str_ptr_type_id
+		        // ),  // [40, 56) ptr_tmp_store
+		        // MAKE_BYTECODE_INSTRUCTION(
+		        // 	init_lany_type, 56, byte_type_id
+		        // ),  // [56, 57) char_tmp_store
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_l64_imm, 24, args.size()
 				),  // argc_internal := args.size()
@@ -250,15 +250,14 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
+						init_lany_type, 40, str_ptr_type_id
+					),  // [40, 56) ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(
+						init_lany_type, 56, byte_type_id
+					),  // [56, 57) char_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(
 						mov_l64_imm, 24, arg.size() + 1
 					),  // argc_internal := arg.size() + 1 (for the \0 character)
-					MAKE_BYTECODE_INSTRUCTION(
-						mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
-					),  // ix := argv_index
-					MAKE_BYTECODE_INSTRUCTION(
-						dynTableLoad_lany_lptr, 40, 8
-					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
 					MAKE_BYTECODE_INSTRUCTION(
 						dynTableReAlloc_lptr_type, 40, str_type_id
 					),                                              // alloc ptr_tmp_store
@@ -293,8 +292,10 @@ namespace vm {
 					),  // ix := argv_index
 					MAKE_BYTECODE_INSTRUCTION(
 						dynTableStore_lptr_lany, 8, 40
-					),  // argv_internal[ix] := ptr_tmp_store
+					),                                        // argv_internal[ix] := ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 				}
 			);
 		}
@@ -302,15 +303,17 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, i64_type_id),  // [56, 64) main ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 64, i64_type_id),       // [64, 72) argc
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 72, argv_ptr_type_id),  // [72, 88) *argv
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 64, args.size()),  // argc := args.size()
-				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 72, 8),          // argv := argv_internal
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id),  // [40, 48) main ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56) argc
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
+				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),          // argv := argv_internal
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 56),  // ret_val := main_ret_val
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 48, str_ptr_type_id
+				),  // [48, 64) ptr_tmp_store
 			}
 		);
 		for ([[maybe_unused]] const auto& arg: args) {
@@ -318,10 +321,10 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
-						dynTableLoad_lany_lptr, 40, 8
+						dynTableLoad_lany_lptr, 48, 8
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
-					MAKE_BYTECODE_INSTRUCTION(free_lptr, 40, 0),    // free ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(free_lptr, 48, 0),    // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1),  // ++ix
 				}
 			);
@@ -330,8 +333,8 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),  // free *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ptr_tmp_store
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ix
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit argc_internal
 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit *argv_internal
