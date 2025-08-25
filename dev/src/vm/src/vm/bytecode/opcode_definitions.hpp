@@ -428,6 +428,13 @@ DEF_OPCODE(
 vm::opargs::StackLocal64     new_elem_count */
 )
 
+/**
+ * @brief Outputs a dynamic table of bytes as a string.
+ */
+DEF_OPCODE(
+	strOutput_lptr, vm::opargs::StackLocalPtr /* string_ptr */
+)
+
 // ========= TYPE OPERATIONS ========
 
 // Casts a primitive type in-place. This does nothing at runtime, but is needed

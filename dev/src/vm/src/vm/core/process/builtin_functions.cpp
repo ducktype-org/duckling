@@ -24,17 +24,18 @@ namespace vm::builtins {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>>
 			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
-			if (std::is_void_v<Ret>) {
+			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->readBytes<FunArgs>()...);
 				return {};
+			} else {
+				auto value = function(thread, args[Is]->readBytes<FunArgs>()...);
+				CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+
+				auto vm_value = process.createOwnedVmValue(vm_return_type);
+
+				vm_value->writeBytes<Ret>(value);
+				return vm_value;
 			}
-			auto value = function(thread, args[Is]->readBytes<FunArgs>()...);
-			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
-
-			auto vm_value = process.createOwnedVmValue(vm_return_type);
-
-			vm_value->writeBytes<Ret>(value);
-			return vm_value;
 		}
 
 		/**
@@ -90,6 +91,23 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(output.size());
 	}
 
+	void FunctionHandlers::builtinOutputString(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+		auto str_data   = block_data.stdString();
+		thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
+	}
+
+	i64 FunctionHandlers::builtinStoi(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		auto str_data = block_data.stdString();
+		return std::stoll(str_data);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         builtin_func_type,
@@ -109,7 +127,7 @@ namespace vm::builtins {
 		);                                       \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -128,7 +146,23 @@ namespace vm::builtins {
 				code::FunctionType(
 					base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
 				),
-			}
+			},
+			{
+				BuiltinFunctionID::OutputString,
+				code::FunctionType(
+					base::StrID("builtin_strOutput_lptr"),
+					{ base::StrID("ptr_string") },
+					base::StrID("i64")
+				),
+			},
+			{
+				BuiltinFunctionID::Stoi,
+				code::FunctionType(
+					base::StrID("builtin_stoi_lptr"),
+					{ base::StrID("ptr_string") },
+					base::StrID("i64")
+				),
+			},
 		};
 
 		return &map;
