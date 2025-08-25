@@ -5,25 +5,17 @@
  */
 #pragma once
 
+#include "../lists/flow_pattern_list.hpp"
 #include "../meta.hpp"
-#include "pst_parser/access.hpp"
-#include "pst_parser/elements/hierarchy/expr_holders.hpp"
-#include "pst_parser/elements/hierarchy/lists/flow_pattern_list.hpp"
-
-#include "token_parser_core/common_elements.hpp"
 
 namespace pst {
-	// TODOP: Forward declaration?
-	// class AnalysisPattern;
-	class FlowPatternList;  // Forward declaration
-
 	/**
 	 * @brief Represents a flow pattern.
 	 */
 	class FlowPattern final: public NotStmt {
 		AccessInternal<AnalysisPattern>                     pattern;
 		base::Optional<tpc::Identifier>                     as_identifier;
-		base::Optional<AccessInternal<UniversalExprHolder>> type_constraint;
+		base::Optional<AccessInternal<UniversalExprHolder>> type_constraint;  // TODOP: Universal?
 
 	public:
 		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {
@@ -31,8 +23,6 @@ namespace pst {
 		}
 
 		~FlowPattern() final = default;
-
-		// virtual ~FlowPattern() final = default;
 
 		[[nodiscard]] AccessLocked<AnalysisPattern> getPattern() const { return pattern.give(); }
 
@@ -57,7 +47,6 @@ namespace pst {
 	 */
 	class AnalysisPattern: public NotStmt {
 	public:
-		// TODOP: Maybe this should be a pure abstract and uninstantiable.
 		explicit AnalysisPattern(const dia::SourcePosition& position): NotStmt(position) {
 			this->element_kind = ElementKind::AnalysisPattern;
 		}
@@ -183,10 +172,11 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Represents a pattern which is an expresion interpreted as a value. Either a literal,
+	 * @brief Represents a pattern which is an expression interpreted as a value. Either a literal,
 	 * block expression or an identifier.
 	 */
 	class ValuePattern final: public AnalysisPattern {
+		// TODOP: Universal? What with CodeBlocks with no semicolon like this {my_var}.
 		AccessInternal<UniversalExprHolder> expression;
 
 	public:

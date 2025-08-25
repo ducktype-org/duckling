@@ -47,6 +47,8 @@ namespace pst {
 
 		// Expressions:
 		ExprStmt,
+		Match,
+		MatchCase,
 
 		// Expression wrappers:
 		RoundGroupExpr,

@@ -157,6 +157,7 @@ private:
 	void testFor() { testJsonRelativePath("for.duck", "for.json"); }
 
 	void testFun() { testJsonRelativePath("fun.duck", "fun.json"); }
+
 	// TODOP: Add tests here.
 
 	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }

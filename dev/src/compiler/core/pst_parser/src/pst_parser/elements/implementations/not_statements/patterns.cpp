@@ -1,16 +1,6 @@
 #include "../../hierarchy/not_statements/patterns.hpp"
 
 #include "preamble.hpp"
-#include "pst_parser/access.hpp"
-
-#include "base/box.hpp"
-#include "base/exceptions.hpp"
-
-#include "lang_definitions/key_spec_op.hpp"
-#include "lexer/token.hpp"
-#include "token_parser_core/common_elements.hpp"
-
-#include <cstddef>
 
 namespace pst {
 	class UnrecognizedPatternInCaseError final: public dia::Error {

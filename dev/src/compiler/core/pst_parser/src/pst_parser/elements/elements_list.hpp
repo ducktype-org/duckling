@@ -86,6 +86,7 @@ namespace pst {
 		class ChainExpr;
 		class RoundExpr;
 		class BlockExpr;
+		class MatchExpr;
 		class GeneralPrefix;
 		class GeneralSuffix;
 		class GeneralBinary;

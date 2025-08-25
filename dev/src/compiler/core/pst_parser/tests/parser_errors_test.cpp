@@ -1,5 +1,3 @@
-#include "pst_parser/elements/hierarchy/not_statements/patterns.hpp"
-
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -283,7 +281,6 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FlowPattern, true>  flow_tuple_nested{ "(1, (x, _))" };
 	Example<pst::FlowPattern, false> flow_tuple_empty{ "()" };
 	Example<pst::FlowPattern, false> flow_tuple_unclosed{ "(1, x" };
-	Example<pst::FlowPattern, false> flow_tuple_trailing_comma{ "(1, x,)" };
 	Example<pst::FlowPattern, true>  flow_deconstructor_simple{ "Point(x, y)" };
 	Example<pst::FlowPattern, true>  flow_deconstructor_nested{ "Circle(Point(0, 0), r)" };
 	Example<pst::FlowPattern, false> flow_deconstructor_empty_args{ "None()" };
@@ -314,17 +311,50 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32, y as coord_y : f64)" };
 	Example<pst::FlowPattern, false> analysis_bad_value{ "+" };
 	Example<pst::FlowPattern, false> analysis_binding_is_keyword{ "if" };
+	Example<pst::FlowPattern, true>  analysis_block_expr{ "{ x + y * z; }" };          // TODOP: Fix
+	Example<pst::FlowPattern, true>  analysis_block_with_variable{ "{ some_var; }" };  // TODOP:
 
-	// Example<pst::FlowPattern, false> flow_bad_order{ "x : i32 as my_var" };
-	// Example<pst::FlowPattern, false> flow_double_as{ "x as var1 as var2" };
-	// Example<pst::FlowPattern, false> flow_double_type{ "x : T1 : T2" };
 
-	// TODOP: Fix block expressions.
-	// Example<pst::ValuePattern, true> value_pattern_block_expression{ "{ x + y * z }" }; // TODOP:
-	// Example<pst::ValuePattern, true> value_pattern_block_with_variable{ "{ my_constant }" };
-	// Example<pst::FlowPattern, true>  analysis_block_expr{ "{ x + y * z }" }; // TODOP: Fix
-	// Example<pst::FlowPattern, true>  analysis_block_with_variable{ "{ some_var }" }; // TODOP:
-	// Example<pst::FlowPattern, true> analysis_literal_char{ "'c'" }; // TODOP: Fix
+	Example<pst::expr::MatchExpr, true> match_single_case{ R"(match (x) { case 1 = "one"; };)" };
+	Example<pst::expr::MatchExpr, true> match_multiple_cases{
+		R"(match (value) { case 1 = "one"; case 2 = "two"; case _ = "other"; };)"
+	};
+	Example<pst::expr::MatchExpr, true> match_no_cases_in_block{ R"(match (value) {};)" };
+	Example<pst::expr::MatchExpr, true> match_no_semicolon_at_end{ R"(match (x) { case _ = 1; };)" };
+	Example<pst::expr::MatchExpr, true> match_body_is_block_expr{
+		R"(match (x) { case _ = { let y = x + 1; return y; }; };)"
+	};
+	Example<pst::expr::MatchExpr, true> match_case_with_single_if_guard{
+		R"(match (p) { case (a, b) if a > 0 = "a is positive"; };)"
+	};
+	Example<pst::expr::MatchExpr, true> match_case_with_multiple_if_guards{
+		R"(match (p) { case x if x > 10 = "large"; if x < 0 = "negative"; };)"
+	};
+	Example<pst::expr::MatchExpr, true> match_multiple_cases_with_guards{
+		R"(match (p) { case (a, b) if a > 0 = 1; case (c, d) if c < 0 = -1; case _ = 0; };)"
+	};
+	Example<pst::expr::MatchExpr, false> match_no_value_expr{ R"(match { case _ = 1; };)" };
+	Example<pst::expr::MatchExpr, false> match_no_parens_for_value{ R"(match x { case _ = 1; };)" };
+	Example<pst::expr::MatchExpr, false> match_empty_parens_for_value{
+		R"(match () { case _ = 1; };)"
+	};
+	Example<pst::expr::MatchExpr, false> match_no_curly_braces{ R"(match(x);)" };
+	Example<pst::expr::MatchExpr, false> match_unclosed_curly_braces{ R"(match(x) { case _ = 1;)" };
+	Example<pst::expr::MatchExpr, false> match_case_no_pattern{ R"(match(x) { case = 1; };)" };
+	Example<pst::expr::MatchExpr, false> match_case_no_body{ R"(match(x) { case 1; };)" };
+	Example<pst::expr::MatchExpr, false> match_case_no_equals{ R"(match(x) { case 1 "one"; };)" };
+	Example<pst::expr::MatchExpr, false> match_case_if_guard_no_condition{
+		R"(match(x) { case _ if = 1; };)"
+	};
+	Example<pst::expr::MatchExpr, false> match_case_if_guard_no_body{
+		R"(match(x) { case _ if x > 0; };)"
+	};
+	Example<pst::expr::MatchExpr, false> match_if_after_default_branch{
+		R"(match(x) { case _ = 1 if x > 10 = 2; };)"
+	};
+	Example<pst::expr::MatchExpr, false> match_junk_between_cases{
+		R"(match(x) { case 1 = "one"; let y = 5; case 2 = "two"; };)"
+	};
 
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());

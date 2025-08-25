@@ -23,6 +23,7 @@ namespace pst::expr {
 		ChainExpr,
 		RoundExpr,
 		BlockExpr,
+		MatchExpr,
 		ComparisonChain,
 		Ternary,
 		Comma,

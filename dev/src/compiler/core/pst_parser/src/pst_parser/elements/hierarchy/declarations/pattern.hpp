@@ -9,7 +9,7 @@ namespace pst {
 	 */
 	class Pattern final: public Decl {
 		tpc::Identifier                                 name;
-		AccessInternal<Param>                        param;
+		AccessInternal<Param>                           param;
 		base::Optional<AccessInternal<CommaExprHolder>> ret;
 		AccessInternal<CodeBlockOrStmt>                 body;
 
@@ -26,10 +26,10 @@ namespace pst {
 			return param.give();
 		}
 
-		[[nodiscard]]
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
+		[[nodiscard]]
 		base::Optional<AccessLocked<ExprHolder>> getRet() const {
 			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
 		}
