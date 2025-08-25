@@ -1,7 +1,7 @@
 #include "source_file.hpp"
 
-#include <base/stable_container.hpp>
 #include <base/exceptions.hpp>
+#include <base/stable_container.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -36,7 +36,8 @@ namespace compiler::frontend {
 					"SourceFile with path '",
 					abs_path.string(),
 					"' already exists with different content. "
-					"Delete the existing SourceFile first or call update handler from the ModuleModifier."
+					"Delete the existing SourceFile first or call update handler from the "
+			        "ModuleModifier."
 				)
 			);
 		} else {

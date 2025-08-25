@@ -119,8 +119,10 @@ namespace compiler::frontend {
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
 
-		ModuleTree(const ModuleTree&) = delete;
+		ModuleTree(const ModuleTree&)            = delete;
 		ModuleTree& operator=(const ModuleTree&) = delete;
+		ModuleTree(ModuleTree&&) noexcept        = default;
+
 	private:
 		ModuleTree();
 

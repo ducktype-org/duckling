@@ -53,7 +53,11 @@ namespace compiler::frontend {
 		friend class ModuleTree;
 
 		bool operator==(const SourceFile& other) const {
-			CORE_ASSERT(file != other.file || linked_module != other.linked_module || lang_file_name == other.lang_file_name, "The same source files should have the same language file name");
+			CORE_ASSERT(
+				file != other.file || linked_module != other.linked_module
+					|| lang_file_name == other.lang_file_name,
+				"The same source files should have the same language file name"
+			);
 			return file == other.file && linked_module == other.linked_module;
 		}
 
@@ -101,7 +105,8 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] base::SharedView getCachedContent() const;
 
-		SourceFile(const SourceFile&) = delete;
+		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;
+		SourceFile(SourceFile&&) noexcept        = default;
 	};
 }

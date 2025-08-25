@@ -2,8 +2,8 @@
 
 #include "queries.hpp"
 
-#include <base/stable_container.hpp>
 #include <base/exceptions.hpp>
+#include <base/stable_container.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
@@ -255,7 +255,7 @@ namespace compiler::frontend {
 		// Create new ModuleTree instance
 		modules.pushBack(ModuleTree());
 		Ref<ModuleTree> module_ref = modules.last();
-		ModuleID mod_id(module_ref);
+		ModuleID        mod_id(module_ref);
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
@@ -289,8 +289,8 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeSourceFile([[maybe_unused]] query::Context& ctx, FileID file_id) {
-		Ref<SourceFile> file          = file_id.ref;
-		Ref<ModuleTree> module        = file->getModule().ref;
+		Ref<SourceFile> file   = file_id.ref;
+		Ref<ModuleTree> module = file->getModule().ref;
 
 		auto& source_files = module->m_source_files;
 		auto  it
@@ -300,7 +300,7 @@ namespace compiler::frontend {
 
 		CORE_ASSERT(it != source_files.end(), "SourceFile not found in module");
 
-		//Delete SourceFiles
+		// Delete SourceFiles
 		source_files.erase(it);
 		file->erase();
 	}
@@ -442,7 +442,7 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::removeModule(ModuleID module_id) {
 		Ref<ModuleTree> module_ref = module_id.ref;
-		auto parent     = module_ref->m_parent;
+		auto            parent     = module_ref->m_parent;
 
 		// Remove all source files associated with this module
 		for (const auto& file: module_ref->m_source_files) file->erase();
@@ -482,18 +482,16 @@ namespace compiler::frontend {
 
 	base::StrID moduleName(ModuleID module) { return module.ref->getName(); }
 
-	std::string printModuleTree(ModuleID module) {
-		return module.ref->prettyPrint();
-	}
+	std::string printModuleTree(ModuleID module) { return module.ref->prettyPrint(); }
 
 	/*********************
 	 * QueryParentModule *
 	 *********************/
 	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = key.ref;
-			return module_tree->getParentModule().map([](const auto& parent) {
-				return ModuleID(parent);
+			auto module_tree = key.ref;
+			return module_tree->getParentModule().map([](auto parent) {
+				return ModuleID(const_cast<ModuleTree*>(&*parent));  // hacking here
 			});
 		}
 
@@ -507,8 +505,8 @@ namespace compiler::frontend {
 	 ***********************/
 	struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = key.ref;
-			return {module_tree->getMainSourceFile()};
+			auto module_tree = key.ref;
+			return { const_cast<SourceFile*>(&*module_tree->getMainSourceFile()) };  // hacking here
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -557,7 +555,7 @@ namespace compiler::frontend {
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref<SourceFile> file = key.ref;
-			auto pst  = file->getPST();
+			auto            pst  = file->getPST();
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 			// @todo modify it, when making proper helios errors

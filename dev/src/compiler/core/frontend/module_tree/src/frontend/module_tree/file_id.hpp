@@ -1,8 +1,10 @@
 #pragma once
 
-#include <base/ref.hpp>
-#include <query_framework/context.hpp>
 #include <pst_parser/access.hpp>
+
+#include <base/ref.hpp>
+
+#include <query_framework/context.hpp>
 
 namespace compiler::frontend {
 
@@ -16,12 +18,13 @@ namespace compiler::frontend {
 		}
 
 		bool operator==(const FileID&) const = default;
+
 		auto operator<=>(const FileID& other) const { return ref.get() <=> other.ref.get(); }
 
-	private:
-		base::CRef<SourceFile> ref;
+		FileID(base::Ref<SourceFile> ref): ref(ref) {}
 
-		FileID(base::CRef<SourceFile> ref): ref(ref) {}
+	private:
+		base::Ref<SourceFile> ref;
 		friend class SourceFile;
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
@@ -29,6 +32,8 @@ namespace compiler::frontend {
 		friend struct ImplementationOf_QueryMainSourceFile;
 		friend struct ImplementationOf_QuerySourceFiles;
 		friend struct ImplementationOf_QueryFilePST;
-		friend ModuleID extendQueryModuleIDOfPST(query::Context& ctx, pst::AccessLocked<pst::LangElement> element);
+		friend ModuleID extendQueryModuleIDOfPST(
+			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+		);
 	};
 }

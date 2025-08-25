@@ -13,12 +13,14 @@ namespace compiler::frontend {
 		}
 
 		bool operator==(const ModuleID&) const = default;
+
 		auto operator<=>(const ModuleID& other) const { return ref.get() <=> other.ref.get(); }
 
-	private:
-		base::CRef<ModuleTree> ref;
+		ModuleID(base::Ref<ModuleTree> ref): ref(ref) {}
 
-		ModuleID(base::CRef<ModuleTree> ref): ref(ref) {}
+	private:
+		base::Ref<ModuleTree> ref;
+
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;

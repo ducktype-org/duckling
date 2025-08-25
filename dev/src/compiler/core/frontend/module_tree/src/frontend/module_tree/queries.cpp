@@ -15,7 +15,7 @@ namespace compiler::frontend {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			Ref<ModuleTree> module_tree = ModuleTreeBuilder::create(key);
 
-			return module_tree->getID();
+			return { module_tree };
 		}
 
 		QUERY_AUTO_CACHE_COPY
