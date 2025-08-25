@@ -411,6 +411,7 @@ private:
 		// Check structure
 		ASSERT_EQUAL("manual_mod", mt->getName().strView());
 		ASSERT_TRUE(mt->hasMainSourceFile());
+		ASSERT_TRUE(parent_mod->getSubmodules().contains(mt->getName()));
 		ASSERT_EQUAL(2, mt->getSourceFiles().size());
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 		ASSERT_EQUAL(1, mt->getSubmodules().size());
