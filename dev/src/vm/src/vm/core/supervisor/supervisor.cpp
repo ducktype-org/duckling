@@ -1,12 +1,13 @@
 #include "supervisor.hpp"
 
+#include "base/exceptions.hpp"
+#include "base/variant.hpp"
+
 #include "vm/api/data/request.hpp"
 #include <vm/core/process/vmprocess.hpp>
 
 #include <mutex>
 #include <ranges>
-#include "base/exceptions.hpp"
-#include "base/variant.hpp"
 
 namespace vm {
 	Supervisor& Supervisor::get() {
@@ -32,11 +33,12 @@ namespace vm {
 	) {
 		variant_match(request.request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
+				auto res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
+					return process->doRequest(api::request::DeinitAndValidate{});
+				});
 				std::unique_lock lock(rw_process_table);
-				auto             ret = process_table[request.pid]
-							->doRequest(api::request::DeinitAndValidate{});
 				process_table.erase(request.pid);
-				return ret;
+				return res;
 			}
 			variant_default {
 				return getProcess(request.pid).and_then([&request](Ref<VMProcess> process) {

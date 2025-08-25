@@ -148,4 +148,7 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 		fail(err_str);
 	}
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
+	// auto validation_res = vm::api::deinitAndValidate(test_result.pid);
+	// ASSERT_TRUE(validation_res.has_value());
+	// ASSERT_TRUE(validation_res.value());
 }

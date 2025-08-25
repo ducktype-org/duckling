@@ -235,6 +235,7 @@ namespace vm {
 	}
 
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
+		// Decrease the dst block's refcount before assigning the new block
 		if_opt_some(dst.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
 			destroyBlockReference(dst);

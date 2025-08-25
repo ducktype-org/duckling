@@ -326,9 +326,6 @@ namespace vm {
 		vm_threads.emplace_back(*this);
 	}
 
-	VMProcess::~VMProcess() {
-	}
-
 	ProcIO& VMProcess::getIO() { return io; }
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }

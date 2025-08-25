@@ -47,6 +47,8 @@ namespace vm {
 	 *
 	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
+	 *
+	 * @note VMProcess should be deinitialized before destruction.
 	 */
 	class VMProcess final {
 		friend class VmValue;
