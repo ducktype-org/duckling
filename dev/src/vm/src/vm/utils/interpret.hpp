@@ -15,7 +15,7 @@ namespace vm {
 	 * object of type T. The `memcpy` operation is optimized by compilers to a single machine
 	 * instruction for trivially copyable types.
 	 * @note Type T must be trivially copyable.
-	 * @warning Well defined iff compiled with C++20 or newer, otherwise UB.
+	 * @warning Well defined if compiled with C++20 or newer, otherwise UB.
 	 *
 	 * @tparam T The target type to construct. Must be trivially copyable.
 	 * @param ptr A pointer to the beginning of the source byte buffer.
