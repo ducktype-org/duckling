@@ -122,9 +122,9 @@ namespace vm {
 		auto called_func_type = executing_program->types->at(func.name);
 		auto result_type      = called_func_type->getResultType().value();
 
-		u64  result_type_id     = result_type->getID().asInt();
+		u64         result_type_id     = result_type->getID().asInt();
 		const auto& funcs              = executing_program->functions;
-		u64  called_function_id = 0;
+		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
@@ -189,7 +189,7 @@ namespace vm {
 		start_function.name             = base::StrID("vm_start_function");
 		start_function.arg_size         = 0;
 		start_function.ret_size         = 0;
-		start_function.local_stack_size = 88;
+		start_function.local_stack_size = 72;
 
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
@@ -211,8 +211,8 @@ namespace vm {
 		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
 		u64 byte_type_id     = byte_type->getID().asInt();
 
-		auto funcs              = executing_program->functions;
-		u64  called_function_id = 0;
+		const auto& funcs              = executing_program->functions;
+		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
