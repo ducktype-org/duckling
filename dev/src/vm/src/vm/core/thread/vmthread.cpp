@@ -183,7 +183,8 @@ namespace vm {
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
 	) const {
-		std::optional<low::FuncData> start_function;
+		low::FuncData start_function {
+		.};
 		start_function->name             = base::StrID("vm_start_function");
 		start_function->arg_size         = 0;
 		start_function->ret_size         = 0;

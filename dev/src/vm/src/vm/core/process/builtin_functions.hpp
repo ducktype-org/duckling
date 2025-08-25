@@ -107,7 +107,7 @@ namespace vm::builtins {
 	 * @brief Get the stdlib module with the builtin functions.
 	 * The builtin functions are regular functions that have simple implementation
 	 * - they call the "real" builtin function with `call_builtin_func`.
-	 * But thanks to having these these wrappers,
+	 * But thanks to having these wrappers,
 	 * user can call builtins with simple `call_func` opcode.
 	 *
 	 * @note Both the wrapper and real builtin use the same function types.

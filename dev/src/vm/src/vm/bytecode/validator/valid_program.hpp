@@ -68,12 +68,12 @@ namespace vm::code {
 
 		/**
 		 * @brief Inserts code in-place.
-		 * @note If the newly injected code unvalidates the state,
+		 * @note If the newly injected code invalidates the state,
 		 * an exception of `ValidationError` base is thrown. This means this object will contain
 		 * invalid code and mustn't be used! If you don't want to lose the state, place use
 		 * `newInsertCode`.
 		 */
-		void insertCode(const code::CodeCollection& collections);
+		void insertCode(const code::CodeCollection& collection);
 
 		const ObjIdNameMap<TypeOfData>& types() const;
 

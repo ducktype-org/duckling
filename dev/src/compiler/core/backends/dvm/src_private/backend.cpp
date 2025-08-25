@@ -665,9 +665,7 @@ namespace compiler::backend_vm {
 		valid_program.insertCode(compiled_collection);
 	}
 
-	vm::code::CodeCollection Module::build() const {
-		auto return_collection            = valid_program.produceValidCodeCollection();
-		return_collection.contains_stdlib = true;
-		return return_collection;
+	CodeCollection Module::build() const {
+		return valid_program.produceValidCodeCollection();
 	}
 }

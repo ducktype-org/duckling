@@ -38,6 +38,6 @@ namespace compiler::backend_vm {
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
 	private:
-		vm::code::ValidProgram valid_program;
+		vm::code::ValidProgram valid_program = vm::code::ValidProgram::withStdlib();
 	};
 }

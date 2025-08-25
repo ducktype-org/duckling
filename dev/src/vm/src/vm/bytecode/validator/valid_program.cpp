@@ -31,7 +31,8 @@ Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
 	return type_context.validateAndProduceTypeMetadata();
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
@@ -49,7 +50,6 @@ void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) 
 	insertGlobals(collection.global_data);
 
 	insertFunctions(collection.functions);
-	is_stdlib_included |= collection.contains_stdlib;
 	valid = true;
 }
 
@@ -103,6 +103,5 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 	return { .functions = { function_map.begin(), function_map.end() },
 		     .types
 		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
-		     .global_data     = { globals_map.begin(), globals_map.end() },
-		     .contains_stdlib = is_stdlib_included };
+		     .global_data = { globals_map.begin(), globals_map.end() } };
 }

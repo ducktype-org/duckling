@@ -73,6 +73,5 @@ namespace vm::code {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;
 		std::vector<GlobalData> global_data;
-		bool                    contains_stdlib = false;
 	};
 }

@@ -164,13 +164,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	LoaderLogger log;
 	try {
-		bool stdlib_included = false;
-		for (const auto& code: code_collections)
-			if (code.contains_stdlib) stdlib_included = true;
-		if (!stdlib_included && !program.is_stdlib_included)
-			program = program.newInsertCode(
-				code::ValidProgram::withStdlib().produceValidCodeCollection()
-			);
 		for (const auto& code: code_collections) program = program.newInsertCode(code);
 		return compiler::compile(program);
 	} catch (code::StackStructureMismatchError& e) {
