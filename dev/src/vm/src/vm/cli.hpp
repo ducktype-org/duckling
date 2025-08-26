@@ -7,5 +7,5 @@
 
 #include <vm/core/supervisor/supervisor.hpp>
 
-int cli(const fs::File& filepath, bool load_stdlib);
-int cli(bool load_stdlib);
+int cli(const fs::File& filepath);
+int cli();

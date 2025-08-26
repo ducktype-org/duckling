@@ -1,21 +1,18 @@
-type fun: g_dtor { } void
-type fun: g_ctor { } void
-
 global_data g i64 {
     constructor: g_ctor,
     destructor: g_dtor
 };
 
-function g_ctor {
+function g_ctor {} -> void {
     mov_g64_imm            g,       5;
     ret;
 }
 
-function g_dtor {
+function g_dtor {} -> void {
     ret;
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
     mov_l64_g64 ret_val, g;
     ret;
 }

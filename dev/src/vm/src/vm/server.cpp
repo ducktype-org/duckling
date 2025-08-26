@@ -58,9 +58,6 @@ void server(i32 port) {
 
 			return toResponse(vm::api::loadFiles(pid, { fs::File(filepath) }));
 		});
-	CROW_ROUTE(app, "/process/load_stdlib/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::loadStdlib(pid));
-	});
 	CROW_ROUTE(app, "/process/run/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
 		return toResponse(vm::api::run(pid));
 	});

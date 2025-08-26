@@ -1,6 +1,4 @@
-type fun: summer { i64, i64 } void
-
-function summer {
+function summer { i64, i64 } -> void {
 	# [0, 8) arg0
 	# [8, 16) arg1
 	
