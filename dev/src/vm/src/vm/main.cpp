@@ -24,10 +24,6 @@ clah::Clah getVmClah() {
 	             .addLongName("version")
 	             .addShortDesc("Shows version and config")
 	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("stdlib")
-	             .addShortDesc("When passed, loads standard library")
-	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
@@ -52,7 +48,7 @@ clah::Clah getVmClah() {
 	                       .setHandler([](const clah::ParsingResult& options) {
 							   vm::Supervisor::get();
 							   auto file = options.getPositional<fs::File>(0);
-							   return cli(file, options.isFlag("stdlib"));
+							   return cli(file);
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

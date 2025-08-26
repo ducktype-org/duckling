@@ -396,23 +396,26 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
-			auto function_type      = builtins::getBuiltinFunctionType(builtin_id);
-			auto real_function_type = thread.executing_program->types->at(function_type->name);
-			auto arg_count          = function_type->parameters.size();
+			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
+			auto arg_count          = function_signature->parameters.size();
 
 			std::vector<Box<VmValue>> args;
 			u64                       first_arg_idx = frame->block_stack.size() - arg_count;
 
 			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type  = function_type->parameters[i];
+				const base::StrID arg_type  = function_signature->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
 				auto              block     = frame->block_stack[first_arg_idx + i];
 				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
-				builtin_id, real_function_type, thread.process, thread, args
+				builtin_id,
+				thread.executing_program->types->at(function_signature->result_type),
+				thread.process,
+				thread,
+				args
 			);
 
 			if (return_value.has_value()) {
@@ -438,16 +441,19 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
-			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 
 			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
 			// This is verified by static verification.
-			auto        view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+
+			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
 			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			auto        method_name      = thread.executing_program->method_name_pool[instr->arg1];
-			auto        implementation_name = inh_metadata->vtable[method_name]->getName();
-			usize function_id = *thread.executing_program->functions.idOf(implementation_name);
+			const auto  method_name      = thread.executing_program->method_name_pool[instr->arg1];
+			const auto  implementation_name = inh_metadata->vtable[method_name];
+
+			const usize function_id
+				= *thread.executing_program->functions.idOf(implementation_name);
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
