@@ -15,7 +15,6 @@ public:
 		TESTER_ADD_TEST(nonInstantiableDynTable);
 		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);
-
 	}
 
 private:
@@ -35,6 +34,7 @@ private:
 			vm::exceptions::VMMemoryAllocationError::ERR_MSG
 		);
 	}
+
 	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0, true); }
 };
 
