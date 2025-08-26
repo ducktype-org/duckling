@@ -91,6 +91,8 @@ namespace vm::builtins {
 		return &getBuiltinFunctions()->at(id).second;
 	}
 
+	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name);
+
 	/**
 	 * @brief Get the ID of the builtin function given the name.
 	 * ID is the index in the BUILTIN_FUNCTIONS array.
@@ -104,20 +106,4 @@ namespace vm::builtins {
 	 * @brief Returns true if the name is a builtin function name.
 	 */
 	bool isBuiltinFunction(base::StrID name);
-
-	/**
-	 * @brief Get the stdlib module with the builtin functions.
-	 * The builtin functions are regular functions that have simple implementation
-	 * - they call the "real" builtin function with `call_builtin_func`.
-	 * But thanks to having these wrappers,
-	 * user can call builtins with simple `call_func` opcode.
-	 *
-	 * @note Both the wrapper and real builtin use the same function types.
-	 * @note Function prototypes depend on the builtin types.
-	 *
-	 * The module with all the functions is generated on the first use of this function.
-	 *
-	 * @return Ref<code::CodeCollection>
-	 */
-	CRef<code::CodeCollection> getStdlibModule();
 }

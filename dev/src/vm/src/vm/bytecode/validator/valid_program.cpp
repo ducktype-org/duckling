@@ -19,45 +19,35 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	return program;
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::withStdlib() {
-	auto program               = withBuiltins();
-	program.is_stdlib_included = true;
-	auto code                  = *builtins::getStdlibModule().get();
-	return program.newInsertCode(code);
-}
-
 Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return type_context.validateAndProduceTypeMetadata();
+	return type_context.validateAndProduceTypeMetadata(available_functions);
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;
 }
 
-void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) {
+void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 	valid = false;
-	for (const auto& func: collection.functions)
-		type_context.signatures.put(func.name, func.signature);
+
+	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
+
 	insertTypes(collection.types);
-
-	for (auto& func: collection.functions) available_functions.insert(func.name);
-
 	insertGlobals(collection.global_data);
-
 	insertFunctions(collection.functions);
+
 	valid = true;
 }
 
-void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& new_types) {
+void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
 	for (const auto& type: new_types) type_context.insertType(type);
 }
 
-void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
+void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
@@ -69,15 +59,15 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& 
 	}
 }
 
-void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
-	auto type_metadata = type_context.validateAndProduceTypeMetadata();
+void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
+	auto type_metadata = type_context.validateAndProduceTypeMetadata(available_functions);
 
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = validateAndExtractReachableCode(
-			type_context.getCurrentTypes(), *type_metadata, globals_map, type_context.signatures, func
+			type_context.getCurrentTypes(), *type_metadata, globals_map, available_functions, func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}

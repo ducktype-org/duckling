@@ -246,21 +246,24 @@ class FunctionValidator {
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
-		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
-		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
-		auto generic_arg   = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto signature     = signatures.at(fun_name);
-		bool check_ret_val = signature.result_type.str != base::StrID("void");
+		auto                generic_arg = opargs::OpCodeArg{ instr.arg0 };
+		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
+            if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
+                return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
+            return &signatures.at(instr.arg0.function_name);
+		}();
 
-		if (signature.parameters.size() > local_stack.size() + check_ret_val)
+		bool check_ret_val = signature->result_type.str != base::StrID("void");
+
+		if (signature->parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: signature.parameters | std::views::reverse) {
-			if (code::typeName(*local_stack.back().type) != param.str)
+		for (auto param: signature->parameters | std::views::reverse) {
+			if (typeName(*local_stack.back().type) != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type.str)
+		if (check_ret_val && typeName(*local_stack.back().type) != signature->result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 

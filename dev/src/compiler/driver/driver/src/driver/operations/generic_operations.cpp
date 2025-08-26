@@ -145,5 +145,4 @@ namespace compiler::driver {
 				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
 			});
 	}
-
 }

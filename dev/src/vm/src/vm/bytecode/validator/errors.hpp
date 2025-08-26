@@ -282,7 +282,7 @@ namespace vm::code {
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidVirtualMethodImplementationError,
-		"Method implementation lacks it's declaration as a virtual method: "
+		"Method implementation lacks its declaration as a virtual method: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
 

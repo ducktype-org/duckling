@@ -65,21 +65,17 @@ private:
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						// @TODO: create global constant ctors if necessary
-						fail(
-							base::strConcat(
-								"Creating ctors for constant variables is not implemented yet. ",
-								"Global constant: ",
-								hout_glob.original_name.strView()
-							)
-						);
+						fail(base::strConcat(
+							"Creating ctors for constant variables is not implemented yet. ",
+							"Global constant: ",
+							hout_glob.original_name.strView()
+						));
 					}
 					variant_default {
-						fail(
-							base::strConcat(
-								"Unexpected global data type in module: ",
-								hout_glob.original_name.strView()
-							)
-						);
+						fail(base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_glob.original_name.strView()
+						));
 					}
 				}
 			}

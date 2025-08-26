@@ -144,7 +144,7 @@ namespace vm::builtins {
 			     {
 					 BuiltinFunctionID::OutputString,
 					 { base::StrID("builtin_strOutput_lptr"),
-			           code::FuncSignature{ base::StrID("i64"), { base::StrID("ptr_string") } } },
+			           code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }) },
 				 },
 			     {
 					 BuiltinFunctionID::Stoi,
@@ -155,6 +155,12 @@ namespace vm::builtins {
 				 } };
 
 		return &map;
+	}
+
+	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {
+		return getBuiltinFunctionID(name).map([](const auto& id) {
+			return getBuiltinFunctionSignature(id);
+		});
 	}
 
 	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name) {
@@ -174,27 +180,4 @@ namespace vm::builtins {
 	}
 
 	bool isBuiltinFunction(base::StrID name) { return getBuiltinFunctionID(name).has_value(); }
-
-	CRef<code::CodeCollection> getStdlibModule() {
-		static const code::CodeCollection builtin_module = []() {
-			code::CodeCollection code_collection;
-
-			for (const auto& [name, signature]: *getBuiltinFunctions() | std::views::values) {
-				code::Function builtin_function;
-				builtin_function.name = name;
-				builtin_function.body.emplace_back(
-					code::instructions::Op_call_builtin_func(opargs::BuiltinFunctionName(name))
-				);
-				builtin_function.body.emplace_back(code::instructions::Op_ret{});
-				builtin_function.signature = signature;
-				code_collection.functions.push_back(builtin_function);
-			}
-			// This is to ensure the produced std library is valid.
-			return code::ValidProgram::withBuiltins()
-			    .newInsertCode(code_collection)
-			    .produceValidCodeCollection();
-		}();
-
-		return &builtin_module;
-	}
 }

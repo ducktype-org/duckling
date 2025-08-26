@@ -20,7 +20,7 @@ namespace vm::loader {
 	 * @brief Loader class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		code::ValidProgram program = code::ValidProgram::withStdlib();
+		code::ValidProgram program = code::ValidProgram::withBuiltins();
 
 		/**
 		 * @brief Parses a list of files, returns an intermediate loader-only program

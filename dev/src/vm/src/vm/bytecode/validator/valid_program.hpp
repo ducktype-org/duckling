@@ -43,12 +43,6 @@ namespace vm::code {
 		static ValidProgram withBuiltins();
 
 		/**
-		 * @brief Creates a new ValidProgram object with builtin types and builtin functions
-		 * pre-inserted.
-		 */
-		static ValidProgram withStdlib();
-
-		/**
 		 * @brief Produces valid CodeCollection.
 		 */
 		CodeCollection produceValidCodeCollection() const;
@@ -64,7 +58,7 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram newInsertCode(const code::CodeCollection& collection) const;
+		ValidProgram newInsertCode(const CodeCollection& collection) const;
 
 		/**
 		 * @brief Inserts code in-place.
@@ -73,7 +67,7 @@ namespace vm::code {
 		 * invalid code and mustn't be used! If you don't want to lose the state, place use
 		 * `newInsertCode`.
 		 */
-		void insertCode(const code::CodeCollection& collection);
+		void insertCode(const CodeCollection& collection);
 
 		const ObjIdNameMap<TypeOfData>& types() const;
 
@@ -86,13 +80,13 @@ namespace vm::code {
 		 * @brief Inserts types. May invalidate state.
 		 * Can insert the same type multiple times.
 		 */
-		void insertTypes(const std::vector<code::TypeOfData>& new_types);
+		void insertTypes(const std::vector<TypeOfData>& new_types);
 
 		/**
 		 * @brief Inserts globals. May invalidate state.
 		 * Cannot insert the same global data multiple times.
 		 */
-		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
+		void insertGlobals(const std::vector<GlobalData>& new_globals);
 
 		/**
 		 * @brief Inserts a function. May invalidate state.
@@ -100,15 +94,14 @@ namespace vm::code {
 		 * function must not contain any dead-code, but Duckling's compiler, as of 21.05.2025, may
 		 * produce dead code.
 		 */
-		void insertFunctions(const std::vector<code::Function>& new_functions);
+		void insertFunctions(const std::vector<Function>& new_functions);
 
-		ObjIdNameMap<code::Function>   function_map;
-		ObjIdNameMap<code::GlobalData> globals_map;
+		ObjIdNameMap<Function>   function_map;
+		ObjIdNameMap<GlobalData> globals_map;
 
-		// Useful when verifying the presence of constructors and destructors while inserting globals.
-		std::unordered_set<base::StrID> available_functions;
+		base::HashMap<base::StrID, FuncSignature> available_functions;
 
-		code::TypeContext type_context;
+		TypeContext type_context;
 
 		bool valid = true;
 	};

@@ -446,13 +446,14 @@ namespace vm {
 			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
 			// This is verified by static verification.
 
-			const auto        view = Memory::getPointerData(pointer, sizeof(Type*));
+			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
 			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			const auto        method_name      = thread.executing_program->method_name_pool[instr->arg1];
-			const auto        implementation_name = inh_metadata->vtable[method_name];
+			const auto  method_name      = thread.executing_program->method_name_pool[instr->arg1];
+			const auto  implementation_name = inh_metadata->vtable[method_name];
 
-			const usize function_id = *thread.executing_program->functions.idOf(implementation_name);
+			const usize function_id
+				= *thread.executing_program->functions.idOf(implementation_name);
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}

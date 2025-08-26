@@ -227,9 +227,10 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateImplementations(
-		const InheritableType&                         inh,
-		const base::HashMap<base::StrID, base::StrID>& virtual_methods,
-		const TypeContext&                             ctx
+		const InheritableType&                           inh,
+		const base::HashMap<base::StrID, base::StrID>&   virtual_methods,
+		const TypeContext&                               ctx,
+		const base::HashMap<base::StrID, FuncSignature>& functions
 	) {
 		base::HashMap<base::StrID, base::StrID> implementations;
 		for (const auto& implementation: inh.implementations) {
@@ -245,10 +246,10 @@ namespace {
 			const auto& vmethod_type = getType<FunctionType>(ctx, vmethod_name, inh, [&]() {
 				return TypeIsNotFunctionalError(vmethod_name);
 			});
-			if (!ctx.signatures.contains(impl_name))
+			if (!functions.contains(impl_name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
-			const auto& impl_signature = ctx.signatures.at(impl_name);
+			const auto& impl_signature = functions.at(impl_name);
 			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, ctx);
 			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_name);
 		}
@@ -402,7 +403,11 @@ namespace {
 	/**
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
-	void validateType(const TypeOfData& type, const TypeContext& ctx) {
+	void validateType(
+		const TypeOfData&                                type,
+		const TypeContext&                               ctx,
+		const base::HashMap<base::StrID, FuncSignature>& functions
+	) {
 		variant_match(type) {
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
@@ -414,7 +419,7 @@ namespace {
 
 				validateImplementsDuplicates(interface);
 				validateVMethodSignatures(interface, ctx);
-				validateImplementations(interface, virtual_methods, ctx);
+				validateImplementations(interface, virtual_methods, ctx, functions);
 			}
 			variant_case(ClassType, clazz) {
 				// All virtual methods that can be implemented by this class(including superclass
@@ -425,7 +430,7 @@ namespace {
 				validateFieldDuplicates(clazz, ctx);
 				validateImplementsDuplicates(clazz);
 				validateVMethodSignatures(clazz, ctx);
-				validateImplementations(clazz, virtual_methods, ctx);
+				validateImplementations(clazz, virtual_methods, ctx, functions);
 				if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods, ctx);
 			}
 		}
@@ -436,7 +441,9 @@ namespace {
 	 * Checks each type individually and inheritance
 	 * hierarchy soundness.
 	 */
-	void validateTypes(const TypeContext& ctx) {
+	void validateTypes(
+		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
+	) {
 		// Check for cycles in hierarchy.
 		enum Status { Waiting, Visited, Done };
 
@@ -481,12 +488,14 @@ namespace {
 		for (const auto& type: types) helper(type);
 
 		// @note: Following validation assumes cycles in class hierarchy where detected.
-		for (const auto& type: types) validateType(type, ctx);
+		for (const auto& type: types) validateType(type, ctx, functions);
 	}
 }
 
-Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
-	validateTypes(*this);
+Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
+	const base::HashMap<base::StrID, FuncSignature>& available_functions
+) const {
+	validateTypes(*this, available_functions);
 	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
 
 	// Declare all types first

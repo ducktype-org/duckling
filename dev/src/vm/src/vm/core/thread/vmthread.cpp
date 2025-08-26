@@ -113,15 +113,13 @@ namespace vm {
 	low::FuncData VMThread::createStartFunctionFor(
 		const low::FuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::FuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.bc = {},
-			.local_stack_size = 0,
-			.arg_size = 0,
-			.ret_size = func.result_type->getSize(),
-			.parameters = {},
-			.result_type = func.result_type
-		};
+		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                          .bc               = {},
+			                          .local_stack_size = 0,
+			                          .arg_size         = 0,
+			                          .ret_size         = func.result_type->getSize(),
+			                          .parameters       = {},
+			                          .result_type      = func.result_type };
 
 		u64         result_type_id     = func.result_type->getID().asInt();
 		const auto& funcs              = executing_program->functions;
@@ -189,22 +187,20 @@ namespace vm {
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
 
 		auto main_return_type = func.result_type;
-		auto argv_type          = executing_program->types->at(base::StrID("argv"));
-		auto argv_ptr_type      = executing_program->types->at(base::StrID("ptr_argv"));
-		auto i64_type           = executing_program->types->at(base::StrID("i64"));
-		auto str_type           = executing_program->types->at(base::StrID("string"));
-		auto str_ptr_type       = executing_program->types->at(base::StrID("ptr_string"));
-		auto byte_type          = executing_program->types->at(base::StrID("byte"));
+		auto argv_type        = executing_program->types->at(base::StrID("argv"));
+		auto argv_ptr_type    = executing_program->types->at(base::StrID("ptr_argv"));
+		auto i64_type         = executing_program->types->at(base::StrID("i64"));
+		auto str_type         = executing_program->types->at(base::StrID("string"));
+		auto str_ptr_type     = executing_program->types->at(base::StrID("ptr_string"));
+		auto byte_type        = executing_program->types->at(base::StrID("byte"));
 
-		low::FuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.bc = {},
-			.local_stack_size = 72,
-			.arg_size = i64_type->getSize() + argv_ptr_type->getSize(),
-			.ret_size = main_return_type->getSize(),
-			.parameters = { i64_type, argv_ptr_type },
-			.result_type = func.result_type
-		};
+		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                          .bc               = {},
+			                          .local_stack_size = 72,
+			                          .arg_size    = i64_type->getSize() + argv_ptr_type->getSize(),
+			                          .ret_size    = main_return_type->getSize(),
+			                          .parameters  = { i64_type, argv_ptr_type },
+			                          .result_type = func.result_type };
 
 		// TypeIDs to pass to opcodes.
 		u64 func_ret_type_id = main_return_type->getID().asInt();
@@ -370,8 +366,7 @@ namespace vm {
 		// so we turn off pedantic warnings
 		// for this case
 		PUSH_DIAGNOSTIC
-		_Pragma(
-			"GCC diagnostic ignored \"-Wpedantic\""
+		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
 		) constexpr static std::array<void*, OP_CASES_COUNT>
 			opcode_label = {
 
@@ -639,20 +634,15 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(
-							api::response::CodePosition{
-								.function_id
-								= static_cast<u64>(index),  // Assuming function_id is int
-								.instr_number = static_cast<u64>(instr - func.bc.data()) }
-						);
+						return api::Response(api::response::CodePosition{
+							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(
-					api::ApiError{
-						api::OtherError{ "wrong execution status while reading current position" } }
-				);
+				return std::unexpected(api::ApiError{
+					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
 		CORE_UNREACHABLE();

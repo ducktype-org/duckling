@@ -22,10 +22,11 @@ namespace vm::code {
 
 		/**
 		 * @brief Creates TypeMetadata by building types.
+		 * @param functions Functions available in the program, callable with `call_func`
 		 */
-		Box<TypeMetadata> validateAndProduceTypeMetadata() const;
-
-		base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
+		Box<TypeMetadata> validateAndProduceTypeMetadata(
+			const base::HashMap<base::StrID, FuncSignature>& functions
+		) const;
 
 	private:
 		ObjIdNameMap<TypeOfData> types;

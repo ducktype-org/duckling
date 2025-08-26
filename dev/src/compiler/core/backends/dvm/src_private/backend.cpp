@@ -15,6 +15,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/interpret.hpp>
@@ -251,15 +252,13 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
-						throw base::NotYetImplemented(
-							base::strConcat(
-								"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
-								"supported YET, name: ",
-								primitive.name,
-								", size: ",
-								primitive.size
-							)
-						);
+						throw base::NotYetImplemented(base::strConcat(
+							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
+							"supported YET, name: ",
+							primitive.name,
+							", size: ",
+							primitive.size
+						));
 					if (is_global) {
 						if (primitive.size == 8) return vm::opargs::Global64{ name };
 						if (primitive.size == 4) return vm::opargs::Global32{ name };
@@ -436,6 +435,9 @@ namespace compiler::backend_vm {
 				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
+			if (vm::builtins::isBuiltinFunction(called_func_name))
+				called_func_arg = vm::opargs::BuiltinFunctionName(called_func_name);
+
 			pushInstruction(ctx.bytecode_func, { OpKind::call, called_func_arg });
 
 			pushInstruction(
@@ -456,12 +458,9 @@ namespace compiler::backend_vm {
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
 				ctx.bytecode_func,
-				vm::code::instructions::Comment(
-					base::StrID(
-						base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
-							.data()
-					)
-				)
+				vm::code::instructions::Comment(base::StrID(
+					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
+				))
 			);
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
@@ -543,11 +542,9 @@ namespace compiler::backend_vm {
 
 		pushInstruction(
 			ctx.bytecode_func,
-			instructions::Comment(
-				base::StrID(
-					base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-				)
-			)
+			instructions::Comment(base::StrID(
+				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+			))
 		);
 
 		if (terminator.operation == lir::Operation::Branch) {
@@ -637,10 +634,8 @@ namespace compiler::backend_vm {
 			}
 
 			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
-			compiled_collection.global_data.push_back(
-				GlobalData{
-					{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name }
-			);
+			compiled_collection.global_data.push_back(GlobalData{
+				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}
 
 		// Insert and validate types:
