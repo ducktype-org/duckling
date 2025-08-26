@@ -5,8 +5,8 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
-#include <vm/utils/interpret.hpp>
 #include <vm/core/process/exceptions.hpp>
+#include <vm/utils/interpret.hpp>
 
 #include <mutex>
 
@@ -152,7 +152,7 @@ namespace vm {
 		block_data.view         = getPointerData(parent_pointer, type->getSize());
 
 		auto new_block = createBlock(block_data);  // @note createBlock nulls them bytes
-		new_block->refcount++;  // so that the block does not disappear accidentally
+		increaseBlockRefCount(new_block);  // so that the block does not disappear accidentally
 		children.put(parent_pointer.offset, new_block);
 	}
 
@@ -258,6 +258,16 @@ namespace vm {
 		return block->data.element_type;
 	}
 
+	void Memory::increaseBlockRefCount(Ref<Block> block) {
+		std::lock_guard lock(*block->mutex_ref);
+		block->refcount++;
+	}
+
+	void Memory::decreaseBlockRefCount(Ref<Block> block) {
+		std::lock_guard lock(*block->mutex_ref);
+		block->refcount--;
+	}
+
 	void Memory::runDataDestructor(Ref<Block> block) {
 		runDataDestructorImpl(block->data.view, block->data.element_type);
 	}
@@ -304,7 +314,5 @@ namespace vm {
 		}
 	}
 
-	bool Memory::validateMemoryState() const {
-		return blocks.empty();
-	}
+	bool Memory::validateMemoryState() const { return blocks.empty(); }
 }

@@ -102,6 +102,7 @@ namespace vm {
 		) {
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.executing_program->functions[function_id];
+			std::cerr << "Calling: " << called_func.name.strView() << std::endl;
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
@@ -174,6 +175,9 @@ namespace vm {
 			auto type     = thread.executing_program->types->at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+
+			Memory::increaseBlockRefCount(block); // so that nobody can delete our block
+
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
 			// local_offset mappings from the frame when we call a function. In the call, we just
 			// move the local_stack_head and new inits (which will happen after we return from a

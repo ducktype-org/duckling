@@ -174,6 +174,9 @@ namespace vm {
 
 		// ======================== Pointers ========================
 
+		static void increaseBlockRefCount(Ref<Block> block);
+		static void decreaseBlockRefCount(Ref<Block> block);
+
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer;
 

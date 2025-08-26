@@ -459,6 +459,7 @@ namespace vm {
 		{
 			auto  function_id = static_cast<usize>(instr->arg0);
 			auto& function    = thread.executing_program->functions[function_id];
+			std::cerr << "Tailcalling: " << function.name.strView() << std::endl;
 			instr             = function.bc.data();
 
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
@@ -517,6 +518,7 @@ namespace vm {
 			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
 			// will overwrite the old mappings
 
+			Memory::decreaseBlockRefCount(block);
 			thread.process_memory.freeBlock(block);
 			frame->local_stack_head -= type->getSize();
 		}
