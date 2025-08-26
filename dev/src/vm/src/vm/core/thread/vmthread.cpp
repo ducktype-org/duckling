@@ -122,9 +122,9 @@ namespace vm {
 		auto called_func_type = executing_program->types->at(func.name);
 		auto result_type      = called_func_type->getResultType().value();
 
-		u64  result_type_id     = result_type->getID().asInt();
-		auto funcs              = executing_program->functions;
-		u64  called_function_id = 0;
+		u64         result_type_id     = result_type->getID().asInt();
+		const auto& funcs              = executing_program->functions;
+		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
@@ -177,14 +177,10 @@ namespace vm {
 	 * which may vary from call to call and creating a generic start function using builders in the
 	 * loading phase is not possible. This also results in the need to create the function in its
 	 * low representation.
-	 * @todo This is a mock implementation. Since strings and dynamic arrays don't exist in the VM
-	 * yet, the passed arguments are expected to be strings representing a numerical value and are
-	 * passed as `i64` to the main function. Additionally, in the future, we might want to add a
+	 * @note In the future, we might want to add a
 	 * separate start function builder because the start function creation will get a lot more
 	 * complicated, after we start using VmValue or default value constructors which have to be
 	 * invoked before main.
-	 *
-	 * This should change after issue #722.
 	 */
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
@@ -202,12 +198,19 @@ namespace vm {
 		auto argv_type          = executing_program->types->at(base::StrID("argv"));
 		auto argv_ptr_type      = executing_program->types->at(base::StrID("ptr_argv"));
 		auto i64_type           = executing_program->types->at(base::StrID("i64"));
+		auto str_type           = executing_program->types->at(base::StrID("string"));
+		auto str_ptr_type       = executing_program->types->at(base::StrID("ptr_string"));
+		auto byte_type          = executing_program->types->at(base::StrID("byte"));
 
 		// TypeIDs to pass to opcodes.
-		u64         func_ret_type_id   = called_return_type->getID().asInt();
-		u64         argv_type_id       = argv_type->getID().asInt();
-		u64         argv_ptr_type_id   = argv_ptr_type->getID().asInt();
-		u64         i64_type_id        = i64_type->getID().asInt();
+		u64 func_ret_type_id = called_return_type->getID().asInt();
+		u64 argv_type_id     = argv_type->getID().asInt();
+		u64 argv_ptr_type_id = argv_ptr_type->getID().asInt();
+		u64 i64_type_id      = i64_type->getID().asInt();
+		u64 str_type_id      = str_type->getID().asInt();
+		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
+		u64 byte_type_id     = byte_type->getID().asInt();
+
 		const auto& funcs              = executing_program->functions;
 		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
@@ -219,24 +222,80 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(
 					init_lany_type, 0, func_ret_type_id
 				),  // [0, 8) program ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 8, argv_ptr_type_id),  // [8, 24) *argv
-				MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),     // alloc argv
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 24, i64_type_id),      // [24, 32) ix
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),  // [32, 40) temp_store
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 8, argv_ptr_type_id
+				),  // [8, 24) *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 24, i64_type_id
+				),  // [24, 32) argc_internal
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),  // [32, 40) ix
+				// MAKE_BYTECODE_INSTRUCTION(
+		        // 	init_lany_type, 40, str_ptr_type_id
+		        // ),  // [40, 56) ptr_tmp_store
+		        // MAKE_BYTECODE_INSTRUCTION(
+		        // 	init_lany_type, 56, byte_type_id
+		        // ),  // [56, 57) char_tmp_store
+				MAKE_BYTECODE_INSTRUCTION(
+					mov_l64_imm, 24, args.size()
+				),  // argc_internal := args.size()
+				MAKE_BYTECODE_INSTRUCTION(
+					dynTableReAlloc_lptr_type, 8, argv_type_id
+				),  // alloc *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 			}
 		);
 
-		for (const auto& arg: args) {
-			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
-			// to ints. This should change after #722.
-			u64 converted_arg = static_cast<u64>(std::stoll(arg));
+		for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
-					MAKE_BYTECODE_INSTRUCTION(fixedSizeTableStore_lptr_lany, 8, 32),
+					MAKE_BYTECODE_INSTRUCTION(
+						init_lany_type, 40, str_ptr_type_id
+					),  // [40, 56) ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(
+						init_lany_type, 56, byte_type_id
+					),  // [56, 57) char_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(
+						mov_l64_imm, 24, arg.size() + 1
+					),  // argc_internal := arg.size() + 1 (for the \0 character)
+					MAKE_BYTECODE_INSTRUCTION(
+						dynTableReAlloc_lptr_type, 40, str_type_id
+					),                                              // alloc ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
-					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
+					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
+				}
+			);
+			for (auto c: arg) {
+				start_function.bc.insert(
+					start_function.bc.end(),
+					{ MAKE_BYTECODE_INSTRUCTION(
+						  mov_l8_imm, 56, static_cast<u64>(c)
+					  ),  // char_tmp_store := c
+				      MAKE_BYTECODE_INSTRUCTION(
+						  dynTableStore_lptr_lany, 40, 56
+					  ),  // ptr_tmp_store[ix] := char_tmp_store
+				      MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+				      MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1) }
+				);
+			}
+			start_function.bc.insert(
+				start_function.bc.end(),
+				{
+					// At this point ix == arg.size().
+					MAKE_BYTECODE_INSTRUCTION(mov_l8_imm, 56, 0),  // char_tmp_store := \0
+					MAKE_BYTECODE_INSTRUCTION(
+						dynTableStore_lptr_lany, 40, 56
+					),  // ptr_tmp_store[ix] := char_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(
+						mov_l64_imm, 32, base::safeIntConv<u64>(argv_index)
+					),  // ix := argv_index
+					MAKE_BYTECODE_INSTRUCTION(
+						dynTableStore_lptr_lany, 8, 40
+					),                                        // argv_internal[ix] := ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 				}
 			);
 		}
@@ -244,26 +303,46 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(
-					init_lany_type, 40, func_ret_type_id
-				),  // [40, 48) call ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56] argc
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 40, i64_type_id),  // [40, 48) main ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56) argc
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
-				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-				// @todo: For now we assume that the return values are always i64. It's true for
-		        // main, but won't be true once REPL arrives.
-				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // move the ret_val to 0th block
-				MAKE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),     // free *argv
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // temp
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // called func ret_val
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // ix
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // argv_ptr
-				// Here, only the return value remains on the stack.
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, args.size()),  // argc := args.size()
+				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),          // argv := argv_internal
+				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // ret_val := main_ret_val
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, 0),  // ix := 0
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 48, str_ptr_type_id
+				),  // [48, 64) ptr_tmp_store
+			}
+		);
+		for ([[maybe_unused]] const auto& arg: args) {
+			start_function.bc.insert(
+				start_function.bc.end(),
+				{
+					MAKE_BYTECODE_INSTRUCTION(
+						dynTableLoad_lany_lptr, 48, 8
+					),  // ptr_tmp_store := argv_internal[ix]
+					MAKE_BYTECODE_INSTRUCTION(ext_l64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(free_lptr, 48, 0),    // free ptr_tmp_store
+					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 32, 1),  // ++ix
+				}
+			);
+		}
+		start_function.bc.insert(
+			start_function.bc.end(),
+			{
+				MAKE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),  // free *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ptr_tmp_store
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit main_ret_val
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ix
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit argc_internal
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit *argv_internal
+				// At this point only the start function return value remains on the stack.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
+
 		return start_function;
 	}
 

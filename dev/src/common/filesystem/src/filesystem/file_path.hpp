@@ -214,7 +214,7 @@ namespace fs {
 		// Comparison operators
 		auto operator<=>(const FilePath& other) const {
 			CORE_ASSERT(
-				(other.type == type) == (path == other.path),
+				(path != other.path) || (type == other.type),
 				"FilePath differ in exactly one of type/path, this should never happen"
 			);
 			return path <=> other.path;
@@ -222,8 +222,18 @@ namespace fs {
 
 		auto operator==(const FilePath& other) const {
 			CORE_ASSERT(
-				(other.type == type) == (path == other.path),
-				"FilePath differ in exactly one of type/path, this should never happen"
+				(path != other.path) || (type == other.type),
+				base::strConcat(
+					"FilePath differ in exactly one of type/path, this should never happen: ",
+					path.string(),
+					" vs ",
+					other.path.string(),
+					" (type: ",
+					type,
+					" vs ",
+					other.type,
+					")"
+				)
 			);
 			return path == other.path;
 		}
