@@ -11,7 +11,7 @@ namespace pst {
 	class MatchCase final: public NotStmt {
 		struct CaseBranch {
 			base::Optional<AccessInternal<UniversalExprHolder>> condition;
-			AccessInternal<AssignmentExprHolder>                result;
+			AccessInternal<UniversalExprHolder>                result;
 		};
 
 		AccessInternal<FlowPattern> pattern;

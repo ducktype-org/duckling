@@ -204,7 +204,6 @@ namespace pst {
 	}
 
 	void ValuePattern::dprint(std::ostream& out) const {
-		// TODOP: Fix that.
 		out << "{";
 		out << R"("pattern_type": "value",)";
 		out << R"("expression": )";

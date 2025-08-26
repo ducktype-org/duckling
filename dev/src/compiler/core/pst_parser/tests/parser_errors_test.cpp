@@ -309,10 +309,11 @@ class PSTErrorTests: public tester::TestSuite {
         "Response(200, Payload(u as user : User, _ as token : Token))"
 	};
 	Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32, y as coord_y : f64)" };
+	// Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32 as coord_y)" };
 	Example<pst::FlowPattern, false> analysis_bad_value{ "+" };
 	Example<pst::FlowPattern, false> analysis_binding_is_keyword{ "if" };
-	Example<pst::FlowPattern, true>  analysis_block_expr{ "{ x + y * z; }" };          // TODOP: Fix
-	Example<pst::FlowPattern, true>  analysis_block_with_variable{ "{ some_var; }" };  // TODOP:
+	Example<pst::FlowPattern, true>  analysis_block_expr{ "{ x + y * z; }" };
+	Example<pst::FlowPattern, true>  analysis_block_with_variable{ "{ some_var; }" };
 
 
 	Example<pst::expr::MatchExpr, true> match_single_case{ R"(match (x) { case 1 = "one"; };)" };
