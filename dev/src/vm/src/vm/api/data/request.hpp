@@ -14,13 +14,10 @@
 
 #include <iostream>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace vm::api {
 	namespace request {
-		struct LoadStdlib {};
-
 		struct LoadFiles {
 			std::vector<fs::File> filenames;
 		};
@@ -83,7 +80,6 @@ namespace vm::api {
 	}
 
 	using RequestVariant = std::variant<
-		request::LoadStdlib,
 		request::LoadFiles,
 		request::LoadCode,
 		request::Pause,

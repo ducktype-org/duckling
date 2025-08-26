@@ -59,18 +59,22 @@
 DEF_OPCODE(mov_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 DEF_OPCODE(mov_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_OPCODE(cmov_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_OPCODE(cmov_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 
 DEF_OPCODE(mov_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
 DEF_OPCODE(mov_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
 DEF_OPCODE(cmov_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_OPCODE(cmov_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
 
 DEF_OPCODE(mov_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_OPCODE(mov_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_OPCODE(cmov_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_OPCODE(cmov_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
 DEF_OPCODE(mov_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_OPCODE(mov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_OPCODE(cmov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_OPCODE(cmov_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 
 
 DEF_OPCODE(mov_g64_g64, vm::opargs::Global64, vm::opargs::Global64)
@@ -422,6 +426,13 @@ DEF_OPCODE(
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::Type /* table_type ,
 vm::opargs::StackLocal64     new_elem_count */
+)
+
+/**
+ * @brief Outputs a dynamic table of bytes as a string.
+ */
+DEF_OPCODE(
+	strOutput_lptr, vm::opargs::StackLocalPtr /* string_ptr */
 )
 
 // ========= TYPE OPERATIONS ========

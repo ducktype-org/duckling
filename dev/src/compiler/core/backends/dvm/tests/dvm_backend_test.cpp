@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(builtinFuncsTest);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
+		TESTER_ADD_TEST(comparisonsTest);
 	}
 
 protected:
@@ -38,10 +39,10 @@ private:
 	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		std::vector<CRef<lir::Function>>                    funcs;
-		std::vector<compiler::backend_vm::BackendDVMGlobal> globals;
-		base::StrID                                         module_name;
-		vm::code::CodeCollection                            code;
+		std::vector<CRef<lir::Function>>          funcs;
+		std::vector<backend_vm::BackendDVMGlobal> globals;
+		base::StrID                               module_name;
+		vm::code::CodeCollection                  code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
@@ -93,18 +94,16 @@ private:
 
 	void runTest(
 		std::string                        module_path,
-		const base::Optional<std::string>& input      = {},
-		const base::Optional<std::string>& output     = {},
-		const std::vector<std::string>&    args       = {},
-		i64                                exit_code  = 0,
-		bool                               add_stdlib = true
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
+		i64                                exit_code = 0
 	) {
 		using namespace compiler;
 		auto code = getModuleFromPath(std::move(module_path));
-
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
-		runTestOnVm(code, input, output, args, exit_code, add_stdlib);
+		runTestOnVm(code, input, output, args, exit_code);
 	}
 
 	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }
@@ -116,6 +115,8 @@ private:
 	void globalVariablesTest() { runTest("modules/globals", {}, {}, {}, 48); }
 
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
+
+	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
 };
 
 
