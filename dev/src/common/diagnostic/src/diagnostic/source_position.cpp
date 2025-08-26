@@ -159,13 +159,9 @@ namespace dia {
 
 	void to_json(json& j, const SourcePosition& pos) {
 		auto [line, column] = pos.getStartLineColumn();
-		j = json{ // { "file", pos.source_file->getPath().strView().data() }, // TODO: Should we
-			      // check if this is not null?
-			      { "file", pos.getSource()->getPath().strView() },
-			      { "line", line },
-			      { "column", column },
-			      { "last_modified", (usize)0 }
-		};  // TODO: Set last modified to real value.
+		j                   = json{ { "file", pos.getSource()->getPath().strView() },
+			                        { "line", line },
+			                        { "column", column } };
 	}
 
 	std::strong_ordering SourcePosition::operator<=>(const dia::SourcePosition& other) const {

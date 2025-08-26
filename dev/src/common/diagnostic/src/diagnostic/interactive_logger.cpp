@@ -1,4 +1,6 @@
 #include "interactive_logger.hpp"
+#include "base/box.hpp"
+#include "diagnostic/interactive_message.hpp"
 #include <dia_app/view_manager/view_manager.hpp>
 #include <dia_app/term_ui/view.hpp>
 
