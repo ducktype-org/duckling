@@ -36,7 +36,6 @@ private:
 	}
 
 	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0); }
-
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/dynamic_table/");
