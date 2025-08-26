@@ -1,8 +1,6 @@
 # Test if previously injected functions are present in program state.
 
-type fun: spring { i64, i64 } i64
-
-function spring {
+function spring { i64, i64 } -> i64 {
 	# For given a, b calculates a * (a+b)
 	
 	mov_l64_l64 ret_val, arg0;

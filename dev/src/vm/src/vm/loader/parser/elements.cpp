@@ -354,31 +354,35 @@ namespace vm::loader::parser {
 			return nullptr;
 		}
 
-		/**
-		    // This code will be needed in the upcoming PR
-		    // https://github.com/ducktype-org/duckling/issues/699
-		    state.goDown();
-		    while (state.notEmpty()) {
-		        tpc::Identifier field_type;
-		        state.parse().one(&field_type);
-		        out->parameters.emplace_back(field_type);
+		state.goDown();
+		while (state.notEmpty()) {
+			tpc::Identifier field_type;
+			state.parse().one(&field_type);
+			out->parameters.emplace_back(field_type);
 
-		        if (state.empty()) break;
-		        if (state[0].is(lang_def::Special::Comma)) {
-		            state.parse().one(lang_def::Special::Comma);
-		        } else {
-		            state.err->failAndLog(state.getPosition(), "expected comma or }");
-		            state.tokens().skip();
-		        }
-		    }
-		    state.goUpAndSkip();
-		    state.parse().one(&out->result_type);
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.err->failAndLog(state.getPosition(), "expected comma or }");
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
 
-		    if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-		        state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
-		        return nullptr;
-		    }
-		 */
+		if (state[0].is(lang_def::NamedOperator::SingleArrow)) {
+			state.parse().one(lang_def::NamedOperator::SingleArrow);
+		} else {
+			state.err->failAndLog(state.getPosition(-1), "expected `->` after function parameters");
+			return nullptr;
+		}
+
+		state.parse().one(&out->result_type);
+
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+			return nullptr;
+		}
 
 		state.goDown();
 		state.parse().one(&out->code);
@@ -767,15 +771,14 @@ namespace vm::loader::parser {
 
 	void Func::dprint(std::ostream& out) const {
 		out << "function ";
-		out << name.value.strView() << "{\n";
-		// Needed by: https://github.com/ducktype-org/duckling/issues/699
-		// bool first = true;
-		// for (const auto& param: parameters) {
-		// 	if (!first) out << ", ";
-		// 	out << param.value.strView();
-		// 	first = false;
-		// }
-		// out << "} " << result_type.value.strView() << "{\n";
+		out << name.value.strView() << "{";
+		bool first = true;
+		for (const auto& param: parameters) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << "} -> " << result_type.value.strView() << "{\n";
 		code->dprint(out);
 		out << "}\n";
 	}

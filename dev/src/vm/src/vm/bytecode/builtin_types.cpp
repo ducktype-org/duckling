@@ -31,11 +31,6 @@ namespace vm::code {
 			TypeOfData(PointerType(base::StrID("ptr_string"), base::StrID("string"))),
 			TypeOfData(DynamicTableType(base::StrID("argv"), base::StrID("ptr_string"))),
 			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))),
-			TypeOfData(FunctionType(
-				base::StrID("main"),
-				{ base::StrID("i64"), base::StrID("ptr_argv") },
-				base::StrID("i64")
-			)),
 
 			SpecialTypes::get().vtable_ptr,
 		};

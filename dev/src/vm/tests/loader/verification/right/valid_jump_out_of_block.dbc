@@ -1,4 +1,4 @@
-function main {
+function main { i64, ptr_argv } -> i64 {
 		# ret_val -> main ret_val
 		# arg0 -> argc
 		# arg1 -> *argv
