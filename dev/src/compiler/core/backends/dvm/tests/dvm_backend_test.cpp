@@ -39,10 +39,10 @@ private:
 	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		std::vector<CRef<lir::Function>>                    funcs;
-		std::vector<compiler::backend_vm::BackendDVMGlobal> globals;
-		base::StrID                                         module_name;
-		vm::code::CodeCollection                            code;
+		std::vector<CRef<lir::Function>>          funcs;
+		std::vector<backend_vm::BackendDVMGlobal> globals;
+		base::StrID                               module_name;
+		vm::code::CodeCollection                  code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
@@ -65,17 +65,21 @@ private:
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						// @TODO: create global constant ctors if necessary
-						fail(base::strConcat(
-							"Creating ctors for constant variables is not implemented yet. ",
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"Creating ctors for constant variables is not implemented yet. ",
+								"Global constant: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type in module: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 				}
 			}

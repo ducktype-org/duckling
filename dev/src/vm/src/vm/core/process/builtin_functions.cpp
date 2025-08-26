@@ -24,17 +24,18 @@ namespace vm::builtins {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>>
 			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
-			if (std::is_void_v<Ret>) {
-				function(thread, args[Is]->readBytes<FunArgs>()...);
+			if constexpr (std::is_void_v<Ret>) {
+				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
+			} else {
+				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
+				CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+
+				auto vm_value = process.createOwnedVmValue(vm_return_type);
+
+				vm_value->writeBytes<Ret>(value);
+				return vm_value;
 			}
-			auto value = function(thread, args[Is]->readBytes<FunArgs>()...);
-			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
-
-			auto vm_value = process.createOwnedVmValue(vm_return_type);
-
-			vm_value->writeBytes<Ret>(value);
-			return vm_value;
 		}
 
 		/**
@@ -82,12 +83,27 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(VMThread& thread, i64 arg) {
-		std::string output;
-
-		output = std::to_string(arg) + "\n";
+		const std::string output = std::to_string(arg) + "\n";
 		thread.process.getIO().writeOutput(output);
 
 		return base::safeIntConv<i64>(output.size());
+	}
+
+	void FunctionHandlers::builtinOutputString(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+		auto str_data   = block_data.stdString();
+		thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
+	}
+
+	i64 FunctionHandlers::builtinStoi(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		auto str_data = block_data.stdString();
+		return std::stoll(str_data);
 	}
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(
@@ -105,7 +121,7 @@ namespace vm::builtins {
 		);                                                                              \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -124,6 +140,18 @@ namespace vm::builtins {
 					 BuiltinFunctionID::OutputI64,
 					 { base::StrID("builtin_output_i64"),
 			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
+				 },
+			     {
+					 BuiltinFunctionID::OutputString,
+					 { base::StrID("builtin_strOutput_lptr"),
+			           code::FuncSignature{ base::StrID("i64"), { base::StrID("ptr_string") } } },
+				 },
+			     {
+					 BuiltinFunctionID::Stoi,
+					 {
+						 base::StrID("builtin_stoi_lptr"),
+						 code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
+					 },
 				 } };
 
 		return &map;
@@ -151,14 +179,14 @@ namespace vm::builtins {
 		static const code::CodeCollection builtin_module = []() {
 			code::CodeCollection code_collection;
 
-			for (const auto& [id, func_pair]: *getBuiltinFunctions()) {
+			for (const auto& [name, signature]: *getBuiltinFunctions() | std::views::values) {
 				code::Function builtin_function;
-				builtin_function.name = func_pair.first;
-				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(
-					vm::opargs::BuiltinFunctionName(func_pair.first)
-				));
+				builtin_function.name = name;
+				builtin_function.body.emplace_back(
+					code::instructions::Op_call_builtin_func(opargs::BuiltinFunctionName(name))
+				);
 				builtin_function.body.emplace_back(code::instructions::Op_ret{});
-				builtin_function.signature = func_pair.second;
+				builtin_function.signature = signature;
 				code_collection.functions.push_back(builtin_function);
 			}
 			// This is to ensure the produced std library is valid.

@@ -895,6 +895,13 @@ class FunctionValidator {
 				base::StrID wanted_type = instr.arg1.type_name;
 				if (wanted_type != table_type.name) throw InvalidArgumentTypeError(instr.arg1);
 			}
+			variant_case(Op_strOutput_lptr, instr) {
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				if (table_type.inner != "byte") throw DynamicTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}
 			variant_case_novalue(Op_ext_field) {}

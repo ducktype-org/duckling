@@ -251,13 +251,15 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
-						throw base::NotYetImplemented(base::strConcat(
-							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
-							"supported YET, name: ",
-							primitive.name,
-							", size: ",
-							primitive.size
-						));
+						throw base::NotYetImplemented(
+							base::strConcat(
+								"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
+								"supported YET, name: ",
+								primitive.name,
+								", size: ",
+								primitive.size
+							)
+						);
 					if (is_global) {
 						if (primitive.size == 8) return vm::opargs::Global64{ name };
 						if (primitive.size == 4) return vm::opargs::Global32{ name };
@@ -410,6 +412,7 @@ namespace compiler::backend_vm {
 
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
+
 			auto called_func_signature = ctx.SIGNATURES.at(called_func_name);
 			// Init result type
 
@@ -453,9 +456,12 @@ namespace compiler::backend_vm {
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
 				ctx.bytecode_func,
-				vm::code::instructions::Comment(base::StrID(
-					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
-				))
+				vm::code::instructions::Comment(
+					base::StrID(
+						base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
+							.data()
+					)
+				)
 			);
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
@@ -537,9 +543,11 @@ namespace compiler::backend_vm {
 
 		pushInstruction(
 			ctx.bytecode_func,
-			instructions::Comment(base::StrID(
-				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-			))
+			instructions::Comment(
+				base::StrID(
+					base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+				)
+			)
 		);
 
 		if (terminator.operation == lir::Operation::Branch) {
@@ -596,13 +604,12 @@ namespace compiler::backend_vm {
 		const std::vector<CRef<lir::Function>>& functions,
 		const std::vector<BackendDVMGlobal>&    globals
 	):
-		  module_id(module_id),
-		  valid_program(ValidProgram::withStdlib()) {
-		CodeCollection                                      compiled_types;
-		CodeCollection                                      compiled_collection;
-		base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
-		std::vector<CRef<lir::Function>>                    ctors;
-		std::vector<CRef<lir::Function>>                    dtors;
+		  module_id(module_id) {
+		CodeCollection                            compiled_types;
+		CodeCollection                            compiled_collection;
+		base::HashMap<base::StrID, FuncSignature> signatures;
+		std::vector<CRef<lir::Function>>          ctors;
+		std::vector<CRef<lir::Function>>          dtors;
 
 		for (const auto& lir_function: functions)
 			insertFunctionDependencies(compiled_types.types, signatures, lir_function);
@@ -630,8 +637,10 @@ namespace compiler::backend_vm {
 			}
 
 			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
-			compiled_collection.global_data.push_back(GlobalData{
-				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
+			compiled_collection.global_data.push_back(
+				GlobalData{
+					{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name }
+			);
 		}
 
 		// Insert and validate types:
@@ -665,7 +674,5 @@ namespace compiler::backend_vm {
 		valid_program.insertCode(compiled_collection);
 	}
 
-	CodeCollection Module::build() const {
-		return valid_program.produceValidCodeCollection();
-	}
+	CodeCollection Module::build() const { return valid_program.produceValidCodeCollection(); }
 }

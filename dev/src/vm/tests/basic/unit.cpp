@@ -46,7 +46,7 @@ private:
 	}
 
 	void commandLineArguments() {
-		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" });
+		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
