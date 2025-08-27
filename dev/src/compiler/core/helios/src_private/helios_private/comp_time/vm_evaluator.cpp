@@ -1,6 +1,7 @@
 #include "vm_evaluator.hpp"
 
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <expected>
@@ -67,28 +68,59 @@ namespace {
 		}
 		}
 	}
+
+	/**
+	 * @brief A helper class that manages the lifetime of the compile-time VM process.
+	 * Spawns a new process when first used and kills it when compilation ends.
+	 */
+	class VmManager {
+		base::Optional<vm::PID> pid{};
+
+	public:
+		VmManager() {
+			auto spawn_result = vm::api::spawn();
+			if (spawn_result) pid = spawn_result->pid;
+		}
+
+		// @todo: Kill the CompTime VM process in the destructor once we get rid of the deadlock.
+		// This should happen after #1222.
+		~VmManager() = default;
+
+		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
+
+		VmManager(const VmManager&)            = delete;
+		VmManager& operator=(const VmManager&) = delete;
+	};
 }
 
 namespace compiler::helios {
-	CompileTimeEvaluator& CompileTimeEvaluator::get() {
-		static CompileTimeEvaluator instance;
-		return instance;
-	}
-
-	CompileTimeEvaluator::CompileTimeEvaluator() = default;
-
-	std::expected<CompileTimeValue, errors::Failed> CompileTimeEvaluator::executeInVm(
-		const tsh::SymbolType<>&             return_type,
-		const vm::code::CodeCollection&      code,
+	std::expected<CompileTimeValue, errors::Failed> executeInVm(
 		const std::string&                   func_name,
-		const std::vector<CompileTimeValue>& args
+		const vm::code::CodeCollection&      code,
+		const std::vector<CompileTimeValue>& args,
+		const tsh::SymbolType<>&             return_type
 	) {
-		auto spawn_result = vm::api::spawn();
-		if (!spawn_result) return std::unexpected(errors::Failed());
-		const vm::PID pid = spawn_result->pid;
-
-		if (auto res = vm::api::loadCode(pid, { code }); !res)
+		static VmManager vm_manager;
+		auto             maybe_pid = vm_manager.getPID();
+		if (!maybe_pid)  // Failed to spawn a process.
 			return std::unexpected(errors::Failed());
+		vm::PID pid = maybe_pid.value();
+
+		auto load_result = vm::api::loadCode(pid, { code });
+		if (!load_result) {
+			variant_match(load_result.error()) {
+				variant_case(vm::api::LoadProgramError, load_error) {
+					// @note: Since we use one process for all evaluations in the VM, if two
+					// constant expressions call the same function we're gonna get a load error
+					// because of the duplicated function.
+					if (load_error.why.find(vm::code::DuplicatedFunctionError::ERR_MSG)
+					    != std::string::npos) {
+						return std::unexpected(errors::Failed());
+					}
+				}
+				variant_default { return std::unexpected(errors::Failed()); }
+			}
+		}
 
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());

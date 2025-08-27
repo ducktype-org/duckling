@@ -355,8 +355,8 @@ namespace compiler::helios {
 			}
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
-			auto vm_eval_result = CompileTimeEvaluator::get().executeInVm(
-				func_type.getResultType(), code, lir_func_result->mangled_name.str(), ctv_arguments
+			auto vm_eval_result = executeInVm(
+				lir_func_result->mangled_name.str(), code, ctv_arguments, func_type.getResultType()
 			);
 
 			if (vm_eval_result.has_value())
