@@ -255,7 +255,7 @@ namespace vm {
 		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
 		 * destructor functions.
 		 */
-		void execGlobalDestructors();
+		void execGlobalDestructors(CRef<low::LowVMProgram> program);
 
 		std::expected<api::Response, api::ApiError> getCurrentPosition();
 

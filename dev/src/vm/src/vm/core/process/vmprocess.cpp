@@ -297,7 +297,9 @@ namespace vm {
 				return api::Response(getStatus());
 			}
 
-			variant_case(api::request::ExitCodeRequest, exit_code_request) { return getExitCode(); }
+			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
+
+			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
@@ -377,7 +379,7 @@ namespace vm {
 			if (t.exec_thread)
 				if (auto res = stop(); !res.has_value()) return res;
 		}
-		if (loaded_program.has_value()) getMainVMThread().execGlobalDestructors();
+		if (loaded_program.has_value()) getMainVMThread().execGlobalDestructors(&loaded_program.value());
 
 		for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
