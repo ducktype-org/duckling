@@ -2,7 +2,7 @@ import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
-import { getWorkspaceFiles } from './getWorkspaceFiles';
+import { getWorkspaceFiles, getWorkspaceFoldersUris } from './getWorkspaceFiles';
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -130,6 +130,32 @@ export class CompilerDaemonClient {
 					console.error(`Error processing file ${files[i].path}: ${error.message}`);
 				} else {
 					console.error(`Error processing file ${files[i].path}: ${String(error)}`);
+				}
+			}
+		}
+		return;
+	}
+
+	// This function is called to update the module trees inside of the daemon
+	public async makeModuleTrees(connection: Connection): Promise<void> {
+		await this.waitForReady(connection);
+		const uris = await getWorkspaceFoldersUris(connection);
+		
+		for (let i = 0; i < uris.length; i++) {
+			try {
+				var base64FilePath: string = Buffer.from(uriToFilePath(uris[i])).toString('base64');
+
+				var response = fetch(`${DAEMON_ADRESS}/make_module_tree/${base64FilePath}`);
+				var res = await response;
+				if (res.status != 200) {
+					throw new Error(`Error: ${res.status}`);
+				}
+				// console.log(`putfile succeeded on ${files[i].path}`);
+			} catch (error) {
+				if (error instanceof Error) {
+					console.error(`Error building tree from path ${uris[i]}: ${error.message}`);
+				} else {
+					console.error(`Error processing file ${uris[i]}: ${String(error)}`);
 				}
 			}
 		}

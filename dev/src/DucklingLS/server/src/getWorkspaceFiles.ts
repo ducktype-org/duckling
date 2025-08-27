@@ -52,3 +52,8 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
 
   return results;
 }
+
+export async function getWorkspaceFoldersUris(connection: Connection): Promise<string[]> {
+  const workspaceFolders = await connection.workspace.getWorkspaceFolders();
+  return workspaceFolders?.map(folder => folder.uri) ?? [];
+}

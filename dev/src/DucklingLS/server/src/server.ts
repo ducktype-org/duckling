@@ -98,6 +98,7 @@ connection.onInitialized(() => {
 	if (hasWorkspaceFolderCapability) {
 		compilerDaemonClient.putWorkspace(connection).then(() => {
 			console.log("Workspace files sent to daemon.");
+			compilerDaemonClient.makeModuleTrees(connection);
 			//compilerDaemonClient.callDebugPrint(connection);
 		});
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
