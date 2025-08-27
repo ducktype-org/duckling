@@ -96,9 +96,15 @@ connection.onInitialized(() => {
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
 	}
 	if (hasWorkspaceFolderCapability) {
+		compilerDaemonClient.putWorkspace(connection).then(() => {
+			console.log("Workspace files sent to daemon.");
+			//compilerDaemonClient.callDebugPrint(connection);
+		});
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
 			connection.console.log("Workspace folder change event received.");
 		});
+	} else {
+		connection.console.log("NO WORKSPACE CAPABILITY");
 	}
 });
 

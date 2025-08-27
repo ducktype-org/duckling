@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
+import { getWorkspaceFiles } from './getWorkspaceFiles';
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -79,6 +80,60 @@ export class CompilerDaemonClient {
 		}
 
 		return response.then(handleResponse).catch(handleCatch);
+	}
+
+	// Used for debug in various places
+	public async callDebugPrint(connection: Connection): Promise<void> {
+		await this.waitForReady(connection);
+		console.log("debug;;")
+		try {
+			const response = await fetch(`${DAEMON_ADRESS}/debug`);
+			if (!response.ok) {
+				console.log("Response not ok!!!!!!!");
+				throw new Error(`Error: ${response.status} ${response.statusText}`);
+			}
+			const text = await response.text();
+			console.log("HERE ARE THE FILES WE GOT:");
+			console.log(text);
+		} catch (error) {
+			if (error instanceof Error) {
+				console.error(`getSemanticTokens error: ${error.message}`);
+			} else {
+				console.error(`getSemanticTokens error: ${String(error)}`);
+			}
+		}
+		return;
+	}
+
+
+
+	// This function is called to update the workspace in the daemon
+	public async putWorkspace(connection: Connection): Promise<void> {
+		await this.waitForReady(connection);
+		const files = await getWorkspaceFiles(connection);
+		
+		for (let i = 0; i < files.length; i++) {
+			try {
+				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
+				var base64FileContent: string = Buffer.from(files[i].content).toString('base64');
+
+				console.log(`putfile called: ${files[i].path}`);
+				console.log(`putfile called: ${uriToFilePath(files[i].path)}`);
+				var response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
+				var res = await response;
+				if (res.status != 200) {
+					throw new Error(`Error: ${res.status}`);
+				}
+				console.log(`putfile succeeded on ${files[i].path}`);
+			} catch (error) {
+				if (error instanceof Error) {
+					console.error(`Error processing file ${files[i].path}: ${error.message}`);
+				} else {
+					console.error(`Error processing file ${files[i].path}: ${String(error)}`);
+				}
+			}
+		}
+		return;
 	}
 
 	// This function is called to get the semantic tokens from the daemon for a file
@@ -248,6 +303,13 @@ export interface LSPKeywordData {
 
 // File paths are stored in URIs, this function converts them to file paths
 function uriToFilePath(uri: string): string {
-	const filepath = uri.split(":")[1];
-	return filepath.replace("///", "").replace("\\\\\\", "");
+	//console.log(`Converting URI to file path: ${uri}`);
+	if (uri.startsWith("file:")) {
+		const filepath = uri.split(":")[1];
+		return filepath.replace("///", "").replace("\\\\\\", "");
+	}
+	if (uri.startsWith("/") || uri.startsWith("\\")) {
+		return uri.slice(1);
+	}
+	return uri;
 }

@@ -21,6 +21,7 @@ POP_DIAGNOSTIC;
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
+#include <filesystem/fs_tree.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -54,6 +55,20 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 			apiError
 		),
 	};
+}
+
+// Debug
+std::string getContentsOfDirs(const fs::FsTree& tree) {
+	std::string contents;
+	for (const auto& [name, file] : tree.getFiles()) {
+		contents += (name + ":\n");
+		contents += ( (std::string) file.getContent().view().stringView() + "\n\n\n");
+	}
+
+	for (const auto& [name, dir] : tree.getDirs()) {
+		contents += getContentsOfDirs(*dir);
+	}
+	return contents;
 }
 
 /**
@@ -124,6 +139,24 @@ void server(i32 port) {
         }
     });
 
+	CROW_ROUTE(app, "/put_file/<string>/")
+    ([&virtual_root](const std::string& base64_path) {
+        try {
+            const auto path = base64::decode_into<std::string>(base64_path);
+            
+            if (!virtual_root.getFilePath().join(path).exists()) {
+                virtual_root.createSubFile("", path);
+            } else {
+                auto file = fs::File(virtual_root.getFilePath().join(path));
+                file.writeToFile("");
+            }
+
+            return crow::response(200, "OK");
+        } catch (const std::exception& e) {
+            return crow::response(400, e.what());
+        }
+    });
+
 	/**
 	 * @brief Route to generate diagnostics for a file under the given path in the virtual file
 	 * system.
@@ -176,8 +209,11 @@ void server(i32 port) {
 			// return crow::response(200, "line 168\n");
             const auto file = virtual_root.getFilePath().join(path);
 
-			const auto pst
-				= query::entryPoint<compiler::frontend::queryPSTFromFilePath>(fs::File(file));
+        	auto tokens = lexer::tokenizeFile(file);
+			pst::PST<>  pst(std::move(tokens));
+
+			// const auto pst
+			// 	= query::entryPoint<compiler::frontend::queryPSTFromFilePath>(fs::File(file));
 
 
 
@@ -233,6 +269,25 @@ void server(i32 port) {
             return crow::response(400, e.what());
         }
     });
+
+
+
+
+
+	/**
+	 * @brief Route to print interesting things from the daemon
+	 * * URL: /debug
+	 * @return whatever you want
+	 */
+	CROW_ROUTE(app, "/debug")
+	([&virtual_root]() { 
+		std::shared_ptr<fs::FsTree> tree = fs::FsTree::create(virtual_root);
+		std::string responsestr = "responsestring\n";
+		const fs::FsTree& tre = *tree;
+		responsestr += getContentsOfDirs(tre);
+		responsestr += "end of responsestring\n";
+		return crow::response(200, "crow route debug: " + tree->prettyPrint() + "\n\n" + responsestr);
+	});
 
     app.port(base::safeIntConv<u16>(port)).run();
 }
