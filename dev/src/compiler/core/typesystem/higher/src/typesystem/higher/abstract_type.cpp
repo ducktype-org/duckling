@@ -20,6 +20,11 @@ namespace tsh {
 	}
 
 	[[nodiscard]]
+	bool AbstractType::hasTrivialDestructor() const {
+		return pimpl->hasTrivialDestructor();
+	}
+
+	[[nodiscard]]
 	bool AbstractType::isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
