@@ -41,14 +41,6 @@ namespace compiler::frontend {
 		 */
 		void update();
 
-		/**
-		 * @brief Removes the file content from cache and deletes the SourceFile.
-		 * @note This should only be called from the Language Server (LS) context.
-		 *       It is not intended for general use.
-		 *       The file content is removed from cache and the SourceFile is erased from all maps.
-		 */
-		void erase();
-
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 
@@ -74,6 +66,14 @@ namespace compiler::frontend {
 		 *       Each fileID has a unique UnstableHash even if it is pointing to the same fs::File
 		 */
 		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
+
+		/**
+		 * @brief Retrieves all SourceFile instances associated with the given file path.
+		 * @param path The file system path.
+		 * @return Vector of references to SourceFile instances for the given path.
+		 *         If no SourceFiles exist for the path, an empty vector is returned.
+		 */
+		std::vector<base::Ref<SourceFile>> getSourceFilesFromPath(const std::filesystem::path& path);
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.

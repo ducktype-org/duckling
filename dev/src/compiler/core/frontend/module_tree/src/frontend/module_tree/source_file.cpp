@@ -4,8 +4,10 @@
 #include <base/stable_container.hpp>
 
 #include <filesystem/file.hpp>
+#include <frontend/module_tree/file_id.hpp>
 
 namespace {
+
 	// Content cache for each file path (used for deduplication and fast access)
 	using ContentMap = base::HashMap<std::filesystem::path, base::SharedView>;
 	ContentMap to_content;
@@ -14,6 +16,8 @@ namespace {
 	 * StableVector that stores all SourceFile instances.
 	 */
 	base::StableVector<compiler::frontend::SourceFile> files;
+
+	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>> files_map;
 }
 
 namespace compiler::frontend {
@@ -43,9 +47,20 @@ namespace compiler::frontend {
 		} else {
 			to_content.put(abs_path, file.getContent());
 		}
-
+		if(!files_map.contains(abs_path)) {
+			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
+		}
 		files.pushBack(SourceFile(std::move(file), linked_module));
+		files_map.at(abs_path).emplace_back(files.last());
 		return files.last();
+	}
+
+	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromPath(const std::filesystem::path& path) {
+		auto abs_path = absolute(path);
+		if (files_map.contains(abs_path)) {
+			return files_map.at(abs_path);
+		}
+		return {};
 	}
 
 	void SourceFile::update() {
@@ -55,12 +70,6 @@ namespace compiler::frontend {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 		// reset the parse tree
 		parse_tree.reset();
-	}
-
-	void SourceFile::erase() {
-		auto abs_path = this->file.getFilePath().absolute().getPath();
-		// Remove content from cache
-		to_content.erase(abs_path);
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
