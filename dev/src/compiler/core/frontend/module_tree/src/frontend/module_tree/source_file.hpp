@@ -10,6 +10,7 @@
 #include <base/stable_hashmap.hpp>
 
 #include <filesystem/file.hpp>
+#include <frontend/module_tree/file_id.hpp>
 
 namespace compiler::frontend {
 
@@ -41,8 +42,11 @@ namespace compiler::frontend {
 		 */
 		void update();
 
+		static Ref<SourceFile> getSourceFile(FileID);
+
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
+		friend struct ImplementationOf_QueryFilePST;
 
 		bool operator==(const SourceFile& other) const {
 			CORE_ASSERT(
@@ -68,12 +72,12 @@ namespace compiler::frontend {
 		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
 
 		/**
-		 * @brief Retrieves all SourceFile instances associated with the given file path.
-		 * @param path The file system path.
-		 * @return Vector of references to SourceFile instances for the given path.
-		 *         If no SourceFiles exist for the path, an empty vector is returned.
+		 * @brief Retrieves all SourceFile instances associated with the given File.
+		 * @param file the fs::File
+		 * @return Vector of references to SourceFile instances for the given file.
+		 *         If no SourceFiles exist for the file, an empty vector is returned.
 		 */
-		std::vector<base::Ref<SourceFile>> getSourceFilesFromPath(const std::filesystem::path& path);
+		static std::vector<base::Ref<SourceFile>> getSourceFilesfromFile(const fs::File& file);
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.

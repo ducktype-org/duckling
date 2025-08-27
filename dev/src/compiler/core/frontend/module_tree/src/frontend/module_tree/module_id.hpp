@@ -16,10 +16,9 @@ namespace compiler::frontend {
 
 		auto operator<=>(const ModuleID& other) const { return ref.get() <=> other.ref.get(); }
 
-		ModuleID(base::Ref<ModuleTree> ref): ref(ref) {}
-
 	private:
-		base::Ref<ModuleTree> ref;
+		ModuleID(base::CRef<ModuleTree> ref): ref(ref) {}
+		base::CRef<ModuleTree> ref;
 
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
@@ -30,5 +29,15 @@ namespace compiler::frontend {
 		friend struct ImplementationOf_QueryMainSourceFile;
 		friend struct ImplementationOf_QuerySourceFiles;
 		friend struct ImplementationOf_QuerySubmodules;
+		friend struct GetModuleID_Functor;
 	};
+}
+
+namespace std {
+    template <>
+    struct hash<compiler::frontend::ModuleID> {
+        size_t operator()(const compiler::frontend::ModuleID& module_id) const noexcept {
+            return static_cast<size_t>(module_id.queryUnstablePerfectHash());
+        }
+    };
 }

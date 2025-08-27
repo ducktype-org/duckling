@@ -21,10 +21,9 @@ namespace compiler::frontend {
 
 		auto operator<=>(const FileID& other) const { return ref.get() <=> other.ref.get(); }
 
-		FileID(base::Ref<SourceFile> ref): ref(ref) {}
-
 	private:
-		base::Ref<SourceFile> ref;
+		FileID(base::CRef<SourceFile> ref): ref(ref) {}
+		base::CRef<SourceFile> ref;
 		friend class SourceFile;
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;
@@ -32,6 +31,7 @@ namespace compiler::frontend {
 		friend struct ImplementationOf_QueryMainSourceFile;
 		friend struct ImplementationOf_QuerySourceFiles;
 		friend struct ImplementationOf_QueryFilePST;
+		friend struct GetFileID_Functor;
 		friend ModuleID extendQueryModuleIDOfPST(
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		);

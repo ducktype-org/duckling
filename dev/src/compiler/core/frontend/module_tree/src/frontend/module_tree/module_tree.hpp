@@ -267,22 +267,19 @@ namespace compiler::frontend {
 	public:
 		/**
 		 * Adds a source file to the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to add.
 		 */
 		static void addSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
 
 		/**
-		 * Removes a source file from its module by FileID.
-		 * @param ctx Query context.
-		 * @param file_id The FileID to remove.
+		 * Removes a source file from its module.
+		 * @param file The SourceFile to remove.
 		 */
-		static void removeSourceFile(query::Context& ctx, FileID file_id);
+		static void removeSourceFile(base::Ref<SourceFile> file);
 
 		/**
 		 * Sets the main source file for the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to set as main source file.
 		 */
@@ -290,14 +287,12 @@ namespace compiler::frontend {
 
 		/**
 		 * Removes the main source file from the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 */
 		static void removeMainSourceFile(base::Ref<ModuleTree> module);
 
 		/**
 		 * Adds a submodule to the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param submodule The submodule to add.
 		 */
@@ -305,7 +300,6 @@ namespace compiler::frontend {
 
 		/**
 		 * Adds an "other" file to the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to add.
 		 */
@@ -313,7 +307,6 @@ namespace compiler::frontend {
 
 		/**
 		 * Removes an "other" file from the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param file The file to remove.
 		 */
@@ -323,7 +316,6 @@ namespace compiler::frontend {
 		 * Sets the parent of the given module.
 		 * If parent is set, adds this module as a submodule to the parent.
 		 * If parent is not set, removes the current parent.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 * @param parent The new parent module (optional).
 		 */
@@ -333,7 +325,6 @@ namespace compiler::frontend {
 
 		/**
 		 * Removes the parent from the given module.
-		 * @param ctx Query context.
 		 * @param module The module to modify.
 		 */
 		static void removeParent(base::Ref<ModuleTree> module);
@@ -341,17 +332,15 @@ namespace compiler::frontend {
 		/**
 		 * Removes the module with the given ModuleID from the module map.
 		 * Also removes it from its parent's submodules and deletes associated source files.
-		 * @param ctx Query context.
 		 * @param module_id The ModuleID to remove.
 		 */
-		static void removeModule(ModuleID module_id);
+		static void removeModule(base::Ref<ModuleTree> module);
 
 		/**
 		 * Notifies that a file has been modified and updates its SourceFile.
-		 * @param ctx Query context.
 		 * @param file The file that was modified.
 		 */
-		static void fileModified(FileID id);
+		static void fileModified(const fs::File& file);
 
 	private:
 		/**

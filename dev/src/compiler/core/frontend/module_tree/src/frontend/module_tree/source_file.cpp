@@ -55,8 +55,8 @@ namespace compiler::frontend {
 		return files.last();
 	}
 
-	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesFromPath(const std::filesystem::path& path) {
-		auto abs_path = absolute(path);
+	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesfromFile(const fs::File& file) {
+		auto abs_path = file.getFilePath().absolute().getPath();
 		if (files_map.contains(abs_path)) {
 			return files_map.at(abs_path);
 		}
@@ -70,6 +70,15 @@ namespace compiler::frontend {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 		// reset the parse tree
 		parse_tree.reset();
+	}
+
+	Ref<SourceFile> SourceFile::getSourceFile(FileID id) {
+		auto it = files_map.find(id.ref->getFile().getFilePath().absolute().getPath());
+		CORE_ASSERT(it != files_map.end(), "FileID not found");
+		for (auto& file: it->second) {
+			if (file == id.ref) return file;
+		}
+		CORE_UNREACHABLE();
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {

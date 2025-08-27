@@ -5,6 +5,7 @@
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
+#include <frontend_private/functors.hpp>
 
 namespace compiler::frontend {
 
@@ -15,7 +16,7 @@ namespace compiler::frontend {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			Ref<ModuleTree> module_tree = ModuleTreeBuilder::create(key);
 
-			return { module_tree };
+			return GetModuleID_Functor::make(module_tree);
 		}
 
 		QUERY_AUTO_CACHE_COPY
