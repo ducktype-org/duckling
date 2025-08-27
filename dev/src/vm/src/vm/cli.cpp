@@ -17,15 +17,15 @@ std::string convertError(const vm::api::ApiError& api_error) {
 	return vm::api::errorToString(api_error);
 }
 
-int cli(bool load_stdlib) {
+int cli() {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
 
-	return cli(fs::File(filepath), load_stdlib);
+	return cli(fs::File(filepath));
 }
 
-int cli(const fs::File& filepath, bool load_stdlib) {
+int cli(const fs::File& filepath) {
 	vm::PID pid{};
 
 	std::expected<i64, std::string> result
@@ -33,7 +33,6 @@ int cli(const fs::File& filepath, bool load_stdlib) {
 	          .and_then([&](vm::api::ProcessInfo info) {
 				  pid = info.pid;
 
-				  if (load_stdlib) return vm::api::loadStdlib(pid);
 				  return std::expected<void, vm::api::ApiError>{};
 			  })
 	          .and_then([&] { return vm::api::loadFiles(pid, { filepath }); })

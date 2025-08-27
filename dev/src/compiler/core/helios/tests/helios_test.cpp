@@ -63,6 +63,7 @@ public:
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
+		TESTER_ADD_TEST(testDebugPrint);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1094,6 +1095,26 @@ private:
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+	}
+
+	void testDebugPrint() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/pretty_debug")));
+
+		auto sym_c1         = getChain("c1", scope).back();
+		auto sym_v1         = getChain("v1", scope).back();
+		auto sym_n1         = getChain("n1", scope).back();
+		auto sym_n2         = getChain("n1.n2", scope).back();
+		auto sym_test_class = getChain("n1.n2.TestClass", scope).back();
+		auto sym_n3         = getChain("n1.n3", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			std::cout << compiler::helios::prettyDebugPrint(sym_c1, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_v1, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_n1, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_n2, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_test_class, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_n3, ctx) << '\n';
+		});
 	}
 };
 

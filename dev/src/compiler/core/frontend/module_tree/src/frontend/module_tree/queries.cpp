@@ -13,7 +13,7 @@ namespace compiler::frontend {
 	 *******************/
 	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleID) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
+			Ref<ModuleTree> module_tree = ModuleTreeBuilder::create(key);
 
 			return module_tree->getID();
 		}
