@@ -5,7 +5,6 @@
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 
-#include "vm/core/process/type_metadata/kinds/data.hpp"
 #include <vm/core/process/memory/pointer.hpp>
 
 #include <json/json.hpp>
@@ -116,7 +115,7 @@ namespace vm {
 		}
 
 		template<class T>
-		base::Optional<base::CRef<T>> get() const {
+		base::Optional<CRef<T>> get() const {
 			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
 			return {};
 		}

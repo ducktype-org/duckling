@@ -566,8 +566,7 @@ namespace vm {
 		}
 	}
 
-	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
-		executing_program = program;
+	void VMThread::execGlobalDestructors() {
 		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
@@ -586,6 +585,7 @@ namespace vm {
 				}
 			}
 		}
+		process_memory.deinitGlobals();
 	}
 
 	bool VMThread::stop() {
@@ -684,8 +684,8 @@ namespace vm {
 			return false;
 
 		exec_thread = std::thread([this, program, func_name, run_arguments] {
-				run(program, func_name, run_arguments);
 			try {
+				run(program, func_name, run_arguments);
 			} catch (const exceptions::VMRuntimeException& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
 				respondExecutionRequest(api::ExecutionPanicked{ e.what() });

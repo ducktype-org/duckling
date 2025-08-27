@@ -7,7 +7,6 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/kinds/data.hpp"
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 

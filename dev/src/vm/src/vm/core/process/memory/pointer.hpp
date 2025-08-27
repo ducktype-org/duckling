@@ -45,12 +45,12 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		auto getOffset() {
+		auto getOffset() const {
 			return offset;
 		}
 
 		[[nodiscard]]
-		auto isNull() -> bool {
+		auto isNull() const -> bool {
 			return block == nullptr;
 		}
 

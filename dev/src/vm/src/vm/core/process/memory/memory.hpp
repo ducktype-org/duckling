@@ -64,22 +64,44 @@ namespace vm {
 		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
 
 		/**
-		 * @brief Copies `byte_size` bytes pointed-to by `src` to `dst`.
+		 * @brief Moves `byte_size` bytes pointed-to by `src` to `dst`.
+		 * Moving here means data copy-constructors are not invoked.
 		 * @note Frees *block_dst's nested blocks whose offsets would not fit
-		   inside the new memory area.
+		 * inside the new memory area.
 		 */
-		auto copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+		auto movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+
+		/**
+		 * @brief Executes destructors on individual objects that are in the block.
+		 * @param block The block to source the data from.
+		 */
+		void runDataDestructors(Ref<Block> block);
+
+		/**
+		 * @brief Executes copy constructors on individual objects that are in the block.
+		 * @param block The block to source the data from.
+		 */
+		void runDataCopyConstructors(Ref<Block> block);
+
+		/**
+		 * @brief Iterates over each object in the block and calls the callback on it.
+		 * @note The callback should not change the layout of the objects in the block.
+		 * @param callback A function that will be called on each object.
+		 */
+		void iterateOverDataAndExecute(Ref<Block> block, void(Memory::*callback)(base::ModRawView data, TypeCRef type));
+		void iterateOverDataAndExecute(base::ModRawView data, TypeCRef type, void(Memory::*callback)(base::ModRawView data, TypeCRef type));
 
 		/**
 		 * @brief Based on block's type, performs destruction of the data.
-		 * E.g. in case of a non-null pointer, decreased pointed block's reference count.
+		 * E.g. in case of a non-null pointer, decreases pointed block's reference count.
 	     */
-		void runDataDestructor(Ref<Block> block);
+		void runObjectDestructor(base::ModRawView data, TypeCRef type);
 
 		/**
-		 * @brief This function implements the destruction of data.
+		 * @brief Based on block's type, performs copy-constructor of the data.
+		 * E.g. in case of a non-null pointer, increases pointed block's reference count.
 	     */
-		void runDataDestructorImpl(base::ModRawView data, TypeCRef type);
+		void runObjectCopyConstructor(base::ModRawView data, TypeCRef type);
 
 	public:
 		Memory() = default;
@@ -130,6 +152,11 @@ namespace vm {
 		 * exist); false otherwise.
 		 */
 		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
+
+		/**
+		 * @brief Frees all the global data
+		 */
+		void deinitGlobals();
 
 		/**
 		 * @brief Returns a view of global data by the id.

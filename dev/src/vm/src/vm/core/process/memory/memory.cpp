@@ -8,7 +8,9 @@
 #include <vm/core/process/exceptions.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <iostream>
 #include <mutex>
+#include <unordered_set>
 
 namespace vm {
 
@@ -77,17 +79,18 @@ namespace vm {
 
 		Pointer dst = { &mock_block, 0 };
 		Pointer src = { block, 0 };
-		copyPointedDataAndEraseSuffix(dst, src, std::min(old_view_size, new_view_size));
+		movePointedDataAndEraseSuffix(dst, src, std::min(old_view_size, new_view_size));
 
 		heap_allocator.deallocate(&block->data);
+
 		block->data = mock_block.data;
 	}
 
 	void Memory::freeBlock(Ref<Block> block) {
 		std::lock_guard lock(mutex);
-		for (auto [offset, child]: block->children_blocks) freeBlock(child);
+		for (const auto child: block->children_blocks | std::views::values) freeBlock(child);
 
-		runDataDestructor(block);
+		runDataDestructors(block);
 
 		// Parents reference their children so that they don't disappear on someone's pointer
 		// destruction.
@@ -129,6 +132,10 @@ namespace vm {
 		return false;
 	}
 
+	void Memory::deinitGlobals() {
+		for (const auto& block: global_blocks | std::views::values) freeBlock(block);
+	}
+
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
 		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
 		std::lock_guard lock(*parent_pointer.block->mutex_ref);
@@ -166,7 +173,7 @@ namespace vm {
 		}
 	}
 
-	auto Memory::copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void {
+	auto Memory::movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void {
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst{ *dst.block->mutex_ref };
@@ -194,6 +201,7 @@ namespace vm {
 		auto dst_view = getPointerData(dst, byte_size);
 		auto src_view = getPointerData(src, byte_size);
 		std::memcpy(dst_view.getBegin(), src_view.getBegin(), byte_size);
+		runDataCopyConstructors(dst.getBlock());
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
@@ -225,6 +233,7 @@ namespace vm {
 		auto dst_view = getPointerData(dst, type->getSize());
 		auto src_view = getPointerData(src, type->getSize());
 		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize());
+		runDataCopyConstructors(dst.getBlock());
 	}
 
 	auto Memory::destroyBlockReference(Pointer pointer) -> void {
@@ -268,51 +277,109 @@ namespace vm {
 		block->refcount--;
 	}
 
-	void Memory::runDataDestructor(Ref<Block> block) {
-		runDataDestructorImpl(block->data.view, block->data.element_type);
+	void Memory::runDataDestructors(Ref<Block> block) {
+		iterateOverDataAndExecute(block, &Memory::runObjectDestructor);
 	}
 
-	void Memory::runDataDestructorImpl(base::ModRawView data, TypeCRef type) {
+	void Memory::runDataCopyConstructors(Ref<Block> block) {
+		iterateOverDataAndExecute(block, &Memory::runObjectCopyConstructor);
+	}
+
+	void Memory::iterateOverDataAndExecute(
+		Ref<Block> block, void (Memory::*callback)(base::ModRawView data, TypeCRef type)
+	) {
+		iterateOverDataAndExecute(block->data.view, block->data.element_type, callback);
+	}
+
+	void Memory::iterateOverDataAndExecute(
+		const base::ModRawView data,
+		const TypeCRef         type,
+		void (Memory::*callback)(base::ModRawView data, TypeCRef type)
+	) {
+		(this->*callback)(data, type);
 		switch (type->getKind()) {
 		case Type::Kind::Primitive:
-			break;
-		case Type::Kind::Pointer: {
-			auto ptr = safeReadBytes<Pointer>(data.getBegin());
-			destroyBlockReference(ptr);
-			break;
-		}
 		case Type::Kind::Function:
-			break;
 		case Type::Kind::Opaque:
+		case Type::Kind::Variant:
+		case Type::Kind::Pointer:
 			break;
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable: {
-			auto inner_type = type->getInnerType().value();
-			auto inner_size = inner_type->getSize();
+			const auto inner_type = type->getInnerType().value();
+			const auto inner_size = inner_type->getSize();
 			for (usize begin = 0; begin < data.size(); begin += inner_size)
-				runDataDestructorImpl(
+				(this->*callback)(
 					base::ModRawView{ data.getBegin() + begin, inner_size }, inner_type
 				);
 			break;
 		}
 		case Type::Kind::Data: {
-			// Iterate over data's fields and run the destructors on the fields
-			const auto& fields = *type->getFields().value();
-			for (auto [offset, tp]: fields) {
-				runDataDestructorImpl(
-					base::ModRawView{ data.getBegin() + offset, tp->getSize() }, tp
-				);
-			}
+			// Iterate over data's fields
+			for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
+				(this->*callback)(base::ModRawView{ data.getBegin() + offset, tp->getSize() }, tp);
 			break;
 		}
+		default:
+			CORE_PANIC("Handling default");
+		}
+	}
+
+	void Memory::runObjectDestructor(base::ModRawView data, TypeCRef type) {
+		switch (type->getKind()) {
+		case Type::Kind::Pointer: {
+			const auto ptr = safeReadBytes<Pointer>(data.getBegin());
+			destroyBlockReference(ptr);
+			break;
+		}
+		case Type::Kind::Primitive:
+		case Type::Kind::Function:
+		case Type::Kind::Opaque:
+		case Type::Kind::DynamicTable:
+		case Type::Kind::FixedSizeTable:
+		case Type::Kind::Data:
 		case Type::Kind::Variant:
 			// There is nothing to do with variant, because its should be already deleted thanks to
 			// the nested blocks structure, that deletes the nested block's data first.
 			break;
 		default:
-			CORE_UNREACHABLE();
+			CORE_PANIC("Handling default");
 		}
 	}
 
-	bool Memory::validateMemoryState() const { return blocks.empty(); }
+	void Memory::runObjectCopyConstructor(base::ModRawView data, TypeCRef type) {
+		switch (type->getKind()) {
+		case Type::Kind::Pointer: {
+			const auto ptr = safeReadBytes<Pointer>(data.getBegin());
+			if_opt_some(ptr.block.toOpt(), block) increaseBlockRefCount(block);
+			break;
+		}
+		case Type::Kind::Primitive:
+		case Type::Kind::Function:
+		case Type::Kind::Opaque:
+		case Type::Kind::DynamicTable:
+		case Type::Kind::FixedSizeTable:
+		case Type::Kind::Data:
+		case Type::Kind::Variant:
+			// There is nothing to do with variant, because its should be already deleted thanks to
+			// the nested blocks structure, that deletes the nested block's data first.
+			break;
+		default:
+			CORE_PANIC("Handling default");
+		}
+	}
+
+	bool Memory::validateMemoryState() const {
+#define TEST_HERE(test)             \
+	if (test) {                     \
+		std::cerr << #test << "\n"; \
+		return false;               \
+	}
+		for (const auto& block: blocks) {
+			TEST_HERE(block.refcount != 0)
+			TEST_HERE(block.used)
+			TEST_HERE(!block.deallocated)
+		}
+		return true;
+	}
 }
