@@ -19,11 +19,11 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
   const results: FileEntry[] = [];
 
   if (workspaceFolders === null || workspaceFolders.length === 0) {
-    console.log("No workspace folders found.");
+    // console.log("No workspace folders found.");
     return results;
   }
 
-  console.log("Workspace folders found:", workspaceFolders);
+  // console.log("Workspace folders found:", workspaceFolders);
 
   async function* walk(dir: string): AsyncGenerator<string> {
     for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {

@@ -65,7 +65,7 @@ export class CompilerDaemonClient {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
-		console.log(`putfile called: ${uriToFilePath(filePath)}`);
+		// console.log(`putfile called: ${uriToFilePath(filePath)}`);
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 		
 		function handleResponse(res: Response) {
@@ -117,14 +117,14 @@ export class CompilerDaemonClient {
 				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
 				var base64FileContent: string = Buffer.from(files[i].content).toString('base64');
 
-				console.log(`putfile called: ${files[i].path}`);
-				console.log(`putfile called: ${uriToFilePath(files[i].path)}`);
+				// console.log(`putfile called: ${files[i].path}`);
+				// console.log(`putfile called: ${uriToFilePath(files[i].path)}`);
 				var response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 				var res = await response;
 				if (res.status != 200) {
 					throw new Error(`Error: ${res.status}`);
 				}
-				console.log(`putfile succeeded on ${files[i].path}`);
+				// console.log(`putfile succeeded on ${files[i].path}`);
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error(`Error processing file ${files[i].path}: ${error.message}`);
