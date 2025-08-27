@@ -46,7 +46,7 @@ private:
 	}
 
 	void commandLineArguments() {
-		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0, true);
+		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
@@ -55,7 +55,7 @@ private:
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
 
-	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5, true); }
+	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5); }
 
 	void globalNoConstructorTest() {
 		loadInvalidDbc(

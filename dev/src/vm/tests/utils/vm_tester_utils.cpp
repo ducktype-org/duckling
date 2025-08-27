@@ -20,12 +20,10 @@ void VmTestSuite::runTestOnVm(
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
 	const std::vector<std::string>&    args,
-	i64                                exit_code,
-	bool                               add_stdlib
+	i64                                exit_code
 ) {
 	handleTestResult(
-		runTestOnVmGetResult(dbc_filename, optional_input, optional_output, args, add_stdlib),
-		exit_code
+		runTestOnVmGetResult(dbc_filename, optional_input, optional_output, args), exit_code
 	);
 }
 
@@ -34,12 +32,9 @@ void VmTestSuite::runTestOnVm(
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
 	const std::vector<std::string>&    args,
-	i64                                exit_code,
-	bool                               add_stdlib
+	i64                                exit_code
 ) {
-	handleTestResult(
-		runTestOnVmGetResult(code, optional_input, optional_output, args, add_stdlib), exit_code
-	);
+	handleTestResult(runTestOnVmGetResult(code, optional_input, optional_output, args), exit_code);
 }
 
 void VmTestSuite::assertExecutionPanickedWith(
@@ -117,12 +112,10 @@ auto VmTestSuite::runTestOnVmGetResult(
 	const std::string&                 dbc_filename,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
-	const std::vector<std::string>&    args,
-	bool                               add_stdlib
+	const std::vector<std::string>&    args
 ) -> TestResult {
 	auto pid  = initProcess();
 	auto file = fs::File(path(dbc_filename));
-	if (add_stdlib) EXPECT_VOID(vm::api::loadStdlib(pid));
 	EXPECT_VOID(vm::api::loadFiles(pid, { file }));
 	return runTestImpl(pid, optional_input, optional_output, args);
 }
@@ -131,11 +124,9 @@ auto VmTestSuite::runTestOnVmGetResult(
 	const vm::code::CodeCollection&    code,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
-	const std::vector<std::string>&    args,
-	bool                               add_stdlib
+	const std::vector<std::string>&    args
 ) -> TestResult {
 	auto pid = initProcess();
-	if (add_stdlib) EXPECT_VOID(vm::api::loadStdlib(pid));
 	EXPECT_VOID(vm::api::loadCode(pid, { code }));
 	return runTestImpl(pid, optional_input, optional_output, args);
 }

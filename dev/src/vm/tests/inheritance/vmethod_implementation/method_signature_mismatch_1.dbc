@@ -1,6 +1,9 @@
 type pointer: pointer_A A
 type fun: method_foo {pointer_A, i64} void
-type fun: method_foo_impl {pointer_A, i32} void
+
+function method_foo_impl {pointer_A, i32} -> void {
+    ret;
+}
 
 type class: A {
     abstract: true;

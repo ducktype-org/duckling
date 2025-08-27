@@ -72,7 +72,7 @@ namespace vm::builtins {
 	 */
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         builtin_func_type,
+		TypeCRef                         result_type,
 		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
@@ -84,12 +84,14 @@ namespace vm::builtins {
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
 	 */
-	auto getBuiltinFunctionTypes()
-		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>>;
+	auto getBuiltinFunctions()
+		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
 
-	inline CRef<code::FunctionType> getBuiltinFunctionType(BuiltinFunctionID id) {
-		return &getBuiltinFunctionTypes()->at(id);
+	inline CRef<code::FuncSignature> getBuiltinFunctionSignature(BuiltinFunctionID id) {
+		return &getBuiltinFunctions()->at(id).second;
 	}
+
+	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name);
 
 	/**
 	 * @brief Get the ID of the builtin function given the name.
@@ -101,18 +103,7 @@ namespace vm::builtins {
 	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name);
 
 	/**
-	 * @brief Get the stdlib module with the builtin functions.
-	 * The builtin functions are regular functions that have simple implementation
-	 * - they call the "real" builtin function with `call_builtin_func`.
-	 * But thanks to having these these wrappers,
-	 * user can call builtins with simple `call_func` opcode.
-	 *
-	 * @note Both the wrapper and real builtin use the same function types.
-	 * @note Function prototypes depend on the builtin types.
-	 *
-	 * The module with all the functions is generated on the first use of this function.
-	 *
-	 * @return Ref<code::CodeCollection>
+	 * @brief Returns true if the name is a builtin function name.
 	 */
-	CRef<code::CodeCollection> getStdlibModule();
+	bool isBuiltinFunction(base::StrID name);
 }

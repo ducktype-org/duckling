@@ -113,44 +113,42 @@ namespace vm {
 	low::FuncData VMThread::createStartFunctionFor(
 		const low::FuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::FuncData start_function;
-		start_function.name     = base::StrID("vm_start_function");
-		start_function.arg_size = 0;
-		start_function.ret_size = 0;
+		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                          .bc               = {},
+			                          .local_stack_size = 0,
+			                          .arg_size         = 0,
+			                          .ret_size         = func.result_type->getSize(),
+			                          .parameters       = {},
+			                          .result_type      = func.result_type };
 
-		// @note All the following are guaranteed to exist or their existence was checked earlier.
-		auto called_func_type = executing_program->types->at(func.name);
-		auto result_type      = called_func_type->getResultType().value();
-
-		u64         result_type_id     = result_type->getID().asInt();
+		u64         result_type_id     = func.result_type->getID().asInt();
 		const auto& funcs              = executing_program->functions;
 		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
 
-		u64 stack_top = 0;
 
-		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
+		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
 		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, result_type_id));
 
-		stack_top += result_type->getSize();
+		start_function.local_stack_size += func.result_type->getSize();
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
-			auto        arg_type  = called_func_type->getNthParameterType(i).expect(
-                "Wrong number of passed arguments!"
-            );
+			auto        arg_type  = func.parameters[i];
+			// @TODO: Turn this to exception?
 			CORE_ASSERT(
 				arg_value->getPID() == process.getPID(), "VmValue comes from a different process"
 			);
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
 			);
-			stack_top += arg_type->getSize();
+			start_function.local_stack_size += arg_type->getSize();
+			start_function.parameters.push_back(arg_value->type);
+			start_function.arg_size += (arg_value->type->getSize());
 		}
 
-		start_function.local_stack_size = stack_top;
 
 		start_function.bc.insert(
 			start_function.bc.end(),
@@ -185,25 +183,27 @@ namespace vm {
 	low::FuncData VMThread::createProgramStartFunction(
 		const low::FuncData& func, const ProgramRunArguments& args
 	) const {
-		low::FuncData start_function;
-		start_function.name             = base::StrID("vm_start_function");
-		start_function.arg_size         = 0;
-		start_function.ret_size         = 0;
-		start_function.local_stack_size = 72;
-
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
-		auto called_func_type   = executing_program->types->at(func.name);
-		auto called_return_type = called_func_type->getResultType().value();
-		auto argv_type          = executing_program->types->at(base::StrID("argv"));
-		auto argv_ptr_type      = executing_program->types->at(base::StrID("ptr_argv"));
-		auto i64_type           = executing_program->types->at(base::StrID("i64"));
-		auto str_type           = executing_program->types->at(base::StrID("string"));
-		auto str_ptr_type       = executing_program->types->at(base::StrID("ptr_string"));
-		auto byte_type          = executing_program->types->at(base::StrID("byte"));
+
+		auto main_return_type = func.result_type;
+		auto argv_type        = executing_program->types->at(base::StrID("argv"));
+		auto argv_ptr_type    = executing_program->types->at(base::StrID("ptr_argv"));
+		auto i64_type         = executing_program->types->at(base::StrID("i64"));
+		auto str_type         = executing_program->types->at(base::StrID("string"));
+		auto str_ptr_type     = executing_program->types->at(base::StrID("ptr_string"));
+		auto byte_type        = executing_program->types->at(base::StrID("byte"));
+
+		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                          .bc               = {},
+			                          .local_stack_size = 72,
+			                          .arg_size    = i64_type->getSize() + argv_ptr_type->getSize(),
+			                          .ret_size    = main_return_type->getSize(),
+			                          .parameters  = { i64_type, argv_ptr_type },
+			                          .result_type = func.result_type };
 
 		// TypeIDs to pass to opcodes.
-		u64 func_ret_type_id = called_return_type->getID().asInt();
+		u64 func_ret_type_id = main_return_type->getID().asInt();
 		u64 argv_type_id     = argv_type->getID().asInt();
 		u64 argv_ptr_type_id = argv_ptr_type->getID().asInt();
 		u64 i64_type_id      = i64_type->getID().asInt();
@@ -229,12 +229,6 @@ namespace vm {
 					init_lany_type, 24, i64_type_id
 				),  // [24, 32) argc_internal
 				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),  // [32, 40) ix
-				// MAKE_BYTECODE_INSTRUCTION(
-		        // 	init_lany_type, 40, str_ptr_type_id
-		        // ),  // [40, 56) ptr_tmp_store
-		        // MAKE_BYTECODE_INSTRUCTION(
-		        // 	init_lany_type, 56, byte_type_id
-		        // ),  // [56, 57) char_tmp_store
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_l64_imm, 24, args.size()
 				),  // argc_internal := args.size()
@@ -342,7 +336,6 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
-
 		return start_function;
 	}
 
@@ -361,8 +354,7 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		auto called_func_return_type = *executing_program->types->at(func.name)->getResultType();
-		frame->called_func_ret_size  = called_func_return_type->getSize();
+		frame->called_func_ret_size = func.result_type->getSize();
 
 		const auto* instr = start_function.bc.data();
 
@@ -430,7 +422,7 @@ namespace vm {
 #endif
 		// @note: The return value is the only block left on the block stack.
 		auto block         = frame->block_stack.back();
-		exit_value_storage = process.createVmValue(called_func_return_type, Pointer(block, 0));
+		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
 		process_memory.freeBlock(block);
 		frame->resetFrameData();
 
@@ -536,9 +528,8 @@ namespace vm {
 												"Called function does not exist: "
 												+ global->ctor_name.value().str()
 											);
-					low::FuncData start_function;
-					start_function        = createStartFunctionFor(func, {});
-					const auto exit_value = executeFunction(start_function, func);
+					low::FuncData start_function = createStartFunctionFor(func, {});
+					const auto    exit_value     = executeFunction(start_function, func);
 					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -549,7 +540,7 @@ namespace vm {
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
 			                        .expect("Called function does not exist: " + func_name);
-			low::FuncData start_function;
+			std::optional<low::FuncData> start_function;
 			variant_match(run_arguments) {
 				variant_case(ProgramRunArguments, program_run_arguments) {
 					start_function = createProgramStartFunction(func, program_run_arguments);
@@ -559,7 +550,7 @@ namespace vm {
 				}
 			}
 
-			const auto exit_value = executeFunction(start_function, func);
+			const auto exit_value = executeFunction(*start_function, func);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -576,9 +567,8 @@ namespace vm {
 												"Called function does not exist: "
 												+ global->dtor_name.value().str()
 											);
-					low::FuncData start_function;
-					start_function        = createStartFunctionFor(func, {});
-					const auto exit_value = executeFunction(start_function, func);
+					low::FuncData start_function = createStartFunctionFor(func, {});
+					const auto    exit_value     = executeFunction(start_function, func);
 					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -713,4 +703,4 @@ namespace vm {
 	bool VMThread::waitForRunningResponse() {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
-}  // namespace vm
+}
