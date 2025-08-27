@@ -112,7 +112,6 @@ namespace compiler::helios {
 		auto exit_value = vm::api::getExitValue(pid);
 		if (!exit_value) return std::unexpected(errors::Failed());
 
-		if (!exit_value.has_value()) CORE_PANIC("Empty VmValue response");
 		auto ctv_res = vmValueToCtv(return_type, exit_value.value());
 
 		return ctv_res;

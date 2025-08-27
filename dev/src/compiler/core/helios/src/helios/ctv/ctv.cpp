@@ -7,7 +7,7 @@ namespace compiler::helios {
 
 	std::string CompileTimeValue::toString() const {
 		variant_match(value) {
-			variant_case(i64, val) { return std::to_string(val); }
+			variant_case(i64, val) { return base::toString(val); }
 			variant_case(bool, val) { return val ? "true" : "false"; }
 			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
 			variant_default {

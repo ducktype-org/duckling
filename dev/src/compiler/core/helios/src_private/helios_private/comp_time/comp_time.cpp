@@ -23,7 +23,7 @@
 #include <type_traits>
 
 namespace compiler::helios {
-	struct IMPLEMENT_QUERY(QueryCompTime, CompTimeEvalResult) {
+	struct IMPLEMENT_QUERY(QueryEvaluateExpression, CompTimeEvalResult) {
 		/**
 		 * @brief Error indicating that an expression was to complex for a simple tree evaluation.
 		 */
@@ -402,12 +402,12 @@ namespace compiler::helios {
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (expr.hasError()) return query::QError(errors::Failed(expr.error()));
+			if (expr.hasError()) return query::QError(errors::Failed());
 			return evalHoutExpr(ctx, expr.value().ref());
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCompTime);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateExpression);
 }

@@ -55,7 +55,7 @@ namespace compiler::helios::test_utils {
 		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
 			maybe_value = ctv_result.asType();
 		else
-			static_assert(!std::is_same_v<T, T>, "Unsupported type for getConstValueAs");
+			static_assert(false, "Unsupported type for getConstValueAs");
 
 		CORE_ASSERT(
 			maybe_value.has_value(),

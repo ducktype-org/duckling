@@ -57,7 +57,7 @@ namespace {
 			variant_case(bool, val) {
 				if (!llvm_type->isIntegerTy(1)) {
 					CORE_PANIC(
-						"LLVM lowering : Type mismatch. CTV is an boolean, but LLVM type is not"
+						"LLVM lowering : Type mismatch. CTV is a boolean, but LLVM type is not"
 					);
 				}
 				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);

@@ -21,7 +21,7 @@ namespace {
 			out << " ";
 			for (j = 0; j < 16; j++)
 				if (i + j < buflen)
-					out << (isprint(buf[i + j]) ? static_cast<char>(buf[i + j]) : '.');
+					out << (std::isprint(buf[i + j]) ? static_cast<char>(buf[i + j]) : '.');
 			out << '\n';
 		}
 	}

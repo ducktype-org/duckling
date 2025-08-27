@@ -580,9 +580,10 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			auto ctv
-				= ctx.query<QueryCompTime>(const_symbol->getValue().value().unlock(ctx)->getExpr());
-			if (ctv.hasError()) return query::QError(errors::Failed(ctv.error()));
+			auto ctv = ctx.query<QueryEvaluateExpression>(
+				const_symbol->getValue().value().unlock(ctx)->getExpr()
+			);
+			if (ctv.hasError()) return query::QError(errors::Failed());
 			return ctv.value();
 		}
 
