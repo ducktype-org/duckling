@@ -25,7 +25,7 @@ int cli() {
 	return cli(fs::File(filepath));
 }
 
-int cli(const fs::File& filepath) {
+int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 	vm::PID pid{};
 
 	std::expected<i64, std::string> result
@@ -37,7 +37,7 @@ int cli(const fs::File& filepath) {
 			  })
 	          .and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
 	          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-	          .and_then([&] { return vm::api::run(pid); })
+	          .and_then([&] { return vm::api::run(pid, args); })
 	          .and_then([&] { return vm::api::join(pid); })
 	          .and_then([&] { return vm::api::getExitValue(pid); })
 	          .transform([&](Ref<vm::VmValue> vm_value) {
