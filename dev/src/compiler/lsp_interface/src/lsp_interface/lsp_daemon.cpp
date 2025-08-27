@@ -23,6 +23,7 @@ POP_DIAGNOSTIC;
 #include <filesystem/file_path.hpp>
 #include <filesystem/fs_tree.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <lexer/lexer.hpp>
@@ -157,6 +158,22 @@ void server(i32 port) {
         }
     });
 
+	
+	CROW_ROUTE(app, "/make_module_tree/<string>")
+    ([&virtual_root](const std::string& base64_path) {
+        try {
+            const auto path = base64::decode_into<std::string>(base64_path);
+            
+			auto root = query::entryPoint<compiler::frontend::QueryModuleTree>(
+								fs::File(virtual_root.getFilePath().join(path))
+							);
+
+            return crow::response(200, "OK");
+        } catch (const std::exception& e) {
+            return crow::response(400, e.what());
+        }
+    });
+
 	/**
 	 * @brief Route to generate diagnostics for a file under the given path in the virtual file
 	 * system.
@@ -209,21 +226,24 @@ void server(i32 port) {
 			// return crow::response(200, "line 168\n");
             const auto file = virtual_root.getFilePath().join(path);
 
-        	auto tokens = lexer::tokenizeFile(file);
-			pst::PST<>  pst(std::move(tokens));
+        	// auto tokens = lexer::tokenizeFile(file);
+			// pst::PST<>  pst(std::move(tokens));
+			crow::response resp = crow::response(400, e.what());
+			pst::AccessLocked<pst::Element> pst_root;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto pst = compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
+				if (pst.getLogger()->bad()) {
+					std::stringstream ss;
+					pst.getLogger()->dumpLog(true, ss);
+					resp = crow::response(200, ss.str());
+				} else {
+					pst_root = pst.getRootElement();
+				}
+			});
+			if (resp.code != 400) return resp;
+			return crow::response(200, lsp::getSemanticTokens(pst_root));
 
-			// const auto pst
-			// 	= query::entryPoint<compiler::frontend::queryPSTFromFilePath>(fs::File(file));
 
-
-
-            if (pst.getLogger()->bad()) {
-                std::stringstream ss;
-                pst.getLogger()->dumpLog(true, ss);
-                return crow::response(200, ss.str());
-            }
-
-            return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
         } catch (const std::exception& e) {
             return crow::response(400, e.what());
         }
