@@ -117,6 +117,9 @@ namespace compiler::helios {
 				case code::BuiltinUnary::Box:
 					output(value.value().withReferenceKind(tsh::ReferenceKind::Box));
 					return;
+				case code::BuiltinUnary::Const:
+					output(value.value().withMutability(tsh::Mutability::Immutable));
+					return;
 				default:
 					CORE_PANIC(
 						"ShortPathVisitor encountered unsupported unary operation: ",

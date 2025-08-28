@@ -13,3 +13,4 @@ const STR: str = "quack";
 
 const VREF: ref i32 = 0;
 const VBOX: box f16 = 0;
+const VCONST: const bool = true;

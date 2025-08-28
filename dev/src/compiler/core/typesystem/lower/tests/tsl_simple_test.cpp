@@ -25,6 +25,7 @@ public:
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(classTest);
+		TESTER_ADD_TEST(mutabilityTest);
 	}
 
 private:
@@ -361,6 +362,19 @@ private:
 				variant_default { fail("Layout of class type should be class-like."); }
 			}
 			testPrinting(my_class_layout, ctx, true);
+		});
+	}
+
+	void mutabilityTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+            auto int_symbol_type = st(ctx.query<QueryIntegralType>(64));
+            auto const_int_symbol_type = int_symbol_type.withMutability(Immutable);
+            auto int_layout = ctx.query<QuerySymbolTypeLayout>(int_symbol_type);
+            auto const_int_layout = ctx.query<QuerySymbolTypeLayout>(const_int_symbol_type);
+            assertTrue(int_layout == const_int_layout, "Symbol mutability should not affect type layout");
+
+			testPrinting(int_layout, ctx);
+			testPrinting(const_int_layout, ctx);
 		});
 	}
 
