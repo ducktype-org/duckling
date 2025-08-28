@@ -1110,6 +1110,13 @@ class FunctionValidator {
 		}
 	}
 
+	void validateSignature() {
+		for (const auto& param_type: function.signature.parameters) {
+			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
+			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
+		}
+	}
+
 public:
 	FunctionValidator(
 		const ObjIdNameMap<TypeOfData>&                  tod_map,
@@ -1125,6 +1132,7 @@ public:
 		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
+		validateSignature();
 		preprocessLabels();
 		traverseControlFlowGraph();
 		validateFunctionEnd();

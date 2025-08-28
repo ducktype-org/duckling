@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(literalsTest);
 		TESTER_ADD_TEST(checkLiteralErrorHandling);
 		TESTER_ADD_TEST(checkZeroDivision);
+		TESTER_ADD_TEST(invalidPrimitiveTypes);
 	}
 
 private:
@@ -105,6 +106,21 @@ private:
 		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
 		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
 		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
+	}
+
+	void invalidPrimitiveTypes() {
+		loadInvalidDbc(
+			"void_instantiation.dbc",
+			{
+				vm::code::UninstantiableValueError::ERR_MSG,
+			}
+		);
+		loadInvalidDbc(
+			"size_zero_primitive.dbc",
+			{
+				vm::code::InvalidPrimitiveSizeError::ERR_MSG,
+			}
+		);
 	}
 };
 
