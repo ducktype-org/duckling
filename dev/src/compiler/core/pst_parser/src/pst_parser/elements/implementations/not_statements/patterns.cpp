@@ -30,8 +30,6 @@ namespace pst {
 			tpc::Identifier temp_ident;
 			state.parse(out).one(&temp_ident);
 			out->as_identifier = temp_ident;
-			// TODOP: Why doesn't this work.
-			// state.parse(out).one(&out->as_identifier);
 		}
 
 		if (state.parse(out).tryEat(NamedOperator::Colon))
@@ -77,7 +75,6 @@ namespace pst {
 
 		// Literal or expression.
 		// '1', 'true', 'false', '{...}'
-		// TODOP: isLiteral would be nice.
 		if (state[0].isNumLiteral() || state[0].isString() || state[0].is(Keyword::True)
 		    || state[0].is(Keyword::False)
 		    || state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
@@ -124,7 +121,6 @@ namespace pst {
 
 	/// Tuple pattern ///
 	MBox<TuplePattern> TuplePattern::parse(LangParserState& state) {
-		// TODOP: AssertStmtChoice.
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Round)) return nullptr;
 		auto position = state.getPosition();
 		auto out      = makeBox<TuplePattern>(position);
@@ -164,7 +160,7 @@ namespace pst {
 
 	/// Binding pattern ///
 	MBox<BindingPattern> BindingPattern::parse(LangParserState& state) {
-		// TODOP: Assert statement choice.
+		std::cout << "BINDING\n";
 		if (!state[0].isIdentifier()) return nullptr;
 		auto position = state.getPosition();
 		auto out      = makeBox<BindingPattern>(position);
@@ -186,7 +182,6 @@ namespace pst {
 
 	/// Value pattern ///
 	MBox<ValuePattern> ValuePattern::parse(LangParserState& state) {
-		// TODOP: Assert statement choice.
 		if (!state[0].isNumLiteral() && !state[0].isString() && !state[0].is(Keyword::True)
 		    && !state[0].is(Keyword::False)
 		    && !state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {

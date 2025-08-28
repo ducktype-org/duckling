@@ -159,8 +159,6 @@ private:
 	void testFun() { testJsonRelativePath("fun.duck", "fun.json"); }
 
 	void testPattern() { testJsonRelativePath("pattern.duck", "pattern.json"); }
-	
-	//TODOP: Add Match test here.
 
 	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }
 

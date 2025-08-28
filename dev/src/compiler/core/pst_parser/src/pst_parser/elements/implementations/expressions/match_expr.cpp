@@ -62,7 +62,6 @@ namespace pst::expr {
 			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
 			return nullptr;
 		}
-		// TODOP: parseUntil("case");
 		state.goDown();
 		state.parse(out).one(&out->value_to_match);
 		state.goUpAndSkip();
@@ -77,8 +76,8 @@ namespace pst::expr {
 			if (state[0].is(Keyword::Case)) {
 				auto match_case = MatchCase::parse(state);
 				if (!match_case)  // Error in case parsing.
-					break;
-				out->cases.push_back(std::move(match_case));
+					return nullptr;
+				out->cases.emplace_back(std::move(match_case));
 			} else {
 				break;
 			}

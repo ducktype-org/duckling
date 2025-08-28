@@ -35,6 +35,22 @@ namespace pst {
 		DoubleDefaultBranchError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class UnconditionedBranchAfterConditionedError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unconditioned case branch after a conditioned branch";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		UnconditionedBranchAfterConditionedError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeBox<MatchCase>(position);
@@ -55,8 +71,10 @@ namespace pst {
 				);
 				if_case = true;
 			} else if (state.parse(out).tryEat(NamedOperator::Assign)) {
-				if (if_case) {  // Unconditioned case after a conditioned case.
-					// TODOP: Test for that.
+				if (if_case) {  // Unconditioned branch after a conditioned branch.
+					state.log(
+						makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
+					);
 					return nullptr;
 				}
 

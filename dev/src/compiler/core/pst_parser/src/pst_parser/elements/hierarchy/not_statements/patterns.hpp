@@ -175,7 +175,6 @@ namespace pst {
 	 * block expression or an identifier.
 	 */
 	class ValuePattern final: public AnalysisPattern {
-		// TODOP: Universal? What with CodeBlocks with no semicolon like this {my_var}.
 		AccessInternal<UniversalExprHolder> expression;
 
 	public:

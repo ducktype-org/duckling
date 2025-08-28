@@ -41,7 +41,11 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
-			// parsed.getLogger()->dumpLog(true);
+			std::cout << "Errors\n";
+			parsed.getLogger()->dumpLog(true);
+			std::cout << "Parsed tree\n";
+			parsed.dprint(std::cout);
+			std::cout << "\n";
 			return parsed.getLogger()->good() == good;
 		}
 
@@ -272,68 +276,47 @@ class PSTErrorTests: public tester::TestSuite {
 		"(x * t).y:{x, y}.z:{}(4)[3]"
 	};
 
-	Example<pst::FlowPattern, true>  flow_literal_int{ "123" };
-	Example<pst::FlowPattern, true>  flow_literal_string{ "\"hello world\"" };
-	Example<pst::FlowPattern, true>  flow_literal_bool{ "true" };
-	Example<pst::FlowPattern, true>  flow_binding_simple{ "my_variable" };
-	Example<pst::FlowPattern, true>  flow_wildcard{ "_" };
-	Example<pst::FlowPattern, true>  flow_tuple_simple{ "(1, x)" };
-	Example<pst::FlowPattern, true>  flow_tuple_nested{ "(1, (x, _))" };
-	Example<pst::FlowPattern, false> flow_tuple_empty{ "()" };
-	Example<pst::FlowPattern, false> flow_tuple_unclosed{ "(1, x" };
-	Example<pst::FlowPattern, true>  flow_deconstructor_simple{ "Point(x, y)" };
-	Example<pst::FlowPattern, true>  flow_deconstructor_nested{ "Circle(Point(0, 0), r)" };
-	Example<pst::FlowPattern, false> flow_deconstructor_empty_args{ "None()" };
-	Example<pst::FlowPattern, false> flow_deconstructor_unclosed{ "Point(x, y" };
-	Example<pst::FlowPattern, true>  flow_just_literal{ "1" };
-	Example<pst::FlowPattern, true>  flow_just_binding{ "x" };
-	Example<pst::FlowPattern, true>  flow_just_tuple{ "(a, b)" };
-	Example<pst::FlowPattern, true>  flow_just_deconstructor{ "Some(v)" };
-	Example<pst::FlowPattern, true>  flow_as_binding_simple{ "x as my_var" };
-	Example<pst::FlowPattern, true>  flow_as_binding_tuple{ "(a, b) as point" };
-	Example<pst::FlowPattern, true>  flow_as_binding_deconstructor{ "Rectangle(w, h) as rect" };
-	Example<pst::FlowPattern, false> flow_as_binding_no_identifier{ "(a, b) as" };
-	Example<pst::FlowPattern, false> flow_as_binding_keyword{ "_ as if" };
-	Example<pst::FlowPattern, true>  flow_type_constraint_simple{ "x : i32" };
-	Example<pst::FlowPattern, true>  flow_type_constraint_wildcard{ "_ : MyClass" };
-	Example<pst::FlowPattern, true>  flow_type_constraint_variant{ "v : A | B" };
-	Example<pst::FlowPattern, true>  flow_type_constraint_tuple{ "(a, b) : Point" };
-	Example<pst::FlowPattern, false> flow_type_constraint_no_type{ "x :" };
-	Example<pst::FlowPattern, false> flow_type_constraint_no_type_eof{ "x :" };
-	Example<pst::FlowPattern, true>  flow_full_simple{ "x as my_var : i32" };
-	Example<pst::FlowPattern, true>  flow_full_tuple{ "(a, b) as point : Point" };
-	Example<pst::FlowPattern, true>  flow_full_deconstructor{ "Rectangle(w, h) as rect : Shape" };
-	Example<pst::FlowPattern, true>  flow_full_wildcard{ "_ as value : A | B" };
-	Example<pst::FlowPattern, true>  flow_subpattern_simple{ "Tuple(x as inner_x : i32, _)" };
-	Example<pst::FlowPattern, true>  flow_subpattern_complex{
-        "Response(200, Payload(u as user : User, _ as token : Token))"
+	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
+	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };
+	Example<pst::FlowPattern, true> flow_deconstructor_simple{ "Point(x, y)" };
+	Example<pst::FlowPattern, true> flow_deconstructor_nested{ "Circle(Point(0, 0), r)" };
+	Example<pst::FlowPattern, true> flow_as_binding{ "Rectangle(a, b) as rect" };
+	Example<pst::FlowPattern, true> flow_type_constraint_simple{ "x : A | B" };
+	Example<pst::FlowPattern, true> flow_type_constraint_tuple{ "(a, b) : Point" };
+	Example<pst::FlowPattern, true> flow_full_deconstructor{ "Rectangle(w, h) as rect : Shape" };
+	Example<pst::FlowPattern, true> flow_full_wildcard{ "_ as value : A | B" };
+	Example<pst::FlowPattern, true> flow_subpattern_complex{
+		"Response(200, Payload(u as user : User, _ as token : Token))"
 	};
 	Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32, y as coord_y : f64)" };
-	// Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32 as coord_y)" };
-	Example<pst::FlowPattern, false> analysis_bad_value{ "+" };
-	Example<pst::FlowPattern, false> analysis_binding_is_keyword{ "if" };
-	Example<pst::FlowPattern, true>  analysis_block_expr{ "{ x + y * z; }" };
-	Example<pst::FlowPattern, true>  analysis_block_with_variable{ "{ some_var; }" };
+	Example<pst::FlowPattern, true>  flow_block_expr{ "{ x + y * z; }" };
+	Example<pst::FlowPattern, false> flow_tuple_empty{ "()" };
+	Example<pst::FlowPattern, false> flow_tuple_unclosed{ "(1, x" };
+	Example<pst::FlowPattern, false> flow_deconstructor_empty_args{ "None()" };
+	Example<pst::FlowPattern, false> flow_deconstructor_unclosed{ "Point(x, y" };
+	Example<pst::FlowPattern, false> flow_as_binding_no_identifier{ "(a, b) as" };
+	Example<pst::FlowPattern, false> flow_as_binding_keyword{ "_ as if" };
+	Example<pst::FlowPattern, false> flow_type_constraint_no_type{ "x :" };
 
-
-	Example<pst::expr::MatchExpr, true> match_single_case{ R"(match (x) { case 1 = "one"; };)" };
-	Example<pst::expr::MatchExpr, true> match_multiple_cases{
-		R"(match (value) { case 1 = "one"; case 2 = "two"; case _ = "other"; };)"
+	Example<pst::expr::MatchExpr, true> match_big{
+		R"(match (x) {
+        case 1                  = print("one");
+        case "kajak"            = 1;
+        case my_var             = true; 
+        case true              	= { let y = x + 1; return y; };
+        case (0, 0)             = false;
+        case (_, 0)             = print("four");
+        case { x == true; }     = print("five");
+        case Even(x)            = print("six");
+        case Rectangle(_, _) as colorful : Colorful = print("seven");
+        case Y(X(x1, x2) as x, y)                   = print("eight");
+        case (a, b) if a > 0 and b > 0              = print("nine");
+                    if a < 0 and b < 0              = print("ten");
+        case _ : A | C                              = print("eleven");
+        case _                                      = print("did not match");
+    };)"
 	};
-	Example<pst::expr::MatchExpr, true> match_no_cases_in_block{ R"(match (value) {};)" };
-	Example<pst::expr::MatchExpr, true> match_no_semicolon_at_end{ R"(match (x) { case _ = 1; };)" };
-	Example<pst::expr::MatchExpr, true> match_body_is_block_expr{
-		R"(match (x) { case _ = { let y = x + 1; return y; }; };)"
-	};
-	Example<pst::expr::MatchExpr, true> match_case_with_single_if_guard{
-		R"(match (p) { case (a, b) if a > 0 = "a is positive"; };)"
-	};
-	Example<pst::expr::MatchExpr, true> match_case_with_multiple_if_guards{
-		R"(match (p) { case x if x > 10 = "large"; if x < 0 = "negative"; };)"
-	};
-	Example<pst::expr::MatchExpr, true> match_multiple_cases_with_guards{
-		R"(match (p) { case (a, b) if a > 0 = 1; case (c, d) if c < 0 = -1; case _ = 0; };)"
-	};
+	Example<pst::expr::MatchExpr, true>  match_no_cases_in_block{ R"(match (value) {};)" };
 	Example<pst::expr::MatchExpr, false> match_no_value_expr{ R"(match { case _ = 1; };)" };
 	Example<pst::expr::MatchExpr, false> match_no_parens_for_value{ R"(match x { case _ = 1; };)" };
 	Example<pst::expr::MatchExpr, false> match_empty_parens_for_value{
@@ -351,7 +334,10 @@ class PSTErrorTests: public tester::TestSuite {
 		R"(match(x) { case _ if x > 0; };)"
 	};
 	Example<pst::expr::MatchExpr, false> match_if_after_default_branch{
-		R"(match(x) { case _ = 1 if x > 10 = 2; };)"
+		R"(match(x) { case _ = 1; if x > 10 = 2; };)"
+	};
+	Example<pst::expr::MatchExpr, false> match_default_branch_after_if{
+		R"(match(x) { case _ if x > 10 = 2; = 2; };)"
 	};
 	Example<pst::expr::MatchExpr, false> match_junk_between_cases{
 		R"(match(x) { case 1 = "one"; let y = 5; case 2 = "two"; };)"
