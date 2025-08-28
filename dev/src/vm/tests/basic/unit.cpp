@@ -27,6 +27,7 @@ public:
 		TESTER_ADD_TEST(floatOperationTest);
 		TESTER_ADD_TEST(literalsTest);
 		TESTER_ADD_TEST(checkLiteralErrorHandling);
+		TESTER_ADD_TEST(checkZeroDivision);
 	}
 
 private:
