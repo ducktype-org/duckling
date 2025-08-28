@@ -69,7 +69,7 @@ namespace vm::api {
 	std::expected<response::Output, ApiError> output(PID pid);
 
 	std::expected<response::Type, ApiError>  getType(PID pid, const std::string& type_name);
-	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id);
+
 
 	/**
 	 * @brief Returns an empty VmValue (initialized by zero bytes) of the given type.

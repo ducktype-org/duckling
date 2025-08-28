@@ -122,11 +122,7 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::Type>);
 	}
 
-	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Block{ BlockID(block_id) }))
-		    .and_then(mapOrWrongResponse<response::Block>);
-	}
+
 
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {
 		return Supervisor::get()
