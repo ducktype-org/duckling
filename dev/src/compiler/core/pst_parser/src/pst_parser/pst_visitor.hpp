@@ -45,6 +45,7 @@ namespace pst {
 		WildcardPattern,
 		BindingPattern,
 		ValuePattern,
-		Expand
+		Expand,
+		CodeBlock,
 	);
 }

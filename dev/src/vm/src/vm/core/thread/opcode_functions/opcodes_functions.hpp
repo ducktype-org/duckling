@@ -133,9 +133,7 @@ namespace vm {
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
-			auto called_func_type = thread.executing_program->types->at(called_func.name);
-			u64  arg_count
-				= called_func_type->getParameterCount().expect("Parameter count not set!");
+			u64 arg_count              = called_func.parameters.size();
 			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 

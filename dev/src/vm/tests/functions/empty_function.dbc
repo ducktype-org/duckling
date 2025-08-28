@@ -1,2 +1,2 @@
-function main {
+function main { i64, ptr_argv } -> i64 {
 }

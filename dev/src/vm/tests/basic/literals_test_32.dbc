@@ -1,6 +1,4 @@
-type fun: foo {} i32
-
-function foo {
+function foo {} -> i32 {
 	init_lany_type		a, i32;
 
 	mov_l32_imm 		a, 0.5f;		# b = 0.5    
@@ -31,7 +29,7 @@ function foo {
 	ret;
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
     # ret_val -> main ret_val
     # arg0 -> argc
     # arg1 -> *argv

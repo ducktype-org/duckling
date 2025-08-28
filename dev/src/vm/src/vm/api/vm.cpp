@@ -57,12 +57,6 @@ namespace vm::api {
 		});
 	}
 
-	std::expected<void, ApiError> loadStdlib(PID pid) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadStdlib{}))
-		    .transform(ignoreResponse);
-	}
-
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))

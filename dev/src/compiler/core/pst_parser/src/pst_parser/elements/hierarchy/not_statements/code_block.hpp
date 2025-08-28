@@ -29,5 +29,7 @@ namespace pst {
 		bool isStatementAggregate() const final {
 			return true;
 		}
+
+		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 }
