@@ -942,10 +942,7 @@ namespace vm {
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
 			if (new_elem_count == 0) {
-				// When reallocating to 0 elements, free the data and set pointer to null
-				if (!tbl_pointer.isNull()) {
-					thread.process_memory.freeBlock(tbl_pointer.getBlock());
-				}
+				// When reallocating to 0 elements, set pointer to null (this will free the data)
 				const Pointer new_dst = thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 			} else if (tbl_pointer.isNull()) {
