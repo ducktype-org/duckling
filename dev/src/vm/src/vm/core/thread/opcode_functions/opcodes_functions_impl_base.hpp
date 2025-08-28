@@ -946,7 +946,8 @@ namespace vm {
 				if (!tbl_pointer.isNull()) {
 					thread.process_memory.freeBlock(tbl_pointer.getBlock());
 				}
-				writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
+				const Pointer new_dst = thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
+				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 			} else if (tbl_pointer.isNull()) {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
