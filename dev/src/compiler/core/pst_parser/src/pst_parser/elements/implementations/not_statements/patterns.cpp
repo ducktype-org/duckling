@@ -91,9 +91,6 @@ namespace pst {
 		return nullptr;
 	}
 
-	// TODOP: Think about that.
-	void AnalysisPattern::dprint(std::ostream&) const {}
-
 	void AnalysisPattern::acceptVisitor(PstVisitor& visitor) const {
 		visitor.visitAnalysisPattern(*this);
 	}

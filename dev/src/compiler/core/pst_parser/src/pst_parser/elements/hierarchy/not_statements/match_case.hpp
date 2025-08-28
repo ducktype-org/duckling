@@ -3,20 +3,17 @@
 #include "patterns.hpp"
 
 namespace pst {
-	// TODOP: Maybe put MatchCase and MatchExpr into one file?
-
 	/**
 	 * @brief Single match case for the match expression.
 	 */
 	class MatchCase final: public NotStmt {
 		struct CaseBranch {
 			base::Optional<AccessInternal<UniversalExprHolder>> condition;
-			AccessInternal<UniversalExprHolder>                result;
+			AccessInternal<UniversalExprHolder>                 result;
 		};
 
 		AccessInternal<FlowPattern> pattern;
 
-		// TODOP: Change that to branch list?
 		/**
 		 * @brief Represents all the possible conditions for the case.
 		 * For 'cases' with no conditions this vector holds one 'CaseBranch' element with an empty

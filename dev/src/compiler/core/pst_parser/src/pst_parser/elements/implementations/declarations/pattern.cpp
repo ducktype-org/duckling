@@ -73,7 +73,7 @@ namespace pst {
 	}
 
 	void Pattern::dprint(std::ostream& out) const {
-		out << "Pattern {";
+		out << "{";
 		out << "\"name\":";
 		nullAwareDprint(name, out);
 		out << ",\"parameter\":";

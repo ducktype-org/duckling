@@ -4,14 +4,15 @@
 #include "expr_common.hpp"
 #include "pst_parser/access.hpp"
 
+#include <ranges>
+
 namespace pst::expr {
 	/**
 	 * @brief Represents the full match expression.
-	 * TODOP: Move that to declarations maybe.
 	 */
 	class MatchExpr final: public ExprElement {
-		AccessInternal<CommaExprHolder>        value_to_match;  // TODOP: ???
-		std::vector<AccessInternal<MatchCase>> cases;           // TODOP: MatchCaseList?
+		AccessInternal<CommaExprHolder>        value_to_match;
+		std::vector<AccessInternal<MatchCase>> cases;
 
 	public:
 		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {
@@ -33,9 +34,11 @@ namespace pst::expr {
 			return value_to_match.give();
 		}
 
-		[[nodiscard]] const std::vector<AccessInternal<MatchCase>>& getCases() const {
-			// TODOP: Map with give()
-			return cases;
+		[[nodiscard]] auto getCases() const {
+			using namespace std::views;
+			static auto give_one
+				= [](const auto& ref) -> AccessLocked<MatchCase> { return ref.give(); };
+			return std::ranges::ref_view(cases) | transform(give_one);
 		}
 	};
 }

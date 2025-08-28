@@ -15,7 +15,7 @@ namespace pst {
 	class FlowPattern final: public NotStmt {
 		AccessInternal<AnalysisPattern>                     pattern;
 		base::Optional<tpc::Identifier>                     as_identifier;
-		base::Optional<AccessInternal<UniversalExprHolder>> type_constraint;  // TODOP: Universal?
+		base::Optional<AccessInternal<UniversalExprHolder>> type_constraint;
 
 	public:
 		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {
@@ -54,7 +54,6 @@ namespace pst {
 		virtual ~AnalysisPattern() = default;
 
 		static MBox<AnalysisPattern> parse(LangParserState& state);
-		void                         dprint(std::ostream& out) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
