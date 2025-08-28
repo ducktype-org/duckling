@@ -82,6 +82,13 @@ namespace vm::code {
 		 */
 		void insertTypes(const std::vector<TypeOfData>& new_types);
 
+
+		/**
+		 * @brief Inserts const types. May invalidate state.
+		 * Can insert the same const type multiple times.
+		 */
+		void insertConsts(const std::vector<ConstType>& new_consts);
+
 		/**
 		 * @brief Inserts globals. May invalidate state.
 		 * Cannot insert the same global data multiple times.

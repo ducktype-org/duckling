@@ -236,6 +236,19 @@ namespace vm::code {
 		}
 	};
 
+	struct ConstType final: ElementBase {
+		ConstType() = default;
+
+		ConstType(base::StrID name, base::StrID referenced_type): name{name}, referenced_type{referenced_type} {}
+
+		base::StrID name;
+		base::StrID referenced_type;
+
+		bool operator==(const ConstType& other) const {
+			return name == other.name && referenced_type == other.referenced_type;
+		}
+	};
+
 	/**
 	 * @brief Storage for any type of bytecode data.
 	 */
@@ -249,7 +262,8 @@ namespace vm::code {
 		FunctionType,
 		OpaqueType,
 		ClassType,
-		InterfaceType>;
+		InterfaceType,
+		ConstType>;
 
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);

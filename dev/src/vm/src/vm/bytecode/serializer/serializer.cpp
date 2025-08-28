@@ -231,6 +231,12 @@ namespace vm::code {
 				out << "]\n";
 				out << "}";
 			}
+
+			void operator()(const ConstType& const_decl) const {
+				out << "const: ";
+				out << const_decl.name.strView() << " ";
+				out << const_decl.referenced_type.strView();
+			}
 		};
 
 	public:

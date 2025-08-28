@@ -422,6 +422,25 @@ namespace vm::loader::parser {
 		}
 	}
 
+	MBox<Const> Const::parse(F8ParserState& state) {
+		using namespace vm::code;
+		state.parse().one(lang_def::Keyword::BCConst);
+		state.parse().one(lang_def::NamedOperator::Colon);
+		
+		auto out = makeBox<Const>(state.getPosition());
+		base::StrID name = state.tokens().next().getValue();
+
+		auto referenced_type = state.tokens().next();
+		if (not referenced_type.isIdentifier()) {
+			state.err->failAndLog(state.getPosition(), "expected identifier");
+		} else {
+			auto c_spec = ConstType{name, referenced_type.getValue()};
+			c_spec.bytecode_pos = out->position;
+			out->const_spec = c_spec;
+		}
+		return out;
+	}
+
 	MBox<Type> Type::parse(F8ParserState& state) {
 		using namespace vm::code;
 
@@ -707,6 +726,9 @@ namespace vm::loader::parser {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
 				if (type) out->types.emplace_back(std::move(*type));
+			} else if (state[0].is(lang_def::Keyword::BCConst)) {
+				auto const_decl = Const::parse(state).toOptBox();
+				if (const_decl) out->consts.emplace_back(std::move(*const_decl));
 			} else if (state[0].is(lang_def::Keyword::BCGlobalData)) {
 				auto global_data = GlobalData::parse(state);
 				out->global_data.emplace_back(std::move(global_data));

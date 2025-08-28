@@ -53,11 +53,49 @@ namespace {
 		return HoldsOneOfImpl<Tup>{}(instr);
 	}
 
+	template<typename... Ts>
+	struct tuple_cat_type {
+		using type = void;
+	};
+
+	template<typename... Ts, typename... Us>
+	struct tuple_cat_type<std::tuple<Ts...>, std::tuple<Us...>> {
+		using type = std::tuple<Ts..., Us...>;
+	};
+
+	template<typename... Ts, typename U>
+	struct tuple_cat_type<std::tuple<Ts...>, U> {
+		using type = std::tuple<Ts..., U>;
+	};
+
+	template<typename T, typename U, typename... Vs>
+	struct tuple_cat_type<T, U, Vs...> {
+		using type = tuple_cat_type<typename tuple_cat_type<T, U>::type, Vs...>::type;
+	};
+
+	template<typename... Ts>
+	using tuple_cat_type_t = tuple_cat_type<Ts...>::type;
+
 	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
 	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
 	using DeinitializingInstructions
 		= std::tuple<Op_deinit, Op_call_func, Op_call_builtin_func, Op_virtual_call_lptr_method>;
 	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtin_func>;
+
+	using CastInstructions
+		= std::tuple<Op_upcast_lptr_lptr, Op_downcast_lptr_lptr, Op_cast_l8_type, Op_cast_l16_type, Op_cast_l32_type, Op_cast_l64_type>;
+	using LocalCmpEqInstructions
+		= std::tuple<Op_cmpEq_l32_imm, Op_cmpEq_l32_l32, Op_cmpEq_l64_imm, Op_cmpEq_l64_l64, Op_cmpEq_l8_imm, Op_cmpEq_l8_l8>;
+	using LocalCmpGInstructions = std::tuple<Op_cmpG_l32_imm, Op_cmpG_l32_l32, Op_cmpG_l64_imm, Op_cmpG_l64_l64, Op_cmpG_l8_imm, Op_cmpG_l8_l8>;
+	using LocalCmpLInstructions = std::tuple<Op_cmpL_l32_imm, Op_cmpL_l32_l32, Op_cmpL_l64_imm, Op_cmpL_l64_l64, Op_cmpL_l8_imm, Op_cmpL_l8_l8>;
+	using LocalCmpInstructions = tuple_cat_type_t<LocalCmpEqInstructions, LocalCmpGInstructions, LocalCmpLInstructions>;
+	using OutputInstructions = std::tuple<Op_output_l32, Op_output_l64, Op_strOutput_lptr>;
+	using ComplexLoadStoreInstructions = std::tuple<Op_structStore_lptr_lany, Op_fixedSizeTableStore_lptr_lany, Op_dynTableStore_lptr_lany>;
+	using OtherInstructions = std::tuple<Op_nop, Op_exit, Op_breakpoint, Op_virtual_call_lptr_method, Op_ret, Op_ret_tailcall_func>;
+	using ArgNonModInstructions
+		= tuple_cat_type_t<LocalCmpInstructions, OutputInstructions, ComplexLoadStoreInstructions, OtherInstructions, CallingInstructions>;
+
+
 	template<typename T>
 	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
 	template<typename T>
@@ -65,6 +103,9 @@ namespace {
 
 	template<typename T>
 	concept CallingInstruction = IsIn<T, CallingInstructions>::VALUE;
+
+	template<typename T>
+	concept ArgNonModInstruction = IsIn<T, ArgNonModInstructions>::VALUE;
 
 	template<Extension E>
 	struct ExtensionMetadata;

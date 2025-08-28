@@ -46,6 +46,15 @@ namespace vm::loader::parser {
 		void dprint(std::ostream& out) const override;
 	};
 
+	struct Const final: AsmElement {
+		using AsmElement::AsmElement;
+
+		code::ConstType const_spec;
+		static MBox<Const> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+	};
+
 	struct GlobalData final: AsmElement {
 		using AsmElement::AsmElement;
 
@@ -105,6 +114,7 @@ namespace vm::loader::parser {
 	struct ParsedFile final {
 		std::vector<Box<Func>>       functions;
 		std::vector<Box<Type>>       types;
+		std::vector<Box<Const>>      consts;
 		std::vector<Box<GlobalData>> global_data;
 		fs::File                     source_file;
 

@@ -72,6 +72,7 @@ namespace vm::code {
 	struct CodeCollection final {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;
+		// std::vector<ConstType> consts;
 		std::vector<GlobalData> global_data;
 	};
 }

@@ -241,6 +241,25 @@ namespace vm::code {
 			  ) {}                                                                  \
 	};
 
+#define DEFINE_CONST_ERROR(error_name, msg) \
+	class error_name: public ValidationError { \
+	public: \
+		constexpr static const std::string_view ERR_MSG = (msg); \
+		const ConstType CONST; \
+        error_name(ConstType argument): ValidationError(base::strConcat(ERR_MSG, argument.name, " ", argument.referenced_type)), \
+		CONST(std::move(argument)) {}                      \
+		\
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {\
+			return static_cast<CRef<ElementBase>>(&CONST);\
+		}	\
+	};
+
+	DEFINE_CONST_ERROR(
+		InvalidConstReferencedTypeError, "This const type's referenced type does not exist: "
+	);
+	DEFINE_CONST_ERROR(
+		ConstReferencingConstError, "This const type references a const, not a type: "
+	);
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);

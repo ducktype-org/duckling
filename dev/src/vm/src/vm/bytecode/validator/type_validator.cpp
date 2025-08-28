@@ -353,7 +353,7 @@ namespace {
 					  for (const Field& field_code: clazz.fields) {
 						  fields.emplace_back(
 							  field_code.name,
-							  metadata.atMaybe(field_code.type)
+							  ctx.maybeStripConst(&metadata, field_code.type)
 								  .expect<UnknownSubtypeError>(clazz, field_code.name)
 						  );
 					  }
@@ -409,6 +409,21 @@ namespace {
 		const base::HashMap<base::StrID, FuncSignature>& functions
 	) {
 		variant_match(type) {
+			variant_case(ConstType, ct) {
+				match_optional(ctx.getCurrentTypes().atMaybe(ct.referenced_type)) {
+					opt_some(rt) {
+						variant_match(*rt) {
+							variant_case_novalue(ConstType) {
+								throw ConstReferencingConstError(ct);
+							}
+							variant_default {}
+						}
+					}
+					opt_none {
+						throw InvalidConstReferencedTypeError(ct);
+					}
+				}
+			}
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
 			}
@@ -492,6 +507,37 @@ namespace {
 	}
 }
 
+auto TypeContext::maybeStripConst(Ref<const vm::TypeMetadata> metadata, base::StrID type_id) const -> base::Optional<vm::TypeCRef> {
+	auto opt = metadata->atMaybe(type_id);
+	match_optional(opt) {
+		opt_none {
+			match_optional(types.atMaybe(type_id)) {
+				opt_some(maybe_incomplete) {
+					variant_match(*maybe_incomplete) {
+						variant_case(ConstType, ct) {
+							match_optional(metadata->atMaybe(ct.referenced_type)) {
+								opt_some(rt) {
+									return rt;
+								}
+								opt_none {
+									return {};
+								}
+							}
+						}
+						variant_default {
+							return {};
+						}
+					}
+				}
+				opt_none {
+					return {};
+				}
+			}
+		}
+	}
+	return *opt;
+};
+
 Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	const base::HashMap<base::StrID, FuncSignature>& available_functions
 ) const {
@@ -499,7 +545,16 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
 
 	// Declare all types first
-	for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
+	// for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
+	auto add_type_to_metadata = [&](const TypeOfData& type) -> void {
+		variant_match(type) {
+			variant_case_novalue(ConstType) {}
+			variant_default {
+				metadata->addType(Type::declareType(typeName(type)));
+			}
+		}
+	};
+	for (const auto& type: types) add_type_to_metadata(type);
 
 	// Well-define every type.
 	for (const auto& type: types) {
@@ -509,18 +564,18 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 			}
 			variant_case(PointerType, data) {
 				metadata->at(data.name)->definePointer(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
+					maybeStripConst(metadata.ref(), data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(FixedSizeTableType, data) {
 				metadata->at(data.name)->defineFixedSizeTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
+					maybeStripConst(metadata.ref(), data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
 			variant_case(DynamicTableType, data) {
 				metadata->at(data.name)->defineDynamicTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
+					maybeStripConst(metadata.ref(), data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(DataType, data) {
@@ -529,7 +584,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 				for (auto& field: data.fields)
 					fields.emplace_back(
 						field.name,
-						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
+						maybeStripConst(metadata.ref(), field.type).expect<UnknownSubtypeError>(data, field.name)
 					);
 				metadata->at(data.name)->defineData(fields, {});
 			}
@@ -538,17 +593,18 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
 					variants.emplace_back(
-						metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
+						maybeStripConst(metadata.ref(), variant).expect<UnknownSubtypeError>(data, variant)
 					);
 				metadata->at(data.name)->defineVariant(variants);
 			}
 			variant_case(FunctionType, data) {
 				std::vector<vm::TypeCRef> parameters;
 				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
+				// TODO: maybe add separate error
+				for (auto& param: data.parameters) parameters.emplace_back(maybeStripConst(metadata.ref(), param).expect<UnknownSubtypeError>(data, param));
 				metadata->at(data.name)->defineFunction(
 					parameters,
-					metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
+					maybeStripConst(metadata.ref(), data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
 			}
 			variant_case(OpaqueType, opaque) {
@@ -569,6 +625,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 
 				tp->defineData(fields, std::move(inh_metadata));
 			}
+			variant_case_novalue(ConstType) {}
 			variant_default { CORE_PANIC("bad type"); }
 		}
 	}

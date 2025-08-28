@@ -152,6 +152,7 @@ namespace lang_def {
 		// BC:
 		BCFunction,
 		BCType,
+		BCConst,
 		BCPrimitive,
 		BCPointer,
 		BCFixedSizeTable,

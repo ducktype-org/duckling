@@ -123,6 +123,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 					new_code.global_data.emplace_back(code_global);
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
+				for (const auto& cs: parsed_file.consts) new_code.types.emplace_back(cs->const_spec);
 
 				for (const auto& func: parsed_file.functions) {
 					code::Function function;

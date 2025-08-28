@@ -204,7 +204,8 @@ the low-level, concrete `vm::Type` representation used in the VM's runtime.
     All type names are resolved to direct references (`TypeRef` or `TypeCRef`).
     Previously, component types (e.g. types of fields in a data type) were held
     as a string representing the type name. After this step, all types keep the
-    direct reference to the corresponding type object.
+    direct reference to the corresponding type object. Const type versions are 
+    resolved to references to the same `vm::Type` objects as their non-const counterparts.
 *   **Field Layout**:
     For classes, the validator computes the final in-memory layout by creating
     a flat list of all fields, including those inherited from superclasses.
