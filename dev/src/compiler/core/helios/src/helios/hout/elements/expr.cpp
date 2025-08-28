@@ -298,6 +298,10 @@ namespace compiler::helios::code {
 			out << "box ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::Const:
+			out << "const ";
+			expr->debugPrint(out);
+			break;
 		default:
 			CORE_PANIC("unsupported unary operation");
 		}
