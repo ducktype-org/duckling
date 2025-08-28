@@ -180,7 +180,7 @@ namespace compiler::helios {
 				auto location_type  = location_expr->expression_type.getSymbolType();
 				auto new_value_type = new_value_expr->expression_type.getSymbolType();
 
-                auto location_mutability = location_type.getMutability();
+				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -276,16 +276,14 @@ namespace compiler::helios {
 
 				if (stmt->getValue().empty()) {
 					// no initial value case
-                    if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
+					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							stmt->getSourcePosition(),
-							base::strConcat(
-                                "Immutable variables must have an initial value"
-							)
+							base::strConcat("Immutable variables must have an initial value")
 						));
 						return;  // fail
-                    }
+					}
 
 					output(code::VariableStmt({}, symbol_type, symbol));
 					return;

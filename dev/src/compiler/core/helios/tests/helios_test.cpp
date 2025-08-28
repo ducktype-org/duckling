@@ -475,9 +475,9 @@ private:
 		auto              tree_vconst = getExprOfConst(sym_vconst);
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
-		const auto bool_type    = query::entryPoint<tsh::QueryBoolType>(query::EmptyKey{});
+		const auto bool_type       = query::entryPoint<tsh::QueryBoolType>(query::EmptyKey{});
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
-		const auto vconst_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
+		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 	}
 

@@ -178,7 +178,7 @@ namespace compiler::helios::code {
 		BooleanNot,
 		Ref,
 		Box,
-        Const,
+		Const,
 	};
 
 	/**
