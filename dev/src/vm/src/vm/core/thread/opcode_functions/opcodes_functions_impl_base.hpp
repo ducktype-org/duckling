@@ -941,7 +941,13 @@ namespace vm {
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
-			if (tbl_pointer.isNull()) {
+			if (new_elem_count == 0) {
+				// When reallocating to 0 elements, free the data and set pointer to null
+				if (!tbl_pointer.isNull()) {
+					thread.process_memory.freeBlock(tbl_pointer.getBlock());
+				}
+				writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
+			} else if (tbl_pointer.isNull()) {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
 				const Pointer new_dst
