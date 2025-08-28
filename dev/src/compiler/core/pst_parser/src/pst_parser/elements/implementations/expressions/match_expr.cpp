@@ -75,8 +75,7 @@ namespace pst::expr {
 		while (true) {
 			if (state[0].is(Keyword::Case)) {
 				auto match_case = MatchCase::parse(state);
-				if (!match_case)  // Error in case parsing.
-					return nullptr;
+				if (!match_case) return nullptr;
 				out->cases.emplace_back(std::move(match_case));
 			} else {
 				break;

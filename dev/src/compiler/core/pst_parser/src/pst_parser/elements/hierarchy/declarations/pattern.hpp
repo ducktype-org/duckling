@@ -5,7 +5,7 @@
 
 namespace pst {
 	/**
-	 * @brief Pattern declaration
+	 * @brief Pattern declaration.
 	 */
 	class Pattern final: public Decl {
 		tpc::Identifier                                 name;

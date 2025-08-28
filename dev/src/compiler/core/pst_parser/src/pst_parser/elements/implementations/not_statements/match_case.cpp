@@ -72,8 +72,7 @@ namespace pst {
 				if_case = true;
 			} else if (state.parse(out).tryEat(NamedOperator::Assign)) {
 				if (if_case) {  // Unconditioned branch after a conditioned branch.
-					state.log(
-						makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
+					state.log(makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
 					);
 					return nullptr;
 				}

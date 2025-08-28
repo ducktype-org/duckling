@@ -41,11 +41,6 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
-			std::cout << "Errors\n";
-			parsed.getLogger()->dumpLog(true);
-			std::cout << "Parsed tree\n";
-			parsed.dprint(std::cout);
-			std::cout << "\n";
 			return parsed.getLogger()->good() == good;
 		}
 
