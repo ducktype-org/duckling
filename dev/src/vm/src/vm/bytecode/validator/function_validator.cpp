@@ -543,19 +543,23 @@ class FunctionValidator {
 
 			variant_case_novalue(Comment) {}
 			variant_case(Op_mov_l8_imm, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val") && function.signature.result_type.str == base::StrID("void"))
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
 			variant_case(Op_mov_l8_l8, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val") && function.signature.result_type.str == base::StrID("void"))
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
 			variant_case(Op_cmov_l8_l8, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val") && function.signature.result_type.str == base::StrID("void"))
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
 			variant_case(Op_cmov_l8_imm, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val") && function.signature.result_type.str == base::StrID("void"))
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
 			variant_case_novalue(Op_mov_l16_imm) {}
@@ -1122,12 +1126,10 @@ class FunctionValidator {
 		}
 	}
 
-	void validateSignature () {
+	void validateSignature() {
 		for (const auto& param_type: function.signature.parameters) {
-			if (!tod_map.contains(param_type))
-				throw UnknownTypeError(opargs::Type { param_type });
-			if (param_type.str == base::StrID("void"))
-				throw VoidTypeArgumentError(function.name);
+			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
+			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
 	}
 
