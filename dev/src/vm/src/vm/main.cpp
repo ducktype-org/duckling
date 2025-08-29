@@ -24,10 +24,6 @@ clah::Clah getVmClah() {
 	             .addLongName("version")
 	             .addShortDesc("Shows version and config")
 	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("stdlib")
-	             .addShortDesc("When passed, loads standard library")
-	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
@@ -49,10 +45,16 @@ clah::Clah getVmClah() {
 						   }))
 	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
 	                       .addPositional(clah::FileParser::make("file"))
+	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
 	                       .setHandler([](const clah::ParsingResult& options) {
 							   vm::Supervisor::get();
-							   auto file = options.getPositional<fs::File>(0);
-							   return cli(file, options.isFlag("stdlib"));
+							   auto                     file = options.getPositional<fs::File>(0);
+							   std::vector<std::string> args;
+							   args.reserve(options.getExtraParameterCount());
+							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+								   args.push_back(*options.getExtra<std::string>(argc));
+
+							   return cli(file, args);
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

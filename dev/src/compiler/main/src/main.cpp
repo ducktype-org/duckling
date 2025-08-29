@@ -282,9 +282,7 @@ clah::Clah getClahForMain() {
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {
-								   auto run_result = driver::runModuleOnDVM(
-									   ctx, root, options.isFlag("add-builtin-library")
-								   );
+								   auto run_result = driver::runModuleOnDVM(ctx, root);
 								   if (run_result.has_value()) {
 									   exit_code = run_result.value().exit_code;
 								   } else {

@@ -9,10 +9,12 @@
 int file_counter = 0;
 int dir_counter  = 0;
 
-void countFiles(const fs::FsTree& tree) {
-	file_counter += (int) tree.getFiles().size();
-	for (const auto& subdir: tree.getDirs()) {
-		countFiles(*subdir.second);
+// Recursively count files and directories in a ModuleTree
+void countFiles(const compiler::frontend::ModuleTree& tree) {
+	file_counter += (int) tree.getSourceFiles().size();
+	for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
+	for (const auto& [_, submodule]: tree.getSubmodules()) {
+		countFiles(*submodule);
 		dir_counter++;
 	}
 }
@@ -48,13 +50,14 @@ int main(int argc, const char* argv[]) {
 		std::cout << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 	}
 
-	auto fs_tree = fs::FsTree::create(
+	auto module_tree = compiler::frontend::ModuleTreeBuilder::create(
 		res.getValue<fs::File>('p').copyValueOr(fs::File(".")),
 		std::regex(res.getValue<std::string>("fileregex").copyValueOr("\\.*")),
 		std::regex(res.getValue<std::string>("dirregex").copyValueOr("\\..*"))
 	);
-	if (!res.isFlag("noprint")) std::cout << fs_tree->prettyPrint();
-	countFiles(*fs_tree);
+
+	if (!res.isFlag("noprint")) std::cout << module_tree->prettyPrint();
+	countFiles(*module_tree);
 	std::cout << "Files: " << file_counter << ", directories: " << dir_counter
 			  << ", sum: " << file_counter + dir_counter << '\n';
 }
