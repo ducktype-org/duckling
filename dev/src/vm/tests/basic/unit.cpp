@@ -121,6 +121,12 @@ private:
 				vm::code::InvalidPrimitiveSizeError::ERR_MSG,
 			}
 		);
+		loadInvalidDbc(
+			"void_arg.dbc",
+			{
+				vm::code::VoidTypeArgumentError::ERR_MSG,
+			}
+		);
 	}
 };
 
