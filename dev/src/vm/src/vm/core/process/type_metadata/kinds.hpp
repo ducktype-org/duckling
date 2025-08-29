@@ -7,3 +7,4 @@
 #include "kinds/pointer.hpp"
 #include "kinds/primitive.hpp"
 #include "kinds/variant.hpp"
+#include "kinds/const.hpp"

@@ -32,6 +32,7 @@ namespace vm {
 			Variant,
 			Function,
 			Opaque,
+			Const,
 		};
 
 	private:
@@ -54,7 +55,8 @@ namespace vm {
 			kind::Data,
 			kind::Variant,
 			kind::Function,
-			kind::Opaque>
+			kind::Opaque,
+			kind::Const>
 			kind;
 
 		Type() = default;
@@ -67,9 +69,15 @@ namespace vm {
 
 		/**
 		 * @brief Finds out if the type is instantiable knowing it is of kind::Variant.
-		 * @param data The stored kind.
+		 * @param variant The stored kind.
 		 */
 		void isInstantiableImpl(kind::Variant& variant);
+
+		/**
+		 * @brief Finds out if the type is instantiable knowing it is of kind::Const.
+		 * @param const_type The stored kind. 
+		 */
+		void isInstantiableImpl(kind::Const& const_type);
 
 		/**
 		 * @brief Finds out if the type is instantiable knowing it has inheritance.
@@ -93,6 +101,7 @@ namespace vm {
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 		void defineOpaque(TypeSize size);
+		void defineConst(TypeCRef actual_type);
 
 		// Type finalization:
 		void finalize();

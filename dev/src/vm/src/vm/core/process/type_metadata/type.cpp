@@ -46,6 +46,10 @@ namespace vm {
 		}
 	}
 
+	void Type::isInstantiableImpl(kind::Const& const_type) {
+		am_i_instantiable = const_type.inner_type->isInstantiable();
+	}
+
 	void Type::inheritsFromImpl(InheritanceMetadata& imd) {
 		imd.inherits_from.insert(getID());
 		auto get_all_super = [](TypeCRef type) {
@@ -150,6 +154,15 @@ namespace vm {
 		kind      = kind::Opaque{};
 	}
 
+	void Type::defineConst(TypeCRef actual_type) {
+		CORE_ASSERT(state == State::Declared, "Bad const define");
+		state = State::Defined;
+
+		size = actual_type->size;
+		kind_type = Kind::Const;
+		kind = kind::Const{ .inner_type = actual_type };
+	}
+
 	void Type::finalize() {
 		if (state == State::Finalizing) throw code::CyclicDependencyError(*this);
 		if (state == State::Finalized) return;
@@ -183,6 +196,10 @@ namespace vm {
 				this->size = 16 + data_size;
 				isInstantiableImpl(variant);
 			}
+			variant_case(kind::Const, const_type) {
+				this->size = const_type.inner_type->getSize();
+				isInstantiableImpl(const_type);
+			}
 		}
 	}
 
@@ -198,6 +215,9 @@ namespace vm {
 
 		auto dynamic_table_option = get<kind::DynamicTable>().map(get_inner_type);
 		if (dynamic_table_option.has_value()) return (TypeCRef) dynamic_table_option.value();
+
+		auto const_option = get<kind::Const>().map(get_inner_type);
+		if (const_option.has_value()) return (TypeCRef) const_option.value();
 
 		return {};
 	}

@@ -28,8 +28,6 @@ namespace vm::code {
 			const base::HashMap<base::StrID, FuncSignature>& functions
 		) const;
 
-		base::Optional<TypeCRef> maybeStripConst(CRef<TypeMetadata>, base::StrID) const;
-
 	private:
 		ObjIdNameMap<TypeOfData> types;
 	};

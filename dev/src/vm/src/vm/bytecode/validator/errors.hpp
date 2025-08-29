@@ -347,6 +347,9 @@ namespace vm::code {
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		ConstFirstArgError, "First argument of a modyfing instruction is const."
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		FixedSizeTableTypeMismatchError, "Inner fixed size table type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
