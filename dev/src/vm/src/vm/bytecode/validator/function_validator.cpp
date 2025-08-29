@@ -572,6 +572,16 @@ class FunctionValidator {
 		}
 	}
 
+	bool isConstVersion(base::StrID maybe_const_id, base::StrID other_id) const {
+		CRef<TypeOfData> maybe_const = tod_map.at(maybe_const_id);
+		CRef<TypeOfData> other = tod_map.at(other_id);
+		if (maybe_const == other)
+			return true;
+		if (std::holds_alternative<ConstType>(*maybe_const))
+			return (tod_map.at(std::get<ConstType>(*maybe_const).referenced_type) == other);
+		return false;
+	}
+
 	/**
 	 * @brief Validates instruction's arguments non-trivially - using specific logic for each
 	 * instruction. For instance, an instruction may expect type `T` as arg0, a `Pointer<T>` as
@@ -585,6 +595,14 @@ class FunctionValidator {
 		[[maybe_unused]] base::Optional<base::CRef<Instruction>> next_instruction,
 		const LocalStack&                                        current_stack
 	) const {
+
+		// Utility lambda for type decaying.
+		auto strip_const = [&]<typename T>(const TypeOfData& tod) -> const T& {
+			if (std::holds_alternative<T>(tod))
+				return std::get<T>(tod);
+			return std::get<T>(*tod_map.at(std::get<ConstType>(tod).referenced_type));
+		};
+
 		variant_match(instruction) {
 			variant_case(Op_init_lany_type, instr) {
 				validateArgInstantiable(instr.arg1);
@@ -765,47 +783,38 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			// makes arg0 point to arg1's data, expected type is arg0's inner type
-			// handle the case where arg1 is constant
+			// From now on the third argument is the actual c-qualified variant alternative
+			// and the pointer's inner type must comply with its qualification and, possibly, the
+			// qualification of the variant itself. This is necessary because now the user might
+			// declare a `const variant<i64, const i64>` and there is no way to deduce to which value to
+			// assign a `const i64*`.
 			variant_case(Op_variantGetInner_lptr_lvnt, instr) {
 				validateFirstArgNonConst(instr, current_stack);
-				const auto& variant_type
-					= *current_stack.at(instr.arg1.var_name);
 				const auto& pointer_type = std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				base::StrID wanted_type = pointer_type.inner;
-				variant_match(variant_type) {
-					variant_case(VariantType, vtype) {
-						const std::vector<base::StrID>& possible_types = vtype.variant_alternatives;
-						if (!std::ranges::contains(possible_types, wanted_type))
+				base::StrID alternative_type = std::get<Op_ext_type>(*next_instruction.value()).arg0.type_name;
+				variant_match(*current_stack.at(instr.arg1.var_name)) {
+					// If the variant is not const, the pointer's inner type must be a (possibly const)
+					// version of some variant alternative.
+					variant_case(VariantType, variant_type) {
+						const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
+						if (!std::ranges::contains(possible_types, alternative_type) || !isConstVersion(pointer_type.inner, alternative_type))
 							throw VariantTypeMismatchError(instr);
 					}
-					variant_case(ConstType, ctype) {
-						const auto& vtype = std::get<VariantType>(*tod_map.at(ctype.referenced_type));
-						const std::vector<base::StrID>& possible_types = vtype.variant_alternatives;
-						const auto& pointer_inner_type = *tod_map.at(wanted_type);
-						variant_match(pointer_inner_type) {
-							variant_case(ConstType, ct) {
-
-							}
-							variant_default {
-								throw VariantTypeMismatchError(instr);
-							}
-						}
+					// If the variant is const, same as above + the pointer's inner type must be const.
+					variant_case(ConstType, const_type) {
+						const auto& variant_type = *tod_map.at(const_type.referenced_type);
+						const std::vector<base::StrID>& possible_types = std::get<VariantType>(variant_type).variant_alternatives;
+						const auto& ptr_inner_type = *tod_map.at(pointer_type.inner);
+						if (!std::holds_alternative<ConstType>(ptr_inner_type)
+							|| !std::ranges::contains(possible_types, alternative_type) || !isConstVersion(pointer_type.inner, alternative_type))
+							throw VariantTypeMismatchError(instr);
 					}
 				}
-				// const auto& pointer_type
-				// 	= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				// base::StrID                     wanted_type    = pointer_type.inner;
-				// const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
-				// if (!std::ranges::contains(possible_types, wanted_type))
-				// 	throw VariantTypeMismatchError(instr);
-
-				// const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
-				// if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
-				const auto& variant_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& variant_pointer_tod = *current_stack.at(instr.arg0.var_name);
+
+				const auto& variant_pointer = strip_const.template operator()<PointerType>(variant_pointer_tod);
 
 				const auto& variant_type
 					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
@@ -818,18 +827,29 @@ class FunctionValidator {
 				validateFirstArgNonConst(instr, current_stack);
 				const auto& pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				base::StrID wanted_type = pointer_type.inner;
+				base::StrID alternative_type = std::get<Op_ext_type>(*next_instruction.value()).arg0.type_name;
 
 				const auto& variant_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
-				const auto& variant_type
-					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
-
-				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
-					throw VariantTypeMismatchError(instr);
-
-				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
-				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+					= strip_const.template operator()<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& variant_type_tod = *tod_map.at(variant_pointer.inner);
+				variant_match(variant_type_tod) {
+					// If the second argument points to a non-const variant, the first pointer's inner type
+					// must be a (possibly const) version of some variant alternative.
+					variant_case(VariantType, variant_type) {
+						if (!std::ranges::contains(variant_type.variant_alternatives, alternative_type)
+							|| !isConstVersion(pointer_type.inner, alternative_type))
+							throw VariantTypeMismatchError(instr);
+					}
+					// If it points to a const variant, same as above + the first pointer's inner type
+					// must be const.
+					variant_case(ConstType, const_type) {
+						const auto& variant_type = std::get<VariantType>(*tod_map.at(const_type.referenced_type));
+						if (!std::holds_alternative<ConstType>(*tod_map.at(pointer_type.inner))
+							|| !std::ranges::contains(variant_type.variant_alternatives, alternative_type)
+							|| !isConstVersion(pointer_type.inner, alternative_type))
+							throw VariantTypeMismatchError(instr);
+					}
+				}
 			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
@@ -903,6 +923,7 @@ class FunctionValidator {
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
 			variant_case(Op_structLea_lptr_lptr, instr) {
+
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
