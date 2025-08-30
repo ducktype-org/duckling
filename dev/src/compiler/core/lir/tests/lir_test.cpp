@@ -137,7 +137,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			// this might change in the future:
-			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
@@ -252,7 +252,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
 
 			// Check local variable 'a'
