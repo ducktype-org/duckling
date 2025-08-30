@@ -74,7 +74,7 @@ namespace tsh::internal {
 		[[nodiscard]]
 		virtual bool hasNoOpDestructor() const {
 			return false;
-		};
+		}
 
 		/**
 		 * @brief Get the text representation of this type.
@@ -360,6 +360,8 @@ namespace tsh::internal {
 			            || !RawPointerAbstractType(target).isMutable()));
 		}
 
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
 	private:
 		Mutability mutability;
 	};
@@ -411,6 +413,8 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::String;
 
 		StringAbstractTypeImpl() { representation = "string"; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -440,6 +444,10 @@ namespace tsh::internal {
 		bool isImplicitlyCoercible(AbstractType, query::Context&) const override {
 			return false;
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			return element_type.hasNoOpDestructor();
+		}
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -465,6 +473,8 @@ namespace tsh::internal {
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
+
+		[[nodiscard]] bool hasNoOpDestructor() const override;
 	};
 
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
@@ -544,6 +554,8 @@ namespace tsh::internal {
 		SymbolType<> getMember(const usize idx) const {
 			return underlying_types[idx];
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override;
 	};
 
 	class ClassAbstractTypeImpl final: public AbstractTypeImpl {
@@ -610,6 +622,8 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Namespace;
 
 		NamespaceAbstractTypeImpl() = default;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class ModuleAbstractTypeImpl final: public AbstractTypeImpl {
