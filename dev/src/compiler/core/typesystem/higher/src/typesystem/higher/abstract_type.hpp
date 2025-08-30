@@ -112,7 +112,7 @@ namespace tsh {
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasTrivialDestructor() const;
+		bool hasNoOpDestructor() const;
 
 		/**
 		 * @brief The default constructor is deleted.

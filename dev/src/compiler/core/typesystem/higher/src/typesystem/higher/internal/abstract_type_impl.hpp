@@ -72,7 +72,7 @@ namespace tsh::internal {
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		virtual bool hasTrivialDestructor() const {
+		virtual bool hasNoOpDestructor() const {
 			return false;
 		};
 
@@ -157,7 +157,7 @@ namespace tsh::internal {
 
 		UnitAbstractTypeImpl() { representation = "unit"; }
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -174,7 +174,7 @@ namespace tsh::internal {
 
 		VoidAbstractTypeImpl() { representation = "void"; }
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {
@@ -197,7 +197,7 @@ namespace tsh::internal {
 			return target.getKind() == Kind::Bool;
 		}
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class BoolAbstractTypeImpl final: public AbstractTypeImpl {
@@ -220,7 +220,7 @@ namespace tsh::internal {
 			return target.getKind() == Kind::Integral;
 		}
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class CharAbstractTypeImpl final: public AbstractTypeImpl {
@@ -243,7 +243,7 @@ namespace tsh::internal {
 			return target.getKind() == Kind::Bool;
 		}
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class IntegralAbstractTypeImpl final: public AbstractTypeImpl {
@@ -293,7 +293,7 @@ namespace tsh::internal {
 			    || target.getKind() == Kind::Float;
 		}
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class FloatAbstractTypeImpl final: public AbstractTypeImpl {
@@ -325,7 +325,7 @@ namespace tsh::internal {
 			return target.getKind() == Kind::Float && FloatAbstractType(target).getSize() > size;
 		}
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class RawPointerAbstractTypeImpl final: public AbstractTypeImpl {
@@ -395,7 +395,7 @@ namespace tsh::internal {
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
@@ -641,7 +641,7 @@ namespace tsh::internal {
 
 		explicit MetaAbstractTypeImpl() { representation = "META"; }
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class ImportAbstractTypeImpl final: public AbstractTypeImpl {
@@ -658,6 +658,6 @@ namespace tsh::internal {
 
 		explicit ImportAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool hasTrivialDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 }

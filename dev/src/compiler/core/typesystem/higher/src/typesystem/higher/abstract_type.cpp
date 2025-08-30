@@ -20,8 +20,8 @@ namespace tsh {
 	}
 
 	[[nodiscard]]
-	bool AbstractType::hasTrivialDestructor() const {
-		return pimpl->hasTrivialDestructor();
+	bool AbstractType::hasNoOpDestructor() const {
+		return pimpl->hasNoOpDestructor();
 	}
 
 	[[nodiscard]]

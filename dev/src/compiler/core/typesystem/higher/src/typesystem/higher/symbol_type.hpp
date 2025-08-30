@@ -167,12 +167,12 @@ namespace tsh {
 		 * @return true if the symbol has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasTrivialDestructor() const {
+		bool hasNoOpDestructor() const {
 			if (reference_kind == ReferenceKind::Ref) {
 				// Ref types have trivial destructors, because it do not own its contents.
 				return true;
 			}
-			if (abstract_type.hasTrivialDestructor()) {
+			if (abstract_type.hasNoOpDestructor()) {
 				return true;
 			}
 			// @TODO: add more cases where destructor is trivial

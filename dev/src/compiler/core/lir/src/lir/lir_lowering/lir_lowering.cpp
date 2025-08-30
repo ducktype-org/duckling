@@ -241,7 +241,7 @@ namespace compiler::lir {
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
-					if (mir_local.type.hasTrivialDestructor())
+					if (mir_local.type.hasNoOpDestructor())
 						continue;  // Only create lifetime flag if needed
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 					locals.pushBack(std::move(lifetime_flag));
