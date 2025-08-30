@@ -330,10 +330,11 @@ private:
 	}
 
 	void testLifetimeFlags() {
-		// @TODO: this test oesn't make much sense yet, add proper tests when classes and composite types such as variants are fully added
-		auto module      = getLirOfModule(path("modules/lifetime_flags"));
+		// @TODO: this test oesn't make much sense yet, add proper tests when classes and composite
+		// types such as variants are fully added
+		auto module = getLirOfModule(path("modules/lifetime_flags"));
 		ASSERT_EQUAL(2, module.ctors.size());
-		
+
 		auto my_int = module.houtGlobal("my_int");
 		ASSERT_TRUE(my_int.type.hasNoOpDestructor());
 
