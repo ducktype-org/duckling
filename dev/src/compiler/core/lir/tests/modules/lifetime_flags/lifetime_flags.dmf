@@ -1,0 +1,2 @@
+var my_int: i64 = 23;
+var my_bool: bool = true;

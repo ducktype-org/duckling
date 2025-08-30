@@ -43,6 +43,7 @@ public:
 		TESTER_ADD_TEST(testGlobals);
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLirGlobal);
+		TESTER_ADD_TEST(testLifetimeFlags);
 	}
 
 private:
@@ -326,6 +327,18 @@ private:
 			ASSERT_EQUAL(lir::LirGlobalType::Variable, g_lir.type);
 			ASSERT_EQUAL(false, g_lir.inital_value.has_value());
 		});
+	}
+
+	void testLifetimeFlags() {
+		// @TODO: this test oesn't make much sense yet, add proper tests when classes and composite types such as variants are fully added
+		auto module      = getLirOfModule(path("modules/lifetime_flags"));
+		ASSERT_EQUAL(2, module.ctors.size());
+		
+		auto my_int = module.houtGlobal("my_int");
+		ASSERT_TRUE(my_int.type.hasNoOpDestructor());
+
+		auto my_bool = module.houtGlobal("my_bool");
+		ASSERT_TRUE(my_bool.type.hasNoOpDestructor());
 	}
 };
 
