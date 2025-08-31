@@ -15,6 +15,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/interpret.hpp>
@@ -88,21 +89,18 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		vm::code::FunctionType getFunctionTypeFromLayouts(
-			base::StrID                         function_name,
+		vm::code::FuncSignature getDVMSignatureFromLayouts(
 			const std::vector<tsl::TypeLayout>& parameter_layouts,
-			const tsl::TypeLayout&              return_type_layout
+			const tsl::TypeLayout&              return_layout
 		) {
-			auto param_types = parameter_layouts | std::views::transform([](auto&& layout) {
-								   return getTypeFromLayout(layout);
-							   });
-
-			auto param_type_names
-				= param_types | std::views::transform([](auto&& type) { return typeName(type); })
-			    | std::ranges::to<std::vector>();
-			auto result_type      = getTypeFromLayout(return_type_layout);
-			auto result_type_name = typeName(result_type);
-			return vm::code::FunctionType{ function_name, param_type_names, result_type_name };
+			vm::code::FuncSignature signature;
+			signature.parameters.reserve(parameter_layouts.size());
+			for (const auto& layout: parameter_layouts) {
+				auto type = getTypeFromLayout(layout);
+				signature.parameters.emplace_back(typeName(type));
+			}
+			signature.result_type = Identifier(typeName(getTypeFromLayout(return_layout)));
+			return signature;
 		}
 
 		struct AddLirFuncContext final {
@@ -115,24 +113,36 @@ namespace compiler::backend_vm {
 			base::Map<lir::LocalRef, TypeOfData>  lir_local_types;
 
 			// Used to create unique names for temporary values.
-			usize                                        next_call_id = 0;
-			base::Map<lir::LocalRef, u64>                variable_to_id;
-			base::Map<lir::BlockRef, u64>                block_to_id;
-			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
+			usize                                                     next_call_id = 0;
+			base::Map<lir::LocalRef, u64>                             variable_to_id;
+			base::Map<lir::BlockRef, u64>                             block_to_id;
+			const base::HashMap<base::StrID, TypeOfData>              TYPE_OF_DATA;
+			const base::HashMap<base::StrID, vm::code::FuncSignature> SIGNATURES;
 
 			AddLirFuncContext(
-				query::Context&                     ctx,
-				CRef<lir::Function>                 lir_function,
-				const vm::ObjIdNameMap<TypeOfData>& type_map
+				query::Context&                                            ctx,
+				CRef<lir::Function>                                        lir_function,
+				const vm::ObjIdNameMap<TypeOfData>&                        type_map,
+				const base::HashMap<base::StrID, vm::code::FuncSignature>& signatures
 			):
 				  ctx(ctx),
 				  lir_func(lir_function),
-				  bytecode_func(Function({}, lir_function->mangled_name, {})),
+				  bytecode_func(Function({}, lir_function->mangled_name, {}, {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
-				  }()) {
+				  }()),
+				  SIGNATURES(signatures) {
+				if (lir_function->mangled_name == "main") {
+					bytecode_func.signature.parameters.emplace_back(base::StrID("i64"));
+					bytecode_func.signature.parameters.emplace_back(base::StrID("ptr_argv"));
+					bytecode_func.signature.result_type = Identifier(base::StrID("i64"));
+				} else {
+					bytecode_func.signature = getDVMSignatureFromLayouts(
+						lir_function->parameter_layouts, lir_function->return_type_layout
+					);
+				}
 				variable_to_id = lir_function->getLocalVariableIDs();
 				block_to_id    = lir_function->getBlockIDs();
 			}
@@ -148,13 +158,7 @@ namespace compiler::backend_vm {
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
-			CORE_ASSERT(
-				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name)
-			    ),
-				"Type not functional"
-			);
-			auto func_type_tod
-				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->mangled_name));
+			auto func_signature = ctx.bytecode_func.signature;
 
 			// Save locals offset
 			for (const auto& var: ctx.lir_func->local_list) {
@@ -167,7 +171,7 @@ namespace compiler::backend_vm {
 					opt_some(param_idx) {
 						// In this case we are handling a parameter
 						CORE_ASSERT(
-							vm_type == ctx.TYPE_OF_DATA.at(func_type_tod.parameters.at(param_idx)),
+							vm_type == ctx.TYPE_OF_DATA.at(func_signature.parameters.at(param_idx)),
 							"getTypeFromLayout created an invalid type..."
 						);
 
@@ -187,30 +191,6 @@ namespace compiler::backend_vm {
 		}
 
 		/**
-		 * @brief Inserts function signature type and types used by the signature.
-		 */
-		void insertFunctionSignatureType(
-			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
-		) {
-			auto param_types
-				= lir_function->parameter_layouts
-			    | std::views::transform([](auto&& layout) { return getTypeFromLayout(layout); });
-
-			std::ranges::for_each(param_types, [&](auto&& type) { types.push_back(type); });
-
-			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
-			types.push_back(result_type);
-
-			if (lir_function->mangled_name != "main") {
-				types.emplace_back(getFunctionTypeFromLayouts(
-					lir_function->mangled_name,
-					lir_function->parameter_layouts,
-					lir_function->return_type_layout
-				));
-			}
-		}
-
-		/**
 		 * @brief Inserts types used by function's local variables.
 		 */
 		void insertFunctionLocalTypes(
@@ -223,33 +203,35 @@ namespace compiler::backend_vm {
 		}
 
 		/**
-		 * @brief Insert function types for all functions that are called somewhere in the LIR
-		 * code. Used to add function types for functions that are not in the current module.
+		 * @brief Insert function signatures for all functions that are called somewhere in the LIR
+		 * code. Used to add function signatures for functions that are not in the current module.
 		 */
-		void insertCalledFunctionTypes(
-			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
+		void insertCalledFunctionSignatures(
+			base::HashMap<base::StrID, FuncSignature>& signatures, CRef<lir::Function> lir_function
 		) {
 			for (const auto& lir_block: lir_function->block_order) {
 				for (const auto& lir_instruction: lir_block->instructions) {
 					if (lir_instruction.operation == lir::Operation::Call) {
 						auto func_literal
 							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-						types.emplace_back(getFunctionTypeFromLayouts(
+						signatures.put(
 							func_literal.mangled_name,
-							*func_literal.parameter_layouts,
-							*func_literal.return_type_layout
-						));
+							getDVMSignatureFromLayouts(
+								*func_literal.parameter_layouts, *func_literal.return_type_layout
+							)
+						);
 					}
 				}
 			}
 		}
 
-		void insertTypesUsedByFunction(
-			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
+		void insertFunctionDependencies(
+			std::vector<TypeOfData>&                   types,
+			base::HashMap<base::StrID, FuncSignature>& signatures,
+			CRef<lir::Function>                        lir_function
 		) {
-			insertFunctionSignatureType(types, lir_function);
 			insertFunctionLocalTypes(types, lir_function);
-			insertCalledFunctionTypes(types, lir_function);
+			insertCalledFunctionSignatures(signatures, lir_function);
 		}
 
 		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -429,20 +411,20 @@ namespace compiler::backend_vm {
 
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-			auto called_func = std::get<FunctionType>(ctx.TYPE_OF_DATA.at(called_func_name));
 
+			auto called_func_signature = ctx.SIGNATURES.at(called_func_name);
 			// Init result type
 
 			usize call_id     = ctx.next_call_id++;
 			auto  result_name = base::StrID(base::strConcat("call", call_id, "_res").c_str());
 			auto  func_result_argument = modifyVarNameOpArg(lir_result_argument, result_name);
-			initType(ctx, result_name, called_func.result);
+			initType(ctx, result_name, called_func_signature.result_type);
 
 			// Instantiate function parameters on the stack.
 
 			for (const auto& [arg_id, op_arg, type_name]:
-			     std::views::zip(std::views::iota(0), args, called_func.parameters)) {
-				std::cerr << "Initializing: " << type_name.str() << '\n';
+			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
+				std::cerr << "Initializing: " << type_name.str.str() << '\n';
 				auto arg_name
 					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
 				initType(ctx, arg_name, type_name);
@@ -452,6 +434,9 @@ namespace compiler::backend_vm {
 				mov_arg.pushArg(op_arg);
 				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
+
+			if (vm::builtins::isBuiltinFunction(called_func_name))
+				called_func_arg = vm::opargs::BuiltinFunctionName(called_func_name);
 
 			pushInstruction(ctx.bytecode_func, { OpKind::call, called_func_arg });
 
@@ -616,15 +601,15 @@ namespace compiler::backend_vm {
 		const std::vector<CRef<lir::Function>>& functions,
 		const std::vector<BackendDVMGlobal>&    globals
 	):
-		  module_id(module_id),
-		  valid_program(ValidProgram::withBuiltins()) {
-		CodeCollection                   compiled_types;
-		CodeCollection                   compiled_collection;
-		std::vector<CRef<lir::Function>> ctors;
-		std::vector<CRef<lir::Function>> dtors;
+		  module_id(module_id) {
+		CodeCollection                            compiled_types;
+		CodeCollection                            compiled_collection;
+		base::HashMap<base::StrID, FuncSignature> signatures;
+		std::vector<CRef<lir::Function>>          ctors;
+		std::vector<CRef<lir::Function>>          dtors;
 
 		for (const auto& lir_function: functions)
-			insertTypesUsedByFunction(compiled_types.types, lir_function);
+			insertFunctionDependencies(compiled_types.types, signatures, lir_function);
 
 		for (const auto& global: globals) {
 			auto global_type = getTypeFromLayout(*global.lir_global.layout);
@@ -634,12 +619,16 @@ namespace compiler::backend_vm {
 			base::Optional<Identifier> dtor_name;
 
 			if (global.global_ctor.has_value()) {
-				insertTypesUsedByFunction(compiled_types.types, global.global_ctor.value());
+				insertFunctionDependencies(
+					compiled_types.types, signatures, global.global_ctor.value()
+				);
 				ctor_name = Identifier(global.global_ctor.value()->mangled_name);
 				ctors.emplace_back(global.global_ctor.value());
 			}
 			if (global.global_dtor.has_value()) {
-				insertTypesUsedByFunction(compiled_types.types, global.global_dtor.value());
+				insertFunctionDependencies(
+					compiled_types.types, signatures, global.global_dtor.value()
+				);
 				dtor_name = Identifier(global.global_dtor.value()->mangled_name);
 				dtors.emplace_back(global.global_dtor.value());
 			}
@@ -655,7 +644,8 @@ namespace compiler::backend_vm {
 		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
 
-			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types());
+			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
+
 			initLocals(ctx);
 
 			for (auto&& lir_block: lir_function->block_order) registerBlock(ctx, lir_block);
@@ -679,7 +669,5 @@ namespace compiler::backend_vm {
 		valid_program.insertCode(compiled_collection);
 	}
 
-	vm::code::CodeCollection Module::build() const {
-		return valid_program.produceValidCodeCollection();
-	}
+	CodeCollection Module::build() const { return valid_program.produceValidCodeCollection(); }
 }

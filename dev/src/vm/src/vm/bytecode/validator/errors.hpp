@@ -282,7 +282,7 @@ namespace vm::code {
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidVirtualMethodImplementationError,
-		"Method implementation lacks it's declaration as a virtual method: "
+		"Method implementation lacks its declaration as a virtual method: "
 	);
 	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
 
@@ -301,6 +301,7 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(DuplicatedLabelError, "Duplicated label: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFunctionError, "Unknown function: ");
 	DEFINE_ARGUMENT_ERROR(UnknownMethodError, "Unknown method: ");
+	DEFINE_ARGUMENT_ERROR(InvalidBuiltinFunctionError, "Function is not builtin: ");
 	DEFINE_ARGUMENT_ERROR(
 		InvalidFunctionCallArgumentsError,
 		"Invalid function call arguments. Values on the stack do not have proper types for "

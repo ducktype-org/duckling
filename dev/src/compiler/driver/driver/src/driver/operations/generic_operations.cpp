@@ -122,7 +122,7 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id, bool add_builtin_library
+		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
@@ -133,7 +133,6 @@ namespace compiler::driver {
 		return vm::api::spawn()
 		    .and_then([&](vm::api::ProcessInfo process) {
 				pid = process.pid;
-				if (add_builtin_library) return vm::api::loadStdlib(pid);
 				return std::expected<void, vm::api::ApiError>{};
 			})
 		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection }); })
@@ -147,5 +146,4 @@ namespace compiler::driver {
 				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
 			});
 	}
-
 }

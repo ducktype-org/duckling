@@ -90,8 +90,10 @@ namespace vm::loader::parser {
 	struct Func final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier name;
-		MBox<ByteCode>  code;
+		tpc::Identifier              name;
+		std::vector<tpc::Identifier> parameters;
+		tpc::Identifier              result_type;
+		MBox<ByteCode>               code;
 
 		static MBox<Func> parse(F8ParserState& state);
 
