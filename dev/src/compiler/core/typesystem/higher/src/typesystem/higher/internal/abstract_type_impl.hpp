@@ -63,10 +63,11 @@ namespace tsh::internal {
 		}
 
 		/**
-		 * @brief Determines weather the type has a no-op destructor, i.e. destructor that does not perform any operations.
-		 * By default we assume that type's destructor is non-no-op.
+		 * @brief Determines weather the type has a no-op destructor, i.e. destructor that does not
+		 * perform any operations. By default we assume that type's destructor is non-no-op.
 		 *
-		 * Importantly, It is used in LIR lowering to determine if destructor calls and lifetime flag are needed.
+		 * Importantly, It is used in LIR lowering to determine if destructor calls and lifetime
+		 * flag are needed.
 		 *
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
