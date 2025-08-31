@@ -348,4 +348,10 @@ namespace compiler::frontend {
 		 */
 		ModuleTreeModifier() = default;
 	};
+
+	/*
+	 * Creates a new module tree from the given file and returns the ModuleID
+	 */
+	ModuleID createModuleTree(const fs::File& file);
+
 }

@@ -15,8 +15,9 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-
+#include <frontend/module_tree/module_tree.hpp>
 #include <fstream>
+
 #include <utility>
 
 namespace compiler::driver {
@@ -97,7 +98,7 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	void compilerEntirePackage(const fs::File& package_location, BackendType backend) {
-		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
+		auto root = frontend::createModuleTree(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
 

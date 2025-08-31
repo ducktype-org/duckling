@@ -1,5 +1,6 @@
 #include "module_tree.hpp"
 
+#include "functors.hpp"
 #include "queries.hpp"
 
 #include <base/exceptions.hpp>
@@ -499,6 +500,10 @@ namespace compiler::frontend {
 	base::StrID moduleName(ModuleID module) { return module.ref->getName(); }
 
 	std::string printModuleTree(ModuleID module) { return module.ref->prettyPrint(); }
+
+	ModuleID createModuleTree(const fs::File& file) {
+		return GetModuleID_Functor::make(ModuleTreeBuilder::create(file));
+	}
 
 	/*********************
 	 * QueryParentModule *

@@ -168,7 +168,7 @@ private:
 
 	void testQueries() {
 		auto pth  = fs::File(path("test_module"));
-		auto root = query::entryPoint<QueryModuleTree>(pth);
+		auto root = compiler::frontend::createModuleTree(pth);
 
 		[[maybe_unused]] auto awe
 			= query::entryPoint<QuerySubmodules>(root)->at(base::StrID("awe"));
