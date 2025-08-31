@@ -1,3 +1,4 @@
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
@@ -58,7 +59,7 @@ private:
 	void testModuleIDInSourceFile(base::Ref<ModuleTree> module) {
 		std::cerr << "Testing module ID in source files for module: " << module->getName().strView()
 				  << '\n';
-		auto id = ModuleID(module);
+		auto id = GetModuleID_Functor::make(module);
 		std::cerr << "Module id: " << id.queryUnstablePerfectHash() << '\n';
 		std::cerr << "Main source file Module ID: "
 				  << module->getMainSourceFile()->getModule().queryUnstablePerfectHash() << '\n';
@@ -114,10 +115,22 @@ private:
 			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
 		);
 
-		ASSERT_EQUAL(mt, awe_module->getParentModule().value());
-		ASSERT_EQUAL(mt, another_module->getParentModule().value());
-		ASSERT_EQUAL(another_module, awesome_module->getParentModule().value());
-		ASSERT_EQUAL(awesome_module, mod_module->getParentModule().value());
+		ASSERT_EQUAL(
+			GetModuleID_Functor::make(mt),
+			GetModuleID_Functor::make(awe_module->getParentModule().value())
+		);
+		ASSERT_EQUAL(
+			GetModuleID_Functor::make(mt),
+			GetModuleID_Functor::make(another_module->getParentModule().value())
+		);
+		ASSERT_EQUAL(
+			GetModuleID_Functor::make(another_module),
+			GetModuleID_Functor::make(awesome_module->getParentModule().value())
+		);
+		ASSERT_EQUAL(
+			GetModuleID_Functor::make(awesome_module),
+			GetModuleID_Functor::make(mod_module->getParentModule().value())
+		);
 	}
 
 	void testQueries() {
@@ -274,7 +287,7 @@ private:
 
 			// Test removeSourceFile
 			auto src_to_remove = mt->getSourceFiles().front();
-			ModuleTreeModifier::removeSourceFile(ctx, FileID(src_to_remove));
+			ModuleTreeModifier::removeSourceFile(src_to_remove);
 			bool still_present = false;
 			for (auto& sf: mt->getSourceFiles())
 				if (sf == src_to_remove) still_present = true;
@@ -321,8 +334,7 @@ private:
 			ASSERT_EQUAL(mt, sub_mod->getParentModule().value());
 
 			// Test removeModule
-			ModuleID sub_mod_id(sub_mod);
-			ModuleTreeModifier::removeModule(sub_mod_id);
+			ModuleTreeModifier::removeModule(sub_mod);
 			ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("submod")));
 
 			// Test fileModified (should not throw)
@@ -346,13 +358,14 @@ private:
 				// Check that main and source files exist in SourceFile::file_map
 				ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
 				auto removable_main_id = removable_sub_mod->getMainSourceFile();
-				ASSERT_TRUE(removable_main_id->getModule() == ModuleID(removable_sub_mod));
+				ASSERT_TRUE(
+					removable_main_id->getModule() == GetModuleID_Functor::make(removable_sub_mod)
+				);
 				for (auto& sf: removable_sub_mod->getSourceFiles())
-					ASSERT_TRUE(sf->getModule() == ModuleID(removable_sub_mod));
+					ASSERT_TRUE(sf->getModule() == GetModuleID_Functor::make(removable_sub_mod));
 
 				// Remove the submodule
-				ModuleID removable_sub_mod_id(removable_sub_mod);
-				ModuleTreeModifier::removeModule(removable_sub_mod_id);
+				ModuleTreeModifier::removeModule(removable_sub_mod);
 				ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("removable")));
 			}
 		});

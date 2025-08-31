@@ -1,10 +1,11 @@
 #include "source_file.hpp"
 
+#include <frontend/module_tree/file_id.hpp>
+
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 
 #include <filesystem/file.hpp>
-#include <frontend/module_tree/file_id.hpp>
 
 namespace {
 
@@ -17,7 +18,8 @@ namespace {
 	 */
 	base::StableVector<compiler::frontend::SourceFile> files;
 
-	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>> files_map;
+	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>>
+		files_map;
 }
 
 namespace compiler::frontend {
@@ -47,9 +49,8 @@ namespace compiler::frontend {
 		} else {
 			to_content.put(abs_path, file.getContent());
 		}
-		if(!files_map.contains(abs_path)) {
+		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		}
 		files.pushBack(SourceFile(std::move(file), linked_module));
 		files_map.at(abs_path).emplace_back(files.last());
 		return files.last();
@@ -57,9 +58,7 @@ namespace compiler::frontend {
 
 	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesfromFile(const fs::File& file) {
 		auto abs_path = file.getFilePath().absolute().getPath();
-		if (files_map.contains(abs_path)) {
-			return files_map.at(abs_path);
-		}
+		if (files_map.contains(abs_path)) return files_map.at(abs_path);
 		return {};
 	}
 
@@ -75,9 +74,8 @@ namespace compiler::frontend {
 	Ref<SourceFile> SourceFile::getSourceFile(FileID id) {
 		auto it = files_map.find(id.ref->getFile().getFilePath().absolute().getPath());
 		CORE_ASSERT(it != files_map.end(), "FileID not found");
-		for (auto& file: it->second) {
+		for (auto& file: it->second)
 			if (file == id.ref) return file;
-		}
 		CORE_UNREACHABLE();
 	}
 

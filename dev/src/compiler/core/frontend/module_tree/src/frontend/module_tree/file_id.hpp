@@ -23,6 +23,7 @@ namespace compiler::frontend {
 
 	private:
 		FileID(base::CRef<SourceFile> ref): ref(ref) {}
+
 		base::CRef<SourceFile> ref;
 		friend class SourceFile;
 		friend class ModuleTree;

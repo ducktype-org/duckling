@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
@@ -10,7 +11,6 @@
 #include <base/stable_hashmap.hpp>
 
 #include <filesystem/file.hpp>
-#include <frontend/module_tree/file_id.hpp>
 
 namespace compiler::frontend {
 

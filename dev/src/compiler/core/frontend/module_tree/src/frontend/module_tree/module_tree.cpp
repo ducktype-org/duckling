@@ -30,7 +30,8 @@ namespace {
 	/*
 	 * Converting ModuleID to module when needed use with caution
 	 */
-	base::HashMap<compiler::frontend::ModuleID, base::Ref<compiler::frontend::ModuleTree>> module_id_to_module;
+	base::HashMap<compiler::frontend::ModuleID, base::Ref<compiler::frontend::ModuleTree>>
+		module_id_to_module;
 
 	/**
 	 * Checks if a file name is valid according to the reject regex.
@@ -262,7 +263,10 @@ namespace compiler::frontend {
 		Ref<ModuleTree> module_ref = modules.last();
 		ModuleID        mod_id(module_ref);
 
-		CORE_ASSERT(module_id_to_module.contains(mod_id), "ModuleID to module map contains the module ID, this should neve happen");
+		CORE_ASSERT(
+			!module_id_to_module.contains(mod_id),
+			"ModuleID to module map contains the module ID, this should neve happen"
+		);
 		module_id_to_module.put(mod_id, module_ref);
 
 		// Set ID and name
@@ -297,7 +301,11 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
-		CORE_ASSERT(module_id_to_module.contains(file->getModule()), "The module id to module map does not containt the module id of SourceFile, this should never happen...");
+		CORE_ASSERT(
+			module_id_to_module.contains(file->getModule()),
+			"The module id to module map does not containt the module id of SourceFile, this "
+			"should never happen..."
+		);
 		Ref<ModuleTree> module = module_id_to_module.at(file->getModule());
 
 		auto& source_files = module->m_source_files;
@@ -449,7 +457,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
-		auto            parent     = module->m_parent;
+		auto parent = module->m_parent;
 
 		// @TODO: we want to remove each SourceFile associated with this module
 
@@ -480,9 +488,7 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
-		for (auto& source_file : source_files) {
-			source_file->update();
-		}
+		for (auto& source_file: source_files) source_file->update();
 	}
 
 	// ----------------------
@@ -497,9 +503,7 @@ namespace compiler::frontend {
 	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
 			auto module_tree = key.ref;
-			return module_tree->getParentModule().map([](auto parent) {
-				return ModuleID(parent);
-			});
+			return module_tree->getParentModule().map([](auto parent) { return ModuleID(parent); });
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -529,7 +533,8 @@ namespace compiler::frontend {
 			const auto& module_tree = key.ref;
 
 			std::vector<FileID> out{};
-			for (CRef<SourceFile> file: module_tree->getSourceFiles()) out.emplace_back(FileID(file));
+			for (CRef<SourceFile> file: module_tree->getSourceFiles())
+				out.emplace_back(FileID(file));
 			return out;
 		}
 

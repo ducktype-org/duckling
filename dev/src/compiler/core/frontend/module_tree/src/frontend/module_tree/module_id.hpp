@@ -18,6 +18,7 @@ namespace compiler::frontend {
 
 	private:
 		ModuleID(base::CRef<ModuleTree> ref): ref(ref) {}
+
 		base::CRef<ModuleTree> ref;
 
 		friend class ModuleTree;
@@ -34,10 +35,10 @@ namespace compiler::frontend {
 }
 
 namespace std {
-    template <>
-    struct hash<compiler::frontend::ModuleID> {
-        size_t operator()(const compiler::frontend::ModuleID& module_id) const noexcept {
-            return static_cast<size_t>(module_id.queryUnstablePerfectHash());
-        }
-    };
+	template<>
+	struct hash<compiler::frontend::ModuleID> {
+		size_t operator()(const compiler::frontend::ModuleID& module_id) const noexcept {
+			return static_cast<size_t>(module_id.queryUnstablePerfectHash());
+		}
+	};
 }
