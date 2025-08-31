@@ -42,8 +42,6 @@ namespace compiler::frontend {
 		 */
 		void update();
 
-		static Ref<SourceFile> getSourceFile(FileID);
-
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 		friend struct ImplementationOf_QueryFilePST;

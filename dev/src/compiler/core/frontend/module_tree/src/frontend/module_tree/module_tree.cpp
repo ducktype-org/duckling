@@ -1,5 +1,6 @@
 #include "module_tree.hpp"
 
+#include "functors.hpp"
 #include "queries.hpp"
 
 #include <base/exceptions.hpp>
@@ -26,12 +27,6 @@ namespace {
 	 * StableVector that stores all ModuleTree instances.
 	 */
 	base::StableVector<compiler::frontend::ModuleTree> modules;
-
-	/*
-	 * Converting ModuleID to module when needed use with caution
-	 */
-	base::HashMap<compiler::frontend::ModuleID, base::Ref<compiler::frontend::ModuleTree>>
-		module_id_to_module;
 
 	/**
 	 * Checks if a file name is valid according to the reject regex.
@@ -106,7 +101,7 @@ namespace compiler::frontend {
 			indent += (i % 3 == 0 ? "│" : " ");
 
 		if (getName().isBad())
-			output << indent << "/ [id: " << ModuleID(this).queryUnstablePerfectHash() << "]\n";
+			output << indent << "/ [id: " << reinterpret_cast<u64>(this) << "]\n";
 		else
 			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
@@ -266,12 +261,6 @@ namespace compiler::frontend {
 		Ref<ModuleTree> module_ref = modules.last();
 		ModuleID        mod_id(module_ref);
 
-		CORE_ASSERT(
-			!module_id_to_module.contains(mod_id),
-			"ModuleID to module map contains the module ID, this should neve happen"
-		);
-		module_id_to_module.put(mod_id, module_ref);
-
 		// Set ID and name
 		module_ref->m_name        = m_name;
 		module_ref->m_other_files = std::move(m_other_files);
@@ -304,12 +293,10 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
-		CORE_ASSERT(
-			module_id_to_module.contains(file->getModule()),
-			"The module id to module map does not containt the module id of SourceFile, this "
-			"should never happen..."
-		);
-		Ref<ModuleTree> module = module_id_to_module.at(file->getModule());
+		Ref<ModuleTree> module
+			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+				file->getModule()
+			);
 
 		auto& source_files = module->m_source_files;
 		auto  it
@@ -569,8 +556,11 @@ namespace compiler::frontend {
 	 ****************/
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			Ref<SourceFile> file = SourceFile::getSourceFile(key);
-			auto            pst  = file->getPST();
+			Ref<SourceFile> file
+				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+					key
+				);
+			auto pst = file->getPST();
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 			// @todo modify it, when making proper helios errors

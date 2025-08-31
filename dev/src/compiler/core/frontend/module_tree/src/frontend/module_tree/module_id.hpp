@@ -6,6 +6,14 @@ namespace compiler::frontend {
 
 	class ModuleTree;
 
+	/**
+	 * @brief ModuleID is a unique identifier for a ModuleTree in the Duckling compiler.
+	 *
+	 * ModuleID wraps a reference to a ModuleTree and provides hashing and identity.
+	 * It is used to track and query modules in the module tree structure during the compilation
+	 * process. ModuleID is not copy-constructible from outside; use functors or friend classes to
+	 * create instances.
+	 */
 	struct ModuleID final {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
@@ -17,9 +25,9 @@ namespace compiler::frontend {
 		auto operator<=>(const ModuleID& other) const { return ref.get() <=> other.ref.get(); }
 
 	private:
-		ModuleID(base::CRef<ModuleTree> ref): ref(ref) {}
+		ModuleID(base::Ref<ModuleTree> ref): ref(ref) {}
 
-		base::CRef<ModuleTree> ref;
+		base::Ref<ModuleTree> ref;
 
 		friend class ModuleTree;
 		friend class ModuleTreeBuilder;

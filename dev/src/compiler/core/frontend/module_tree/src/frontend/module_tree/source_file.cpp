@@ -71,14 +71,6 @@ namespace compiler::frontend {
 		parse_tree.reset();
 	}
 
-	Ref<SourceFile> SourceFile::getSourceFile(FileID id) {
-		auto it = files_map.find(id.ref->getFile().getFilePath().absolute().getPath());
-		CORE_ASSERT(it != files_map.end(), "FileID not found");
-		for (auto& file: it->second)
-			if (file == id.ref) return file;
-		CORE_UNREACHABLE();
-	}
-
 	CRef<pst::PST<>> SourceFile::getPST() {
 		if (parse_tree) {
 			return &parse_tree.value();
