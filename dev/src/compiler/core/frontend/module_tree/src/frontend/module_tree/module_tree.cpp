@@ -105,7 +105,10 @@ namespace compiler::frontend {
 		for (u32 i = 0; i < indentation - (indentation % 3); i++)
 			indent += (i % 3 == 0 ? "│" : " ");
 
-		output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
+		if (getName().isBad())
+			output << indent << "/ [id: " << ModuleID(this).queryUnstablePerfectHash() << "]\n";
+		else
+			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
 		if (hasMainSourceFile())
 			output << indent << "├> " << getMainSourceFile()->getFile().name() << '\n';

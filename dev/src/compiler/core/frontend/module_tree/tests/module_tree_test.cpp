@@ -20,13 +20,46 @@ public:
 		TESTER_ADD_TEST(parseModule);
 		TESTER_ADD_TEST(testOtherFeatures);
 		TESTER_ADD_TEST(testQueries);
-		TESTER_ADD_TEST(testParseDirectoryLikeFsTree);    // moved from FsTree test
-		TESTER_ADD_TEST(testVirtualFilesLikeModuleTree);  // moved from FsTree test
-		TESTER_ADD_TEST(testModuleTreeModifierVariants);  // new test
-		TESTER_ADD_TEST(testManualModuleTreeBuilder);     // new test
+		TESTER_ADD_TEST(testParseDirectoryLikeFsTree);
+		TESTER_ADD_TEST(testVirtualFilesLikeModuleTree);
+		TESTER_ADD_TEST(testModuleTreeModifierVariants);
+		TESTER_ADD_TEST(testManualModuleTreeBuilder);
+		TESTER_ADD_TEST(testPrintModuleTree);
 	}
 
 private:
+	void testPrintModuleTree() {
+		// Test with valid name
+		auto temp_file            = fs::FileManager::createRandomVirtualFile("fn main() {}\n");
+		auto dummy_module_builder = ModuleTreeBuilder::create();
+		dummy_module_builder->setName(base::StrID("dummy"));
+		dummy_module_builder->setMainSourceFile(temp_file);
+		auto dummy_module = dummy_module_builder->finalize();
+		auto module_id    = GetModuleID_Functor::make(dummy_module);
+		auto tree_str     = printModuleTree(module_id);
+		assertTrue(
+			tree_str.find("dummy") != std::string::npos, "Module tree should contain module name"
+		);
+		fs::FileManager::deleteFile(temp_file);
+
+		// Test with no name (bad name)
+		auto temp_file2      = fs::FileManager::createRandomVirtualFile("fn main() {}\n");
+		auto no_name_builder = ModuleTreeBuilder::create();
+		// do NOT set name
+		no_name_builder->setMainSourceFile(temp_file2);
+		auto        no_name_module = no_name_builder->finalize();
+		auto        no_name_id     = GetModuleID_Functor::make(no_name_module);
+		auto        tree_str2      = printModuleTree(no_name_id);
+		std::string hash_str       = std::to_string(no_name_id.queryUnstablePerfectHash());
+		assertTrue(
+			tree_str2.find("id:") != std::string::npos, "Output should contain 'id:' for bad name"
+		);
+		assertTrue(
+			tree_str2.find(hash_str) != std::string::npos, "Output should contain module hash"
+		);
+		fs::FileManager::deleteFile(temp_file2);
+	}
+
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
 		auto mt  = ModuleTreeBuilder::create(pth, test_regex, test_regex);

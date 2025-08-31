@@ -65,7 +65,7 @@ namespace compiler::frontend {
 	void SourceFile::update() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 		// Update content in cache
-		to_content.put(abs_path, this->file.getContent());
+		to_content.insert_or_assign(abs_path, this->file.getContent());
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 		// reset the parse tree
 		parse_tree.reset();

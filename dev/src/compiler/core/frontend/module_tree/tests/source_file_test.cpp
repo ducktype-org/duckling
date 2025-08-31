@@ -5,6 +5,8 @@
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
+#include <algorithm>
+
 using namespace compiler::frontend;
 
 class SourceFileTest: public tester::TestSuite {
@@ -19,6 +21,8 @@ public:
 		TESTER_ADD_TEST(testContentCaching);
 		TESTER_ADD_TEST(testHashGeneration);
 		TESTER_ADD_TEST(testMultipleSourceFiles);
+		TESTER_ADD_TEST(testFileModifiedUpdatesContent);
+		TESTER_ADD_TEST(testGetSourceFilesfromFile);
 	}
 
 private:
@@ -232,6 +236,50 @@ private:
 		assertTrue(hash1 != hash2, "Should have different hashes");
 
 		// Cleanup
+		fs::FileManager::deleteFile(temp_file);
+	}
+
+	void testFileModifiedUpdatesContent() {
+		// Create a temp file and SourceFile
+		auto temp_file    = fs::FileManager::createRandomVirtualFile("original content");
+		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto source_file  = SourceFile::create(temp_file, GetModuleID_Functor::make(dummy_module));
+
+		// Check initial cached content
+		ASSERT_EQUAL("original content", source_file->getCachedContent().view().stringView());
+
+		// Modify file content
+		temp_file.writeToFile("new content");
+		// Call fileModified
+		ModuleTreeModifier::fileModified(temp_file);
+
+		std::cerr << "After modification, temp_file content: "
+				  << temp_file.getContent().view().stringView() << '\n';
+		std::cerr << "After modification, sourcefile content: "
+				  << source_file->getCachedContent().view().stringView() << '\n';
+		// SourceFile should have updated cached content
+		ASSERT_EQUAL("new content", source_file->getCachedContent().view().stringView());
+
+		fs::FileManager::deleteFile(temp_file);
+	}
+
+	void testGetSourceFilesfromFile() {
+		auto temp_file     = fs::FileManager::createRandomTempFile("abc");
+		auto dummy_module1 = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module2 = ModuleTreeBuilder::create()->finalize();
+		// Create two SourceFiles for the same fs::File but different modules
+		auto source_file1 = SourceFile::create(temp_file, GetModuleID_Functor::make(dummy_module1));
+		auto source_file2 = SourceFile::create(temp_file, GetModuleID_Functor::make(dummy_module2));
+		// Should both be returned by getSourceFilesfromFile
+		auto files_vec = SourceFile::getSourceFilesfromFile(temp_file);
+		assertTrue(
+			std::ranges::find(files_vec, source_file1) != files_vec.end(),
+			"source_file1 should be found"
+		);
+		assertTrue(
+			std::ranges::find(files_vec, source_file2) != files_vec.end(),
+			"source_file2 should be found"
+		);
 		fs::FileManager::deleteFile(temp_file);
 	}
 };
