@@ -3,6 +3,7 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
@@ -15,9 +16,8 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <frontend/module_tree/module_tree.hpp>
-#include <fstream>
 
+#include <fstream>
 #include <utility>
 
 namespace compiler::driver {
