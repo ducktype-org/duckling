@@ -28,12 +28,6 @@ namespace {
 	 */
 	base::StableVector<compiler::frontend::ModuleTree> modules;
 
-	/*
-	 * Converting ModuleID to module when needed use with caution
-	 */
-	base::HashMap<compiler::frontend::ModuleID, base::Ref<compiler::frontend::ModuleTree>>
-		module_id_to_module;
-
 	/**
 	 * Checks if a file name is valid according to the reject regex.
 	 * @param filename The file name to check.
@@ -73,6 +67,8 @@ namespace compiler::frontend {
 
 	ModuleTree::ModuleTree() = default;
 
+	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
+
 	base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return m_parent.value();
 		return {};
@@ -107,7 +103,7 @@ namespace compiler::frontend {
 			indent += (i % 3 == 0 ? "│" : " ");
 
 		if (getName().isBad())
-			output << indent << "/ [id: " << ModuleID(this).queryUnstablePerfectHash() << "]\n";
+			output << indent << "/ [id: " << reinterpret_cast<u64>(this) << "]\n";
 		else
 			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
@@ -267,11 +263,7 @@ namespace compiler::frontend {
 		Ref<ModuleTree> module_ref = modules.last();
 		ModuleID        mod_id(module_ref);
 
-		CORE_ASSERT(
-			!module_id_to_module.contains(mod_id),
-			"ModuleID to module map contains the module ID, this should neve happen"
-		);
-		module_id_to_module.put(mod_id, module_ref);
+		module_ref->m_id = mod_id;
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
@@ -305,12 +297,10 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
-		CORE_ASSERT(
-			module_id_to_module.contains(file->getModule()),
-			"The module id to module map does not containt the module id of SourceFile, this "
-			"should never happen..."
-		);
-		Ref<ModuleTree> module = module_id_to_module.at(file->getModule());
+		Ref<ModuleTree> module
+			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+				file->getModule()
+			);
 
 		auto& source_files = module->m_source_files;
 		auto  it
@@ -497,9 +487,11 @@ namespace compiler::frontend {
 
 	// ----------------------
 
-	base::StrID moduleName(ModuleID module) { return module.ref->getName(); }
+	base::StrID moduleName(ModuleID module) { return GetModuleID_Functor::get(module)->getName(); }
 
-	std::string printModuleTree(ModuleID module) { return module.ref->prettyPrint(); }
+	std::string printModuleTree(ModuleID module) {
+		return GetModuleID_Functor::get(module)->prettyPrint();
+	}
 
 	ModuleID createModuleTree(const fs::File& file) {
 		return GetModuleID_Functor::make(ModuleTreeBuilder::create(file));
@@ -510,8 +502,10 @@ namespace compiler::frontend {
 	 *********************/
 	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			auto module_tree = key.ref;
-			return module_tree->getParentModule().map([](auto parent) { return ModuleID(parent); });
+			auto module_tree = GetModuleID_Functor::get(key);
+			return module_tree->getParentModule().map([](auto parent) {
+				return parent->getModuleID();
+			});
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -524,8 +518,8 @@ namespace compiler::frontend {
 	 ***********************/
 	struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 		static auto provide(Context&, QKey key) -> PResult {
-			auto module_tree = key.ref;
-			return { module_tree->getMainSourceFile() };
+			auto module_tree = GetModuleID_Functor::get(key);
+			return { module_tree->getMainSourceFile()->getFileID() };
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -538,11 +532,11 @@ namespace compiler::frontend {
 	 ********************/
 	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = key.ref;
+			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			std::vector<FileID> out{};
 			for (CRef<SourceFile> file: module_tree->getSourceFiles())
-				out.emplace_back(FileID(file));
+				out.emplace_back(file->getFileID());
 			return out;
 		}
 
@@ -556,11 +550,11 @@ namespace compiler::frontend {
 	 *******************/
 	struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = key.ref;
+			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult out{};
 			for (const auto& [name, module]: module_tree->getSubmodules())
-				out.put(name, ModuleID(module));
+				out.put(name, module->getModuleID());
 			return out;
 		}
 
@@ -574,8 +568,11 @@ namespace compiler::frontend {
 	 ****************/
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			Ref<SourceFile> file = SourceFile::getSourceFile(key);
-			auto            pst  = file->getPST();
+			Ref<SourceFile> file
+				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+					key
+				);
+			auto pst = file->getPST();
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 			// @todo modify it, when making proper helios errors
@@ -603,6 +600,6 @@ namespace compiler::frontend {
 
 		// this access depends of global state that might become a problem in incremental compilation:
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-		return file_id.ref->getModule();
+		return GetFileID_Functor::get(file_id)->getModule();
 	}
 }

@@ -11,6 +11,14 @@ namespace compiler::frontend {
 	class SourceFile;
 	struct ModuleID;
 
+	/**
+	 * @brief FileID is a unique identifier for a SourceFile in the Duckling compiler.
+	 *
+	 * FileID wraps a reference to a SourceFile and provides hashing.
+	 * It is used to track and query source files in module trees.
+	 * FileID is not copy-constructible from outside; use functors or friend classes to create
+	 * instances.
+	 */
 	struct FileID final {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
@@ -22,19 +30,10 @@ namespace compiler::frontend {
 		auto operator<=>(const FileID& other) const { return ref.get() <=> other.ref.get(); }
 
 	private:
-		FileID(base::CRef<SourceFile> ref): ref(ref) {}
+		FileID(base::Ref<SourceFile> ref): ref(ref) {}
 
-		base::CRef<SourceFile> ref;
+		base::Ref<SourceFile> ref;
 		friend class SourceFile;
-		friend class ModuleTree;
-		friend class ModuleTreeBuilder;
-		friend class ModuleTreeModifier;
-		friend struct ImplementationOf_QueryMainSourceFile;
-		friend struct ImplementationOf_QuerySourceFiles;
-		friend struct ImplementationOf_QueryFilePST;
 		friend struct GetFileID_Functor;
-		friend ModuleID extendQueryModuleIDOfPST(
-			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
-		);
 	};
 }

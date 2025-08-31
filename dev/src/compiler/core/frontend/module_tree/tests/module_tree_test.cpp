@@ -35,7 +35,7 @@ private:
 		dummy_module_builder->setName(base::StrID("dummy"));
 		dummy_module_builder->setMainSourceFile(temp_file);
 		auto dummy_module = dummy_module_builder->finalize();
-		auto module_id    = GetModuleID_Functor::make(dummy_module);
+		auto module_id    = dummy_module->getModuleID();
 		auto tree_str     = printModuleTree(module_id);
 		assertTrue(
 			tree_str.find("dummy") != std::string::npos, "Module tree should contain module name"
@@ -48,7 +48,7 @@ private:
 		// do NOT set name
 		no_name_builder->setMainSourceFile(temp_file2);
 		auto        no_name_module = no_name_builder->finalize();
-		auto        no_name_id     = GetModuleID_Functor::make(no_name_module);
+		auto        no_name_id     = no_name_module->getModuleID();
 		auto        tree_str2      = printModuleTree(no_name_id);
 		std::string hash_str       = std::to_string(no_name_id.queryUnstablePerfectHash());
 		assertTrue(
@@ -92,7 +92,7 @@ private:
 	void testModuleIDInSourceFile(base::Ref<ModuleTree> module) {
 		std::cerr << "Testing module ID in source files for module: " << module->getName().strView()
 				  << '\n';
-		auto id = GetModuleID_Functor::make(module);
+		auto id = module->getModuleID();
 		std::cerr << "Module id: " << id.queryUnstablePerfectHash() << '\n';
 		std::cerr << "Main source file Module ID: "
 				  << module->getMainSourceFile()->getModule().queryUnstablePerfectHash() << '\n';
@@ -148,21 +148,13 @@ private:
 			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
 		);
 
+		ASSERT_EQUAL(mt->getModuleID(), awe_module->getParentModule().value()->getModuleID());
+		ASSERT_EQUAL(mt->getModuleID(), another_module->getParentModule().value()->getModuleID());
 		ASSERT_EQUAL(
-			GetModuleID_Functor::make(mt),
-			GetModuleID_Functor::make(awe_module->getParentModule().value())
+			another_module->getModuleID(), awesome_module->getParentModule().value()->getModuleID()
 		);
 		ASSERT_EQUAL(
-			GetModuleID_Functor::make(mt),
-			GetModuleID_Functor::make(another_module->getParentModule().value())
-		);
-		ASSERT_EQUAL(
-			GetModuleID_Functor::make(another_module),
-			GetModuleID_Functor::make(awesome_module->getParentModule().value())
-		);
-		ASSERT_EQUAL(
-			GetModuleID_Functor::make(awesome_module),
-			GetModuleID_Functor::make(mod_module->getParentModule().value())
+			awesome_module->getModuleID(), mod_module->getParentModule().value()->getModuleID()
 		);
 	}
 
@@ -308,100 +300,95 @@ private:
 
 		// Build initial module tree
 		auto mt = ModuleTreeBuilder::create(root_dir);
+		// Test addSourceFile
+		auto new_src = root_dir.createSubFile("new src", "newsrc.duck");
+		ModuleTreeModifier::addSourceFile(mt, new_src);
+		bool found_newsrc = false;
+		for (auto& sf: mt->getSourceFiles())
+			if (sf->getFile().name() == "newsrc.duck") found_newsrc = true;
+		ASSERT_TRUE(found_newsrc);
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Test addSourceFile
-			auto new_src = root_dir.createSubFile("new src", "newsrc.duck");
-			ModuleTreeModifier::addSourceFile(mt, new_src);
-			bool found_newsrc = false;
-			for (auto& sf: mt->getSourceFiles())
-				if (sf->getFile().name() == "newsrc.duck") found_newsrc = true;
-			ASSERT_TRUE(found_newsrc);
+		// Test removeSourceFile
+		auto src_to_remove = mt->getSourceFiles().front();
+		ModuleTreeModifier::removeSourceFile(src_to_remove);
+		bool still_present = false;
+		for (auto& sf: mt->getSourceFiles())
+			if (sf == src_to_remove) still_present = true;
+		ASSERT_EQUAL(false, still_present);
 
-			// Test removeSourceFile
-			auto src_to_remove = mt->getSourceFiles().front();
-			ModuleTreeModifier::removeSourceFile(src_to_remove);
-			bool still_present = false;
-			for (auto& sf: mt->getSourceFiles())
-				if (sf == src_to_remove) still_present = true;
-			ASSERT_EQUAL(false, still_present);
-
-			// Test setMainSourceFile (remove first if exists)
-			if (mt->hasMainSourceFile()) {
-				ModuleTreeModifier::removeMainSourceFile(mt);
-				ASSERT_EQUAL(false, mt->hasMainSourceFile());
-			}
-			auto new_main = root_dir.createSubFile("main2", "main2.dmf");
-			ModuleTreeModifier::setMainSourceFile(mt, new_main);
-			ASSERT_EQUAL("main2.dmf", mt->getMainSourceFile()->getFile().name());
-
-			// Test removeMainSourceFile explicitly
+		// Test setMainSourceFile (remove first if exists)
+		if (mt->hasMainSourceFile()) {
 			ModuleTreeModifier::removeMainSourceFile(mt);
 			ASSERT_EQUAL(false, mt->hasMainSourceFile());
+		}
+		auto new_main = root_dir.createSubFile("main2", "main2.dmf");
+		ModuleTreeModifier::setMainSourceFile(mt, new_main);
+		ASSERT_EQUAL("main2.dmf", mt->getMainSourceFile()->getFile().name());
 
-			// Test addOtherFile
-			auto other_file = root_dir.createSubFile("other3", "other3.txt");
-			ModuleTreeModifier::addOtherFile(mt, other_file);
-			bool found_other3 = false;
-			for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
-				if (f.name() == "other3.txt") found_other3 = true;
-			ASSERT_TRUE(found_other3);
+		// Test removeMainSourceFile explicitly
+		ModuleTreeModifier::removeMainSourceFile(mt);
+		ASSERT_EQUAL(false, mt->hasMainSourceFile());
 
-			// Test removeOtherFile
-			ModuleTreeModifier::removeOtherFile(mt, other_file);
-			bool still_other3 = false;
-			for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
-				if (f.name() == "other3.txt") still_other3 = true;
-			ASSERT_EQUAL(false, still_other3);
+		// Test addOtherFile
+		auto other_file = root_dir.createSubFile("other3", "other3.txt");
+		ModuleTreeModifier::addOtherFile(mt, other_file);
+		bool found_other3 = false;
+		for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
+			if (f.name() == "other3.txt") found_other3 = true;
+		ASSERT_TRUE(found_other3);
 
-			// Test addSubmodule and setParent/removeParent
-			auto sub_dir = root_dir.createSubDirectory("submod");
-			auto sub_mod = ModuleTreeBuilder::create(sub_dir);
-			ModuleTreeModifier::addSubmodule(mt, sub_mod);
-			ASSERT_TRUE(mt->getSubmodules().contains(sub_mod->getName()));
-			// Remove parent
-			ModuleTreeModifier::removeParent(sub_mod);
-			ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
-			// Set parent again
-			ModuleTreeModifier::setParent(sub_mod, mt);
-			ASSERT_EQUAL(mt, sub_mod->getParentModule().value());
+		// Test removeOtherFile
+		ModuleTreeModifier::removeOtherFile(mt, other_file);
+		bool still_other3 = false;
+		for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
+			if (f.name() == "other3.txt") still_other3 = true;
+		ASSERT_EQUAL(false, still_other3);
 
-			// Test removeModule
-			ModuleTreeModifier::removeModule(sub_mod);
-			ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("submod")));
+		// Test addSubmodule and setParent/removeParent
+		auto sub_dir = root_dir.createSubDirectory("submod");
+		auto sub_mod = ModuleTreeBuilder::create(sub_dir);
+		ModuleTreeModifier::addSubmodule(mt, sub_mod);
+		ASSERT_TRUE(mt->getSubmodules().contains(sub_mod->getName()));
+		// Remove parent
+		ModuleTreeModifier::removeParent(sub_mod);
+		ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
+		// Set parent again
+		ModuleTreeModifier::setParent(sub_mod, mt);
+		ASSERT_EQUAL(mt, sub_mod->getParentModule().value());
 
-			// Test fileModified (should not throw)
-			// auto src_file
-			// 	= mt->getSourceFiles().empty() ? new_src : mt->getSourceFiles().front();
-			// ModuleTreeModifier::fileModified(src_file);
+		// Test removeModule
+		ModuleTreeModifier::removeModule(sub_mod);
+		ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("submod")));
 
-			// Test removeModule with a module that has source files and main source file
-			{
-				// Use unique variable names to avoid shadowing
-				auto removable_sub_dir   = root_dir.createSubDirectory("removable");
-				auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dmf");
-				auto removable_src_file1 = removable_sub_dir.createSubFile("src1", "src1.duck");
-				auto removable_src_file2 = removable_sub_dir.createSubFile("src2", "src2.duck");
-				auto removable_sub_mod   = ModuleTreeBuilder::create(removable_sub_dir);
+		// Test fileModified (should not throw)
+		// auto src_file
+		// 	= mt->getSourceFiles().empty() ? new_src : mt->getSourceFiles().front();
+		// ModuleTreeModifier::fileModified(src_file);
 
-				// Add as submodule
-				ModuleTreeModifier::addSubmodule(mt, removable_sub_mod);
-				ASSERT_TRUE(mt->getSubmodules().contains(removable_sub_mod->getName()));
+		// Test removeModule with a module that has source files and main source file
+		{
+			// Use unique variable names to avoid shadowing
+			auto removable_sub_dir   = root_dir.createSubDirectory("removable");
+			auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dmf");
+			auto removable_src_file1 = removable_sub_dir.createSubFile("src1", "src1.duck");
+			auto removable_src_file2 = removable_sub_dir.createSubFile("src2", "src2.duck");
+			auto removable_sub_mod   = ModuleTreeBuilder::create(removable_sub_dir);
 
-				// Check that main and source files exist in SourceFile::file_map
-				ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
-				auto removable_main_id = removable_sub_mod->getMainSourceFile();
-				ASSERT_TRUE(
-					removable_main_id->getModule() == GetModuleID_Functor::make(removable_sub_mod)
-				);
-				for (auto& sf: removable_sub_mod->getSourceFiles())
-					ASSERT_TRUE(sf->getModule() == GetModuleID_Functor::make(removable_sub_mod));
+			// Add as submodule
+			ModuleTreeModifier::addSubmodule(mt, removable_sub_mod);
+			ASSERT_TRUE(mt->getSubmodules().contains(removable_sub_mod->getName()));
 
-				// Remove the submodule
-				ModuleTreeModifier::removeModule(removable_sub_mod);
-				ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("removable")));
-			}
-		});
+			// Check that main and source files exist in SourceFile::file_map
+			ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
+			auto removable_main_id = removable_sub_mod->getMainSourceFile();
+			ASSERT_TRUE(removable_main_id->getModule() == removable_sub_mod->getModuleID());
+			for (auto& sf: removable_sub_mod->getSourceFiles())
+				ASSERT_TRUE(sf->getModule() == removable_sub_mod->getModuleID());
+
+			// Remove the submodule
+			ModuleTreeModifier::removeModule(removable_sub_mod);
+			ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("removable")));
+		}
 	}
 
 	void testManualModuleTreeBuilder() {

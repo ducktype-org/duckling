@@ -39,6 +39,7 @@ namespace compiler::frontend {
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
 		files.pushBack(SourceFile(std::move(file), linked_module));
 		files_map.at(abs_path).emplace_back(files.last());
+		files.last()->file_id = FileID(files.last());
 		return files.last();
 	}
 
@@ -73,14 +74,6 @@ namespace compiler::frontend {
 		} else {
 			to_content.put(abs_path, file.getContent());
 		}
-	}
-
-	Ref<SourceFile> SourceFile::getSourceFile(FileID id) {
-		auto it = files_map.find(id.ref->getFile().getFilePath().absolute().getPath());
-		CORE_ASSERT(it != files_map.end(), "FileID not found");
-		for (auto& file: it->second)
-			if (file == id.ref) return file;
-		CORE_UNREACHABLE();
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {

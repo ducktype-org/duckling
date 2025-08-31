@@ -50,5 +50,4 @@ namespace compiler::frontend {
 
 		return current_module;
 	}
-
 }
