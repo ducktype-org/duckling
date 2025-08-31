@@ -71,11 +71,13 @@ private:
 		const auto void_2 = query::entryPoint<QueryVoidType>({});
 		assertTrue(void_1 == void_2, "There should only be one Void type.");
 		assertTrue(void_1.getKind() == Void, "Void type should have kind Void.");
+		assertTrue(void_1.hasNoOpDestructor(), "Void should have no op destructor.");
 
 		const auto unit_1 = query::entryPoint<QueryUnitType>({});
 		const auto unit_2 = query::entryPoint<QueryUnitType>({});
 		assertTrue(unit_1 == unit_2, "There should only be one Unit type.");
 		assertTrue(unit_1.getKind() == Unit, "Unit type should have kind Unit.");
+		assertTrue(unit_1.hasNoOpDestructor(), "Unit should have no op destructor.");
 
 		assertTrue(void_1 != unit_1, "Void and Unit should be different types.");
 
@@ -94,10 +96,13 @@ private:
 	void simpleByteSized() {
 		const auto byte_1 = query::entryPoint<QueryByteType>({});
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
+		assertTrue(byte_1.hasNoOpDestructor(), "Byte should have no op destructor.");
 		const auto bool_1 = query::entryPoint<QueryBoolType>({});
 		assertTrue(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
+		assertTrue(bool_1.hasNoOpDestructor(), "Bool should have no op destructor.");
 		const auto char_1 = query::entryPoint<QueryCharType>({});
 		assertTrue(char_1.getKind() == Char, "Char type should have kind Char.");
+		assertTrue(char_1.hasNoOpDestructor(), "Char should have no op destructor.");
 
 		assertTrue(
 			byte_1 != bool_1 && bool_1 != char_1 && char_1 != byte_1,
@@ -156,6 +161,11 @@ private:
 			ASSERT_TRUE(int_2.getSignedness() == Signed);
 			ASSERT_TRUE(int_u.getSignedness() == Unsigned);
 			ASSERT_TRUE(int_3.getSignedness() == Signed);
+
+			assertTrue(
+				int_1.hasNoOpDestructor() && int_u.hasNoOpDestructor(),
+				"Ints should have no op destructor."
+			);
 		}
 
 		assertTrue(
@@ -184,6 +194,8 @@ private:
 			AbstractType      type_float = float_1;
 			FloatAbstractType float_3    = type_float;
 			assertTrue(float_3.getKind() == Float, "Float should survive casting.");
+
+			assertTrue(float_1.hasNoOpDestructor(), "Floats should have no op destructor.");
 		}
 
 		assertTrue(
@@ -250,6 +262,8 @@ private:
 		const AbstractType       type_str = str_1;
 		const StringAbstractType str_3    = type_str;
 		assertTrue(str_3.getKind() == String, "String should survive casting.");
+
+		assertTrue(str_1.hasNoOpDestructor(), "String should have no op destructor.");
 	}
 
 	/**
@@ -281,6 +295,12 @@ private:
 			arr_1 != arr_5,
 			"DynamicArrays with element with different mutability should be different."
 		);
+
+		assertTrue(
+			arr_1.hasNoOpDestructor() && arr_4.hasNoOpDestructor(),
+			"DynamicArrays of Ints should have no op destructors."
+		);
+		// @TODO: add test with element that doesn't have no-op destructor
 	}
 
 	/**
@@ -311,6 +331,12 @@ private:
 
 		const auto tup_5 = query::entryPoint<QueryTupleType>({ { st(int_16, true), st(int_32) } });
 		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
+
+		assertTrue(
+			tup_1.hasNoOpDestructor() && tup_4.hasNoOpDestructor() && tup_5.hasNoOpDestructor(),
+			"Tuples of Ints should have no op destructors."
+		);
+		// @TODO: add test with element that doesn't have no-op destructor
 	}
 
 	/**
@@ -338,6 +364,12 @@ private:
 
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
+
+		assertTrue(
+			var_1.hasNoOpDestructor() && var_4.hasNoOpDestructor(),
+			"Variants of Ints should have no op destructors."
+		);
+		// @TODO: add test with element that doesn't have no-op destructor
 	}
 
 	/**
