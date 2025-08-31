@@ -25,6 +25,7 @@ namespace compiler::frontend {
 		base::StrID                lang_file_name;
 		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
+		base::Optional<FileID>     file_id;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
@@ -76,6 +77,11 @@ namespace compiler::frontend {
 		 *         If no SourceFiles exist for the file, an empty vector is returned.
 		 */
 		static std::vector<base::Ref<SourceFile>> getSourceFilesfromFile(const fs::File& file);
+
+		/**
+		 * @brief Returns the FileID associated with this SourceFile.
+		 */
+		[[nodiscard]] FileID getFileID() const { return file_id.value(); }
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.

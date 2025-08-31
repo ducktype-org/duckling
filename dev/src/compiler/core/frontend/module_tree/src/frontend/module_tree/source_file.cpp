@@ -53,6 +53,7 @@ namespace compiler::frontend {
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
 		files.pushBack(SourceFile(std::move(file), linked_module));
 		files_map.at(abs_path).emplace_back(files.last());
+		files.last()->file_id = FileID(files.last());
 		return files.last();
 	}
 

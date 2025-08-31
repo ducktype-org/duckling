@@ -59,6 +59,8 @@ namespace compiler::frontend {
 		friend class ModuleTreeModifier;
 
 	public:
+		ModuleID getModuleID() const;
+
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -125,6 +127,8 @@ namespace compiler::frontend {
 
 	private:
 		ModuleTree();
+
+		base::Optional<ModuleID> m_id;
 
 		base::StrID m_name;
 

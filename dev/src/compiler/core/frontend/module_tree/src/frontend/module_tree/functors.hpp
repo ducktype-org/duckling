@@ -17,9 +17,6 @@ namespace compiler::frontend {
 		static auto getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(FileID id) {
 			return id.ref;
 		}
-
-		static FileID make(Ref<SourceFile> ref) { return FileID{ ref }; }
-		static FileID make(CRef<SourceFile> ref) { return FileID{ const_cast<SourceFile*>(&*ref) }; }
 	};
 
 	inline auto getFileRef(FileID id) { return GetFileID_Functor::get(id); }
@@ -34,9 +31,6 @@ namespace compiler::frontend {
 		static auto getModRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(ModuleID id) {
 			return id.ref;
 		}
-
-		static ModuleID make(Ref<ModuleTree> ref) { return ModuleID{ ref }; }
-		static ModuleID make(CRef<ModuleTree> ref) { return ModuleID{ const_cast<ModuleTree*>(&*ref) }; }
 	};
 
 	inline auto getModuleRef(ModuleID id) { return GetModuleID_Functor::get(id); }

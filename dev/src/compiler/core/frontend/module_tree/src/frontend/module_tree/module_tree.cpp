@@ -67,6 +67,8 @@ namespace compiler::frontend {
 
 	ModuleTree::ModuleTree() = default;
 
+	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
+
 	base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return m_parent.value();
 		return {};
@@ -260,6 +262,8 @@ namespace compiler::frontend {
 		modules.pushBack(ModuleTree());
 		Ref<ModuleTree> module_ref = modules.last();
 		ModuleID        mod_id(module_ref);
+
+		module_ref->m_id = mod_id;
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
@@ -483,17 +487,21 @@ namespace compiler::frontend {
 
 	// ----------------------
 
-	base::StrID moduleName(ModuleID module) { return module.ref->getName(); }
+	base::StrID moduleName(ModuleID module) { return GetModuleID_Functor::get(module)->getName(); }
 
-	std::string printModuleTree(ModuleID module) { return module.ref->prettyPrint(); }
+	std::string printModuleTree(ModuleID module) {
+		return GetModuleID_Functor::get(module)->prettyPrint();
+	}
 
 	/*********************
 	 * QueryParentModule *
 	 *********************/
 	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			auto module_tree = key.ref;
-			return module_tree->getParentModule().map([](auto parent) { return ModuleID(parent); });
+			auto module_tree = GetModuleID_Functor::get(key);
+			return module_tree->getParentModule().map([](auto parent) {
+				return parent->getModuleID();
+			});
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -506,8 +514,8 @@ namespace compiler::frontend {
 	 ***********************/
 	struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 		static auto provide(Context&, QKey key) -> PResult {
-			auto module_tree = key.ref;
-			return { module_tree->getMainSourceFile() };
+			auto module_tree = GetModuleID_Functor::get(key);
+			return { module_tree->getMainSourceFile()->getFileID() };
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -520,11 +528,11 @@ namespace compiler::frontend {
 	 ********************/
 	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = key.ref;
+			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			std::vector<FileID> out{};
 			for (CRef<SourceFile> file: module_tree->getSourceFiles())
-				out.emplace_back(FileID(file));
+				out.emplace_back(file->getFileID());
 			return out;
 		}
 
@@ -538,11 +546,11 @@ namespace compiler::frontend {
 	 *******************/
 	struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
 		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = key.ref;
+			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult out{};
 			for (const auto& [name, module]: module_tree->getSubmodules())
-				out.put(name, ModuleID(module));
+				out.put(name, module->getModuleID());
 			return out;
 		}
 
@@ -588,6 +596,6 @@ namespace compiler::frontend {
 
 		// this access depends of global state that might become a problem in incremental compilation:
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-		return file_id.ref->getModule();
+		return GetFileID_Functor::get(file_id)->getModule();
 	}
 }
