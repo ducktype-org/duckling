@@ -494,7 +494,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTree(const fs::File& file) {
-		return GetModuleID_Functor::make(ModuleTreeBuilder::create(file));
+		return ModuleTreeBuilder::create(file)->getModuleID();
 	}
 
 	/*********************
