@@ -431,6 +431,7 @@ private:
 		assertTrue(nspace == nspace_2, "There shouldn't be multiple different Namespace types.");
 
 		assertTrue(nspace.getKind() == Namespace, "NamespaceType should have kind Meta.");
+		assertTrue(nspace.hasNoOpDestructor(), "NamespaceType should have no op destructor.");
 
 		const AbstractType          nspace_type = nspace;
 		const NamespaceAbstractType nspace_3    = nspace_type;
@@ -442,6 +443,7 @@ private:
 		assertTrue(module == module_2, "There shouldn't be multiple different Module types.");
 
 		assertTrue(module.getKind() == Module, "ModuleType should have kind Meta.");
+		assertFalse(module.hasNoOpDestructor(), "ModuleType should not have no op destructor.");
 
 		const AbstractType       module_type = module;
 		const ModuleAbstractType module_3    = module_type;
@@ -455,6 +457,7 @@ private:
 		assertTrue(meta == meta_2, "There shouldn't be multiple different 'type' types.");
 
 		assertTrue(meta.getKind() == Meta, "MetaType should have kind Meta.");
+		assertFalse(meta.hasNoOpDestructor(), "MetaType should not have no op destructor.");
 
 		const AbstractType     meta_type = meta;
 		const MetaAbstractType met_3     = meta_type;
