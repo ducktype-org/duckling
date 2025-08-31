@@ -29,6 +29,7 @@ POP_DIAGNOSTIC;
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 
+#include <base/anycast.hpp>
 #include <base/int_conv.hpp>
 #include <base/macros/diagnostics.hpp>
 #include <base/variant.hpp>
@@ -212,38 +213,25 @@ void server(i32 port) {
     ([&virtual_root](const std::string& base64_path) {
         try {
             const auto path = base64::decode_into<std::string>(base64_path);
+			const auto file = virtual_root.getFilePath().join(path);
 
-			const auto vfs_root_path = virtual_root.getFilePath();
-			// const auto string_res = "{table: [" + vfs_root_path.string() + "," + path + "]}";
-			// return crow::response(200, string_res);
-			const auto vfs_file_path = vfs_root_path.join(path);
-			// return crow::response(200, "line 166\n");
-
-            if (!vfs_file_path.exists()) {
+            if (!file.exists()) {
                 return crow::response(404, "File not found");
             }
 
-			// return crow::response(200, "line 168\n");
-            const auto file = virtual_root.getFilePath().join(path);
+			auto pst = base::anyCast<CRef<pst::PST<>>> (
+				query::utils::withContextCompute([&](query::Context& ctx) {
+					return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
+				})
+			);
 
-        	// auto tokens = lexer::tokenizeFile(file);
-			// pst::PST<>  pst(std::move(tokens));
-			crow::response resp = crow::response(400, e.what());
-			pst::AccessLocked<pst::Element> pst_root;
-			query::utils::withContextDo([&](query::Context& ctx) {
-				auto pst = compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
-				if (pst.getLogger()->bad()) {
-					std::stringstream ss;
-					pst.getLogger()->dumpLog(true, ss);
-					resp = crow::response(200, ss.str());
-				} else {
-					pst_root = pst.getRootElement();
-				}
-			});
-			if (resp.code != 400) return resp;
-			return crow::response(200, lsp::getSemanticTokens(pst_root));
+			if (pst->getLogger()->bad()) {
+				std::stringstream ss;
+				pst->getLogger()->dumpLog(true, ss);
+				return crow::response(200, ss.str());
+			};
 
-
+			return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
         } catch (const std::exception& e) {
             return crow::response(400, e.what());
         }
