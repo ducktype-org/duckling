@@ -317,13 +317,19 @@ namespace compiler::helios::code {
 		}
 	}
 
-	CallExpr::CallExpr(query::Context&, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
+	CallExpr::CallExpr(
+		query::Context&,
+		base::Box<Expr>                             callee,
+		std::vector<Box<Expr>>                      arguments,
+		base::HashMap<base::StrID, base::Box<Expr>> named_arguments
+	):
 		  Expr(tsh::ExpressionType(
 			  getCallResultType(callee->expression_type.getType()),
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),
 		  callee(std::move(callee)),
-		  arguments(std::move(arguments)) {}
+		  arguments(std::move(arguments)),
+		  named_arguments(std::move(named_arguments)) {}
 
 	void CallExpr::debugPrint(std::ostream& out) const {
 		callee->debugPrint(out);

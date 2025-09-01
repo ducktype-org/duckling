@@ -7,6 +7,7 @@
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
+#include <base/maps.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -251,10 +252,16 @@ namespace compiler::helios::code {
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
-		base::Box<Expr>              callee;
-		std::vector<base::Box<Expr>> arguments;
+		base::Box<Expr>                             callee;
+		std::vector<base::Box<Expr>>                arguments;
+		base::HashMap<base::StrID, base::Box<Expr>> named_arguments;
 
-		CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments);
+		CallExpr(
+			query::Context&                             ctx,
+			base::Box<Expr>                             callee,
+			std::vector<base::Box<Expr>>                arguments,
+			base::HashMap<base::StrID, base::Box<Expr>> named_arguments
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

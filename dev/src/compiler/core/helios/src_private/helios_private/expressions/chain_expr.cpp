@@ -255,7 +255,7 @@ namespace compiler::helios::code {
 			// @TODO write tests for this case when parser will support it
 			// @TODO maybe chose one style of error messages in this file
 
-			std::vector<Box<Expr>> call_arguments;
+			/*std::vector<Box<Expr>> call_arguments; TODO
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
 				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
 					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
@@ -291,10 +291,12 @@ namespace compiler::helios::code {
 				}
 				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
-
+			*/
+			auto expr_type = current_expr->expression_type.getSymbolType();
+			std::vector<base::Box<Expr>> coerced_arguments;
 			auto node = makeBox<CallExpr>(
-				query_ctx, std::move(current_expr), std::move(coerced_arguments)
-			);
+				query_ctx, std::move(current_expr), std::move(coerced_arguments), base::HashMap<base::StrID, base::Box<Expr>>{}
+			); // TODO
 			return ChainState::ofExpr(std::move(node));
 		}
 
@@ -417,13 +419,20 @@ namespace compiler::helios::code {
 			auto callee = lookup_result->getAsSingle().value().back();
 
 			std::vector<Box<Expr>> call_arguments;
-
+			base::HashMap<base::StrID, base::Box<Expr>> named_arguments;
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
 				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
 					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
 				);
 				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				call_arguments.emplace_back(std::move(arg_expr.value()));
+				if (arg.unlock(query_ctx)->arg_name.has_value()){
+					base::StrID arg_name = arg.unlock(query_ctx)->arg_name.value().value;
+					if (named_arguments.contains(arg_name)) return query::QError(errors::Failed()); // Not unique names.
+					named_arguments.emplace(std::move(arg_name), std::move(arg_expr.value()));
+				}else{
+					if (!named_arguments.empty()) return query::QError(errors::Failed()); // Normal argument after named one.
+					call_arguments.emplace_back(std::move(arg_expr.value()));
+				}
 			}
 
 			auto call_type_result = query_ctx.query<QueryTypeOfSymbol>({ callee });
@@ -440,6 +449,7 @@ namespace compiler::helios::code {
 			}
 
 			std::vector<base::Box<Expr>> coerced_arguments;
+			base::HashMap<base::StrID, base::Box<Expr>> coerced_named_arguments; // TODO
 			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
 				auto coerced = coerceExpression(
 					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
@@ -457,7 +467,7 @@ namespace compiler::helios::code {
 
 			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
 			auto node            = makeBox<CallExpr>(
-                query_ctx, std::move(identifier_expr), std::move(coerced_arguments)
+                query_ctx, std::move(identifier_expr), std::move(coerced_arguments), std::move(named_arguments)
             );
 			return ChainState::ofExpr(std::move(node));
 		}

@@ -129,9 +129,6 @@ namespace compiler::helios {
 
 		void visitFunParam(pst::Access<pst::FunParam> stmt) final { name = stmt->getName().str(); }
 
-		// void visitCallArgument(pst::Access<pst::CallArgument> stmt) final { name =
-		// stmt->getName().str(); }
-
 		base::Optional<std::string> getName() { return name; }
 	};
 
