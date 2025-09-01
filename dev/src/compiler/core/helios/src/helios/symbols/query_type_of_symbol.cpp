@@ -154,11 +154,6 @@ namespace compiler::helios {
 			void visitFunParam(pst::Access<pst::FunParam> param) final {
 				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
-
-			void visitCallArgument(pst::Access<pst::CallArgument> arg) {
-				std::cout<<"CALLED\n";
-				setTypeOfSymbol(arg->arg.give().unlock(ctx)->getExpr().unlock(ctx));
-			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

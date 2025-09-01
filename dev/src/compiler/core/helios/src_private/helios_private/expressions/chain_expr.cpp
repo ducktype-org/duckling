@@ -188,7 +188,6 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState, errors::Failed> {
-
 			if (call_expr->getType() != lexer::Token::Round) {
 				throw base::NotYetImplemented(base::strConcat(
 					"HOUT call with invalid bracket type: ", char(call_expr->getType())
@@ -258,12 +257,13 @@ namespace compiler::helios::code {
 
 			std::vector<Box<Expr>> call_arguments;
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr = query_ctx.query<QueryHoutOfExpr>({
-					arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr()});
+				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
+				);
 				if (arg_expr.hasError()) return query::QError(errors::Failed());
 				call_arguments.emplace_back(std::move(arg_expr.value()));
 			}
-			
+
 			auto expr_type = current_expr->expression_type.getSymbolType();
 			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
 
@@ -275,7 +275,7 @@ namespace compiler::helios::code {
 				);
 				return query::QError(errors::Failed());
 			}
-			
+
 			std::vector<base::Box<Expr>> coerced_arguments;
 			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
 				auto coerced = coerceExpression(
@@ -405,7 +405,6 @@ namespace compiler::helios::code {
 			const tpc::Identifier&       name,
 			pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState, errors::Failed> {
-
 			if (lookup_result->isEmpty()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
@@ -420,8 +419,9 @@ namespace compiler::helios::code {
 			std::vector<Box<Expr>> call_arguments;
 
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr = query_ctx.query<QueryHoutOfExpr>({
-					arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr()});
+				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
+				);
 				if (arg_expr.hasError()) return query::QError(errors::Failed());
 				call_arguments.emplace_back(std::move(arg_expr.value()));
 			}
