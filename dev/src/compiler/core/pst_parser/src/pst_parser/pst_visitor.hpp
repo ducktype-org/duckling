@@ -37,6 +37,7 @@ namespace pst {
 		Destructor,
 		AccessBlock,
 		FunParam,
+		CallArgument,
 		Expand,
 		CodeBlock,
 	);

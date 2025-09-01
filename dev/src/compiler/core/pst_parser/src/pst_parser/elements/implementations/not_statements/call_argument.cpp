@@ -11,15 +11,11 @@ namespace pst {
                         out->arg_name = std::move(name);
                         state.parse(out).one(lang_def::NamedOperator::Assign);
 		}
-                state.parse(out).one(&out->arg);
+        state.parse(out).one(&out->arg);
 		return out;
 	}
 
 	void CallArgument::dprint(std::ostream& out) const {
 		// TODO
-	}
-
-	void CallArgument::acceptVisitor(PstVisitor& visitor) const {
-		//visitor.visitExprValue(*this);
 	}
 }

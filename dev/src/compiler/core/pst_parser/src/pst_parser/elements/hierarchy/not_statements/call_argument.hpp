@@ -14,7 +14,9 @@ namespace pst {
 		AccessInternal<UniversalExprHolderLowerLevel> arg;
 
 	public:
-		explicit CallArgument(const dia::SourcePosition& pos): NotStmt(pos) {}
+		explicit CallArgument(const dia::SourcePosition& pos): NotStmt(pos) {
+			this->element_kind = ElementKind::CallArgument;
+		}
 
 		static MBox<CallArgument> parse(LangParserState& state);
 		~CallArgument() final = default;
@@ -25,7 +27,5 @@ namespace pst {
 		std::string elementType() const override {
 			return "Call argument";
 		}
-
-        void acceptVisitor(PstVisitor& visitor) const final;
 	};
 }

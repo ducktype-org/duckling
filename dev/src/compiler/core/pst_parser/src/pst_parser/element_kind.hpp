@@ -73,6 +73,7 @@ namespace pst {
 		FunParam,
 		ParamList,
 		DottedName,
+		CallArgument,
 
 		// for detecting when kind was not set:
 		KindNotSet,

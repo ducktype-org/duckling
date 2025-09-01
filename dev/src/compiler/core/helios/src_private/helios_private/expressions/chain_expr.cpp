@@ -258,10 +258,10 @@ namespace compiler::helios::code {
 
 			std::vector<Box<Expr>> call_arguments;
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr
-					= query_ctx.query<QueryHoutOfExpr>({arg.unlock(query_ctx)->getExpr()});
-			//	if (arg_expr.hasError()) return query::QError(errors::Failed());
-			//	call_arguments.emplace_back(std::move(arg_expr.value()));
+				auto arg_expr = query_ctx.query<QueryHoutOfExpr>({
+					arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr()});
+				if (arg_expr.hasError()) return query::QError(errors::Failed());
+				call_arguments.emplace_back(std::move(arg_expr.value()));
 			}
 			
 			auto expr_type = current_expr->expression_type.getSymbolType();
@@ -419,9 +419,9 @@ namespace compiler::helios::code {
 
 			std::vector<Box<Expr>> call_arguments;
 
-			/*for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr
-					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
+			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
+				auto arg_expr = query_ctx.query<QueryHoutOfExpr>({
+					arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr()});
 				if (arg_expr.hasError()) return query::QError(errors::Failed());
 				call_arguments.emplace_back(std::move(arg_expr.value()));
 			}
@@ -437,10 +437,10 @@ namespace compiler::helios::code {
 					)
 				);
 				return query::QError(errors::Failed());
-			}*/
+			}
 
 			std::vector<base::Box<Expr>> coerced_arguments;
-			/*for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
 				auto coerced = coerceExpression(
 					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
 				);
@@ -453,7 +453,7 @@ namespace compiler::helios::code {
 					return query::QError(errors::Failed());
 				}
 				coerced_arguments.emplace_back(std::move(coerced.value()));
-			}*/
+			}
 
 			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
 			auto node            = makeBox<CallExpr>(
