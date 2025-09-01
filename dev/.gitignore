@@ -25,3 +25,5 @@ __pycache__/
 
 !.clang-format
 !.clang-tidy
+/tmp/test_fix.o
+*.o
