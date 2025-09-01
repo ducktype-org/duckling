@@ -2,6 +2,12 @@
 
 #include "preamble.hpp"
 
+namespace base::extend {
+	void BoxPtrDeleter<pst::Attribute>::del(pst::Attribute* ptr) {
+		delete ptr;
+	}
+}
+
 namespace pst {
 	class AttrStarError final: public dia::Error {
 	protected:
