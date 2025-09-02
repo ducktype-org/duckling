@@ -4,6 +4,10 @@ fun square(a: i32) -> i32 = {
 
 fun foo(a: i32, b: i32) -> i32 = {
     let a_squared: i32 = square(a);
+    let a_squared2: i32 = square(a);
+ 
+    const V1: i64 = 1;
+    let bb: i64 = 1 + V1;
 
     return square(a_squared + b);
 }

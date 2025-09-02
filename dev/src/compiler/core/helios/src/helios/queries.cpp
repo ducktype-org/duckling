@@ -301,6 +301,10 @@ namespace compiler::helios {
 					));
 				}
 			}
+
+			void visitConst(pst::Access<pst::Const> stmt) override {
+				empty = true; 
+			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
