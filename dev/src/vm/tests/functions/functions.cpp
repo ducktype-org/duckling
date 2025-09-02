@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testNoRet);
+		TESTER_ADD_TEST(testSignaturesValidation);
 	}
 
 private:
@@ -94,6 +95,21 @@ private:
 			);
 
 		for (auto filename: { "infinite_loop.dbc", "dead_end.dbc" }) loadValidDbc(filename);
+	}
+
+	void testSignaturesValidation() {
+		loadInvalidDbc(
+			"invalid_ret_type.dbc",
+			{
+				vm::code::UnknownTypeError::ERR_MSG,
+			}
+		);
+		loadInvalidDbc(
+			"invalid_param_type.dbc",
+			{
+				vm::code::UnknownTypeError::ERR_MSG,
+			}
+		);
 	}
 };
 
