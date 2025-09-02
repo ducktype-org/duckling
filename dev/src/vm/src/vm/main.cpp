@@ -45,10 +45,16 @@ clah::Clah getVmClah() {
 						   }))
 	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
 	                       .addPositional(clah::FileParser::make("file"))
+	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
 	                       .setHandler([](const clah::ParsingResult& options) {
 							   vm::Supervisor::get();
-							   auto file = options.getPositional<fs::File>(0);
-							   return cli(file);
+							   auto                     file = options.getPositional<fs::File>(0);
+							   std::vector<std::string> args;
+							   args.reserve(options.getExtraParameterCount());
+							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+								   args.push_back(*options.getExtra<std::string>(argc));
+
+							   return cli(file, args);
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

@@ -13,6 +13,7 @@ public:
 		TESTER_ADD_TEST(lea);
 		TESTER_ADD_TEST(nonInstantiableDynTable);
 		TESTER_ADD_TEST(stringOutput);
+		TESTER_ADD_TEST(reallocZero);
 	}
 
 private:
@@ -27,6 +28,8 @@ private:
 	}
 
 	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0); }
+
+	void reallocZero() { runTestOnVm("realloc_zero.dbc", "", "42", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/dynamic_table/");

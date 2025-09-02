@@ -602,10 +602,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0);
-			thread.process_memory.freeBlock(ptr.getBlock());
-			thread.process_memory.destroyBlockReference(ptr);
-			writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
+			if (const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0); !ptr.isNull()) {
+				thread.process_memory.freeBlock(ptr.getBlock());
+				thread.process_memory.destroyBlockReference(ptr);
+				writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
+			}
 		}
 		FUNCTION_CONT(1);
 	}
@@ -932,12 +933,27 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto pointed_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
+			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointed_type   = thread.executing_program->types->at(TypeID(instr->arg1));
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
-			if (tbl_pointer.isNull()) {
+			if (new_elem_count == 0) {
+				@TODO Actually free the data XDDDD
+				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
+				// null. This is one of two possible approaches:
+				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to
+				// null-poiner (what we do here)
+				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
+				// C-nullptr as their data, but on DVM level we would still allow pointer
+				// [0-sized-block, nullptr] to exist. Any access to such block would simply
+				// be out-of-bound access.
+				//
+				// It might be desired to switch to second approach in the future, depending on the
+				// semantics of Duckling arrays.
+				const Pointer new_dst
+					= thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
+				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			} else if (tbl_pointer.isNull()) {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
 				const Pointer new_dst

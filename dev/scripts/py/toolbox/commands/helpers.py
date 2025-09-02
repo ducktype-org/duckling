@@ -49,7 +49,7 @@ def build_dir(*args, **kwargs):
 
 def build_system(*args, **kwargs):
     return create_option(
-        "-b",
+        "-s",
         "--build-system",
         "build_system",
         prompt="Build system",
