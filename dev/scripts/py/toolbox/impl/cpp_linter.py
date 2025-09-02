@@ -66,34 +66,21 @@ def get_unstaged_new_files() -> List[str]:
 
 def get_repo_cpp_files():
     # Use the new standardized file listing for C++ files
-    cpp_files_with_lines = list_files_impl(
+    return list_files_impl(
         extensions=['.cpp', '.hpp', '.cc', '.cxx', '.h'], 
-        all=True, 
+        modified=False, 
         lines=True
     )
-    
-    # Convert from (start, end) tuples to [start, end] lists to maintain compatibility
-    result = {}
-    for file, line_ranges in cpp_files_with_lines.items():
-        result[file] = [[start, end] for start, end in line_ranges]
-    
-    return result
 
 
 def get_modified_files_and_lines(branch: str, no_merge_base: bool = False):
     # Use the shared implementation from list_files module
-    modified_files_with_lines = list_files_impl(
+    return list_files_impl(
         branch=branch,
         no_merge_base=no_merge_base,
+        modified=True,
         lines=True
     )
-    
-    # Convert from (start, end) tuples to [start, end] lists to maintain compatibility
-    result = {}
-    for file, line_ranges in modified_files_with_lines.items():
-        result[file] = [[start, end] for start, end in line_ranges]
-    
-    return result
 
 
 def get_files_for_linter(all, branch, no_merge_base):
