@@ -505,6 +505,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	for (const auto& type: types) {
 		variant_match(type) {
 			variant_case(PrimitiveType, data) {
+				if (data.size == 0) throw InvalidPrimitiveSizeError(data);
 				metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(PointerType, data) {
