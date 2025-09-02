@@ -312,7 +312,7 @@ namespace compiler::frontend {
 
 		// Remove file from source_files
 		source_files.erase(it);
-		// @TODO: remove SourceFile here
+		// @TODO: remove SourceFile here #1252
 	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -369,7 +369,7 @@ namespace compiler::frontend {
 		);
 
 		module->m_other_files.at(ext_id).push_back(file);
-		//@TODO: do we need to update the module here?
+		//@TODO: do we need to update the module here? #1253
 		// module->update();
 	}
 
@@ -413,7 +413,7 @@ namespace compiler::frontend {
 		);
 
 		files.erase(it);
-		//@TODO: do we need to update the module here?
+		//@TODO: do we need to update the module here? #1253
 		// module->update();
 	}
 
@@ -453,7 +453,7 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
 		auto parent = module->m_parent;
 
-		// @TODO: we want to remove each SourceFile associated with this module
+		// @TODO: we want to remove each SourceFile associated with this module #1252
 
 		// Update parent module if it exists
 		if (parent.has_value()) {
@@ -476,7 +476,7 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// @TODO: we also want to remove the module from vector here
+		// @TODO: we also want to remove the module from vector here #1252
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {

@@ -18,6 +18,10 @@ namespace {
 	 */
 	base::StableVector<compiler::frontend::SourceFile> files;
 
+	/*
+	 * Map that stores all SourceFile instances by their file path.
+	 * it is used for function getSourceFilesfromFile()
+	 */
 	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>>
 		files_map;
 }

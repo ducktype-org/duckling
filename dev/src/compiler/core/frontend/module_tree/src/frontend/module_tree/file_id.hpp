@@ -1,7 +1,5 @@
 #pragma once
 
-#include <pst_parser/access.hpp>
-
 #include <base/ref.hpp>
 
 #include <query_framework/context.hpp>
@@ -16,7 +14,7 @@ namespace compiler::frontend {
 	 *
 	 * FileID wraps a reference to a SourceFile and provides hashing.
 	 * It is used to track and query source files in module trees.
-	 * FileID is not copy-constructible from outside; use functors or friend classes to create
+	 * FileID is not constructible from outside; use functors or friend classes to create
 	 * instances.
 	 */
 	struct FileID final {
