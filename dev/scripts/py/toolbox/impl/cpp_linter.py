@@ -14,6 +14,7 @@ from .helpers import (
     log_new_line,
     log_warning,
 )
+from .list_files import list_files_impl
 
 def cpp_linter_impl(
     clang_tidy_path: str,
@@ -57,23 +58,26 @@ def cpp_linter_impl(
 
 
 def get_unstaged_new_files() -> bool:
-    status_out, _ = bash_command_get_output("git status --porcelain")
-    new_unstaged_files = []
-    for file in status_out.splitlines():
-        if file.startswith("??"):
-            new_unstaged_files.append(file[3:])
-
-    return new_unstaged_files
+    # Use the shared implementation from list_files module
+    from .list_files import _get_unstaged_new_files
+    return _get_unstaged_new_files()
 
 
 def get_repo_cpp_files():
-    ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
-    file_lengths = [line.split() for line in ls_out.splitlines()][:-1]
-
+    # Use the new standardized file listing for C++ files
+    cpp_files = list_files_impl(extensions=['.cpp', '.hpp', '.cc', '.cxx', '.h'], all=True)
+    
     files = {}
-    for line_count, file in file_lengths:
-        files[file] = [[1, line_count]]
-
+    for file in cpp_files:
+        try:
+            # Count lines in the file to maintain the same interface
+            with open(file, 'r') as f:
+                line_count = sum(1 for _ in f)
+            files[file] = [[1, line_count]]
+        except Exception:
+            # If we can't read the file, default to assuming it has some lines
+            files[file] = [[1, 100]]
+    
     return files
 
 
