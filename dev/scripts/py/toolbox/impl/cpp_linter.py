@@ -68,7 +68,7 @@ def get_repo_cpp_files():
     # Use the new standardized file listing for C++ files
     return list_files_impl(
         extensions=['.cpp', '.hpp', '.cc', '.cxx', '.h'], 
-        modified=False, 
+        only_modified=False, 
         lines=True
     )
 
@@ -78,7 +78,7 @@ def get_modified_files_and_lines(branch: str, no_merge_base: bool = False):
     return list_files_impl(
         branch=branch,
         no_merge_base=no_merge_base,
-        modified=True,
+        only_modified=True,
         lines=True
     )
 

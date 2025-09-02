@@ -4,7 +4,7 @@
 original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
-# Gather files using the new toolbox command
+# Gather C++ files
 files=$(python3 toolbox.py list-files --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
 
 # Find binary

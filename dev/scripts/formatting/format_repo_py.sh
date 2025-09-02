@@ -4,7 +4,7 @@
 original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
-# Gather files into array using the new toolbox command
+# Gather files into array
 readarray -t files < <(python3 toolbox.py list-files --extensions .py)
 
 # Find binary

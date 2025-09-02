@@ -17,6 +17,7 @@ from ..impl.list_files import list_files_impl
 )
 @option(
     "--modified",
+    "only_modified",
     is_flag=True,
     help="List only modified files instead of all tracked files",
 )
@@ -32,7 +33,7 @@ from ..impl.list_files import list_files_impl
     help="Compare against the latest commit on branch instead of the merge base. "
          "This feature allows running on a shallow clone.",
 )
-def list_files(extensions: Tuple[str, ...], modified: bool, lines: bool, branch: str, no_merge_base: bool) -> None:
+def list_files(extensions: Tuple[str, ...], only_modified: bool, lines: bool, branch: str, no_merge_base: bool) -> None:
     """List files in the repository based on specified criteria.
     
     By default, lists all tracked files. Use --modified to list only modified files compared to origin/main.
@@ -45,13 +46,13 @@ def list_files(extensions: Tuple[str, ...], modified: bool, lines: bool, branch:
     files = list_files_impl(
         extensions=ext_list,
         branch=branch,
-        modified=modified,
+        only_modified=only_modified,
         no_merge_base=no_merge_base,
         lines=lines,
     )
     
     # Output files or files with line ranges
-    if lines and modified:
+    if lines and only_modified:
         # When lines flag is used with modified, output is a dict
         for file, line_ranges in files.items():
             for start, end in line_ranges:

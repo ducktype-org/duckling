@@ -10,7 +10,7 @@ from .helpers import (
 def list_files_impl(
     extensions: Optional[List[str]] = None,
     branch: str = "origin/main",
-    modified: bool = False,
+    only_modified: bool = False,
     no_merge_base: bool = False,
     lines: bool = False,
 ) -> Union[List[str], Dict[str, List[Tuple[int, int]]]]:
@@ -20,16 +20,16 @@ def list_files_impl(
     Args:
         extensions: List of file extensions to include (e.g., ['.cpp', '.hpp', '.py'])
                    If None, all files are included.
-        branch: The branch to compare against for modified files (ignored if modified=False)
-        modified: If True, list only modified files; if False, list all tracked files
+        branch: The branch to compare against for modified files (ignored if only_modified=False)
+        only_modified: If True, list only modified files; if False, list all tracked files
         no_merge_base: If True, compare against latest commit on branch instead of merge base
-        lines: If True and modified=True, return dict with file->line_ranges mapping
+        lines: If True and only_modified=True, return dict with file->line_ranges mapping
         
     Returns:
         List of file paths relative to the repository root when lines=False,
         or Dict mapping file paths to list of (start_line, end_line) tuples when lines=True
     """
-    if not modified:
+    if not only_modified:
         if lines:
             # For all files with lines, we return all lines in each file
             files = _get_all_tracked_files(extensions)
