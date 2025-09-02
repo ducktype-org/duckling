@@ -33,10 +33,13 @@ constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 
 // #define USE_COMPUTED_GOTO
 
+// not: undefinig default macro when using non-defult mode
 #if defined(USE_TAIL_CALLS) || defined(USE_COMPUTED_GOTO)
 	#undef USE_SWITCH_CASE
 #endif
 
+// note: since default macro is undefined when using non-default mode
+// we just have to check if all the other macros are pairwise exclusive
 #if defined(USE_TAIL_CALLS) && defined(USE_COMPUTED_GOTO)
 	#error "USE_TAIL_CALLS and USE_COMPUTED_GOTO are mutually exclusive. Choose only one"
 #endif
