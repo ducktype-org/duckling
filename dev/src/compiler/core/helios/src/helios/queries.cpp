@@ -302,7 +302,7 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const> stmt) override { empty = true; }
+			void visitConst(pst::Access<pst::Const>) override { empty = true; }
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
