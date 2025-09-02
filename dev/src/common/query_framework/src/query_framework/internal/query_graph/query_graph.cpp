@@ -77,7 +77,11 @@ namespace query::internal {
 
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
-		for (auto& [k, v]: node_deps) index[k] = id++;
+		for (auto& [k, v]: node_deps) {
+			index[k] = id++;
+			out << id << " " << k.q_id.getData().name << "\n"; 
+		}
+
 		for (auto& [k, v]: node_deps)
 			for (auto& dep: v) out << index[k] << " " << index[dep] << "\n";
 	}
