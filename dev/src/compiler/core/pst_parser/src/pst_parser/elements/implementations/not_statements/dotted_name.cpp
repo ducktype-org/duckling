@@ -3,9 +3,7 @@
 #include "preamble.hpp"
 
 namespace base::extend {
-	void BoxPtrDeleter<pst::DottedName>::del(pst::DottedName* ptr) {
-		delete ptr;
-	}
+	void BoxPtrDeleter<pst::DottedName>::del(pst::DottedName* ptr) { delete ptr; }
 }
 
 namespace pst {

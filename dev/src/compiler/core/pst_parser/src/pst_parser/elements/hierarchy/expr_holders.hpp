@@ -150,8 +150,6 @@ namespace base::extend {
 	 */
 	template<>
 	struct BoxPtrDeleter<pst::UniversalExprHolder> {
-		static void del(pst::UniversalExprHolder* ptr) {
-			delete ptr;
-		}
+		static void del(pst::UniversalExprHolder* ptr) { delete ptr; }
 	};
 }

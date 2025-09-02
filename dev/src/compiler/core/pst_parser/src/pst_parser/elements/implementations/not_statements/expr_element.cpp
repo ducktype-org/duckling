@@ -7,9 +7,7 @@
 #include "preamble.hpp"
 
 namespace base::extend {
-	void BoxPtrDeleter<pst::ExprElement>::del(pst::ExprElement* ptr) {
-		delete ptr;
-	}
+	void BoxPtrDeleter<pst::ExprElement>::del(pst::ExprElement* ptr) { delete ptr; }
 }
 
 namespace pst {
