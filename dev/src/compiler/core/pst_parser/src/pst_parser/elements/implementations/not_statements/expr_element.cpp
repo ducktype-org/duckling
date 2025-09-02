@@ -6,6 +6,12 @@
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+namespace base::extend {
+	void BoxPtrDeleter<pst::ExprElement>::del(pst::ExprElement* ptr) {
+		delete ptr;
+	}
+}
+
 namespace pst {
 	class EmptyExprError final: public dia::Error {
 	protected:

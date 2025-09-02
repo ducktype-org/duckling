@@ -2,6 +2,7 @@
 
 #include "../lists/attribute_arg_list.hpp"
 #include "../meta.hpp"
+#include "dotted_name.hpp"
 
 #include <base/box.hpp>
 

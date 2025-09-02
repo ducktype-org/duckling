@@ -2,6 +2,8 @@
 
 #include "../meta.hpp"
 
+#include <base/box.hpp>
+
 namespace pst {
 	/**
 	 * @brief Simple dotted name that is Identifiers separated by dots potentially ended by `.*`
@@ -44,5 +46,16 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~DottedName() final = default;
+	};
+}
+
+namespace base::extend {
+	/**
+	 * @brief Custom Box/MBox deleter for DottedName.
+	 * It is needed to avoid UB with delete on incomplete type.
+	 */
+	template<>
+	struct BoxPtrDeleter<pst::DottedName> {
+		static void del(pst::DottedName* ptr);
 	};
 }

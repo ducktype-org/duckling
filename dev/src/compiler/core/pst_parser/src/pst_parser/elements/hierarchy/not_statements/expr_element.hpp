@@ -2,6 +2,8 @@
 
 #include "../meta.hpp"
 
+#include <base/box.hpp>
+
 namespace pst {
 	/**
 	 * @brief Common root for expression sub-elements.
@@ -28,5 +30,16 @@ namespace pst {
 
 	public:
 		virtual void acceptExprVisitor(expr::PstExprVisitor& visitor) const = 0;
+	};
+}
+
+namespace base::extend {
+	/**
+	 * @brief Custom Box/MBox deleter for ExprElement.
+	 * It is needed to avoid UB with delete on incomplete type.
+	 */
+	template<>
+	struct BoxPtrDeleter<pst::ExprElement> {
+		static void del(pst::ExprElement* ptr);
 	};
 }

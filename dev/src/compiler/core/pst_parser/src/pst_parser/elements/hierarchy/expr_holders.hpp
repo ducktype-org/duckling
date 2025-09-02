@@ -2,7 +2,9 @@
 
 #include "../lang_state_unmethods.hpp"
 #include "meta.hpp"
+#include "not_statements/expr_element.hpp"
 
+#include <base/box.hpp>
 #include <base/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -138,5 +140,18 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ForTypeExprHolder() final = default;
+	};
+}
+
+namespace base::extend {
+	/**
+	 * @brief Custom Box/MBox deleter for UniversalExprHolder.
+	 * It is needed to avoid UB with delete on incomplete type.
+	 */
+	template<>
+	struct BoxPtrDeleter<pst::UniversalExprHolder> {
+		static void del(pst::UniversalExprHolder* ptr) {
+			delete ptr;
+		}
 	};
 }

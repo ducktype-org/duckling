@@ -2,6 +2,12 @@
 
 #include "preamble.hpp"
 
+namespace base::extend {
+	void BoxPtrDeleter<pst::DottedName>::del(pst::DottedName* ptr) {
+		delete ptr;
+	}
+}
+
 namespace pst {
 
 	bool DottedName::getStar() const { return star; }
