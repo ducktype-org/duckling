@@ -945,8 +945,9 @@ namespace vm {
 				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to
 				// null-poiner (what we do here)
 				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
-				// C-nullptr as their data, but on DVM level we would still allow pointer [0-sized-block,
-				// nullptr] to exist. Any access to such block would simply be out-of-bound access.
+				// C-nullptr as their data, but on DVM level we would still allow pointer
+				// [0-sized-block, nullptr] to exist. Any access to such block would simply
+				// be out-of-bound access.
 				//
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
