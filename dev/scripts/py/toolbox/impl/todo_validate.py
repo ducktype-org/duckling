@@ -2,6 +2,7 @@ import re
 import os
 import json
 import shutil
+from typing import List, Optional
 from .helpers import (
     BashCommandError,
     log_info, 
@@ -10,17 +11,20 @@ from .helpers import (
     bash_command_get_output,
 )
 
-def get_open_issues_from_github():
+def check_issue_exists_and_open(issue_number: str) -> bool:
     """
-    Retrieves all open issue numbers from GitHub for the current repository.
+    Check if a specific GitHub issue exists and is open.
     
+    Args:
+        issue_number: The issue number to check
+        
     Returns:
-        list[str]: List of open issue numbers as strings, empty list if none found or on error
+        bool: True if the issue exists and is open, False otherwise
     """
     # Check if 'gh' is available
     if shutil.which('gh') is None:
         log_warning("'gh' CLI not found. Cannot validate issue existence.")
-        return []
+        return False
 
     # Get OWNER and REPO from git remote (support both SSH and HTTPS URLs)
     try:
@@ -28,20 +32,20 @@ def get_open_issues_from_github():
         remote_url = remote_url.strip()
     except BashCommandError as e:
         log_warning(f"Could not get git remote url: {e}")
-        return []
+        return False
     
     m = re.match(r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url)
     if not m:
         log_warning("Could not parse OWNER/REPO from git remote.")
-        return []
+        return False
     owner, repo = m.group(2), m.group(3)
 
-    # Query for open issues using GraphQL
+    # Query for specific issue using GraphQL
     query = f"""{{
       repository(owner: "{owner}", name: "{repo}") {{
-        issues(states: OPEN, first: 100) {{
-          nodes {{ number }}
-          pageInfo {{ hasNextPage endCursor }}
+        issue(number: {issue_number}) {{
+          number
+          state
         }}
       }}
     }}"""
@@ -50,45 +54,41 @@ def get_open_issues_from_github():
     try:
         gh_output, _ = bash_command_get_output(gh_cmd)
         data = json.loads(gh_output)
-        nodes = (
+        issue = (
             data.get("data", {})
                 .get("repository", {})
-                .get("issues", {})
-                .get("nodes", [])
+                .get("issue")
         )
-        issue_numbers = [str(node["number"]) for node in nodes if "number" in node]
         
-        # Note: This only gets first 100 issues. For a more complete implementation,
-        # we could handle pagination, but for TODO validation this should be sufficient.
-        return issue_numbers
+        if issue is None:
+            return False  # Issue doesn't exist
+            
+        return issue.get("state") == "OPEN"
         
     except BashCommandError as e:
-        log_warning(f"Error while fetching open issues via gh api: {e}")
-        return []
+        log_warning(f"Error while checking issue #{issue_number} via gh api: {e}")
+        return False
     except json.JSONDecodeError as e:
         log_warning(f"Error parsing GitHub API response: {e}")
-        return []
+        return False
 
 def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False) -> bool:
     """
     Validates that all TODO/FIXME comments follow the required format with issue numbers.
     
-    Returns True if all TODOs are properly formatted, False if any violations are found.
+    Args:
+        branch: Git branch to check against (default: origin/main)
+        no_merge_base: If True, skip merge base calculation
+    
+    Returns:
+        bool: True if all TODOs are properly formatted, False if any violations are found.
     """
     
-    # Get valid open issue numbers from GitHub
-    valid_issues = get_open_issues_from_github()
-    if not valid_issues:
-        log_warning("Could not fetch open issues from GitHub. Skipping issue existence validation.")
-        valid_issues = []
-    
     # Define strict patterns for TODO/FIXME comments in the required format
-    # Format: @TODO #123 description or TODO #123 description
+    # Format: @TODO #123 description or @FIXME #123 description (only @ prefixed)
     todo_patterns = [
         re.compile(r'@TODO\s+#(\d+)\s+\S+', re.IGNORECASE),
         re.compile(r'@FIXME\s+#(\d+)\s+\S+', re.IGNORECASE),
-        re.compile(r'\bTODO\s+#(\d+)\s+\S+', re.IGNORECASE),
-        re.compile(r'\bFIXME\s+#(\d+)\s+\S+', re.IGNORECASE),
     ]
     
     # Patterns to detect any TODO/FIXME comment (for reporting violations)
@@ -106,23 +106,17 @@ def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False)
         log_warning(f"Could not get file list from git: {e}")
         return True
     
-    # Filter to only check source files (exclude generated files, docs, etc.)
-    source_extensions = {'.cpp', '.hpp', '.c', '.h', '.cc', '.cxx', '.hxx', '.py', '.cmake'}
-    source_files = []
-    for file in files:
-        if os.path.isdir(file):
-            continue
-        _, ext = os.path.splitext(file)
-        if ext.lower() in source_extensions or file.endswith('CMakeLists.txt'):
-            source_files.append(file)
-    
+    # Check all files as requested - we don't store generated files in git
     violations_found = False
     violation_count = 0
     invalid_issue_count = 0
     
     log_info("Validating TODO/FIXME comments format...")
     
-    for file in source_files:
+    for file in files:
+        if os.path.isdir(file):
+            continue
+            
         try:
             with open(file, "r", encoding='utf-8', errors='ignore') as f:
                 for line_num, line in enumerate(f, 1):
@@ -145,7 +139,7 @@ def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False)
                             log_warning(f"{file}:{line_num}: {line.strip()}")
                             violations_found = True
                             violation_count += 1
-                        elif valid_issues and issue_number not in valid_issues:
+                        elif issue_number and not check_issue_exists_and_open(issue_number):
                             log_warning(f"{file}:{line_num}: Issue #{issue_number} does not exist or is not open: {line.strip()}")
                             violations_found = True
                             invalid_issue_count += 1

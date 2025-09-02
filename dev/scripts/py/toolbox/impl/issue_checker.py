@@ -1,5 +1,6 @@
 import re
 import json
+from typing import List, Optional
 from .helpers import (
     BashCommandError,
     log_info, 
@@ -9,7 +10,7 @@ from .helpers import (
 )
 import os
 
-def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+def issue_checker_impl(issues: Optional[List[str]], branch: str = "origin/main", no_merge_base: bool = False) -> bool:
     """
     Checks if specified GitHub issue numbers appear in the codebase.
     
@@ -72,7 +73,7 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
         log_info(f"#{num}: {summary[num]} occurrence(s)")
     return not found_any
 
-def get_issues_from_github():
+def get_issues_from_github() -> List[str]:
     """
     Retrieves open issue numbers from GitHub for the current repository and PR.
     
