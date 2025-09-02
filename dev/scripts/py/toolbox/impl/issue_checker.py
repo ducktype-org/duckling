@@ -10,6 +10,17 @@ from .helpers import (
 import os
 
 def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
+    """
+    Checks if specified GitHub issue numbers appear in the codebase.
+    
+    Args:
+        issues: List of issue numbers to search for in the code
+        branch: Git branch to check against (default: origin/main)
+        no_merge_base: If True, skip merge base calculation
+        
+    Returns:
+        bool: True if no issue references found, False if issues were found in code
+    """
     if(not issues):
         issues = get_issues_from_github()
         if not issues:
@@ -62,6 +73,19 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
     return not found_any
 
 def get_issues_from_github():
+    """
+    Retrieves open issue numbers from GitHub for the current repository and PR.
+    
+    This function:
+    1. Checks if 'gh' CLI is available
+    2. Extracts repository owner/name from git remote
+    3. Gets current branch name
+    4. Finds associated Pull Request number (from PR_NUMBER env var or gh CLI)
+    5. Queries GitHub GraphQL API for issues that would be closed by the PR
+    
+    Returns:
+        list[str]: List of open issue numbers as strings, empty list if none found or on error
+    """
     import shutil
 
     # Check if 'gh' is available
