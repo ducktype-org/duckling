@@ -23,7 +23,6 @@ function main { i64, ptr_argv } -> i64 {
     # If we reach here, pointer is not null - this is an error
     mov_l64_imm iter, 1;  # Error code 1
     output_l64 iter;
-    free_lptr tbl_ptr;
     deinit; # iter
     deinit; # *tbl_ptr
     deinit; # *argv
