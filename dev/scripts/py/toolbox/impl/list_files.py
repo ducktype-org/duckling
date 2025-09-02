@@ -35,13 +35,9 @@ def list_files_impl(
             files = _get_all_tracked_files(extensions)
             result = {}
             for file in files:
-                try:
-                    line_count_str, _ = bash_command_get_output(f"wc -l < {file}")
-                    line_count = int(line_count_str.strip())
-                    result[file] = [(1, line_count)]
-                except Exception:
-                    # If we can't read the file, default to assuming it has some lines
-                    result[file] = [(1, 100)]
+                line_count_str, _ = bash_command_get_output(f"wc -l < {file}")
+                line_count = int(line_count_str.strip())
+                result[file] = [(1, line_count)]
             return result
         else:
             return _get_all_tracked_files(extensions)

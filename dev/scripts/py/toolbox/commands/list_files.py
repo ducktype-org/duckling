@@ -27,7 +27,7 @@ from ..impl.list_files import list_files_impl
 @option(
     "--lines",
     is_flag=True,
-    help="Return line ranges for each file (only applicable with --modified)",
+    help="Return line ranges for each file",
 )
 @no_merge_base(
     help="Compare against the latest commit on branch instead of the merge base. "
@@ -38,7 +38,7 @@ def list_files(extensions: Tuple[str, ...], only_modified: bool, lines: bool, br
     
     By default, lists all tracked files. Use --modified to list only modified files compared to origin/main.
     Use --extensions to filter by file type (e.g., --extensions .cpp --extensions .hpp).
-    Use --lines with --modified to get line ranges for each modified file.
+    Use --lines to get line ranges for each file (full ranges for all files, or specific ranges for modified files).
     """
     # Convert extensions tuple to list, or None if empty
     ext_list = list(extensions) if extensions else None
@@ -52,8 +52,8 @@ def list_files(extensions: Tuple[str, ...], only_modified: bool, lines: bool, br
     )
     
     # Output files or files with line ranges
-    if lines and only_modified:
-        # When lines flag is used with modified, output is a dict
+    if lines:
+        # When lines flag is used, output is a dict
         for file, line_ranges in files.items():
             for start, end in line_ranges:
                 print(f"{file}:{start}-{end}")
