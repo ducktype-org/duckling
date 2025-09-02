@@ -26,7 +26,7 @@ def list_files_impl(
         lines: If True and only_modified=True, return dict with file->line_ranges mapping
         
     Returns:
-        List of file paths relative to the repository root when lines=False,
+        List of file paths relative to the current working directory when lines=False,
         or Dict mapping file paths to list of (start_line, end_line) tuples when lines=True
     """
     if not only_modified:
@@ -76,7 +76,7 @@ def _get_modified_files(
     # Get the diff
     try:
         diff_out, _ = bash_command_get_output(
-            f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only"
+            f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative"
         )
         files = [f.strip() for f in diff_out.strip().split('\n') if f.strip()]
     except Exception as e:
