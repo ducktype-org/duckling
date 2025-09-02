@@ -1,3 +1,4 @@
+from typing import Tuple
 from click import command, option
 
 from .helpers import (
@@ -25,7 +26,7 @@ from ..impl.list_files import list_files_impl
     help="Compare against the latest commit on branch instead of the merge base. "
          "This feature allows running on a shallow clone.",
 )
-def list_files(extensions, all, branch, no_merge_base):
+def list_files(extensions: Tuple[str, ...], all: bool, branch: str, no_merge_base: bool) -> None:
     """List files in the repository based on specified criteria.
     
     By default, lists modified files compared to origin/main. Use --all to list all tracked files.

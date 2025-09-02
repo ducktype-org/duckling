@@ -4,8 +4,8 @@
 original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
-# Gather files
-files=$(./scripts/list_files.sh)
+# Gather files using the new toolbox command
+files=$(python3 toolbox.py list-files --all --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
 
 # Find binary
 clang_format=clang-format-19
