@@ -940,11 +940,12 @@ namespace vm {
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
 			if (new_elem_count == 0) {
-				// When reallocating to 0 elements, we free the data and set pointer to null.
+				// When reallocating dynamic data to 0 elements, we free the data and set pointer to null.
 				// This is one of two possible approaches:
-				// 1. Current approach: Free the data (what we do here)
-				// 2. Alternative approach: Allow blocks of size 0, which would be compliant
-				//    with duckling's semantics when that design choice is made
+				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to null-poiner (what we do here)
+				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the C-nullptr as their data, but on DVM level we would still allow pointer [0-sized-block, nullptr] to exist. Any access to such block would simply be out-of-bound access.
+				//
+				// It might be desired to switch to second approach in the future, depending on the semantics of Duckling arrays. 
 				const Pointer new_dst
 					= thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
