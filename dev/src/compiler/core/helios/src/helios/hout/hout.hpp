@@ -32,32 +32,15 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * @brief Storage for heavy function data,
-	 * in a way that makes it cheap to copy, since
-	 * we want HOUTFunction to be a copyable object.
-	 * @note use of shared_ptr's is intentional, as they
-	 * work well for incomplete types, and fit the use case.
-	 * In the future we might optimize it to single (or zero) shared_ptr, but
-	 * that will require some boilerplate.
+	 * @brief Storage of information coming from function declaration without processing its body.
 	 */
-	struct HOUTFunctionContent {
-		std::shared_ptr<const std::vector<code::Parameter>> parameters;
-		std::shared_ptr<const code::CodeBlock>              body;
-	};
+	struct HOUTFunctionDeclaration {
+		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
 
-	/**
-	 * @brief placeholder for functions, methods, etc
-	 */
-	struct HOUTFunction {
-		// @TODO:
-		// - flags like "pure", "thread safe", "shared-thread-function", etc
+		HOUTFunctionDeclaration() = delete;
 
-		// @TODO: decide if HOUT functions should contain its HELIOS SymID
-
-		HOUTFunction() = delete;
-
-		HOUTFunction(const HOUTFunction&) = default;
-		HOUTFunction(HOUTFunction&&)      = default;
+		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = default;
+		HOUTFunctionDeclaration(HOUTFunctionDeclaration&&)      = default;
 
 		/**
 		 * @note it is used for hashes, and == only
@@ -69,9 +52,15 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
-		HOUTFunctionContent content;
-
 		tsh::FunctionAbstractType type;
+
+		/**
+		 * @note use of shared_ptr's is intentional, as they
+		 * work well for incomplete types, and fit the use case.
+		 * In the future we might optimize it to single (or zero) shared_ptr, but
+		 * that will require some boilerplate.
+		 */
+		std::shared_ptr<const std::vector<code::Parameter>> parameters;
 
 		/**
 		 * @brief Lifetime scope, thats higher
@@ -79,25 +68,39 @@ namespace compiler::helios {
 		 */
 		helios::ScopeID top_lifetime_scope;
 
-		[[nodiscard]]
-		std::string debugPrint() const;
+		bool operator==(const HOUTFunctionDeclaration& oth) const {
+			return original_symbol == oth.original_symbol;
+		}
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		bool operator==(const HOUTFunction& oth) const {
-			return original_symbol == oth.original_symbol;
-		}
+		[[nodiscard]]
+		std::string debugPrint() const;
 
 	private:
-		/**
-		 * Construct a HOUT Function object.
-		 * @param symbol The symbol of the function.
-		 * @param ctx The query context to resolve the function's properties.
-		 */
-		HOUTFunction(SymID symbol, query::Context& ctx);
+		HOUTFunctionDeclaration(SymID symbol, query::Context& ctx);
+		friend ImplementationOf_QueryCodeOFFun;  // TODO co innego
+	};
 
-		friend ImplementationOf_QueryCodeOFFun;
+	/**
+	 * @brief placeholder for functions, methods, etc. It is declaration extended by function content.
+	 */
+	struct HOUTFunction: public HOUTFunctionDeclaration {
+		using HOUTFunctionDeclaration::HOUTFunctionDeclaration;
+		// @TODO (maybe in declaration?):
+		// - flags like "pure", "thread safe", "shared-thread-function", etc
+
+		/**
+		 * @note use of shared_ptr's is intentional, as they
+		 * work well for incomplete types, and fit the use case.
+		 * In the future we might optimize it to single (or zero) shared_ptr, but
+		 * that will require some boilerplate.
+		 */
+		std::shared_ptr<const code::CodeBlock> body;
+
+		[[nodiscard]]
+		std::string debugPrint() const;
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };

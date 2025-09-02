@@ -19,6 +19,8 @@
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <helios/queries.hpp>
+
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
@@ -451,6 +453,12 @@ namespace compiler::helios::code {
 			std::vector<base::Box<Expr>> coerced_arguments;
 			base::HashMap<base::StrID, base::Box<Expr>> coerced_named_arguments; // TODO
 			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+				//compiler::helios::
+				//auto tmp = compiler::helios::stmt(query_ctx, callee);
+				//((pst::Fun*)&tmp)->getParams();
+				stmt(query_ctx, callee);
+				//std::cout<<compiler::helios::name(callee).str()<<'\n';
+				query_ctx.query<QueryCodeOFFun>(callee);
 				auto coerced = coerceExpression(
 					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
 				);

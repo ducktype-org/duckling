@@ -653,12 +653,12 @@ namespace compiler::mir {
 			}
 
 			u64 parameter_index = 0;
-			for (const auto& parameter: *hout_function.content.parameters) {
+			for (const auto& parameter: *hout_function.parameters) {
 				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
 				local->setLifetimeScope(function.getTopLevelScope());
 				parameter_index++;
 			}
-			goOverCodeBlock(*hout_function.content.body);
+			goOverCodeBlock(*hout_function.body);
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
@@ -1300,7 +1300,7 @@ namespace compiler::mir {
 
 		// build cfg+quad step by step:
 		auto first_block = lowerCodeBlock(
-			*function.content.body, last_block, function_builder, function_builder.getTopLevelScope()
+			*function.body, last_block, function_builder, function_builder.getTopLevelScope()
 		);
 
 		function_builder.setEntry(first_block.begin);

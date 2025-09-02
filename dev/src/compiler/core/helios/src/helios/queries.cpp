@@ -327,7 +327,7 @@ namespace compiler::helios {
 				auto fun_body = stmt->getBody();
 
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-				output.content.body
+				output.body
 					= std::make_shared<const code::CodeBlock>(std::move(function_body));
 
 
@@ -370,7 +370,7 @@ namespace compiler::helios {
 					}
 				}
 
-				output.content.parameters
+				output.parameters
 					= std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
 
 				this->out.emplace(std::move(output));

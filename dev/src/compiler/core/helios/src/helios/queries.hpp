@@ -34,6 +34,12 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<HOUTUnit>)
 
 	/**
+	 * @brief Query declaration of function: types, args and its names.
+	 * @note Works only for SymID-s that actually represent a function. Can be called on every functon in program without making cycles.
+	 */
+	DECLARE_QUERY(QueryDeclOFFun, SymID, HOUTFunction);
+
+	/**
 	 * @brief Query code of a function.
 	 * @note Works only for SymID-s that actually represent a function
 	 */

@@ -33,14 +33,30 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::string HOUTFunction::debugPrint() const {
+	HOUTFunctionDeclaration::HOUTFunctionDeclaration(SymID symbol, query::Context& ctx):
+		  original_symbol(symbol),
+		  original_name(name(original_symbol)),
+		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
+	               ->expect("Handling errors in HOUT is not supported yet")
+	               .getType()),
+		  top_lifetime_scope(parent(scope(symbol)).value()) {
+		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	}
+
+	u64 HOUTFunctionDeclaration::queryUnstablePerfectHash() const {
+		// @note: see
+		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
+		return original_symbol.queryUnstablePerfectHash();
+	}
+
+	std::string HOUTFunctionDeclaration::debugPrint() const {
 		std::stringstream out;
 		out << "fun ";
 		out << original_name.strView() << " : ";
 		out << this->type.toString() << "\n";
 		out << "Parameters: \n";
-		if (content.parameters->empty()) out << "  none\n";
-		for (auto& param: *content.parameters) {
+		if (parameters->empty()) out << "  none\n";
+		for (auto& param: *parameters) {
 			out << "  " << param.name.strView() << " : ";
 			out << param.type.toString();
 			if (param.initial_value.has_value()) {
@@ -49,26 +65,15 @@ namespace compiler::helios {
 			}
 			out << "\n";
 		}
-		out << "{\n";
-		for (auto& stmt: content.body->statements) stmt->debugPrint(out, 1);
-		out << "}\n";
 		return out.str();
 	}
 
-	u64 HOUTFunction::queryUnstablePerfectHash() const {
-		// @note: see
-		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
-		return original_symbol.queryUnstablePerfectHash();
-	}
-
-	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
-		  original_symbol(symbol),
-		  original_name(name(original_symbol)),
-		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               ->expect("Handling errors in HOUT is not supported yet")
-	               .getType()),
-		  top_lifetime_scope(parent(scope(symbol)).value()) {
-		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	std::string HOUTFunction::debugPrint() const {
+		std::stringstream out;
+		out << "{\n";
+		for (auto& stmt: body->statements) stmt->debugPrint(out, 1);
+		out << "}\n";
+		return HOUTFunctionDeclaration::debugPrint() + out.str();
 	}
 
 	std::string HOUTGlobalData::debugPrint() const {
