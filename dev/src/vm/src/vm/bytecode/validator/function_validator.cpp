@@ -1131,6 +1131,8 @@ class FunctionValidator {
 			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
+		if (!tod_map.contains(function.signature.result_type.str))
+			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
 	}
 
 public:
