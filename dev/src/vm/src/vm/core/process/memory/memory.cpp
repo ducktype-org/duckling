@@ -309,6 +309,7 @@ namespace vm {
 		const TypeCRef         type,
 		void (Memory::*callback)(base::ModRawView data, TypeCRef type)
 	) {
+		for (auto  = data.getBegin(); )
 		(this->*callback)(data, type);
 		switch (type->getKind()) {
 		case Type::Kind::Primitive:
