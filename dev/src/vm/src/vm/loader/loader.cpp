@@ -171,7 +171,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 			e.label,
 			[&](Box<SomeValidationError>& err) {
 				for (const auto& instruction: e.jumps)
-					log.addNote<SomeValidationNote>(err, instruction, e.NOTE_MSG);
+					log.addNote<SomeValidationNote>(err, instruction, code::StackStructureMismatchError::NOTE_MSG);
 			},
 			e.what()
 		);

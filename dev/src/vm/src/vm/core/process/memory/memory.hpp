@@ -52,8 +52,6 @@ namespace vm {
 
 		void deleteBlock(Ref<Block> block);
 
-		void destroyReference(Ref<Block> block);
-
 		[[nodiscard]]
 		Ref<Block> getBlock(BlockID id);
 
@@ -69,7 +67,7 @@ namespace vm {
 		 * @note Frees *block_dst's nested blocks whose offsets would not fit
 		 * inside the new memory area.
 		 */
-		auto movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+		auto movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_number) -> void;
 
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.
@@ -77,11 +75,15 @@ namespace vm {
 		 */
 		void runDataDestructors(Ref<Block> block);
 
+		void runDataDestructors(base::ModRawView data, TypeCRef type);
+
 		/**
 		 * @brief Executes copy constructors on individual objects that are in the block.
 		 * @param block The block to source the data from.
 		 */
 		void runDataCopyConstructors(Ref<Block> block);
+
+		void runDataCopyConstructors(base::ModRawView data, TypeCRef type);
 
 		/**
 		 * @brief Iterates over each object in the block and calls the callback on it.
@@ -201,8 +203,8 @@ namespace vm {
 
 		// ======================== Pointers ========================
 
-		static void increaseBlockRefCount(Ref<Block> block);
-		static void decreaseBlockRefCount(Ref<Block> block);
+		void increaseBlockRefcount(Ref<Block> block);
+		void decreaseBlockRefcount(Ref<Block> block);
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer;

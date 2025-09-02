@@ -67,14 +67,10 @@ namespace vm {
 		bool deallocated = false;
 
 		/**
-		 * @brief Flag whether the block is used.
-		 * The block is not used, if it is inside the "free_ids" list of the Memory class.
-		 * It can be reused for a new block.
-		 */
-		bool used = true;
-
-		/**
 		 * @brief The reference count of the block.
+		 * If anybody is looking at a block (function stack, pointer, parent block, etc.), then
+		 * refcount should stay positive. If refcount is dropped to 0, then nobody needs the
+		 * block anymore, so if it's still deallocated=false, then it means we have a leak.
 		 */
 		u64 refcount = 0;
 

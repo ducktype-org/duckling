@@ -178,6 +178,7 @@ namespace vm::loader::compiler {
 				offsets.put(local.var_name, curr_stack_size);
 				auto type_size = ctx.type_map.at(type.type_name)->getSize();
 				type_size_stack.push_back(type_size);
+				if (type.type_name == "void") return;
 				curr_stack_size += type_size;
 				max_stack_size = std::max(max_stack_size, curr_stack_size);
 			};

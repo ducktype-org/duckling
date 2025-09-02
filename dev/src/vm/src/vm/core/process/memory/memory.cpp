@@ -30,18 +30,13 @@ namespace vm {
 	}
 
 	void Memory::deleteBlock(Ref<Block> block) {
-		block->used = false;
+		if (!block->deallocated) throw exceptions::VMFoundMemoryLeakException();
 		free_ids.push_back(block->id);
-	}
-
-	void Memory::destroyReference(Ref<Block> block) {
-		if (block->refcount == 0) throw exceptions::VMUnreferencedBlockDeletionException();
-		if (--block->refcount == 0) deleteBlock(block);
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
 		if (static_cast<u64>(id) >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
-		if (!blocks[usize(id)].used) exceptions::VMUseAfterFreeException();
+		if (blocks[static_cast<usize>(id)].deallocated) throw exceptions::VMUseAfterFreeException();
 		return &blocks[static_cast<u64>(id)];
 	}
 
@@ -95,18 +90,16 @@ namespace vm {
 		// Parents reference their children so that they don't disappear on someone's pointer
 		// destruction.
 		if (block->parent)
-			destroyReference(block);
+			decreaseBlockRefcount(block);
 		else
 			block->data.allocator->deallocate(&block->data);
 
 		block->deallocated = true;
-		if (block->refcount == 0) deleteBlock(block);
 	}
 
 	auto Memory::requestBlockIDs() -> std::vector<BlockID> {
 		std::vector<BlockID> ids;
-		for (auto& block: blocks)
-			if (block.used) ids.push_back(block.id);
+		for (auto& block: blocks) ids.push_back(block.id);
 		return ids;
 	}
 
@@ -159,11 +152,12 @@ namespace vm {
 		block_data.view         = getPointerData(parent_pointer, type->getSize());
 
 		auto new_block = createBlock(block_data);  // @note createBlock nulls them bytes
-		increaseBlockRefCount(new_block);  // so that the block does not disappear accidentally
+		increaseBlockRefcount(new_block);  // so that the block does not disappear accidentally
 		children.put(parent_pointer.offset, new_block);
 	}
 
 	void Memory::copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
+		runDataCopyConstructors(block_dst);  // Should this be here or at the end?
 		for (auto nested: block_src->children_blocks) {
 			Pointer new_pointer{ block_dst, nested.first };
 			setNestedViewBlock(new_pointer, nested.second->data.element_type);
@@ -173,7 +167,7 @@ namespace vm {
 		}
 	}
 
-	auto Memory::movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void {
+	auto Memory::movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_number) -> void {
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst{ *dst.block->mutex_ref };
@@ -189,7 +183,7 @@ namespace vm {
 		// Copy the child blocks.
 		auto& src_child_blocks = src.getBlock()->children_blocks;
 		for (auto iter = src_child_blocks.lower_bound(src.offset);
-		     iter != src_child_blocks.end() && iter->first < src.offset + byte_size;
+		     iter != src_child_blocks.end() && iter->first < src.offset + byte_number;
 		     ++iter) {
 			auto    offset = dst.offset + iter->first - src.offset;
 			Pointer new_pointer{ dst.getBlock(), offset };
@@ -198,13 +192,17 @@ namespace vm {
 		}
 
 		// Copy the data itself.
-		auto dst_view = getPointerData(dst, byte_size);
-		auto src_view = getPointerData(src, byte_size);
-		std::memcpy(dst_view.getBegin(), src_view.getBegin(), byte_size);
+		auto dst_view = getPointerData(dst, byte_number);
+		auto src_view = getPointerData(src, byte_number);
+		runDataDestructors(dst_view, dst);
+		std::memcpy(dst_view.getBegin(), src_view.getBegin(), byte_number);
 		runDataCopyConstructors(dst.getBlock());
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
+		// When copying with this or any function we need to first free the previous data and call
+		// the data destructors, then run copy constructors only on the copied data parts.
+
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 		std::lock_guard lock_dst(*dst.block->mutex_ref);
@@ -232,14 +230,15 @@ namespace vm {
 		// Copy the data itself
 		auto dst_view = getPointerData(dst, type->getSize());
 		auto src_view = getPointerData(src, type->getSize());
+		runDataDestructors(dst_view, type);
 		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize());
-		runDataCopyConstructors(dst.getBlock());
+		runDataCopyConstructors(dst_view, type);
 	}
 
 	auto Memory::destroyBlockReference(Pointer pointer) -> void {
 		if_opt_some(pointer.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
-			destroyReference(block);
+			decreaseBlockRefcount(block);
 		}
 	}
 
@@ -267,22 +266,36 @@ namespace vm {
 		return block->data.element_type;
 	}
 
-	void Memory::increaseBlockRefCount(Ref<Block> block) {
+	void Memory::increaseBlockRefcount(Ref<Block> block) {
 		std::lock_guard lock(*block->mutex_ref);
+		if (block->id.asInt() == 7) {
+			std::cerr << "Here!!!\n";
+		}
 		block->refcount++;
 	}
 
-	void Memory::decreaseBlockRefCount(Ref<Block> block) {
+	void Memory::decreaseBlockRefcount(Ref<Block> block) {
 		std::lock_guard lock(*block->mutex_ref);
-		block->refcount--;
+		CORE_ASSERT(
+			block->refcount > 0, "Deleting an unreferenced block"
+		);  // This should never be possible, even in a faulty program
+		if (--block->refcount == 0) deleteBlock(block);
 	}
 
 	void Memory::runDataDestructors(Ref<Block> block) {
 		iterateOverDataAndExecute(block, &Memory::runObjectDestructor);
 	}
 
+	void Memory::runDataDestructors(base::ModRawView data, TypeCRef type) {
+		iterateOverDataAndExecute(data, type, &Memory::runObjectCopyConstructor);
+	}
+
 	void Memory::runDataCopyConstructors(Ref<Block> block) {
 		iterateOverDataAndExecute(block, &Memory::runObjectCopyConstructor);
+	}
+
+	void Memory::runDataCopyConstructors(base::ModRawView data, TypeCRef type) {
+		iterateOverDataAndExecute(data, type, &Memory::runObjectCopyConstructor);
 	}
 
 	void Memory::iterateOverDataAndExecute(
@@ -351,7 +364,7 @@ namespace vm {
 		switch (type->getKind()) {
 		case Type::Kind::Pointer: {
 			const auto ptr = safeReadBytes<Pointer>(data.getBegin());
-			if_opt_some(ptr.block.toOpt(), block) increaseBlockRefCount(block);
+			if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
 			break;
 		}
 		case Type::Kind::Primitive:
@@ -377,7 +390,6 @@ namespace vm {
 	}
 		for (const auto& block: blocks) {
 			TEST_HERE(block.refcount != 0)
-			TEST_HERE(block.used)
 			TEST_HERE(!block.deallocated)
 		}
 		return true;

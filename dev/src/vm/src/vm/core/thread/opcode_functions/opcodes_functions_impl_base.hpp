@@ -81,7 +81,10 @@ namespace vm {
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
-	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
+		{ CORE_ASSERT(frame->block_stack.size() == 1, "Invalid start function."); }
+		IF_TC(return;)
+	}
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                            \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
@@ -431,6 +434,7 @@ namespace vm {
 				auto block = frame->block_stack.back();
 				frame->block_stack.pop_back();
 				thread.process_memory.freeBlock(block);
+				thread.process_memory.decreaseBlockRefcount(block);
 			}
 			if (arg_count > 0)
 				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
@@ -462,10 +466,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto  function_id = static_cast<usize>(instr->arg0);
-			auto& function    = thread.executing_program->functions[function_id];
-			std::cerr << "Tailcalling: " << function.name.strView() << std::endl;
-			instr             = function.bc.data();
+			auto  function_id       = static_cast<usize>(instr->arg0);
+			auto& function          = thread.executing_program->functions[function_id];
+			instr                   = function.bc.data();
+			frame->current_function = &function;
 
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
@@ -476,7 +480,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
-			auto* callee_frame = frame;
+			auto*      callee_frame = frame;
+			const bool void_func    = frame->current_function->result_type->getName() == "void";
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -484,26 +489,25 @@ namespace vm {
 			// substracting one from the pointer will give us the previous frame.
 			// The `instr`, `local_stack` and `frame` values should be restored from the previous
 			// call stack frame.
-			frame--;  // This is now the caller's frame.
+			frame--;  // This is now the caller's frame
 
-			bool non_void = frame->called_func_ret_size > 0;
 			while (!callee_frame->block_stack.empty()) {
 				auto block = callee_frame->block_stack.back();
 
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
-				if (!non_void || callee_frame->block_stack.size() != 1)
+				if (void_func || callee_frame->block_stack.size() != 1) {
 					thread.process_memory.freeBlock(block);
+					thread.process_memory.decreaseBlockRefcount(block);
+				}
 
 				callee_frame->block_stack.pop_back();
 			}
 			callee_frame->resetFrameData();
 
 			// Load previous frame.
-			instr                       = frame->instr;  // This is already a pointer to next instr.
-			local_stack                 = frame->local_stack;
-			frame->called_func_arg_size = 0;
-			frame->called_func_ret_size = 0;
+			instr       = frame->instr;  // This is already a pointer to next instr.
+			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
@@ -515,18 +519,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
-		{
-			auto block = frame->block_stack.back();
-			auto type  = thread.process_memory.getBlockType(block);
-			frame->block_stack.pop_back();
-
-			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
-			// will overwrite the old mappings
-
-			Memory::decreaseBlockRefCount(block);
-			thread.process_memory.freeBlock(block);
-			frame->local_stack_head -= type->getSize();
-		}
+		{ performDeinit(instr, local_stack, frame, thread); }
 		FUNCTION_CONT(1);
 	}
 
@@ -609,9 +602,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			thread.process_memory.freeBlock(
-				readFromStack<Pointer>(local_stack, instr->arg0).getBlock()
-			);
+			const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0);
+			thread.process_memory.freeBlock(ptr.getBlock());
+			thread.process_memory.destroyBlockReference(ptr);
 			writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
 		}
 		FUNCTION_CONT(1);
