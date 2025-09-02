@@ -2,8 +2,6 @@
 
 #include "module_tree.hpp"
 
-#include <frontend/module_tree/functors.hpp>
-
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>

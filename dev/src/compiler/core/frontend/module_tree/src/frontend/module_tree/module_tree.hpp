@@ -128,6 +128,7 @@ namespace compiler::frontend {
 	private:
 		ModuleTree();
 
+		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
 
 		base::StrID m_name;

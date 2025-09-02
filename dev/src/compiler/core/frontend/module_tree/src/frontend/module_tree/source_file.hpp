@@ -25,7 +25,8 @@ namespace compiler::frontend {
 		base::StrID                lang_file_name;
 		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
-		base::Optional<FileID>     file_id;
+		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
+		base::Optional<FileID> file_id;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
