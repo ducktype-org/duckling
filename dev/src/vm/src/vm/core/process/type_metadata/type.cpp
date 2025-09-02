@@ -76,7 +76,7 @@ namespace vm {
 		kind_type = Kind::Primitive;
 		size      = pass_size;
 		kind      = kind::Primitive();
-		if (size == 0 or name == "void") am_i_instantiable = false;
+		if (name == "void") am_i_instantiable = false;
 	}
 
 	void Type::definePointer(TypeCRef inner) {
