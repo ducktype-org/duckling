@@ -33,7 +33,7 @@ constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 
 // #define USE_COMPUTED_GOTO
 
-// not: undefinig default macro when using non-defult mode
+// note: undefinig default macro when using non-defult mode
 #if defined(USE_TAIL_CALLS) || defined(USE_COMPUTED_GOTO)
 	#undef USE_SWITCH_CASE
 #endif
