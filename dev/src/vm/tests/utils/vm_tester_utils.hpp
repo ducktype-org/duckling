@@ -47,8 +47,7 @@ protected:
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
 		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0,
-		bool                               add_stdlib      = false
+		i64                                exit_code       = 0
 	);
 	/**
 	 * @brief Same as above, but the program is given as an argument
@@ -58,24 +57,21 @@ protected:
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
 		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0,
-		bool                               add_stdlib      = false
+		i64                                exit_code       = 0
 	);
 
 	TestResult runTestOnVmGetResult(
 		const std::string&                 dbc_filename,
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {},
-		bool                               add_stdlib      = false
+		const std::vector<std::string>&    args            = {}
 	);
 
 	TestResult runTestOnVmGetResult(
 		const vm::code::CodeCollection&    code,
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
-		const std::vector<std::string>&    args            = {},
-		bool                               add_stdlib      = false
+		const std::vector<std::string>&    args            = {}
 	);
 
 	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);

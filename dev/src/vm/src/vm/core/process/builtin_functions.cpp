@@ -24,17 +24,18 @@ namespace vm::builtins {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<Box<VmValue>>
 			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMProcess& process, VMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
-			if (std::is_void_v<Ret>) {
-				function(thread, args[Is]->readBytes<FunArgs>()...);
+			if constexpr (std::is_void_v<Ret>) {
+				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
+			} else {
+				auto value = function(thread, args[Is]->template readBytes<FunArgs>()...);
+				CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+
+				auto vm_value = process.createOwnedVmValue(vm_return_type);
+
+				vm_value->writeBytes<Ret>(value);
+				return vm_value;
 			}
-			auto value = function(thread, args[Is]->readBytes<FunArgs>()...);
-			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
-
-			auto vm_value = process.createOwnedVmValue(vm_return_type);
-
-			vm_value->writeBytes<Ret>(value);
-			return vm_value;
 		}
 
 		/**
@@ -82,56 +83,84 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(VMThread& thread, i64 arg) {
-		std::string output;
-
-		output = std::to_string(arg) + "\n";
+		const std::string output = std::to_string(arg) + "\n";
 		thread.process.getIO().writeOutput(output);
 
 		return base::safeIntConv<i64>(output.size());
 	}
 
+	void FunctionHandlers::builtinOutputString(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+		auto str_data   = block_data.stdString();
+		thread.process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
+	}
+
+	i64 FunctionHandlers::builtinStoi(VMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		auto str_data = block_data.stdString();
+		return std::stoll(str_data);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         builtin_func_type,
+		TypeCRef                         result_type,
 		VMProcess&                       process,
 		VMThread&                        thread,
 		const std::vector<Box<VmValue>>& arguments
 	) {
 		switch (id) {
-#define CASE_FUNC(ID_NAME)                       \
-	case BuiltinFunctionID::ID_NAME: {           \
-		return callUnpackArgs(                   \
-			FunctionHandlers::builtin##ID_NAME,  \
-			*builtin_func_type->getResultType(), \
-			process,                             \
-			thread,                              \
-			arguments                            \
-		);                                       \
+#define CASE_FUNC(ID_NAME)                                                              \
+	case BuiltinFunctionID::ID_NAME: {                                                  \
+		return callUnpackArgs(                                                          \
+			FunctionHandlers::builtin##ID_NAME, result_type, process, thread, arguments \
+		);                                                                              \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
 		}
 	}
 
-	auto getBuiltinFunctionTypes()
-		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>> {
-		static const std::unordered_map<BuiltinFunctionID, code::FunctionType> map{
-			{
-				BuiltinFunctionID::InputI64,
-				code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")),
-			},
-			{
-				BuiltinFunctionID::OutputI64,
-				code::FunctionType(
-					base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
-				),
-			}
-		};
+	auto getBuiltinFunctions()
+		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
+		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
+			map{ {
+					 BuiltinFunctionID::InputI64,
+					 { base::StrID("builtin_input_i64"),
+			           code::FuncSignature(base::StrID("i64"), {}) },
+				 },
+			     {
+					 BuiltinFunctionID::OutputI64,
+					 { base::StrID("builtin_output_i64"),
+			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
+				 },
+			     {
+					 BuiltinFunctionID::OutputString,
+					 { base::StrID("builtin_strOutput_lptr"),
+			           code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }) },
+				 },
+			     {
+					 BuiltinFunctionID::Stoi,
+					 {
+						 base::StrID("builtin_stoi_lptr"),
+						 code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
+					 },
+				 } };
 
 		return &map;
+	}
+
+	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {
+		return getBuiltinFunctionID(name).map([](const auto& id) {
+			return getBuiltinFunctionSignature(id);
+		});
 	}
 
 	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name) {
@@ -140,8 +169,8 @@ namespace vm::builtins {
 			= [] {
 				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
-				  for (const auto& func_tp: *getBuiltinFunctionTypes())
-					  indices.emplace(func_tp.second.name, func_tp.first);
+				  for (const auto& [id, func_pair]: *getBuiltinFunctions())
+					  indices.emplace(func_pair.first, id);
 				  return indices;
 			  }();
 
@@ -150,27 +179,5 @@ namespace vm::builtins {
 		return {};
 	}
 
-	CRef<code::CodeCollection> getStdlibModule() {
-		static const code::CodeCollection builtin_module = []() {
-			code::CodeCollection code_collection;
-			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
-				code_collection.types.emplace_back(func_type);
-
-			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
-				code::Function builtin_function;
-				builtin_function.name = func_type.name;
-				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(
-					vm::opargs::BuiltinFunctionName(func_type.name)
-				));
-				builtin_function.body.emplace_back(code::instructions::Op_ret{});
-				code_collection.functions.push_back(builtin_function);
-			}
-			// This is to ensure the produced std library is valid.
-			return code::ValidProgram::withBuiltins()
-			    .newInsertCode(code_collection)
-			    .produceValidCodeCollection();
-		}();
-
-		return &builtin_module;
-	}
+	bool isBuiltinFunction(base::StrID name) { return getBuiltinFunctionID(name).has_value(); }
 }

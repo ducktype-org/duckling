@@ -1,10 +1,3 @@
-/**
- * @file module_tree.hpp
- * @author Mateusz Kołpa (matihopemine@gmail.com)
- *
- * @example module_tree_example.cpp
- */
-
 #pragma once
 
 #include "file_id.hpp"
@@ -15,10 +8,12 @@
 
 #include <base/ints.hpp>
 #include <base/maps.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
 
 #include <filesystem/file.hpp>
-#include <filesystem/fs_tree.hpp>
 
+#include <regex>
 #include <string>
 
 namespace compiler::frontend {
@@ -34,57 +29,41 @@ namespace compiler::frontend {
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
 
+	// Regexes to reject files/directories starting with '.' or '$'
+	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
+	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
+
+	class ModuleTreeBuilder;
+	class ModuleTreeModifier;
+
 	/**
-	 * `ModuleTree` contains source files, modules and other
-	 * files from a directory specified as root. If a module does not contain
-	 * a module file, then it is omitted.
+	 * @brief Represents a single module in the Duckling project tree.
 	 *
-	 * It is a recursive data structure.
+	 * ModuleTree provides a hierarchical, in-memory representation of a module,
+	 * including its source files, submodules, and other files.
+	 * The ModuleTree is the first instance of module in duckling compiling process
+	 * the main use case is to build a module tree form exesting folder, and then
+	 * extract the pst from source files
+	 * But module tree can be also created manually.
 	 *
-	 * In order to construct ModuleTree use a factory: `ModuleTree::create(root)`.
+	 * - Tracks main source file, additional source files, submodules, and other files.
+	 * - Supports pretty-printing for debugging and inspection.
+	 * - Immutable after construction; use ModuleTreeModifier for changes.
+	 * - Submodules form a tree structure, each with a parent reference.
+	 * - Source files and other files can have any path, including outside the module directory.
+	 *   Files may be virtual or real; their location on disk does not affect their association
+	 *   with the module.
 	 */
-	class ModuleTree {
-		/**
-		 * If a file matches this regex, then it is omitted.
-		 * The value is set by fs::FsTree::default_reject_file_regex.
-		 */
-		constexpr static std::regex& default_reject_file_regex
-			= fs::FsTree::default_reject_file_regex;
-		/**
-		 * If a directory matches this regex, then it is omitted.
-		 * The value is set by fs::FsTree::default_reject_directory_regex.
-		 */
-		constexpr static std::regex& default_reject_directory_regex
-			= fs::FsTree::default_reject_directory_regex;
+	class ModuleTree final {
+		friend class ModuleTreeBuilder;
+		friend class ModuleTreeModifier;
 
 	public:
 		/**
-		 * The main factory to construct `ModuleTree`s.
-		 * @param root (std::string/fs::File/std::filesystem::path...) - anything,
-		 * that can be used to construct fs::FsTree.
-		 * @param reject_file_regex A regex to check against whether
-		 * a file should be omitted.
-		 * @param reject_directory_regex A regex to check against whether
-		 * a directory should be omitted.
-		 * @return A valid pointer with the root.
+		 * Returns a reference to the ModuleTree with the given ModuleID.
+		 * Panics if the module does not exist.
 		 */
-		static std::shared_ptr<ModuleTree> create(
-			auto       root,
-			std::regex reject_file_regex      = default_reject_file_regex,
-			std::regex reject_directory_regex = default_reject_directory_regex
-		) {
-			return ModuleTree::create(
-				fs::FsTree::create(root, reject_file_regex, reject_directory_regex)
-			);
-		}
-
-		/**
-		 * An alternative factory, does not construct a new `fs::FsTree`, but uses
-		 * the one that is passed.
-		 * @param root Pre-constructed std::shared_ptr<fs::FsTree> with a module structure.
-		 * @return A valid pointer with the root.
-		 */
-		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root);
+		static Ref<ModuleTree> getModule(ModuleID id);
 
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
@@ -95,33 +74,34 @@ namespace compiler::frontend {
 		base::Optional<base::CRef<ModuleTree>> getParentModule() const;
 
 		/**
-		 * Checks if a module contains `LANG_MAIN_SOURCE_FILE`.
-		 * @return True if pointer is valid, false otherwise.
+		 * Checks if a module contains main source file.
+		 * @return True if the main source file exists, false otherwise.
 		 */
 		[[nodiscard]]
 		bool hasMainSourceFile() const;
 
 		/**
-		 * Accesses the main `LANG_MAIN_SOURCE_FILE` - main source file of the module.
+		 * Accesses the main source file of the module.
 		 * If a pointer to file is invalid, then throws an std::logic_error exception.
-		 * @return A reference to the `LANG_MAIN_SOURCE_FILE`.
+		 * @return A reference to the main source file.
 		 */
 		[[nodiscard]]
-		const SourceFile& getMainSourceFile() const;
+		base::CRef<SourceFile> getMainSourceFile() const;
 
 		/**
 		 * Accesses the source files of the module.
-		 * @return A std::vector<SourceFile> with `LANG_SOURCE_FILE` files to iterate over.
+		 * Does not contain Main module file (Main source file)
+		 * @return A const reference to a vector of SourceFile references
 		 */
 		[[nodiscard]]
-		const std::vector<SourceFile>& getSourceFiles() const;
+		const std::vector<base::Ref<SourceFile>>& getSourceFiles() const;
 
 		/**
-		 * Accesses the submodules located in this submodule. Submodules are indexed by their name.
+		 * Accesses the submodules located in this module. Submodules are indexed by their name.
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& getSubmodules() const;
+		const base::HashMap<base::StrID, base::Ref<ModuleTree>>& getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -152,76 +132,250 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		ModuleID getID() const;
 
+		// @TODO: fix this when implementing #1209
+		// ModuleTree(const ModuleTree&) = delete;
+		// ModuleTree& operator=(const ModuleTree&) = delete;
+
 	private:
+		/**
+		 * Constructs a ModuleTree with a new unique ModuleID.
+		 */
 		ModuleTree();
 
-		/**
-		 * Recursively builds the ModuleTree inplace on the module_tree.
-		 * @param module_root A pointer to the ModuleTree.
-		 * @param tree_root A FsTree pointer, that will be used to get information
-		 * about the folder structure.
-		 */
-		static void buildModuleTree(
-			const std::shared_ptr<ModuleTree>& module_root, std::shared_ptr<fs::FsTree> tree_root
-		);
 
-		/**
-		 * Adds the file to the module - inserts it
-		 * to m_main_source_file/m_source_files/m_submodules according to its type.
-		 * @param module_root A pointer to ModuleTree, where the file should be inserted.
-		 */
-		static void handleNewFile(
-			const std::shared_ptr<ModuleTree>& module_root, const fs::File& filepath
-		);
+		ModuleID m_id;
 
-		/**
-		 * ID of the current root Module.
-		 */
-		ModuleID id;
+		base::StrID m_name;
 
-		/**
-		 * A pointer to the module's parent.
-		 * Empty if module is a root module.
-		 */
-		base::Optional<std::weak_ptr<ModuleTree>> m_parent;
+		base::Optional<base::Ref<ModuleTree>> m_parent;
 
-		/**
-		 * A pointer to the file system tree, that this structure is mapping.
-		 */
-		std::shared_ptr<fs::FsTree> m_fs_tree;
-
-		/**
-		 * A link to the main source file.
-		 *
-		 * Has to be a container (like base::Optional), because fs::File does
-		 * not have a default constructor.
-		 */
-		base::Optional<SourceFile> m_main_source_file;
-		/**
-		 * All the source files in the module. Does not contain files of other submodules.
-		 * Does not include main source file.
-		 */
-		std::vector<SourceFile> m_source_files;
-		/**
-		 * Other direct submodules. Maps module's name to a pointer to it.
-		 */
-		base::HashMap<base::StrID, std::shared_ptr<ModuleTree>> m_submodules;
-		/**
-		 * All other files inside this module. Indexed by their extension.
-		 */
+		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
+		std::vector<base::Ref<SourceFile>>                m_source_files;
+		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 	};
-}
 
-// std::hash functor for ModuleID and FileID:
-namespace std {
-	template<>
-	struct hash<compiler::frontend::ModuleID> final {
-		usize operator()(const compiler::frontend::ModuleID& k) const { return k.asInt(); }
+	/**
+	 * ModuleTreeBuilder - Builder class for constructing ModuleTree instances.
+	 *
+	 * Allows step-by-step construction of module trees with assertions that check the correctness
+	 * of module creation.
+	 */
+	class ModuleTreeBuilder final {
+	public:
+		/**
+		 * Creates a new builder instance.
+		 * @return Boxed ModuleTreeBuilder.
+		 */
+		static base::Box<ModuleTreeBuilder> create();
+
+		/**
+		 * Factory method to create ModuleTree from filesystem tree.
+		 * @param root Pre-constructed fs::File with a module structure.
+		 * @param file_reject Regex for rejecting files.
+		 * @param dir_reject Regex for rejecting directories.
+		 * @return A valid pointer with the root.
+		 */
+		static Ref<ModuleTree> create(
+			const fs::File&   root,
+			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+		);
+
+		/**
+		 * Adds a source file to the module being built.
+		 * @param file The source file to add.
+		 */
+		void addSourceFile(const fs::File& file);
+
+		/**
+		 * Sets the main source file for the module.
+		 * @param file The main source file.
+		 */
+		void setMainSourceFile(const fs::File& file);
+
+		/**
+		 * Adds a submodule to the module being built.
+		 * @param submodule The submodule to add.
+		 */
+		void addSubmodule(base::Ref<ModuleTree> submodule);
+
+		/**
+		 * Adds an other file to the module being built.
+		 * @param file The file to add.
+		 */
+		void addOtherFile(const fs::File& file);
+
+		/**
+		 * Sets the name of the module.
+		 * @param name The name to set.
+		 */
+		void setName(base::StrID name);
+
+		/**
+		 * Sets the parent module.
+		 * @param parent The parent module.
+		 */
+		void setParent(base::Ref<ModuleTree> parent);
+
+		/**
+		 * Builds the module tree from a single file (single-file module).
+		 * @param file The file to build from.
+		 */
+		void buildFromSingleFile(const fs::File& file);
+
+		/**
+		 * Checks if the builder is finalized.
+		 * @return True if finalized, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isFinalized() const;
+
+		/**
+		 * Finalizes the construction and returns the built ModuleTree.
+		 * After calling this, the builder becomes invalid.
+		 * @return The constructed ModuleTree.
+		 */
+		base::Ref<ModuleTree> finalize();
+
+	private:
+		/**
+		 * Constructs a ModuleTreeBuilder.
+		 */
+		ModuleTreeBuilder();
+
+		/**
+		 * Builds the module tree from a directory structure.
+		 * This will recursively traverse the directory and build the module tree.
+		 * @param directory The root directory to build the module tree from.
+		 * @param file_reject Regex for rejecting files.
+		 * @param dir_reject Regex for rejecting directories.
+		 */
+		void buildFromDirectory(
+			const fs::File&   directory,
+			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+		);
+
+		/**
+		 * Handles a new file found during directory traversal.
+		 * @param file The file to handle.
+		 */
+		void handleNewFile(const fs::File& file);
+
+		base::Optional<base::Ref<ModuleTree>>             m_parent;
+		base::Optional<fs::File>                          m_main_source_file_path;
+		std::vector<fs::File>                             m_source_file_paths;
+		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
+		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+
+		base::StrID m_name;
+		bool        m_finalized;
 	};
 
-	template<>
-	struct hash<compiler::frontend::FileID> final {
-		usize operator()(const compiler::frontend::FileID& k) const { return k.asInt(); }
+	/**
+	 * @brief Modifier class for making changes to ModuleTree instances.
+	 *
+	 * ModuleTreeModifier provides static methods to add, remove, and update source files,
+	 * submodules, parent relationships, and other files within a ModuleTree.
+	 * All modifications are performed in-place and require a query context.
+	 * This class cannot be instantiated.
+	 * If you are using this class you should know what you are doing.
+	 */
+	class ModuleTreeModifier final {
+	public:
+		/**
+		 * Adds a source file to the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to add.
+		 */
+		static void addSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * Removes a source file from its module by FileID.
+		 * @param ctx Query context.
+		 * @param file_id The FileID to remove.
+		 */
+		static void removeSourceFile(query::Context& ctx, FileID file_id);
+
+		/**
+		 * Sets the main source file for the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to set as main source file.
+		 */
+		static void setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * Removes the main source file from the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 */
+		static void removeMainSourceFile(base::Ref<ModuleTree> module);
+
+		/**
+		 * Adds a submodule to the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param submodule The submodule to add.
+		 */
+		static void addSubmodule(base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule);
+
+		/**
+		 * Adds an "other" file to the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to add.
+		 */
+		static void addOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * Removes an "other" file from the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param file The file to remove.
+		 */
+		static void removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * Sets the parent of the given module.
+		 * If parent is set, adds this module as a submodule to the parent.
+		 * If parent is not set, removes the current parent.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 * @param parent The new parent module (optional).
+		 */
+		static void setParent(
+			base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
+		);
+
+		/**
+		 * Removes the parent from the given module.
+		 * @param ctx Query context.
+		 * @param module The module to modify.
+		 */
+		static void removeParent(base::Ref<ModuleTree> module);
+
+		/**
+		 * Removes the module with the given ModuleID from the module map.
+		 * Also removes it from its parent's submodules and deletes associated source files.
+		 * @param ctx Query context.
+		 * @param module_id The ModuleID to remove.
+		 */
+		static void removeModule(ModuleID module_id);
+
+		/**
+		 * Notifies that a file has been modified and updates its SourceFile.
+		 * @param ctx Query context.
+		 * @param file The file that was modified.
+		 */
+		static void fileModified(const fs::File& file);
+
+	private:
+		/**
+		 * Private constructor to prevent instantiation.
+		 */
+		ModuleTreeModifier() = default;
 	};
 }

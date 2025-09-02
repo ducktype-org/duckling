@@ -1,7 +1,9 @@
 type pointer: pointer_A A
 type fun: method_foo {pointer_A} void
 type fun: method_bar {pointer_A} void
-type fun: method_foo_impl {pointer_A} void
+function method_foo_impl {pointer_A} -> void {
+    ret;
+}
 
 type class: A {
     virtual_methods: {
