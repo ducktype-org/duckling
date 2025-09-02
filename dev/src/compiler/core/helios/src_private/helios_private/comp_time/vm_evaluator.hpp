@@ -9,6 +9,23 @@
 #include <string>
 
 namespace compiler::helios {
+	struct VmEvaluationError {
+		enum class Kind {
+			ProcessSpawnFailed,
+			CodeLoadFailed,
+			DuplicateFunction,
+			ArgConversionFailed,
+			FunctionRunFailed,
+			VmJoinFailed,
+			GetExitValueFailed,
+			ReturnConversionFailed
+		};
+		Kind        kind;
+		std::string message;
+
+		VmEvaluationError(Kind k, std::string msg): kind(k), message(msg) {}
+	};
+
 	/**
 	 * @brief Executes a function with given arguments on a DVM and returns the calculated result.
 	 *
@@ -18,9 +35,9 @@ namespace compiler::helios {
 	 * @param code The bytecode containing the function to execute.
 	 * @param args A vector of CTVs to be passed as arguments.
 	 * @param return_type The expected return type of the function.
-	 * @return The resulting CTV on success, or an error.
+	 * @return The resulting CTV on success, or a VmEvaluationError.
 	 */
-	std::expected<CompileTimeValue, errors::Failed> executeInVm(
+	std::expected<CompileTimeValue, VmEvaluationError> executeInVm(
 		const std::string&                   func_name,
 		const vm::code::CodeCollection&      code,
 		const std::vector<CompileTimeValue>& args,

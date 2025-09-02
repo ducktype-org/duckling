@@ -359,10 +359,8 @@ namespace compiler::helios {
 				lir_func_result->mangled_name.str(), code, ctv_arguments, func_type.getResultType()
 			);
 
-			if (vm_eval_result.has_value())
-				return vm_eval_result.value();
-			else
-				return query::QError(vm_eval_result.error());
+			if (!vm_eval_result) return query::QError(errors::Failed());
+			return vm_eval_result.value();
 		}
 
 		/**
@@ -388,9 +386,7 @@ namespace compiler::helios {
 
 			if (tree_eval_result.hasError()) {
 				variant_match(tree_eval_result.error()) {
-					variant_case(errors::Failed, failed) {
-						return query::QError(errors::Failed(failed));
-					}
+					variant_case(errors::Failed, failed) { return query::QError(errors::Failed()); }
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
 						return evaluateFunctionWithVm(ctx, expr);

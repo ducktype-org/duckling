@@ -11,15 +11,19 @@ namespace {
 
 	/**
 	 * @brief Converts a given `ctv` to VmValue.
-	 * @return The converted VmValue or errors::Failed if the conversion failed.
+	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<Box<vm::VmValue>, compiler::helios::errors::Failed> ctvToVmValue(
+	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
 		vm::PID pid, const compiler::helios::CompileTimeValue& ctv
 	) {
 		variant_match(ctv.getStorage()) {
 			variant_case(i64, val) {
 				auto vm_value_response = vm::api::getVmValue(pid, "i64");
-				if (!vm_value_response.has_value()) return std::unexpected(errors::Failed());
+				if (!vm_value_response.has_value())
+					return std::unexpected(VmEvaluationError(
+						VmEvaluationError::Kind::ArgConversionFailed,
+						"Failed to get VM value for 'i64' type."
+					));
 
 				auto res = std::move(vm_value_response->vm_value);
 				res->writeBytes<i64>(val);
@@ -27,7 +31,12 @@ namespace {
 			}
 			variant_case(bool, val) {
 				auto vm_value_response = vm::api::getVmValue(pid, "byte");
-				if (!vm_value_response.has_value()) return std::unexpected(errors::Failed());
+				if (!vm_value_response.has_value())
+
+					return std::unexpected(VmEvaluationError(
+						VmEvaluationError::Kind::ArgConversionFailed,
+						"Failed to get VM value for 'byte'(bool) type."
+					));
 
 				auto res = std::move(vm_value_response->vm_value);
 				res->writeBytes<bool>(val);
@@ -39,26 +48,36 @@ namespace {
 				);
 			}
 		}
-		return std::unexpected(errors::Failed());
+		return std::unexpected(VmEvaluationError(
+			VmEvaluationError::Kind::ArgConversionFailed,
+			"Unknown error during CompileTimeValue to VmValue conversion"
+		));
 	}
 
 	/**
 	 * @brief Converts a given `vm_value` to CTV representing a specified `type`.
-	 * @return The converted value or errors::Failed if the conversion failed.
+	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<CompileTimeValue, compiler::helios::errors::Failed> vmValueToCtv(
+	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
 		const tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
 	) {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
 		case tsh::Kind::Integral: {
 			if (vm_value->type->getName() != base::StrID("i64"))
-				return std::unexpected(errors::Failed());
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ReturnConversionFailed,
+					"Expected i64 VM value but received type: " + vm_value->type->getName().str()
+				));
 			return CompileTimeValue{ vm_value->readBytes<i64>() };
 		}
 		case tsh::Kind::Bool: {
-			if (vm_value->type->getName() != base::StrID("bool"))
-				return std::unexpected(errors::Failed());
+			if (vm_value->type->getName() != base::StrID("byte"))
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ReturnConversionFailed,
+					"Expected byte (bool) VM value but received type: "
+						+ vm_value->type->getName().str()
+				));
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
 		}
 		default: {
@@ -94,7 +113,7 @@ namespace {
 }
 
 namespace compiler::helios {
-	std::expected<CompileTimeValue, errors::Failed> executeInVm(
+	std::expected<CompileTimeValue, VmEvaluationError> executeInVm(
 		const std::string&                   func_name,
 		const vm::code::CodeCollection&      code,
 		const std::vector<CompileTimeValue>& args,
@@ -102,8 +121,10 @@ namespace compiler::helios {
 	) {
 		static VmManager vm_manager;
 		auto             maybe_pid = vm_manager.getPID();
-		if (!maybe_pid)  // Failed to spawn a process.
-			return std::unexpected(errors::Failed());
+		if (!maybe_pid)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ProcessSpawnFailed, "Failed to spawn VM process."
+			));
 		vm::PID pid = maybe_pid.value();
 
 		auto load_result = vm::api::loadCode(pid, { code });
@@ -115,10 +136,17 @@ namespace compiler::helios {
 					// because of the duplicated function.
 					if (load_error.why.find(vm::code::DuplicatedFunctionError::ERR_MSG)
 					    != std::string::npos) {
-						return std::unexpected(errors::Failed());
+						return std::unexpected(VmEvaluationError(
+							VmEvaluationError::Kind::CodeLoadFailed,
+							"Failed to load code into VM: " + load_error.why
+						));
 					}
 				}
-				variant_default { return std::unexpected(errors::Failed()); }
+				variant_default {
+					return std::unexpected(VmEvaluationError(
+						VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+					));
+				}
 			}
 		}
 
@@ -126,7 +154,7 @@ namespace compiler::helios {
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
 			auto res = ctvToVmValue(pid, ctv_arg);
-			if (!res) return std::unexpected(errors::Failed());
+			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
 
@@ -135,17 +163,25 @@ namespace compiler::helios {
 		    | std::ranges::to<vm::FunctionRunArguments>();
 
 		if (auto res = vm::api::runFunction(pid, func_name, vm_args); !res)
-			return std::unexpected(errors::Failed());
-		if (auto res = vm::api::join(pid); !res) return std::unexpected(errors::Failed());
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::FunctionRunFailed,
+				"Failed to run a function '" + func_name + "' on VM."
+			));
+		if (auto res = vm::api::join(pid); !res)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
+			));
 
 		// Free the owned arguments.
 		for (const auto& arg: owned_arguments) arg->freeData();
 
 		auto exit_value = vm::api::getExitValue(pid);
-		if (!exit_value) return std::unexpected(errors::Failed());
+		if (!exit_value)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::GetExitValueFailed,
+				"Failed to get exit value from VM after function execution."
+			));
 
-		auto ctv_res = vmValueToCtv(return_type, exit_value.value());
-
-		return ctv_res;
+		return vmValueToCtv(return_type, exit_value.value());
 	}
 }
