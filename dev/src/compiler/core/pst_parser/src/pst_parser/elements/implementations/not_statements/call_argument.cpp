@@ -16,6 +16,11 @@ namespace pst {
 	}
 
 	void CallArgument::dprint(std::ostream& out) const {
-		// TODO
+		if (arg_name.has_value()){
+			out << R"("name": )";
+			nullAwareDprint(arg_name.value(), out);
+		}
+		nullAwareDprint(arg, out);
+		out << "}";
 	}
 }

@@ -409,6 +409,7 @@ namespace compiler::helios::code {
 			const tpc::Identifier&       name,
 			pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState, errors::Failed> {
+
 			if (lookup_result->isEmpty()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
@@ -453,12 +454,7 @@ namespace compiler::helios::code {
 			std::vector<base::Box<Expr>> coerced_arguments;
 			base::HashMap<base::StrID, base::Box<Expr>> coerced_named_arguments; // TODO
 			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-				//compiler::helios::
-				//auto tmp = compiler::helios::stmt(query_ctx, callee);
-				//((pst::Fun*)&tmp)->getParams();
-				stmt(query_ctx, callee);
-				//std::cout<<compiler::helios::name(callee).str()<<'\n';
-				query_ctx.query<QueryCodeOFFun>(callee);
+
 				auto coerced = coerceExpression(
 					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
 				);
@@ -472,7 +468,7 @@ namespace compiler::helios::code {
 				}
 				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
-
+			std::cout<<"HERE2"<<std::endl;
 			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
 			auto node            = makeBox<CallExpr>(
                 query_ctx, std::move(identifier_expr), std::move(coerced_arguments), std::move(named_arguments)

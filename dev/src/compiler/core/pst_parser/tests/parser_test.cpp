@@ -131,7 +131,7 @@ private:
 
 		auto             correct_content = fs::File(json_file).getContent();
 		std::string_view correct_string  = correct_content.view().stringView();
-
+		std::cout<<ss.str()<<'\n';
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
 			assertTrue(

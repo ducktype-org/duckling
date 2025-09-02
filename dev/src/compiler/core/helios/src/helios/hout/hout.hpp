@@ -78,7 +78,7 @@ namespace compiler::helios {
 		[[nodiscard]]
 		std::string debugPrint() const;
 
-	private:
+	//private:
 		HOUTFunctionDeclaration(SymID symbol, query::Context& ctx);
 		friend ImplementationOf_QueryCodeOFFun;  // TODO co innego
 	};
@@ -90,6 +90,9 @@ namespace compiler::helios {
 		using HOUTFunctionDeclaration::HOUTFunctionDeclaration;
 		// @TODO (maybe in declaration?):
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
+
+		HOUTFunction(const HOUTFunctionDeclaration&);
+		HOUTFunction(HOUTFunctionDeclaration&&);
 
 		/**
 		 * @note use of shared_ptr's is intentional, as they

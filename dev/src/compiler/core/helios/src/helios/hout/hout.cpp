@@ -76,6 +76,12 @@ namespace compiler::helios {
 		return HOUTFunctionDeclaration::debugPrint() + out.str();
 	}
 
+	HOUTFunction::HOUTFunction(const HOUTFunctionDeclaration& other):
+		  HOUTFunctionDeclaration(other) {}
+
+	HOUTFunction::HOUTFunction(HOUTFunctionDeclaration&& other):
+		  HOUTFunctionDeclaration(std::move(other)) {}
+
 	std::string HOUTGlobalData::debugPrint() const {
 		std::stringstream out;
 		if (std::holds_alternative<HOUTGlobalConst>(value)) {

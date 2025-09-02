@@ -676,10 +676,10 @@ private:
 			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			ASSERT_EQUAL(hout->functions.size(), 2);
 			{
-				/*auto function = hout->functions.at(0);
+				auto function = hout->functions.at(0);
 				ASSERT_EQUAL(function.original_name, "foo");
 
-				auto& a_param = function.content.parameters->at(0);
+				auto& a_param = function.parameters->at(0);
 				ASSERT_EQUAL("a", a_param.name);
 				ASSERT_EQUAL(st(int32_type), a_param.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
@@ -706,14 +706,14 @@ private:
 					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
 				);
 
-				ASSERT_EQUAL(a_sym, a_param.helios_symbol);*/
+				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
 			}
 
 			{
-			/*	auto function = hout->functions.at(1);
+				auto function = hout->functions.at(1);
 				ASSERT_EQUAL(function.original_name, "bar");
-				auto& abc_param    = function.content.parameters->at(0);
-				auto& second_param = function.content.parameters->at(1);
+				auto& abc_param    = function.parameters->at(0);
+				auto& second_param = function.parameters->at(1);
 
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
@@ -722,7 +722,7 @@ private:
 				ASSERT_EQUAL(second_param.type, st(int64_type));
 
 				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
-				assertTrue(second_param.initial_value.empty(), "No initial value expected");*/
+				assertTrue(second_param.initial_value.empty(), "No initial value expected");
 			}
 		});
 	}

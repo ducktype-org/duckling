@@ -99,6 +99,83 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
+	struct IMPLEMENT_QUERY(QueryDeclOFFun, HOUTFunctionDeclaration) {
+		struct declarationVisitor final: public pst::PstVisitorPanicky {
+			query::Context& ctx;
+			SymID           original_symbol;
+
+			base::Optional<HOUTFunctionDeclaration> out;
+
+			declarationVisitor(query::Context& ctx, SymID symbol):
+				  ctx(ctx),
+				  original_symbol(symbol) {}
+
+			// @TODO: make failure more explicit
+			void visitFun(pst::Access<pst::Fun> stmt) final {
+				// @TODO: rest, flags, attributes, etc
+
+				HOUTFunction output(original_symbol, ctx);
+
+				std::vector<code::Parameter> parameters;
+				for (auto param: *stmt->getParams().unlock(ctx)) {
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto param_name   = name(param_symbol);
+					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+
+					auto value = param.unlock(ctx)->getValue();
+
+					if (param_type->hasError()) {
+						// we just fail here, because we can't continue without type
+						return;
+					}
+
+					if (value.empty()) {
+						parameters.emplace_back(
+							param_name, param_type->value(), std::nullopt, param_symbol
+						);
+					} else {
+						auto initial_value
+							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
+
+						if (initial_value.hasError()) {
+							// we just fail here, because we can't continue without correct
+							// initial expression
+							return;
+						}
+
+						parameters.emplace_back(
+							param_name,
+							param_type->value(),
+							std::move(initial_value.value()),
+							param_symbol
+						);
+					}
+				}
+
+				output.parameters
+					= std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
+
+				this->out.emplace(std::move(output));
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function,
+				"Function declaration processing called on non-function symbol"
+			);
+
+			declarationVisitor func_maker(ctx, key);
+			stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+			return func_maker.out.value();
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOFFun);
+
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 		/**
 		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or pst::CodeBlockOrStmt
@@ -316,62 +393,16 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
-				// @TODO: create function here...
-				// - create types, attributes, flags, ...
-				// @TODO: rest, flags, attributes, etc
 
-				HOUTFunction output(original_symbol, ctx);
+				// declaration:
+				auto decl = ctx.query<QueryDeclOFFun>(original_symbol);
+				HOUTFunction output(decl);
 
 				// body:
-
 				auto fun_body = stmt->getBody();
 
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-				output.body
-					= std::make_shared<const code::CodeBlock>(std::move(function_body));
-
-
-				// parameters:
-
-				std::vector<code::Parameter> parameters;
-
-				for (auto param: *stmt->getParams().unlock(ctx)) {
-					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_name   = name(param_symbol);
-					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
-
-					auto value = param.unlock(ctx)->getValue();
-
-					if (param_type->hasError()) {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-
-					if (value.empty()) {
-						parameters.emplace_back(
-							param_name, param_type->value(), std::nullopt, param_symbol
-						);
-					} else {
-						auto initial_value
-							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
-
-						if (initial_value.hasError()) {
-							// we just fail here, because we can't continue without correct
-							// initial expression
-							return;
-						}
-
-						parameters.emplace_back(
-							param_name,
-							param_type->value(),
-							std::move(initial_value.value()),
-							param_symbol
-						);
-					}
-				}
-
-				output.parameters
-					= std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
+				output.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 
 				this->out.emplace(std::move(output));
 			}
