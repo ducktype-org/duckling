@@ -119,6 +119,9 @@ namespace compiler::helios {
 		const std::vector<CompileTimeValue>& args,
 		const tsh::SymbolType<>&             return_type
 	) {
+		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process) once
+		// upon the first call to executeInVm and its lifetime extends for the duration of the
+		// program. When deinitialized, it kills the spawned process.
 		static VmManager vm_manager;
 		auto             maybe_pid = vm_manager.getPID();
 		if (!maybe_pid)

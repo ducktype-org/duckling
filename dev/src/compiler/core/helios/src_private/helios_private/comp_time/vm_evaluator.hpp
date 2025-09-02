@@ -13,7 +13,6 @@ namespace compiler::helios {
 		enum class Kind {
 			ProcessSpawnFailed,
 			CodeLoadFailed,
-			DuplicateFunction,
 			ArgConversionFailed,
 			FunctionRunFailed,
 			VmJoinFailed,
@@ -23,13 +22,15 @@ namespace compiler::helios {
 		Kind        kind;
 		std::string message;
 
-		VmEvaluationError(Kind k, std::string msg): kind(k), message(msg) {}
+		VmEvaluationError(Kind k, std::string msg): kind(k), message(std::move(msg)) {}
 	};
 
 	/**
 	 * @brief Executes a function with given arguments on a DVM and returns the calculated result.
 	 *
-	 * The VM is initialized on the first call and reused for subsequent evaluations.
+	 * @note: The DVM compile-time evaluation process is initialized once upon the first call to
+	 * this function and is reused for subsequent evaluations. This is done by a static instance of
+	 * VmManager, which spawns the process when first used and kills on exit.
 	 *
 	 * @param func_name The name of the function to call.
 	 * @param code The bytecode containing the function to execute.

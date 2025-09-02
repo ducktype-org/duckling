@@ -2,22 +2,10 @@
 
 #include <typesystem/higher/symbol_type.hpp>
 
+#include <base/type_traits.hpp>
 #include <base/variant.hpp>
 
 #include <string>
-#include <variant>
-
-namespace {
-	template<typename T, typename VariantT>
-	struct is_variant_member;
-
-	template<typename T, typename... Types>
-	struct is_variant_member<T, std::variant<Types...>>:
-		  std::disjunction<std::is_same<T, Types>...> {};
-
-	template<typename T, typename VariantT>
-	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
-}
 
 namespace compiler::helios {
 	/**
@@ -35,7 +23,7 @@ namespace compiler::helios {
 		 * @brief Template constructor of CTV for all types which exist in the Storage variant.
 		 */
 		template<typename T>
-		requires(IS_VARIANT_MEMBER_V<T, Storage>) CompileTimeValue(T val): value(val) {}
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) CompileTimeValue(T val): value(val) {}
 
 		/**
 		 * @brief Returns a constant reference to the CTVs internal value storage.
