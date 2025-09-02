@@ -607,9 +607,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			thread.process_memory.freeBlock(
-				readFromStack<Pointer>(local_stack, instr->arg0).getBlock()
-			);
+			auto ptr = readFromStack<Pointer>(local_stack, instr->arg0);
+			if (!ptr.isNull()) thread.process_memory.freeBlock(ptr.getBlock());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -936,18 +935,18 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto pointed_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
+			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointed_type   = thread.executing_program->types->at(TypeID(instr->arg1));
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
 			if (new_elem_count == 0) {
 				// When reallocating to 0 elements, we free the data and set pointer to null.
 				// This is one of two possible approaches:
 				// 1. Current approach: Free the data (what we do here)
-				// 2. Alternative approach: Allow blocks of size 0, which would be compliant 
+				// 2. Alternative approach: Allow blocks of size 0, which would be compliant
 				//    with duckling's semantics when that design choice is made
-				const Pointer new_dst = thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
+				const Pointer new_dst
+					= thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
 				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 			} else if (tbl_pointer.isNull()) {
 				auto new_block
