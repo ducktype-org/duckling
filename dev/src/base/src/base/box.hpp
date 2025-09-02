@@ -271,6 +271,24 @@ namespace base {
 
 		MBox(std::nullptr_t) : deleter{} {}
 
+		/**
+		 * @brief Constructs an MBox from a raw pointer.
+		 * It takes ownership of the pointer.
+		 */
+		static MBox fromPointer(T* ptr) noexcept { return MBox(ptr); }
+
+		/**
+		 * @brief Constructs an MBox from a raw pointer with a custom deleter.
+		 * It takes ownership of the pointer.
+		 */
+		static MBox fromPointer(T* ptr, const Deleter& del) noexcept { return MBox(ptr, del); }
+
+		/**
+		 * @brief Constructs an MBox from a raw pointer with a custom deleter (move version).
+		 * It takes ownership of the pointer.
+		 */
+		static MBox fromPointer(T* ptr, Deleter&& del) noexcept { return MBox(ptr, std::move(del)); }
+
 		MBox(const MBox& other) = delete;
 
 		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other.deleter) } { other.ptr = nullptr; }
