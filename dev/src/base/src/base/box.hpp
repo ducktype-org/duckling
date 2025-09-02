@@ -56,10 +56,10 @@ namespace base {
 
 	/**
 	 * @brief Macro to create a simple function-based deleter.
-	 * Usage: DUCKLING_MAKE_DELETER(MyDeleter, my_delete_function)
+	 * Usage: BOX_MAKE_DELETER(MyDeleter, my_delete_function)
 	 * This creates a deleter type that calls the specified function.
 	 */
-	#define DUCKLING_MAKE_DELETER(DeleterName, DeleteFunction) \
+	#define BOX_MAKE_DELETER(DeleterName, DeleteFunction) \
 		struct DeleterName { \
 			template<class T> \
 			void operator()(T* ptr) const { \
@@ -69,16 +69,16 @@ namespace base {
 
 	/**
 	 * @brief Macro to create a method-based deleter.
-	 * Usage: DUCKLING_MAKE_METHOD_DELETER(MyDeleter, destroy)
+	 * Usage: BOX_MAKE_METHOD_DELETER(MyDeleter, destroy)
 	 * This creates a deleter type that calls the specified method on the object.
+	 * The method is responsible for any cleanup including deletion.
 	 */
-	#define DUCKLING_MAKE_METHOD_DELETER(DeleterName, MethodName) \
+	#define BOX_MAKE_METHOD_DELETER(DeleterName, MethodName) \
 		struct DeleterName { \
 			template<class T> \
 			void operator()(T* ptr) const { \
 				if (ptr) { \
 					ptr->MethodName(); \
-					delete ptr; \
 				} \
 			} \
 		}
@@ -97,6 +97,7 @@ namespace base {
 	class Box final {
 	private:
 		T* ptr;
+		// Use no_unique_address to avoid storage overhead for stateless deleters
 		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
@@ -235,6 +236,7 @@ namespace base {
 	class MBox final {
 	private:
 		T* ptr = nullptr;
+		// Use no_unique_address to avoid storage overhead for stateless deleters
 		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
