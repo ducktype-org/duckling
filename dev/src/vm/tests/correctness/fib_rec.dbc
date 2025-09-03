@@ -1,6 +1,4 @@
-type fun: fib { i64 } i64
-
-function fib {
+function fib { i64 } -> i64 {
 	# arg0 -> n
 
 	mov_l64_l64         ret_val, arg0;
@@ -37,7 +35,7 @@ function fib {
 	ret;
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
 	# ret_val -> main ret_val
 	# arg0 -> argc
 	# arg1 -> *argv

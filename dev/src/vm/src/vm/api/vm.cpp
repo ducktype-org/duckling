@@ -57,12 +57,6 @@ namespace vm::api {
 		});
 	}
 
-	std::expected<void, ApiError> loadStdlib(PID pid) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadStdlib{}))
-		    .transform(ignoreResponse);
-	}
-
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))
@@ -126,12 +120,6 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::TypeMetadata{ type_name }))
 		    .and_then(mapOrWrongResponse<response::Type>);
-	}
-
-	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Block{ BlockID(block_id) }))
-		    .and_then(mapOrWrongResponse<response::Block>);
 	}
 
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {

@@ -45,7 +45,6 @@ namespace vm::api {
 	 */
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
-	std::expected<void, ApiError> loadStdlib(PID pid);
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& path);
 	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code);
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
@@ -69,8 +68,8 @@ namespace vm::api {
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
-	std::expected<response::Type, ApiError>  getType(PID pid, const std::string& type_name);
-	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id);
+	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
+
 
 	/**
 	 * @brief Returns an empty VmValue (initialized by zero bytes) of the given type.

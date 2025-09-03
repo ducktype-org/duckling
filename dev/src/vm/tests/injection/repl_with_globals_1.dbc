@@ -1,9 +1,7 @@
-type fun: globaler_setter {} void
-
 global_data counter i64 {};
 global_data global_ptr ptr_i64 {};
 
-function globaler_setter {
+function globaler_setter {} -> void {
 	init_lany_type  x, i64;
 	input_l64       x;
 	mov_g64_l64     counter, x;

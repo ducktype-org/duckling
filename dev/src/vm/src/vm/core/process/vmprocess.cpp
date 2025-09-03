@@ -192,11 +192,6 @@ namespace vm {
 				return getMainVMThread().getCurrentPosition();
 			}
 
-			variant_case(api::request::LoadStdlib, load_stdlib_request) {
-				return loadProgram(std::vector<code::CodeCollection>{ *builtins::getStdlibModule() })
-				    .transform_error([](auto err) { return api::ApiError{ err }; });
-			}
-
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::ApiError{ err };
@@ -259,15 +254,6 @@ namespace vm {
 				}
 			}
 
-			variant_case(api::request::Block, block_request) {
-				match_optional(validateMemoryRequest()) {
-					opt_some(error) { return std::unexpected(error); }
-					opt_none {
-						return api::Response(api::response::Block{
-							memory.requestBlockData(block_request.block_id) });
-					}
-				}
-			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {

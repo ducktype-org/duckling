@@ -1,6 +1,4 @@
-type fun: check { i64 } void
-
-function check {
+function check { i64 } -> void {
 	output_l64          arg0;
 	deinit;
 	ret;
