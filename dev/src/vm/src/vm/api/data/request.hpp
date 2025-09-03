@@ -6,7 +6,6 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
@@ -57,10 +56,6 @@ namespace vm::api {
 			std::string type_name;
 		};
 
-		struct Block {
-			BlockID block_id;
-		};
-
 		struct StatusRequest {};
 
 		struct Input {
@@ -95,7 +90,6 @@ namespace vm::api {
 		request::ExecutionPosition,
 		request::TypeMetadata,
 		request::VmValue,
-		request::Block,
 		request::StatusRequest,
 		request::Input,
 		request::Output,
