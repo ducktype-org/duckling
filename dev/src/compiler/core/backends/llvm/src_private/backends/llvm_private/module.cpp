@@ -10,10 +10,8 @@
 
 #include <iostream>
 
-namespace base::extend {
-	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
-		compiler::backend_llvm::ModuleImpl* ptr
-	) {
+namespace compiler::backend_llvm {
+	void deleteModuleImpl(ModuleImpl* ptr) {
 		delete ptr;
 	}
 }

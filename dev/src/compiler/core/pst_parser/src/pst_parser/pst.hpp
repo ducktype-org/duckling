@@ -11,11 +11,18 @@ namespace pst::internal {
 	void deleteState(pst::LangParserState* ptr);
 }
 
+// Create a custom deleter for LangParserState using the new macro system
+BOX_MAKE_DELETER(LangParserStateDeleter, pst::internal::deleteState);
+
 namespace base::extend {
 	// Custom deleter to not include full state definition
+	// Now implemented using the new macro-based deleter system
 	template<>
 	struct BoxPtrDeleter<pst::LangParserState> {
-		static void del(pst::LangParserState* ptr) { pst::internal::deleteState(ptr); }
+		static void del(pst::LangParserState* ptr) {
+			LangParserStateDeleter deleter;
+			deleter(ptr);
+		}
 	};
 }
 
