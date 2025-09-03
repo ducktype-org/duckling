@@ -75,7 +75,8 @@ private:
 			// This method can fail on module verification
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
-			auto module_name = base::StrID(base::strConcat("module_", module.asInt()).c_str());
+			auto module_name
+				= base::StrID(base::strConcat("module_", module.queryUnstablePerfectHash()).c_str());
 
 			auto asm_file     = module_name.str() + ".s";
 			auto llvm_ir_file = module_name.str() + ".ll";
