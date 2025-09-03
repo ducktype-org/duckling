@@ -324,7 +324,7 @@ private:
 			auto some_global_lir = lir::LirGlobal::fromHOUT(ctx, some_global);
 			ASSERT_EQUAL(lir::LirGlobalType::Variable, some_global_lir.type);
 			ASSERT_EQUAL(lir::LirGlobalType::Variable, g_lir.type);
-			ASSERT_EQUAL(false, g_lir.inital_value.has_value());
+			ASSERT_EQUAL(false, g_lir.initial_value.has_value());
 		});
 	}
 };
