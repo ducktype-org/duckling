@@ -1049,23 +1049,27 @@ private:
 						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
 					));
 
-				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[0].body->statements[0])
-				);
+				std::cout << hout_unit.functions[0].original_name.str() << '\n';
 
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+				for (const auto& fun: hout_unit.functions) {
+					if (fun.original_name.str() == "foo0") {
+						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+							&(*fun.body->statements[0])
+						);
+						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+					}
+					if (fun.original_name.str() == "foo1") {
+						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+							&(*fun.body->statements[0])
+						);
+						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
-				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[0].body->statements[1])
-				);
-
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
-
-				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[1].body->statements[0])
-				);
-
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+						var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+							&(*fun.body->statements[1])
+						);
+						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+					}
+				}
 			});
 		}
 	}
