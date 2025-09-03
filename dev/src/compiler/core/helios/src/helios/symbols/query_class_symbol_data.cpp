@@ -73,7 +73,7 @@ namespace compiler::helios {
 				if (auto ctv = ctx.query<QueryEvaluateExpression>({ base })) {
 					if (auto maybe_type = ctv.value().asType()) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
-						// the base class is given with any specifiers apart from the abstract type.
+						// the base class has any specifiers other than the abstract type.
 						class_info.base = maybe_type.value().getType();
 					} else {
 						return query::QError(errors::Failed());
@@ -90,8 +90,7 @@ namespace compiler::helios {
 					    = ctx.query<QueryEvaluateExpression>(interface.unlock(ctx)->getExpr())) {
 						if (auto maybe_type = ctv.value().asType()) {
 							// @TODO: Raise errors, here, or preferably earlier, if the symbol type
-							// of the base class is given with any specifiers apart from the
-							// abstract type.
+							// of the base class has any specifiers other than the abstract type.
 							class_info.implements.push_back(maybe_type.value().getType());
 						} else {
 							return query::QError(errors::Failed());
