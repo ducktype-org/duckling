@@ -1,7 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include "ints.hpp"
+
+#include <algorithm>
 
 namespace base {
 	/**
