@@ -1,3 +1,5 @@
+#include "call_processing.hpp"
+
 #include "coercions.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
@@ -5,7 +7,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/lookup/interface.hpp>
 #include <pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -16,7 +17,6 @@
 #include <base/optional.hpp>
 
 #include <query_framework/context.hpp>
-#include <query_framework/query_result.hpp>
 
 #include <vector>
 
@@ -25,7 +25,8 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
-	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get invalidated.
+	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
+	 * invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attempFittingFun(
 		query::Context&                        ctx,
@@ -71,7 +72,8 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
 	 * @note invalidadates normal and named_arguments (may move expr from boxes and leave them empty).
-	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get invalidated.
+	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
+	 * invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attempFittingBuiltin(
 		query::Context&                        ctx,
@@ -131,11 +133,10 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>                normal_arguments;
 		base::HashMap<base::StrID, Box<Expr>> named_arguments;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			auto arg_expr
-				= ctx.query<QueryHoutOfExpr>({ arg.unlock(ctx)->arg.give().unlock(ctx)->getExpr() });
+			auto arg_expr = ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr() );
 			if (arg_expr.hasError()) return std::nullopt;
-			if (arg.unlock(ctx)->arg_name.has_value()) {
-				base::StrID arg_name = arg.unlock(ctx)->arg_name.value().value;
+			if (arg.unlock(ctx)->isNamedArg()) {
+				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().value;
 				if (named_arguments.contains(arg_name)) return std::nullopt;  // Not unique names.
 				named_arguments.emplace(std::move(arg_name), std::move(arg_expr.value()));
 			} else {

@@ -2,6 +2,7 @@
  * @file chain_expr.cpp
  * @author Wojciech Rzepliński
  */
+
 #include "chain_expr.hpp"
 
 #include "call_processing.hpp"
@@ -200,7 +201,6 @@ namespace compiler::helios::code {
 			auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
 
-
 			match_optional(processFunctionCall(query_ctx, lookup_result->leaves, call_expr)) {
 				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
 				opt_none {
@@ -228,7 +228,6 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState, errors::Failed> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
-
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 				ident->getName().position, query_ctx, ident->getName().value
@@ -272,13 +271,12 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
 			// @TODO write tests for this case when parser will support it
-			// @TODO after overloading will be implementing, improve lookup and provide correct candidates for processFunctionCall
+			// @TODO after overloading will be implementing, improve lookup and provide correct
+			// candidates for processFunctionCall
 
 			match_optional(processFunctionCall(query_ctx, /*provide*/ {}, call_expr)) {
 				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
-				opt_none {
-					return query::QError(errors::Failed());
-				}
+				opt_none { return query::QError(errors::Failed()); }
 			}
 			CORE_UNREACHABLE();
 		}

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/lookup/interface.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 

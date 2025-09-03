@@ -24,7 +24,7 @@
 namespace compiler::helios {
 
 	// for friend:
-	struct ImplementationOf_QueryCodeOFFun;
+	struct ImplementationOf_QueryDeclOfFun;
 
 	namespace code {
 		// Forward declaration:
@@ -79,9 +79,9 @@ namespace compiler::helios {
 		[[nodiscard]]
 		std::string debugPrint() const;
 
-		// private:
+	private:
 		HOUTFunctionDeclaration(SymID symbol, query::Context& ctx);
-		friend ImplementationOf_QueryCodeOFFun;  // TODO co innego
+		friend ImplementationOf_QueryDeclOfFun;
 	};
 
 	/**
