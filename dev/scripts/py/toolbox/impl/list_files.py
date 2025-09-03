@@ -1,4 +1,5 @@
 import os
+import shlex
 from typing import Dict, List, Optional, Tuple, Union
 
 from .helpers import (
@@ -35,7 +36,10 @@ def list_files_impl(
             files = _get_all_tracked_files(extensions)
             result = {}
             for file in files:
-                line_count_str, _ = bash_command_get_output(f"wc -l < {file}")
+                # Skip directories (e.g., git submodules)
+                if os.path.isdir(file):
+                    continue
+                line_count_str, _ = bash_command_get_output(f"wc -l < {shlex.quote(file)}")
                 line_count = int(line_count_str.strip())
                 result[file] = [(1, line_count)]
             return result
