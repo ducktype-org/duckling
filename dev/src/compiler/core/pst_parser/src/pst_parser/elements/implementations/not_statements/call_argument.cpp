@@ -8,7 +8,7 @@ namespace pst {
 		if (state[1].is(lang_def::NamedOperator::Assign)) {
 			tpc::Identifier name;
 			state.parse(out).one(&name);
-			out->arg_name = std::move(name);
+			out->arg_name = name;
 			state.parse(out).one(lang_def::NamedOperator::Assign);
 		}
 		state.parse(out).one(&out->arg);
