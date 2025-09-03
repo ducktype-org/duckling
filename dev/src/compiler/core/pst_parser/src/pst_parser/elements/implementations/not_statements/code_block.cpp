@@ -71,5 +71,5 @@ namespace pst {
 		out << "]";
 	}
 
-	void CodeBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitCodeBlock(*this); }
+	// void CodeBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitCodeBlock(*this); }
 }
