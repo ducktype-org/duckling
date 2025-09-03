@@ -1,6 +1,7 @@
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
+#include <helios/ctv/ctv.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
 
@@ -24,12 +25,44 @@ namespace compiler::helios::test_utils {
 	SymbolList getChain(const std::string_view chain, ScopeID scope);
 
 	/**
-	 * Get the integral value of the last symbol in a symbol chain in a given scope.
+	 *
+	 * Get the CTV representing a constant value of the last symbol in a symbol chain in a given
+	 * scope.
+	 * @note Used as a helper for `getConstValueAs` since we can't use QueryConstValueOf in this
+	 * header file.
+	 * @param chain The symbol chain to resolve.
+	 * @param scope The scope in which to resolve.
+	 * @return The CTV value of the last symbol in the chain.
+	 */
+	CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the value of type T of the last symbol in a symbol chain in a given scope.
+	 * @tparam T The expected type of the value.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
 	 * @return The value of the last symbol in the chain.
 	 */
-	i64 getValue(const std::string_view chain, ScopeID scope);
+	template<typename T>
+	T getConstValueAs(const std::string_view chain, ScopeID scope) {
+		auto ctv_result = getConstValue(chain, scope);
+
+		base::Optional<T> maybe_value{};
+		if constexpr (std::is_same_v<T, i64>)
+			maybe_value = ctv_result.asI64();
+		else if constexpr (std::is_same_v<T, bool>)
+			maybe_value = ctv_result.asBool();
+		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
+			maybe_value = ctv_result.asType();
+		else
+			static_assert(false, "Unsupported type for getConstValueAs");
+
+		CORE_ASSERT(
+			maybe_value.has_value(),
+			base::strConcat("Constant '", chain, "' has a different type than expected")
+		);
+		return maybe_value.value();
+	}
 
 	/**
 	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
