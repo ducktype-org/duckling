@@ -68,7 +68,7 @@ namespace vm::api {
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
-	std::expected<response::Type, ApiError>  getType(PID pid, const std::string& type_name);
+	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
 
 
 	/**

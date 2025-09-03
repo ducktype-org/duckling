@@ -4,8 +4,6 @@
 
 #include <vm/core/process/type_metadata/type.hpp>
 
-#include <memory>
-
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
 struct nlohmann::adl_serializer<base::RawView> {
@@ -45,8 +43,6 @@ namespace vm::api {
 			Box<::vm::VmValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
 		};
-
-
 
 		struct CodePosition {
 			u64 function_id;
