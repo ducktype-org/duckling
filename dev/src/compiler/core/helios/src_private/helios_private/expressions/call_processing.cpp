@@ -3,6 +3,7 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <pst_parser/elements/hierarchy/expr_holders.hpp>
@@ -31,8 +32,8 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		auto decl = ctx.query<QueryDeclOfFun>(fun);
-
+		// TODO dont break vector, hashmap
+		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0, used_named_args = 0;
 		for (auto& param: *(decl.parameters)) {
@@ -69,6 +70,56 @@ namespace compiler::helios::code {
 		return makeBox<CallExpr>(ctx, std::move(identifier_expr), std::move(coerced_arguments));
 	}
 
+	/**
+	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
+	 */
+	base::Optional<Box<CallExpr>> attempFittingBuiltin(
+		query::Context&                        ctx,
+		SymID                                  fun,
+		std::vector<Box<Expr>>&                normal_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
+	) {
+		// TODO, temporary version
+		auto call_type_result = ctx.query<QueryTypeOfSymbol>({ fun });
+		if (call_type_result->hasError()) return std::nullopt;
+
+		tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
+
+		if (call_type.getType().getParameterTypes().size() != normal_arguments.size())
+			return std::nullopt;
+
+		std::vector<base::Box<Expr>> coerced_arguments;
+		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+			auto coerced = coerceExpression(
+				std::move(normal_arguments[i]), call_type.getType().getParameterTypes()[i]
+			);
+			if (coerced.hasError()) return std::nullopt;
+			coerced_arguments.emplace_back(std::move(coerced.value()));
+		}
+
+		auto identifier_expr = makeBox<IdentifierExpr>(ctx, fun);
+		return makeBox<CallExpr>(ctx, std::move(identifier_expr), std::move(coerced_arguments));
+	}
+
+	/**
+	 * @brief Attemps to use given normal and named arguments as arguments for given function.
+	 */
+	base::Optional<Box<CallExpr>> attempFitting(
+		query::Context&                        ctx,
+		SymID                                  fun,
+		std::vector<Box<Expr>>&                normal_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
+	) {
+		switch (kind(fun)) {
+		case SymbolKind::Function:
+			return attempFittingFun(ctx, fun, normal_arguments, named_arguments);
+		case SymbolKind::BuiltinFunction:
+			return attempFittingBuiltin(ctx, fun, normal_arguments, named_arguments);
+		default:
+			CORE_PANIC("Function candidate is neither a function nor a builtin function");
+		}
+	}
+
 	base::Optional<Box<CallExpr>> processFunctionCall(
 		query::Context& ctx, CRef<LookupResult> lookup_result, pst::Access<pst::expr::Call> call_expr
 	) {
@@ -91,8 +142,9 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<Box<CallExpr>> result;
+		std::cout << lookup_result->leaves.size() << std::endl;
 		for (const auto& fun: lookup_result->leaves) {
-			match_optional(attempFittingFun(ctx, fun, normal_arguments, named_arguments)) {
+			match_optional(attempFitting(ctx, fun, normal_arguments, named_arguments)) {
 				opt_some(call_res) {
 					if (result.has_value())
 						return std::nullopt;  // At least 2 functions fit.

@@ -113,7 +113,6 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: rest, flags, attributes, etc
-
 				HOUTFunction output(original_symbol, ctx);
 
 				std::vector<code::Parameter> parameters;
@@ -151,7 +150,7 @@ namespace compiler::helios {
 						);
 					}
 				}
-
+				
 				output.parameters
 					= std::make_shared<std::vector<code::Parameter>>(std::move(parameters));
 
@@ -162,7 +161,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function 
-				//|| kind(key) == SymbolKind::BuiltinFunction
+				|| kind(key) == SymbolKind::BuiltinFunction
 				,"Function declaration processing called on non-function symbol"
 			);
 
