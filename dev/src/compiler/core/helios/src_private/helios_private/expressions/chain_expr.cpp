@@ -208,7 +208,7 @@ namespace compiler::helios::code {
 						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 							ident->getName().position,
 							base::strConcat(
-								"Failed to find correct function: '", ident->getName().value
+								"Failed to find correct function: ", ident->getName().value
 							)
 						)
 					);

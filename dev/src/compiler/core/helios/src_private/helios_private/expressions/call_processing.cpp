@@ -25,6 +25,8 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
+	 * @note normal_arguments and named_arguments are passed by reference, but in case nullopt is
+	 * returned, they must be unchanged.
 	 */
 	base::Optional<Box<CallExpr>> attempFittingFun(
 		query::Context&                        ctx,
@@ -32,19 +34,30 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		// TODO dont break vector, hashmap
+		
+		/*std::vector<std::pair<MRef<Box<Expr>>, MRef<Box<Expr>>> > moves; // Store all moves that happened: source, target. In case of failure undo all of them.
+		auto make_new = [&moves](){moves.emplace_back();};
+		auto set_source = [&moves](auto target){moves.rbegin()->first = target;};
+		auto set_target = [&moves](auto target){moves.rbegin()->second = target;};
+		auto undo_all_moves = [&moves](){
+			for (const auto& tmp: moves)
+				*tmp.second = std::move(*tmp.first);
+		};*/
+
 		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0, used_named_args = 0;
 		for (auto& param: *(decl.parameters)) {
+			make_new();
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
 				if (named_arguments.contains(param.name)) {
 					++used_named_args;
 					return std::move(named_arguments[param.name]);
 				} else {
-					if (normal_args_position < normal_arguments.size())
+					if (normal_args_position < normal_arguments.size()){
 						return std::move(normal_arguments[normal_args_position++]);
-					else if (param.initial_value.has_value())
+					}else if (param.initial_value.has_value())
+						// Initial values are created here and may be used (moved freely).
 						return std::move(param.initial_value.value());
 					else
 						return std::nullopt;
@@ -62,7 +75,8 @@ namespace compiler::helios::code {
 				opt_none { return std::nullopt; }
 			}
 		}
-		if (normal_args_position != normal_arguments.size()
+
+		if (normal_args_position != normal_arguments.size()  // All arguments must be used.
 		    or used_named_args != named_arguments.size())
 			return std::nullopt;
 
