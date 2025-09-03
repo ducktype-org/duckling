@@ -255,7 +255,6 @@ namespace vm {
 			}
 
 
-
 			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }

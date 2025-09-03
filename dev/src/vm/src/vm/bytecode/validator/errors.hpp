@@ -52,6 +52,17 @@ namespace vm::code {
 			  FUNC_NAME(func_name) {}
 	};
 
+	class VoidTypeArgumentError: public ValidationError {
+	public:
+		constexpr const static std::string_view ERR_MSG
+			= "Void type cannot be used as argument in function: ";
+		const base::StrID FUNC_NAME;
+
+		VoidTypeArgumentError(base::StrID func_name):
+			  ValidationError(base::strConcat(ERR_MSG, func_name)),
+			  FUNC_NAME(func_name) {}
+	};
+
 	/**
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.
@@ -244,6 +255,7 @@ namespace vm::code {
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
+	DEFINE_TYPE_ERROR(InvalidPrimitiveSizeError, "Primitive type cannot have size 0: ");
 	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
 	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidImplementsError,
@@ -345,5 +357,5 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		VTableTypeMismatchError, "The vtable type does not match the object pointer type."
 	);
-
+	DEFINE_INSTRUCTION_ERROR(VoidRetValAssignmentError, "Cannot assign to 'ret_val' of type void.");
 }
