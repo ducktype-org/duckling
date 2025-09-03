@@ -809,7 +809,7 @@ private:
 		auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(2, hout->functions.size());
+		ASSERT_EQUAL(4, hout->functions.size());
 		std::cerr << hout->debugPrint() << '\n';
 		auto function = hout->functions.at(1);
 		ASSERT_EQUAL(function.original_name, "foo");

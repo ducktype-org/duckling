@@ -170,7 +170,9 @@ namespace compiler::helios {
 			return func_maker.out.value();
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_NO_CACHE  // Query is used to provide default argumentes for call processing.
+		                     // They are provided in boxes which are moved to call expression. After
+		                     // queries are refactored to store refs it should be changed.
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
