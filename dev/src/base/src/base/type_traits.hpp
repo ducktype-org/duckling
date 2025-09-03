@@ -20,6 +20,11 @@
  * ----------
  * - base::Implication
  *
+ * Type Traits:
+ * ------------
+ * - base::is_variant_member
+ * - base::IS_VARIANT_MEMBER_V
+ *
  * ### Usage
  * @include type_traits_example.cpp
  *
@@ -29,6 +34,7 @@
 
 #include <string_view>
 #include <type_traits>
+#include <variant>
 
 namespace base {
 	namespace internal {
@@ -81,6 +87,26 @@ namespace base {
 	 */
 	template<class TypeA, class TypeB>
 	concept IsOfSameClass = internal::IsOfSameClassImpl<TypeA, TypeB>::value;
+
+	/**
+	 * @brief Type trait to check if a type `T` is a member of a `std::variant`.
+	 * @tparam T The type to check.
+	 * @tparam VariantT The `std::variant` type.
+	 */
+	template<typename T, typename VariantT>
+	struct is_variant_member;
+
+	template<typename T, typename... Types>
+	struct is_variant_member<T, std::variant<Types...>>:
+		  std::disjunction<std::is_same<T, Types>...> {};
+
+	/**
+	 * @brief Helper variable template for `is_variant_member`.
+	 * @tparam T The type to check.
+	 * @tparam VariantT The `std::variant` type.
+	 */
+	template<typename T, typename VariantT>
+	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
 
 	/**
 	 * @brief Checks if A implies B.
