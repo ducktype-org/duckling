@@ -224,8 +224,8 @@ namespace compiler::helios::code {
 		 * Case when as a first element we have an identifier not followed by a call expression,
 		 * like "foo.bar.c".
 		 */
-		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident
-		) -> query::QResult<ChainState, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident)
+			-> query::QResult<ChainState, errors::Failed> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
 
@@ -254,8 +254,8 @@ namespace compiler::helios::code {
 		 * Case when as a first element in the chain
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
-		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr
-		) -> query::QResult<ChainState, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
+			-> query::QResult<ChainState, errors::Failed> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::QError(errors::Failed());
 			auto hout_expr = std::move(expr).value();
@@ -278,42 +278,42 @@ namespace compiler::helios::code {
 			// TODO i tak wywolac
 			/*std::vector<Box<Expr>> call_arguments;
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
-					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
-				);
-				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				call_arguments.emplace_back(std::move(arg_expr.value()));
+			    auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+			        { arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
+			    );
+			    if (arg_expr.hasError()) return query::QError(errors::Failed());
+			    call_arguments.emplace_back(std::move(arg_expr.value()));
 			}
 
 			auto expr_type = current_expr->expression_type.getSymbolType();
 			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
 
 			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						call_expr->getSourcePosition(), "Invalid number of arguments"
-					)
-				);
-				return query::QError(errors::Failed());
+			    query_ctx.log(
+			        dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+			            call_expr->getSourcePosition(), "Invalid number of arguments"
+			        )
+			    );
+			    return query::QError(errors::Failed());
 			}
 
 			std::vector<base::Box<Expr>> coerced_arguments;
 			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-				auto coerced = coerceExpression(
-					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-				);
-				if (coerced.hasError()) {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							call_expr->getSourcePosition(), "Invalid argument type"
-						)
-					);
-					return query::QError(errors::Failed());
-				}
-				coerced_arguments.emplace_back(std::move(coerced.value()));
+			    auto coerced = coerceExpression(
+			        std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
+			    );
+			    if (coerced.hasError()) {
+			        query_ctx.log(
+			            dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+			                call_expr->getSourcePosition(), "Invalid argument type"
+			            )
+			        );
+			        return query::QError(errors::Failed());
+			    }
+			    coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
 			auto node = makeBox<CallExpr>(
-				query_ctx, std::move(current_expr), std::move(coerced_arguments)
+			    query_ctx, std::move(current_expr), std::move(coerced_arguments)
 			);
 			return ChainState::ofExpr(std::move(node));*/
 			CORE_UNREACHABLE();
@@ -437,8 +437,8 @@ namespace compiler::helios::code {
 		 * Helper function of @p processPSTExpr that processes a value given the
 		 * lookup result of the name.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol
-		) -> query::QResult<ChainState, errors::Failed> {
+		auto processNamespaceOrValue(const SymID& symbol)
+			-> query::QResult<ChainState, errors::Failed> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {

@@ -150,7 +150,7 @@ namespace compiler::helios {
 						);
 					}
 				}
-				
+
 				output.parameters
 					= std::make_shared<std::vector<code::Parameter>>(std::move(parameters));
 
@@ -160,9 +160,8 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function 
-				|| kind(key) == SymbolKind::BuiltinFunction
-				,"Function declaration processing called on non-function symbol"
+				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::BuiltinFunction,
+				"Function declaration processing called on non-function symbol"
 			);
 
 			declarationVisitor func_maker(ctx, key);
@@ -395,9 +394,8 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
-
 				// declaration:
-				auto decl = ctx.query<QueryDeclOfFun>(original_symbol);
+				auto         decl = ctx.query<QueryDeclOfFun>(original_symbol);
 				HOUTFunction output(decl);
 
 				// body:
