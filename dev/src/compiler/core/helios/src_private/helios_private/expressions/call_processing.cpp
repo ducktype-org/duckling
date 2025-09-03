@@ -25,8 +25,6 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
-	 * @note normal_arguments and named_arguments are passed by reference, but in case nullopt is
-	 * returned, they must be unchanged.
 	 */
 	base::Optional<Box<CallExpr>> attempFittingFun(
 		query::Context&                        ctx,
@@ -34,15 +32,6 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		
-		/*std::vector<std::pair<MRef<Box<Expr>>, MRef<Box<Expr>>> > moves; // Store all moves that happened: source, target. In case of failure undo all of them.
-		auto make_new = [&moves](){moves.emplace_back();};
-		auto set_source = [&moves](auto target){moves.rbegin()->first = target;};
-		auto set_target = [&moves](auto target){moves.rbegin()->second = target;};
-		auto undo_all_moves = [&moves](){
-			for (const auto& tmp: moves)
-				*tmp.second = std::move(*tmp.first);
-		};*/
 
 		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
 		std::vector<base::Box<Expr>> coerced_arguments;
