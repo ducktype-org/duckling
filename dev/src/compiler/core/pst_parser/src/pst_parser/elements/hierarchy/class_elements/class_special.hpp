@@ -43,7 +43,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbol() const final {
+		base::Optional<base::StrID> getDeclSymbolName() const final {
 			return getName();
 		}
 

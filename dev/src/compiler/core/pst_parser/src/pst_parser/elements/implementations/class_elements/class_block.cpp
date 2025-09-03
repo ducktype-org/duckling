@@ -36,7 +36,7 @@ namespace pst {
 				no_symbol.emplace_back(stmt.give());
 				break;
 			case DeclKind::Symbol:
-				symbol = stmt.internal()->getDeclSymbol().value();
+				symbol = stmt.internal()->getDeclSymbolName().value();
 				if (!by_symbol.atMaybe(symbol)) by_symbol.put(symbol);
 				by_symbol[symbol].emplace_back(stmt.give());
 				break;
@@ -68,7 +68,7 @@ namespace pst {
 				no_symbol_count++;
 				break;
 			case DeclKind::Symbol:
-				symbol = stmt.internal()->getDeclSymbol().value();
+				symbol = stmt.internal()->getDeclSymbolName().value();
 				if (by_symbol_count.atMaybe(symbol)) {
 					symbol_count = by_symbol_count[symbol];
 				} else {

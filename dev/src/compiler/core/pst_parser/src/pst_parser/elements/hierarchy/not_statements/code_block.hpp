@@ -12,7 +12,7 @@ namespace pst {
 		 * @brief Type of code block
 		 *
 		 * Relevant for some behaviors, for example path to node as different blocks can be ordered
-		 * like in a function or more unordered like in the global scope.
+		 * like in a function or more unordered like in the global scope. Undefined is just a default that will cause an error if another type is not set.
 		 */
 		enum CodeBlockType {
 			Unordered,
@@ -24,10 +24,16 @@ namespace pst {
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
 		CodeBlockType                              type = Undefined;
 
+		/**
+		 * This is the division of statements inside the block based on their symbol declaration kind and the symbol they declare, more detailed information about symbol declaration kinds is in the declaration of Stmt.
+		 */
 		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
 		std::vector<AccessLocked<Stmt>>                         no_symbol;
 		std::vector<AccessLocked<Stmt>>                         transparent;
 
+		/**
+		 * @brief Fills the by_symbol, no_symbol and transparent variables to reflect an ordered code block.
+		 */
 		void fillSymbols();
 
 	public:

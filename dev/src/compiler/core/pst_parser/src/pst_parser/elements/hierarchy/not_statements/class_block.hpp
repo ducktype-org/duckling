@@ -9,6 +9,9 @@ namespace pst {
 	class ClassBlock final: public NotStmt {
 		std::vector<AccessInternalAnonymous<ClassStmt>> statements;
 
+		/**
+		 * This is the division of statements inside the block based on their symbol declaration kind and the symbol they declare, more detailed information about symbol declaration kinds is in the declaration of Stmt.
+		 */
 		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
 		std::vector<AccessLocked<Stmt>>                         no_symbol;
 		std::vector<AccessLocked<Stmt>>                         transparent;

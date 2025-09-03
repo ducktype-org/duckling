@@ -38,9 +38,9 @@ namespace pst {
 	/**
 	 * @brief Three declaration options:
 	 *
-	 * None - This statement doesn't introduce any symbols.
-	 * Symbol - This statement introduces a symbol.
-	 * Transparent - This statement contains or links somewhere where there might be introduced
+	 * None - This statement doesn't introduce any symbols. For example an expression statement or a return statement.
+	 * Symbol - This statement introduces a symbol. For example a function declaration, import, using and variable declaration.
+	 * Transparent - This statement contains or links somewhere where there might be introduced. For example a macro expansion or a specifier block.
 	 * symbols.
 	 */
 	enum class DeclKind {
@@ -155,10 +155,10 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Get the symbol declared by a given statement if it exists.
+		 * @brief Get the symbol name declared by a given statement if it exists.
 		 */
 		[[nodiscard]]
-		virtual base::Optional<base::StrID> getDeclSymbol() const {
+		virtual base::Optional<base::StrID> getDeclSymbolName() const {
 			return {};
 		}
 	};

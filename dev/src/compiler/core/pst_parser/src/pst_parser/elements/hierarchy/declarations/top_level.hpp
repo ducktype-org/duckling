@@ -43,8 +43,6 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
-
-
 		DeclKind isDeclaration() const final {
 			return DeclKind::Transparent;
 		}

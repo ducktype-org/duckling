@@ -1,13 +1,13 @@
 #pragma once
 
 #include <algorithm>
-#include <cstddef>
+#include "ints.hpp"
 
 namespace base {
 	/**
 	 * @brief Struct that allows a string to be passed through a template
 	 */
-	template<std::size_t N>
+	template<usize N>
 	struct TemplateStringLiteral {
 		constexpr TemplateStringLiteral(const char (&str)[N]): value() {
 			std::copy_n(str, N, value);

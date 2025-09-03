@@ -6,7 +6,46 @@
 #include <base/variant.hpp>
 
 namespace pst {
-	class CodeBlockOrStmtIterator {
+	class CodeBlockOrStmtIterator;
+	/**
+	 * @brief Code Block or Statement.
+	 */
+	class CodeBlockOrStmt final: public NotStmt {
+		NAMED_CHILD_OPT(stmt, Stmt);
+		NAMED_CHILD_OPT(code_block, CodeBlock);
+
+	public:
+		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::CodeBlockOrStmt;
+		}
+
+		static MBox<CodeBlockOrStmt> parse(
+			LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
+		);
+		~CodeBlockOrStmt() final = default;
+		void dprint(std::ostream& out) const final;
+
+		using const_iterator = CodeBlockOrStmtIterator;
+		[[nodiscard]]
+		const_iterator begin() const;
+		[[nodiscard]]
+		const_iterator end() const;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Code Block or Statement";
+		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
+	};
+
+	/**
+	 * @brief A special iterator that can iterate over bot a code block or a single statement
+	 */
+	class CodeBlockOrStmtIterator final {
 	private:
 		using code_block_iterator = typename CodeBlock::const_iterator;
 		using stmt_iterator       = std::pair<AccessLocked<Stmt>, long>;
@@ -178,38 +217,4 @@ namespace pst {
 		}
 	};
 
-	/**
-	 * @brief Code Block or Statement.
-	 */
-	class CodeBlockOrStmt final: public NotStmt {
-		NAMED_CHILD_OPT(stmt, Stmt);
-		NAMED_CHILD_OPT(code_block, CodeBlock);
-
-	public:
-		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {
-			this->element_kind = ElementKind::CodeBlockOrStmt;
-		}
-
-		static MBox<CodeBlockOrStmt> parse(
-			LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
-		);
-		~CodeBlockOrStmt() final = default;
-		void dprint(std::ostream& out) const final;
-
-		using const_iterator = CodeBlockOrStmtIterator;
-		[[nodiscard]]
-		const_iterator begin() const;
-		[[nodiscard]]
-		const_iterator end() const;
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Code Block or Statement";
-		}
-
-		[[nodiscard]]
-		bool isStatementAggregate() const final {
-			return true;
-		}
-	};
 }
