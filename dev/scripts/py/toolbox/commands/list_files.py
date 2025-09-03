@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Dict, List, Tuple, Union
 from click import command, option
 
 from .helpers import (
@@ -43,7 +43,7 @@ def list_files(extensions: Tuple[str, ...], only_modified: bool, lines: bool, br
     # Convert extensions tuple to list, or None if empty
     ext_list = list(extensions) if extensions else None
     
-    files = list_files_impl(
+    files: Union[List[str], Dict[str, List[Tuple[int, int]]]] = list_files_impl(
         extensions=ext_list,
         branch=branch,
         only_modified=only_modified,
