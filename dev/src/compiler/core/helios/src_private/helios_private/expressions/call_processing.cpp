@@ -124,7 +124,7 @@ namespace compiler::helios::code {
 
 	base::Optional<Box<CallExpr>> processFunctionCall(
 		query::Context&              ctx,
-		const std::vector<SymID>     candidates,
+		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	) {
 		CORE_ASSERT(candidates.size() == 1, "Overloading is not implemented yet");
@@ -139,7 +139,7 @@ namespace compiler::helios::code {
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().value;
 				if (named_arguments.contains(arg_name)) return std::nullopt;  // Not unique names.
-				named_arguments.emplace(std::move(arg_name), std::move(arg_expr.value()));
+				named_arguments.emplace(arg_name, std::move(arg_expr.value()));
 			} else {
 				if (!named_arguments.empty())
 					return std::nullopt;  // Normal argument after named one.

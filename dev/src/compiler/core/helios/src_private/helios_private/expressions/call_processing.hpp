@@ -21,7 +21,7 @@ namespace compiler::helios::code {
 	 */
 	base::Optional<Box<CallExpr>> processFunctionCall(
 		query::Context&              ctx,
-		const std::vector<SymID>     candidates,
+		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	);
 }
