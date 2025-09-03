@@ -14,6 +14,12 @@
 
 namespace vm {
 
+	inline std::byte* heapAllocOrThrow(u64 size) {
+		try {
+			return new std::byte[size];
+		} catch (const std::bad_alloc&) { throw exceptions::VMMemoryAllocationError(); }
+	}
+
 	struct BlockData;
 
 	class HeapAllocator final: public AllocatorABC {
@@ -23,7 +29,7 @@ namespace vm {
 	public:
 		BlockData allocate(TypeCRef type) {
 			auto             size = type->getSize();
-			auto             ptr  = new std::byte[size];
+			auto             ptr  = heapAllocOrThrow(size);
 			base::OwningView view{ ptr, size };
 			allocated.push_back(std::move(view));
 			return BlockData{ type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>{ this } };
@@ -37,10 +43,7 @@ namespace vm {
 		 */
 		BlockData dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
 			auto       size = inner_type->getSize() * n;
-			std::byte* ptr  = nullptr;
-			try {
-				ptr = new std::byte[size];
-			} catch (const std::bad_alloc&) { throw exceptions::VMMemoryAllocationError(); }
+			std::byte* ptr  = heapAllocOrThrow(size);
 			allocated.emplace_back(ptr, size);
 			return BlockData{ table_type, base::ModRawView{ ptr, size }, Ref<AllocatorABC>(this) };
 		}
