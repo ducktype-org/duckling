@@ -133,7 +133,8 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>                normal_arguments;
 		base::HashMap<base::StrID, Box<Expr>> named_arguments;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			auto arg_expr = ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr() );
+			auto arg_expr
+				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
 			if (arg_expr.hasError()) return std::nullopt;
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().value;

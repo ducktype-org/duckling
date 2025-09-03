@@ -23,7 +23,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isNamedArg() const{
+		bool isNamedArg() const {
 			return arg_name.has_value();
 		}
 
