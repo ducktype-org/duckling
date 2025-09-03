@@ -307,7 +307,7 @@ namespace compiler::helios {
 				// for example: `if (let a = ...) {}`.
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet");
+				          .expect("Not handling errors here yet... (If)");
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 
@@ -326,7 +326,7 @@ namespace compiler::helios {
 			void visitWhile(pst::Access<pst::While> stmt) override {
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet");
+				          .expect("Not handling errors here yet... (While)");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
 
@@ -378,6 +378,8 @@ namespace compiler::helios {
 					));
 				}
 			}
+
+			void visitConst(pst::Access<pst::Const>) override { empty = true; }
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

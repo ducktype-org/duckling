@@ -9,6 +9,7 @@
 #include "../scope_symbol_id.hpp"
 #include "elements/expr.hpp"  // IWYU pragma: export
 
+#include <helios/ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
@@ -109,8 +110,7 @@ namespace compiler::helios {
 	enum class HOUTGlobalDataType { Constant, Variable };
 
 	struct HOUTGlobalConst final {
-		// @TODO: CTV from TS:
-		i64 value;
+		CompileTimeValue value;
 	};
 
 	struct HOUTGlobalVariable final {

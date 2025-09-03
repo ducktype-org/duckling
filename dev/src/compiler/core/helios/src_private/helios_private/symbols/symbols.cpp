@@ -1,8 +1,8 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios_private/comp_time/int_eval.hpp>
-#include <helios_private/comp_time/type_eval.hpp>
+#include <helios/ctv/ctv.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -630,7 +630,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<i64 COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -638,8 +638,11 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			// @TODO: Handle potential lack of value
-			return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
+			auto ctv = ctx.query<QueryEvaluateExpression>(
+				const_symbol->getValue().value().unlock(ctx)->getExpr()
+			);
+			if (ctv.hasError()) return query::QError(errors::Failed());
+			return ctv.value();
 		}
 
 		QUERY_AUTO_CACHE_COPY
