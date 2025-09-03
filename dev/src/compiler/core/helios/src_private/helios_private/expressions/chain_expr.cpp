@@ -201,7 +201,7 @@ namespace compiler::helios::code {
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
 
 
-			match_optional(processFunctionCall(query_ctx, lookup_result, call_expr)) {
+			match_optional(processFunctionCall(query_ctx, lookup_result->leaves, call_expr)) {
 				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
 				opt_none {
 					query_ctx.log(
@@ -270,52 +270,16 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
+			// @note this function is not run yet.
 			// @TODO write tests for this case when parser will support it
-			// @TODO maybe chose one style of error messages in this file
-			// @TODO after lookup will be improved, use process_call providing lookup result
-			// including all possible function.
-			// @note this code doesn't work, ignore named arguments etc.
-			// TODO i tak wywolac
-			/*std::vector<Box<Expr>> call_arguments;
-			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-			    auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
-			        { arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
-			    );
-			    if (arg_expr.hasError()) return query::QError(errors::Failed());
-			    call_arguments.emplace_back(std::move(arg_expr.value()));
-			}
+			// @TODO after overloading will be implementing, improve lookup and provide correct candidates for processFunctionCall
 
-			auto expr_type = current_expr->expression_type.getSymbolType();
-			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
-
-			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-			    query_ctx.log(
-			        dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-			            call_expr->getSourcePosition(), "Invalid number of arguments"
-			        )
-			    );
-			    return query::QError(errors::Failed());
+			match_optional(processFunctionCall(query_ctx, /*provide*/ {}, call_expr)) {
+				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
+				opt_none {
+					return query::QError(errors::Failed());
+				}
 			}
-
-			std::vector<base::Box<Expr>> coerced_arguments;
-			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-			    auto coerced = coerceExpression(
-			        std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-			    );
-			    if (coerced.hasError()) {
-			        query_ctx.log(
-			            dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-			                call_expr->getSourcePosition(), "Invalid argument type"
-			            )
-			        );
-			        return query::QError(errors::Failed());
-			    }
-			    coerced_arguments.emplace_back(std::move(coerced.value()));
-			}
-			auto node = makeBox<CallExpr>(
-			    query_ctx, std::move(current_expr), std::move(coerced_arguments)
-			);
-			return ChainState::ofExpr(std::move(node));*/
 			CORE_UNREACHABLE();
 		}
 
@@ -413,7 +377,7 @@ namespace compiler::helios::code {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			match_optional(processFunctionCall(query_ctx, lookup_result, call_expr)) {
+			match_optional(processFunctionCall(query_ctx, lookup_result->leaves, call_expr)) {
 				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
 				opt_none {
 					query_ctx.log(

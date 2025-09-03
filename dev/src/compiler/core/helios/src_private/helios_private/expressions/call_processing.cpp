@@ -14,7 +14,6 @@
 #include <base/ints.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
-#include <base/ref.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
@@ -25,6 +24,8 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
+	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
+	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attempFittingFun(
 		query::Context&                        ctx,
@@ -32,25 +33,19 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-
 		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0, used_named_args = 0;
 		for (auto& param: *(decl.parameters)) {
-			make_new();
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
-				if (named_arguments.contains(param.name)) {
-					++used_named_args;
-					return std::move(named_arguments[param.name]);
-				} else {
-					if (normal_args_position < normal_arguments.size()){
-						return std::move(normal_arguments[normal_args_position++]);
-					}else if (param.initial_value.has_value())
-						// Initial values are created here and may be used (moved freely).
-						return std::move(param.initial_value.value());
-					else
-						return std::nullopt;
-				}
+				if (named_arguments.contains(param.name))
+					return ++used_named_args, std::move(named_arguments[param.name]);
+				else if (normal_args_position < normal_arguments.size())
+					return std::move(normal_arguments[normal_args_position++]);
+				else if (param.initial_value.has_value())
+					return std::move(param.initial_value.value());
+				else
+					return std::nullopt;
 			};
 
 			match_optional(get_arg()) {
@@ -75,6 +70,8 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
+	 * @note invalidadates normal and named_arguments (may move expr from boxes and leave them empty).
+	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attempFittingBuiltin(
 		query::Context&                        ctx,
@@ -82,14 +79,14 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		// TODO, temporary version
 		auto call_type_result = ctx.query<QueryTypeOfSymbol>({ fun });
 		if (call_type_result->hasError()) return std::nullopt;
 
 		tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
 
-		if (call_type.getType().getParameterTypes().size() != normal_arguments.size())
-			return std::nullopt;
+		if (call_type.getType().getParameterTypes().size() != normal_arguments.size()
+		    || !named_arguments.empty())
+			return std::nullopt;  // Builtin functions doesn't support named arguments.
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
@@ -124,8 +121,12 @@ namespace compiler::helios::code {
 	}
 
 	base::Optional<Box<CallExpr>> processFunctionCall(
-		query::Context& ctx, CRef<LookupResult> lookup_result, pst::Access<pst::expr::Call> call_expr
+		query::Context&              ctx,
+		const std::vector<SymID>     candidates,
+		pst::Access<pst::expr::Call> call_expr
 	) {
+		CORE_ASSERT(candidates.size() == 1, "Overloading is not implemented yet");
+
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                normal_arguments;
 		base::HashMap<base::StrID, Box<Expr>> named_arguments;
@@ -145,8 +146,7 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<Box<CallExpr>> result;
-		std::cout << lookup_result->leaves.size() << std::endl;
-		for (const auto& fun: lookup_result->leaves) {
+		for (const auto& fun: candidates) {
 			match_optional(attempFitting(ctx, fun, normal_arguments, named_arguments)) {
 				opt_some(call_res) {
 					if (result.has_value())
