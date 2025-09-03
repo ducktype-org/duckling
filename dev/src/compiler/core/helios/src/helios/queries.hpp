@@ -38,7 +38,7 @@ namespace compiler::helios {
 	 * @note Works only for SymID-s that actually represent a function. Can be called on every
 	 * functon in program without creating cycles.
 	 */
-	DECLARE_QUERY(QueryDeclOFFun, SymID, HOUTFunctionDeclaration);
+	DECLARE_QUERY(QueryDeclOfFun, SymID, HOUTFunctionDeclaration);
 
 	/**
 	 * @brief Query code of a function.

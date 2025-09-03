@@ -4,8 +4,11 @@
  */
 #include "chain_expr.hpp"
 
+#include "call_processing.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -18,8 +21,6 @@
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <typesystem/higher/types.hpp>
-
-#include <helios/queries.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -199,7 +200,22 @@ namespace compiler::helios::code {
 			auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
 
-			return processFunctionCall(lookup_result, ident->getName(), call_expr);
+
+			match_optional(processFunctionCall(query_ctx, lookup_result, call_expr)) {
+				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
+				opt_none {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+							ident->getName().position,
+							base::strConcat(
+								"Failed to find correct function: '", ident->getName().value
+							)
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		/**
@@ -208,8 +224,8 @@ namespace compiler::helios::code {
 		 * Case when as a first element we have an identifier not followed by a call expression,
 		 * like "foo.bar.c".
 		 */
-		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident)
-			-> query::QResult<ChainState, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident
+		) -> query::QResult<ChainState, errors::Failed> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
 
@@ -238,8 +254,8 @@ namespace compiler::helios::code {
 		 * Case when as a first element in the chain
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
-		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
-			-> query::QResult<ChainState, errors::Failed> {
+		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr
+		) -> query::QResult<ChainState, errors::Failed> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::QError(errors::Failed());
 			auto hout_expr = std::move(expr).value();
@@ -256,8 +272,11 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState, errors::Failed> {
 			// @TODO write tests for this case when parser will support it
 			// @TODO maybe chose one style of error messages in this file
-
-			/*std::vector<Box<Expr>> call_arguments; TODO
+			// @TODO after lookup will be improved, use process_call providing lookup result
+			// including all possible function.
+			// @note this code doesn't work, ignore named arguments etc.
+			// TODO i tak wywolac
+			/*std::vector<Box<Expr>> call_arguments;
 			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
 				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
 					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
@@ -293,13 +312,11 @@ namespace compiler::helios::code {
 				}
 				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
-			*/
-			auto expr_type = current_expr->expression_type.getSymbolType();
-			std::vector<base::Box<Expr>> coerced_arguments;
 			auto node = makeBox<CallExpr>(
-				query_ctx, std::move(current_expr), std::move(coerced_arguments), base::HashMap<base::StrID, base::Box<Expr>>{}
-			); // TODO
-			return ChainState::ofExpr(std::move(node));
+				query_ctx, std::move(current_expr), std::move(coerced_arguments)
+			);
+			return ChainState::ofExpr(std::move(node));*/
+			CORE_UNREACHABLE();
 		}
 
 		/**
@@ -395,93 +412,33 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState, errors::Failed> {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
-			return processFunctionCall(lookup_result, expr_access->getName(), call_expr);
-		}
 
-		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
-
-		/**
-		 * Helper function of @p processPSTExpr that processes a function call given the
-		 * lookup result of the function name.
-		 */
-		auto processFunctionCall(
-			CRef<LookupResult>           lookup_result,
-			const tpc::Identifier&       name,
-			pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ChainState, errors::Failed> {
-
-			if (lookup_result->isEmpty()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						name.position, base::strConcat("Function '", name.value, "' not found")
-					)
-				);
-				return query::QError(errors::Failed());
-			}
-			// @TODO: make it better #981:
-			auto callee = lookup_result->getAsSingle().value().back();
-
-			std::vector<Box<Expr>> call_arguments;
-			base::HashMap<base::StrID, base::Box<Expr>> named_arguments;
-			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
-					{ arg.unlock(query_ctx)->arg.give().unlock(query_ctx)->getExpr() }
-				);
-				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				if (arg.unlock(query_ctx)->arg_name.has_value()){
-					base::StrID arg_name = arg.unlock(query_ctx)->arg_name.value().value;
-					if (named_arguments.contains(arg_name)) return query::QError(errors::Failed()); // Not unique names.
-					named_arguments.emplace(std::move(arg_name), std::move(arg_expr.value()));
-				}else{
-					if (!named_arguments.empty()) return query::QError(errors::Failed()); // Normal argument after named one.
-					call_arguments.emplace_back(std::move(arg_expr.value()));
-				}
-			}
-
-			auto call_type_result = query_ctx.query<QueryTypeOfSymbol>({ callee });
-			if (call_type_result->hasError()) return query::QError(errors::Failed());
-			tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
-
-			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						name.position, "Invalid number of arguments"
-					)
-				);
-				return query::QError(errors::Failed());
-			}
-
-			std::vector<base::Box<Expr>> coerced_arguments;
-			base::HashMap<base::StrID, base::Box<Expr>> coerced_named_arguments; // TODO
-			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-
-				auto coerced = coerceExpression(
-					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-				);
-				if (coerced.hasError()) {
+			match_optional(processFunctionCall(query_ctx, lookup_result, call_expr)) {
+				opt_some(call_expr) { return ChainState::ofExpr(std::move(call_expr)); }
+				opt_none {
 					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							name.position, "Invalid argument type"
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+							expr_access->getName().position,
+							base::strConcat(
+								"Failed to find correct function: '", expr_access->getName().value
+							)
 						)
 					);
 					return query::QError(errors::Failed());
 				}
-				coerced_arguments.emplace_back(std::move(coerced.value()));
 			}
-			std::cout<<"HERE2"<<std::endl;
-			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
-			auto node            = makeBox<CallExpr>(
-                query_ctx, std::move(identifier_expr), std::move(coerced_arguments), std::move(named_arguments)
-            );
-			return ChainState::ofExpr(std::move(node));
+			CORE_UNREACHABLE();
 		}
+
+		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
+
 
 		/**
 		 * Helper function of @p processPSTExpr that processes a value given the
 		 * lookup result of the name.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol)
-			-> query::QResult<ChainState, errors::Failed> {
+		auto processNamespaceOrValue(const SymID& symbol
+		) -> query::QResult<ChainState, errors::Failed> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {

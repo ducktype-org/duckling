@@ -99,7 +99,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
-	struct IMPLEMENT_QUERY(QueryDeclOFFun, HOUTFunctionDeclaration) {
+	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
 		struct declarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -153,7 +153,7 @@ namespace compiler::helios {
 				}
 
 				output.parameters
-					= std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
+					= std::make_shared<std::vector<code::Parameter>>(std::move(parameters));
 
 				this->out.emplace(std::move(output));
 			}
@@ -161,8 +161,9 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function,
-				"Function declaration processing called on non-function symbol"
+				kind(key) == SymbolKind::Function 
+				//|| kind(key) == SymbolKind::BuiltinFunction
+				,"Function declaration processing called on non-function symbol"
 			);
 
 			declarationVisitor func_maker(ctx, key);
@@ -174,7 +175,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOFFun);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 		/**
@@ -395,7 +396,7 @@ namespace compiler::helios {
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 
 				// declaration:
-				auto decl = ctx.query<QueryDeclOFFun>(original_symbol);
+				auto decl = ctx.query<QueryDeclOfFun>(original_symbol);
 				HOUTFunction output(decl);
 
 				// body:

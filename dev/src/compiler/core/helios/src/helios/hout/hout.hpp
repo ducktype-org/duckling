@@ -60,7 +60,7 @@ namespace compiler::helios {
 		 * In the future we might optimize it to single (or zero) shared_ptr, but
 		 * that will require some boilerplate.
 		 */
-		std::shared_ptr<const std::vector<code::Parameter>> parameters;
+		std::shared_ptr<std::vector<code::Parameter>> parameters;
 
 		/**
 		 * @brief Lifetime scope, thats higher

@@ -254,13 +254,11 @@ namespace compiler::helios::code {
 	struct CallExpr final: public Expr {
 		base::Box<Expr>                             callee;
 		std::vector<base::Box<Expr>>                arguments;
-		base::HashMap<base::StrID, base::Box<Expr>> named_arguments;
 
 		CallExpr(
 			query::Context&                             ctx,
 			base::Box<Expr>                             callee,
-			std::vector<base::Box<Expr>>                arguments,
-			base::HashMap<base::StrID, base::Box<Expr>> named_arguments
+			std::vector<base::Box<Expr>>                arguments
 		);
 
 		void debugPrint(std::ostream& out) const final;
