@@ -84,6 +84,21 @@ namespace base {
 		}
 
 	/**
+	 * @brief Macro to create a BoxPtrDeleter specialization with a function.
+	 * Usage: BOX_MAKE_PTR_DELETER(MyType, my_delete_function)
+	 * This creates a complete BoxPtrDeleter specialization that calls the specified function.
+	 */
+	#define BOX_MAKE_PTR_DELETER(Type, DeleteFunction) \
+		namespace base::extend { \
+			template<> \
+			struct BoxPtrDeleter<Type> { \
+				static void del(Type* ptr) { \
+					DeleteFunction(ptr); \
+				} \
+			}; \
+		}
+
+	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
 	 * scope. It is not nullable, and it is not copyable.
 	 * @note: When performing a move operation, the source pointer is set to nullptr.

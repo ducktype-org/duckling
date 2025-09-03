@@ -19,23 +19,11 @@ namespace compiler::backend_llvm {
 	void deleteModuleImpl(ModuleImpl* ptr);
 }
 
-// Create a custom deleter for ModuleImpl using the new macro system
-BOX_MAKE_DELETER(ModuleImplDeleter, compiler::backend_llvm::deleteModuleImpl);
-
-namespace base::extend {
-	/**
-	 * @brief Custom Box/MBox deleter for ModuleImpl.
-	 * It is needed to avoid UB with delete on incomplete type.
-	 * Now implemented using the new macro-based deleter system.
-	 */
-	template<>
-	struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
-		static void del(compiler::backend_llvm::ModuleImpl* ptr) {
-			ModuleImplDeleter deleter;
-			deleter(ptr);
-		}
-	};
-}
+/**
+ * @brief Custom Box/MBox deleter for ModuleImpl.
+ * It is needed to avoid UB with delete on incomplete type.
+ */
+BOX_MAKE_PTR_DELETER(compiler::backend_llvm::ModuleImpl, compiler::backend_llvm::deleteModuleImpl);
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };
