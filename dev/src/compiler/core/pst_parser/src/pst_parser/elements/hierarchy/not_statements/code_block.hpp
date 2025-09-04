@@ -15,9 +15,9 @@ namespace pst {
 		 * like in a function or more unordered like in the global scope. Undefined is just a
 		 * default that will cause an error if another type is not set.
 		 *
-		 * Unordered - Statements that declare the different symbols, statements that don't declare symbols and transparent statements have separate orders.
-		 * Ordered - Order of statements is as one list.
-		 * Undefined - Illegal default state.
+		 * Unordered - Statements that declare the different symbols, statements that don't declare
+		 * symbols and transparent statements have separate orders. Ordered - Order of statements is
+		 * as one list. Undefined - Illegal default state.
 		 */
 		enum CodeBlockType {
 			Unordered,
