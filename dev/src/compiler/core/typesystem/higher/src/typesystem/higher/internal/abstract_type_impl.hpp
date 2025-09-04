@@ -414,7 +414,7 @@ namespace tsh::internal {
 
 		StringAbstractTypeImpl() { representation = "string"; }
 
-		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; } // string destruction requires to free memory
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -445,9 +445,7 @@ namespace tsh::internal {
 			return false;
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor() const override {
-			return element_type.hasNoOpDestructor();
-		}
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; } // dynamic array destruction requires to free memory
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {

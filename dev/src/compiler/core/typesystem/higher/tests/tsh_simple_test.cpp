@@ -263,7 +263,7 @@ private:
 		const StringAbstractType str_3    = type_str;
 		assertTrue(str_3.getKind() == String, "String should survive casting.");
 
-		assertTrue(str_1.hasNoOpDestructor(), "String should have no op destructor.");
+		assertFalse(str_1.hasNoOpDestructor(), "String should not have no op destructor.");
 	}
 
 	/**
@@ -296,11 +296,10 @@ private:
 			"DynamicArrays with element with different mutability should be different."
 		);
 
-		assertTrue(
+		assertFalse(
 			arr_1.hasNoOpDestructor() && arr_4.hasNoOpDestructor(),
-			"DynamicArrays of Ints should have no op destructors."
+			"DynamicArrays should not have no op destructors."
 		);
-		// @TODO: add test with element that doesn't have no-op destructor
 	}
 
 	/**
@@ -336,7 +335,10 @@ private:
 			tup_1.hasNoOpDestructor() && tup_4.hasNoOpDestructor() && tup_5.hasNoOpDestructor(),
 			"Tuples of Ints should have no op destructors."
 		);
-		// @TODO: add test with element that doesn't have no-op destructor
+
+		const auto str = query::entryPoint<QueryStringType>({});
+		const auto tup_6 = query::entryPoint<QueryTupleType>({ { st(int_16), st(str) } });
+		assertFalse(tup_6.hasNoOpDestructor(), "Tuple with String should not have no op destructor.");
 	}
 
 	/**
@@ -369,7 +371,10 @@ private:
 			var_1.hasNoOpDestructor() && var_4.hasNoOpDestructor(),
 			"Variants of Ints should have no op destructors."
 		);
-		// @TODO: add test with element that doesn't have no-op destructor
+
+		const auto str = query::entryPoint<QueryStringType>({});
+		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(str) } });
+		assertFalse(var_5.hasNoOpDestructor(), "Variant with String should not have no op destructor.");
 	}
 
 	/**
@@ -457,7 +462,7 @@ private:
 		assertTrue(meta == meta_2, "There shouldn't be multiple different 'type' types.");
 
 		assertTrue(meta.getKind() == Meta, "MetaType should have kind Meta.");
-		assertFalse(meta.hasNoOpDestructor(), "MetaType should not have no op destructor.");
+		assertTrue(meta.hasNoOpDestructor(), "MetaType should have no op destructor.");
 
 		const AbstractType     meta_type = meta;
 		const MetaAbstractType met_3     = meta_type;
