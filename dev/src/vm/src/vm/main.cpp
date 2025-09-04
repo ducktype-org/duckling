@@ -8,6 +8,7 @@
 
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/debug/debug.hpp>
 
 #include <exception>
 
@@ -28,6 +29,17 @@ clah::Clah getVmClah() {
 			if (options.isFlag("version")) {
 				showVersion();
 				throw clah::exceptions::SuccessExitException(options);
+			}
+		})
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addShortName('d')
+	             .addLongName("debug-mode")
+	             .addShortDesc("Enables debug mode.")
+	             .build())
+	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("debug-mode")) {
+				std::cerr<<"Debug mode enabled.\n";
+				vm::DebugTracer::setDebug(true);
 			}
 		})
 	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")

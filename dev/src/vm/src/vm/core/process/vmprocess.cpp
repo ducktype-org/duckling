@@ -16,6 +16,7 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
+#include <vm/debug/debug.hpp>
 
 #include <mutex>
 #include <shared_mutex>
@@ -35,6 +36,7 @@ namespace vm {
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
 	) {
+		TRACE_FUNC();
 		std::unique_lock                                       lock(rw_global);
 		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
@@ -60,6 +62,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> VMProcess::runFunction(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
+		TRACE_FUNC();
 		std::unique_lock lock(rw_global);
 		if (!loaded_program.has_value()) return std::unexpected(api::ApiError{ api::RunError{} });
 

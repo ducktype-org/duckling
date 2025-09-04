@@ -6,6 +6,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/debug/debug.hpp>
 
 namespace {
 	using namespace vm::code;
@@ -495,6 +496,7 @@ namespace {
 Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	const base::HashMap<base::StrID, FuncSignature>& available_functions
 ) const {
+	TRACE_FUNC();
 	validateTypes(*this, available_functions);
 	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
 

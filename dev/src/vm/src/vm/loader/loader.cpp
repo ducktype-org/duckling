@@ -28,6 +28,7 @@
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
+#include <vm/debug/debug.hpp>
 
 #include <expected>
 #include <unordered_map>
@@ -104,6 +105,7 @@ namespace {
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	const std::vector<fs::File>& files
 ) {
+	TRACE_FUNC();
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
@@ -162,6 +164,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<code::CodeCollection>& code_collections
 ) {
+	TRACE_FUNC();
 	LoaderLogger log;
 	try {
 		for (const auto& code: code_collections) program = program.newInsertCode(code);

@@ -17,6 +17,7 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
+#include <vm/debug/debug.hpp>
 
 #include <variant>
 
@@ -1169,6 +1170,7 @@ vm::code::Function vm::code::validateAndExtractReachableCode(
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const Function&                                  function
 ) {
+	TRACE_FUNC();
 	FuncSignature signature = signatures.at(function.name);
 
 	FunctionValidator validator(tod_map, type_metadata, globals_map, signatures, function);
