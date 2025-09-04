@@ -56,6 +56,7 @@ namespace vm {
 	}
 
 	Supervisor::~Supervisor() {
-		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
+		for (auto& [pid, proc]: process_table)
+			proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }

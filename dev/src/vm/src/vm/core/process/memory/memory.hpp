@@ -62,12 +62,21 @@ namespace vm {
 		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
 
 		/**
+		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
+		 * hierarchy.
+		 * @note Moving here means no data copy-constructors are called.
+		 */
+		void moveBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
+
+		/**
 		 * @brief Moves `byte_size` bytes pointed-to by `src` to `dst`.
-		 * Moving here means data copy-constructors are not invoked.
+		 * Moving here means data copy-constructors of the moved object are not invoked.
+		 * The objects that are in the "suffix" are destructed.
 		 * @note Frees *block_dst's nested blocks whose offsets would not fit
 		 * inside the new memory area.
+		 * @note These blocks must be of a dynamic table type.
 		 */
-		auto movePointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_number) -> void;
+		void moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count);
 
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.
@@ -75,6 +84,9 @@ namespace vm {
 		 */
 		void runDataDestructors(Ref<Block> block);
 
+		/**
+		 * @brief Executes destructors on a range of objects, that lay next to each other.
+		 */
 		void runDataDestructors(base::ModRawView data, TypeCRef type);
 
 		/**
@@ -83,6 +95,9 @@ namespace vm {
 		 */
 		void runDataCopyConstructors(Ref<Block> block);
 
+		/**
+		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
+		 */
 		void runDataCopyConstructors(base::ModRawView data, TypeCRef type);
 
 		/**
@@ -90,19 +105,39 @@ namespace vm {
 		 * @note The callback should not change the layout of the objects in the block.
 		 * @param callback A function that will be called on each object.
 		 */
-		void iterateOverDataAndExecute(Ref<Block> block, void(Memory::*callback)(base::ModRawView data, TypeCRef type));
-		void iterateOverDataAndExecute(base::ModRawView data, TypeCRef type, void(Memory::*callback)(base::ModRawView data, TypeCRef type));
+		void iterateOverDataAndExecute(
+			Ref<Block> block, void (Memory::*callback)(base::ModRawView data, TypeCRef type)
+		);
 
 		/**
-		 * @brief Based on block's type, performs destruction of the data.
+		 * @brief Iterates over each object in the `data` and calls the callback on it.
+		 * @note The callback should not change the layout of the objects in the block.
+		 * @note In opposition to `runObjectDestructor` and `runObjectCopyConstructor`, here `data`
+		 * can represent multiple objects.
+		 * @param callback A function that will be called on each object.
+		 */
+		void iterateOverDataAndExecute(
+			base::ModRawView data,
+			TypeCRef         type,
+			void (Memory::*callback)(base::ModRawView data, TypeCRef type)
+		);
+
+		/**
+		 * @brief Based on data's type, performs destruction of the data.
 		 * E.g. in case of a non-null pointer, decreases pointed block's reference count.
-	     */
+		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
+		 * range of objects from a table, but it can be a single object from a table, or from
+		 * somewhere else.
+		 */
 		void runObjectDestructor(base::ModRawView data, TypeCRef type);
 
 		/**
-		 * @brief Based on block's type, performs copy-constructor of the data.
+		 * @brief Based on data's type, performs copy-constructor of the data.
 		 * E.g. in case of a non-null pointer, increases pointed block's reference count.
-	     */
+		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
+		 * range of objects from a table, but it can be a single object from a table, or from
+		 * somewhere else.
+		 */
 		void runObjectCopyConstructor(base::ModRawView data, TypeCRef type);
 
 	public:
@@ -203,7 +238,7 @@ namespace vm {
 
 		// ======================== Pointers ========================
 
-		void increaseBlockRefcount(Ref<Block> block);
+		static void increaseBlockRefcount(Ref<Block> block);
 		void decreaseBlockRefcount(Ref<Block> block);
 
 		[[nodiscard]]

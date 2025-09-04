@@ -106,7 +106,6 @@ namespace vm {
 		) {
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.executing_program->functions[function_id];
-			std::cerr << "Calling: " << called_func.name.strView() << std::endl;
 			const bool called_rets_void = called_func.result_type->getName() == "void";
 
 			// Size of the shared stack space between called functions.
