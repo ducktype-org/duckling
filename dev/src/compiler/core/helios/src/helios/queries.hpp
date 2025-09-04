@@ -35,8 +35,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query declaration of function: types, args and its names.
-	 * @note Works only for SymID-s that actually represent a function. Can be called on every
-	 * functon in program without creating cycles.
+	 * @note Works only for SymID-s that actually represent a function.
 	 */
 	DECLARE_QUERY(QueryDeclOfFun, SymID, HOUTFunctionDeclaration);
 
