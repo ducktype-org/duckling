@@ -21,6 +21,5 @@ namespace pst {
 			nullAwareDprint(arg_name.value(), out);
 		}
 		nullAwareDprint(arg, out);
-		out << "}";
 	}
 }
