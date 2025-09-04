@@ -16,7 +16,12 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
-		state.parse(out).all(NamedOperator::Assign, &out->body);
+		// Make '=' optional for function bodies - if present, parse as expression; if not, parse as code block
+		if (state.parse(out).tryEat(NamedOperator::Assign)) {
+			state.parse(out).one(&out->body);
+		} else {
+			state.parse(out).one(&out->body);
+		}
 
 		return out;
 	}
