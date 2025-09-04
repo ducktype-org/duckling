@@ -56,7 +56,7 @@ namespace pst {
 		auto path = getElementPath();
 		if (type == Ordered) {
 			auto ordered = ElementPath(path, "ordered");
-			calcIndexedListChildPath(statements, ordered);
+			calcIndexedListChildPath<Stmt>({ statements }, ordered);
 		} else if (type == Unordered) {
 			calcOrderedListChildPath(statements, path);
 		}

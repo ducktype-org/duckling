@@ -112,7 +112,7 @@ namespace pst {
 	void Stmt::calcElementPathsRecursive() {
 		auto        path       = getElementPath();
 		ElementPath attrs_path = { path, "attributes" };
-		calcIndexedListChildPath(attributes, attrs_path);
+		calcIndexedListChildPath<Attribute>({ attributes }, attrs_path);
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {

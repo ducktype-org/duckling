@@ -101,6 +101,6 @@ namespace pst::expr {
 		auto path = getElementPath();
 		calcNamedChildPath(atom, path);
 
-		calcIndexedListChildPath(chain, path);
+		calcIndexedListChildPath<ExprElement>({ chain }, path);
 	}
 }

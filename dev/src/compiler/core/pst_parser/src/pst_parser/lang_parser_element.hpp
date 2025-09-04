@@ -172,7 +172,7 @@ namespace pst {
 		 */
 		template<typename Element>
 		void calcIndexedListChildPath(
-			std::vector<AccessInternalAnonymous<Element>>& vec, const ElementPath& path
+			std::span<AccessInternalAnonymous<Element>> vec, const ElementPath& path
 		) const {
 			for (usize i = 0; i < vec.size(); i++) {
 				ElementPath child_path(path, std::format("[{}]", i));
