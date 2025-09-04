@@ -76,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testVisitor);
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
+		TESTER_ADD_TEST(testFunctionSyntax);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -242,6 +243,8 @@ private:
 			i++;
 		}
 	}
+
+	void testFunctionSyntax() { testJsonRelativePath("function_syntax.duck", "function_syntax.json"); }
 
 
 public:

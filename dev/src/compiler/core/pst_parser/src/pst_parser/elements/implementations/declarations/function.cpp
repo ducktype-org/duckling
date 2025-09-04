@@ -16,11 +16,13 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
-		// Make '=' optional for function bodies - if present, parse as expression; if not, parse as code block
-		if (state.parse(out).tryEat(NamedOperator::Assign)) {
+		// Check if next token is a code block to determine if '=' is required
+		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
+			// Code block body - no '=' required
 			state.parse(out).one(&out->body);
 		} else {
-			state.parse(out).one(&out->body);
+			// Expression body - '=' required
+			state.parse(out).all(NamedOperator::Assign, &out->body);
 		}
 
 		return out;

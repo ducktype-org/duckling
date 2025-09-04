@@ -1,0 +1,4 @@
+fun expr_body() -> i64 = 42;
+fun block_body() -> i64 {
+    return 1;
+}
