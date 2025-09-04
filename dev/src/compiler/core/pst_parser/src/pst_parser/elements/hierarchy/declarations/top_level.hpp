@@ -19,7 +19,8 @@ namespace pst {
 		std::vector<AccessLocked<Stmt>>                         transparent;
 
 		/**
-		 * @brief Fill the symbol tables for an unordered block 
+		 * @brief Fills the by_symbol, no_symbol and transparent variables to reflect an ordered
+		 * code block.
 		 */
 		void fillSymbols();
 

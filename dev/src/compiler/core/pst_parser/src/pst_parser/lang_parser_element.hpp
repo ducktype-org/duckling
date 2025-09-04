@@ -136,14 +136,14 @@ namespace pst {
 			calcElementPathsRecursive();
 		}
 
-		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements
-		 */
-		template<typename Element, base::TemplateStringLiteral name>
-		void calcChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path) const {
-			if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
-		}
+		// /**
+		// * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		// * from other elements
+		// */
+		// template<typename Element, base::TemplateStringLiteral name>
+		// void calcChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path)
+		// const { if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
+		// }
 
 		/**
 		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
