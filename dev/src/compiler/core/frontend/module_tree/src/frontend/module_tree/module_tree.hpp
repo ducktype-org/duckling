@@ -355,7 +355,10 @@ namespace compiler::frontend {
 	};
 
 	/*
-	 * Creates a new module tree from the given file and returns the ModuleID
+	 * Creates a completely new module tree from the given file and returns the ModuleID
+	 * created ModuleTree contains independent submodules, source files and PSTs
+	 * it is created recursively based on the Duckling module structure
+	 * for more details see ModuleTreeBuilder::create
 	 */
 	ModuleID createModuleTree(const fs::File& file);
 

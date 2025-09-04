@@ -82,7 +82,6 @@ namespace compiler::frontend {
 
 	CRef<pst::PST<>> SourceFile::getPST() {
 		if (parse_tree) {
-			this->loadContent();
 			return &parse_tree.value();
 		} else {
 			parse_tree.emplace(pst::PST(file));
