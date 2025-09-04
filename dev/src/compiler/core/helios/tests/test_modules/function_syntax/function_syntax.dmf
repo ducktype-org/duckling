@@ -1,0 +1,9 @@
+fun add_expr(a: i64, b: i64) -> i64 = a + b;
+
+fun add_block_with_equals(a: i64, b: i64) -> i64 = {
+    return a + b;
+}
+
+fun add_block_without_equals(a: i64, b: i64) -> i64 {
+    return a + b;
+}

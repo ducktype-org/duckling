@@ -64,6 +64,7 @@ public:
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testFunctionSyntax);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1115,6 +1116,31 @@ private:
 			std::cout << compiler::helios::prettyDebugPrint(sym_test_class, ctx) << '\n';
 			std::cout << compiler::helios::prettyDebugPrint(sym_n3, ctx) << '\n';
 		});
+	}
+
+	void testFunctionSyntax() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/function_syntax")));
+
+		// Verify that all three function syntax forms can be processed through the full pipeline
+		auto expr_function = getChain("add_expr", root_scope).back();
+		auto block_with_equals_function = getChain("add_block_with_equals", root_scope).back();
+		auto block_without_equals_function = getChain("add_block_without_equals", root_scope).back();
+
+		// Verify all functions exist
+		ASSERT_EQUAL(compiler::helios::name(expr_function), "add_expr");
+		ASSERT_EQUAL(compiler::helios::name(block_with_equals_function), "add_block_with_equals");
+		ASSERT_EQUAL(compiler::helios::name(block_without_equals_function), "add_block_without_equals");
+
+		// Verify they all have the correct type (i64 -> i64 -> i64)
+		auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		
+		auto expr_function_type = getTypeOf("add_expr", root_scope);
+		auto block_with_equals_function_type = getTypeOf("add_block_with_equals", root_scope);
+		auto block_without_equals_function_type = getTypeOf("add_block_without_equals", root_scope);
+
+		// All functions should have the same signature
+		ASSERT_EQUAL(expr_function_type, block_with_equals_function_type);
+		ASSERT_EQUAL(block_with_equals_function_type, block_without_equals_function_type);
 	}
 };
 
