@@ -336,9 +336,11 @@ private:
 			"Tuples of Ints should have no op destructors."
 		);
 
-		const auto str = query::entryPoint<QueryStringType>({});
+		const auto str   = query::entryPoint<QueryStringType>({});
 		const auto tup_6 = query::entryPoint<QueryTupleType>({ { st(int_16), st(str) } });
-		assertFalse(tup_6.hasNoOpDestructor(), "Tuple with String should not have no op destructor.");
+		assertFalse(
+			tup_6.hasNoOpDestructor(), "Tuple with String should not have no op destructor."
+		);
 	}
 
 	/**
@@ -372,9 +374,11 @@ private:
 			"Variants of Ints should have no op destructors."
 		);
 
-		const auto str = query::entryPoint<QueryStringType>({});
+		const auto str   = query::entryPoint<QueryStringType>({});
 		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(str) } });
-		assertFalse(var_5.hasNoOpDestructor(), "Variant with String should not have no op destructor.");
+		assertFalse(
+			var_5.hasNoOpDestructor(), "Variant with String should not have no op destructor."
+		);
 	}
 
 	/**
