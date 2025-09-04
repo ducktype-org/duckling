@@ -38,11 +38,13 @@ namespace pst {
 	/**
 	 * @brief Three declaration options:
 	 *
-	 * None - This statement doesn't introduce any symbols. For example an expression statement or a
-	 * return statement. Symbol - This statement introduces a symbol. For example a function
-	 * declaration, import, using and variable declaration. Transparent - This statement contains or
+	 * * None - This statement doesn't introduce any symbols. For example an expression statement or a
+	 * return statement. 
+	 * * Symbol - This statement introduces a symbol. For example a function
+	 * declaration, import, using and variable declaration. 
+	 * * Transparent - This statement contains or
 	 * links somewhere where there might be introduced. For example a macro expansion or a specifier
-	 * block. symbols.
+	 * block.
 	 */
 	enum class DeclKind {
 		None,

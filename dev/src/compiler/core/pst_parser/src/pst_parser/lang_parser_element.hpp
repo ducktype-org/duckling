@@ -76,7 +76,7 @@ namespace pst {
 
 		using InternalChild = Ref<LangElement>;
 
-		struct InternalNamedChild {
+		struct InternalNamedChild final {
 			std::string      name;
 			Ref<LangElement> element;
 		};
@@ -86,7 +86,7 @@ namespace pst {
 	public:
 		using Child = AccessLocked<LangElement>;
 
-		struct NamedChild {
+		struct NamedChild final {
 			std::string               name;
 			AccessLocked<LangElement> element;
 		};
