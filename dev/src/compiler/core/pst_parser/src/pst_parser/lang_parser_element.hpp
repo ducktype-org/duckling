@@ -136,18 +136,9 @@ namespace pst {
 			calcElementPathsRecursive();
 		}
 
-		// /**
-		// * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		// * from other elements
-		// */
-		// template<typename Element, base::TemplateStringLiteral name>
-		// void calcChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path)
-		// const { if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
-		// }
-
 		/**
 		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements
+		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
 		template<typename Element>
 		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path)
@@ -157,7 +148,7 @@ namespace pst {
 
 		/**
 		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements
+		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
 		template<typename Element, base::TemplateStringLiteral name>
 		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path)
@@ -168,7 +159,7 @@ namespace pst {
 
 		/**
 		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements
+		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
 		template<typename Element>
 		void calcIndexedListChildPath(
