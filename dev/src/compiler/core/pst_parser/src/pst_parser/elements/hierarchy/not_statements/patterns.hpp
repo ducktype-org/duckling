@@ -64,7 +64,7 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Represents an deconstructor pattern.
+	 * @brief Represents a deconstructor pattern.
 	 */
 	class DeconstructorPattern final: public AnalysisPattern {
 		tpc::Identifier                 deconstructor_name;

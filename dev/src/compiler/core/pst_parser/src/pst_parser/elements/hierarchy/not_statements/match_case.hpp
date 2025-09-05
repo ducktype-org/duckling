@@ -1,6 +1,11 @@
 #pragma once
 #include "../meta.hpp"
 #include "patterns.hpp"
+#include "pst_parser/access.hpp"
+#include "pst_parser/elements/hierarchy/expr_holders.hpp"
+
+#include <ranges>
+#include <vector>
 
 namespace pst {
 	/**
@@ -10,6 +15,11 @@ namespace pst {
 		struct CaseBranch {
 			base::Optional<AccessInternal<UniversalExprHolder>> condition;
 			AccessInternal<UniversalExprHolder>                 result;
+		};
+
+		struct CaseBranchView {
+			base::Optional<AccessLocked<UniversalExprHolder>> condition;
+			AccessLocked<UniversalExprHolder>                 result;
 		};
 
 		AccessInternal<FlowPattern> pattern;
@@ -31,9 +41,18 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 
-		[[nodiscard]] const AccessLocked<FlowPattern> getPattern() const { return pattern.give(); }
+		[[nodiscard]] AccessLocked<FlowPattern> getPattern() const { return pattern.give(); }
 
-		[[nodiscard]] const std::vector<CaseBranch>& getBranches() const { return branches; }
+		[[nodiscard]] std::vector<CaseBranchView> getBranches() const {
+			auto to_branch_view = [](const CaseBranch& internal) -> CaseBranchView {
+				return { .condition = internal.condition.has_value()
+					                    ? internal.condition->give()
+					                    : base::Optional<AccessLocked<UniversalExprHolder>>{},
+					     .result    = internal.result.give() };
+			};
+			return branches | std::views::transform(to_branch_view)
+			     | std::ranges::to<std::vector>();
+		}
 
 		[[nodiscard]]
 		std::string elementType() const override {

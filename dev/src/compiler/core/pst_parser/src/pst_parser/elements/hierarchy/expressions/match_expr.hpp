@@ -29,7 +29,7 @@ namespace pst::expr {
 			return "Match Expr";
 		}
 
-		[[nodiscard]] const AccessLocked<CommaExprHolder> getValueToMatch() const {
+		[[nodiscard]] AccessLocked<CommaExprHolder> getValueToMatch() const {
 			return value_to_match.give();
 		}
 
