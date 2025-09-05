@@ -10,6 +10,7 @@ from .helpers import (
     log_new_line, 
     bash_command_get_output,
 )
+from .list_files import list_files_impl
 
 def check_issue_exists_and_open(issue_number: str) -> bool:
     """
@@ -100,8 +101,7 @@ def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False)
     ]
     
     try:
-        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-        files = [f for f in files_str.strip().split('\n') if f]
+        files = list_files_impl(only_modified=False)
     except Exception as e:
         log_warning(f"Could not get file list from git: {e}")
         return True
