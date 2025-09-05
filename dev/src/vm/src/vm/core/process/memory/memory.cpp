@@ -116,9 +116,9 @@ namespace vm {
 		if (!global_data.contains(id)) {
 			auto             type_size = type->getSize();
 			base::OwningView storage(new byte[type_size], type_size);
-			auto block = allocateDummy(type, storage.modView().getBegin());
-			global_blocks.put(id, block);
+			auto             block = allocateDummy(type, storage.modView().getBegin());
 			increaseBlockRefcount(block);
+			global_blocks.put(id, block);
 			global_data.put(id, std::move(storage));
 			return true;
 		}
@@ -126,14 +126,15 @@ namespace vm {
 	}
 
 	void Memory::deinitGlobals() {
-		// @TODO: Figure out how to deinit the globals in correct order...
-		// If we first free the block with e.g. i64, and then a pointer to that block, then we will
-		// register a leak.
-		// We might skip deinitialization of globals, but then we will not be able to verify the run well?
-		// We detect leak at the very moment they occur.
-		for (const auto& block: global_blocks | std::views::values) {
-			freeBlock(block);
-			decreaseBlockRefcount(block);
+		try {
+			for (const auto& block: global_blocks | std::views::values) freeBlock(block);
+
+			for (const auto& block: global_blocks | std::views::values)
+				decreaseBlockRefcount(block);
+		} catch (exceptions::VMFoundMemoryLeakException& e) {
+			std::cerr << "Leak during global data deinitialization - e.g. there was a global pointer to "
+			             "data, that was not freed.\n";
+			throw;
 		}
 	}
 
@@ -208,12 +209,14 @@ namespace vm {
 		}
 
 		// Copy the data itself.
+		// @note: We are not running destructors or copy-constructors
+		// because the data being is "moved".
 		std::memcpy(dst->data.view.getBegin(), src->data.view.getBegin(), byte_count);
 	}
 
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
-		// When copying with this or any function we need to first free the previous data and call
-		// the data destructors, then run copy constructors only on the copied data parts.
+		// When copying with this or any other function we need to first free the previous
+		// data and call the data destructors, then run copy constructors only on the copied data parts.
 
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
@@ -257,10 +260,8 @@ namespace vm {
 
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		// Decrease the dst block's refcount before assigning the new block
-        destroyBlockReference(dst);
-		if_opt_some(src.block.toOpt(), block) {
-			increaseBlockRefcount(block);
-		}
+		destroyBlockReference(dst);
+		if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
 		return src;
 	}
 

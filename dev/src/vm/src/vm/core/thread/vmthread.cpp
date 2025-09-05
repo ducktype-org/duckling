@@ -354,7 +354,6 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		// frame->called_func_ret_size = func.result_type->getSize();
 		frame->current_function = &start_function;
 
 		const auto* instr = start_function.bc.data();

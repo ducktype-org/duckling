@@ -604,8 +604,11 @@ namespace vm {
 		{
 			if (const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0); !ptr.isNull()) {
 				thread.process_memory.freeBlock(ptr.getBlock());
-				thread.process_memory.destroyBlockReference(ptr);
-				writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
+				// thread.process_memory.destroyBlockReference(ptr);
+
+				// We are writing nullptr to the stack, because otherwise we would still reference a block,
+				// that was just freed and on deinit instruction we would decrease refcount of a block
+				// writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
 			}
 		}
 		FUNCTION_CONT(1);
