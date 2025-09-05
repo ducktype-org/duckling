@@ -94,15 +94,5 @@ void server(i32 port) {
 								  return type_response.type;
 							  }));
 	});
-	CROW_ROUTE(app, "/data/block/<uint>/<uint>")
-	([](vm::PID pid, u32 block_id) {
-		return toResponse(
-			vm::api::getBlock(pid, block_id).transform([](const vm::api::response::Block& block) {
-				const byte* begin = block.data.getBegin();
-				const byte* end   = begin + block.data.size();
-				return std::vector<byte>(begin, end);
-			})
-		);
-	});
 	app.port(base::safeIntConv<u16>(port)).run();
 }

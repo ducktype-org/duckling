@@ -254,15 +254,6 @@ namespace vm {
 				}
 			}
 
-			variant_case(api::request::Block, block_request) {
-				match_optional(validateMemoryRequest()) {
-					opt_some(error) { return std::unexpected(error); }
-					opt_none {
-						return api::Response(api::response::Block{
-							memory.requestBlockData(block_request.block_id) });
-					}
-				}
-			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {
