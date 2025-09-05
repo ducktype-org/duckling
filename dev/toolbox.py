@@ -19,6 +19,7 @@ from scripts.py.toolbox.commands.init import init
 from scripts.py.toolbox.commands.install_llvm import install_llvm
 from scripts.py.toolbox.commands.issue_checker import issue_checker
 from scripts.py.toolbox.commands.itest import itest
+from scripts.py.toolbox.commands.list_files import list_files
 from scripts.py.toolbox.commands.pr_validate import pr_validate
 from scripts.py.toolbox.commands.run_preprocessor import run_preprocessor
 from scripts.py.toolbox.commands.setup_build import setup_build
@@ -50,6 +51,7 @@ cli.add_command(init)
 cli.add_command(install_llvm)
 cli.add_command(issue_checker)
 cli.add_command(itest)
+cli.add_command(list_files)
 cli.add_command(pr_validate)
 cli.add_command(run_preprocessor)
 cli.add_command(setup_build)
