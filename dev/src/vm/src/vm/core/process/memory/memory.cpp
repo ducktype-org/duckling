@@ -87,12 +87,13 @@ namespace vm {
 
 		// Parents reference their children so that they don't disappear on someone's pointer
 		// destruction.
-		if (block->parent)
+		if (block->parent) {
+			block->deallocated = true;
 			decreaseBlockRefcount(block);
-		else
+		} else {
 			block->data.allocator->deallocate(&block->data);
-
-		block->deallocated = true;
+			block->deallocated = true;
+		}
 	}
 
 	auto Memory::requestBlockIDs() -> std::vector<BlockID> {
@@ -131,9 +132,10 @@ namespace vm {
 
 			for (const auto& block: global_blocks | std::views::values)
 				decreaseBlockRefcount(block);
-		} catch (exceptions::VMFoundMemoryLeakException& e) {
-			std::cerr << "Leak during global data deinitialization - e.g. there was a global pointer to "
-			             "data, that was not freed.\n";
+		} catch (exceptions::VMFoundMemoryLeakException&) {
+			std::cerr
+				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
+				   "data, that was not freed.\n";
 			throw;
 		}
 	}
@@ -160,7 +162,8 @@ namespace vm {
 		block_data.element_type = type;
 		block_data.view         = getPointerData(parent_pointer, type->getSize());
 
-		auto new_block = createBlock(block_data);  // @note createBlock nulls them bytes
+		auto new_block    = createBlock(block_data);  // @note createBlock nulls them bytes
+		new_block->parent = parent_pointer.getBlock();
 		increaseBlockRefcount(new_block);  // so that the block does not disappear accidentally
 		children.put(parent_pointer.offset, new_block);
 	}
