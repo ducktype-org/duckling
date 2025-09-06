@@ -12,7 +12,7 @@ namespace pst::expr {
 	 * it's own parsing in the future
 	 */
 	class TemplateSpecifier final: public ExprElement {
-		AccessInternal<TemplateList> inner;
+		NAMED_CHILD(inner, TemplateList);
 
 	public:
 		TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}

@@ -32,7 +32,7 @@ namespace pst::expr {
 
 		auto out = makeBox<BlockExpr>(state.getPosition());
 
-		state.parse(out).one(&out->block);
+		state.parse(out).withDef(&out->block, CodeBlock::CodeBlockType::Ordered);
 
 		return out;
 	}

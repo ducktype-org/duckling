@@ -10,9 +10,9 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
-		AccessInternal<ParamList> params;
-		AccessInternal<InitList>  inits;
-		AccessInternal<CodeBlock> body;
+		NAMED_CHILD(params, ParamList);
+		NAMED_CHILD(inits, InitList);
+		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
@@ -24,11 +24,6 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Constructor";
-		}
-
-		[[nodiscard]]
-		bool isDeclaration() const override {
-			return true;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

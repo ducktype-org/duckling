@@ -7,8 +7,8 @@ namespace pst {
 	 * @brief Block declaration
 	 */
 	class Block final: public CodeDecl {
-		tpc::OptionalIdentifier   optional_name;
-		AccessInternal<CodeBlock> code_block;
+		tpc::OptionalIdentifier optional_name;
+		NAMED_CHILD(code_block, CodeBlock);
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {
@@ -22,6 +22,16 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Block";
+		}
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return optional_name.value;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

@@ -8,10 +8,10 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class Fun final: public Decl {
-		tpc::Identifier                                 name;
-		AccessInternal<ParamList>                       params;
-		base::Optional<AccessInternal<CommaExprHolder>> ret;
-		AccessInternal<CodeBlockOrStmt>                 body;
+		tpc::Identifier name;
+		NAMED_CHILD(params, ParamList);
+		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
@@ -46,6 +46,11 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Function";
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return getName();
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
