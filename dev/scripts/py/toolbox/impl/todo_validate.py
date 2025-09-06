@@ -101,48 +101,54 @@ def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False)
     ]
     
     try:
-        files = list_files_impl(only_modified=False)
+        files_and_lines = list_files_impl(only_modified=True, lines=True, branch=branch, no_merge_base=no_merge_base)
     except Exception as e:
         log_warning(f"Could not get file list from git: {e}")
         return True
     
-    # Check all files as requested - we don't store generated files in git
+    # Check only modified files and lines
     violations_found = False
     violation_count = 0
     invalid_issue_count = 0
     
     log_info("Validating TODO/FIXME comments format...")
     
-    for file in files:
+    for file, line_ranges in files_and_lines.items():
         if os.path.isdir(file):
             continue
             
         try:
             with open(file, "r", encoding='utf-8', errors='ignore') as f:
-                for line_num, line in enumerate(f, 1):
-                    # Check if line contains any TODO/FIXME pattern
-                    has_todo = any(pattern.search(line) for pattern in any_todo_patterns)
-                    
-                    if has_todo:
-                        # Check if it follows the strict format
-                        valid_format = False
-                        issue_number = None
-                        
-                        for pattern in todo_patterns:
-                            match = pattern.search(line)
-                            if match:
-                                valid_format = True
-                                issue_number = match.group(1)
-                                break
-                        
-                        if not valid_format:
-                            log_warning(f"{file}:{line_num}: {line.strip()}")
-                            violations_found = True
-                            violation_count += 1
-                        elif issue_number and not check_issue_exists_and_open(issue_number):
-                            log_warning(f"{file}:{line_num}: Issue #{issue_number} does not exist or is not open: {line.strip()}")
-                            violations_found = True
-                            invalid_issue_count += 1
+                file_lines = f.readlines()
+                
+                for start_line, end_line in line_ranges:
+                    for line_num in range(start_line, end_line):
+                        if line_num <= len(file_lines):
+                            line = file_lines[line_num - 1]  # Convert to 0-based indexing
+                            
+                            # Check if line contains any TODO/FIXME pattern
+                            has_todo = any(pattern.search(line) for pattern in any_todo_patterns)
+                            
+                            if has_todo:
+                                # Check if it follows the strict format
+                                valid_format = False
+                                issue_number = None
+                                
+                                for pattern in todo_patterns:
+                                    match = pattern.search(line)
+                                    if match:
+                                        valid_format = True
+                                        issue_number = match.group(1)
+                                        break
+                                
+                                if not valid_format:
+                                    log_warning(f"{file}:{line_num}: {line.strip()}")
+                                    violations_found = True
+                                    violation_count += 1
+                                elif issue_number and not check_issue_exists_and_open(issue_number):
+                                    log_warning(f"{file}:{line_num}: Issue #{issue_number} does not exist or is not open: {line.strip()}")
+                                    violations_found = True
+                                    invalid_issue_count += 1
                             
         except Exception as e:
             # Skip files that can't be read (binary files, permission issues, etc.)
