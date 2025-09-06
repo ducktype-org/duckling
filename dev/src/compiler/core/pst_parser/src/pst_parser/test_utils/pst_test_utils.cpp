@@ -2,6 +2,8 @@
 
 #include <base/variant.hpp>
 
+#include <set>
+
 namespace pst {
 	void viewAllSubTreeElementsAux(
 		std::vector<AccessLocked<pst::LangElement>>& output, AccessLocked<pst::LangElement> root
@@ -17,5 +19,16 @@ namespace pst {
 		std::vector<AccessLocked<pst::LangElement>> result;
 		viewAllSubTreeElementsAux(result, root);
 		return result;
+	}
+
+	base::OkBad checkUniqueElementPaths(AccessLocked<pst::LangElement> root) {
+		std::set<std::string> paths;
+		auto                  elements = viewAllSubTreeElements(root);
+		for (auto& element: elements) {
+			std::string path = element.illegalAccess().value()->getElementPath().str();
+			if (paths.contains(path)) return base::BAD;
+			paths.insert(path);
+		}
+		return base::OK;
 	}
 }

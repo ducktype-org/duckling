@@ -351,7 +351,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt.unlock(ctx)->isDeclaration()) {
+				if (stmt.unlock(ctx)->isDeclaration() != pst::DeclKind::None) {
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 					symbols.emplace_back(sym_id);
 				}

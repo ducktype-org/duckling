@@ -9,7 +9,7 @@ namespace pst::expr {
 	 * A block that has value equal to the value returned from it.
 	 */
 	class BlockExpr final: public ExprElement {
-		AccessInternal<CodeBlock> block;
+		NAMED_CHILD(block, CodeBlock);
 
 	public:
 		explicit BlockExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}

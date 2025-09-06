@@ -7,10 +7,10 @@ namespace pst {
 	 * @brief If declaration
 	 */
 	class If final: public CodeDecl {
-		AccessInternal<RoundGroupExpr>                  condition;
-		tpc::OptionalIdentifier                         optional_name;
-		AccessInternal<CodeBlockOrStmt>                 then_body;
-		base::Optional<AccessInternal<CodeBlockOrStmt>> else_body = {};
+		NAMED_CHILD(condition, RoundGroupExpr);
+		tpc::OptionalIdentifier optional_name;
+		NAMED_CHILD(then_body, CodeBlockOrStmt);
+		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
@@ -36,9 +36,17 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<CodeBlockOrStmt>> getElseBody() const {
-			return else_body.map([](const AccessInternal<CodeBlockOrStmt>& access) {
-				return access.give();
-			});
+			return else_body.map([](const auto& access) { return access.give(); });
+		}
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return optional_name.value;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

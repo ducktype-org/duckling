@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Statement that is an expression.
 	 */
 	class ExprStmt final: public Stmt {
-		AccessInternal<AssignmentExprHolder> expr;
+		NAMED_CHILD(expr, AssignmentExprHolder);
 
 	public:
 		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {

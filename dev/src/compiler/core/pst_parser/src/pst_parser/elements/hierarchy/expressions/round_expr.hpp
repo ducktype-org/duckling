@@ -7,7 +7,7 @@ namespace pst::expr {
 	 * @brief Expression in round brackets
 	 */
 	class RoundExpr final: public ExprElement {
-		AccessInternal<ExprElement> expr;
+		NAMED_CHILD(expr, ExprElement);
 
 	public:
 		explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
