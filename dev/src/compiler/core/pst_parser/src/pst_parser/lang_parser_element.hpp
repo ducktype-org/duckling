@@ -67,10 +67,14 @@ namespace pst {
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
-		 * @brief Both are needed for access to element path methods.
+		 * @brief Needed for access to element path methods.
 		 */
 		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
 		friend class PST;
+
+		/**
+		 * @brief Needed for access to element path methods.
+		 */
 		friend class Stmt;
 
 	protected:

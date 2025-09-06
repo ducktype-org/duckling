@@ -66,6 +66,5 @@ namespace pst {
 		}
 
 		void calcElementPathsRecursive() override;
-		// void acceptVisitor(PstVisitor& visitor) const final;
 	};
 }
