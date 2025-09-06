@@ -3,6 +3,7 @@ from os import cpu_count
 from pathlib import Path
 import sys
 import tempfile
+from typing import List
 
 from .helpers import (
     BashCommandError,
@@ -14,6 +15,7 @@ from .helpers import (
     log_new_line,
     log_warning,
 )
+from .list_files import list_files_impl
 
 def cpp_linter_impl(
     clang_tidy_path: str,
@@ -56,87 +58,29 @@ def cpp_linter_impl(
     return clang_tidy_failed, clang_format_failed
 
 
-def get_unstaged_new_files() -> bool:
-    status_out, _ = bash_command_get_output("git status --porcelain")
-    new_unstaged_files = []
-    for file in status_out.splitlines():
-        if file.startswith("??"):
-            new_unstaged_files.append(file[3:])
-
-    return new_unstaged_files
+def get_unstaged_new_files() -> List[str]:
+    # Use the shared implementation from list_files module
+    from .list_files import _get_unstaged_new_files
+    return _get_unstaged_new_files()
 
 
 def get_repo_cpp_files():
-    ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
-    file_lengths = [line.split() for line in ls_out.splitlines()][:-1]
-
-    files = {}
-    for line_count, file in file_lengths:
-        files[file] = [[1, line_count]]
-
-    return files
+    # Use the new standardized file listing for C++ files
+    return list_files_impl(
+        extensions=['.cpp', '.hpp', '.cc', '.cxx', '.h'], 
+        only_modified=False, 
+        lines=True
+    )
 
 
 def get_modified_files_and_lines(branch: str, no_merge_base: bool = False):
-    if new_unstaged_files := get_unstaged_new_files():
-        log_warning(
-            f"Files not in working tree, so not included in diff: [{', '.join(new_unstaged_files)}]"
-        )
-
-    diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative"
+    # Use the shared implementation from list_files module
+    return list_files_impl(
+        branch=branch,
+        no_merge_base=no_merge_base,
+        only_modified=True,
+        lines=True
     )
-    diff_lines = diff_out.splitlines()
-
-    changes = {}
-
-    prev_line = None
-    filename = None
-    for line in diff_lines:
-        file_deleted = prev_line == "+++ /dev/null"
-
-        if line.startswith("@@") and not file_deleted:
-            # Check if this diff is for a new file...
-            if prev_line.startswith("+++ b/"):
-                # File has changed
-                filename = prev_line[len("+++ b/") :].rstrip()
-
-            # Parse diffed lines:
-            # @@ -{line_start},{num_lines} +{line_start},{num_lines} @@ ...
-            # or
-            # @@ -{line_start} +{line_start} @@ ...
-            diffed = line[line.find("+") + 1 :]
-            diffed = diffed[: diffed.find("@@")]
-
-            line_range = None
-            if "," in diffed:
-                # In this case there were multiple lines changed in format: +{line_start},{num_lines}
-                line_start, num_lines = diffed.split(",")
-                line_start = int(line_start)
-                num_lines = int(num_lines)
-                line_range = [line_start, line_start + num_lines]
-
-                # This is for the format (note the "0" added lines):
-                # @@ -16 +15,0 @@
-                # -#include <iostream>
-                # (Which is very odd)
-                if line_range[1] == 0:
-                    continue
-            else:
-                # In this case there is only 1 line changed
-                line_start = int(diffed)
-                line_range = [line_start, line_start + 1]
-
-            # Save to our dict which files have changed and which haven't.
-            # There may be multiple places in one files with changed lines, so we have a list of ranges.
-            if filename not in changes:
-                changes[filename] = []
-
-            changes[filename].append(line_range)
-
-        prev_line = line
-
-    return changes
 
 
 def get_files_for_linter(all, branch, no_merge_base):
