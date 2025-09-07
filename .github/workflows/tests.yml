@@ -55,7 +55,7 @@ jobs:
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'aaa' }}
 
     steps:
       - name: Set self-hosted flag
