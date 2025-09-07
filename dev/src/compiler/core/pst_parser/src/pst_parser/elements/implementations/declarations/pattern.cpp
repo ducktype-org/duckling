@@ -2,9 +2,6 @@
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
-#include "pst_parser/elements/hierarchy/not_statements/code_block.hpp"
-
-#include "lang_definitions/key_spec_op.hpp"
 
 namespace pst {
 	class PatternArgumentCountError final: public dia::Error {

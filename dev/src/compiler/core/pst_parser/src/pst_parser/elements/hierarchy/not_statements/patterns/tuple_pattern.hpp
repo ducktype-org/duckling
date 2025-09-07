@@ -1,7 +1,6 @@
 #pragma once
 #include "../../lists/flow_pattern_list.hpp"
 #include "analysis_pattern.hpp"
-#include "pst_parser/access.hpp"
 
 namespace pst {
 	/**

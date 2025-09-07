@@ -1,6 +1,6 @@
 #include "../../../hierarchy/not_statements/patterns/tuple_pattern.hpp"
-#include "../preamble.hpp"
 
+#include "../preamble.hpp"
 
 namespace pst {
 	MBox<TuplePattern> TuplePattern::parse(LangParserState& state) {
