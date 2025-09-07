@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Using statement
 	 */
 	class Using final: public Stmt {
-		AccessInternal<DottedName> names;
+		NAMED_CHILD(names, DottedName);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Using, ElementKind::Using);
@@ -32,8 +32,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const final {
-			return true;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
 		}
 	};
 }

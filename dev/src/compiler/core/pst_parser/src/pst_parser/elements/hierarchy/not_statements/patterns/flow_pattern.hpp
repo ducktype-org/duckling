@@ -7,9 +7,9 @@ namespace pst {
 	 * @brief Represents a flow pattern.
 	 */
 	class FlowPattern final: public NotStmt {
-		AccessInternal<AnalysisPattern>                     pattern;
-		base::Optional<tpc::Identifier>                     as_identifier;
-		base::Optional<AccessInternal<UniversalExprHolder>> type_constraint;
+		base::Optional<tpc::Identifier> as_identifier;
+		NAMED_CHILD(pattern, AnalysisPattern);
+		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
 
 	public:
 		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {

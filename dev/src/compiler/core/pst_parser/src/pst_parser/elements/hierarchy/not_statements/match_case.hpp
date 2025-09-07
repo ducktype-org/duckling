@@ -13,8 +13,8 @@ namespace pst {
 	 */
 	class MatchCase final: public NotStmt {
 		struct CaseBranch {
-			base::Optional<AccessInternal<UniversalExprHolder>> condition;
-			AccessInternal<UniversalExprHolder>                 result;
+			NAMED_CHILD_OPT(condition, UniversalExprHolder);
+			NAMED_CHILD(result, UniversalExprHolder);
 		};
 
 		struct CaseBranchView {
@@ -22,7 +22,7 @@ namespace pst {
 			AccessLocked<UniversalExprHolder>                 result;
 		};
 
-		AccessInternal<FlowPattern> pattern;
+		NAMED_CHILD(pattern, FlowPattern);
 
 		/**
 		 * @brief Represents all the possible conditions for the case.
@@ -43,7 +43,7 @@ namespace pst {
 
 		[[nodiscard]] AccessLocked<FlowPattern> getPattern() const { return pattern.give(); }
 
-		[[nodiscard]] std::vector<CaseBranchView> getBranches() const {
+		[[nodiscard]] auto getBranches() const {
 			auto to_branch_view = [](const CaseBranch& internal) -> CaseBranchView {
 				return { .condition = internal.condition.has_value()
 					                    ? internal.condition->give()

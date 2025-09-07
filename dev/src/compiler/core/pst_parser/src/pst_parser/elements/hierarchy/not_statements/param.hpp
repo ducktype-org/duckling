@@ -7,9 +7,9 @@ namespace pst {
 	 * @brief Declaration of a single function or pattern argument.
 	 */
 	class Param final: public NotStmt {
-		tpc::Identifier                                     name;
-		AccessInternal<UniversalExprHolder>                 type;
-		base::Optional<AccessInternal<UniversalExprHolder>> initial;
+		tpc::Identifier name;
+		NAMED_CHILD(type, UniversalExprHolder);
+		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
 		explicit Param(const dia::SourcePosition& position): NotStmt(position) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/param.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -7,10 +8,10 @@ namespace pst {
 	 * @brief Pattern declaration.
 	 */
 	class Pattern final: public Decl {
-		tpc::Identifier                                 name;
-		AccessInternal<Param>                           param;
-		base::Optional<AccessInternal<CommaExprHolder>> ret;
-		AccessInternal<CodeBlockOrStmt>                 body;
+		tpc::Identifier name;
+		NAMED_CHILD(param, Param);
+		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Pattern, ElementKind::Pattern);

@@ -2,6 +2,9 @@
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
+#include "pst_parser/elements/hierarchy/not_statements/code_block.hpp"
+
+#include "lang_definitions/key_spec_op.hpp"
 
 namespace pst {
 	class PatternArgumentCountError final: public dia::Error {
@@ -67,7 +70,10 @@ namespace pst {
 		state.parse(out).goUpAndSkip();
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
-		state.parse(out).all(NamedOperator::Assign, &out->body);
+
+		state.parse(out)
+			.one(NamedOperator::Assign)
+			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
 		return out;
 	}

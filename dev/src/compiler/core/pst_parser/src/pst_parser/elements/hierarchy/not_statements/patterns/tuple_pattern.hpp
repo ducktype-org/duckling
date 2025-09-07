@@ -1,13 +1,14 @@
 #pragma once
-#include "analysis_pattern.hpp"
 #include "../../lists/flow_pattern_list.hpp"
+#include "analysis_pattern.hpp"
+#include "pst_parser/access.hpp"
 
 namespace pst {
 	/**
 	 * @brief Represents an Tuple pattern, which contains a list of flow patterns.
 	 */
 	class TuplePattern final: public AnalysisPattern {
-		AccessInternal<FlowPatternList> elements;
+		NAMED_CHILD(elements, FlowPatternList);
 
 	public:
 		// explicit TuplePattern(const dia::SourcePosition& position);

@@ -86,9 +86,9 @@ namespace pst {
 		}
 	}
 
-	Stmt::AttrList Stmt::collectAttributes(LangParserState& state) {
-		auto     as_special = state[0].asSpecial();
-		AttrList attributes;
+	Stmt::AttrBoxList Stmt::collectAttributes(LangParserState& state) {
+		auto        as_special = state[0].asSpecial();
+		AttrBoxList attributes;
 
 		while (as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
@@ -107,9 +107,31 @@ namespace pst {
 		MBox<Stmt> out = internal::chooseStmt(state);
 
 		// Add Attributes
-		if (out) out->addAttributes(std::move(attributes));
+		if (out) out->addAttributes(state, std::move(attributes));
 
 		return out;
+	}
+
+	void Stmt::calcElementPathsRecursive() {
+		auto        path       = getElementPath();
+		ElementPath attrs_path = { path, "attributes" };
+		calcIndexedListChildPath<Attribute>({ attributes }, attrs_path);
+		for (auto& el: sub_elements) {
+			variant_match(el) {
+				variant_case(InternalChild, child) {
+					if (child->getElementKind() == ElementKind::Attribute) continue;
+					CORE_PANIC(
+						"Default implementation of calculating element paths cannot handle unnamed "
+						"sub-elements. Encountered while calculating for: "
+						+ elementType()
+					);
+				}
+				variant_case(InternalNamedChild, named_child) {
+					ElementPath child_path(path, named_child.name);
+					named_child.element->calcElementPaths(child_path);
+				}
+			}
+		}
 	}
 
 	void Stmt::dprintPrefix(std::ostream& out) const {
@@ -128,16 +150,13 @@ namespace pst {
 		}
 	}
 
-	void Stmt::addAttributes(AttrList&& additions) {
-		attributes = std::move(additions);
-
-		using namespace std::views;
-		auto borrow = [](AccessInternal<Attribute>& arg) -> Child { return arg.give(); };
-		auto borrowed_additions = attributes | transform(borrow);
-
-		sub_elements.insert(
-			sub_elements.end(), borrowed_additions.begin(), borrowed_additions.end()
-		);
+	void Stmt::addAttributes(LangParserState& state, AttrBoxList&& additions) {
+		attributes.resize(additions.size());
+		usize i = 0;
+		for (auto&& attr_add: std::move(additions)) {
+			state.parse(Ref(this)).assign(&attributes[i], MBox(std::move(attr_add)));
+			i++;
+		}
 
 		if (attributes.size() > 0)
 			setFirstToken(attributes.front().internal()->getSourcePosition());

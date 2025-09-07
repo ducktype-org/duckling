@@ -1,6 +1,8 @@
 
 #pragma once
 #include "analysis_pattern.hpp"
+#include "pst_parser/access.hpp"
+#include "pst_parser/elements/hierarchy/expr_holders.hpp"
 
 namespace pst {
 	/**
@@ -8,7 +10,7 @@ namespace pst {
 	 * block expression or an identifier.
 	 */
 	class ValuePattern final: public AnalysisPattern {
-		AccessInternal<UniversalExprHolder> expression;
+		NAMED_CHILD(expression, UniversalExprHolder);
 
 	public:
 		explicit ValuePattern(const dia::SourcePosition& position): AnalysisPattern(position) {

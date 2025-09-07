@@ -74,7 +74,7 @@ namespace pst {
 		MBox<ClassStmt> out = chooseStmt(state, ctx);
 
 		// Add Attributes
-		if (out) out->addAttributes(std::move(attributes));
+		if (out) out->addAttributes(state, std::move(attributes));
 
 		return out;
 	}

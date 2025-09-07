@@ -46,6 +46,5 @@ namespace pst {
 		BindingPattern,
 		ValuePattern,
 		Expand,
-		CodeBlock,
 	);
 }

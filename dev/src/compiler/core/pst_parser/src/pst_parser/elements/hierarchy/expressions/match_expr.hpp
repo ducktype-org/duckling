@@ -2,6 +2,8 @@
 
 #include "../not_statements/match_case.hpp"
 #include "expr_common.hpp"
+#include "pst_parser/access.hpp"
+#include "pst_parser/elements/hierarchy/expr_holders.hpp"
 
 #include <ranges>
 
@@ -10,8 +12,8 @@ namespace pst::expr {
 	 * @brief Represents the full match expression.
 	 */
 	class MatchExpr final: public ExprElement {
-		AccessInternal<CommaExprHolder>        value_to_match;
-		std::vector<AccessInternal<MatchCase>> cases;
+		NAMED_CHILD(value_to_match, CommaExprHolder);
+		std::vector<AccessInternalAnonymous<MatchCase>> cases;
 
 	public:
 		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {
@@ -39,5 +41,7 @@ namespace pst::expr {
 				= [](const auto& ref) -> AccessLocked<MatchCase> { return ref.give(); };
 			return std::ranges::ref_view(cases) | transform(give_one);
 		}
+		
+		void calcElementPathsRecursive() override;
 	};
 }

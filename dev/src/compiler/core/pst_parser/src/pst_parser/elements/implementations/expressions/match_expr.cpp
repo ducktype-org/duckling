@@ -1,6 +1,9 @@
 #include "../../hierarchy/expressions/match_expr.hpp"  // IWYU pragma: keep
 
 #include "preamble.hpp"
+#include "pst_parser/elements/hierarchy/not_statements/match_case.hpp"
+
+#include <cstddef>
 
 namespace pst::expr {
 	class MatchRoundBracketError final: public dia::Error {
@@ -74,9 +77,12 @@ namespace pst::expr {
 
 		while (true) {
 			if (state[0].is(Keyword::Case)) {
-				auto match_case = MatchCase::parse(state);
-				if (!match_case) return nullptr;
-				out->cases.emplace_back(std::move(match_case));
+				MBox<MatchCase> match_case;
+				state.parse(out).one(&match_case);
+				if (match_case) {
+					out->cases.emplace_back(nullptr);
+					state.parse(out).assign(&out->cases.back(), std::move(match_case));
+				}
 			} else {
 				break;
 			}
@@ -107,5 +113,9 @@ namespace pst::expr {
 
 	void MatchExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitMatchExpr(*this);
+	}
+
+	void MatchExpr::calcElementPathsRecursive() {
+		calcIndexedListChildPath<MatchCase>({ cases }, getElementPath());
 	}
 }

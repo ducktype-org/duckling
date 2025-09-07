@@ -1,8 +1,8 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios_private/comp_time/int_eval.hpp>
-#include <helios_private/comp_time/type_eval.hpp>
+#include <helios/ctv/ctv.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -105,37 +105,10 @@ namespace compiler::helios {
 		return getSymRef(id)->getPSTData()->pst_element;
 	}
 
-	struct PstVisitor_getName final: public pst::PstVisitorEmpty {
-		base::Optional<std::string> name;
-
-	public:
-		void visitConst(pst::Access<pst::Const> stmt) final { name = stmt->getName().str(); }
-
-		void visitVariable(pst::Access<pst::Variable> stmt) final { name = stmt->getName().str(); }
-
-		void visitFun(pst::Access<pst::Fun> stmt) final { name = stmt->getName().str(); }
-
-		void visitNamespace(pst::Access<pst::Namespace> stmt) final {
-			name = stmt->getName().str();
-		}
-
-		void visitClass(pst::Access<pst::Class> stmt) final { name = stmt->getName().str(); }
-
-		void visitAlias(pst::Access<pst::Alias> stmt) final { name = stmt->getName().str(); }
-
-		void visitField(pst::Access<pst::Field> stmt) final { name = stmt->getName().str(); }
-
-		void visitMethod(pst::Access<pst::Method> stmt) final { name = stmt->getName().str(); }
-
-		void visitParam(pst::Access<pst::Param> stmt) final { name = stmt->getName().str(); }
-
-		base::Optional<std::string> getName() { return name; }
-	};
-
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. Get the name of the pst element
+		// 2. If the element is a statement get it's name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
@@ -145,15 +118,16 @@ namespace compiler::helios {
 		base::Optional<pst::AccessLocked<pst::LangElement>> pst = symbolPst(sym);
 		do {
 			if (!pst.value().unlock(ctx)->getParent()) break;
-			PstVisitor_getName name_visitor;
-			pst.value().unlock(ctx)->acceptVisitor(name_visitor);
-			auto name = name_visitor.getName();
+			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
+			if (!stmt) continue;
+
+			auto name = stmt.value()->getDeclSymbolName();
 			if (!name.has_value()) continue;
 
 			if (!out.empty())
-				out = base::strConcat(name.value(), " -> ", out);
+				out = base::strConcat(name.value().str(), " -> ", out);
 			else
-				out = name.value();
+				out = name.value().str();
 
 			// Get the parent of the current pst element
 		} while ((pst = pst.value().unlock(ctx)->getParent()));
@@ -630,7 +604,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<i64 COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -638,8 +612,11 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			// @TODO: Handle potential lack of value
-			return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
+			auto ctv = ctx.query<QueryEvaluateExpression>(
+				const_symbol->getValue().value().unlock(ctx)->getExpr()
+			);
+			if (ctv.hasError()) return query::QError(errors::Failed());
+			return ctv.value();
 		}
 
 		QUERY_AUTO_CACHE_COPY

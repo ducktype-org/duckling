@@ -54,6 +54,48 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	};
 
+	template<bool good, typename Parser>
+	struct Example<pst::CodeBlock, good, Parser>: public GenExample {
+		Example(std::string code): GenExample(std::move(code)) {}
+
+		bool operator()() override {
+			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithContext(
+				code, pst::CodeBlock::CodeBlockType::Ordered
+			);
+			return parsed.getLogger()->good() == good;
+		}
+
+		[[nodiscard]]
+		std::string message() const override {
+			std::stringstream ss;
+			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
+			ss << base::typeName<pst::CodeBlock>();
+			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
+			return ss.str();
+		}
+	};
+
+	template<bool good, typename Parser>
+	struct Example<pst::CodeBlockOrStmt, good, Parser>: public GenExample {
+		Example(std::string code): GenExample(std::move(code)) {}
+
+		bool operator()() override {
+			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithContext(
+				code, pst::CodeBlock::CodeBlockType::Ordered
+			);
+			return parsed.getLogger()->good() == good;
+		}
+
+		[[nodiscard]]
+		std::string message() const override {
+			std::stringstream ss;
+			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
+			ss << base::typeName<pst::CodeBlockOrStmt>();
+			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
+			return ss.str();
+		}
+	};
+
 	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
 		pst::ClassContext context;

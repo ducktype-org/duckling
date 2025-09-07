@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<AccessInternal<CommaExprHolder>> expr;
+		NAMED_CHILD_OPT(expr, CommaExprHolder);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);

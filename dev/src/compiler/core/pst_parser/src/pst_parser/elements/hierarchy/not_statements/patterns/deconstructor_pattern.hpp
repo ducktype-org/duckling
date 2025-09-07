@@ -1,5 +1,6 @@
 #pragma once
 #include "analysis_pattern.hpp"
+#include "pst_parser/access.hpp"
 #include "pst_parser/elements/hierarchy/lists/flow_pattern_list.hpp"
 
 namespace pst {
@@ -8,7 +9,7 @@ namespace pst {
 	 */
 	class DeconstructorPattern final: public AnalysisPattern {
 		tpc::Identifier                 deconstructor_name;
-		AccessInternal<FlowPatternList> arguments;
+		NAMED_CHILD(arguments, FlowPatternList);
 
 	public:
 		explicit DeconstructorPattern(const dia::SourcePosition& position):

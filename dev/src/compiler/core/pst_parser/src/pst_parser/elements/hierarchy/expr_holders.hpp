@@ -17,7 +17,7 @@ namespace pst {
 	 */
 	class ExprHolder: public NotStmt {
 	protected:
-		AccessInternal<ExprElement> expr;
+		NAMED_CHILD(expr, ExprElement);
 		friend void internal::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
 
 	public:

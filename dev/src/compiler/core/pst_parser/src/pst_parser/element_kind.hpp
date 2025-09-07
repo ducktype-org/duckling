@@ -36,6 +36,7 @@ namespace pst {
 
 		Expand,
 
+		Attribute,
 
 		// Duckling statements:
 		If,
