@@ -6,5 +6,5 @@
 #include "dotted_name.hpp"              // IWYU pragma: export
 #include "expr_element.hpp"             // IWYU pragma: export
 #include "param.hpp"                    // IWYU pragma: export
-#include "patterns.hpp"                 // IWYU pragma: export
+#include "patterns/patterns.hpp"        // IWYU pragma: export
 #include "round_group_expression.hpp"   // IWYU pragma: export

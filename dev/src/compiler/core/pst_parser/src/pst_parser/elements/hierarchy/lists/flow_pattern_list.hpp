@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "../not_statements/patterns.hpp"
+#include "../not_statements/patterns/flow_pattern.hpp"
 #include "preamble.hpp"
 
 namespace pst {

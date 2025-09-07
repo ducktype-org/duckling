@@ -1,6 +1,6 @@
 #pragma once
 #include "../meta.hpp"
-#include "patterns.hpp"
+#include "patterns/flow_pattern.hpp"
 #include "pst_parser/access.hpp"
 #include "pst_parser/elements/hierarchy/expr_holders.hpp"
 
