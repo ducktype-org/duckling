@@ -33,8 +33,8 @@ from ..impl.helpers import (
 )
 @no_merge_base(
     help="On no-merge-base: compare against the latest commit on `branch` "
-        "instead of the commit which is the LCA of `branch` and current branch. "
-        "This feature allows to run the checker on a shallow clone.",
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the checker on a shallow clone.",
 )
 @thread_count(
     help="Number of threads used when linting. Defaults to the number of available threads.",
