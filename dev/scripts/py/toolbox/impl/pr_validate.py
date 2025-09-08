@@ -45,9 +45,9 @@ def pr_validate_impl(
         thread_count=thread_count,
     )
 
-    # Step 6 - todo validate
+    # Step 6 - !todo validate
     if not todo_validate_impl():
-        exit_with_error("TODO validation has failed")
+        exit_with_error("!TODO validation has failed")
 
     # Step 7 - issue checker
     if not issue_checker_impl([]):

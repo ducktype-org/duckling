@@ -2,15 +2,14 @@ import re
 import os
 import json
 import shutil
-from typing import List, Optional
 from .helpers import (
     BashCommandError,
-    log_info, 
-    log_warning, 
-    log_new_line, 
-    bash_command_get_output,
+    log_info,
+    log_warning,
+    bash_command_get_output, exit_with_error,
 )
 from .list_files import list_files_impl
+
 
 def check_issue_exists_and_open(issue_number: str) -> bool:
     """
@@ -28,142 +27,162 @@ def check_issue_exists_and_open(issue_number: str) -> bool:
         return False
 
     # Get OWNER and REPO from git remote (support both SSH and HTTPS URLs)
-    try:
-        remote_url, _ = bash_command_get_output('git remote get-url origin')
-        remote_url = remote_url.strip()
-    except BashCommandError as e:
-        log_warning(f"Could not get git remote url: {e}")
-        return False
-    
+    remote_url, _ = bash_command_get_output('git remote get-url origin')
+    remote_url = remote_url.strip()
+
     m = re.match(r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url)
     if not m:
-        log_warning("Could not parse OWNER/REPO from git remote.")
-        return False
+        exit_with_error("Could not parse OWNER/REPO from git remote.")
     owner, repo = m.group(2), m.group(3)
 
     # Query for specific issue using GraphQL
-    query = f"""{{
-      repository(owner: "{owner}", name: "{repo}") {{
-        issue(number: {issue_number}) {{
+    query = """
+    query($owner: String!, $repo: String!, $issue_number: Int!) {
+      repository(owner: $owner, name: $repo) {
+        issue(number: $issue_number) {
           number
           state
-        }}
-      }}
-    }}"""
+        }
+      }
+    }
+    """
 
-    gh_cmd = f"gh api graphql -f 'query={query}'"
+    gh_cmd = (
+        "gh api graphql "
+        f"-f query='{query}' "
+        f"-f owner='{owner}' "
+        f"-f repo='{repo}' "
+        f"-F issue_number={issue_number}"
+    )
     try:
         gh_output, _ = bash_command_get_output(gh_cmd)
         data = json.loads(gh_output)
         issue = (
             data.get("data", {})
-                .get("repository", {})
-                .get("issue")
+            .get("repository", {})
+            .get("issue")
         )
-        
+
         if issue is None:
             return False  # Issue doesn't exist
-            
+
         return issue.get("state") == "OPEN"
-        
-    except BashCommandError as e:
-        log_warning(f"Error while checking issue #{issue_number} via gh api: {e}")
+
+    except BashCommandError:
         return False
     except json.JSONDecodeError as e:
         log_warning(f"Error parsing GitHub API response: {e}")
         return False
 
-def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False) -> bool:
+
+def todo_validate_impl(branch: str = "origin/main", no_merge_base: bool = False,
+                       exclude_files: list[str] = list()) -> bool:
     """
     Validates that all TODO/FIXME comments follow the required format with issue numbers.
     
     Args:
         branch: Git branch to check against (default: origin/main)
         no_merge_base: If True, skip merge base calculation
-    
+        exclude_files: List of file path suffixes, that should be excluded
+
     Returns:
         bool: True if all TODOs are properly formatted, False if any violations are found.
     """
-    
+
     # Define strict patterns for TODO/FIXME comments in the required format
-    # Format: @TODO #123 description or @FIXME #123 description (only @ prefixed)
+    # Format: @TODO: #123 description or @FIXME #123 description (only @ prefixed)
+    if exclude_files is None:
+        exclude_files = []
     todo_patterns = [
-        re.compile(r'@TODO\s+#(\d+)\s+\S+', re.IGNORECASE),
-        re.compile(r'@FIXME\s+#(\d+)\s+\S+', re.IGNORECASE),
+        re.compile(r'@TODO:\s+#(\d+)\s+\S+', re.IGNORECASE),
+        re.compile(r'@FIXME:\s+#(\d+)\s+\S+', re.IGNORECASE),
     ]
-    
+
+    # Chcemy wykrywać wszystkie TODO
+
     # Patterns to detect any TODO/FIXME comment (for reporting violations)
     any_todo_patterns = [
-        re.compile(r'@TODO\b', re.IGNORECASE),
-        re.compile(r'@FIXME\b', re.IGNORECASE),
-        re.compile(r'\bTODO\b', re.IGNORECASE),
-        re.compile(r'\bFIXME\b', re.IGNORECASE),
+        re.compile(r'[^!]@TODO', re.IGNORECASE),
+        re.compile(r'[^!]@FIXME', re.IGNORECASE),
+        re.compile(r'(?!!@)[^!]TODO[^_-]', re.IGNORECASE),
+        re.compile(r'(?!!@)[^!]FIXME[^_-]', re.IGNORECASE),
+        re.compile(r'(?!!@)[^!]TODO\s', re.IGNORECASE),
+        re.compile(r'(?!!@)[^!]FIXME\s', re.IGNORECASE),
     ]
-    
-    try:
-        files_and_lines = list_files_impl(only_modified=True, lines=True, branch=branch, no_merge_base=no_merge_base)
-    except Exception as e:
-        log_warning(f"Could not get file list from git: {e}")
-        return True
-    
+
+    files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(only_modified=True, lines=True, branch=branch,
+                                                                        no_merge_base=no_merge_base)
+
+    # Pop the current file, so that the verification can pass
+    for file in list(files_and_lines.keys()):
+        try:
+            if __file__.endswith(file):
+                files_and_lines.pop(file)
+            if any(file.endswith(suffix) for suffix in exclude_files):
+                files_and_lines.pop(file)
+        except KeyError:
+            pass
+
     # Check only modified files and lines
     violations_found = False
     violation_count = 0
     invalid_issue_count = 0
-    
+
     log_info("Validating TODO/FIXME comments format...")
-    
+
     for file, line_ranges in files_and_lines.items():
         if os.path.isdir(file):
             continue
-            
+
         try:
             with open(file, "r", encoding='utf-8', errors='ignore') as f:
                 file_lines = f.readlines()
-                
+
                 for start_line, end_line in line_ranges:
                     for line_num in range(start_line, end_line):
                         if line_num <= len(file_lines):
                             line = file_lines[line_num - 1]  # Convert to 0-based indexing
-                            
+
                             # Check if line contains any TODO/FIXME pattern
                             has_todo = any(pattern.search(line) for pattern in any_todo_patterns)
-                            
+
                             if has_todo:
                                 # Check if it follows the strict format
                                 valid_format = False
                                 issue_number = None
-                                
+
                                 for pattern in todo_patterns:
                                     match = pattern.search(line)
                                     if match:
                                         valid_format = True
                                         issue_number = match.group(1)
                                         break
-                                
+
                                 if not valid_format:
                                     log_warning(f"{file}:{line_num}: {line.strip()}")
                                     violations_found = True
                                     violation_count += 1
                                 elif issue_number and not check_issue_exists_and_open(issue_number):
-                                    log_warning(f"{file}:{line_num}: Issue #{issue_number} does not exist or is not open: {line.strip()}")
+                                    log_warning(
+                                        f"{file}:{line_num}: Issue #{issue_number} does not exist or is not open: {line.strip()}")
                                     violations_found = True
                                     invalid_issue_count += 1
-                            
-        except Exception as e:
+                        else:
+                            exit_with_error(f"Line count in {file} has changed!")
+
+        except OSError:
             # Skip files that can't be read (binary files, permission issues, etc.)
-            continue
-    
-    log_new_line()
+            exit_with_error(f"Cannot read {file}. Make sure it's text-readable and you have correct permissions.")
+
     if violations_found:
         if violation_count > 0:
             log_warning(f"Found {violation_count} TODO/FIXME comment(s) without proper format")
         if invalid_issue_count > 0:
             log_warning(f"Found {invalid_issue_count} TODO/FIXME comment(s) with invalid or closed issue numbers")
-        log_info("All TODO/FIXME comments must follow the format: @TODO #issue_number description")
-        log_info("Example: // @TODO #0123 Implement this feature")
+        log_info("All TODO/FIXME comments must follow the format: @TODO: #issue_number description")
+        log_info("Example: // @TODO: #0123 Implement this feature")
         log_info("The issue number must reference an open GitHub issue.")
     else:
         log_info("All TODO/FIXME comments are properly formatted with valid issue numbers")
-    
+
     return not violations_found
