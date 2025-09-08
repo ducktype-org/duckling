@@ -64,8 +64,4 @@ constexpr bool USE_TAIL_CALLS_VALUE = true;
 constexpr bool USE_TAIL_CALLS_VALUE = false;
 #endif
 
-namespace config {
-	inline bool debug_mode = false;
-}
-
 // NOLINTEND(cppcoreguidelines-macro-usage)

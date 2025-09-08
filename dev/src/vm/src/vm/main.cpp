@@ -7,7 +7,7 @@
 #include <printer/stream_printer.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/config.hpp>
+#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
