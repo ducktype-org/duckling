@@ -1,0 +1,24 @@
+# Simple macro for struct insides
+macro someMacro(type: Symbol, name: Symbol) {
+    return ${
+        name: type;
+        fun add(a: A) -> type = {
+            return name + a;
+        }
+    };
+}
+
+struct A {
+    p: i64;
+    q: i64;
+}
+
+struct T {
+    x: i32;
+    y: i32;
+    z: i32;
+}
+
+struct K {
+    expand someMacro(T, t);
+}
