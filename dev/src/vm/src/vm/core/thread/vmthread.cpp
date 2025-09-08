@@ -404,6 +404,7 @@ namespace vm {
 	#define HANDLE_OPCODE(opcode_name)                                                              \
 	case low::OpcodeFix8::opcode_name: {                                                            \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		if (config::debug_mode) std::cerr << "Executing: " << #opcode_name << "\n";                 \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
