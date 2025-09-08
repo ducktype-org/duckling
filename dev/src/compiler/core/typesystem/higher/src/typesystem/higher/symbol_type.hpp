@@ -173,7 +173,7 @@ namespace tsh {
 				return true;
 			}
 			if (abstract_type.hasNoOpDestructor()) return true;
-			// @TODO: add more cases where destructor is trivial
+			// @TODO #1271: add more cases where destructor is trivial
 			// NOTE: abstract_type check should probably be the last one as it may be expensive
 			return false;
 		}

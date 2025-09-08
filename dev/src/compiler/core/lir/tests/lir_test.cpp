@@ -330,8 +330,8 @@ private:
 	}
 
 	void testLifetimeFlags() {
-		// @TODO: this test doesn't make much sense yet, add proper tests when classes and composite
-		// types such as variants are fully added. See #1262
+		// @TODO #1262: this test doesn't make much sense yet, add proper tests when classes and
+		// composite types such as variants are fully added.
 		auto module = getLirOfModule(path("modules/lifetime_flags"));
 		ASSERT_EQUAL(3, module.ctors.size());
 

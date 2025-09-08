@@ -64,7 +64,7 @@ namespace tsh::internal {
 
 		/**
 		 * @brief Determines weather the type has a no-op destructor, i.e. destructor that does not
-		 * perform any operations. By default we assume that type's destructor is non-no-op.
+		 * perform any operations.
 		 *
 		 * Importantly, It is used in LIR lowering to determine if destructor calls and lifetime
 		 * flag are needed.
@@ -72,9 +72,8 @@ namespace tsh::internal {
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		virtual bool hasNoOpDestructor() const {
-			return false;
-		}
+		virtual bool hasNoOpDestructor() const
+			= 0;
 
 		/**
 		 * @brief Get the text representation of this type.
@@ -414,9 +413,11 @@ namespace tsh::internal {
 
 		StringAbstractTypeImpl() { representation = "string"; }
 
-		[[nodiscard]] bool hasNoOpDestructor() const override {
-			return false;
-		}  // string destruction requires to free memory
+		/**
+		 * @brief Strings have nontrivial destructors because destruction of a string requires to
+		 * free memory.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -447,9 +448,11 @@ namespace tsh::internal {
 			return false;
 		}
 
-		[[nodiscard]] bool hasNoOpDestructor() const override {
-			return false;
-		}  // dynamic array destruction requires to free memory
+		/**
+		 * @brief Dynamic arrays have nontrivial destructors because destruction of an dynamic array
+		 * requires to free memory.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -524,6 +527,11 @@ namespace tsh::internal {
 			bool                      pure = false,
 			bool                      free = false
 		);
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			// @TODO #1273: this is a placeholder, implemnt proper logic
+			return false;
+		}
 	};
 
 	/** @TODO:
@@ -609,6 +617,11 @@ namespace tsh::internal {
 				if (element.getSymbol() == sym) return element.getType(ctx);
 			CORE_PANIC("Element not found.");
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			// @TODO #1274: this is a placeholder, implemnt proper logic
+			return false;
+		}
 	};
 
 	class NamespaceAbstractTypeImpl final: public AbstractTypeImpl {
@@ -641,6 +654,11 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Module;
 
 		ModuleAbstractTypeImpl() = default;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			// @TODO #1275: this is a placeholder, implemnt proper logic
+			return false;
+		}
 	};
 
 	class MetaAbstractTypeImpl final: public AbstractTypeImpl {
