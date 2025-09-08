@@ -21,7 +21,7 @@ env:
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
   BUILD_SYSTEM: Ninja
-#  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners. See #1021
+  LINKER_TYPE: MOLD
 
 jobs:
   determine-runners:
@@ -187,10 +187,7 @@ jobs:
               -D STRIP_SYMBOL_INFORMATION=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
-#              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
-#              Temporarily disabled due to disk space issues on GH runners. See #1021
-#              When enabling, move this line upwards, so that it is before the cmake-flags value.
-
+              
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
