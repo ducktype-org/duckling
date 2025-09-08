@@ -12,8 +12,8 @@ namespace pst {
 	 *  - public { stmt1; stmt2; }
 	 */
 	class StmtSpecifier final: public Stmt {
-		Keyword                         specifier = Keyword::NotAKeyword;
-		AccessInternal<CodeBlockOrStmt> code_block_or_stmt;
+		Keyword specifier = Keyword::NotAKeyword;
+		NAMED_CHILD(code_block_or_stmt, CodeBlockOrStmt);
 
 	public:
 		static constexpr std::array<Keyword, 3> SPECIFIERS_ARRAY = {
@@ -34,6 +34,11 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "StmtSpecifier";
+		}
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
 		}
 	};
 }

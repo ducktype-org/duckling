@@ -11,9 +11,9 @@ namespace pst::expr {
 	class Assignment final: public ExprElement {
 		using Lower = Comma;
 
-		AccessInternal<ExprElement> variables;
-		base::StrID                 type;
-		AccessInternal<ExprElement> value;
+		NAMED_CHILD(variables, ExprElement);
+		base::StrID type;
+		NAMED_CHILD(value, ExprElement);
 
 	public:
 		explicit Assignment(const dia::SourcePosition& position): ExprElement(position, 1'000) {}

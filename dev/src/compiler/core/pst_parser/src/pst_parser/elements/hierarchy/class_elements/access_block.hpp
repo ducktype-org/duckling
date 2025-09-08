@@ -16,8 +16,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword          specifier = lang_def::Keyword::NotAKeyword;
-		AccessInternal<ClassBlock> block;
+		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
+		NAMED_CHILD(block, ClassBlock);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
@@ -32,8 +32,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const final {
-			return false;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
 		}
 
 		[[nodiscard]]

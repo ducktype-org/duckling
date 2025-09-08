@@ -7,11 +7,11 @@ namespace pst {
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier           optional_name;
-		tpc::Identifier                   iterator;
-		AccessInternal<ForTypeExprHolder> type;
-		AccessInternal<CommaExprHolder>   iterable;
-		AccessInternal<CodeBlockOrStmt>   body;
+		tpc::OptionalIdentifier optional_name;
+		tpc::Identifier         iterator;
+		NAMED_CHILD(type, ForTypeExprHolder);
+		NAMED_CHILD(iterable, CommaExprHolder);
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
@@ -23,6 +23,16 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "For";
+		}
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return optional_name.value;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

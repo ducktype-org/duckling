@@ -38,6 +38,5 @@ namespace pst {
 		AccessBlock,
 		FunParam,
 		Expand,
-		CodeBlock,
 	);
 }
