@@ -254,40 +254,42 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				auto evaluated = evalHoutExpr(ctx, chain_expr.expressions.front().ref());
-				if (evaluated.hasError()) {
-					result = query::QError(errors::Failed(evaluated.error()));
-					return;
-				}
-				auto prev_value = evaluated.value();
-
-				auto evaluated_exprs
-					= chain_expr.expressions
-				    | std::views::transform([this](const base::Box<code::Expr>& expr) {
-						  return evalHoutExpr(ctx, expr.ref());
-					  });
-
 				auto compare = [](i64 first, i64 second, code::BuiltinBinary operation) {
+					using enum code::BuiltinBinary;
 					switch (operation) {
-					case code::BuiltinBinary::IntegerLt:
+					case IntegerLt:
 						return first < second;
-					case code::BuiltinBinary::IntegerGt:
+					case IntegerGt:
 						return first > second;
-					case code::BuiltinBinary::IntegerLteq:
+					case IntegerLteq:
 						return first <= second;
-					case code::BuiltinBinary::IntegerGteq:
+					case IntegerGteq:
 						return first >= second;
-					case code::BuiltinBinary::IntegerEq:
+					case IntegerEq:
 						return first == second;
-					case code::BuiltinBinary::IntegerNeq:
+					case IntegerNeq:
 						return first != second;
 					default:
 						CORE_UNREACHABLE();
 					}
 				};
 
-				for (auto [next_expr, comp]:
-				     std::views::zip(evaluated_exprs, chain_expr.operators)) {
+				using namespace std::views;
+
+				auto evaluate_subexpr = [this](const base::Box<code::Expr>& expr) {
+					return evalHoutExpr(ctx, expr.ref());
+				};
+
+				auto evaluated_exprs = chain_expr.expressions | transform(evaluate_subexpr);
+
+
+				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
+				if (evaluated.hasError()) {
+					result = query::QError(errors::Failed(evaluated.error()));
+					return;
+				}
+				auto prev_value = evaluated.value();
+				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
 					if (next_expr.hasError()) {
 						result = query::QError(errors::Failed(evaluated.error()));
 						return;

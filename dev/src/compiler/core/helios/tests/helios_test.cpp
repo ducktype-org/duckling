@@ -105,6 +105,8 @@ private:
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
 		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
 
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
@@ -512,6 +514,22 @@ private:
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		// This fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: write a test that checks comparison chain compile-time evaluation.
+		try {
+			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
