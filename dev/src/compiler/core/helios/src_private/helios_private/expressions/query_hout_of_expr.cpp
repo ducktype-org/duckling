@@ -1,5 +1,8 @@
 #include "query_hout_of_expr.hpp"
 
+#include "diagnostic/interactive_logger.hpp"
+#include "diagnostic/interactive_message.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -159,18 +162,22 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
-
 				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
+
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
-					// failed
+					lhs = std::move(fromPST(ctx, stmt->getLeftOperand())).value();
+					rhs = std::move(fromPST(ctx, stmt->getRightOperand())).value();
+					dia::InteractiveLogger::log(base::makeBox<dia::OperatorNotFound>(
+						stmt->getSourcePosition(),
+						stmt->getOperator(),
+						std::move(lhs),
+						std::move(rhs),
+						stmt.dynamicCast<pst::LangElement>().value(),
+						ctx
+					));  // failed
 				}
 			}
 

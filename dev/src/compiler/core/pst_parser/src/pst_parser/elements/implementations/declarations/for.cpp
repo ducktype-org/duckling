@@ -3,7 +3,11 @@
 #include "../../hierarchy/expr_holders.hpp"                            // IWYU pragma: keep
 #include "../../hierarchy/expressions/comma.hpp"
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "diagnostic/interactive_logger.hpp"
+#include "diagnostic/interactive_message.hpp"
 #include "preamble.hpp"
+
+#include "base/box.hpp"
 
 namespace pst {
 	class ForBracketError final: public dia::Error {
@@ -42,6 +46,7 @@ namespace pst {
 		state.parse(out).all(Keyword::For, &out->optional_name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
+			dia::InteractiveLogger::log(base::makeBox<dia::RoundBracket>(state.getPosition()));
 			state.log(makeBox<ForBracketError>(state.getPosition()));
 		} else {
 			state.parse(out).goDown();

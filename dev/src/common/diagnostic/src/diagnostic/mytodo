@@ -1,0 +1,7 @@
+// 1. Flagi
+// 3. low-priority issues
+// 4. Pomyśleć co z concept artem
+// 5. Signleton i std::move
+// Logger jako makro sprawdzający singleton
+// 6. Jakie funkcjonalnolności interaktywne chcemy oferować
+// 7. Proposal funkcjonalności języka które mogą pomóc w błędach kompilacji
