@@ -1,0 +1,202 @@
+syntax = "proto3";
+
+package view;
+
+enum VisibilityStatus {
+    Primary = 0;
+    Alternative = 1;
+}
+
+// ---------- COMPONENTS WITHOUT HIGHLIGHT ---------- //
+
+message NoHlTextComponent {
+    optional uint32 component_id = 1;
+    string content = 2;
+}
+
+message NoHlCodeComponent {
+    optional uint32 component_id = 1;
+    string content = 2;
+}
+
+message NoHlConcatComponent {
+    repeated NoHlComponent components = 1;
+}
+
+message NoHlInteractiveComponent {
+    uint32 component_id = 1;
+    VisibilityStatus status = 2;
+    NoHlComponent primary_component = 3;
+}
+
+message NoHlComponent {
+    oneof component {
+        NoHlTextComponent text_component = 1;
+        NoHlCodeComponent code_component = 2;
+        NoHlConcatComponent concat_component = 3;
+        NoHlInteractiveComponent interactive_component = 4;
+    }
+}
+
+// ---------- COMPONENTS WITH HIGHLIGHT ---------- //
+
+// Note: higlights are only allowed inside code sections,
+//       and in these sections all text is rendered as code,
+//       so there is no need for a text component.
+
+message HlCodeComponent {
+    optional uint32 component_id = 1;
+    string content = 2;
+    repeated uint32 hl_tags = 3;
+}
+
+message HlConcatComponent {
+    repeated HlComponent components = 1;
+}
+
+message HlInteractiveComponent {
+    uint32 component_id = 1;
+    VisibilityStatus status = 2;
+    HlComponent primary_component = 3;
+}
+
+message HlComponent {
+    oneof component {
+        HlCodeComponent code_component = 1;
+        HlConcatComponent concat_component = 2;
+        HlInteractiveComponent interactive_component = 3;
+    }
+}
+
+// ---------- CODE SECTION RELATED MESSAGES ---------- //
+
+// Filename, line, and column are required to show the standardized location form:
+//          filename.extension:line:column
+
+message CodeMetadata {
+    string filename = 1;
+    uint32 line = 2;
+    uint32 column = 3;
+}
+
+message CodeLine {
+    optional uint32 line_number = 1;
+    HlComponent content = 2;
+}
+
+// The message related to a specific highlight.
+message HlMessage {
+    // The tag this message is referred to as.
+    uint32 tag = 1;
+    // The priority of display.
+    uint32 priority = 2;
+    InfoType type = 3;
+    NoHlComponent message = 4;
+}
+
+message CodeSection {
+    CodeMetadata metadata = 1;
+    repeated CodeLine lines = 2;
+    repeated HlMessage hl_messages = 3;
+}
+
+// ---------- DIAGNOSTICS ---------- //
+
+// A series of infos related to one diagnostic. 
+message Diagnostic {
+    repeated Info infos = 1;
+}
+
+// A coherent piece of information related to a diagnostic.
+message Info {
+    Metadata metadata = 1;
+    NoHlComponent header = 2;
+    repeated Section sections = 3;
+}
+
+enum InfoType {
+    Error = 0;
+    Warning = 1;
+    Note = 2;
+    Hint = 3;
+    Docs = 4;
+}
+
+message Metadata {
+    InfoType type = 1;
+    // Info code is always a number.
+    uint32 code = 2;
+}
+
+message Section {
+    oneof section {
+        CodeSection code_section = 1;
+        // Both header message and description are of the same type.
+        NoHlComponent text_section = 2;
+    }
+}
+
+
+// ---------- SIDE INFOS ---------- //
+
+message SideEdge {
+    uint32 edge_id = 1;
+    string description = 2;
+}
+
+message SideInfo {
+    uint32 side_info_id = 1;
+    Metadata metadata = 2;
+    NoHlComponent header = 3;
+    repeated Section sections = 4;
+    repeated SideEdge edges = 5;
+}
+
+message SidePath {
+    repeated SideInfo infos = 1;
+}
+
+// ---------- VIEW SERVICE API ---------- //
+
+// The names of clicks are abstract, so the UI may decide how to invoke them.
+enum ClickType {
+    CLICK = 0;
+    CLICK_INTERACTIVE = 1;
+    CLICK_INTERACTIVE_ROLLBACK = 2;
+}
+
+message ViewRequest {}
+message ViewResponse {
+    repeated Diagnostic diagnostics = 1;
+    repeated SidePath side_paths = 2;
+}
+
+message ClickRequest {
+    uint32 component_id = 1;
+    ClickType click_type = 2;
+}
+message ClickResponse {
+    string status = 1;
+}
+
+message CloseSideInfoRequest {
+    uint32 side_info_id = 1;
+}
+message CloseSideInfoResponse {
+    string status = 1;
+}
+
+message EdgeRequest {
+    uint32 side_info_id = 1;
+    uint32 edge_id = 2;
+}
+message EdgeResponse {
+    string status = 1;
+}
+
+service ViewService {
+    rpc GetView(ViewRequest) returns (ViewResponse);
+    rpc Click(ClickRequest) returns (ClickResponse);
+    rpc CloseSideInfo(CloseSideInfoRequest) returns (CloseSideInfoResponse);
+    rpc GetEdge(EdgeRequest) returns (EdgeResponse);
+}
