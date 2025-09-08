@@ -191,30 +191,20 @@ namespace compiler::helios::code {
 		case IntegerPow:
 			out << "**";
 			break;
-		case IntegerLt:
-			out << "<";
-			break;
-		case IntegerLteq:
-			out << "<=";
-			break;
-		case IntegerGt:
-			out << ">";
-			break;
-		case IntegerGteq:
-			out << ">=";
-			break;
-		case IntegerEq:
-			out << "==";
-			break;
-		case IntegerNeq:
-			out << "==";
-			break;
 		case BooleanAnd:
 			out << " and ";
 			break;
 		case BooleanOr:
 			out << " or ";
 			break;
+
+		case IntegerLt:
+		case IntegerLteq:
+		case IntegerGt:
+		case IntegerGteq:
+		case IntegerEq:
+		case IntegerNeq:
+			CORE_PANIC("comparisons should be handled by ComparisonChain, not BinaryOperator");
 		}
 		rhs->debugPrint(out);
 	}
@@ -397,10 +387,31 @@ namespace compiler::helios::code {
 		  operators{ std::move(operators) } {}
 
 	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
-		for (bool add_less = false; auto&& expr: expressions) {
-			if (add_less) out << " < ";
+		using namespace std::views;
+		auto comparison_to_string = [](BuiltinBinary comp) {
+			using enum BuiltinBinary;
+			switch (comp) {
+			case IntegerLt:
+				return "<";
+			case IntegerLteq:
+				return "<=";
+			case IntegerGt:
+				return ">";
+			case IntegerGteq:
+				return ">=";
+			case IntegerEq:
+				return "==";
+			case IntegerNeq:
+				return "==";
+			default:
+				CORE_UNREACHABLE();
+			}
+		};
+
+		expressions.front()->debugPrint(out);
+		for (auto [expr, comp]: zip(expressions | drop(1), operators)) {
+			out << comparison_to_string(comp);
 			expr->debugPrint(out);
-			add_less = true;
 		}
 	}
 }
