@@ -10,7 +10,7 @@ namespace pst {
 	 * Currently allows: using, alias
 	 */
 	class NonClassStmt: public ClassStmt {
-		AccessInternal<Stmt> inner_stmt;
+		NAMED_CHILD(inner_stmt, Stmt);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
@@ -27,6 +27,11 @@ namespace pst {
 		[[nodiscard]]
 		bool trailingSemicolon() override {
 			return false;
+		}
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

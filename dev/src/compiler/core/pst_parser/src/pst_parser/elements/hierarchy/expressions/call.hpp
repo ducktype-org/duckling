@@ -10,7 +10,7 @@ namespace pst::expr {
 	class Call final: public ExprElement {
 		lexer::Token::BracketType type
 			= lexer::Token::BracketType::None;  ///< either Round or Square
-		AccessInternal<CallList> args;
+		NAMED_CHILD(args, CallList);
 
 	public:
 		Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
