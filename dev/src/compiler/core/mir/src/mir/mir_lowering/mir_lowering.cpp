@@ -1160,8 +1160,8 @@ namespace compiler::mir {
 			auto last_lowered
 				= lowerExpr(*chain_expr.expressions.back(), continuation, function, expr_scope);
 
-			auto prev_value    = last_lowered.getResult(function);
-			auto prev_block    = last_lowered.begin;
+			auto prev_value = last_lowered.getResult(function);
+			auto prev_block = last_lowered.begin;
 
 			auto mir_ops     = chain_expr.operators | transform(builtinBinaryToOperation);
 			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);

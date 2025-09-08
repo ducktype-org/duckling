@@ -253,7 +253,7 @@ namespace compiler::helios {
 					result = evalHoutExpr(ctx, expr.if_false.ref());
 			}
 
-			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) {
+			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
 				auto evaluated = evalHoutExpr(ctx, chain_expr.expressions.front().ref());
 				if (evaluated.hasError()) {
 					result = query::QError(errors::Failed(evaluated.error()));
@@ -331,7 +331,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
