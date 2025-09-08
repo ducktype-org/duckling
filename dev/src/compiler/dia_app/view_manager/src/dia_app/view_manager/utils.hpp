@@ -9,6 +9,13 @@
 
 #include <expected>
 #include <functional>
+#include <iostream>
+
+#define UNIMPLEMENTED() \
+	do {                \
+		assert(!"UNIMPLEMENTED function called! Or you just have to fix the code, because it didn't compile otherwise :p");          \
+		std::abort();   \
+	} while (0)
 
 namespace dia_app {
 	using json = nlohmann::json;
