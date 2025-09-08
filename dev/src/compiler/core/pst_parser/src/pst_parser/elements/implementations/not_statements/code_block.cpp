@@ -3,9 +3,13 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<CodeBlock> CodeBlock::parse(LangParserState& state) {
+	MBox<CodeBlock> CodeBlock::parse(LangParserState& state, CodeBlockType order_type) {
+		CORE_ASSERT(order_type != Undefined, "Parsing with an undefined ordering type");
+
 		auto position = state.getPosition();
 		auto out      = makeBox<CodeBlock>(position);
+
+		out->type = order_type;
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.log(makeBox<error::BlockStartError>(state.getPosition()));
@@ -18,11 +22,44 @@ namespace pst {
 		while (state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
-			out->statements.emplace_back(std::move(stmt));
+			out->statements.emplace_back(nullptr);
+			state.parse(out).assign(&out->statements.back(), std::move(stmt));
 		}
 
 		state.parse(out).goUpAndSkip();
+
+		out->fillSymbols();
+
 		return out;
+	}
+
+	void CodeBlock::fillSymbols() {
+		for (auto& stmt: statements) {
+			base::StrID symbol;
+			switch (stmt.internal()->isDeclaration()) {
+			case DeclKind::None:
+				no_symbol.push_back(stmt.give());
+				break;
+			case DeclKind::Symbol:
+				symbol = stmt.internal()->getDeclSymbolName().value();
+				if (!by_symbol.atMaybe(symbol)) by_symbol.put(symbol);
+				by_symbol[symbol].push_back(stmt.give());
+				break;
+			case DeclKind::Transparent:
+				transparent.push_back(stmt.give());
+				break;
+			}
+		}
+	}
+
+	void CodeBlock::calcElementPathsRecursive() {
+		auto path = getElementPath();
+		if (type == Ordered) {
+			auto ordered = ElementPath(path, "ordered");
+			calcIndexedListChildPath<Stmt>({ statements }, ordered);
+		} else if (type == Unordered) {
+			calcOrderedListChildPath(statements, path);
+		}
 	}
 
 	void CodeBlock::dprint(std::ostream& out) const {
@@ -33,6 +70,4 @@ namespace pst {
 		}
 		out << "]";
 	}
-
-	void CodeBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitCodeBlock(*this); }
 }

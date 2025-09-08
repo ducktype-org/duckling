@@ -11,8 +11,8 @@ namespace pst {
 	 * the optional "star" is ignored.
 	 */
 	class Import final: public Stmt {
-		AccessInternal<DottedName> names;
-		tpc::Identifier            alias;
+		NAMED_CHILD(names, DottedName);
+		tpc::Identifier alias;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import, ElementKind::Import);
@@ -45,8 +45,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const final {
-			return true;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Symbol;
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return getAlias();
 		}
 	};
 }
