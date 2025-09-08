@@ -6,6 +6,7 @@ include(ICU.cmake)
 include(NlohmannJson.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
+include(ViewManager.cmake)
 
 # These dependencies should be handled in main CMakeLists (for correct context)
 macro (insertDependencies)

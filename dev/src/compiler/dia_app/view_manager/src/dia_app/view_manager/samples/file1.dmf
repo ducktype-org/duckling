@@ -1,0 +1,28 @@
+# Simple macro for struct insides
+macro someMacro(type: Symbol, name: Symbol) {
+    return ${
+        type name;
+        fun get() -> type = {
+            return name;
+        }
+    };
+}
+
+template{T: type}
+@why_instanced if (T is i32)
+struct K {
+    @explore
+    expand someMacro(T, t);
+}
+
+# Default template parameter is an instance of K
+template{T: type, P = K{i32}: type}
+struct A {
+    T t;
+    P p;
+}
+
+# The function that requires instantiation of A{i64} and therefore K{i32}
+fun main() = {
+    A{i64} a;
+}
