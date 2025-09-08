@@ -71,7 +71,6 @@ set(CMAKE_CXX_FLAGS_RELEASEOPT "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG      ${CMAKE_CXX_FLAGS_DEVDEBUG})
 
 
-# Strip binaries from symbols in Release build
 if(STRIP_SYMBOL_INFORMATION)
 	# if not gcc/clang, this might fail:
 	if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
