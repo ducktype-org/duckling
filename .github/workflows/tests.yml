@@ -184,6 +184,7 @@ jobs:
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
+              -D STRIP_SYMBOL_INFORMATION=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
 #              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
