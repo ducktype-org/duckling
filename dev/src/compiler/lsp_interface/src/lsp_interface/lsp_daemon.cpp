@@ -7,6 +7,7 @@
 
 #include <base64.hpp>
 
+#include <iostream>
 
 PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -264,16 +265,29 @@ void server(i32 port) {
 	 * * URL: /debug
 	 * @return whatever you want
 	 */
-	CROW_ROUTE(app, "/debug")
-	([&virtual_root]() {
-		std::shared_ptr<fs::FsTree> tree        = fs::FsTree::create(virtual_root);
-		std::string                 responsestr = "responsestring\n";
-		const fs::FsTree&           tre         = *tree;
-		responsestr += getContentsOfDirs(tre);
-		responsestr += "end of responsestring\n";
-		return crow::response(
-			200, "crow route debug: " + tree->prettyPrint() + "\n\n" + responsestr
-		);
+	CROW_ROUTE(app, "/debug/<string>")
+	([&virtual_root](const std::string& base64_path) {
+		try {
+			const auto path = base64::decode_into<std::string>(base64_path);
+
+			std::cout << "Requested path: " << path << "\n";
+
+			const auto file = virtual_root.getFilePath().join(path);
+
+			if (!file.exists()) return crow::response(404, "File not found");
+
+			auto pst = base::anyCast<CRef<pst::PST<>>>(
+				query::utils::withContextCompute([&](query::Context& ctx) {
+					std::cout << "Querying PST from file path\n";
+
+					auto root = compiler::frontend::QueryModuleTree(ctx, fs::File(virtual_root.getFilePath().join(path)));
+
+					return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
+				})
+			);
+
+			return crow::response(200, "OK");
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 	app.port(base::safeIntConv<u16>(port)).run();
