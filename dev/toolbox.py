@@ -67,13 +67,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    # TODO: Fix
-    # @TODO: Fix
-    # @TODO: 123
-    # @TODO: 123 Fix this
-    # @TODO: #123 Fix this
-    # @TODO: #1265 Fix this
-    # !@TODO: 123 Fix this
     sys.tracebacklimit = 0
 
     cli()
