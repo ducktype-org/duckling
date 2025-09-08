@@ -1152,6 +1152,7 @@ namespace compiler::mir {
 
 			using namespace std::views;
 
+			// Place for a comparison instruction
 			auto prev_cmp_hole = continuation->addHole();
 
 			auto boolean_output
@@ -1163,9 +1164,9 @@ namespace compiler::mir {
 			auto prev_value = last_lowered.getResult(function);
 			auto prev_block = last_lowered.begin;
 
-			auto mir_ops     = chain_expr.operators | transform(builtinBinaryToOperation);
-			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);
-			auto comparisons = mir_ops | drop(1) | reverse;
+			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
+			auto expressions   = chain_expr.expressions | drop(1) | reverse | drop(1);
+			auto comparisons   = mir_operators | drop(1) | reverse;
 
 			// Construct the boolean output during the first comparison.
 			std::vector<mir::OperationFlag> flags = { flagConstruct(boolean_output) };
@@ -1183,7 +1184,6 @@ namespace compiler::mir {
 					{},
 					expr_scope });
 
-				std::cout << base::enumToStr(comp).str() << '\n';
 				prev_cmp_hole.fill(Instruction{
 					comp, { boolean_output }, { expr_result, prev_value }, flags, expr_scope });
 				flags.clear();
@@ -1197,10 +1197,11 @@ namespace compiler::mir {
 			auto first_value = first_lowered.getResult(function);
 			auto first_block = first_lowered.begin;
 
-			static_assert(std::same_as<decltype(mir_ops.front()), mir::Operation>);
-			prev_cmp_hole.fill(Instruction{
-				mir_ops.front(), { boolean_output }, { first_value, prev_value }, flags, expr_scope }
-			);
+			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
+			                                { boolean_output },
+			                                { first_value, prev_value },
+			                                flags,
+			                                expr_scope });
 
 			valueOutput(first_block, boolean_output);
 		}

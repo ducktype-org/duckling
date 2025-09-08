@@ -418,8 +418,7 @@ namespace compiler::helios::code {
 						}
 					}
 				}
-				std::cout << operators.size() << "\n";
-				CORE_ASSERT(operators.size() == operator_count, "op count");
+
 				node = makeBox<ChainComparisonExpr>(
 					ctx, std::move(result_exprs), std::move(operators)
 				);
