@@ -87,6 +87,14 @@ from click import Choice, option, command
     default=False,
     is_flag=True,
 )
+@option(
+    "--strip-symbol-information",
+    prompt="Strip all symbol information from binaries:",
+    help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)
