@@ -1,10 +1,16 @@
 #pragma once
 
+#if !defined(NDEBUG)
 namespace config {
 	inline bool debug_mode = false;
 }
+#endif
 
-#define DEBUG_LOG(x)                                        \
-	do {                                                    \
-		if (config::debug_mode) { std::cerr << x << "\n"; } \
-	} while (0)
+#if !defined(NDEBUG)
+	#define DEBUG_LOG(x)                                        \
+		do {                                                    \
+			if (config::debug_mode) { std::cerr << x << "\n"; } \
+		} while (0)
+#else
+	#define DEBUG_LOG(x)
+#endif

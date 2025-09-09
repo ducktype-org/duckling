@@ -31,6 +31,7 @@ clah::Clah getVmClah() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
+#if !defined(NDEBUG)
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('d')
 	             .addLongName("debug-mode")
@@ -42,6 +43,7 @@ clah::Clah getVmClah() {
 				config::debug_mode = true;
 			}
 		})
+#endif
 	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 	                                .addShortName('p')
