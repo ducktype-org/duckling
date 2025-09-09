@@ -42,16 +42,12 @@ namespace vm {
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
 	 */
-	constexpr u64 FRAME_COUNT = 16'384;
+	constexpr u64 FRAME_COUNT = ThreadStack::FRAMES_LENGTH;
 
 	/**
 	 * @brief Number of fixed and preallocated stack bytes.
-	 * 256 - a magic number - it means if frames take on average 256 bytes
-	 * of stack space, then there can be at most FRAME_COUNT frames
-	 * on the stack, but if functions on average take more than 256 bytes of space
-	 * then fewer frames will be able to fit.
 	 */
-	constexpr u64 STACK_LENGTH = FRAME_COUNT * 256;
+	constexpr u64 STACK_LENGTH = ThreadStack::STACK_LENGTH;
 
 	/**
 	 * @brief This structure holds pointers to `frame_stack` and `local_stack_reserved`
