@@ -105,6 +105,16 @@ namespace tsh {
 		const TypeInterface& getInterface(query::Context& ctx) const;
 
 		/**
+		 * @brief Determines weather the type has a trivial destructor.
+		 *
+		 * It is needed to determine if createing a lifetime flag is needed during LIR lowering.
+		 *
+		 * @return true if the type has a trivial destructor, false otherwise.
+		 */
+		[[nodiscard]]
+		bool hasNoOpDestructor() const;
+
+		/**
 		 * @brief The default constructor is deleted.
 		 * This class must be instantiated only from meaningful pieces of data.
 		 * See the other constructors.
