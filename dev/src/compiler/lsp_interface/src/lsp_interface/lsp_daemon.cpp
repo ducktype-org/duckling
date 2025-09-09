@@ -271,17 +271,22 @@ void server(i32 port) {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
 			std::cout << "Requested path: " << path << "\n";
+			std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
 			const auto file = virtual_root.getFilePath().join(path);
 
+			std::cout << "OK\n";
+			std::cout << "Computed file path: " << file.exists() << "\n";
+
 			if (!file.exists()) return crow::response(404, "File not found");
 
+			std::cout << "File exists\n";
 			auto pst = base::anyCast<CRef<pst::PST<>>>(
 				query::utils::withContextCompute([&](query::Context& ctx) {
 					std::cout << "Querying PST from file path\n";
 
-					auto root = compiler::frontend::QueryModuleTree(ctx, fs::File(virtual_root.getFilePath().join(path)));
-
+					auto root = ctx.query<compiler::frontend::QueryModuleTree>(fs::File(virtual_root));
+					std::cout << "Got module tree\n";
 					return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
 				})
 			);

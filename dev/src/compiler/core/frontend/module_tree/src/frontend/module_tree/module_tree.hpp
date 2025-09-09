@@ -18,7 +18,7 @@
 
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
-
+#include <iostream>
 #include <string>
 
 namespace compiler::frontend {
@@ -73,9 +73,17 @@ namespace compiler::frontend {
 			std::regex reject_file_regex      = default_reject_file_regex,
 			std::regex reject_directory_regex = default_reject_directory_regex
 		) {
-			return ModuleTree::create(
-				fs::FsTree::create(root, reject_file_regex, reject_directory_regex)
-			);
+			std::cout << "Creating FsTree\n";
+			try {
+				return ModuleTree::create(
+					fs::FsTree::create(root, reject_file_regex, reject_directory_regex)
+				);
+			} catch (const std::exception& e) {
+				std::cerr << "Error during creating FsTree: " << e.what() << "\n";
+				return nullptr;
+			}
+			// std::cout << "Created FsTree\n";
+			// return ret;
 		}
 
 		/**

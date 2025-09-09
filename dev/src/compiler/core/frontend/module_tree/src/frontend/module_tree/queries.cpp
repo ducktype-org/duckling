@@ -6,6 +6,8 @@
 
 #include <query_framework/query_impl.hpp>
 
+#include <iostream>
+
 namespace compiler::frontend {
 
 	/*******************
@@ -13,8 +15,9 @@ namespace compiler::frontend {
 	 *******************/
 	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleID) {
 		static auto provide(Context&, const QKey& key) -> PResult {
+			std::cout << "JUST AFTER PROVIDE\n";
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
-
+			std::cout << "JUST BEFORE RETURN\n";
 			return module_tree->getID();
 		}
 

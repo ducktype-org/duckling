@@ -98,14 +98,14 @@ connection.onInitialized(() => {
 	if (hasWorkspaceFolderCapability) {
 		compilerDaemonClient.putWorkspace(connection).then(() => {
 			console.log("Workspace files sent to daemon.");
-			compilerDaemonClient.makeModuleTrees(connection);
-			//compilerDaemonClient.callDebugPrint(connection);
+			//compilerDaemonClient.makeModuleTrees(connection);
+			compilerDaemonClient.callDebugPrint(connection, "home/szot/repos/snippets/samplename/samplename.dmf");
 		});
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log("Workspace folder change event received.");
+			console.log("Workspace folder change event received.");
 		});
 	} else {
-		connection.console.log("NO WORKSPACE CAPABILITY");
+		console.log("NO WORKSPACE CAPABILITY");
 	}
 });
 
@@ -182,7 +182,7 @@ documents.onDidChangeContent(change => {
 });
 
 connection.onDidChangeWatchedFiles(_change => {
-	connection.console.log("We received an file change event");
+	console.log("We received an file change event");
 });
 
 // This handler provides the initial list of the completion items.

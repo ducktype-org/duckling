@@ -9,6 +9,7 @@
 
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
+#include <iostream>
 
 #include <query_framework/query_impl.hpp>
 
@@ -50,6 +51,7 @@ inline static base::HashMap<fs::File, ModuleID> module_paths{};
 ModuleTree::ModuleTree(): id(ModuleID::next()) {}
 
 std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
+	std::cerr << "11111Creating ModuleTree from FsTree from implementation\n";
 	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
 
 	buildModuleTree(ptr, std::move(root));
@@ -311,12 +313,26 @@ CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
 	query::Context&, const fs::File& file_path
 ) {
 	u64 count = 0;
-	for (const auto& [file_id, file]: files)
-		if (file->path == file_path) count++;
-	CORE_ASSERT(count == 1, "File not found in module tree");
+	try {
+		std::cout<< "size of files: " << files.size() << "\n";
+		std::cout << "Searching for file path: " << file_path.name() << "\n";
+		for (const auto& [file_id, file]: files) {
+			std::cout << "file id: " << file_id.asInt() << "\n";
+			std::cout << "file path: " << file->path.name() << "\n";
+			std::cout << "count: " << count << "\n";
+			std::string type1 = base::enumToStr(file->path.getType()).str();
+			std::string type2 = base::enumToStr(file_path.getType()).str();
+			std::cout << "types: " << type1 << " " << type2 << "\n";
+			if (file->path == file_path) count++;
+		}
+		std::cout << "Final count: " << count << "\n";
+		CORE_ASSERT(count == 1, "File not found in module tree");
 
-	for (const auto& [file_id, file]: files)
-		if (file->path == file_path) return file->getPST();
-
+		for (const auto& [file_id, file]: files)
+			if (file->path == file_path) return file->getPST();
+	} catch (const std::exception& e) {
+		std::cerr << "Exception during iterating files: " << e.what() << "\n";
+	}
+	
 	CORE_UNREACHABLE();
 }

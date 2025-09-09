@@ -3,6 +3,8 @@ import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, getWorkspaceFoldersUris } from './getWorkspaceFiles';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -31,11 +33,29 @@ export class CompilerDaemonClient {
 	private process: ChildProcess;
 
 	constructor() {
+		const logPath = path.join(__dirname, 'daemon.log');
+		const logStream = fs.createWriteStream(logPath, { flags: "a" });
 		this.process = spawn(
 			BINARY_PATH + "lsp_daemon", 
 			["start", "-p", DAEMON_PORT], 
-			{stdio: 'inherit'} // This is necessary for the server to remain responsive
+			{stdio: ["ignore", "pipe", "pipe"], detached: false} // This is necessary for the server to remain responsive
 		);
+		this.process.stdout?.on("data", (data) => {
+		process.stdout.write(data);
+		logStream.write(data);
+		});
+
+		// Mirror stderr to console and log file
+		this.process.stderr?.on("data", (data) => {
+		process.stderr.write(data);
+		logStream.write(data);
+		});
+
+		this.process.on("close", (code) => {
+		console.log(`Compiler daemon exited with code ${code}`);
+		logStream.end();
+		});
+
 	}
 
 	// This function is called when the server is closed
@@ -83,23 +103,24 @@ export class CompilerDaemonClient {
 	}
 
 	// Used for debug in various places
-	public async callDebugPrint(connection: Connection): Promise<void> {
+	public async callDebugPrint(connection: Connection, debugString: string): Promise<void> {
 		await this.waitForReady(connection);
 		console.log("debug;;")
 		try {
-			const response = await fetch(`${DAEMON_ADRESS}/debug`);
+			const base64DebugString: string = Buffer.from(debugString).toString('base64');
+			const response = await fetch(`${DAEMON_ADRESS}/debug/${base64DebugString}`);
 			if (!response.ok) {
-				console.log("Response not ok!!!!!!!");
+				console.log("Call debug failed");
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
 			}
 			const text = await response.text();
-			console.log("HERE ARE THE FILES WE GOT:");
+			console.log("HERE IS WHAT WE GOT:");
 			console.log(text);
 		} catch (error) {
 			if (error instanceof Error) {
-				console.error(`getSemanticTokens error: ${error.message}`);
+				console.error(`cdp error: ${error.message}`);
 			} else {
-				console.error(`getSemanticTokens error: ${String(error)}`);
+				console.error(`cdp error: ${String(error)}`);
 			}
 		}
 		return;
@@ -185,8 +206,8 @@ export class CompilerDaemonClient {
 			}
 
 			// Read and print the response body as text
-			const responseBody = await response.text();
-			console.log(`Response body: ${responseBody}`);
+			// const responseBody = await response.text();
+			// console.log(`Response body: ${responseBody}`);
 	
 
 			const jsonResponse = await response.json();
