@@ -402,7 +402,7 @@ namespace compiler::helios::code {
 			case IntegerEq:
 				return "==";
 			case IntegerNeq:
-				return "==";
+				return "!=";
 			default:
 				CORE_UNREACHABLE();
 			}

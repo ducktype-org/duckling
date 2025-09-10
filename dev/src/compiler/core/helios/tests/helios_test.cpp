@@ -425,6 +425,10 @@ private:
 	}
 
 	void testExprTree() {
+		auto symbol_name = [](const char* name, auto&& symbol) {
+			return base::strConcat("(Symbol ", name, " (", symbol.queryUnstablePerfectHash(), "))");
+		};
+
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getConstValueAs<i64>("V1", root_scope));
@@ -454,18 +458,21 @@ private:
 		tree_v12->debugPrint(out_v12);
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
-		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.queryUnstablePerfectHash(), "))");
+		auto sym_v3_repr = symbol_name("V3", sym_v3);
 		ASSERT_EQUAL(
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
 
-		auto get_cmp  = getChain("CMP", root_scope).back();
-		auto expr_cmp = getExprOfConst(get_cmp);
-		Ref  expr_cmp_casted
-			= dynamic_cast<const compiler::helios::code::ChainComparisonExpr*>(&*expr_cmp);
-		ASSERT_EQUAL(
-			std::vector{ compiler::helios::code::BuiltinBinary::IntegerLt },
-			expr_cmp_casted->operators
+		ASSERT_EQUAL(false, getConstValueAs<bool>("CMP", root_scope));
+		auto              get_cmp  = getChain("CMP", root_scope).back();
+		auto              expr_cmp = getExprOfConst(get_cmp);
+		std::stringstream out_cmp;
+		expr_cmp->debugPrint(out_cmp);
+		ASSERT_EQUAL_PRINT(
+			(base::strConcat(
+				symbol_name("V1", sym_v1), "<3<=4==5!=6>=7>", symbol_name("VM1", sym_vm1)
+			)),
+			out_cmp.str()
 		);
 
 		auto get_str  = getChain("STR", root_scope).back();
