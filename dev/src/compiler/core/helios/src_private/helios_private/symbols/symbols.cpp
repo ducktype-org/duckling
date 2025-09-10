@@ -1,8 +1,8 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios_private/comp_time/int_eval.hpp>
-#include <helios_private/comp_time/type_eval.hpp>
+#include <helios/ctv/ctv.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -103,6 +103,38 @@ namespace compiler::helios {
 
 	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
 		return getSymRef(id)->getPSTData()->pst_element;
+	}
+
+	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
+		// Short summary
+		// 1. Get the symbol's PST element
+		// 2. If the element is a statement get it's name
+		// 3. Get the parent of the pst element
+		// 4. Repeat until we reach the root element
+		// 5. Concatenate all names with " -> "
+		// 6. Prepend the module name
+
+		std::string                                         out = "";
+		base::Optional<pst::AccessLocked<pst::LangElement>> pst = symbolPst(sym);
+		do {
+			if (!pst.value().unlock(ctx)->getParent()) break;
+			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
+			if (!stmt) continue;
+
+			auto name = stmt.value()->getDeclSymbolName();
+			if (!name.has_value()) continue;
+
+			if (!out.empty())
+				out = base::strConcat(name.value().str(), " -> ", out);
+			else
+				out = name.value().str();
+
+			// Get the parent of the current pst element
+		} while ((pst = pst.value().unlock(ctx)->getParent()));
+		auto module_name = compiler::frontend::moduleName(module(scope(sym)));
+		out              = base::strConcat(module_name.str(), " -> ", out);
+
+		return out;
 	}
 
 	namespace {
@@ -572,7 +604,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<i64 COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -580,13 +612,15 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			// @TODO: Handle potential lack of value
-			return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
+			auto ctv = ctx.query<QueryEvaluateExpression>(
+				const_symbol->getValue().value().unlock(ctx)->getExpr()
+			);
+			if (ctv.hasError()) return query::QError(errors::Failed());
+			return ctv.value();
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
-
 }

@@ -1,338 +1,604 @@
-/**
- * @file module_tree.cpp
- * @author Mateusz Kołpa (matihopemine@gmail.com)
- */
-
 #include "module_tree.hpp"
 
+#include "functors.hpp"
 #include "queries.hpp"
 
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
 #include <iostream>
+#include <base/exceptions.hpp>
+#include <base/stable_container.hpp>
+#include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 
-using fs::FsTree;
-using std::regex;
-using namespace compiler::frontend;
+#include <algorithm>
+#include <regex>
+#include <sstream>
 
-// @todo: creation points of module tree shared objects
-// as well as filling of modules, files global lists
-// should be centralized to single methods/functions/queries.
-// The current situation is hard to maintain.
+namespace {
+	/**
+	 * @brief Map storting FileID of each parsed PST (by root element ID)
+	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
+	 * the root scope via extendQueryModuleIDOfPST.
+	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
+	 * information from this map into PST nodes.
+	 */
+	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
 
-/**
- * @brief Holds global map of all modules
- */
-inline static base::HashMap<ModuleID, std::shared_ptr<ModuleTree>> modules{};
+	/**
+	 * StableVector that stores all ModuleTree instances.
+	 */
+	base::StableVector<compiler::frontend::ModuleTree> modules;
 
-/**
- * @brief Holds global map of all Source files
- * @TODO: this holding a reference is dangerous:
- * @TODO: change it during frontend queryfication #731 ?
- */
-inline static base::HashMap<FileID, base::Ref<SourceFile>> files{};
-
-/**
- * @brief Map storting FileID of each parsed PST (by root element ID)
- * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor for acquiring
- * the root scope via extendQueryModuleIDOfPST.
- * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put information
- * from this map into PST nodes.
- */
-inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
-
-/**
- * @brief Holds global map of module path to module id
- */
-inline static base::HashMap<fs::File, ModuleID> module_paths{};
-
-ModuleTree::ModuleTree(): id(ModuleID::next()) {}
-
-std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
-	std::cerr << "11111Creating ModuleTree from FsTree from implementation\n";
-	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
-
-	buildModuleTree(ptr, std::move(root));
-
-	modules.put(ptr->getID(), ptr);
-	if (ptr->hasMainSourceFile()) module_paths.put(ptr->getMainSourceFile().path, ptr->getID());
-
-	// at this point references inside module tree are stable, so we can fill "files" map:
-	if (ptr->hasMainSourceFile()) {
-		auto& main = ptr->m_main_source_file.value();
-		files.put(main.id, &main);
+	/**
+	 * Checks if a file name is valid according to the reject regex.
+	 * @param filename The file name to check.
+	 * @param reject_file_regex The regex to use for rejection.
+	 * @return True if valid, false otherwise.
+	 */
+	bool isFileNameValid(const std::string& filename, const std::regex& reject_file_regex) {
+		std::smatch match;
+		return !std::regex_match(filename, match, reject_file_regex);
 	}
-	for (auto& file: ptr->m_source_files) files.put(file.id, &file);
 
-	return ptr;
-}
-
-bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
-
-void ModuleTree::buildModuleTree(
-	const std::shared_ptr<ModuleTree>& module_root, std::shared_ptr<FsTree> tree_root
-) {
-	module_root->m_fs_tree = std::move(tree_root);
-
-	// Process regular files.
-	for (const auto& file_iter: module_root->m_fs_tree->getFiles())
-		handleNewFile(module_root, file_iter.second);
-
-	// Add directory submodules.
-	for (const auto& dir_iter: module_root->m_fs_tree->getDirs()) {
-		auto submodule      = ModuleTree::create(dir_iter.second);
-		submodule->m_parent = module_root;
-
-		// Discards directories without main module file:
-		// @TODO: decide if this behavior is desirable
-		if (submodule->hasMainSourceFile())
-			module_root->m_submodules.put(base::StrID(dir_iter.first.c_str()), submodule);
+	/**
+	 * Checks if a directory name is valid according to the reject regex.
+	 * @param dirname The directory name to check.
+	 * @param reject_directory_regex The regex to use for rejection.
+	 * @return True if valid, false otherwise.
+	 */
+	bool isDirectoryNameValid(const std::string& dirname, const std::regex& reject_directory_regex) {
+		std::smatch match;
+		return !std::regex_match(dirname, match, reject_directory_regex);
 	}
 }
 
-void ModuleTree::handleNewFile(
-	const std::shared_ptr<ModuleTree>& module_root, const fs::File& filepath
-) {
-	if (filepath.isDirectory()) throw base::LogicError("File is not a file, but a directory!");
+namespace compiler::frontend {
+	Ref<ModuleTree> ModuleTreeBuilder::create(
+		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
+	) {
+		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
-	std::string stem      = filepath.stem();
-	std::string extension = filepath.extension();
+		if (root.isDirectory())
+			builder->buildFromDirectory(root, file_reject, dir_reject);
+		else
+			builder->buildFromSingleFile(root);
 
-	auto stem_id      = base::StrID(stem.c_str());
-	auto extension_id = base::StrID(extension.c_str());
+		return builder->finalize();
+	}
 
-	// There are 3 types of files: source files, module file, others - each if-branch handles other
-	// type.
-	if (extension == LANG_SOURCE_FILE) {
-		// File contains regular source content.
-		module_root->m_source_files.emplace_back(filepath, module_root->getID());
-	} else if (extension == LANG_MODULE_FILE) {
-		// File with a config of SOME module.
-		if (stem_id == module_root->getName()) {
-			// File with a config of CURRENT module.
+	ModuleTree::ModuleTree() = default;
 
-			// An assert for @aw5421 <3
-			if (module_root->m_main_source_file.has_value())
-				throw base::LogicError(base::strConcat("Module already has a main source file."));
+	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
-			module_root->m_main_source_file.emplace(filepath, module_root->getID());
-		} else {
-			// Single-file module.
-			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
-			modules.put(submodule->getID(), submodule);
-			module_root->m_submodules.put(stem_id, submodule);
-			submodule->m_main_source_file.emplace(filepath, submodule->getID());
-			submodule->m_parent = module_root;
-			if_opt_some(submodule->m_main_source_file, main_file) {
-				files.put(main_file.id, &main_file);
+	base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
+		if (m_parent.has_value()) return m_parent.value();
+		return {};
+	}
+
+	bool ModuleTree::hasMainSourceFile() const { return m_main_source_file.has_value(); }
+
+	base::CRef<SourceFile> ModuleTree::getMainSourceFile() const {
+		return m_main_source_file.value();
+	}
+
+	const std::vector<base::Ref<SourceFile>>& ModuleTree::getSourceFiles() const {
+		return m_source_files;
+	}
+
+	const base::HashMap<base::StrID, base::Ref<ModuleTree>>& ModuleTree::getSubmodules() const {
+		return m_submodules;
+	}
+
+	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
+		return m_other_files;
+	}
+
+	base::StrID ModuleTree::getName() const { return m_name; }
+
+	std::string ModuleTree::prettyPrint(u32 indentation) const {
+		std::stringstream output;
+
+		std::string indent;
+		for (u32 i = 0; i < indentation % 3; i++) indent += " ";
+		for (u32 i = 0; i < indentation - (indentation % 3); i++)
+			indent += (i % 3 == 0 ? "│" : " ");
+
+		if (getName().isBad())
+			output << indent << "/ [id: " << reinterpret_cast<u64>(this) << "]\n";
+		else
+			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
+
+		if (hasMainSourceFile())
+			output << indent << "├> " << getMainSourceFile()->getFile().name() << '\n';
+		else
+			output << indent << "├> Missing main module file!\n";
+
+		for (const auto& file_ref: getSourceFiles())
+			output << indent << "├= " << file_ref->getFile().name() << '\n';
+
+		for (const auto& [ext, files]: getOtherFiles())
+			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
+
+		for (const auto& [name, submodule_ref]: getSubmodules())
+			output << submodule_ref->prettyPrint(indentation + 3);
+
+		return output.str();
+	}
+
+	void ModuleTreeBuilder::buildFromDirectory(
+		const fs::File& directory, const std::regex& file_reject, const std::regex& dir_reject
+	) {
+		CORE_ASSERT(
+			directory.isDirectory(),
+			base::strConcat("Expected directory, got file: ", directory.getFilePath().string())
+		);
+
+		setName(base::StrID(directory.name().c_str()));
+
+		// Process all files and directories in the current directory
+		for (const auto& path: directory.listFilePaths()) {
+			// Skip symlinks to avoid cycles
+			if (path.isSymlink()) continue;
+
+			fs::File file(path);
+
+			if (file.isDirectory()) {
+				// Handle subdirectory
+				if (!isDirectoryNameValid(file.name(), dir_reject)) continue;
+
+				auto submodule = ModuleTreeBuilder::create(file, file_reject, dir_reject);
+				CORE_ASSERT(
+					submodule->getName() == base::StrID(file.name().c_str()),
+					"Submodule name does not match"
+				);
+
+				// Discards directories without main module file:
+				// @TODO: decide if this behavior is desirable
+				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
+			} else {
+				// Handle regular file
+				if (!isFileNameValid(file.name(), file_reject)) continue;
+				handleNewFile(file);
 			}
 		}
-	} else {
-		// File contains content not related to the module.
-		if (!module_root->m_other_files.contains(extension_id))
-			module_root->m_other_files.put(extension_id, std::vector<fs::File>());
-		module_root->m_other_files[extension_id].push_back(filepath);
 	}
-}
 
-base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
-	if (m_parent.has_value()) {
-		CORE_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
-		return &*m_parent->lock();
-	}
-	return {};
-}
-
-base::StrID ModuleTree::getName() const {
-	// @OPT: store this value as a module tree field
-	if (m_fs_tree == nullptr) return getMainSourceFile().lang_file_name;
-	return base::StrID(m_fs_tree->getRoot().name().c_str());
-}
-
-std::string ModuleTree::prettyPrint(u32 indentation) const {
-	std::stringstream output;
-
-	std::string indent;
-	for (u32 i = 0; i < indentation % 3; i++) indent += " ";
-	for (u32 i = 0; i < indentation - (indentation % 3); i++) indent += (i % 3 == 0 ? "│" : " ");
-
-	output << indent << getName().strView() << "/\n";
-
-	if (m_main_source_file.has_value())
-		output << indent << "├> " << m_main_source_file.value().path.name() << '\n';
-	else
-		output << indent << "├> Missing main module file!\n";
-
-	for (const auto& file_iter: getSourceFiles())
-		output << indent << "├= " << file_iter.path.name() << '\n';
-
-	for (const auto& file_iter: getOtherFiles())
-		for (const auto& file_name: file_iter.second)
-			output << indent << "├─ " << file_name.name() << '\n';
-
-	for (const auto& submodule: getSubmodules())
-		output << submodule.second->prettyPrint(indentation + 3);
-
-	return output.str();
-}
-
-const SourceFile& ModuleTree::getMainSourceFile() const {
-	if (m_main_source_file.empty())
-		throw base::LogicError(base::strConcat("No main source file! in module: ", getName()));
-
-	return m_main_source_file.value();
-}
-
-const std::vector<SourceFile>& ModuleTree::getSourceFiles() const { return m_source_files; }
-
-const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
-	return m_submodules;
-}
-
-const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
-	return m_other_files;
-}
-
-ModuleID ModuleTree::getID() const { return id; }
-
-base::StrID compiler::frontend::moduleName(ModuleID module) {
-	return modules.at(module)->getName();
-}
-
-std::string compiler::frontend::printModuleTree(ModuleID module) {
-	return modules.at(module)->prettyPrint();
-}
-
-/*********************
- * QueryParentModule *
- *********************/
-struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
-	static auto provide(Context&, QKey key) -> PResult {
-		const auto& module_tree = modules.at(key);
-		return module_tree->getParentModule().map([](const auto& parent) { return parent->getID(); }
+	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file) {
+		std::string stem      = file.stem();
+		std::string extension = file.extension();
+		CORE_ASSERT(
+			extension == LANG_MODULE_FILE,
+			"Expected a module file, got: " + file.getFilePath().string()
 		);
+		setName(base::StrID(stem.c_str()));
+		setMainSourceFile(file);
 	}
 
-	QUERY_AUTO_NO_CACHE
-};
+	void ModuleTreeBuilder::handleNewFile(const fs::File& file) {
+		CORE_ASSERT(
+			file.isFile(),
+			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
+		);
+		std::string stem      = file.stem();
+		std::string extension = file.extension();
 
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
+		if (extension == LANG_SOURCE_FILE) {
+			// Regular source file - store path for later
+			addSourceFile(file);
+		} else if (extension == LANG_MODULE_FILE) {
+			// Module file
+			base::StrID stem_id(stem.c_str());
 
-/***********************
- * QueryMainSourceFile *
- ***********************/
-struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
-	static auto provide(Context&, QKey key) -> PResult {
-		const auto& module_tree = modules.at(key);
-		return module_tree->getMainSourceFile().id;
+			if (stem_id == m_name) {
+				setMainSourceFile(file);
+			} else {
+				auto submodule = ModuleTreeBuilder::create(file);
+				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
+				addSubmodule(base::Ref<ModuleTree>(submodule));
+			}
+		} else {
+			// Other file
+			addOtherFile(file);
+		}
 	}
 
-	QUERY_AUTO_NO_CACHE
-};
+	/*********************
+	 * ModuleTreeBuilder Implementation
+	 *********************/
 
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
+	ModuleTreeBuilder::ModuleTreeBuilder(): m_finalized(false) {}
 
-/********************
- * QuerySourceFiles *
- ********************/
-struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
-	static auto provide(Context&, QKey key) -> PResult {
-		const auto& module_tree = modules.at(key);
-
-		std::vector<FileID> out{};
-		for (const auto& file: module_tree->getSourceFiles()) out.push_back(file.id);
-		return out;
+	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::create() {
+		return base::makeBox<ModuleTreeBuilder>(ModuleTreeBuilder());
 	}
 
-	QUERY_AUTO_CACHE_REF
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
-
-/*******************
- * QuerySubmodules *
- *******************/
-struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
-	static auto provide(Context&, QKey key) -> PResult {
-		const auto& module_tree = modules.at(key);
-
-		PResult out{};
-		for (const auto& [name, module]: module_tree->getSubmodules())
-			out.put(name, module->getID());
-		return out;
+	void ModuleTreeBuilder::addSourceFile(const fs::File& file) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		m_source_file_paths.push_back(file);
 	}
 
-	QUERY_AUTO_CACHE_REF
-};
+	void ModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(!m_main_source_file_path.has_value(), "Main source file already set");
+		m_main_source_file_path = file;
+	}
 
-QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
+	void ModuleTreeBuilder::addSubmodule(base::Ref<ModuleTree> submodule) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(
+			!m_submodules.contains(submodule->getName()),
+			"Submodule with the same name already added"
+		);
+		m_submodules.put(submodule->getName(), submodule);
+	}
 
-/****************
- * QueryFilePST *
- ****************/
-struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		auto& file = files.at(key);
-		auto  pst  = file->getPST();
-		root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
+	void ModuleTreeBuilder::addOtherFile(const fs::File& file) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		std::string extension = file.extension();
+		base::StrID ext_id(extension.c_str());
 
-		// @todo modify it, when making proper helios errors
-		if (pst->getLogger()->bad()) {
-			std::cerr << "PARSING ERRORS: \n";
-			pst->getLogger()->dumpLog(true, std::cerr);
-			std::cerr << "\n\n";
+		if (!m_other_files.contains(ext_id)) m_other_files.put(ext_id, std::vector<fs::File>());
+		m_other_files.at(ext_id).push_back(file);
+	}
+
+	void ModuleTreeBuilder::setName(base::StrID name) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(m_name.isBad(), "Module name is already set");
+		m_name = name;
+	}
+
+	void ModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		m_parent = parent;
+	}
+
+	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }
+
+	base::Ref<ModuleTree> ModuleTreeBuilder::finalize() {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+
+		m_finalized = true;
+
+		// Create new ModuleTree instance
+		modules.pushBack(ModuleTree());
+		Ref<ModuleTree> module_ref = modules.last();
+		ModuleID        mod_id(module_ref);
+
+		module_ref->m_id = mod_id;
+
+		// Set ID and name
+		module_ref->m_name        = m_name;
+		module_ref->m_other_files = std::move(m_other_files);
+
+		// Create SourceFiles from stored paths
+		if (m_main_source_file_path.has_value()) {
+			module_ref->m_main_source_file
+				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 		}
 
-		return pst;
-	}
-
-	// @note: unstable ref here is only possible, because
-	// PResult is already a reference
-	QUERY_AUTO_CACHE_COPY
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
-
-ModuleID compiler::frontend::extendQueryModuleIDOfPST(
-	query::Context& ctx, pst::AccessLocked<pst::LangElement> element
-) {
-	// get top-level:
-	while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
-
-	// this access depends of global state that might become a problem in incremental compilation:
-	auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-	auto result  = files.at(file_id)->linked_module;
-	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
-
-	return result;
-}
-
-CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
-	query::Context&, const fs::File& file_path
-) {
-	u64 count = 0;
-	try {
-		std::cout<< "size of files: " << files.size() << "\n";
-		std::cout << "Searching for file path: " << file_path.name() << "\n";
-		for (const auto& [file_id, file]: files) {
-			std::cout << "file id: " << file_id.asInt() << "\n";
-			std::cout << "file path: " << file->path.name() << "\n";
-			std::cout << "count: " << count << "\n";
-			std::string type1 = base::enumToStr(file->path.getType()).str();
-			std::string type2 = base::enumToStr(file_path.getType()).str();
-			std::cout << "types: " << type1 << " " << type2 << "\n";
-			if (file->path == file_path) count++;
+		for (const auto& file_path: m_source_file_paths) {
+			auto source_file = SourceFile::create(file_path, mod_id);
+			module_ref->m_source_files.push_back(source_file);
 		}
-		std::cout << "Final count: " << count << "\n";
-		CORE_ASSERT(count == 1, "File not found in module tree");
 
-		for (const auto& [file_id, file]: files)
-			if (file->path == file_path) return file->getPST();
-	} catch (const std::exception& e) {
-		std::cerr << "Exception during iterating files: " << e.what() << "\n";
+		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
+
+		for (const auto& [name, submodule]: m_submodules)
+			ModuleTreeModifier::addSubmodule(module_ref, submodule);
+
+		return module_ref;
 	}
-	
-	CORE_UNREACHABLE();
+
+	/*********************
+	 * ModuleTreeModifier Implementation
+	 *********************/
+
+	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
+	}
+
+	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
+		Ref<ModuleTree> module
+			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+				file->getModule()
+			);
+
+		auto& source_files = module->m_source_files;
+		auto  it
+			= std::ranges::find_if(source_files, [file](const base::Ref<SourceFile>& source_file) {
+				  return source_file == file;
+			  });
+
+		CORE_ASSERT(it != source_files.end(), "SourceFile not found in module");
+
+		// Remove file from source_files
+		source_files.erase(it);
+		// @TODO: remove SourceFile here #1252
+	}
+
+	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		CORE_ASSERT(
+			!module->m_main_source_file.has_value(),
+			"Main source file is already set, remove it first"
+		);
+		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
+	}
+
+	void ModuleTreeModifier::addSubmodule(
+		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
+	) {
+		base::StrID name = submodule->getName();
+		CORE_ASSERT(
+			!module->m_submodules.contains(name),
+			base::strConcat(
+				"Submodule with name '",
+				name.strView(),
+				"' already exists in module ",
+				module->getName().strView(),
+				" call remove first!"
+			)
+		);
+
+
+		module->m_submodules.put(name, submodule);
+
+		CORE_ASSERT(
+			!submodule->m_parent.has_value(),
+			base::strConcat("Submodule ", name.strView(), " already has a parent")
+		);
+		submodule->m_parent = module;
+	}
+
+	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		std::string extension = file.extension();
+		base::StrID ext_id(extension.c_str());
+
+		if (!module->m_other_files.contains(ext_id))
+			module->m_other_files.put(ext_id, std::vector<fs::File>());
+
+		CORE_ASSERT(
+			!std::ranges::any_of(
+				module->m_other_files.at(ext_id),
+				[&file](const fs::File& f) { return f.getFilePath() == file.getFilePath(); }
+			),
+			base::strConcat(
+				"Other file with path '",
+				file.getFilePath().string(),
+				"' already exists in module ",
+				module->getName().strView()
+			)
+		);
+
+		module->m_other_files.at(ext_id).push_back(file);
+		//@TODO: do we need to update the module here? #1253
+		// module->update();
+	}
+
+	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
+		CORE_ASSERT(
+			module->m_main_source_file.has_value(),
+			base::strConcat(
+				"Module ", module->getName().strView(), " does not have a main source file"
+			)
+		);
+		module->m_main_source_file = {};
+	}
+
+	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+		std::string extension = file.extension();
+		base::StrID ext_id(extension.c_str());
+
+		CORE_ASSERT(
+			module->m_other_files.contains(ext_id),
+			base::strConcat(
+				"Other file with extension '",
+				ext_id.strView(),
+				"' does not exist in module ",
+				module->getName().strView()
+			)
+		);
+
+		auto& files = module->m_other_files.at(ext_id);
+		auto  it    = std::ranges::find_if(files, [&file](const fs::File& f) {
+            return f.getFilePath() == file.getFilePath();
+        });
+
+		CORE_ASSERT(
+			it != files.end(),
+			base::strConcat(
+				"Other file with path '",
+				file.getFilePath().string(),
+				"' does not exist in module ",
+				module->getName().strView()
+			)
+		);
+
+		files.erase(it);
+		//@TODO: do we need to update the module here? #1253
+		// module->update();
+	}
+
+	void ModuleTreeModifier::setParent(
+		base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
+	) {
+		CORE_ASSERT(parent.has_value(), "Parent module must be specified");
+		addSubmodule(parent.value(), module);
+	}
+
+	void ModuleTreeModifier::removeParent(base::Ref<ModuleTree> module) {
+		CORE_ASSERT(
+			module->m_parent.has_value(),
+			base::strConcat("Module ", module->getName().strView(), " does not have a parent")
+		);
+
+		// remove this module from its parent's submodules
+		auto  parent     = module->m_parent.value();
+		auto& submodules = parent->m_submodules;
+		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
+            return pair.second == module;
+        });
+		CORE_ASSERT(
+			it != submodules.end(),
+			base::strConcat(
+				"Submodule with name ",
+				module->getName(),
+				" does not exist in parent module ",
+				parent->getName().strView()
+			)
+		);
+		submodules.erase(it);
+
+		module->m_parent = {};
+	}
+
+	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
+		auto parent = module->m_parent;
+
+		// @TODO: we want to remove each SourceFile associated with this module #1252
+
+		// Update parent module if it exists
+		if (parent.has_value()) {
+			// Remove the submodule from the parent's submodules
+			auto& submodules = parent.value()->m_submodules;
+			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
+                return pair.second == module;
+            });
+			CORE_ASSERT(
+				it != submodules.end(),
+				base::strConcat(
+					"Submodule with Name ",
+					module->getName(),
+					" and hash ",
+					ModuleID(module).queryUnstablePerfectHash(),
+					" does not exist in parent module ",
+					parent.value()->getName().strView()
+				)
+			);
+			submodules.erase(it);
+		}
+
+		// @TODO: we also want to remove the module from vector here #1252
+	}
+
+	void ModuleTreeModifier::fileModified(const fs::File& file) {
+		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
+		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
+		for (auto& source_file: source_files) source_file->update();
+	}
+
+	// ----------------------
+
+	base::StrID moduleName(ModuleID module) { return GetModuleID_Functor::get(module)->getName(); }
+
+	std::string printModuleTree(ModuleID module) {
+		return GetModuleID_Functor::get(module)->prettyPrint();
+	}
+
+	/*********************
+	 * QueryParentModule *
+	 *********************/
+	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
+		static auto provide(Context&, QKey key) -> PResult {
+			auto module_tree = GetModuleID_Functor::get(key);
+			return module_tree->getParentModule().map([](auto parent) {
+				return parent->getModuleID();
+			});
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
+
+	/***********************
+	 * QueryMainSourceFile *
+	 ***********************/
+	struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
+		static auto provide(Context&, QKey key) -> PResult {
+			auto module_tree = GetModuleID_Functor::get(key);
+			return { module_tree->getMainSourceFile()->getFileID() };
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
+
+	/********************
+	 * QuerySourceFiles *
+	 ********************/
+	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
+		static auto provide(Context&, QKey key) -> PResult {
+			const auto& module_tree = GetModuleID_Functor::get(key);
+
+			std::vector<FileID> out{};
+			for (CRef<SourceFile> file: module_tree->getSourceFiles())
+				out.emplace_back(file->getFileID());
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
+
+	/*******************
+	 * QuerySubmodules *
+	 *******************/
+	struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
+		static auto provide(Context&, QKey key) -> PResult {
+			const auto& module_tree = GetModuleID_Functor::get(key);
+
+			PResult out{};
+			for (const auto& [name, module]: module_tree->getSubmodules())
+				out.put(name, module->getModuleID());
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
+
+	/****************
+	 * QueryFilePST *
+	 ****************/
+	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			Ref<SourceFile> file
+				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+					key
+				);
+			auto pst = file->getPST();
+			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
+
+			// @todo modify it, when making proper helios errors
+			if (pst->getLogger()->bad()) {
+				std::cerr << "PARSING ERRORS: \n";
+				pst->getLogger()->dumpLog(true, std::cerr);
+				std::cerr << "\n\n";
+			}
+
+			return pst;
+		}
+
+		// @note: unstable ref here is only possible, because
+		// PResult is already a reference
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
+
+	ModuleID extendQueryModuleIDOfPST(
+		[[maybe_unused]] query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+	) {
+		// get top-level:
+		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
+
+		// this access depends of global state that might become a problem in incremental compilation:
+		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
+		return GetFileID_Functor::get(file_id)->getModule();
+	}
 }

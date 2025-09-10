@@ -8,10 +8,10 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
-		bool                                            is_mutable = true;
-		tpc::Identifier                                 name;
-		AccessInternal<CommaExprHolder>                 type;
-		base::Optional<AccessInternal<CommaExprHolder>> init;
+		bool            is_mutable = true;
+		tpc::Identifier name;
+		NAMED_CHILD(type, CommaExprHolder);
+		NAMED_CHILD_OPT(init, CommaExprHolder);
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
@@ -36,8 +36,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const override {
-			return true;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Symbol;
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return getName();
 		}
 
 		[[nodiscard]]

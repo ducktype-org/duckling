@@ -123,15 +123,14 @@ namespace vm::code {
 			  function(function) {}
 
 		void write() {
-			out << "function " << function.name.str.strView() << " {\n";
-			// Needed by https://github.com/ducktype-org/duckling/issues/699
-			// bool first = true;
-			// for (const auto& param: function.parameter_types) {
-			// 	if (!first) out << ", ";
-			// 	out << param.strView();
-			// 	first = false;
-			// }
-			// out << "} " << function.result_type.strView() << "{\n";
+			out << "function " << function.name.str.strView() << " { ";
+			bool first = true;
+			for (const auto& param: function.signature.parameters) {
+				if (!first) out << ", ";
+				out << param.str.strView();
+				first = false;
+			}
+			out << " } -> " << function.signature.result_type.str.strView() << " {\n";
 
 			indentUp();
 			writeCode();
@@ -166,16 +165,18 @@ namespace vm::code {
 				out << type.table_size;
 			}
 
-			void operator()(const DynamicTableType&) const {
-				throw base::NotYetImplemented("DynamicTableType serialization");
+			void operator()(const DynamicTableType& type) const {
+				out << "type dynamic_table: ";
+				out << type.name.strView() << " ";
+				out << type.inner.strView();
 			}
 
 			void operator()(const DataType&) const {
-				throw base::NotYetImplemented("DynamicTableType serialization");
+				throw base::NotYetImplemented("DataType serialization");
 			}
 
 			void operator()(const VariantType&) const {
-				throw base::NotYetImplemented("DynamicTableType serialization");
+				throw base::NotYetImplemented("VariantType serialization");
 			}
 
 			void operator()(const FunctionType& fun) const {
@@ -191,7 +192,7 @@ namespace vm::code {
 					out << param.strView();
 					first = false;
 				}
-				out << " } " << fun.result.strView();
+				out << " } -> " << fun.result.strView();
 			}
 
 			void operator()(const OpaqueType& type) const {

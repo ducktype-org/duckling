@@ -1,0 +1,63 @@
+function foo {} -> i32 {
+	init_lany_type		a, i32;
+	init_lany_type		b, i32;
+
+	mov_l32_imm 		b, 1056964608i32;		# b = 0.5
+	mov_l32_l32 		a, b;				# a = 0.5
+
+	fadd_l32_l32 		a, b;				# a = 1.0
+	fadd_l32_imm		a, 1065353216;		# a = 2.0
+
+	cmpEq_l32_imm 		a, 1073741824;		# a == 2.0
+	jmpIfNot_label 	fail;
+
+	fsub_l32_l32 		a, b;				# a = 1.5
+	fsub_l32_imm 		a, 1056964608;		# a = 1.0
+
+	cmpEq_l32_imm 		a, 1065353216;		# a == 1.0
+	jmpIfNot_label 	fail;
+
+	fmul_l32_l32 		a, b;				# a = 0.5
+	fmul_l32_imm 		a, 1056964608;		# a = 0.25
+
+	cmpEq_l32_imm 		a, 1048576000;		# a == 0.25
+	jmpIfNot_label 	fail;
+
+	fdiv_l32_l32 		a, b;				# a = 0.5
+	fdiv_l32_imm 		a, 1065353216;		# a = 0.5
+
+	fneg_l32 			a;					# a = -0.5
+	fneg_l32			b;					# b = -0.5
+
+	cmpEq_l32_l32 		a, b;
+	jmpIfNot_label 		fail;
+
+	fneg_l32			a;
+
+	mov_l32_l32 		ret_val, a;
+	ret;
+
+	label fail;
+	init_lany_type		tmp, i32;
+	mov_l32_imm 		tmp, 2137;
+	output_l32  		tmp;
+	mov_l32_l32 		ret_val, a;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type 	foo_ret_val, i32;
+
+	call_func 	foo;
+	output_l32 	foo_ret_val;
+
+	deinit;
+    deinit; # *argv
+    deinit; # argc
+	ret;
+}

@@ -13,6 +13,7 @@
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -191,11 +192,6 @@ namespace vm {
 				return getMainVMThread().getCurrentPosition();
 			}
 
-			variant_case(api::request::LoadStdlib, load_stdlib_request) {
-				return loadProgram(std::vector<code::CodeCollection>{ *builtins::getStdlibModule() })
-				    .transform_error([](auto err) { return api::ApiError{ err }; });
-			}
-
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::ApiError{ err };
@@ -247,7 +243,8 @@ namespace vm {
 							base::StrID(type_request.type_name.c_str())
 						);
 						match_optional(res) {
-							opt_some(value) { return value; }
+							opt_some(value) { return api::response::Type{ value }; }
+
 							opt_none {
 								return std::unexpected(api::ApiError{
 									api::OtherError{ "Type not found" } });
@@ -257,16 +254,27 @@ namespace vm {
 				}
 			}
 
-			variant_case(api::request::Block, block_request) {
+
+			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						return api::Response(api::response::Block{
-							memory.requestBlockData(block_request.block_id) });
+						auto maybe_type = loaded_program->types->atMaybe(
+							base::StrID(vmvalue_request.type_name.c_str())
+						);
+						match_optional(maybe_type) {
+							opt_some(type) {
+								auto vm_value = createOwnedVmValue(type);
+								return api::response::VmValue{ std::move(vm_value) };
+							}
+							opt_none {
+								return std::unexpected(api::ApiError{
+									api::OtherError{ "Type not found" } });
+							}
+						}
 					}
 				}
 			}
-
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
 			}
@@ -278,13 +286,38 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}) { vm_threads.emplace_back(*this); }
+	Ref<VmValue> VMProcess::createVmValue(TypeCRef type) {
+		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type));
+		owned_vm_values.push_back(std::move(value));
+		return owned_vm_values.back().refMut();
+	}
+
+	Ref<VmValue> VMProcess::createVmValue(TypeCRef type, Pointer src) {
+		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+		owned_vm_values.push_back(std::move(value));
+		return owned_vm_values.back().refMut();
+	}
+
+	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type) {
+		return Box<VmValue>::fromPointer(new VmValue(*this, type));
+	}
+
+	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
+		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+	}
+
+	PID VMProcess::getPID() const { return my_pid; }
+
+	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {
+		vm_threads.emplace_back(*this);
+	}
 
 	VMProcess::~VMProcess() {
 		for (auto& t: vm_threads)
 			if (t.exec_thread) (void) (stop());
 		if (loaded_program.has_value())
 			getMainVMThread().execGlobalDestructors(&loaded_program.value());
+		for (auto& vm_value: owned_vm_values) vm_value->freeData();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
@@ -318,7 +351,7 @@ namespace vm {
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
 		variant_match(getStatus()) {
-			variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
+			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
 				executingStarted(getStatus()) ? "Execution did not complete"
 											  : "Execution did not start"

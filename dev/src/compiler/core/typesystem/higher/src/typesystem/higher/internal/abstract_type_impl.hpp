@@ -63,6 +63,19 @@ namespace tsh::internal {
 		}
 
 		/**
+		 * @brief Determines weather the type has a no-op destructor, i.e. destructor that does not
+		 * perform any operations.
+		 *
+		 * Importantly, It is used in LIR lowering to determine if destructor calls and lifetime
+		 * flag are needed.
+		 *
+		 * @return true if the type has a trivial destructor, false otherwise.
+		 */
+		[[nodiscard]]
+		virtual bool hasNoOpDestructor() const
+			= 0;
+
+		/**
 		 * @brief Get the text representation of this type.
 		 * @return The text representation of this type.
 		 */
@@ -142,6 +155,8 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Unit;
 
 		UnitAbstractTypeImpl() { representation = "unit"; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -157,6 +172,8 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Void;
 
 		VoidAbstractTypeImpl() { representation = "void"; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {
@@ -178,6 +195,8 @@ namespace tsh::internal {
 			// Implicit coercions allow checking against null bytes.
 			return target.getKind() == Kind::Bool;
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class BoolAbstractTypeImpl final: public AbstractTypeImpl {
@@ -199,6 +218,8 @@ namespace tsh::internal {
 			// Implicit coercions allow adding to an integral counter.
 			return target.getKind() == Kind::Integral;
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class CharAbstractTypeImpl final: public AbstractTypeImpl {
@@ -220,6 +241,8 @@ namespace tsh::internal {
 			// Implicit coercions allow checking against null chars.
 			return target.getKind() == Kind::Bool;
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class IntegralAbstractTypeImpl final: public AbstractTypeImpl {
@@ -268,6 +291,8 @@ namespace tsh::internal {
 			        && IntegralAbstractType(target).getSize() > size)
 			    || target.getKind() == Kind::Float;
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class FloatAbstractTypeImpl final: public AbstractTypeImpl {
@@ -298,6 +323,8 @@ namespace tsh::internal {
 			// Implicit coercions allow promoting to greater sizes
 			return target.getKind() == Kind::Float && FloatAbstractType(target).getSize() > size;
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class RawPointerAbstractTypeImpl final: public AbstractTypeImpl {
@@ -331,6 +358,8 @@ namespace tsh::internal {
 			        && (mutability == Mutability::Mutable
 			            || !RawPointerAbstractType(target).isMutable()));
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
 	private:
 		Mutability mutability;
@@ -366,6 +395,8 @@ namespace tsh::internal {
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
@@ -381,6 +412,12 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::String;
 
 		StringAbstractTypeImpl() { representation = "string"; }
+
+		/**
+		 * @brief Strings have nontrivial destructors because destruction of a string requires to
+		 * free memory.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -410,6 +447,12 @@ namespace tsh::internal {
 		bool isImplicitlyCoercible(AbstractType, query::Context&) const override {
 			return false;
 		}
+
+		/**
+		 * @brief Dynamic arrays have nontrivial destructors because destruction of an dynamic array
+		 * requires to free memory.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -435,6 +478,8 @@ namespace tsh::internal {
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
+
+		[[nodiscard]] bool hasNoOpDestructor() const override;
 	};
 
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
@@ -482,6 +527,11 @@ namespace tsh::internal {
 			bool                      pure = false,
 			bool                      free = false
 		);
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			// @TODO #1273: this is a placeholder, implemnt proper logic
+			return false;
+		}
 	};
 
 	/** @TODO:
@@ -514,6 +564,8 @@ namespace tsh::internal {
 		SymbolType<> getMember(const usize idx) const {
 			return underlying_types[idx];
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override;
 	};
 
 	class ClassAbstractTypeImpl final: public AbstractTypeImpl {
@@ -565,6 +617,11 @@ namespace tsh::internal {
 				if (element.getSymbol() == sym) return element.getType(ctx);
 			CORE_PANIC("Element not found.");
 		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			// @TODO #1274: this is a placeholder, implemnt proper logic
+			return false;
+		}
 	};
 
 	class NamespaceAbstractTypeImpl final: public AbstractTypeImpl {
@@ -580,6 +637,8 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Namespace;
 
 		NamespaceAbstractTypeImpl() = default;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class ModuleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -595,6 +654,11 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Module;
 
 		ModuleAbstractTypeImpl() = default;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			// @TODO #1275: this is a placeholder, implemnt proper logic
+			return false;
+		}
 	};
 
 	class MetaAbstractTypeImpl final: public AbstractTypeImpl {
@@ -610,6 +674,8 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Meta;
 
 		explicit MetaAbstractTypeImpl() { representation = "META"; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 
 	class ImportAbstractTypeImpl final: public AbstractTypeImpl {
@@ -625,5 +691,7 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Import;
 
 		explicit ImportAbstractTypeImpl() = default;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 	};
 }

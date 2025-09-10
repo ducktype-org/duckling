@@ -25,6 +25,8 @@ namespace vm::code {
 		ValidProgram() = default;
 
 	public:
+		bool is_stdlib_included = false;
+
 		ValidProgram(const ValidProgram&)            = default;
 		ValidProgram(ValidProgram&&) noexcept        = default;
 		ValidProgram& operator=(const ValidProgram&) = default;
@@ -56,35 +58,35 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram newInsertCode(const code::CodeCollection& collection) const;
+		ValidProgram newInsertCode(const CodeCollection& collection) const;
 
 		/**
 		 * @brief Inserts code in-place.
-		 * @note If the newly injected code unvalidates the state,
+		 * @note If the newly injected code invalidates the state,
 		 * an exception of `ValidationError` base is thrown. This means this object will contain
 		 * invalid code and mustn't be used! If you don't want to lose the state, place use
 		 * `newInsertCode`.
 		 */
-		void insertCode(const code::CodeCollection& collections);
+		void insertCode(const CodeCollection& collection);
 
-		const StableObjIdNameMap<TypeOfData>& types() const;
+		const ObjIdNameMap<TypeOfData>& types() const;
 
-		const StableObjIdNameMap<GlobalData>& globals() const;
+		const ObjIdNameMap<GlobalData>& globals() const;
 
-		const StableObjIdNameMap<Function>& functions() const;
+		const ObjIdNameMap<Function>& functions() const;
 
 	private:
 		/**
 		 * @brief Inserts types. May invalidate state.
 		 * Can insert the same type multiple times.
 		 */
-		void insertTypes(const std::vector<code::TypeOfData>& new_types);
+		void insertTypes(const std::vector<TypeOfData>& new_types);
 
 		/**
 		 * @brief Inserts globals. May invalidate state.
 		 * Cannot insert the same global data multiple times.
 		 */
-		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
+		void insertGlobals(const std::vector<GlobalData>& new_globals);
 
 		/**
 		 * @brief Inserts a function. May invalidate state.
@@ -92,15 +94,14 @@ namespace vm::code {
 		 * function must not contain any dead-code, but Duckling's compiler, as of 21.05.2025, may
 		 * produce dead code.
 		 */
-		void insertFunctions(const std::vector<code::Function>& new_functions);
+		void insertFunctions(const std::vector<Function>& new_functions);
 
-		StableObjIdNameMap<code::Function>   function_map;
-		StableObjIdNameMap<code::GlobalData> globals_map;
+		ObjIdNameMap<Function>   function_map;
+		ObjIdNameMap<GlobalData> globals_map;
 
-		// Useful when verifying the presence of constructors and destructors while inserting globals.
-		std::unordered_set<base::StrID> available_functions;
+		base::HashMap<base::StrID, FuncSignature> available_functions;
 
-		code::TypeContext type_context;
+		TypeContext type_context;
 
 		bool valid = true;
 	};

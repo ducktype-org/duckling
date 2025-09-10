@@ -5,20 +5,18 @@
 #include <filesystem/file.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/core/process/memory/block.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/pointer.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 #include <json/json.hpp>
 
 #include <iostream>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace vm::api {
 	namespace request {
-		struct LoadStdlib {};
-
 		struct LoadFiles {
 			std::vector<fs::File> filenames;
 		};
@@ -34,14 +32,12 @@ namespace vm::api {
 		struct Stop {};
 
 		struct Run {
-			std::vector<std::string> program_args;
+			ProgramRunArguments program_args;
 		};
 
 		struct RunFunction {
-			std::string func_name;
-			// @todo: This should be a vector of any VM type, not just u64.
-			// This should change after: https://github.com/ducktype-org/duckling/issues/721
-			std::vector<i64> func_args;
+			std::string          func_name;
+			FunctionRunArguments func_args;
 		};
 
 		struct Join {};
@@ -56,8 +52,8 @@ namespace vm::api {
 			std::string type_name;
 		};
 
-		struct Block {
-			BlockID block_id;
+		struct VmValue {
+			std::string type_name;
 		};
 
 		struct StatusRequest {};
@@ -79,7 +75,6 @@ namespace vm::api {
 	}
 
 	using RequestVariant = std::variant<
-		request::LoadStdlib,
 		request::LoadFiles,
 		request::LoadCode,
 		request::Pause,
@@ -92,7 +87,7 @@ namespace vm::api {
 		request::WaitForBreakpoint,
 		request::ExecutionPosition,
 		request::TypeMetadata,
-		request::Block,
+		request::VmValue,
 		request::StatusRequest,
 		request::Input,
 		request::Output,

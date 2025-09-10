@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testNoRet);
+		TESTER_ADD_TEST(testSignaturesValidation);
 	}
 
 private:
@@ -72,8 +73,14 @@ private:
 	void testPreservedFlag() { runTestOnVm("preserved_flag.dbc", "", "1", {}); }
 
 	void testBuiltinFunctions() {
-		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {}, 0, true);
-		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {}, 0, true);
+		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {}, 0);
+		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {}, 0);
+		loadInvalidDbc(
+			"invalid_builtin_function.dbc",
+			{
+				vm::code::InvalidBuiltinFunctionError::ERR_MSG,
+			}
+		);
 	}
 
 	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }
@@ -88,6 +95,21 @@ private:
 			);
 
 		for (auto filename: { "infinite_loop.dbc", "dead_end.dbc" }) loadValidDbc(filename);
+	}
+
+	void testSignaturesValidation() {
+		loadInvalidDbc(
+			"invalid_ret_type.dbc",
+			{
+				vm::code::UnknownTypeError::ERR_MSG,
+			}
+		);
+		loadInvalidDbc(
+			"invalid_param_type.dbc",
+			{
+				vm::code::UnknownTypeError::ERR_MSG,
+			}
+		);
 	}
 };
 

@@ -220,7 +220,7 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
 				.addPositional(clah::FileParser::make("module"))
-				.add(clah::ParamBuilder::ofValue(clah::FileParser::make("file"))
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
 	                     .addShortDesc("Path to the top-level folder with build artifacts")
@@ -235,7 +235,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.compilation_artifacts = {
 								.artifacts_path = 
-									options.getValue<fs::File>("artifact-location").copyValueOr("./duck_build/").getFilePath(),
+									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
 							.debug_options = getDebugOptionsFromClap(options),
 						}
@@ -277,9 +277,7 @@ clah::Clah getClahForMain() {
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {
-								   auto run_result = driver::runModuleOnDVM(
-									   ctx, root, options.isFlag("add-builtin-library")
-								   );
+								   auto run_result = driver::runModuleOnDVM(ctx, root);
 								   if (run_result.has_value()) {
 									   exit_code = run_result.value().exit_code;
 								   } else {

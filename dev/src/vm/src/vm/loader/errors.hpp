@@ -9,7 +9,7 @@ namespace vm::loader {
 		base::StrID type_name;
 
 	public:
-		constexpr static const std::string_view ERR_MSG = "Duplicated type: ";
+		constexpr static std::string_view ERR_MSG = "Duplicated type: ";
 
 	protected:
 		[[nodiscard]]

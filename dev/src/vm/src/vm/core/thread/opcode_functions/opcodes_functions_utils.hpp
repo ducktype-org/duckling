@@ -5,33 +5,78 @@
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
 
+#include <vm/utils/interpret.hpp>
+
+/**
+ * @brief Reads a value of a given TYPE from the specified location on the stack.
+ */
+template<typename T>
+[[nodiscard]] [[gnu::always_inline]]
+inline static T readFromStack(std::byte* stack, u64 position) {
+	return vm::safeReadBytes<T>(stack, position);
+}
+
+/**
+ * @brief Writes a value of a given TYPE to a specified location on the stack.
+ */
 template<typename T>
 [[gnu::always_inline]]
-inline static T& derefStack(std::byte* stack, u64 position) {
-	return *(reinterpret_cast<T*>(&stack[position]));
+inline static void writeToStack(std::byte* stack, u64 position, const T& value) {
+	return vm::safeWriteBytes<T>(stack, value, position);
 }
 
+/**
+ * @brief Reads a value of a given TYPE from the beginning of the given view.
+ */
 template<typename T>
-inline static T& derefView(base::ModRawView view) {
-	return *(reinterpret_cast<T*>(view.getBegin()));
+[[nodiscard]] [[gnu::always_inline]]
+inline static T readFromView(base::ModRawView view) {
+	return vm::safeReadBytes<T>(view.getBegin());
 }
 
 /**
- * Returns a reference (Ref) to the block corresponding to global data with id ID.
- * Should be preferred over DEREF_GLOBAL_RAW_UNSAFE in general.
+ * @brief Writes a value of a given TYPE to the beginning of the given view.
  */
-#define DEREF_GLOBAL(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
+template<typename T>
+[[gnu::always_inline]]
+inline static void writeToView(base::ModRawView view, const T& value) {
+	return vm::safeWriteBytes<T>(view.getBegin(), value);
+}
 
 /**
- * Returns a reference of type TYPE (eg. int, i64, usize. etc) to a global data with id ID.
+ * @brief Returns a block containing the data of the global specified by the ID.
  */
-#define DEREF_GLOBAL_RAW_UNSAFE(TYPE, ID) \
-	derefView<TYPE>(thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(ID))))
+#define GET_GLOBAL_BLOCK(ID) thread.process_memory.getGlobalData(GlobalDataID(usize(ID)))
 
-#if defined(__clang__)
-	#define CLANG_MUST_TAIL [[clang::musttail]]
+/**
+ * @brief Reads a value of a given TYPE from a global memory location specified by a global ID.
+ */
+#define READ_FROM_GLOBAL(TYPE, GLOBAL_ID)                                               \
+	([&](u64 id) {                                                                      \
+		auto view = thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(id))); \
+		return readFromView<TYPE>(view);                                                \
+	}(GLOBAL_ID))
+
+/**
+ * @brief Writes a value to a global memory location specified by a global ID.
+ */
+#define WRITE_TO_GLOBAL(TYPE, GLOBAL_ID, VALUE)                                                \
+	do {                                                                                       \
+		auto view = thread.process_memory.getGlobalViewUnsafe(GlobalDataID(usize(GLOBAL_ID))); \
+		writeToView<TYPE>(view, VALUE);                                                        \
+	} while (false)
+
+#if defined(__clang__) && __clang__ >= 13
+	#define MUST_TAIL [[clang::musttail]]
+#elif defined(__GNUG__) && __GNUG__ >= 15
+	#define MUST_TAIL [[gnu::musttail]]
 #else
-	#define CLANG_MUST_TAIL  //@todo in the newest GCC version there is a musttail attribute
+	#define MUST_TAIL
+
+	#ifdef USE_TAIL_CALLS
+		#warning \
+			"USE_TAIL_CALLS without support from compiler. This can potentially cause stack-overflow."
+	#endif
 #endif
 
 /**
@@ -40,8 +85,8 @@ inline static T& derefView(base::ModRawView view) {
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                           \
-	IF_TC({ CLANG_MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
+#define OPFUN_CONT(i)                                                                     \
+	IF_TC({ MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 

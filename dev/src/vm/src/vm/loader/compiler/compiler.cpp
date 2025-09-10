@@ -20,25 +20,24 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
+#include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
-
-#include <expected>
 
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableObjIdNameMap<code::Function>&         func_map;
-			const TypeMetadata&                               type_map;
-			const StableObjIdNameMap<TypeCRef, GlobalDataID>& globals;
-			const base::HashMap<u64, base::StrID>&            method_id_to_name;
-			const base::HashMap<base::StrID, u64>&            method_name_to_id;
-			base::Optional<code::Function>                    function{};
-			base::HashMap<base::StrID, usize>                 label_positions{};
-			base::HashMap<base::StrID, usize>                 local_offset_map{};
-			usize                                             local_stack_size{};
+			const ObjIdNameMap<code::Function>&         func_map;
+			const TypeMetadata&                         type_map;
+			const ObjIdNameMap<TypeCRef, GlobalDataID>& globals;
+			const base::HashMap<u64, base::StrID>&      method_id_to_name;
+			const base::HashMap<base::StrID, u64>&      method_name_to_id;
+			base::Optional<code::Function>              function{};
+			base::HashMap<base::StrID, usize>           label_positions{};
+			base::HashMap<base::StrID, usize>           local_offset_map{};
+			usize                                       local_stack_size{};
 		};
 
-		i64 getOpCodeArgValue(
+		u64 getOpCodeArgValue(
 			CompilationContext&      ctx,
 			const usize              instruction_index,
 			const opargs::OpCodeArg& opcode_arg
@@ -49,7 +48,7 @@ namespace vm::loader::compiler {
 				// Every used local variable is guaranteed to exist by static verification.
 #define HANDLE_LOCAL(TYPE)                                                     \
 	variant_case(vm::opargs::TYPE, local_type) {                               \
-		return static_cast<i64>(ctx.local_offset_map.at(local_type.var_name)); \
+		return static_cast<u64>(ctx.local_offset_map.at(local_type.var_name)); \
 	}
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
@@ -57,31 +56,31 @@ namespace vm::loader::compiler {
 #define HANDLE_GLOBAL(TYPE)                         \
 	variant_case(vm::opargs::TYPE, global_data) {   \
 		auto name = global_data.global_data_name;   \
-		return i64(usize(*ctx.globals.idOf(name))); \
+		return u64(usize(*ctx.globals.idOf(name))); \
 	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
 #undef HANDLE_GLOBAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					auto type_obj = ctx.type_map.at(type_arg.type_name);
-					return static_cast<i64>(static_cast<u64>(type_obj->getID()));
+					return static_cast<u64>(static_cast<u64>(type_obj->getID()));
 				}
 				variant_case(vm::opargs::Field, field_arg) {
 					auto type_obj     = ctx.type_map.at(field_arg.type_name);
 					auto field_offset = *type_obj->getFieldOffsetByName(field_arg.field_name);
-					return static_cast<i64>(field_offset);
+					return static_cast<u64>(field_offset);
 				}
 				variant_case(vm::opargs::FunctionName, func) {
-					return i64(*ctx.func_map.idOf(func.function_name));
+					return u64(*ctx.func_map.idOf(func.function_name));
 				}
 				variant_case(vm::opargs::BuiltinFunctionName, func) {
 					auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
-					return base::safeIntConv<i64>(
+					return base::safeIntConv<u64>(
 						static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
 					);
 				}
 				variant_case(vm::opargs::MethodName, method) {
-					return base::safeIntConv<i64>(ctx.method_name_to_id[method.method_name]);
+					return base::safeIntConv<u64>(ctx.method_name_to_id[method.method_name]);
 				}
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
@@ -89,27 +88,29 @@ namespace vm::loader::compiler {
 					// We have to calculate the
 					// difference instead of absolute jump position,
 					// because our instruction counter is a pointer.
-					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
+					return static_cast<u64>(pos) - static_cast<u64>(instruction_index) - 1;
 				}
 				variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 			}
-
 			CORE_UNREACHABLE();
 		}
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
-			low::FuncData func_data;
-			func_data.name = ctx.function->name.str;
 			// This is guaranteed to exist by builders.
-			auto functional_type       = ctx.type_map.at(ctx.function->name.str);
-			func_data.arg_size         = functional_type->getParametersSize().value();
-			func_data.ret_size         = functional_type->getResultType().value()->getSize();
-			func_data.local_stack_size = ctx.local_stack_size;
+			code::FuncSignature   signature       = ctx.function->signature;
+			u64                   parameters_size = 0;
+			std::vector<TypeCRef> parameters;
+			for (const auto& param: signature.parameters) {
+				parameters.emplace_back(ctx.type_map.at(param.str));
+				auto type = ctx.type_map.at(param.str);
+				parameters_size += type->getSize();
+			}
 
+			low::ByteCode bc;
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
 				const auto& op    = ctx.function->body[op_idx];
-				i64         arg_0 = 0;
-				i64         arg_1 = 0;
+				u64         arg_0 = 0;
+				u64         arg_1 = 0;
 				variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
@@ -125,13 +126,20 @@ namespace vm::loader::compiler {
 #include <vm/bytecode/opcode_definitions.hpp>
 				}
 
-				func_data.bc.emplace_back(makeLowInstruction(
+				bc.emplace_back(makeLowInstruction(
 					low::fix8FromInstr(op),
-					Memory::interpret<u64>(arg_0),
-					Memory::interpret<u64>(arg_1)
+					vm::safeReadBytes<u64>(arg_0),
+					vm::safeReadBytes<u64>(arg_1)
 				));
 			}
-			return func_data;
+			return low::FuncData{ .name             = ctx.function->name,
+				                  .bc               = std::move(bc),
+				                  .local_stack_size = ctx.local_stack_size,
+				                  .arg_size         = parameters_size,
+				                  .ret_size    = ctx.type_map.at(signature.result_type)->getSize(),
+				                  .parameters  = std::move(parameters),
+				                  .result_type = ctx.type_map.at(signature.result_type) };
+			;
 		}
 
 		void splitCodeAndLabels(CompilationContext& ctx) {
@@ -196,11 +204,10 @@ namespace vm::loader::compiler {
 				CORE_UNREACHABLE();
 			};
 
-			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
-			push(base::StrID("ret_val"), func_type->result->getName());
-			for (auto [idx, param_type]: std::views::enumerate(func_type->parameters))
-				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type->getName());
-
+			code::FuncSignature func_signature = ctx.function->signature;
+			push(base::StrID("ret_val"), func_signature.result_type.str);
+			for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
+				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 			// instruction index, stack state, stack size
 			std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
 				{ ctx.function->body.size(), {}, 0 }  // sentinel
@@ -250,8 +257,9 @@ namespace vm::loader::compiler {
 						dfs_stack.pop_back();
 					}
 					variant_case(Op_call_func, instr) {
-						for (usize i = 0;
-						     i < ctx.type_map.at(instr.arg0.function_name)->getParameterCount();
+						for (usize i = 0; i < ctx.func_map.at((instr.arg0.function_name))
+						                          .get()
+						                          ->signature.parameters.size();
 						     i++) {
 							pop();
 						}
@@ -259,7 +267,9 @@ namespace vm::loader::compiler {
 					}
 					variant_case(Op_call_builtin_func, instr) {
 						for (usize i = 0;
-						     i < ctx.type_map.at(instr.arg0.function_name)->getParameterCount();
+						     i < builtins::getBuiltinFunctionSignature(instr.arg0.function_name)
+						             .value()
+						             ->parameters.size();
 						     i++) {
 							pop();
 						}
@@ -305,8 +315,8 @@ namespace vm::loader::compiler {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
-		StableObjIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto                                       ctx = CompilationContext(
+		ObjIdNameMap<TypeCRef, GlobalDataID> globals;
+		auto                                 ctx = CompilationContext(
             program.functions(), *types, globals, method_id_to_name, method_name_to_id
         );
 

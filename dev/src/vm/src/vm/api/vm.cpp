@@ -2,7 +2,9 @@
 
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 namespace vm::api {
 	void ignoreResponse([[maybe_unused]] const Response& response) {}
@@ -10,6 +12,12 @@ namespace vm::api {
 	template<class T>
 	std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
 		if (std::holds_alternative<T>(response)) return std::get<T>(response);
+		return std::unexpected(WrongResponse{});
+	}
+
+	template<class T>
+	std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
+		if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
 		return std::unexpected(WrongResponse{});
 	}
 
@@ -49,12 +57,6 @@ namespace vm::api {
 		});
 	}
 
-	std::expected<void, ApiError> loadStdlib(PID pid) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadStdlib{}))
-		    .transform(ignoreResponse);
-	}
-
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))
@@ -74,7 +76,7 @@ namespace vm::api {
 	}
 
 	std::expected<void, ApiError> runFunction(
-		PID pid, const std::string& function_name, const std::vector<i64>& args
+		PID pid, const std::string& function_name, const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
@@ -114,16 +116,16 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::Output>);
 	}
 
-	std::expected<TypeCRef, ApiError> getType(PID pid, const std::string& type_name) {
+	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::TypeMetadata{ type_name }))
-		    .and_then(mapOrWrongResponse<TypeCRef>);
+		    .and_then(mapOrWrongResponse<response::Type>);
 	}
 
-	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
+	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Block{ BlockID(block_id) }))
-		    .and_then(mapOrWrongResponse<response::Block>);
+		    .doRequest(SupervisorRequest(pid, request::VmValue{ type_name }))
+		    .and_then(mapOrWrongResponseMove<response::VmValue>);
 	}
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
@@ -145,10 +147,9 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<i64, ApiError> getExitCode(PID pid) {
+	std::expected<ExitValue, ApiError> getExitValue(PID pid) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::ExitCodeRequest{}))
-		    .and_then(mapOrWrongResponse<ExitCode>);
+		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
-
 }

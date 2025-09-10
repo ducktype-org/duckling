@@ -21,7 +21,7 @@
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
-		return { module_id.asInt(), std::to_underlying(backend_type) };
+		return { module_id.queryUnstablePerfectHash(), std::to_underlying(backend_type) };
 	}
 
 	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
@@ -51,8 +51,9 @@ namespace compiler::driver {
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
-			auto module_name
-				= base::StrID(base::strConcat("module_", key.module_id.asInt()).c_str());
+			auto module_name = base::StrID(
+				base::strConcat("module_", key.module_id.queryUnstablePerfectHash()).c_str()
+			);
 
 			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name);
 
@@ -121,7 +122,7 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id, bool add_builtin_library
+		query::Context& ctx, frontend::ModuleID module_id
 	) {
 		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
@@ -132,18 +133,17 @@ namespace compiler::driver {
 		return vm::api::spawn()
 		    .and_then([&](vm::api::ProcessInfo process) {
 				pid = process.pid;
-				if (add_builtin_library) return vm::api::loadStdlib(pid);
 				return std::expected<void, vm::api::ApiError>{};
 			})
 		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection }); })
 		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 		    .and_then([&] { return vm::api::run(pid); })
 		    .and_then([&] { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitCode(pid); })
+		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
-		    .transform([](auto exit_code) {
-				return RunOutput{ .exit_code = base::safeIntConv<int>(exit_code) };
+		    .transform([](Ref<vm::VmValue> exit_value) {
+				return RunOutput{ .exit_code
+				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
 			});
 	}
-
 }

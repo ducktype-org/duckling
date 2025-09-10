@@ -58,9 +58,6 @@ void server(i32 port) {
 
 			return toResponse(vm::api::loadFiles(pid, { fs::File(filepath) }));
 		});
-	CROW_ROUTE(app, "/process/load_stdlib/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::loadStdlib(pid));
-	});
 	CROW_ROUTE(app, "/process/run/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
 		return toResponse(vm::api::run(pid));
 	});
@@ -93,17 +90,9 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/data/type/<uint>/<string>")
 	([](vm::PID pid, const std::string& type_name) {
 		return toResponse(vm::api::getType(pid, type_name)
-		                      .transform([](const vm::TypeCRef& type_ptr) { return *type_ptr; }));
-	});
-	CROW_ROUTE(app, "/data/block/<uint>/<uint>")
-	([](vm::PID pid, u32 block_id) {
-		return toResponse(
-			vm::api::getBlock(pid, block_id).transform([](const vm::api::response::Block& block) {
-				const byte* begin = block.data.getBegin();
-				const byte* end   = begin + block.data.size();
-				return std::vector<byte>(begin, end);
-			})
-		);
+		                      .transform([](const vm::api::response::Type& type_response) {
+								  return type_response.type;
+							  }));
 	});
 	app.port(base::safeIntConv<u16>(port)).run();
 }

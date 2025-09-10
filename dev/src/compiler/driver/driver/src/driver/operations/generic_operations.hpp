@@ -30,7 +30,7 @@ namespace compiler::driver {
 	 * Temporary interface for compiling and running code on DVM in-memory.
 	 */
 	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id, bool add_builtin_library
+		query::Context& ctx, frontend::ModuleID module_id
 	);
 
 	struct KeyOf_CompileModule final {

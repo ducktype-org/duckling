@@ -1,6 +1,7 @@
 #include <vm_tester_utils.hpp>
 
 #include <base/optional.hpp>
+#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
@@ -17,7 +18,7 @@ private:
 	vm::TypeCRef getType(vm::PID pid, const std::string& name) {
 		auto response = vm::api::getType(pid, name);
 		assertTrue(response.has_value(), "Type query failed for: " + name);
-		return response.value();
+		return response->type;
 	}
 
 	void checkPod(vm::TypeCRef type) {
@@ -25,7 +26,7 @@ private:
 	}
 
 	void checkI1(
-		vm::TypeCRef type, vm::TypeCRef expected_method_type, vm::TypeCRef expected_foo_impl_type
+		vm::TypeCRef type, vm::TypeCRef expected_method_type, base::StrID expected_foo_impl_type
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
@@ -68,7 +69,7 @@ private:
 		fail("I2 should not be plain");
 	}
 
-	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type, vm::TypeCRef method_impl_type) {
+	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type, base::StrID method_impl_type) {
 		std::cerr << "Check parent\n";
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
@@ -99,11 +100,11 @@ private:
 		vm::TypeCRef                     type,
 		vm::TypeCRef                     super_type,
 		const std::vector<vm::TypeCRef>& interfaces,
-		vm::TypeCRef                     expected_i1_foo_impl,
+		base::StrID                      expected_i1_foo_impl,
 		vm::TypeCRef                     expected_child_method,
-		vm::TypeCRef                     expected_child_get_age_impl,
-		vm::TypeCRef                     expected_child_i1_impl,
-		vm::TypeCRef                     expected_child_cry_impl
+		base::StrID                      expected_child_get_age_impl,
+		base::StrID                      expected_child_i1_impl,
+		base::StrID                      expected_child_cry_impl
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd->type == type, "Invalid type in inheritance metadata");
@@ -200,13 +201,13 @@ private:
 		std::vector interfaces{ i1, i2 };
 
 		auto i1_method           = getType(pid, "method_I1_int");
-		auto i1_foo_impl         = getType(pid, "I1_foo_impl");
+		auto i1_foo_impl         = base::StrID("I1_foo_impl");
 		auto parent_method       = getType(pid, "method_parent_int");
-		auto parent_get_age_impl = getType(pid, "Parent_getAge_impl");
+		auto parent_get_age_impl = base::StrID("Parent_getAge_impl");
 		auto child_method        = getType(pid, "method_child_int");
-		auto child_get_age_impl  = getType(pid, "Child_getAge_impl");
-		auto child_i1_impl       = getType(pid, "Child_I1_impl");
-		auto child_cry_impl      = getType(pid, "Child_cry_impl");
+		auto child_get_age_impl  = base::StrID("Child_getAge_impl");
+		auto child_i1_impl       = base::StrID("Child_I1_impl");
+		auto child_cry_impl      = base::StrID("Child_cry_impl");
 
 		checkPod(pod);
 		checkI1(i1, i1_method, i1_foo_impl);

@@ -4,7 +4,6 @@
 #include "allocator/dummy_allocator.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "block.hpp"
-#include "frame.hpp"
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
@@ -18,7 +17,6 @@
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 
-#include <cstring>
 #include <deque>
 #include <mutex>
 
@@ -59,10 +57,21 @@ namespace vm {
 		[[nodiscard]]
 		Ref<Block> getBlock(BlockID id);
 
+		/**
+		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
+		 * hierarchy.
+		 */
+		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
+
+		/**
+		 * @brief Copies `byte_size` bytes pointed-to by `src` to `dst`.
+		 * @note Frees *block_dst's nested blocks whose offsets would not fit
+		   inside the new memory area.
+		 */
+		auto copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+
 	public:
 		Memory() = default;
-
-		using error = std::string;
 
 		// =================== Used by executor ===================
 
@@ -71,9 +80,22 @@ namespace vm {
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
 		/**
+		 * @brief Allocates a contiguous new block of memory for n elements of `type`'s inner type.
+		 * @note Assumes that type is a dynamic table type.
+		 */
+		auto dynTableAllocateHeapN(TypeCRef type, u64 n) -> Ref<Block>;
+
+		/**
 		 * @brief Creates a block with externally managed data life-time.
 		 */
 		auto allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
+
+		/**
+		 * @brief Dynamically reallocates block data.
+		 * @note Assumes that type is a dynamic table type and reallocates it to
+		   a table of size n with elements of type equal to type's inner type.
+		 */
+		auto dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void;
 
 		void freeBlock(Ref<Block> block);
 
@@ -147,11 +169,16 @@ namespace vm {
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
+		/**
+		 * @brief Copies data pointed-to by `src` to `dst`.
+		 * @note Assumes that the size of `type` is known at compile time and (implicitly)
+		 * that it is the type of the blocks pointed-to by `dst` and `src`.
+		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void;
 
 		auto destroyBlockReference(Pointer pointer) -> void;
 
-		auto setPointer(Pointer& dst, Pointer src) -> void;
+		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer;
 
 		// ======================== Requests ========================
 
@@ -166,12 +193,5 @@ namespace vm {
 
 		[[nodiscard]]
 		auto requestBlockType(BlockID id) -> TypeCRef;
-
-		// ======================== Utility =========================
-
-		template<typename T, typename U>
-		requires(sizeof(T) <= sizeof(U)) constexpr static T& interpret(U& value) {
-			return *(reinterpret_cast<T*>(&value));
-		}
 	};
 }

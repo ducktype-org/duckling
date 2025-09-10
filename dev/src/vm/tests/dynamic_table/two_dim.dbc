@@ -1,0 +1,42 @@
+type dynamic_table: dtable_i64 i64
+type pointer: inner_ptr_dtable dtable_i64
+type dynamic_table: dtable_ptr inner_ptr_dtable
+type pointer: outer_ptr_dtable dtable_ptr
+
+function main { i64, ptr_argv } -> i64 {
+    init_lany_type size, i64;
+    init_lany_type val, i64;
+    init_lany_type inner_ptr, inner_ptr_dtable;
+    init_lany_type outer_ptr, outer_ptr_dtable;
+
+    mov_l64_imm val, 2137;
+    mov_l64_imm size, 5;
+    dynTableReAlloc_lptr_type inner_ptr, dtable_i64;
+    ext_l64 size;
+    mov_l64_imm size, 3;
+    dynTableStore_lptr_lany inner_ptr, val;
+    ext_l64 size;
+    mov_l64_imm val, 0;
+    dynTableReAlloc_lptr_type outer_ptr, dtable_ptr;
+    ext_l64 size;
+    mov_l64_imm size, 2;
+    dynTableStore_lptr_lany outer_ptr, inner_ptr;
+    ext_l64 size;
+    dynTableLoad_lany_lptr inner_ptr, outer_ptr;
+    ext_l64 size;
+    mov_l64_imm size, 3;
+    dynTableLoad_lany_lptr val, inner_ptr;
+    ext_l64 size;
+    output_l64 val;
+    free_lptr inner_ptr;
+    free_lptr outer_ptr;
+
+    deinit; # outer_ptr
+    deinit; # inner_ptr
+    deinit; # val
+    deinit; # size
+    deinit; # *argv
+    deinit; # argc
+    ret;
+
+}

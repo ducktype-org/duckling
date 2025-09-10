@@ -7,7 +7,10 @@
 #include <filesystem/file.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/process/interface_types.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 #include <vector>
 
@@ -29,23 +32,24 @@ namespace vm::api {
 	 * @return
 	 */
 	std::expected<response::CodePosition, ApiError> pause(PID pid);
+
 	/** @brief Resumes the execution of the program.
 	 * When this function returns true, the program is running. If false, the state is undefined.
 	 * @return
 	 */
 	std::expected<void, ApiError> resume(PID pid);
 	std::expected<void, ApiError> step(PID pid);
+
 	/**
 	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
-	std::expected<void, ApiError> loadStdlib(PID pid);
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& path);
 	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code);
-	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args = {});
+	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 	std::expected<void, ApiError> runFunction(
-		PID pid, const std::string& func_name, const std::vector<i64>& args = {}
+		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
 	);
 	std::expected<void, ApiError> join(PID pid);
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);
@@ -54,11 +58,25 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
 
-	std::expected<ExitCode, ApiError> getExitCode(PID pid);
+	/**
+	 * @brief Returns a VmValue containing the return value of the last ran function on DVM.
+	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
+	 * will be automatically freed when the process is destructed.
+	 * @return The VmValue containing the return value of the last called function.
+	 */
+	std::expected<ExitValue, ApiError> getExitValue(PID pid);
 
 	std::expected<response::Output, ApiError> output(PID pid);
 
-	std::expected<TypeCRef, ApiError>               getType(PID pid, const std::string& type_name);
-	std::expected<response::Block, ApiError>        getBlock(PID pid, u64 block_id);
+	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
+
+
+	/**
+	 * @brief Returns an empty VmValue (initialized by zero bytes) of the given type.
+	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
+	 * responsibility to call `VmValue::freeData()` on the VmValue.
+	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
+	 */
+	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);
 }

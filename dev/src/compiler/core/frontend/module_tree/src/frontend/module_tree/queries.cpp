@@ -15,10 +15,9 @@ namespace compiler::frontend {
 	 *******************/
 	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleID) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			std::cout << "JUST AFTER PROVIDE\n";
-			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
-			std::cout << "JUST BEFORE RETURN\n";
-			return module_tree->getID();
+			Ref<ModuleTree> module_tree = ModuleTreeBuilder::create(key);
+
+			return module_tree->getModuleID();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -70,5 +69,4 @@ namespace compiler::frontend {
 
 		return current_module;
 	}
-
 }

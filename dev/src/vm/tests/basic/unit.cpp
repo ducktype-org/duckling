@@ -23,6 +23,12 @@ public:
 		TESTER_ADD_TEST(globalNoConstructorTest);
 		TESTER_ADD_TEST(globalNoDestructorTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
+		TESTER_ADD_TEST(verySimpleBooleanTest);
+		TESTER_ADD_TEST(floatOperationTest);
+		TESTER_ADD_TEST(literalsTest);
+		TESTER_ADD_TEST(checkLiteralErrorHandling);
+		TESTER_ADD_TEST(checkZeroDivision);
+		TESTER_ADD_TEST(invalidPrimitiveTypes);
 	}
 
 private:
@@ -42,7 +48,7 @@ private:
 	}
 
 	void commandLineArguments() {
-		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" });
+		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" }, 0);
 	}
 
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
@@ -51,7 +57,7 @@ private:
 
 	void globalsInitializationTest() { runTestOnVm("globals_initialization.dbc", {}, {}, {}, 7); }
 
-	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5, true); }
+	void globalDestructorTest() { runTestOnVm("global_destructor.dbc", {}, {}, {}, 5); }
 
 	void globalNoConstructorTest() {
 		loadInvalidDbc(
@@ -71,7 +77,19 @@ private:
 		);
 	}
 
+	void floatOperationTest() {
+		runTestOnVm("floating_point_arithmetic_32.dbc", "", "1056964608", {});
+		runTestOnVm("floating_point_arithmetic_64.dbc", "", "4602678819172646912", {});
+	}
+
+	void literalsTest() {
+		runTestOnVm("literals_test_32.dbc", "", "3", {});
+		runTestOnVm("literals_test_64.dbc", "", "3", {});
+	}
+
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "2137", {}); }
+
+	void verySimpleBooleanTest() { runTestOnVm("very_simple_boolean.dbc", "", "1", {}); }
 
 	void checkZeroDivision() {
 		assertExecutionPanickedWith(
@@ -81,6 +99,33 @@ private:
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult("zero_division_i32.dbc", "", "0"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+	}
+
+	void checkLiteralErrorHandling() {
+		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
+		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
+		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
+	}
+
+	void invalidPrimitiveTypes() {
+		loadInvalidDbc(
+			"void_instantiation.dbc",
+			{
+				vm::code::UninstantiableValueError::ERR_MSG,
+			}
+		);
+		loadInvalidDbc(
+			"size_zero_primitive.dbc",
+			{
+				vm::code::InvalidPrimitiveSizeError::ERR_MSG,
+			}
+		);
+		loadInvalidDbc(
+			"void_arg.dbc",
+			{
+				vm::code::VoidTypeArgumentError::ERR_MSG,
+			}
 		);
 	}
 };

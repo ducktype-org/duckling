@@ -45,7 +45,7 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testError);
-		TESTER_ADD_TEST(testI32Consts);
+		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
@@ -63,7 +63,7 @@ public:
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
-
+		TESTER_ADD_TEST(testDebugPrint);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -85,21 +85,32 @@ private:
 		};
 	}
 
-	void testI32Consts() {
+	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
-		ASSERT_EQUAL(1'107, getValue("M", root_scope));
-		ASSERT_EQUAL(1, getValue("N.X", root_scope));
-		ASSERT_EQUAL(1, getValue("A", root_scope));
-		ASSERT_EQUAL(-3, getValue("B", root_scope));
-		ASSERT_EQUAL(-1, getValue("D", root_scope));
-		ASSERT_EQUAL(6, getValue("E", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
-		ASSERT_EQUAL(3, getValue("H2", root_scope));
-		ASSERT_EQUAL(1, getValue("T0", root_scope));
-		ASSERT_EQUAL(2, getValue("T1", root_scope));
-		ASSERT_EQUAL(3, getValue("T2", root_scope));
-		ASSERT_EQUAL(30, getValue("F", root_scope));
+		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("N.X", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("A", root_scope));
+		ASSERT_EQUAL(-3, getConstValueAs<i64>("B", root_scope));
+		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i64>("E", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i64>("MAX_I32", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
+		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
+
+		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
+
+		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
+		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
+		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
+		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
+		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 	}
 
 	void testClassSymbolData() {
@@ -202,10 +213,10 @@ private:
 
 	void testEdgeEvals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/edge_evals")));
-		ASSERT_EQUAL(1, getValue("M1", root_scope));
-		ASSERT_EQUAL(6, getValue("M2", root_scope));
-		ASSERT_EQUAL(7, getValue("O1", root_scope));
-		ASSERT_EQUAL(7, getValue("O2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("M1", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i64>("M2", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
 		// These do not work anymore.
 		// ASSERT_EQUAL(7, getValue("O3", root_scope));
 		// ASSERT_EQUAL(7, getValue("O4", root_scope));
@@ -381,14 +392,19 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		auto test_value = [&](auto str, i64 val) {
+		auto test_value = [&](auto str, i64 exp_val) {
 			auto name = base::StrID(str);
 			for (auto& gb: hout->glob_data) {
 				if (gb.original_name == name) {
 					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
-						auto const_value
-							= std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
-						ASSERT_EQUAL(val, const_value);
+						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
+						auto val = ctv.asI64();
+						if (!val.has_value()) {
+							this->fail(base::strConcat(
+								"Got a constant with a different type than expected", name.strView()
+							));
+						}
+						ASSERT_EQUAL(exp_val, val);
 						return;
 					} else {
 						this->fail(base::strConcat("Expected constant but found: ", name.strView()));
@@ -409,19 +425,19 @@ private:
 	void testExprTree() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
-		ASSERT_EQUAL(1, getValue("V1", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("V1", root_scope));
 		auto              sym_v1  = getChain("V1", root_scope).back();
 		auto              tree_v1 = getExprOfConst(sym_v1);
 		std::stringstream out_v1;
 		tree_v1->debugPrint(out_v1);
 
-		ASSERT_EQUAL(-1, getValue("VM1", root_scope));
+		ASSERT_EQUAL(-1, getConstValueAs<i64>("VM1", root_scope));
 		auto              sym_vm1  = getChain("VM1", root_scope).back();
 		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
 
-		ASSERT_EQUAL(256, getValue("V256", root_scope));
+		ASSERT_EQUAL(256, getConstValueAs<i64>("V256", root_scope));
 
 		auto              sym_v256 = getChain("V256", root_scope).back();
 		std::stringstream out_v256;
@@ -429,7 +445,7 @@ private:
 		tree_v256->debugPrint(out_v256);
 		ASSERT_EQUAL("(3+4-4*16/5%7)**8", out_v256.str());
 
-		ASSERT_EQUAL(12, getValue("V12", root_scope));
+		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
 		auto              tree_v12 = getExprOfConst(sym_v12);
 		std::stringstream out_v12;
@@ -478,21 +494,21 @@ private:
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
 
 		try {
-			getValue("InvalidExpr", root_scope);
+			getConstValueAs<i64>("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (base::NotYetImplemented& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
-			getValue("InvalidSym", root_scope);
+			getConstValueAs<i64>("InvalidSym", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
-			getValue("C", root_scope);
+			getConstValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
@@ -515,15 +531,21 @@ private:
 
 		auto& statements = function.content.body->statements;
 
-		auto get_var_ref = [&](usize i) -> decltype(auto) {
-			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i));
+		auto get_var_block = [&](usize i, auto&& code_block) -> decltype(auto) {
+			return dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*code_block.statements.at(i)
+			);
 		};
+
+		auto get_var_ref
+			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function.content.body); };
 
 
 		auto i32_type = query::entryPoint<tsh::QueryIntegralType>(32);
 		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
 		auto i32_or_f32
 			= query::entryPoint<tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
+
 
 		{
 			auto& var = get_var_ref(0);
@@ -551,19 +573,26 @@ private:
 
 		{
 			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
-			auto& var     = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-                *if_stmt.body.statements.at(0)
-            );
-			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
-			ASSERT_EQUAL(var.type, st(i32_type));
+			{
+				auto& var1 = get_var_block(0, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
+				ASSERT_EQUAL(var1.type, st(i32_type));
+
+				auto& var2 = get_var_block(1, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
+				ASSERT_EQUAL(var2.type, st(i32_or_f32));
+			}
+			{
+				auto& var = get_var_block(0, if_stmt.else_body);
+				ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "z");
+				ASSERT_EQUAL(var.type, st(i32_type));
+			}
 		}
 
 		{
 			auto& while_stmt
 				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
-			auto& var = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*while_stmt.body.statements.at(0)
-			);
+			auto& var = get_var_block(0, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
 			ASSERT_EQUAL(var.type, st(i32_type));
 		}
@@ -975,7 +1004,7 @@ private:
 
 		{  // General global variable checks.
 
-			auto [module, _] = getModule(fs::File(path("test_modules/global_viariables/general")));
+			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/general")));
 			auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
@@ -1008,9 +1037,8 @@ private:
 		}
 
 		{  // Global variable detections check (isGlobalVar function).
-			auto [module, _]
-				= getModule(fs::File(path("test_modules/global_viariables/detection")));
-			auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/detection")));
+			auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
 
@@ -1067,6 +1095,26 @@ private:
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+	}
+
+	void testDebugPrint() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/pretty_debug")));
+
+		auto sym_c1         = getChain("c1", scope).back();
+		auto sym_v1         = getChain("v1", scope).back();
+		auto sym_n1         = getChain("n1", scope).back();
+		auto sym_n2         = getChain("n1.n2", scope).back();
+		auto sym_test_class = getChain("n1.n2.TestClass", scope).back();
+		auto sym_n3         = getChain("n1.n3", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			std::cout << compiler::helios::prettyDebugPrint(sym_c1, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_v1, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_n1, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_n2, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_test_class, ctx) << '\n';
+			std::cout << compiler::helios::prettyDebugPrint(sym_n3, ctx) << '\n';
+		});
 	}
 };
 

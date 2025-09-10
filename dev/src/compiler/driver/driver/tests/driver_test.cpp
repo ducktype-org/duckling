@@ -75,7 +75,8 @@ private:
 			// This method can fail on module verification
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
-			auto module_name = base::StrID(base::strConcat("module_", module.asInt()).c_str());
+			auto module_name
+				= base::StrID(base::strConcat("module_", module.queryUnstablePerfectHash()).c_str());
 
 			auto asm_file     = module_name.str() + ".s";
 			auto llvm_ir_file = module_name.str() + ".ll";
@@ -96,7 +97,7 @@ private:
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto run_result = driver::runModuleOnDVM(ctx, module, true);
+			auto run_result = driver::runModuleOnDVM(ctx, module);
 
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
@@ -145,7 +146,7 @@ private:
 
 			std::filesystem::remove(module_dbc.FILE.getFilePath().getPath());
 
-			auto run_result = driver::runModuleOnDVM(ctx, module, false);
+			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 		});
@@ -159,7 +160,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto run_result = driver::runModuleOnDVM(ctx, module, false);
+			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(5, run_result.value().exit_code);
 		});

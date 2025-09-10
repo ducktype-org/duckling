@@ -1,6 +1,9 @@
 #include "type_validator.hpp"
 
+#include <base/string_id.hpp>
+
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
@@ -153,7 +156,8 @@ namespace {
 	}
 
 	/**
-	 * @brief Validates that a method's first argument is a pointer to the 'this' object.
+	 * @brief Validates that a method's FunctionType first parameter is a pointer to the 'this'
+	 * object.
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateMethodFirstArgument(
@@ -168,19 +172,41 @@ namespace {
 	}
 
 	/**
+	 * @brief Validates that a function signature's first argument is a pointer to the 'this' object.
+	 */
+	template<InheritableTypeConcept InheritableType>
+	void validateMethodFirstArgumentImpl(
+		const InheritableType& inh,
+		const FuncSignature&   func_signature,
+		base::StrID            func_name,
+		const TypeContext&     ctx
+	) {
+		if (func_signature.parameters.empty()) throw MethodFirstArgumentError(inh, func_name);
+		const auto& first_param_type_name = func_signature.parameters[0];
+		const auto& first_param_type = getType<PointerType>(ctx, first_param_type_name, inh, [&]() {
+			return MethodFirstArgumentError(inh, func_name);
+		});
+		if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_name);
+	}
+
+	/**
 	 * @brief Validates that a method implementation's signature matches a virtual method's
 	 * signature.
 	 */
 	template<InheritableTypeConcept InheritableType>
-	void validateMethodSignatureMatch(
-		const InheritableType& inh, const FunctionType& vmethod_type, const FunctionType& impl_type
+	void validateMethodSignatureMatchImpl(
+		const InheritableType& inh,
+		const FunctionType&    vmethod_type,
+		const FuncSignature&   impl_signature,
+		base::StrID            impl_type_name
 	) {
-		if (vmethod_type.result != impl_type.result) throw MethodTypeError(inh, impl_type.name);
-		if (vmethod_type.parameters.size() != impl_type.parameters.size())
-			throw MethodTypeError(inh, impl_type.name);
-		for (u64 i = 1; i < impl_type.parameters.size(); i++)
-			if (vmethod_type.parameters[i] != impl_type.parameters[i])
-				throw MethodTypeError(inh, impl_type.name);
+		if (vmethod_type.result != impl_signature.result_type.str)
+			throw MethodTypeError(inh, impl_type_name);
+		if (vmethod_type.parameters.size() != impl_signature.parameters.size())
+			throw MethodTypeError(inh, impl_type_name);
+		for (u64 i = 1; i < impl_signature.parameters.size(); i++)
+			if (vmethod_type.parameters[i] != impl_signature.parameters[i].str)
+				throw MethodTypeError(inh, impl_type_name);
 	}
 
 	/**
@@ -201,9 +227,10 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateImplementations(
-		const InheritableType&                         inh,
-		const base::HashMap<base::StrID, base::StrID>& virtual_methods,
-		const TypeContext&                             ctx
+		const InheritableType&                           inh,
+		const base::HashMap<base::StrID, base::StrID>&   virtual_methods,
+		const TypeContext&                               ctx,
+		const base::HashMap<base::StrID, FuncSignature>& functions
 	) {
 		base::HashMap<base::StrID, base::StrID> implementations;
 		for (const auto& implementation: inh.implementations) {
@@ -214,17 +241,17 @@ namespace {
 			if (!virtual_methods.contains(implementation.name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
-			const auto& vmethod_name   = virtual_methods[implementation.name];
-			const auto& impl_type_name = implementation.type;
-			const auto& vmethod_type   = getType<FunctionType>(ctx, vmethod_name, inh, [&]() {
-                return TypeIsNotFunctionalError(vmethod_name);
-            });
-			const auto& impl_type      = getType<FunctionType>(ctx, impl_type_name, inh, [&]() {
-                return TypeIsNotFunctionalError(impl_type_name);
-            });
+			const auto& vmethod_name = virtual_methods[implementation.name];
+			const auto& impl_name    = implementation.type;
+			const auto& vmethod_type = getType<FunctionType>(ctx, vmethod_name, inh, [&]() {
+				return TypeIsNotFunctionalError(vmethod_name);
+			});
+			if (!functions.contains(impl_name))
+				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
-			validateMethodFirstArgument(inh, impl_type, ctx);
-			validateMethodSignatureMatch(inh, vmethod_type, impl_type);
+			const auto& impl_signature = functions.at(impl_name);
+			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, ctx);
+			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_name);
 		}
 	}
 
@@ -272,17 +299,13 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
 	void buildVTableRecursive(
-		const InheritableType&                    inh,
-		const ErrorContextType&                   error_context_inh,
-		base::HashMap<base::StrID, vm::TypeCRef>& vtable,
-		vm::TypeMetadata&                         metadata,
-		const TypeContext&                        ctx
+		const InheritableType&                   inh,
+		const ErrorContextType&                  error_context_inh,
+		base::HashMap<base::StrID, base::StrID>& vtable,
+		vm::TypeMetadata&                        metadata,
+		const TypeContext&                       ctx
 	) {
-		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef {
-			return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
-		};
-
-		for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
+		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
 				ctx,
@@ -359,11 +382,7 @@ namespace {
 		for (auto& method: inh.virtual_methods)
 			virtual_methods.put(method.name, get_type_cref(method.type));
 
-		base::HashMap<base::StrID, vm::TypeCRef> implementations;
-		for (auto& method: inh.implementations)
-			implementations.put(method.name, get_type_cref(method.type));
-
-		base::HashMap<base::StrID, vm::TypeCRef> vtable;
+		base::HashMap<base::StrID, base::StrID> vtable;
 		buildVTableRecursive(inh, inh, vtable, metadata, ctx);
 
 		vm::InheritanceMetadata::Kind kind;
@@ -384,7 +403,11 @@ namespace {
 	/**
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
-	void validateType(const TypeOfData& type, const TypeContext& ctx) {
+	void validateType(
+		const TypeOfData&                                type,
+		const TypeContext&                               ctx,
+		const base::HashMap<base::StrID, FuncSignature>& functions
+	) {
 		variant_match(type) {
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
@@ -396,7 +419,7 @@ namespace {
 
 				validateImplementsDuplicates(interface);
 				validateVMethodSignatures(interface, ctx);
-				validateImplementations(interface, virtual_methods, ctx);
+				validateImplementations(interface, virtual_methods, ctx, functions);
 			}
 			variant_case(ClassType, clazz) {
 				// All virtual methods that can be implemented by this class(including superclass
@@ -407,7 +430,7 @@ namespace {
 				validateFieldDuplicates(clazz, ctx);
 				validateImplementsDuplicates(clazz);
 				validateVMethodSignatures(clazz, ctx);
-				validateImplementations(clazz, virtual_methods, ctx);
+				validateImplementations(clazz, virtual_methods, ctx, functions);
 				if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods, ctx);
 			}
 		}
@@ -418,7 +441,9 @@ namespace {
 	 * Checks each type individually and inheritance
 	 * hierarchy soundness.
 	 */
-	void validateTypes(const TypeContext& ctx) {
+	void validateTypes(
+		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
+	) {
 		// Check for cycles in hierarchy.
 		enum Status { Waiting, Visited, Done };
 
@@ -463,12 +488,14 @@ namespace {
 		for (const auto& type: types) helper(type);
 
 		// @note: Following validation assumes cycles in class hierarchy where detected.
-		for (const auto& type: types) validateType(type, ctx);
+		for (const auto& type: types) validateType(type, ctx, functions);
 	}
 }
 
-Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
-	validateTypes(*this);
+Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
+	const base::HashMap<base::StrID, FuncSignature>& available_functions
+) const {
+	validateTypes(*this, available_functions);
 	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
 
 	// Declare all types first
@@ -478,6 +505,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 	for (const auto& type: types) {
 		variant_match(type) {
 			variant_case(PrimitiveType, data) {
+				if (data.size == 0) throw InvalidPrimitiveSizeError(data);
 				metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(PointerType, data) {
@@ -539,6 +567,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 				FieldVector             fields = buildFieldVector(interface, *metadata, *this);
 				vm::InheritanceMetadata inh_metadata
 					= buildInheritanceMetadata(interface, *metadata, *this);
+
 				tp->defineData(fields, std::move(inh_metadata));
 			}
 			variant_default { CORE_PANIC("bad type"); }
@@ -548,7 +577,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata() const {
 	return metadata;
 }
 
-const vm::StableObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
+const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
 
 void TypeContext::insertType(const TypeOfData& type) {
 	const auto name = typeName(type);

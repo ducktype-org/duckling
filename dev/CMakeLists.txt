@@ -1,19 +1,7 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 project(Duckling)
 
-cmake_policy(SET CMP0079 NEW)
-cmake_policy(SET CMP0054 NEW)
-
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-
-# This is ifed-out, because it is
-# available only from CMAKE 3.24.
-# @FUTURE: un-if it.
-# Note: It is not that important for us (as of 11.2023).
-# It is related to dependencies.
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-	cmake_policy(SET CMP0135 NEW)
-endif()
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
@@ -51,7 +39,7 @@ add_custom_test_pack(common)
 add_custom_test_pack(compiler)
 
 
-insertLLVM()
+insertDependencies()
 
 add_subdirectory(src/base)
 add_subdirectory(src/common)

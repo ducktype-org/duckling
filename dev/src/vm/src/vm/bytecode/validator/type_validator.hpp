@@ -1,5 +1,7 @@
 #pragma once
 
+
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -16,14 +18,17 @@ namespace vm::code {
 		 */
 		void insertType(const TypeOfData& type);
 
-		const StableObjIdNameMap<TypeOfData>& getCurrentTypes() const;
+		const ObjIdNameMap<TypeOfData>& getCurrentTypes() const;
 
 		/**
 		 * @brief Creates TypeMetadata by building types.
+		 * @param functions Functions available in the program, callable with `call_func`
 		 */
-		Box<TypeMetadata> validateAndProduceTypeMetadata() const;
+		Box<TypeMetadata> validateAndProduceTypeMetadata(
+			const base::HashMap<base::StrID, FuncSignature>& functions
+		) const;
 
 	private:
-		StableObjIdNameMap<TypeOfData> types;
+		ObjIdNameMap<TypeOfData> types;
 	};
 }

@@ -11,8 +11,10 @@ fun foo() -> i32 = {
 		var x: i32;
 		var y: i32 | f32 = c;
 		b;
+	} else {
+		var z: i32;
 	}
-	while (0){
+	while (0) {
 		var a: i32 = 1;
 		var x: i32;
 		var y: i32 | f32 = c;

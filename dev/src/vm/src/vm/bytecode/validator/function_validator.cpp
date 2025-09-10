@@ -14,6 +14,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -73,7 +74,11 @@ namespace {
 		using RequiredAfter = std::tuple<
 			Op_fixedSizeTableLea_lptr_lptr,
 			Op_fixedSizeTableLoad_lany_lptr,
-			Op_fixedSizeTableStore_lptr_lany>;
+			Op_fixedSizeTableStore_lptr_lany,
+			Op_dynTableLea_lptr_lptr,
+			Op_dynTableLoad_lany_lptr,
+			Op_dynTableStore_lptr_lany,
+			Op_dynTableReAlloc_lptr_type>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -114,9 +119,7 @@ namespace {
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
-		const PointerType&                    pointer,
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		Args&&... error_args
+		const PointerType& pointer, const ObjIdNameMap<TypeOfData>& tod_map, Args&&... error_args
 	) {
 		const auto& pointed_type = tod_map.at(pointer.inner);
 		if (!std::holds_alternative<ExpectedT>(*pointed_type))
@@ -158,7 +161,7 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<StableObjIdNameMap<TypeOfData>>         tod_map;
+	CRef<ObjIdNameMap<TypeOfData>>               tod_map;
 	[[maybe_unused]] CRef<TypeMetadata>          type_metadata;
 	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
 
@@ -169,15 +172,15 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const FunctionType&                   function_type,
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                   type_metadata
+		const FuncSignature&            signature,
+		const ObjIdNameMap<TypeOfData>& tod_map,
+		const TypeMetadata&             type_metadata
 	):
 		  tod_map(&tod_map),
 		  type_metadata(&type_metadata) {
-		push(base::StrID("ret_val"), function_type.result);
-		for (auto [idx, param]: std::views::enumerate(function_type.parameters))
-			push(base::StrID(base::strConcat("arg", idx).c_str()), param);
+		push(base::StrID("ret_val"), signature.result_type.str);
+		for (auto [idx, param]: std::views::enumerate(signature.parameters))
+			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}
 
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
@@ -230,11 +233,11 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const StableObjIdNameMap<TypeOfData>& tod_map;
-	const TypeMetadata&                   type_metadata;
-	const StableObjIdNameMap<GlobalData>& globals;
-	const Function&                       function;
-	FunctionType                          function_type;
+	const ObjIdNameMap<TypeOfData>&                  tod_map;
+	const TypeMetadata&                              type_metadata;
+	const ObjIdNameMap<GlobalData>&                  globals;
+	const base::HashMap<base::StrID, FuncSignature>& signatures;
+	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
@@ -243,21 +246,24 @@ class FunctionValidator {
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
-		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
-		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
-		auto generic_arg   = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto func_type     = std::get<FunctionType>(*tod_map.at(fun_name));
-		bool check_ret_val = func_type.result != base::StrID("void");
+		auto                generic_arg = opargs::OpCodeArg{ instr.arg0 };
+		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
+            if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
+                return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
+            return &signatures.at(instr.arg0.function_name);
+		}();
 
-		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+		bool check_ret_val = signature->result_type.str != base::StrID("void");
+
+		if (signature->parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: func_type.parameters | std::views::reverse) {
-			if (code::typeName(*local_stack.back().type) != param)
+		for (auto param: signature->parameters | std::views::reverse) {
+			if (typeName(*local_stack.back().type) != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+		if (check_ret_val && typeName(*local_stack.back().type) != signature->result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -280,21 +286,21 @@ class FunctionValidator {
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
                 type.getInheritanceMetadata(), inh_meta
-            ) return inh_meta->virtual_methods.contains(instr.arg1.method_name);
+            ) return inh_meta->vtable.contains(instr.arg1.method_name);
             return false;
         });
 		auto        inh_meta = it->getInheritanceMetadata().value();
-		impl_name            = inh_meta->virtual_methods[instr.arg1.method_name]->getName();
+		impl_name            = inh_meta->vtable[instr.arg1.method_name];
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
-		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
-		bool check_ret_val = func_type.result != base::StrID("void");
+		auto signature     = signatures.at(impl_name);
+		bool check_ret_val = signature.result_type.str != base::StrID("void");
 
-		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+		if (signature.parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
-		for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
-			if (code::typeName(*local_stack.back().type) != param)
+		for (auto param: signature.parameters | std::views::drop(1) | std::views::reverse) {
+			if (code::typeName(*local_stack.back().type) != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
@@ -306,34 +312,34 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+		if (check_ret_val && code::typeName(*local_stack.back().type) != signature.result_type.str)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
 	void validateTailcall(
 		const LocalStack&           local_stack,
 		const Op_ret_tailcall_func& instr,
-		const FunctionType&         current_function_type
+		const FuncSignature&        current_signature
 	) const {
 		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto func_type   = std::get<FunctionType>(*tod_map.at(fun_name));
+		auto signature   = signatures.at(fun_name);
 
-		if (!(func_type.result == current_function_type.result
-		      && func_type.parameters == current_function_type.parameters))
+		if (!(signature.result_type.str == current_signature.result_type.str
+		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
-		if (func_type.parameters.size() + 1 != local_stack.size())
+		if (signature.parameters.size() + 1 != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (code::typeName(*local_stack.front().type) != func_type.result)
+		if (code::typeName(*local_stack.front().type) != signature.result_type.str)
 			throw InvalidTailcallArgumentsError(generic_arg);
 		for (auto [param, stack_elem]: std::views::zip(
-				 func_type.parameters, local_stack.getStackState() | std::views::drop(1)
+				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
 			 ))
-			if (code::typeName(*stack_elem.type) != param)
+			if (code::typeName(*stack_elem.type) != param.str)
 				throw InvalidTailcallArgumentsError(generic_arg);
 	}
 
@@ -429,18 +435,13 @@ class FunctionValidator {
 				variant_case(opargs::FunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					auto maybe_func_type
-						= tod_map.atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-					if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-						throw UnknownFunctionError(generic_arg);
+					if (!signatures.contains(fun_name)) throw UnknownFunctionError(generic_arg);
 				}
 				variant_case(opargs::BuiltinFunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					auto maybe_func_type
-						= tod_map.atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-					if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-						throw UnknownFunctionError(generic_arg);
+					if (!builtins::isBuiltinFunction(fun_name))
+						throw InvalidBuiltinFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;
@@ -541,20 +542,38 @@ class FunctionValidator {
 			}
 
 			variant_case_novalue(Comment) {}
-			variant_case_novalue(Op_mov_l8_imm) {}
-			variant_case_novalue(Op_mov_l8_l8) {}
-			variant_case_novalue(Op_cmov_l8_l8) {}
+			variant_case(Op_mov_l8_imm, instr) {
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
+			variant_case(Op_mov_l8_l8, instr) {
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
+			variant_case(Op_cmov_l8_l8, instr) {
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
+			variant_case(Op_cmov_l8_imm, instr) {
+				if (instr.arg0.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
 			variant_case_novalue(Op_mov_l16_imm) {}
 			variant_case_novalue(Op_mov_l16_l16) {}
 			variant_case_novalue(Op_cmov_l16_l16) {}
+			variant_case_novalue(Op_cmov_l16_imm) {}
 			variant_case_novalue(Op_mov_l32_imm) {}
 			variant_case_novalue(Op_mov_l32_l32) {}
 			variant_case_novalue(Op_cmov_l32_l32) {}
+			variant_case_novalue(Op_cmov_l32_imm) {}
 			variant_case_novalue(Op_mov_l64_imm) {}
 			variant_case_novalue(Op_mov_l64_l64) {}
 			variant_case_novalue(Op_cmov_l64_l64) {}
-			variant_case_novalue(Op_mov_l64_r0) {}
-			variant_case_novalue(Op_mov_r0_l64) {}
+			variant_case_novalue(Op_cmov_l64_imm) {}
 			variant_case_novalue(Op_mov_g64_g64) {}
 			variant_case_novalue(Op_mov_g64_l64) {}
 			variant_case_novalue(Op_mov_g64_imm) {}
@@ -598,17 +617,59 @@ class FunctionValidator {
 			variant_case_novalue(Op_neg_l32) {}
 			variant_case_novalue(Op_cmpEq_l64_l64) {}
 			variant_case_novalue(Op_cmpEq_l64_imm) {}
-			variant_case_novalue(Op_cmpG_l64_l64) {}
-			variant_case_novalue(Op_cmpG_l64_imm) {}
 			variant_case_novalue(Op_cmpEq_l32_l32) {}
 			variant_case_novalue(Op_cmpEq_l32_imm) {}
-			variant_case_novalue(Op_cmpG_l32_l32) {}
-			variant_case_novalue(Op_cmpG_l32_imm) {}
 			variant_case_novalue(Op_cmpEq_l8_l8) {}
 			variant_case_novalue(Op_cmpEq_l8_imm) {}
+			variant_case_novalue(Op_cmpG_l64_l64) {}
+			variant_case_novalue(Op_cmpG_l64_imm) {}
+			variant_case_novalue(Op_cmpG_l32_l32) {}
+			variant_case_novalue(Op_cmpG_l32_imm) {}
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
+			variant_case_novalue(Op_ucmpG_l64_l64) {}
+			variant_case_novalue(Op_ucmpG_l64_imm) {}
+			variant_case_novalue(Op_ucmpG_l32_l32) {}
+			variant_case_novalue(Op_ucmpG_l32_imm) {}
+			variant_case_novalue(Op_ucmpG_l8_l8) {}
+			variant_case_novalue(Op_ucmpG_l8_imm) {}
+			variant_case_novalue(Op_cmpL_l64_l64) {}
+			variant_case_novalue(Op_cmpL_l64_imm) {}
+			variant_case_novalue(Op_cmpL_l32_l32) {}
+			variant_case_novalue(Op_cmpL_l32_imm) {}
+			variant_case_novalue(Op_cmpL_l8_l8) {}
+			variant_case_novalue(Op_cmpL_l8_imm) {}
+			variant_case_novalue(Op_ucmpL_l64_l64) {}
+			variant_case_novalue(Op_ucmpL_l64_imm) {}
+			variant_case_novalue(Op_ucmpL_l32_l32) {}
+			variant_case_novalue(Op_ucmpL_l32_imm) {}
+			variant_case_novalue(Op_ucmpL_l8_l8) {}
+			variant_case_novalue(Op_ucmpL_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
+
+			variant_case_novalue(Op_fadd_l64_l64) {}
+			variant_case_novalue(Op_fadd_l64_imm) {}
+			variant_case_novalue(Op_fadd_l32_l32) {}
+			variant_case_novalue(Op_fadd_l32_imm) {}
+
+			variant_case_novalue(Op_fsub_l64_l64) {}
+			variant_case_novalue(Op_fsub_l64_imm) {}
+			variant_case_novalue(Op_fsub_l32_l32) {}
+			variant_case_novalue(Op_fsub_l32_imm) {}
+
+			variant_case_novalue(Op_fmul_l64_l64) {}
+			variant_case_novalue(Op_fmul_l64_imm) {}
+			variant_case_novalue(Op_fmul_l32_l32) {}
+			variant_case_novalue(Op_fmul_l32_imm) {}
+
+			variant_case_novalue(Op_fdiv_l64_l64) {}
+			variant_case_novalue(Op_fdiv_l64_imm) {}
+			variant_case_novalue(Op_fdiv_l32_l32) {}
+			variant_case_novalue(Op_fdiv_l32_imm) {}
+
+			variant_case_novalue(Op_fneg_l64) {}
+			variant_case_novalue(Op_fneg_l32) {}
+
 			variant_case_novalue(Op_umul_l64_l64) {}
 			variant_case_novalue(Op_umul_l64_imm) {}
 			variant_case_novalue(Op_umul_l32_l32) {}
@@ -621,12 +682,13 @@ class FunctionValidator {
 			variant_case_novalue(Op_udiv_l64_imm) {}
 			variant_case_novalue(Op_udiv_l32_l32) {}
 			variant_case_novalue(Op_udiv_l32_imm) {}
-			variant_case_novalue(Op_ucmpG_l64_l64) {}
-			variant_case_novalue(Op_ucmpG_l64_imm) {}
-			variant_case_novalue(Op_ucmpG_l32_l32) {}
-			variant_case_novalue(Op_ucmpG_l32_imm) {}
-			variant_case_novalue(Op_ucmpG_l8_l8) {}
-			variant_case_novalue(Op_ucmpG_l8_imm) {}
+			variant_case_novalue(Op_log_and_l8_l8) {}
+			variant_case_novalue(Op_log_and_l8_imm) {}
+			variant_case_novalue(Op_log_or_l8_l8) {}
+			variant_case_novalue(Op_log_or_l8_imm) {}
+			variant_case_novalue(Op_log_xor_l8_l8) {}
+			variant_case_novalue(Op_log_xor_l8_imm) {}
+			variant_case_novalue(Op_log_not_l8) {}
 
 
 			variant_case(Op_variantSetInner_lvnt_type, instr) {
@@ -718,7 +780,12 @@ class FunctionValidator {
 			variant_case_novalue(Op_output_l64) {}
 			variant_case_novalue(Op_input_l32) {}
 			variant_case_novalue(Op_output_l32) {}
-			variant_case_novalue(Op_setVTable_lptr_type) {}
+			variant_case(Op_setVTable_lptr_type, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				if (pointer_type.inner != instr.arg1.type_name)
+					throw VTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_downcast_lptr_lptr) {}
 			variant_case_novalue(Op_free_lptr) {}
 			variant_case(Op_store_lptr_lany, instr) {
@@ -785,6 +852,18 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
+			variant_case(Op_dynTableLea_lptr_lptr, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+
+				if (destination.inner != table_type.inner)
+					throw DynamicTableTypeMismatchError(instr);
+			}
 			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
@@ -796,6 +875,15 @@ class FunctionValidator {
 				if (typeName(*destination) != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
+			variant_case(Op_dynTableLoad_lany_lptr, instr) {
+				const auto& destination = current_stack.at(instr.arg0.var_name);
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				if (typeName(*destination) != table_type.inner)
+					throw DynamicTableTypeMismatchError(instr);
+			}
 			variant_case(Op_fixedSizeTableStore_lptr_lany, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
@@ -806,6 +894,32 @@ class FunctionValidator {
 
 				if (table_type.inner != typeName(*source))
 					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			variant_case(Op_dynTableStore_lptr_lany, instr) {
+				const auto& source = current_stack.at(instr.arg1.var_name);
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+
+				if (table_type.inner != typeName(*source))
+					throw DynamicTableTypeMismatchError(instr);
+			}
+			variant_case(Op_dynTableReAlloc_lptr_type, instr) {
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+
+				base::StrID wanted_type = instr.arg1.type_name;
+				if (wanted_type != table_type.name) throw InvalidArgumentTypeError(instr.arg1);
+			}
+			variant_case(Op_strOutput_lptr, instr) {
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
+				if (table_type.inner != "byte") throw DynamicTableTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}
@@ -919,7 +1033,7 @@ class FunctionValidator {
 	}
 
 	void traverseControlFlowGraph() {
-		LocalStack local_stack(function_type, tod_map, type_metadata);
+		LocalStack local_stack(function.signature, tod_map, type_metadata);
 		visited_instructions.resize(function.body.size());
 		std::vector<std::tuple<usize, LocalStack>> dfs_stack{
 			{ function.body.size(), local_stack }  // sentinel
@@ -944,7 +1058,6 @@ class FunctionValidator {
 			);
 
 			visited_instructions[index] = true;
-
 			variant_match(instructions[index]) {
 				variant_case(Op_init_lany_type, instr) {
 					local_stack.push(instr.arg0, instr.arg1);
@@ -996,7 +1109,7 @@ class FunctionValidator {
 					index++;
 				}
 				variant_case(Op_ret_tailcall_func, instr) {
-					validateTailcall(local_stack, instr, function_type);
+					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
@@ -1013,26 +1126,31 @@ class FunctionValidator {
 		}
 	}
 
+	void validateSignature() {
+		for (const auto& param_type: function.signature.parameters) {
+			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
+			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
+		}
+		if (!tod_map.contains(function.signature.result_type.str))
+			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
+	}
+
 public:
 	FunctionValidator(
-		const StableObjIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&                   type_metadata,
-		const StableObjIdNameMap<GlobalData>& globals,
-		const Function&                       function
+		const ObjIdNameMap<TypeOfData>&                  tod_map,
+		const TypeMetadata&                              type_metadata,
+		const ObjIdNameMap<GlobalData>&                  globals,
+		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const Function&                                  function
 	):
 		  tod_map(tod_map),
 		  type_metadata(type_metadata),
 		  globals(globals),
-		  function(function),
-		  function_type([&] {
-			  auto maybe_func_type
-				  = tod_map.atMaybe(function.name).expect<MissingFunctionalTypeError>(function.name);
-			  if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-				  throw TypeIsNotFunctionalError(function.name);
-			  return std::get<FunctionType>(*maybe_func_type);
-		  }()) {}
+		  signatures(signatures),
+		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
+		validateSignature();
 		preprocessLabels();
 		traverseControlFlowGraph();
 		validateFunctionEnd();
@@ -1045,17 +1163,21 @@ public:
 };
 
 vm::code::Function vm::code::validateAndExtractReachableCode(
-	const StableObjIdNameMap<TypeOfData>& tod_map,
-	const TypeMetadata&                   type_metadata,
-	const StableObjIdNameMap<GlobalData>& globals_map,
-	const Function&                       function
+	const ObjIdNameMap<TypeOfData>&                  tod_map,
+	const TypeMetadata&                              type_metadata,
+	const ObjIdNameMap<GlobalData>&                  globals_map,
+	const base::HashMap<base::StrID, FuncSignature>& signatures,
+	const Function&                                  function
 ) {
-	FunctionValidator validator(tod_map, type_metadata, globals_map, function);
+	FuncSignature signature = signatures.at(function.name);
+
+	FunctionValidator validator(tod_map, type_metadata, globals_map, signatures, function);
 
 	Function new_function;
 	new_function.name         = function.name;
 	new_function.body         = validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
+	new_function.signature    = signature;
 
 	return new_function;
 }
