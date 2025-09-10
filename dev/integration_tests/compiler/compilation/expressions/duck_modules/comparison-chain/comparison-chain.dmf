@@ -1,17 +1,31 @@
 fun main() -> i64 = {
     let c = 3;
 
+    #   3 >= 3 < 4 >= 3 == 3 <= 3 >= 3
     if (3 >= c < 4 >= c == c <= c >= c) {}
     else {
-        builtin_output_i64(1);
+        return 1;
     }
 
-    let d: bool = 5 < c;
+    #   -2 <= -3 == -3 != 3
+    if (-2 <= -c == -c != c) { # first comparison is important
+        return 2;
+        #      -4 <= -3 != -3 != 3
+    } else if (-4 <= -c != -c != c) { # middle comparison is important
+        return 3;
+        #      -4 <= -3 == -3 != 3
+    } else if (-4 <= -c == -c == c) { # last comparison is important
+        return 4;
+    }
+
+    #             5 < 3 <= 4 > 9
+    let d: bool = 5 < c <= 4 > 9; # first
     if (d) {
-        builtin_output_i64(2);
+        return 5;
     }
-
-    let e: bool = (c != c) + (2 < c <= 3 <= c < 7);
+    
+    #                 (    true    )                     2 < 3 <= 3 <= 3 < 7
+    let e: bool = if c == c != c == c  then false   else 2 < c <= 3 <= c < 7;
     if (e) {
         let f = 5;
         let g: bool = (f == f);
@@ -19,7 +33,7 @@ fun main() -> i64 = {
     else {
         let f = 3;
         let g: bool = (f != f);
-        builtin_output_i64(3);
+        return 6;
     }
     return 0;
 }
