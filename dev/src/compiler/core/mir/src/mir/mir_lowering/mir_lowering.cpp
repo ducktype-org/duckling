@@ -1153,13 +1153,18 @@ namespace compiler::mir {
 			using namespace std::views;
 
 			// Place for a comparison instruction
-			auto prev_cmp_hole = continuation->addHole();
+			auto last_comparison_block = function.newBlock();
+			last_comparison_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+
+			auto prev_cmp_hole = last_comparison_block->addHole();
 
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			auto last_lowered
-				= lowerExpr(*chain_expr.expressions.back(), continuation, function, expr_scope);
+			auto last_lowered = lowerExpr(
+				*chain_expr.expressions.back(), last_comparison_block, function, expr_scope
+			);
 
 			auto prev_value = last_lowered.getResult(function);
 			auto prev_block = last_lowered.begin;
@@ -1188,6 +1193,7 @@ namespace compiler::mir {
 					comp, { boolean_output }, { expr_result, prev_value }, flags, expr_scope });
 				flags.clear();
 
+				prev_block    = lowered_block.begin;
 				prev_value    = expr_result;
 				prev_cmp_hole = cmp_hole;
 			}
