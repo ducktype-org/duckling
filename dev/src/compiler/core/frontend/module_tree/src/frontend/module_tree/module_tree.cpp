@@ -567,11 +567,21 @@ namespace compiler::frontend {
 	 ****************/
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::cout << "IN DA MF QUERY\n";
 			Ref<SourceFile> file
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
 					key
 				);
+			std::cout << "GOT DA FILE\n";
 			auto pst = file->getPST();
+			pst->dprint(std::cout);
+			// std::cout << "Parsed file \n";
+			// if (pst->getRootElement().illegalAccess().has_value()) {
+			// 	pst->getRootElement().illegalAccess().value()->dprint(std::cout);
+			// } else {
+			// 	std::cout << "No root element\n";
+			// }
+			std::cout << "\n";
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 			// @todo modify it, when making proper helios errors

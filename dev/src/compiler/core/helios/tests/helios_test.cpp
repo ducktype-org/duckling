@@ -749,7 +749,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
 			auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
-
+			std::cout << "LITERAL EXACT SAME FUCKING PATH:\n" << path("test_modules/expr_scopes") << '\n';
 			auto test_expr = [&](pst::AccessLocked<pst::ExprHolder> expr) {
 				auto unlocked = expr.unlock(ctx);
 				ASSERT_TRUE(unlocked->isTopLevel());

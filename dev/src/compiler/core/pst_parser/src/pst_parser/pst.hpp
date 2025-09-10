@@ -6,6 +6,7 @@
 #include "pst_state_forward.hpp"
 
 #include <token_source/source.hpp>
+#include <iostream>
 
 namespace pst::internal {
 	void deleteState(pst::LangParserState* ptr);
@@ -110,8 +111,13 @@ namespace pst {
 		 * @brief Construct a new Pst from file path
 		 */
 		PST(const fs::File& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
-			if (!file->tokenize()) return;
-			parse();
+			if (!file->tokenize()) {
+				std::cout << "failed to tokenize\n";
+				return;
+			} else {
+				std::cout << "tokenized\n";
+				parse();
+			}
 		}
 
 		static PST fromContents(std::string_view contents) requires ParseAble<> {

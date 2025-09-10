@@ -31,7 +31,6 @@ POP_DIAGNOSTIC;
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
-#include <filesystem/fs_tree.hpp>
 #include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
@@ -58,17 +57,17 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 	};
 }
 
-// Debug
-std::string getContentsOfDirs(const fs::FsTree& tree) {
-	std::string contents;
-	for (const auto& [name, file]: tree.getFiles()) {
-		contents += (name + ":\n");
-		contents += ((std::string) file.getContent().view().stringView() + "\n\n\n");
-	}
+// // Debug
+// std::string getContentsOfDirs(const fs::FsTree& tree) {
+// 	std::string contents;
+// 	for (const auto& [name, file]: tree.getFiles()) {
+// 		contents += (name + ":\n");
+// 		contents += ((std::string) file.getContent().view().stringView() + "\n\n\n");
+// 	}
 
-	for (const auto& [name, dir]: tree.getDirs()) contents += getContentsOfDirs(*dir);
-	return contents;
-}
+// 	for (const auto& [name, dir]: tree.getDirs()) contents += getContentsOfDirs(*dir);
+// 	return contents;
+// }
 
 /**
  * @brief Converts the result of an operation to an HTTP response.
@@ -197,29 +196,29 @@ void server(i32 port) {
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */
-	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
-	([&virtual_root](const std::string& base64_path) {
-		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
-			const auto file = virtual_root.getFilePath().join(path);
+	// CROW_ROUTE(app, "/get_semantic_tokens/<string>")
+	// ([&virtual_root](const std::string& base64_path) {
+	// 	try {
+	// 		const auto path = base64::decode_into<std::string>(base64_path);
+	// 		const auto file = virtual_root.getFilePath().join(path);
 
-			if (!file.exists()) return crow::response(404, "File not found");
+	// 		if (!file.exists()) return crow::response(404, "File not found");
 
-			auto pst = base::anyCast<CRef<pst::PST<>>>(
-				query::utils::withContextCompute([&](query::Context& ctx) {
-					return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
-				})
-			);
+	// 		auto pst = base::anyCast<CRef<pst::PST<>>>(
+	// 			query::utils::withContextCompute([&](query::Context& ctx) {
+	// 				return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
+	// 			})
+	// 		);
 
-			if (pst->getLogger()->bad()) {
-				std::stringstream ss;
-				pst->getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
+	// 		if (pst->getLogger()->bad()) {
+	// 			std::stringstream ss;
+	// 			pst->getLogger()->dumpLog(true, ss);
+	// 			return crow::response(200, ss.str());
+	// 		};
 
-			return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
-	});
+	// 		return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
+	// 	} catch (const std::exception& e) { return crow::response(400, e.what()); }
+	// });
 
 	/**
 	 * @brief Route to get definition location for a symbol defined by a given file and offset.
@@ -271,28 +270,37 @@ void server(i32 port) {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
 			std::cout << "Requested path: " << path << "\n";
-			std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
+			//std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
-			const auto file = virtual_root.getFilePath().join(path);
+			const auto& physfile = fs::File("/" + path);
+			//const auto& file = virtual_root.getFilePath().join(path);
+			//const auto& fileobj = fs::File(file);
+			//std::cout << "fileobj contynts: " << fileobj.getContent().view().stdString() << "\n";
+			//std::cout << "Computed file path: " << file.exists() << "\n";
+			//auto module_tree = module_builder->create(file);
+			auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(physfile);
+			
+			//auto module = module_tree->	getModuleID();
+			//auto main_file = module_tree->getMainSourceFile();
+			//std::cout << "Module tree:\n" << module_tree->prettyPrint() << "\n";
 
-			std::cout << "OK\n";
-			std::cout << "Computed file path: " << file.exists() << "\n";
-
-			if (!file.exists()) return crow::response(404, "File not found");
-
-			std::cout << "File exists\n";
-			auto pst = base::anyCast<CRef<pst::PST<>>>(
-				query::utils::withContextCompute([&](query::Context& ctx) {
-					std::cout << "Querying PST from file path\n";
-
-					auto root = ctx.query<compiler::frontend::QueryModuleTree>(fs::File(virtual_root));
-					std::cout << "Got module tree\n";
-					return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
+			
+			auto pstr = base::anyCast<CRef<pst::PST<>>>(
+				query::utils::withContextCompute([&](query::Context& ctx) {					
+					auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
+					std::cout << "Main File: " << main_file.queryUnstablePerfectHash() << "\n";
+					auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
+					//std::cout << "Main File: " << main_file->getFileID().queryUnstablePerfectHash() << "     " <<  main_file->getFile().getContent().view().stdString() << "\n";
+					return pst;
 				})
 			);
+			std::cout << "WE GOT PST\n";
 
 			return crow::response(200, "OK");
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		} catch (const std::exception& e) { 
+			std::cout << e.what() << "\n";
+			return crow::response(400, e.what()); 
+		}
 	});
 
 	app.port(base::safeIntConv<u16>(port)).run();
