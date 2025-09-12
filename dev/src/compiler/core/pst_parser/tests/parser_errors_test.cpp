@@ -335,7 +335,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FlowPattern, false> flow_as_binding_keyword{ "_ as if" };
 	Example<pst::FlowPattern, false> flow_type_constraint_no_type{ "x :" };
 
-	Example<pst::expr::MatchExpr, true> match_big{
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> match_big{
 		R"(match (x) {
         case 1                  = print("one");
         case "kajak"            = 1;
@@ -353,30 +353,46 @@ class PSTErrorTests: public tester::TestSuite {
         case _                                      = print("did not match");
     };)"
 	};
-	Example<pst::expr::MatchExpr, true>  match_no_cases_in_block{ R"(match (value) {};)" };
-	Example<pst::expr::MatchExpr, false> match_no_value_expr{ R"(match { case _ = 1; };)" };
-	Example<pst::expr::MatchExpr, false> match_no_parens_for_value{ R"(match x { case _ = 1; };)" };
-	Example<pst::expr::MatchExpr, false> match_empty_parens_for_value{
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> match_no_cases_in_block{
+		R"(match (value) {};)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_no_value_expr{
+		R"(match { case _ = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_no_parens_for_value{
+		R"(match x { case _ = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_empty_parens_for_value{
 		R"(match () { case _ = 1; };)"
 	};
-	Example<pst::expr::MatchExpr, false> match_no_curly_braces{ R"(match(x);)" };
-	Example<pst::expr::MatchExpr, false> match_unclosed_curly_braces{ R"(match(x) { case _ = 1;)" };
-	Example<pst::expr::MatchExpr, false> match_case_no_pattern{ R"(match(x) { case = 1; };)" };
-	Example<pst::expr::MatchExpr, false> match_case_no_body{ R"(match(x) { case 1; };)" };
-	Example<pst::expr::MatchExpr, false> match_case_no_equals{ R"(match(x) { case 1 "one"; };)" };
-	Example<pst::expr::MatchExpr, false> match_case_if_guard_no_condition{
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_no_curly_braces{
+		R"(match(x);)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_unclosed_curly_braces{
+		R"(match(x) { case _ = 1;)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_no_pattern{
+		R"(match(x) { case = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_no_body{
+		R"(match(x) { case 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_no_equals{
+		R"(match(x) { case 1 "one"; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_if_guard_no_condition{
 		R"(match(x) { case _ if = 1; };)"
 	};
-	Example<pst::expr::MatchExpr, false> match_case_if_guard_no_body{
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_if_guard_no_body{
 		R"(match(x) { case _ if x > 0; };)"
 	};
-	Example<pst::expr::MatchExpr, false> match_if_after_default_branch{
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_if_after_default_branch{
 		R"(match(x) { case _ = 1; if x > 10 = 2; };)"
 	};
-	Example<pst::expr::MatchExpr, false> match_default_branch_after_if{
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_default_branch_after_if{
 		R"(match(x) { case _ if x > 10 = 2; = 2; };)"
 	};
-	Example<pst::expr::MatchExpr, false> match_junk_between_cases{
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_junk_between_cases{
 		R"(match(x) { case 1 = "one"; let y = 5; case 2 = "two"; };)"
 	};
 

@@ -1,5 +1,6 @@
 #include "../../hierarchy/expressions/match_expr.hpp"  // IWYU pragma: keep
 
+#include "../../hierarchy/expressions/ternary.hpp"     // IWYU pragma: keep
 #include "../../hierarchy/not_statements/match_case.hpp"
 #include "preamble.hpp"
 
@@ -52,7 +53,11 @@ namespace pst::expr {
 		MatchCurlyBracketError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	MBox<MatchExpr> MatchExpr::parse(LangParserState& state) {
+	MBox<ExprElement> MatchExpr::parse(LangParserState& state, i64 length) {
+		if (!checkLength(state, length)) return nullptr;
+
+		if (!state[0].is(Keyword::Match)) return Lower::parse(state, length);
+
 		auto position = state.getPosition();
 		auto out      = makeBox<MatchExpr>(position);
 

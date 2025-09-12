@@ -8,17 +8,22 @@
 namespace pst::expr {
 	/**
 	 * @brief Represents the full match expression.
+	 *
+	 * For now it needs to be at the surface of the expression (it needs to either be the whole
+	 * expression, be on the right of assignment or be surrounded by parenthesis)
 	 */
 	class MatchExpr final: public ExprElement {
+		using Lower = Ternary;
+
 		NAMED_CHILD(value_to_match, CommaExprHolder);
 		std::vector<AccessInternalAnonymous<MatchCase>> cases;
 
 	public:
-		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {
+		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 810) {
 			this->element_kind = ElementKind::Match;
 		}
 
-		static MBox<MatchExpr> parse(LangParserState& state);
+		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 		~MatchExpr() override = default;
 		void dprint(std::ostream& out) const final;
