@@ -99,7 +99,7 @@ connection.onInitialized(() => {
 		compilerDaemonClient.putWorkspace(connection).then(() => {
 			console.log("Workspace files sent to daemon.");
 			//compilerDaemonClient.makeModuleTrees(connection);
-			compilerDaemonClient.callDebugPrint(connection, "home/szot/repos/duckling/dev/src/compiler/core/helios/tests/test_modules/expr_scopes");
+			compilerDaemonClient.callDebugPrint(connection, "home/krzysiek/rift/duckling/dev/src/compiler/core/helios/tests/test_modules/expr_scopes");
 		});
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
 			console.log("Workspace folder change event received.");

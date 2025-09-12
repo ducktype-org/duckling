@@ -16,6 +16,7 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
   const workspaceFolders = await connection.workspace.getWorkspaceFolders();
   const workspaceUris = workspaceFolders?.map(folder => folder.uri) ?? [];
   const excludes = new Set(['node_modules', '.git', 'dist', 'build', '.vscode', '.idea', 'out']);
+  const extensions = new Set(["rift", "dl", "duckling", "dmf"]);
   const results: FileEntry[] = [];
 
   if (workspaceFolders === null || workspaceFolders.length === 0) {
@@ -28,7 +29,7 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
   async function* walk(dir: string): AsyncGenerator<string> {
     for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory() && !excludes.has(entry.name)) {
+      if (entry.isDirectory() && !excludes.has(entry.name) && extensions.has(entry.name.split('.').pop() || '')) {
         yield* walk(fullPath);
       } else if (entry.isFile()) {
         yield fullPath;

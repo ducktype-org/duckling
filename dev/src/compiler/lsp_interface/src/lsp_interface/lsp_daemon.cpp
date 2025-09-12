@@ -37,6 +37,7 @@ POP_DIAGNOSTIC;
 
 #include <vm/cli.hpp>
 #include <vm/server.hpp>
+#include <init/init.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -196,29 +197,29 @@ void server(i32 port) {
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */
-	// CROW_ROUTE(app, "/get_semantic_tokens/<string>")
-	// ([&virtual_root](const std::string& base64_path) {
-	// 	try {
-	// 		const auto path = base64::decode_into<std::string>(base64_path);
-	// 		const auto file = virtual_root.getFilePath().join(path);
+	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
+	([&virtual_root](const std::string& base64_path) {
+		try {
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			const auto path = virtual_root.getFilePath().join(relative_path);
 
-	// 		if (!file.exists()) return crow::response(404, "File not found");
+			if (!path.exists()) return crow::response(404, "File not found");
 
-	// 		auto pst = base::anyCast<CRef<pst::PST<>>>(
-	// 			query::utils::withContextCompute([&](query::Context& ctx) {
-	// 				return compiler::frontend::queryPSTFromFilePath(ctx, fs::File(file));
-	// 			})
-	// 		);
+			auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(fs::File(path.parentPath()));
 
-	// 		if (pst->getLogger()->bad()) {
-	// 			std::stringstream ss;
-	// 			pst->getLogger()->dumpLog(true, ss);
-	// 			return crow::response(200, ss.str());
-	// 		};
+			const auto file = fs::File(path);
+			const auto src_file = compiler::frontend::SourceFile::create(file, module);
+			auto pst = src_file->getPST();
 
-	// 		return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
-	// 	} catch (const std::exception& e) { return crow::response(400, e.what()); }
-	// });
+			if (pst->getLogger()->bad()) {
+				std::stringstream ss;
+				pst->getLogger()->dumpLog(true, ss);
+				return crow::response(200, ss.str());
+			};
+
+			return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+	});
 
 	/**
 	 * @brief Route to get definition location for a symbol defined by a given file and offset.
@@ -267,12 +268,12 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/debug/<string>")
 	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
+			std::string path = "/home/krzysiek/rift/duckling/dev/src/compiler/core/helios/tests/test_modules/expr_scopes";
 
 			std::cout << "Requested path: " << path << "\n";
 			//std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
-			const auto& physfile = fs::File("/" + path);
+			const auto& physfile = fs::File(path);
 			//const auto& file = virtual_root.getFilePath().join(path);
 			//const auto& fileobj = fs::File(file);
 			//std::cout << "fileobj contynts: " << fileobj.getContent().view().stdString() << "\n";
@@ -288,7 +289,6 @@ void server(i32 port) {
 			auto pstr = base::anyCast<CRef<pst::PST<>>>(
 				query::utils::withContextCompute([&](query::Context& ctx) {					
 					auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
-					std::cout << "Main File: " << main_file.queryUnstablePerfectHash() << "\n";
 					auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
 					//std::cout << "Main File: " << main_file->getFileID().queryUnstablePerfectHash() << "     " <<  main_file->getFile().getContent().view().stdString() << "\n";
 					return pst;
@@ -347,8 +347,8 @@ clah::Clah getLspDaemonCLI() {
  * This function initializes the command-line argument parser, handles exceptions,
  * and starts the LSP server on the specified port.
  *
- * Example usage 1: ./lsp_daemon -p 8080
- * Example usage 2: ./lsp_daemon --port 8080
+ * Example usage 1: ./lsp_daemon start -p 8080
+ * Example usage 2: ./lsp_daemon start --port 8080
  *
  * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
@@ -357,6 +357,8 @@ clah::Clah getLspDaemonCLI() {
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
+
+	init::InitObject _;
 
 	try {
 		// Parse the command-line arguments
