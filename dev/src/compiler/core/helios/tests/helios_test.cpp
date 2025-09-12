@@ -61,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
@@ -935,27 +936,42 @@ private:
 		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
 		std::cerr << "\nFunction name: " << goo.original_name.strView() << '\n';
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ goo.original_symbol, 123, "metadata_v123" }
+			{ .symbol_key              = goo.original_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 123,
+		      .additional_metadata     = "metadata_v123" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
+		auto globA = find_global(hout_unit, base::StrID("A")).value();
+		std::cerr << "\nGlobal variable name: " << globA.original_name.strView() << '\n';
+		auto mangled_globA = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key              = globA.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 0,
+		      .additional_metadata     = std::nullopt }
+		);
+		std::cerr << "Mangled symbol: " << mangled_globA.strView() << '\n';
+		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_globA.str());
+
 		auto glob = find_global(hout_unit, base::StrID("B")).value();
 		std::cerr << "\nGlobal Variable name: " << glob.original_name.strView() << '\n';
-		std::cerr << "Expression: ";
-		std::get<compiler::helios::HOUTGlobalVariable>(glob.value)
-			.initial_value.get()
-			->ref()
-			->debugPrint(std::cerr);
-		std::cerr << '\n';
 		auto mangled_glob = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ glob.helios_symbol, 321, "metadata_v321" }
+			{ .symbol_key              = glob.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 321,
+		      .additional_metadata     = "metadata_v321" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_glob.strView() << '\n';
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.str());
 
 		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
 		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
 		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ g_const.helios_symbol, 321, "metadata_v321" }
+			{ .symbol_key              = g_const.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 321,
+		      .additional_metadata     = "metadata_v321" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
@@ -965,14 +981,20 @@ private:
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
 		std::cerr << "\nSub function name: " << sub_fun.original_name.strView() << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ sub_fun.original_symbol, 5, "metadata_v5" }
+			{ .symbol_key              = sub_fun.original_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
 
 		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
 		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ sub_cnst.helios_symbol, 5, "metadata_v5" }
+			{ .symbol_key              = sub_cnst.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
@@ -983,6 +1005,52 @@ private:
 
 		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+	}
+
+	void testManglerSpecialMembers() {
+		std::cerr << "--- testManglerSpecialMembers ---\n";
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_special_mem")));
+
+		// std::cerr << "testManglerSpecialMembers(): HOUT:\n";
+		// auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+		// std::cerr << hout_unit.debugPrint() << '\n';
+
+		auto test_class = getChain("N.TestClass", root_scope).back();
+		auto test_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(test_class)->valueOrThrow();
+		// auto test_class_abstract_type
+		// 	=
+		// query::entryPoint<compiler::helios::QueryTypeFromDefinition>(test_class)->valueOrThrow().getType();
+
+		std::cerr << "TestClass constructors:\n";
+		for (auto&& ctor: test_class_info.constructors) {
+			std::cerr << compiler::helios::name(ctor).strView() << '\n';
+			// auto mangled_ctor = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			// 	{ ctor, 0, "" }
+			// );
+			// std::cerr << "  " << mangled_ctor.strView() << '\n';
+		}
+
+
+		// auto [_, root_scope] = getModule(fs::File(path("test_modules/classes")));
+
+		// const auto first_class = getChain("FirstClassEver", root_scope).back();
+		// const auto first_class_info
+		// 	= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
+		// const auto first_class_abstract_type
+		// 	= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
+		//           ->valueOrThrow()
+		//           .getType();
+
+		// std::cerr << "FirstClassEver constructors:\n";
+		// for(auto&& ctor : first_class_info.constructors) {
+		// 	auto mangled_ctor = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+		// 		{ ctor, 0, "" }
+		// 	);
+		// 	std::cerr << "  " << mangled_ctor.strView() << '\n';
+		// }
+		// std::cerr << "FirstClassEver end\n";
 	}
 
 	void testGlobalVariableExpressions() {
