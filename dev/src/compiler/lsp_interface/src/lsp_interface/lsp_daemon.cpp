@@ -209,6 +209,7 @@ void server(i32 port) {
 
 			const auto file = fs::File(path);
 			const auto src_file = compiler::frontend::SourceFile::create(file, module);
+			//const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 			auto pst = src_file->getPST();
 
 			if (pst->getLogger()->bad()) {
@@ -217,6 +218,7 @@ void server(i32 port) {
 				return crow::response(200, ss.str());
 			};
 
+			//return crow::response(200, lsp::getSemanticTokens(file_vector));
 			return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});

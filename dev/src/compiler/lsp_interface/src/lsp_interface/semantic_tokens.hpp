@@ -10,6 +10,8 @@
 #include <base/ints.hpp>
 #include <base/ref.hpp>
 #include <base/stringifyable_enum.hpp>
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/file_id.hpp>
 
 #include <lexer/lexer.hpp>
 
@@ -66,4 +68,5 @@ namespace lsp {
 
 	void        getSemanticTokens(pst::AccessLocked<pst::LangElement>, std::vector<SemanticToken>&);
 	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement>);
+	std::string getSemanticTokens(std::vector<base::Ref<compiler::frontend::SourceFile>> files);
 }

@@ -9,6 +9,7 @@
 
 #include <base/stringifyable_enum.hpp>
 #include <base/variant.hpp>
+#include <iostream>
 
 #include <map>
 #include <string>
@@ -76,6 +77,10 @@ namespace lsp {
 					// recursive token generation
 					getSemanticTokens(child, token_list);
 				}
+				variant_case(pst::LangElement::NamedChild, child) {
+					// recursive token generation
+					getSemanticTokens(child.element, token_list);
+				}
 			}
 		}
 	}
@@ -87,6 +92,27 @@ namespace lsp {
 		std::vector<std::string> token_strings(tokens.size());
 		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
 
+		return jsonList(token_strings);
+	}
+
+	std::string getSemanticTokens(std::vector<base::Ref<compiler::frontend::SourceFile>> files) {
+		std::vector<SemanticToken> tokens;
+		for (auto& file: files) {
+			auto pst = file->getPST();
+			if (pst->getLogger()->bad()) {
+				std::stringstream ss;
+				pst->getLogger()->dumpLog(true, ss);
+				std::cerr << ss.str() << "\n";
+				continue;
+			};
+			auto element = pst->getRootElement();
+
+			getSemanticTokens(element, tokens);
+		}
+
+		std::vector<std::string> token_strings(tokens.size());
+		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
+		std::cerr << "Generated: " << jsonList(token_strings) << "\n";
 		return jsonList(token_strings);
 	}
 }
