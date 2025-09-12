@@ -4,9 +4,9 @@
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <helios/mangler/mangler.hpp>
 
 #include <system_command/system_command.hpp>
 
@@ -39,8 +39,9 @@ namespace compiler::driver {
 				ctx,
 				ctors,
 				helios::mangler::getSpecialMangledName<
-					helios::mangler::ManglingSymbolKind::ModuleConstructor
-				>(ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id })
+					helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+					ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id }
+				)
 			);
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 		}
@@ -51,9 +52,10 @@ namespace compiler::driver {
 			auto                             module_dtor = lir::fromLIRFunctions(
                 ctx,
                 reversed_dtors,
-				helios::mangler::getSpecialMangledName<
-					helios::mangler::ManglingSymbolKind::ModuleDestructor
-				>(ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id })
+                helios::mangler::getSpecialMangledName<
+												helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+                    ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id }
+                )
             );
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}

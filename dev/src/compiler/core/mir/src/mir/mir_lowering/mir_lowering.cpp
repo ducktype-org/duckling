@@ -9,11 +9,11 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <helios/mangler/mangler.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -1436,7 +1436,9 @@ namespace compiler::mir {
 			// 	)
 			//                     .c_str())
 			// );
-			function_builder.setName(compiler::helios::mangler::getSimpleMangledName(ctx, key.global_data.helios_symbol));
+			function_builder.setName(
+				compiler::helios::mangler::getSimpleMangledName(ctx, key.global_data.helios_symbol)
+			);
 
 			auto last_block = function_builder.newBlock();
 			last_block->setTerminator(

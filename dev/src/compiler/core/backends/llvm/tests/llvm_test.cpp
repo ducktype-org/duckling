@@ -1,5 +1,6 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
@@ -10,8 +11,6 @@
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include <helios/mangler/mangler.hpp>
 
 #include <utility>
 
@@ -79,8 +78,11 @@ private:
 					ctx,
 					ctors,
 					compiler::helios::mangler::getSpecialMangledName<
-						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor
-					>(ctx, compiler::helios::mangler::special_symbol_keys::LirModuleID{ frontend::moduleName(module) })
+						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+						ctx,
+						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+							frontend::moduleName(module) }
+					)
 				);
 				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 
@@ -90,8 +92,11 @@ private:
 					ctx,
 					{},
 					compiler::helios::mangler::getSpecialMangledName<
-						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor
-					>(ctx, compiler::helios::mangler::special_symbol_keys::LirModuleID{ frontend::moduleName(module) })
+						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+						ctx,
+						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+							frontend::moduleName(module) }
+					)
 				);
 				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 			}
@@ -166,9 +171,7 @@ private:
 		);
 	}
 
-	void globalVariablesTest() {
-		runTestForModule("modules/global-variables", 5, 5);
-	}
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
 };
 
 

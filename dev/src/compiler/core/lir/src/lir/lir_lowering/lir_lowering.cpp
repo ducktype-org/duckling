@@ -471,7 +471,10 @@ namespace compiler::lir {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
 						variant_case(mir::GlobalVariableCTOR, name) {
-							return helios::mangler::getSpecialMangledName<helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(ctx, name.global_var_id);
+							return helios::mangler::getSpecialMangledName<
+								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+								ctx, name.global_var_id
+							);
 						}
 					}
 					CORE_UNREACHABLE();

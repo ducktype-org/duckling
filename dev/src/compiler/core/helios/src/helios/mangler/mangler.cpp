@@ -4,6 +4,8 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/utils/go_to_definition.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -11,9 +13,6 @@
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-
-#include <helios/utils/go_to_definition.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -28,8 +27,13 @@
 namespace compiler::helios::mangler {
 
 	constexpr auto KeyOf_MangledSymbol::operator<=>(const KeyOf_MangledSymbol& other) const {
-		return std::tie(symbol_key, kind, mangling_scheme_version, additional_metadata) 
-		   <=> std::tie(other.symbol_key, other.kind, other.mangling_scheme_version, other.additional_metadata);
+		return std::tie(symbol_key, kind, mangling_scheme_version, additional_metadata)
+		   <=> std::tie(
+				   other.symbol_key,
+				   other.kind,
+				   other.mangling_scheme_version,
+				   other.additional_metadata
+		   );
 	}
 
 	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
@@ -172,7 +176,7 @@ namespace compiler::helios::mangler {
 				std::string ret = "N";
 				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
 
-				if(add_symbol_name) ret += unscopedName(symbol_id);
+				if (add_symbol_name) ret += unscopedName(symbol_id);
 
 				return ret + "E";
 			}
@@ -184,7 +188,9 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id, bool add_symbol_name = true) {
-			return base::strConcat(pathPrefix(symbol_id), symbolName(ctx, symbol_id, add_symbol_name));
+			return base::strConcat(
+				pathPrefix(symbol_id), symbolName(ctx, symbol_id, add_symbol_name)
+			);
 		}
 
 		/**
@@ -216,31 +222,36 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string specialMemberType([[maybe_unused]] query::Context& ctx, SymID symbol_id) {
-			auto kind = compiler::helios::kind(symbol_id);
+			auto        kind = compiler::helios::kind(symbol_id);
 			std::string ret;
-			
+
 			if (kind == SymbolKind::Constructor) {
 				ret = "C";
 
 				auto pst = symbolPst(symbol_id).unlock(ctx);
-				for (const pst::LangElement::Child& child_locked : pst->viewChildren()) {
+				for (const pst::LangElement::Child& child_locked: pst->viewChildren()) {
 					auto child = child_locked.unlock(ctx);
-					if(child->getElementKind() == pst::ElementKind::ParamList) {
-						pst::Access<pst::ParamList> list = child.dynamicCast<pst::ParamList>().value();
-						for(auto begin = list->begin(); begin != list->end(); ++begin) {
+					if (child->getElementKind() == pst::ElementKind::ParamList) {
+						pst::Access<pst::ParamList> list
+							= child.dynamicCast<pst::ParamList>().value();
+						for (auto begin = list->begin(); begin != list->end(); ++begin) {
 							pst::Access<pst::FunParam> param = (*begin).unlock(ctx);
 
 							auto expr = param->getType().unlock(ctx)->getExpr();
-							
-							compiler::helios::ExprConstructionResult hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
-							
-							auto type = hout_expr.value()->expression_type.getSymbolType().getType().toString(); // "META" ?
+
+							compiler::helios::ExprConstructionResult hout_expr
+								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
+
+							auto type = hout_expr.value()
+							                ->expression_type.getSymbolType()
+							                .getType()
+							                .toString();  // "META" ?
 
 							// auto type = compiler::helios::querySymIDOfPSTExpr(ctx, expr); // empty
-							
-							// auto symid = querySymIDOfHOUTExpr(ctx, hout_expr.value().ref()); // empty
-							// auto type = ctx.query<QueryTypeOfSymbol>({ symid });
-							
+
+							// auto symid = querySymIDOfHOUTExpr(ctx, hout_expr.value().ref()); //
+							// empty auto type = ctx.query<QueryTypeOfSymbol>({ symid });
+
 							ret += identifier(type);
 						}
 						break;
@@ -252,18 +263,23 @@ namespace compiler::helios::mangler {
 				ret = "D";
 
 				auto pst = symbolPst(symbol_id).unlock(ctx);
-				for (const pst::LangElement::Child& child_locked : pst->viewChildren()) {
+				for (const pst::LangElement::Child& child_locked: pst->viewChildren()) {
 					auto child = child_locked.unlock(ctx);
-					if(child->getElementKind() == pst::ElementKind::ParamList) {
-						pst::Access<pst::ParamList> list = child.dynamicCast<pst::ParamList>().value();
-						for(auto begin = list->begin(); begin != list->end(); ++begin) {
+					if (child->getElementKind() == pst::ElementKind::ParamList) {
+						pst::Access<pst::ParamList> list
+							= child.dynamicCast<pst::ParamList>().value();
+						for (auto begin = list->begin(); begin != list->end(); ++begin) {
 							pst::Access<pst::FunParam> param = (*begin).unlock(ctx);
 
 							auto expr = param->getType().unlock(ctx)->getExpr();
 
-							compiler::helios::ExprConstructionResult hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
+							compiler::helios::ExprConstructionResult hout_expr
+								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()->expression_type.getSymbolType().getType().toString();
+							auto type = hout_expr.value()
+							                ->expression_type.getSymbolType()
+							                .getType()
+							                .toString();
 
 							ret += identifier(type);
 						}
@@ -314,7 +330,11 @@ namespace compiler::helios::mangler {
 		std::string specialSymbolEncoding(query::Context& ctx, SpecialSymbolKey key);
 
 		template<>
-		std::string specialSymbolEncoding<ManglingSymbolKind::ModuleConstructor, special_symbol_keys::LirModuleID>(query::Context&, special_symbol_keys::LirModuleID module_id) {
+		std::string specialSymbolEncoding<
+			ManglingSymbolKind::ModuleConstructor,
+			special_symbol_keys::LirModuleID>(
+			query::Context&, special_symbol_keys::LirModuleID module_id
+		) {
 			// <encoding> ::= <path>
 			// <path> ::= <path-prefix> <symbol-name>
 			auto path_prefix = pathPrefix(module_id);
@@ -329,19 +349,27 @@ namespace compiler::helios::mangler {
 		}
 
 		template<>
-		std::string specialSymbolEncoding<ManglingSymbolKind::ModuleDestructor, special_symbol_keys::LirModuleID>(query::Context&, special_symbol_keys::LirModuleID module_id) {
+		std::string specialSymbolEncoding<
+			ManglingSymbolKind::ModuleDestructor,
+			special_symbol_keys::LirModuleID>(
+			query::Context&, special_symbol_keys::LirModuleID module_id
+		) {
 			auto path_prefix = pathPrefix(module_id);
 			return base::strConcat(path_prefix, "GHmdE");
 		}
 
 		template<>
-		std::string specialSymbolEncoding<ManglingSymbolKind::GlobalVariableConstructor>(query::Context& ctx, SymID symbol_id) {
-			return symbolEncoding(ctx, symbol_id) + "gc";	
+		std::string specialSymbolEncoding<ManglingSymbolKind::GlobalVariableConstructor>(
+			query::Context& ctx, SymID symbol_id
+		) {
+			return symbolEncoding(ctx, symbol_id) + "gc";
 		}
 
 		template<>
-		std::string specialSymbolEncoding<ManglingSymbolKind::GlobalVariableDestructor>(query::Context& ctx, SymID symbol_id) {
-			return symbolEncoding(ctx, symbol_id) + "gd";	
+		std::string specialSymbolEncoding<ManglingSymbolKind::GlobalVariableDestructor>(
+			query::Context& ctx, SymID symbol_id
+		) {
+			return symbolEncoding(ctx, symbol_id) + "gd";
 		}
 
 		/**
@@ -359,13 +387,13 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			if(key.kind == ManglingSymbolKind::Standard) {
+			if (key.kind == ManglingSymbolKind::Standard) {
 				// a temporary hack:
 				// @TODO: fix it when we do #895
-				if(name(std::get<0>(key.symbol_key)) == "main") {
+				if (name(std::get<0>(key.symbol_key)) == "main") {
 					// main is not mangled
 					return base::StrID{ "main" };
-				} else if(kind(std::get<0>(key.symbol_key)) == SymbolKind::BuiltinFunction) {
+				} else if (kind(std::get<0>(key.symbol_key)) == SymbolKind::BuiltinFunction) {
 					// Builtin functions are not mangled
 					return name(std::get<0>(key.symbol_key));
 				}
@@ -375,28 +403,39 @@ namespace compiler::helios::mangler {
 			// reserved in C. Q seems to be free and stands for both query and quack
 			constexpr auto language_prefix = "_Q"sv;
 
-			const auto mangling_scheme_version = internal::compactNumber(key.mangling_scheme_version);
+			const auto mangling_scheme_version
+				= internal::compactNumber(key.mangling_scheme_version);
 
-			const std::string encoding = [&key, &ctx]{
-				switch(key.kind) {
+			const std::string encoding = [&key, &ctx] {
+				switch (key.kind) {
 				case ManglingSymbolKind::Standard:
 					return internal::symbolEncoding(ctx, std::get<0>(key.symbol_key));
 					break;
-					
+
 				case ManglingSymbolKind::ModuleConstructor:
-					return internal::specialSymbolEncoding<ManglingSymbolKind::ModuleConstructor>(ctx, std::get<1>(key.symbol_key));
+					return internal::specialSymbolEncoding<ManglingSymbolKind::ModuleConstructor>(
+						ctx, std::get<1>(key.symbol_key)
+					);
 					break;
 
 				case ManglingSymbolKind::ModuleDestructor:
-					return internal::specialSymbolEncoding<ManglingSymbolKind::ModuleDestructor>(ctx, std::get<1>(key.symbol_key));
+					return internal::specialSymbolEncoding<ManglingSymbolKind::ModuleDestructor>(
+						ctx, std::get<1>(key.symbol_key)
+					);
 					break;
-				
+
 				case ManglingSymbolKind::GlobalVariableConstructor:
-					return internal::specialSymbolEncoding<ManglingSymbolKind::GlobalVariableConstructor>(ctx, std::get<0>(key.symbol_key));
+					return internal::specialSymbolEncoding<
+						ManglingSymbolKind::GlobalVariableConstructor>(
+						ctx, std::get<0>(key.symbol_key)
+					);
 					break;
 
 				case ManglingSymbolKind::GlobalVariableDestructor:
-					return internal::specialSymbolEncoding<ManglingSymbolKind::GlobalVariableDestructor>(ctx, std::get<0>(key.symbol_key));
+					return internal::specialSymbolEncoding<
+						ManglingSymbolKind::GlobalVariableDestructor>(
+						ctx, std::get<0>(key.symbol_key)
+					);
 					break;
 
 				default:
@@ -406,8 +445,9 @@ namespace compiler::helios::mangler {
 
 			std::string metadata = internal::optMetadata(key.additional_metadata);
 
-			std::string mangled_name = base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
-			
+			std::string mangled_name
+				= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
+
 			return base::StrID{ mangled_name.c_str() };
 		}
 
@@ -421,34 +461,38 @@ namespace compiler::helios::mangler {
 	}
 
 	template<>
-	base::StrID getSpecialMangledName<ManglingSymbolKind::ModuleConstructor, special_symbol_keys::LirModuleID>(query::Context& ctx, special_symbol_keys::LirModuleID mod_id) {
-		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ 
-			.symbol_key = mod_id,
-			.kind = ManglingSymbolKind::ModuleConstructor
-		});
+	base::StrID getSpecialMangledName<
+		ManglingSymbolKind::ModuleConstructor,
+		special_symbol_keys::LirModuleID>(
+		query::Context& ctx, special_symbol_keys::LirModuleID mod_id
+	) {
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
+			.symbol_key = mod_id, .kind = ManglingSymbolKind::ModuleConstructor });
 	}
 
 	template<>
-	base::StrID getSpecialMangledName<ManglingSymbolKind::ModuleDestructor, special_symbol_keys::LirModuleID>(query::Context& ctx, special_symbol_keys::LirModuleID mod_id) {
-		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ 
-			.symbol_key = mod_id,
-			.kind = ManglingSymbolKind::ModuleDestructor
-		});
-	}
-
-		template<>
-	base::StrID getSpecialMangledName<ManglingSymbolKind::GlobalVariableConstructor>(query::Context& ctx, SymID sym_id) {
-		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ 
-			.symbol_key = sym_id,
-			.kind = ManglingSymbolKind::GlobalVariableConstructor
-		});
+	base::StrID getSpecialMangledName<
+		ManglingSymbolKind::ModuleDestructor,
+		special_symbol_keys::LirModuleID>(
+		query::Context& ctx, special_symbol_keys::LirModuleID mod_id
+	) {
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
+			.symbol_key = mod_id, .kind = ManglingSymbolKind::ModuleDestructor });
 	}
 
 	template<>
-	base::StrID getSpecialMangledName<ManglingSymbolKind::GlobalVariableDestructor>(query::Context& ctx, SymID sym_id) {
-		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{ 
-			.symbol_key = sym_id,
-			.kind = ManglingSymbolKind::GlobalVariableDestructor
-		});
+	base::StrID getSpecialMangledName<ManglingSymbolKind::GlobalVariableConstructor>(
+		query::Context& ctx, SymID sym_id
+	) {
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
+			.symbol_key = sym_id, .kind = ManglingSymbolKind::GlobalVariableConstructor });
+	}
+
+	template<>
+	base::StrID getSpecialMangledName<ManglingSymbolKind::GlobalVariableDestructor>(
+		query::Context& ctx, SymID sym_id
+	) {
+		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
+			.symbol_key = sym_id, .kind = ManglingSymbolKind::GlobalVariableDestructor });
 	}
 }

@@ -1,5 +1,6 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
@@ -11,8 +12,6 @@
 #include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-
-#include <helios/mangler/mangler.hpp>
 
 #include <iostream>
 
@@ -95,8 +94,11 @@ int main(int argc, const char* argv[]) {
 				ctx,
 				ctors,
 				compiler::helios::mangler::getSpecialMangledName<
-					compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor
-				>(ctx, compiler::helios::mangler::special_symbol_keys::LirModuleID{ frontend::moduleName(root) })
+					compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+					ctx,
+					compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						frontend::moduleName(root) }
+				)
 			);
 
 			module_ctor.debugPrint(ctx, std::cerr);
@@ -114,8 +116,11 @@ int main(int argc, const char* argv[]) {
 				ctx,
 				{},
 				compiler::helios::mangler::getSpecialMangledName<
-					compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor
-				>(ctx, compiler::helios::mangler::special_symbol_keys::LirModuleID{ frontend::moduleName(root) })
+					compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+					ctx,
+					compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						frontend::moduleName(root) }
+				)
 			);
 
 			module_dtor.debugPrint(ctx, std::cerr);
