@@ -1,32 +1,31 @@
 const A: i64 = 1;
 
-namespace Nmspc {
+namespace M {
     var B: i64 = 4 + 4;
 }
 
-fun foooo(a: i32) -> i32 = {
+fun foo(a: i32) -> i32 = {
     return a;
 }
 
 namespace N {
-    class ClassName {
+    class TestClass {
         a: i32 = 0;
 
-        # The feature is not implemented yet: PST element scope kind for: Class Constructor @future
-        ClassName.create() = {
-            a = 0;
+        # TestClass.create() = {
+        #     a = 0;
+        # }
+
+        TestClass.create(x: i32, y: f32) = {
+            a = x;
         }
 
-        # The feature is not implemented yet: PST element scope kind for: Copy Constructor @future
-        # ClassName.copy(other: ClassName) = {
+        # TestClass.copy(TestClass: other) = {
         #     a = other.a;
         # }
 
-        # The feature is not implemented yet: PST element scope kind for: Class Destructor @future
-        # ClassName.destroy() = {
-        #
-        # }
+        # TestClass.destroy() = {}
     }
-
-    var obj: ClassName;
 }
+
+const C: N.TestClass = 42;

@@ -11,6 +11,8 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <helios/mangler/mangler.hpp>
+
 #include <utility>
 
 class LLVMBackendTest final: public tester::TestSuite {
@@ -48,17 +50,12 @@ private:
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
 							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-
 						mir_func->debugPrint(std::cerr);
 						std::cerr << "\n\n\n";
-
 						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
-
 						lir_func->debugPrint(ctx, std::cerr);
 						std::cerr << "\n\n\n";
-
 						ctors.push_back(lir_func);
-
 						llvm_module.addFunctionToModule(ctx, lir_func);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
@@ -78,25 +75,23 @@ private:
 
 			if (!ctors.empty()) {
 				// Add module ctors
-				// @TODO: fix this: add proper module global ctor mangling
 				auto module_ctor = lir::fromLIRFunctions(
 					ctx,
 					ctors,
-					base::StrID(
-						base::strConcat("_MODULE_CTOR_", frontend::moduleName(module).str()).c_str()
-					)
+					compiler::helios::mangler::getSpecialMangledName<
+						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor
+					>(ctx, compiler::helios::mangler::special_symbol_keys::LirModuleID{ frontend::moduleName(module) })
 				);
 				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 
 				// Add module dtors (for now empty)
-				// @TODO: fix this: add proper module global dtor mangling
 				// @TODO: add a legit dtors
 				auto module_dtor = lir::fromLIRFunctions(
 					ctx,
 					{},
-					base::StrID(
-						base::strConcat("_MODULE_DTOR_", frontend::moduleName(module).str()).c_str()
-					)
+					compiler::helios::mangler::getSpecialMangledName<
+						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor
+					>(ctx, compiler::helios::mangler::special_symbol_keys::LirModuleID{ frontend::moduleName(module) })
 				);
 				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 			}
@@ -171,7 +166,9 @@ private:
 		);
 	}
 
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+	void globalVariablesTest() {
+		runTestForModule("modules/global-variables", 5, 5);
+	}
 };
 
 

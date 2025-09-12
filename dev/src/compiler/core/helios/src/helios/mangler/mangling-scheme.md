@@ -125,7 +125,6 @@ either in the scheme or it's implementation, they should be reflected here.
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
                   | <special-symbol-encoding>               // special symbols that are created by the compiler
-                  | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
 
 // more special methods could be added in the future
@@ -141,8 +140,12 @@ either in the scheme or it's implementation, they should be reflected here.
 <chain-operator> ::= "ch" <type> (<binary-operator-name> <type>)* "E"
 
 // special symbols like virtual tables, RTTI, guard variables, structures for generics, etc.
-<special-symbol-encoding> ::= <path-prefix> <special-symbol-name>
-<special-symbol-name> ::= (todo: virtual tables, generic structures, named parameter tables, guard variables, ...)
+<special-symbol-encoding> ::= "H" <special-symbol-name> "E"
+<special-symbol-name> ::= "mc"                              // module constructor
+                        | "md"                              // module destructor
+                        | "gc"                              // global variable constructor
+                        | "gd"                              // global variable destructor
+//                      | ...                               // todo: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
 
@@ -152,13 +155,13 @@ either in the scheme or it's implementation, they should be reflected here.
 // e.g.: 0 -> "_", 1 -> "0_", 11 -> "a_", 62 -> "Z_"
 <compact-number> ::= "0-9a-zA-Z"* "_"
 
-// more operators could be added in the future
+// more operators can be added in the future
 <unary-operator-name> ::= "ps"                              // +
                         | "ng"	                            // -
                         | "ad"	                            // &
                         | "de"	                            // *
 
-// more operators could be added in the future
+// more operators can be added in the future
 <binary-operator-name> ::= "co"	                            // ~
                          | "pl"	                            // +
                          | "mi"	                            // -
