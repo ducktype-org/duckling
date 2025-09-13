@@ -2,7 +2,7 @@ import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
-import { getWorkspaceFiles, getWorkspaceFoldersUris } from './getWorkspaceFiles';
+import { getWorkspaceFiles, getWorkspaceFoldersUris, filterDucklingFiles } from './getWorkspaceFiles';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -87,7 +87,7 @@ export class CompilerDaemonClient {
 
 		// console.log(`putfile called: ${uriToFilePath(filePath)}`);
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
-		
+
 		function handleResponse(res: Response) {
 			// console.log(`Response status: ${res.status}`);
 			if (res.status != 200) {
@@ -131,7 +131,7 @@ export class CompilerDaemonClient {
 	// This function is called to update the workspace in the daemon
 	public async putWorkspace(connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
-		const files = await getWorkspaceFiles(connection);
+		const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
 		
 		for (let i = 0; i < files.length; i++) {
 			try {
@@ -160,7 +160,7 @@ export class CompilerDaemonClient {
 	// This function is called to update the module trees inside of the daemon
 	public async makeModuleTrees(connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
-		const files = await getWorkspaceFiles(connection);
+		const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
 		
 		for (let i = 0; i < files.length; i++) {
 			try {

@@ -16,7 +16,6 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
   const workspaceFolders = await connection.workspace.getWorkspaceFolders();
   const workspaceUris = workspaceFolders?.map(folder => folder.uri) ?? [];
   const excludes = new Set(['node_modules', '.git', 'dist', 'build', '.vscode', '.idea', 'out']);
-  const extensions = new Set(["rift", "dl", "duckling", "dmf"]);
   const results: FileEntry[] = [];
 
   if (workspaceFolders === null || workspaceFolders.length === 0) {
@@ -29,7 +28,7 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
   async function* walk(dir: string): AsyncGenerator<string> {
     for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory() && !excludes.has(entry.name) && extensions.has(entry.name.split('.').pop() || '')) {
+      if (entry.isDirectory() && !excludes.has(entry.name)) {
         yield* walk(fullPath);
       } else if (entry.isFile()) {
         yield fullPath;
@@ -48,6 +47,24 @@ export async function getWorkspaceFiles(connection: Connection): Promise<FileEnt
       } catch {
         // Ignore files that cannot be read
       }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Filter the given list of files to include only Duckling-related files.
+ * Returns a list of Duckling file paths and their contents.
+ */
+export async function filterDucklingFiles(files: FileEntry[]): Promise<FileEntry[]> {
+  const extensions = new Set(["rift", "dl", "duckling", "dmf"]);
+  const results: FileEntry[] = [];
+
+  for (const file of files) {
+    const ext = path.extname(file.path).toLowerCase().slice(1); // remove the dot
+    if (extensions.has(ext)) {
+      results.push(file);
     }
   }
 
