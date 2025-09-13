@@ -205,23 +205,10 @@ void server(i32 port) {
 
 			if (!path.exists()) return crow::response(404, "File not found");
 
-			auto module
-				= query::entryPoint<compiler::frontend::QueryModuleTree>(fs::File(path.parentPath())
-			    );
-
 			const auto file     = fs::File(path);
-			const auto src_file = compiler::frontend::SourceFile::create(file, module);
-			// const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
-			auto pst = src_file->getPST();
+			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 
-			if (pst->getLogger()->bad()) {
-				std::stringstream ss;
-				pst->getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
-
-			// return crow::response(200, lsp::getSemanticTokens(file_vector));
-			return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
+			return crow::response(200, lsp::getSemanticTokens(file_vector));
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 

@@ -79,14 +79,25 @@ namespace lsp {
 				}
 				variant_case(pst::LangElement::NamedChild, child) {
 					// recursive token generation
+					// @TODO figure out if we want to use the name somehow
 					getSemanticTokens(child.element, token_list);
 				}
 			}
 		}
 	}
 
-	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement> element) {
+	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile> file) {
 		std::vector<SemanticToken> tokens;
+
+		auto pst = file->getPST();
+		// @TODO figure out logging strategy
+		if (pst->getLogger()->bad()) {
+			std::stringstream ss;
+			pst->getLogger()->dumpLog(true, ss);
+			std::cerr << ss.str() << "\n";
+		};
+
+		auto element = pst->getRootElement();
 		getSemanticTokens(element, tokens);
 
 		std::vector<std::string> token_strings(tokens.size());
@@ -99,6 +110,7 @@ namespace lsp {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
 			auto pst = file->getPST();
+			// @TODO figure out logging strategy
 			if (pst->getLogger()->bad()) {
 				std::stringstream ss;
 				pst->getLogger()->dumpLog(true, ss);
@@ -106,13 +118,12 @@ namespace lsp {
 				continue;
 			};
 			auto element = pst->getRootElement();
-
 			getSemanticTokens(element, tokens);
 		}
 
 		std::vector<std::string> token_strings(tokens.size());
 		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
-		std::cerr << "Generated: " << jsonList(token_strings) << "\n";
+
 		return jsonList(token_strings);
 	}
 }
