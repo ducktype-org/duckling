@@ -2,7 +2,7 @@ import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
-import { getWorkspaceFiles, getWorkspaceFoldersUris, filterDucklingFiles } from './getWorkspaceFiles';
+import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -34,26 +34,26 @@ export class CompilerDaemonClient {
 
 	constructor() {
 		const logPath = path.join(__dirname, 'daemon.log');
-		const logStream = fs.createWriteStream(logPath, { flags: "a" });
+		const logStream = fs.createWriteStream(logPath);
 		this.process = spawn(
 			BINARY_PATH + "lsp_daemon", 
 			["start", "-p", DAEMON_PORT], 
 			{stdio: ["ignore", "pipe", "pipe"], detached: false} // This is necessary for the server to remain responsive
 		);
 		this.process.stdout?.on("data", (data) => {
-		process.stdout.write(data);
-		logStream.write(data);
+			process.stdout.write(data);
+			logStream.write(data);
 		});
 
 		// Mirror stderr to console and log file
 		this.process.stderr?.on("data", (data) => {
-		process.stderr.write(data);
-		logStream.write(data);
+			process.stderr.write(data);
+			logStream.write(data);
 		});
 
 		this.process.on("close", (code) => {
-		console.log(`Compiler daemon exited with code ${code}`);
-		logStream.end();
+			console.log(`Compiler daemon exited with code ${code}`);
+			logStream.end();
 		});
 
 	}
@@ -85,11 +85,9 @@ export class CompilerDaemonClient {
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
-		// console.log(`putfile called: ${uriToFilePath(filePath)}`);
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 
 		function handleResponse(res: Response) {
-			// console.log(`Response status: ${res.status}`);
 			if (res.status != 200) {
 				throw new Error(`Error: ${res.status}`);
 			}
@@ -103,18 +101,18 @@ export class CompilerDaemonClient {
 	}
 
 	// Used for debug in various places
-	public async callDebugPrint(connection: Connection, debugString: string): Promise<void> {
+	public async callDebugPrint(connection: Connection, arg: string): Promise<void> {
 		await this.waitForReady(connection);
-		console.log("debug;;")
+		console.log("Debugging in progress...")
 		try {
-			const base64DebugString: string = Buffer.from(debugString).toString('base64');
-			const response = await fetch(`${DAEMON_ADRESS}/debug/${base64DebugString}`);
+			const base64Arg: string = Buffer.from(arg).toString('base64');
+			const response = await fetch(`${DAEMON_ADRESS}/debug/${base64Arg}`);
 			if (!response.ok) {
 				console.log("Call debug failed");
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
 			}
 			const text = await response.text();
-			console.log("HERE IS WHAT WE GOT:");
+			console.log("ERROR CONTENTS:");
 			console.log(text);
 		} catch (error) {
 			if (error instanceof Error) {
@@ -126,8 +124,6 @@ export class CompilerDaemonClient {
 		return;
 	}
 
-
-
 	// This function is called to update the workspace in the daemon
 	public async putWorkspace(connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
@@ -138,14 +134,11 @@ export class CompilerDaemonClient {
 				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
 				var base64FileContent: string = Buffer.from(files[i].content).toString('base64');
 
-				// console.log(`putfile called: ${files[i].path}`);
-				// console.log(`putfile called: ${uriToFilePath(files[i].path)}`);
 				var response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 				var res = await response;
 				if (res.status != 200) {
 					throw new Error(`Error: ${res.status}`);
 				}
-				// console.log(`putfile succeeded on ${files[i].path}`);
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error(`Error processing file ${files[i].path}: ${error.message}`);
@@ -171,7 +164,6 @@ export class CompilerDaemonClient {
 				if (res.status != 200) {
 					throw new Error(`Error: ${res.status}`);
 				}
-				// console.log(`putfile succeeded on ${files[i].path}`);
 			} catch (error) {
 				if (error instanceof Error) {
 					console.error(`Error building tree from path ${files[i].path}: ${error.message}`);
@@ -204,11 +196,6 @@ export class CompilerDaemonClient {
 				console.log("Response not ok!!!!!!!");
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
 			}
-
-			// Read and print the response body as text
-			// const responseBody = await response.text();
-			// console.log(`Response body: ${responseBody}`);
-	
 
 			const jsonResponse = await response.json();
 			console.log(`getSemanticTokens response: ${JSON.stringify(jsonResponse)}\n`);
@@ -350,7 +337,6 @@ export interface LSPKeywordData {
 
 // File paths are stored in URIs, this function converts them to file paths
 function uriToFilePath(uri: string): string {
-	//console.log(`Converting URI to file path: ${uri}`);
 	if (uri.startsWith("file:")) {
 		const filepath = uri.split(":")[1];
 		return filepath.replace("///", "").replace("\\\\\\", "");
