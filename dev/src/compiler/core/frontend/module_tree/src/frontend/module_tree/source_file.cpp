@@ -4,7 +4,6 @@
 
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
-#include <iostream>
 
 #include <filesystem/file.hpp>
 
@@ -82,7 +81,6 @@ namespace compiler::frontend {
 			return &parse_tree.value();
 		} else {
 			parse_tree.emplace(pst::PST(file));
-			std::cout << "Parsed file in getPST\n";
 			return &parse_tree.value();
 		}
 	}

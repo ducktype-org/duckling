@@ -12,7 +12,7 @@
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/token.hpp>
-#include <iostream>
+
 #include <set>
 
 namespace tokenizer {
@@ -112,21 +112,9 @@ namespace tokenizer {
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {
 			decode<encoding>();
-			if (log.bad()) {
-				std::cout << "Bad log in decode\n";
-				log.dumpLog(true);
-				return false;
-			}
-			std::cout << "Decoded successfully\n";
+			if (log.bad()) return false;
 			countLines();
-			std::cout << "Lines counted successfully\n";
 			runLexer();
-			std::cout << "Lexer run successfully\n";
-			if (log.bad()) {
-				std::cout << "Bad log in tokenize\n";
-				log.dumpLog(true);
-				return false;
-			}
 			return log.good();
 		}
 	};

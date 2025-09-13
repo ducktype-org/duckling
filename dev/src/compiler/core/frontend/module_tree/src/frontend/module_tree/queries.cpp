@@ -6,8 +6,6 @@
 
 #include <query_framework/query_impl.hpp>
 
-#include <iostream>
-
 namespace compiler::frontend {
 
 	/*******************
