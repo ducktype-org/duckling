@@ -58,18 +58,6 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 	};
 }
 
-// // Debug
-// std::string getContentsOfDirs(const fs::FsTree& tree) {
-// 	std::string contents;
-// 	for (const auto& [name, file]: tree.getFiles()) {
-// 		contents += (name + ":\n");
-// 		contents += ((std::string) file.getContent().view().stringView() + "\n\n\n");
-// 	}
-
-// 	for (const auto& [name, dir]: tree.getDirs()) contents += getContentsOfDirs(*dir);
-// 	return contents;
-// }
-
 /**
  * @brief Converts the result of an operation to an HTTP response.
  *
@@ -257,38 +245,11 @@ void server(i32 port) {
 	 * @return whatever you want
 	 */
 	CROW_ROUTE(app, "/debug/<string>")
-	([&virtual_root](const std::string& base64_path) {
+	([&virtual_root](const std::string& arg) {
 		try {
-			std::string path
-				= "/home/krzysiek/rift/duckling/dev/src/compiler/core/helios/tests/test_modules/"
-			      "expr_scopes";
-
-			std::cout << "Requested path: " << path << "\n";
-			// std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
-
-			const auto& physfile = fs::File(path);
-			// const auto& file = virtual_root.getFilePath().join(path);
-			// const auto& fileobj = fs::File(file);
-			// std::cout << "fileobj contynts: " << fileobj.getContent().view().stdString() << "\n";
-			// std::cout << "Computed file path: " << file.exists() << "\n";
-			// auto module_tree = module_builder->create(file);
-			auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(physfile);
-
-			// auto module = module_tree->	getModuleID();
-			// auto main_file = module_tree->getMainSourceFile();
-			// std::cout << "Module tree:\n" << module_tree->prettyPrint() << "\n";
-
-
-			auto pstr = base::anyCast<CRef<pst::PST<>>>(
-				query::utils::withContextCompute([&](query::Context& ctx) {
-					auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
-					auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
-					// std::cout << "Main File: " << main_file->getFileID().queryUnstablePerfectHash()
-				    // << "     " <<  main_file->getFile().getContent().view().stdString() << "\n";
-					return pst;
-				})
-			);
-			std::cout << "WE GOT PST\n";
+			// put here whatever you want for debugging
+			// use virtual_root to access the virtual file system
+			std::cerr << "Debug arg: " << arg << "\n";
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) {
