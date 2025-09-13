@@ -31,13 +31,13 @@ POP_DIAGNOSTIC;
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
+#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
 #include <vm/cli.hpp>
 #include <vm/server.hpp>
-#include <init/init.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -201,15 +201,17 @@ void server(i32 port) {
 	([&virtual_root](const std::string& base64_path) {
 		try {
 			const auto relative_path = base64::decode_into<std::string>(base64_path);
-			const auto path = virtual_root.getFilePath().join(relative_path);
+			const auto path          = virtual_root.getFilePath().join(relative_path);
 
 			if (!path.exists()) return crow::response(404, "File not found");
 
-			auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(fs::File(path.parentPath()));
+			auto module
+				= query::entryPoint<compiler::frontend::QueryModuleTree>(fs::File(path.parentPath())
+			    );
 
-			const auto file = fs::File(path);
+			const auto file     = fs::File(path);
 			const auto src_file = compiler::frontend::SourceFile::create(file, module);
-			//const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+			// const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 			auto pst = src_file->getPST();
 
 			if (pst->getLogger()->bad()) {
@@ -218,7 +220,7 @@ void server(i32 port) {
 				return crow::response(200, ss.str());
 			};
 
-			//return crow::response(200, lsp::getSemanticTokens(file_vector));
+			// return crow::response(200, lsp::getSemanticTokens(file_vector));
 			return crow::response(200, lsp::getSemanticTokens(pst->getRootElement()));
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
@@ -270,38 +272,41 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/debug/<string>")
 	([&virtual_root](const std::string& base64_path) {
 		try {
-			std::string path = "/home/krzysiek/rift/duckling/dev/src/compiler/core/helios/tests/test_modules/expr_scopes";
+			std::string path
+				= "/home/krzysiek/rift/duckling/dev/src/compiler/core/helios/tests/test_modules/"
+			      "expr_scopes";
 
 			std::cout << "Requested path: " << path << "\n";
-			//std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
+			// std::cout << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
 			const auto& physfile = fs::File(path);
-			//const auto& file = virtual_root.getFilePath().join(path);
-			//const auto& fileobj = fs::File(file);
-			//std::cout << "fileobj contynts: " << fileobj.getContent().view().stdString() << "\n";
-			//std::cout << "Computed file path: " << file.exists() << "\n";
-			//auto module_tree = module_builder->create(file);
+			// const auto& file = virtual_root.getFilePath().join(path);
+			// const auto& fileobj = fs::File(file);
+			// std::cout << "fileobj contynts: " << fileobj.getContent().view().stdString() << "\n";
+			// std::cout << "Computed file path: " << file.exists() << "\n";
+			// auto module_tree = module_builder->create(file);
 			auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(physfile);
-			
-			//auto module = module_tree->	getModuleID();
-			//auto main_file = module_tree->getMainSourceFile();
-			//std::cout << "Module tree:\n" << module_tree->prettyPrint() << "\n";
 
-			
+			// auto module = module_tree->	getModuleID();
+			// auto main_file = module_tree->getMainSourceFile();
+			// std::cout << "Module tree:\n" << module_tree->prettyPrint() << "\n";
+
+
 			auto pstr = base::anyCast<CRef<pst::PST<>>>(
-				query::utils::withContextCompute([&](query::Context& ctx) {					
+				query::utils::withContextCompute([&](query::Context& ctx) {
 					auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
 					auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
-					//std::cout << "Main File: " << main_file->getFileID().queryUnstablePerfectHash() << "     " <<  main_file->getFile().getContent().view().stdString() << "\n";
+					// std::cout << "Main File: " << main_file->getFileID().queryUnstablePerfectHash()
+				    // << "     " <<  main_file->getFile().getContent().view().stdString() << "\n";
 					return pst;
 				})
 			);
 			std::cout << "WE GOT PST\n";
 
 			return crow::response(200, "OK");
-		} catch (const std::exception& e) { 
+		} catch (const std::exception& e) {
 			std::cout << e.what() << "\n";
-			return crow::response(400, e.what()); 
+			return crow::response(400, e.what());
 		}
 	});
 

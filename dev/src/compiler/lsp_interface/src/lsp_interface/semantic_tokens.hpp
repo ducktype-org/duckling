@@ -5,13 +5,13 @@
 
 #pragma once
 
+#include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/ints.hpp>
 #include <base/ref.hpp>
 #include <base/stringifyable_enum.hpp>
-#include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/file_id.hpp>
 
 #include <lexer/lexer.hpp>
 
