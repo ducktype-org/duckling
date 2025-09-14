@@ -19,16 +19,10 @@ POP_DIAGNOSTIC;
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <pst_parser/pst.hpp>
-
-#include <base/anycast.hpp>
-#include <base/int_conv.hpp>
 #include <base/macros/diagnostics.hpp>
-#include <base/variant.hpp>
-
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
@@ -36,42 +30,6 @@ POP_DIAGNOSTIC;
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#include <vm/cli.hpp>
-#include <vm/server.hpp>
-
-/**
- * @brief Wrapper for converting API error to HTTP response.
- *
- * @param apiError The API error to convert.
- * @return crow::response The HTTP response corresponding to the API error.
- */
-crow::response convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
-	return {
-		400,
-		std::visit(
-			[]([[maybe_unused]] const auto& v) {
-				return "JSON is broken\n";  // JS::serializeStruct(v);
-			},
-			apiError
-		),
-	};
-}
-
-/**
- * @brief Converts the result of an operation to an HTTP response.
- *
- * @tparam E The type of the error.
- * @param x The result of the operation.
- * @return crow::response The HTTP response corresponding to the result.
- */
-template<class E>
-crow::response toResponse(const std::expected<void, E>& x) {
-	static auto convert = []() { return crow::response(200, "{}"); };
-
-	if (x.has_value()) return convert();
-	return convertError(x.error());
-}
 
 /**
  * @brief Starts the LSP server on the specified port.
