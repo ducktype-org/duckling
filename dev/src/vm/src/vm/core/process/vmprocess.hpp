@@ -14,9 +14,6 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
-#include <vm/services/profiler/profiler.hpp>
-#include <vm/services/reference_counter/reference_counter.hpp>
-#include <vm/services/service_manager.hpp>
 
 #include <condition_variable>
 #include <deque>
@@ -135,11 +132,6 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::StateError> getExitCode();
 
-		/**
-		 * @brief Holds all services. When it's constructed, it initializes all services.
-		 */
-		ServiceManager service_manager = ServiceManager();
-
 		ProcIO                           io;
 		base::Optional<ProcIORedirecter> io_redirecter;
 
@@ -160,11 +152,6 @@ namespace vm {
 		void onEvent(const api::ProcStatus& event) noexcept;
 
 		Memory& getMemory();
-
-		/**
-		 * Can be safely called from Execution Thread only
-		 */
-		ServiceManager& getServices();
 
 		ProcIO& getIO();
 

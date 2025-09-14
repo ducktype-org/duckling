@@ -25,8 +25,6 @@
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
 
-	ServiceManager& VMProcess::getServices() { return service_manager; }
-
 	api::ProcStatus VMProcess::getStatus() {
 		std::shared_lock lock(rw_status);
 		return status;
