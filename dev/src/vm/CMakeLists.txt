@@ -74,7 +74,6 @@ make_module(LibVM USES ${vm_dependencies})
 add_executable(VM $<TARGET_OBJECTS:MainVM>)
 target_link_libraries(VM LibVM)
 
-add_subdirectory(playground)
 add_subdirectory(tests)
 
 duck_add_test(vm program_builders tests/program_builders_test.cpp USES LibVM)
