@@ -7,13 +7,6 @@ type fun: method_Animal_void {pointer_Animal} void
 type fun: method_Feline_void {pointer_Feline} void
 type fun: method_Cat_void {pointer_Cat} void
 
-# ========== VIRTUAL METHOD IMPLEMENTATIONS ==============
-type fun: Animal_makeSound_impl {pointer_Animal} void
-type fun: Feline_hunt_impl {pointer_Feline} void
-type fun: Feline_makeSound_impl {pointer_Feline} void
-type fun: Cat_makeSound_impl {pointer_Cat} void
-type fun: Cat_hunt_impl {pointer_Cat} void
-
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
     virtual_methods: {
@@ -45,7 +38,7 @@ type class: Cat {
 
 # ============ METHODS IMPLEMENTATION ============ 
 # Implementation for Animal.
-function Animal_makeSound_impl {
+function Animal_makeSound_impl {pointer_Animal} -> void {
     init_lany_type x, i64;
     mov_l64_imm x, 1;
     output_l64 x; 
@@ -55,7 +48,7 @@ function Animal_makeSound_impl {
 }
 
 # Override for Feline
-function Feline_makeSound_impl { 
+function Feline_makeSound_impl {pointer_Feline} -> void { 
     init_lany_type x, i64;
     mov_l64_imm x, 2;
     output_l64 x; 
@@ -65,7 +58,7 @@ function Feline_makeSound_impl {
 }
 
 # Implementation for Feline.
-function Feline_hunt_impl { 
+function Feline_hunt_impl {pointer_Feline} -> void { 
     init_lany_type x, i64;
     mov_l64_imm x, 3;
     output_l64 x; 
@@ -75,7 +68,7 @@ function Feline_hunt_impl {
 }
 
 # Override for Cat.
-function Cat_makeSound_impl { 
+function Cat_makeSound_impl {pointer_Cat} -> void { 
     init_lany_type x, i64;
     mov_l64_imm x, 4;
     output_l64 x; 
@@ -85,7 +78,7 @@ function Cat_makeSound_impl {
 }
 
 # Override for Cat.
-function Cat_hunt_impl { 
+function Cat_hunt_impl {pointer_Cat} -> void { 
     init_lany_type x, i64;
     mov_l64_imm x, 5;
     output_l64 x; 
@@ -94,7 +87,7 @@ function Cat_hunt_impl {
     ret;
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
     init_lany_type ptr_a, pointer_Animal;
     init_lany_type ptr_f, pointer_Feline;
     init_lany_type ptr_c, pointer_Cat;

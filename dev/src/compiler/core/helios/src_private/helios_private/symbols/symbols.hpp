@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -69,10 +70,10 @@ namespace compiler::helios {
 	using PotentialParsingErrors
 		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 
-	using QueryConstValueOf_Result = query::QResult<i64, errors::Failed>;
+	using QueryConstValueOf_Result = query::QResult<CompileTimeValue, errors::Failed>;
 
 	/**
-	 * Calculates a value of a constant.
+	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result);
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -21,7 +22,10 @@ namespace vm::code {
 		/**
 		 * @brief Creates TypeMetadata by building types.
 		 */
-		Box<TypeMetadata> validateAndProduceTypeMetadata() const;
+		// TODOP: Add doc comment.
+		Box<TypeMetadata> validateAndProduceTypeMetadata(
+			const base::HashMap<base::StrID, FuncSignature>& available_functions
+		) const;
 
 	private:
 		ObjIdNameMap<TypeOfData> types;

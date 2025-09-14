@@ -8,7 +8,7 @@ namespace pst {
 	 * @brief Class destructor element.
 	 */
 	class Destructor final: public ClassSpecial {
-		AccessInternal<CodeBlock> body;
+		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);

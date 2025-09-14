@@ -13,18 +13,19 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
 	void buildVTableRecursive(
-		const InheritableType&                    inh,
-		const ErrorContextType&                   error_context_inh,
-		base::HashMap<base::StrID, vm::TypeCRef>& vtable,
-		vm::TypeMetadata&                         metadata,
-		const TypeContext&                        ctx
+		const InheritableType&                   inh,
+		const ErrorContextType&                  error_context_inh,
+		base::HashMap<base::StrID, base::StrID>& vtable,
+		vm::TypeMetadata&                        metadata,
+		const TypeContext&                       ctx
 	) {
-		for (const auto& impl: inh.implementations) vtable.put(impl.name, metadata.at(impl.type));
+		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx, interface_name, error_context_inh, [&]() {
-					return InvalidImplementsError(error_context_inh, interface_name);
-				}
+				ctx,
+				interface_name,
+				error_context_inh,
+				[&]() { return InvalidImplementsError(error_context_inh, interface_name); }
 			);
 			buildVTableRecursive(interface, error_context_inh, vtable, metadata, ctx);
 		}
@@ -63,12 +64,8 @@ namespace {
 						  collect_class_fields_recursive(super_class_code);
 					  }
 
-					  for (const Field& field_code: clazz.fields) {
-						  fields.emplace_back(
-							  field_code.name,
-							  metadata.at(field_code.type)
-						  );
-					  }
+					  for (const Field& field_code: clazz.fields)
+						  fields.emplace_back(field_code.name, metadata.at(field_code.type));
 				  };
 			collect_class_fields_recursive(inh);
 		}
@@ -95,11 +92,7 @@ namespace {
 			virtual_methods.put(method.name, get_type_cref(method.type));
 		// TODOP: Get rid of get_type_cref
 
-		base::HashMap<base::StrID, vm::TypeCRef> implementations;
-		for (auto& method: inh.implementations)
-			implementations.put(method.name, get_type_cref(method.type));
-
-		base::HashMap<base::StrID, vm::TypeCRef> vtable;
+		base::HashMap<base::StrID, base::StrID> vtable;
 		buildVTableRecursive(inh, inh, vtable, metadata, ctx);
 
 		vm::InheritanceMetadata::Kind kind;

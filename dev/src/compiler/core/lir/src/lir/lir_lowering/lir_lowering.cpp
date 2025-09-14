@@ -236,17 +236,18 @@ namespace compiler::lir {
 			 */
 			void makeLocals() {
 				for (const auto& mir_local: key.function->local_list) {
-					auto lir_local     = LirLocal::fromMIR(ctx, &mir_local);
-					auto lifetime_flag = LirLocal::boolLocal(ctx);
-
+					auto lir_local = LirLocal::fromMIR(ctx, &mir_local);
 					locals.pushBack(std::move(lir_local));
 					auto local_index = locals.lastIndex();
-
-					locals.pushBack(std::move(lifetime_flag));
-					auto flag_index = locals.lastIndex();
-
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
-					mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
+
+					// Only create lifetime flag if needed
+					if (!mir_local.type.hasNoOpDestructor()) {
+						auto lifetime_flag = LirLocal::boolLocal(ctx);
+						locals.pushBack(std::move(lifetime_flag));
+						auto flag_index = locals.lastIndex();
+						mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
+					}
 				}
 			}
 

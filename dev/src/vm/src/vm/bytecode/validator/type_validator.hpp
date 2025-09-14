@@ -1,5 +1,7 @@
 #pragma once
 
+
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -14,5 +16,7 @@ namespace vm::code {
 	 *
 	 * For the complete list of specific checks see `vm/src/vm/bytecode/validator/readme.md`).
 	 */
-	void validateTypes(const TypeContext& ctx);
+	void validateTypes(
+		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
+	);
 }

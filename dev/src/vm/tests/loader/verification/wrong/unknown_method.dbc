@@ -11,7 +11,7 @@ type class: A {
     };
 }
 
-function main {
+function main { i64, ptr_argv } -> i64 {
     init_lany_type a_obj, pointer_A;
     alloc_lptr_type a_obj, A;
     setVTable_lptr_type a_obj, A;

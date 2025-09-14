@@ -76,6 +76,7 @@ namespace vm {
 		kind_type = Kind::Primitive;
 		size      = pass_size;
 		kind      = kind::Primitive();
+		if (name == "void") am_i_instantiable = false;
 	}
 
 	void Type::definePointer(TypeCRef inner) {
@@ -99,9 +100,9 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ inner };
+		kind_type         = Kind::DynamicTable;
+		kind              = kind::DynamicTable{ .inner_type = inner };
+		am_i_instantiable = false;
 	}
 
 	void Type::defineData(

@@ -6,7 +6,6 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
@@ -14,13 +13,10 @@
 
 #include <iostream>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace vm::api {
 	namespace request {
-		struct LoadStdlib {};
-
 		struct LoadFiles {
 			std::vector<fs::File> filenames;
 		};
@@ -60,10 +56,6 @@ namespace vm::api {
 			std::string type_name;
 		};
 
-		struct Block {
-			BlockID block_id;
-		};
-
 		struct StatusRequest {};
 
 		struct Input {
@@ -83,7 +75,6 @@ namespace vm::api {
 	}
 
 	using RequestVariant = std::variant<
-		request::LoadStdlib,
 		request::LoadFiles,
 		request::LoadCode,
 		request::Pause,
@@ -97,7 +88,6 @@ namespace vm::api {
 		request::ExecutionPosition,
 		request::TypeMetadata,
 		request::VmValue,
-		request::Block,
 		request::StatusRequest,
 		request::Input,
 		request::Output,

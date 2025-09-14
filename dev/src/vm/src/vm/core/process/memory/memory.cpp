@@ -58,6 +58,30 @@ namespace vm {
 		return createBlock(dummy_allocator.allocate(type, stack_pointer));
 	}
 
+	auto Memory::dynTableAllocateHeapN(TypeCRef tbl_type, u64 n) -> Ref<Block> {
+		std::lock_guard lock(mutex);
+		auto            inner_type = tbl_type->getInnerType().value();
+		return createBlock(heap_allocator.dynTableAllocateN(tbl_type, inner_type, n));
+	}
+
+	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void {
+		std::lock_guard lock(mutex);
+		auto            tbl_type       = block->data.element_type;
+		auto            inner_type     = tbl_type->getInnerType().value();
+		BlockData       new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+		auto            old_view_size  = block->data.view.size();
+		auto            new_view_size  = new_block_data.view.size();
+
+		Block mock_block{ BlockID{ 0 }, new_block_data, &mutex };
+
+		Pointer dst = { &mock_block, 0 };
+		Pointer src = { block, 0 };
+		copyPointedDataAndEraseSuffix(dst, src, std::min(old_view_size, new_view_size));
+
+		heap_allocator.deallocate(&block->data);
+		block->data = mock_block.data;
+	}
+
 	void Memory::freeBlock(Ref<Block> block) {
 		std::lock_guard lock(mutex);
 		for (auto [offset, child]: block->children_blocks) freeBlock(child);
@@ -129,6 +153,46 @@ namespace vm {
 		children.put(parent_pointer.offset, new_block);
 	}
 
+	void Memory::copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
+		for (auto nested: block_src->children_blocks) {
+			Pointer new_pointer{ block_dst, nested.first };
+			setNestedViewBlock(new_pointer, nested.second->data.element_type);
+			copyBlocksRecursively(
+				new_pointer.getBlock()->children_blocks[nested.first], nested.second
+			);
+		}
+	}
+
+	auto Memory::copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void {
+		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
+
+		std::lock_guard lock_dst{ *dst.block->mutex_ref };
+		std::lock_guard lock_src{ *src.block->mutex_ref };
+
+		// Free all child blocks on suffix.
+		auto& dst_child_blocks = dst.getBlock()->children_blocks;
+		for (auto iter = dst_child_blocks.lower_bound(dst.offset); iter != dst_child_blocks.end();
+		     iter      = dst_child_blocks.erase(iter)) {
+			freeBlock(iter->second);
+		}
+
+		// Copy the child blocks.
+		auto& src_child_blocks = src.getBlock()->children_blocks;
+		for (auto iter = src_child_blocks.lower_bound(src.offset);
+		     iter != src_child_blocks.end() && iter->first < src.offset + byte_size;
+		     ++iter) {
+			auto    offset = dst.offset + iter->first - src.offset;
+			Pointer new_pointer{ dst.getBlock(), offset };
+			setNestedViewBlock(new_pointer, iter->second->data.element_type);
+			copyBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
+		}
+
+		// Copy the data itself.
+		auto dst_view = getPointerData(dst, byte_size);
+		auto src_view = getPointerData(src, byte_size);
+		std::memcpy(dst_view.getBegin(), src_view.getBegin(), byte_size);
+	}
+
 	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
@@ -143,15 +207,6 @@ namespace vm {
 			freeBlock(iter->second);
 		}
 
-		auto copy_blocks_recursivly
-			= [this](const auto& self, Ref<Block> block_dst, Ref<Block> block_src) -> void {
-			for (auto nested: block_src->children_blocks) {
-				Pointer new_pointer(block_dst, nested.first);
-				setNestedViewBlock(new_pointer, nested.second->data.element_type);
-				self(self, new_pointer.getBlock()->children_blocks[nested.first], nested.second);
-			}
-		};
-
 		// Copy the child blocks
 		auto& src_child_blocks = src.getBlock()->children_blocks;
 		for (auto iter = src_child_blocks.lower_bound(src.offset);
@@ -160,9 +215,7 @@ namespace vm {
 			auto    offset      = dst.offset + iter->first - src.offset;
 			Pointer new_pointer = Pointer(dst.getBlock(), offset);
 			setNestedViewBlock(new_pointer, iter->second->data.element_type);
-			copy_blocks_recursivly(
-				copy_blocks_recursivly, new_pointer.getBlock()->children_blocks[offset], iter->second
-			);
+			copyBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
 		}
 
 		// Copy the data itself
@@ -178,7 +231,7 @@ namespace vm {
 		}
 	}
 
-	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
+	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		if_opt_some(dst.block.toOpt(), block) {
 			std::lock_guard lock(*block->mutex_ref);
 			destroyBlockReference(dst);
@@ -187,7 +240,7 @@ namespace vm {
 			std::lock_guard lock(*block->mutex_ref);
 			block->refcount++;
 		}
-		dst = src;
+		return src;
 	}
 
 	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {

@@ -1,6 +1,6 @@
 #include "query_type_of_symbol.hpp"
 
-#include <helios_private/comp_time/type_eval.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -40,8 +40,18 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
-				auto tp = ctx.query<EvalExprToType>(pst::AccessLocked<pst::ExprElement>(expr));
-				if (tp.hasValue()) setTypeOfSymbol(tp.value());
+				if (auto ctv
+				    = ctx.query<QueryEvaluateExpression>(pst::AccessLocked<pst::ExprElement>(expr)
+				    )) {
+					if (auto maybe_type = ctv.value().asType())
+						setTypeOfSymbol(maybe_type.value());
+					else
+						CORE_PANIC("QueryEvaluateExpressionCT returned not a type");
+					return;
+				} else {
+					// We just fail here, because we can't continue without type.
+					return;
+				}
 			}
 
 		public:
@@ -127,11 +137,14 @@ namespace compiler::helios {
 				};
 
 				if (ret.has_value()) {
-					auto parsed = ctx.query<EvalExprToType>(ret.value().unlock(ctx)->getExpr());
-					if (parsed.hasValue()) {
-						ret_type = parsed.value();
+					if (auto ctv
+					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
+						if (auto maybe_type = ctv.value().asType())
+							ret_type = maybe_type.value();
+						else
+							return;
 					} else {
-						// we just fail here, because we can't continue without type
+						// We just fail here, because we can't continue without type.
 						return;
 					}
 				}
@@ -151,7 +164,7 @@ namespace compiler::helios {
 				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
 			}
 
-			void visitFunParam(pst::Access<pst::FunParam> param) final {
+			void visitParam(pst::Access<pst::Param> param) final {
 				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 		};

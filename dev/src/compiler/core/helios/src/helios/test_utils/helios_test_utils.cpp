@@ -11,7 +11,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/fun_param.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/param.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
@@ -54,7 +54,7 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	i64 getValue(const std::string_view chain, ScopeID scope) {
+	CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 
