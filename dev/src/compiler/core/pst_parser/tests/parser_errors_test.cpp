@@ -184,6 +184,14 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>  simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
 	Example<pst::Fun, false> bad_function{ "fun foo(x: i32, y) = {}" };
 
+	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
+	Example<pst::Pattern, true> simple_pattern2{
+		"pattern Point(p: Point) -> (i32, i32) = {return (p.x, p.y);}"
+	};
+	Example<pst::Pattern, false> no_params_pattern{ "pattern Point() = {}" };
+	Example<pst::Pattern, false> two_params_pattern{ "pattern Point(a: T, b: T) = {}" };
+	Example<pst::Pattern, false> trailing_comma_pattern{ "pattern Point(a: T,) = {}" };
+
 	Example<pst::If, true> simple_if{ "if (a == b) {c = d;}" };
 	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
 	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
@@ -303,6 +311,89 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_template_expr{
 		"(x * t).y:{x, y}.z:{}(4)[3]"
+	};
+
+	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
+	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };
+	Example<pst::FlowPattern, true> flow_deconstructor_simple{ "Point(x, y)" };
+	Example<pst::FlowPattern, true> flow_deconstructor_nested{ "Circle(Point(0, 0), r)" };
+	Example<pst::FlowPattern, true> flow_as_binding{ "Rectangle(a, b) as rect" };
+	Example<pst::FlowPattern, true> flow_type_constraint_simple{ "x : A | B" };
+	Example<pst::FlowPattern, true> flow_type_constraint_tuple{ "(a, b) : Point" };
+	Example<pst::FlowPattern, true> flow_full_deconstructor{ "Rectangle(w, h) as rect : Shape" };
+	Example<pst::FlowPattern, true> flow_full_wildcard{ "_ as value : A | B" };
+	Example<pst::FlowPattern, true> flow_subpattern_complex{
+		"Response(200, Payload(u as user : User, _ as token : Token))"
+	};
+	Example<pst::FlowPattern, true>  flow_subpattern_in_tuple{ "(x : i32, y as coord_y : f64)" };
+	Example<pst::FlowPattern, true>  flow_block_expr{ "{ x + y * z; }" };
+	Example<pst::FlowPattern, false> flow_tuple_empty{ "()" };
+	Example<pst::FlowPattern, false> flow_tuple_unclosed{ "(1, x" };
+	Example<pst::FlowPattern, false> flow_deconstructor_empty_args{ "None()" };
+	Example<pst::FlowPattern, false> flow_deconstructor_unclosed{ "Point(x, y" };
+	Example<pst::FlowPattern, false> flow_as_binding_no_identifier{ "(a, b) as" };
+	Example<pst::FlowPattern, false> flow_as_binding_keyword{ "_ as if" };
+	Example<pst::FlowPattern, false> flow_type_constraint_no_type{ "x :" };
+
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> match_big{
+		R"(match (x) {
+        case 1                  = print("one");
+        case "kajak"            = 1;
+        case my_var             = true; 
+        case true              	= { let y = x + 1; return y; };
+        case (0, 0)             = false;
+        case (_, 0)             = print("four");
+        case { x == true; }     = print("five");
+        case Even(x)            = print("six");
+        case Rectangle(_, _) as colorful : Colorful = print("seven");
+        case Y(X(x1, x2) as x, y)                   = print("eight");
+        case (a, b) if a > 0 and b > 0              = print("nine");
+                    if a < 0 and b < 0              = print("ten");
+        case _ : A | C                              = print("eleven");
+        case _                                      = print("did not match");
+    };)"
+	};
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> match_no_cases_in_block{
+		R"(match (value) {};)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_no_value_expr{
+		R"(match { case _ = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_no_parens_for_value{
+		R"(match x { case _ = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_empty_parens_for_value{
+		R"(match () { case _ = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_no_curly_braces{
+		R"(match(x);)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_unclosed_curly_braces{
+		R"(match(x) { case _ = 1;)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_no_pattern{
+		R"(match(x) { case = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_no_body{
+		R"(match(x) { case 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_no_equals{
+		R"(match(x) { case 1 "one"; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_if_guard_no_condition{
+		R"(match(x) { case _ if = 1; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_case_if_guard_no_body{
+		R"(match(x) { case _ if x > 0; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_if_after_default_branch{
+		R"(match(x) { case _ = 1; if x > 10 = 2; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_default_branch_after_if{
+		R"(match(x) { case _ if x > 10 = 2; = 2; };)"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> match_junk_between_cases{
+		R"(match(x) { case 1 = "one"; let y = 5; case 2 = "two"; };)"
 	};
 
 	void exampleTests() {

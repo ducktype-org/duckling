@@ -5,7 +5,7 @@
 namespace pst {
 	MBox<ParamList> ParamList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
-			FunParam,
+			Param,
 			ParamList,
 			false,
 			lexer::Token::BracketType::Round,
