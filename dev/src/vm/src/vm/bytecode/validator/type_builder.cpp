@@ -26,10 +26,9 @@ namespace {
 		for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(error_context_inh, interface_name); }
+				ctx, interface_name, error_context_inh, [&]() {
+					return InvalidImplementsError(error_context_inh, interface_name);
+				}
 			);
 			buildVTableRecursive(interface, error_context_inh, vtable, metadata, ctx);
 		}
@@ -138,48 +137,35 @@ Box<vm::TypeMetadata> vm::code::buildTypes(const TypeContext& ctx) {
 				metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(PointerType, data) {
-				metadata->at(data.name)->definePointer(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
-				);
+				metadata->at(data.name)->definePointer(metadata->at(data.inner));
 			}
 			variant_case(FixedSizeTableType, data) {
 				metadata->at(data.name)->defineFixedSizeTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
-					data.table_size
+					metadata->at(data.inner), data.table_size
 				);
 			}
 			variant_case(DynamicTableType, data) {
-				metadata->at(data.name)->defineDynamicTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
-				);
+				metadata->at(data.name)->defineDynamicTable(metadata->at(data.inner));
 			}
 			variant_case(DataType, data) {
 				FieldVector fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
-					fields.emplace_back(
-						field.name,
-						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
-					);
+					fields.emplace_back(field.name, metadata->at(field.type));
 				metadata->at(data.name)->defineData(fields, {});
 			}
 			variant_case(VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
-					variants.emplace_back(
-						metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
-					);
+					variants.emplace_back(metadata->at(variant));
 				metadata->at(data.name)->defineVariant(variants);
 			}
 			variant_case(FunctionType, data) {
 				std::vector<vm::TypeCRef> parameters;
 				parameters.reserve(data.parameters.size());
 				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
-				metadata->at(data.name)->defineFunction(
-					parameters,
-					metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
-				);
+				metadata->at(data.name)->defineFunction(parameters, metadata->at(data.result));
 			}
 			variant_case(OpaqueType, opaque) {
 				metadata->at(opaque.name)->defineOpaque(opaque.size);
@@ -198,7 +184,9 @@ Box<vm::TypeMetadata> vm::code::buildTypes(const TypeContext& ctx) {
 					= buildInheritanceMetadata(interface, *metadata, ctx);
 				tp->defineData(fields, std::move(inh_metadata));
 			}
-			variant_default { CORE_PANIC("bad type"); }
+			variant_default {
+				CORE_PANIC("Unhandled type during type building: ", typeToString(type));
+			}
 		}
 	}
 	metadata->finalize();

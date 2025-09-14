@@ -300,4 +300,11 @@ namespace vm::code {
 		writeInstruction(instruction, ss);
 		return ss.str();
 	}
+
+	std::string typeToString(const TypeOfData& type) {
+		std::stringstream ss;
+		TypeSerializer serializer(ss, type);
+		serializer.write();
+		return ss.str();
+	}
 }

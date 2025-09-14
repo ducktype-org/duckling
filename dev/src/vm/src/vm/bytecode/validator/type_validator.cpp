@@ -1,6 +1,11 @@
 #include "type_validator.hpp"
 
+#include "base/exceptions.hpp"
+#include "base/variant.hpp"
+
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -31,6 +36,7 @@ namespace {
 		for (const auto& field_type: fieldable.fields) {
 			if (fields.contains(field_type.name))
 				throw DuplicatedFieldError(error_context, field_type.name);
+			
 			fields.put(field_type.name, field_type.type);
 		}
 	}
@@ -84,10 +90,9 @@ namespace {
 		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(inh, interface_name); }
+				ctx, interface_name, error_context_inh, [&]() {
+					return InvalidImplementsError(inh, interface_name);
+				}
 			);
 			insertImplementationsRecursive(implementations, interface, error_context_inh, ctx);
 		}
@@ -217,15 +222,59 @@ namespace {
 		}
 	}
 
+	/*
+
+	using TypeOfData = std::variant<
+	    PrimitiveType,
+	    PointerType,
+	    FixedSizeTableType,
+	    DynamicTableType,
+	    DataType,
+	    VariantType,
+	    FunctionType,
+	    OpaqueType,
+	    ClassType,
+	    InterfaceType>;
+
+
+	*/
 	/**
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
 	void validateType(const TypeOfData& type, const TypeContext& ctx) {
+		auto& types = ctx.getCurrentTypes();
 		variant_match(type) {
+			variant_case_novalue(PrimitiveType) {}
+			variant_case_novalue(OpaqueType) {}
+			variant_case(PointerType, pointer) {
+				if (!types.contains(pointer.inner))
+					throw UnknownSubtypeError(pointer, pointer.inner);
+			}
+			variant_case(FixedSizeTableType, fixed_table) {
+				if (!types.contains(fixed_table.inner))
+					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
+			}
+			variant_case(DynamicTableType, dynamic_table) {
+				if (!types.contains(dynamic_table.inner))
+					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
+			}
+			variant_case(FunctionType, function) {
+				for (auto& param: function.parameters)
+					if (!types.contains(param)) throw UnknownSubtypeError(function, param);
+				if (!types.contains(function.result))
+					throw UnknownSubtypeError(function, function.result);
+			}
 			variant_case(VariantType, variant) {
+				for (auto& alternative: variant.variant_alternatives)
+					if (!types.contains(alternative))
+						throw UnknownSubtypeError(variant, alternative);
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
 			}
-			variant_case(DataType, data) { validateFieldDuplicates(data, ctx); }
+			variant_case(DataType, data) {
+				for (auto& field: data.fields)
+					if (!types.contains(field.type)) throw UnknownSubtypeError(data, field.name);
+				validateFieldDuplicates(data, ctx);
+			}
 			variant_case(InterfaceType, interface) {
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, interface, interface, ctx);
@@ -235,7 +284,7 @@ namespace {
 				validateImplementations(interface, virtual_methods, ctx);
 			}
 			variant_case(ClassType, clazz) {
-				// All virtual methods that can be implemented by this class(including superclass
+				// All virtual methods that can be implemented by this class (including superclass
 				// and interface vmethods as well).
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, ctx);
@@ -245,6 +294,9 @@ namespace {
 				validateVMethodSignatures(clazz, ctx);
 				validateImplementations(clazz, virtual_methods, ctx);
 				if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods, ctx);
+			}
+			variant_default {
+				CORE_PANIC("Unhandled type during type validation: ", typeToString(type));
 			}
 		}
 	}
