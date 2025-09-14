@@ -114,7 +114,7 @@ void server(i32 port) {
 			const auto content = base64::decode_into<std::string>(base64_content);
 
 			if (!virtual_root.getFilePath().join(path).exists()) {
-				virtual_root.createSubFile(content, path);
+				(void) virtual_root.createSubFile(content, path);
 			} else {
 				auto file = fs::File(virtual_root.getFilePath().join(path));
 				file.writeToFile(content);
@@ -131,7 +131,7 @@ void server(i32 port) {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
 			if (!virtual_root.getFilePath().join(path).exists()) {
-				virtual_root.createSubFile("", path);
+				(void) virtual_root.createSubFile("", path);
 			} else {
 				auto file = fs::File(virtual_root.getFilePath().join(path));
 				file.writeToFile("");
@@ -148,7 +148,7 @@ void server(i32 port) {
 		try {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
-			auto root = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			query::entryPoint<compiler::frontend::QueryModuleTree>(
 				fs::File(virtual_root.getFilePath().join(path))
 			);
 
@@ -195,7 +195,7 @@ void server(i32 port) {
 
 			if (!path.exists()) return crow::response(404, "File not found");
 
-			const auto file     = fs::File(path);
+			const auto file        = fs::File(path);
 			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 
 			return crow::response(200, lsp::getSemanticTokens(file_vector));
@@ -252,6 +252,7 @@ void server(i32 port) {
 			// put here whatever you want for debugging
 			// use virtual_root to access the virtual file system
 			std::cerr << "Debug arg: " << arg << "\n";
+			std::cerr << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) {

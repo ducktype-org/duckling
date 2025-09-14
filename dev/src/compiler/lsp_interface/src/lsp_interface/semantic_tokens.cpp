@@ -106,7 +106,8 @@ namespace lsp {
 		return jsonList(token_strings);
 	}
 
-	std::string getSemanticTokens(std::vector<base::Ref<compiler::frontend::SourceFile>> files) {
+	std::string getSemanticTokens(const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
+	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
 			auto pst = file->getPST();

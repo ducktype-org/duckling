@@ -66,5 +66,6 @@ namespace lsp {
 	};
 
 	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile>);
-	std::string getSemanticTokens(std::vector<base::Ref<compiler::frontend::SourceFile>> files);
+	std::string getSemanticTokens(const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
+	);
 }
