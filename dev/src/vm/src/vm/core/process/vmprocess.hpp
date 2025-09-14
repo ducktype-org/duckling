@@ -31,7 +31,7 @@ namespace vm {
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
-	 * It manages process'es data and services.
+	 * It manages process's data, loader and threads.
 	 *
 	 * VMProcess is an abstract concepts that represents the program's execution environment.
 	 *
@@ -85,7 +85,7 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Creates new thread that runs a function in the Executor service.
+		 * @brief Creates new thread that runs a function.
 		 */
 		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
@@ -149,7 +149,7 @@ namespace vm {
 
 
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept;
+		void setStatus(const api::ProcStatus& new_status) noexcept;
 
 		Memory& getMemory();
 

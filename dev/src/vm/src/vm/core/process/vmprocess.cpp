@@ -339,10 +339,10 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
+	void VMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = event;
+			status = new_status;
 		}
 		status_cv.notify_all();
 	}

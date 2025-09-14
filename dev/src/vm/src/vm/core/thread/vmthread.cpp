@@ -650,7 +650,7 @@ namespace vm {
 
 	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 		status = new_status;
-		process.onEvent(new_status);
+		process.setStatus(new_status);
 	}
 
 	bool VMThread::isPauseRequested() {
