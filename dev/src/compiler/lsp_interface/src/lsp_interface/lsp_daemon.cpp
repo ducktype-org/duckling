@@ -118,6 +118,7 @@ void server(i32 port) {
 			} else {
 				auto file = fs::File(virtual_root.getFilePath().join(path));
 				file.writeToFile(content);
+				compiler::frontend::ModuleTreeModifier::fileModified(file);
 			}
 
 			return crow::response(200, "OK");
@@ -134,6 +135,7 @@ void server(i32 port) {
 			} else {
 				auto file = fs::File(virtual_root.getFilePath().join(path));
 				file.writeToFile("");
+				compiler::frontend::ModuleTreeModifier::fileModified(file);
 			}
 
 			return crow::response(200, "OK");
