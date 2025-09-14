@@ -36,7 +36,6 @@ namespace {
 		for (const auto& field_type: fieldable.fields) {
 			if (fields.contains(field_type.name))
 				throw DuplicatedFieldError(error_context, field_type.name);
-			
 			fields.put(field_type.name, field_type.type);
 		}
 	}
@@ -201,10 +200,16 @@ namespace {
 
 	/**
 	 * @brief Validates that there are no duplicate field names within a FieldableType and its
-	 * hierarchy.
+	 * hierarchy and that field types exist in the context.
 	 */
 	template<FieldableTypeConcept FieldableType>
-	void validateFieldDuplicates(const FieldableType& fieldable, const TypeContext& ctx) {
+	void validateFieldDuplicatesAndSubtypeExistence(
+		const FieldableType& fieldable, const TypeContext& ctx
+	) {
+		for (auto& field: fieldable.fields)
+			if (!ctx.getCurrentTypes().contains(field.type))
+				throw UnknownSubtypeError(fieldable, field.type);
+
 		base::HashMap<base::StrID, base::StrID> fields;
 		insertFieldsRecursive(fields, fieldable, fieldable, ctx);
 	}
@@ -222,22 +227,6 @@ namespace {
 		}
 	}
 
-	/*
-
-	using TypeOfData = std::variant<
-	    PrimitiveType,
-	    PointerType,
-	    FixedSizeTableType,
-	    DynamicTableType,
-	    DataType,
-	    VariantType,
-	    FunctionType,
-	    OpaqueType,
-	    ClassType,
-	    InterfaceType>;
-
-
-	*/
 	/**
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
@@ -270,11 +259,7 @@ namespace {
 						throw UnknownSubtypeError(variant, alternative);
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
 			}
-			variant_case(DataType, data) {
-				for (auto& field: data.fields)
-					if (!types.contains(field.type)) throw UnknownSubtypeError(data, field.name);
-				validateFieldDuplicates(data, ctx);
-			}
+			variant_case(DataType, data) { validateFieldDuplicatesAndSubtypeExistence(data, ctx); }
 			variant_case(InterfaceType, interface) {
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, interface, interface, ctx);
@@ -289,7 +274,7 @@ namespace {
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, ctx);
 
-				validateFieldDuplicates(clazz, ctx);
+				validateFieldDuplicatesAndSubtypeExistence(clazz, ctx);
 				validateImplementsDuplicates(clazz);
 				validateVMethodSignatures(clazz, ctx);
 				validateImplementations(clazz, virtual_methods, ctx);

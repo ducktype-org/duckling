@@ -19,11 +19,7 @@ namespace {
 		vm::TypeMetadata&                         metadata,
 		const TypeContext&                        ctx
 	) {
-		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef {
-			return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
-		};
-
-		for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
+		for (const auto& impl: inh.implementations) vtable.put(impl.name, metadata.at(impl.type));
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
 				ctx, interface_name, error_context_inh, [&]() {
@@ -70,8 +66,7 @@ namespace {
 					  for (const Field& field_code: clazz.fields) {
 						  fields.emplace_back(
 							  field_code.name,
-							  metadata.atMaybe(field_code.type)
-								  .expect<UnknownSubtypeError>(clazz, field_code.name)
+							  metadata.at(field_code.type)
 						  );
 					  }
 				  };
@@ -98,6 +93,7 @@ namespace {
 		base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
 		for (auto& method: inh.virtual_methods)
 			virtual_methods.put(method.name, get_type_cref(method.type));
+		// TODOP: Get rid of get_type_cref
 
 		base::HashMap<base::StrID, vm::TypeCRef> implementations;
 		for (auto& method: inh.implementations)
@@ -127,7 +123,7 @@ Box<vm::TypeMetadata> vm::code::buildTypes(const TypeContext& ctx) {
 
 	auto types = ctx.getCurrentTypes();
 
-	// Declare all types first
+	// Declare all types first.
 	for (const auto& type: types) metadata->addType(vm::Type::declareType(typeName(type)));
 
 	// Well-define every type.
