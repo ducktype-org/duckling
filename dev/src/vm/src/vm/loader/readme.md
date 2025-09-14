@@ -112,8 +112,8 @@ consistent, high-level representation of the same code in the form of a
 The data flow is initiated by an API request to load code - `loadFile`.
 1.  `VMProcess` receives the request and passes it to its `Loader` object.
 2.  The `Loader` processes the file(s), verifies the code through the
-    `TypeContext` (see 'validateTypes' in 'type_validator.hpp') and `FunctionValidator` modules, and tries to inject it into
-    its internal state (`ValidProgram`).
+    `TypeContext` (see 'validateTypes' in 'type_validator.hpp') and `FunctionValidator` modules, 
+    and tries to inject it into its internal state (`ValidProgram`).
 3.  If the operation succeeds, the `Loader` updates its state, compiles a new,
     complete version of the program into the `LowVMProgram` form, and passes it
     to `VMProcess`.

@@ -250,11 +250,6 @@ namespace {
 	}
 }
 
-/**
- * @brief Throws a builder error if types are invalid in current context.
- * Checks each type individually and inheritance
- * hierarchy soundness.
- */
 void vm::code::validateTypes(const TypeContext& ctx) {
 	// Check for cycles in hierarchy.
 	enum Status { Waiting, Visited, Done };

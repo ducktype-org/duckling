@@ -6,9 +6,13 @@
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
-
 	/**
 	 * @brief Validates the types in the given TypeContext.
+	 * Firstly, detects any cycles in the type hierarchy (including the cycles in the inheritance
+	 * hierarchy), then checks each type individually and inheritance hierarchy soundness. Throws a
+	 * builder error if types are invalid in current context.
+	 *
+	 * For the complete list of specific checks see `vm/src/vm/bytecode/validator/readme.md`).
 	 */
 	void validateTypes(const TypeContext& ctx);
 }

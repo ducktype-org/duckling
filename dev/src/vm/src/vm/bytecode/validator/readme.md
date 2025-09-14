@@ -130,13 +130,14 @@ The `type_validator.hpp` and its corresponding `.cpp` file implement the validat
 of the type system, while the construction is handled by `type_builder.hpp` and its 
 `.cpp` file. The main entry point is the `TypeContext` class, which aggregates a 
 collection of high-level type definitions (`TypeOfData`) and, upon request, validates 
-them and produces low-level, runtime-ready representation (`TypeMetadata`). This 
+them and produces a low-level, runtime-ready representation (`TypeMetadata`). This 
 representation, created using `type_validator.hpp` and `type_builder.hpp`, 
 contains execution-specific attributes such as built v-tables for OOP types. Any errors
-found during validation result in a `vm::code::ValidationError` subclass beingthrown.
+found during validation result in a `vm::code::ValidationError` subclass being thrown.
 
 This entire process is split into two main phases, validation and building, which are 
 managed by the `validateAndProduceTypeMetadata` function.
+
 ### Validation Phase
 
 Before types can be used by the runtime, their definitions must be checked for

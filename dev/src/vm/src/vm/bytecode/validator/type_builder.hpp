@@ -6,10 +6,10 @@
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
-
 	/**
-	 *   @brief Builds the TypeMetadata from TypeContext without validation, so it must be checked
-	 * beforehand.
+	 * @brief Builds TypeMetadata from TypeContext without validation. Assumes that the passed
+	 * TypeContext was validated by `validateTypes` beforehand (in particular, there are no cycles
+	 * in the inheritance hierarchy).
 	 */
 	Box<TypeMetadata> buildTypes(const TypeContext& ctx);
 }
