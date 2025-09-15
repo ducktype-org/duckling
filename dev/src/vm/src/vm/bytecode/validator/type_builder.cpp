@@ -106,7 +106,7 @@ namespace {
 	}
 }
 
-Box<vm::TypeMetadata> vm::code::buildTypes(const TypeContext& ctx) {
+Box<vm::TypeMetadata> vm::code::detail::buildTypes(const TypeContext& ctx) {
 	Box<vm::TypeMetadata> metadata = makeBox<vm::TypeMetadata>();
 
 	auto types = ctx.getCurrentTypes();

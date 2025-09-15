@@ -354,7 +354,7 @@ namespace {
 	}
 }
 
-void vm::code::validateTypes(
+void vm::code::detail::validateTypes(
 	const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
 ) {
 	// Check for cycles in hierarchy.
@@ -367,38 +367,36 @@ void vm::code::validateTypes(
 
 	// explicit object parameter lambdas don't seem to work with class members, hence the
 	// reference
-	auto& types_ref = types;
-	auto  helper    = [&](this auto self, const auto& type) {
-        auto name = typeName(type);
-        if (status[name] == Visited)
-            throw CycleInHierarchyError(type);
-        else if (status[name] == Done)
-            return;
+	auto helper = [&](this auto self, const auto& type) {
+		auto name = typeName(type);
+		if (status[name] == Visited)
+			throw CycleInHierarchyError(type);
+		else if (status[name] == Done)
+			return;
 
-        status[name] = Visited;
-        variant_match(type) {
-            variant_case(ClassType, clazz) {
-                if_opt_some(clazz.extends, superclass) {
-                    if (!types_ref.contains(superclass))
-                        throw InvalidExtendsError(clazz, superclass);
-                    self(*types_ref.at(superclass));
-                }
-                for (auto iface: clazz.implements) {
-                    if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz, iface);
-                    self(*types_ref.at(iface));
-                }
-            }
-            variant_case(InterfaceType, interface) {
-                for (auto iface: interface.implements) {
-                    if (!types_ref.contains(iface)) throw InvalidImplementsError(interface, iface);
-                    self(*types_ref.at(iface));
-                }
-            }
-        }
-        status[name] = Done;
+		status[name] = Visited;
+		variant_match(type) {
+			variant_case(ClassType, clazz) {
+				if_opt_some(clazz.extends, superclass) {
+					if (!types.contains(superclass)) throw InvalidExtendsError(clazz, superclass);
+					self(*types.at(superclass));
+				}
+				for (auto iface: clazz.implements) {
+					if (!types.contains(iface)) throw InvalidImplementsError(clazz, iface);
+					self(*types.at(iface));
+				}
+			}
+			variant_case(InterfaceType, interface) {
+				for (auto iface: interface.implements) {
+					if (!types.contains(iface)) throw InvalidImplementsError(interface, iface);
+					self(*types.at(iface));
+				}
+			}
+		}
+		status[name] = Done;
 	};
 	for (const auto& type: types) helper(type);
 
-	// @note: Following validation assumes cycles in class hierarchy where detected.
+	// @note: Following validation assumes no cycles in class hierarchy were detected.
 	for (const auto& type: types) validateType(type, ctx, functions);
 }

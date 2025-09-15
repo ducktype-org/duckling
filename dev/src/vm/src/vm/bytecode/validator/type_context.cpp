@@ -12,8 +12,8 @@ using namespace vm::code;
 Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	const base::HashMap<base::StrID, FuncSignature>& available_functions
 ) const {
-	validateTypes(*this, available_functions);
-	return buildTypes(*this);
+	detail::validateTypes(*this, available_functions);
+	return detail::buildTypes(*this);
 }
 
 const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
