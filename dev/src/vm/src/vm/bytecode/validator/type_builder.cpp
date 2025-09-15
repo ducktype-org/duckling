@@ -1,5 +1,6 @@
 #include "type_builder.hpp"
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
@@ -21,20 +22,18 @@ namespace {
 	) {
 		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
-			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(error_context_inh, interface_name); }
-			);
+			const auto& interface = [&]() -> const InterfaceType& {
+				const auto& tod = *ctx.getCurrentTypes().at(interface_name);
+				return std::get<InterfaceType>(tod);
+			}();
 			buildVTableRecursive(interface, error_context_inh, vtable, metadata, ctx);
 		}
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			if (inh.extends) {
-				const auto& super_class
-					= getType<ClassType>(ctx, *inh.extends, error_context_inh, [&]() {
-						  return InvalidExtendsError(inh, *inh.extends);
-					  });
+				const auto& super_class = [&]() -> const ClassType& {
+					const auto& tod = *ctx.getCurrentTypes().at(*inh.extends);
+					return std::get<ClassType>(tod);
+				}();
 				buildVTableRecursive(super_class, error_context_inh, vtable, metadata, ctx);
 			}
 		}
@@ -57,11 +56,11 @@ namespace {
 			std::function<void(const vm::code::ClassType&)> collect_class_fields_recursive
 				= [&](const vm::code::ClassType& clazz) {
 					  if (clazz.extends) {
-						  const auto& super_class_code
-							  = getType<ClassType>(ctx, *clazz.extends, clazz, [&]() {
-									return InvalidExtendsError(clazz, *clazz.extends);
-								});
-						  collect_class_fields_recursive(super_class_code);
+						  const auto& super_class = [&]() -> const ClassType& {
+							  const auto& tod = *ctx.getCurrentTypes().at(*clazz.extends);
+							  return std::get<ClassType>(tod);
+						  }();
+						  collect_class_fields_recursive(super_class);
 					  }
 
 					  for (const Field& field_code: clazz.fields)
@@ -80,17 +79,14 @@ namespace {
 	vm::InheritanceMetadata buildInheritanceMetadata(
 		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
 	) {
-		vm::TypeCRef tp            = metadata.at(inh.name);
-		auto         get_type_cref = [&](base::StrID name) -> vm::TypeCRef {
-            return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
-		};
-		auto implements = inh.implements | std::views::transform(get_type_cref)
+		vm::TypeCRef tp    = metadata.at(inh.name);
+		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef { return metadata.at(name); };
+		auto implements    = inh.implements | std::views::transform(get_type_cref)
 		                | std::ranges::to<std::vector>();
 
 		base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
 		for (auto& method: inh.virtual_methods)
 			virtual_methods.put(method.name, get_type_cref(method.type));
-		// TODOP: Get rid of get_type_cref
 
 		base::HashMap<base::StrID, base::StrID> vtable;
 		buildVTableRecursive(inh, inh, vtable, metadata, ctx);

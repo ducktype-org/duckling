@@ -99,7 +99,12 @@ namespace vm::code {
 		ObjIdNameMap<Function>   function_map;
 		ObjIdNameMap<GlobalData> globals_map;
 
-		// TODOP: Add doc comment.
+		/**
+		 * @brief Contains a mapping from function name to function signature for all functions
+		 * available in the program (including builtin functions). Used for verification purposes,
+		 * but is basically the same thing as function_map.
+		 */
+		// TODOP: Remove that.
 		base::HashMap<base::StrID, FuncSignature> available_functions;
 
 		TypeContext type_context;
