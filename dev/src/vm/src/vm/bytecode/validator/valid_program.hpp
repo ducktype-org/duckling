@@ -101,10 +101,11 @@ namespace vm::code {
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
-		 * available in the program (including builtin functions). Used for verification purposes,
-		 * but is basically the same thing as function_map.
+		 * available in the program (including builtin functions). Used for type verification of
+		 * class and interface types to check if implementations of declared methods match the
+		 * expected signatures. This map basically stores forward declarations of functions
+		 * available in the program, since `function_map` building is done after type verification.
 		 */
-		// TODOP: Remove that.
 		base::HashMap<base::StrID, FuncSignature> available_functions;
 
 		TypeContext type_context;
