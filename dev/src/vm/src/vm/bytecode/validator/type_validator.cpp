@@ -365,8 +365,6 @@ void vm::code::detail::validateTypes(
 	base::HashMap<base::StrID, Status> status;
 	for (const auto& type: types) status.put(typeName(type), Waiting);
 
-	// explicit object parameter lambdas don't seem to work with class members, hence the
-	// reference
 	auto helper = [&](this auto self, const auto& type) {
 		auto name = typeName(type);
 		if (status[name] == Visited)
