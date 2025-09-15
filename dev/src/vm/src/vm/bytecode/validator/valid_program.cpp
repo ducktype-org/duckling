@@ -9,8 +9,6 @@
 #include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 
-#include <unordered_set>
-
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
@@ -24,7 +22,8 @@ Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
 	return type_context.validateAndProduceTypeMetadata(available_functions);
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
