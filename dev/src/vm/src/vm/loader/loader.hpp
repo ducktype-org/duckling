@@ -45,7 +45,7 @@ namespace vm::loader {
 		 * low-level program representation of the current loader state.
 		 */
 		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
-			const std::vector<code::CodeCollection>& code_collections
+			const code::CodeCollection& code_collection
 		);
 	};
 }

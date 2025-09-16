@@ -160,11 +160,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<code::CodeCollection>& code_collections
+	const code::CodeCollection& code_collection
 ) {
 	LoaderLogger log;
 	try {
-		for (const auto& code: code_collections) program = program.newInsertCode(code);
+		program = program.newInsertCode(code_collection);
 		return compiler::compile(program);
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(

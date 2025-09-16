@@ -33,15 +33,13 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
+		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
 		std::unique_lock                                       lock(rw_global);
 		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
 				variant_case(std::vector<fs::File>, files) { return loader.getProgram(files); }
-				variant_case(std::vector<code::CodeCollection>, code) {
-					return loader.getProgram(code);
-				}
+				variant_case(code::CodeCollection, code) { return loader.getProgram(code); }
 			}
 			CORE_UNREACHABLE();
 		}();

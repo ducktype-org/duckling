@@ -84,7 +84,7 @@ namespace vm {
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
+			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
 
 		/**
