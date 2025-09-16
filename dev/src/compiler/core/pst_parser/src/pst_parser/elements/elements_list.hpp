@@ -40,6 +40,7 @@ namespace pst {
 	class Variable;
 	class Const;
 	class Fun;
+	class FunDecl;
 	class If;
 	class While;
 	class For;

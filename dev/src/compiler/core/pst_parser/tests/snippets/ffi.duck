@@ -1,0 +1,11 @@
+extern("C") {
+    fundecl getpid() -> i32;
+    fundecl fork() -> i32;
+
+    struct Result {
+        var x: i32;
+    };
+}
+
+extern("C", "libname") fundecl SSL_new(a: i32) -> i32;
+extern("C", "libname") fundecl SSL_free(a: i32) -> i32;

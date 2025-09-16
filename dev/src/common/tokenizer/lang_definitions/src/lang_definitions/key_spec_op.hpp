@@ -30,6 +30,7 @@ namespace lang_def {
 
 		// Non-code declaration
 		Fun,
+		FunDecl,
 		Class,
 		Namespace,
 		Import,
@@ -144,6 +145,9 @@ namespace lang_def {
 		This,
 		Extends,
 		Implements,
+
+		// Stmt specifiers:
+		Extern,
 
 		// Misc:
 

@@ -24,6 +24,7 @@ namespace lang_def {
 	constexpr auto LANG_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::Fun, "fun", KeywordFlags() },
+			{ Keyword::FunDecl, "fundecl", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
 			{ Keyword::Import, "import", KeywordFlags() },
@@ -113,6 +114,7 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
+			{ Keyword::Extern, "extern", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY

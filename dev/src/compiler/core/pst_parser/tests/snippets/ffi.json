@@ -1,0 +1,451 @@
+{
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 230
+	},
+	"Top Level": [
+		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 118
+			},
+			"StmtSpecifier": {
+				"specifier": "extern",
+				"call_list": {
+					"position": {
+						"sourceStart": 7,
+						"sourceEnd": 9
+					},
+					"call list": [
+						{
+							"position": {
+								"sourceStart": 7,
+								"sourceEnd": 9
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 7,
+										"sourceEnd": 9
+									},
+									"String Value Expr": {
+										"string": "C"
+									}
+								}
+							}
+						},
+					]
+				},
+				"stmt": {
+					"position": {
+						"sourceStart": 12,
+						"sourceEnd": 118
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 12,
+							"sourceEnd": 118
+						},
+						"Code Block": [
+							{
+								"position": {
+									"sourceStart": 18,
+									"sourceEnd": 41
+								},
+								"Function": {
+									"name": {
+										"Name": "getpid"
+									},
+									"parameters": {
+										"position": {
+											"sourceStart": 32,
+											"sourceEnd": 33
+										},
+										"function parameter list": []
+									},
+									"return": {
+										"position": {
+											"sourceStart": 38,
+											"sourceEnd": 40
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 38,
+													"sourceEnd": 40
+												},
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
+										}
+									}
+								}
+							},
+							{
+								"position": {
+									"sourceStart": 47,
+									"sourceEnd": 68
+								},
+								"Function": {
+									"name": {
+										"Name": "fork"
+									},
+									"parameters": {
+										"position": {
+											"sourceStart": 59,
+											"sourceEnd": 60
+										},
+										"function parameter list": []
+									},
+									"return": {
+										"position": {
+											"sourceStart": 65,
+											"sourceEnd": 67
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 65,
+													"sourceEnd": 67
+												},
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
+										}
+									}
+								}
+							},
+							{
+								"position": {
+									"sourceStart": 75,
+									"sourceEnd": 116
+								},
+								"Expr Stmt": {
+									"position": {
+										"sourceStart": 75,
+										"sourceEnd": 115
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 75,
+												"sourceEnd": 115
+											},
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 75,
+														"sourceEnd": 80
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "struct"
+														}
+													}
+												},
+												"operator": "Result",
+												"right_expr": {
+													"position": {
+														"sourceStart": 89,
+														"sourceEnd": 115
+													},
+													"Block Expression": {
+														"block": {
+															"position": {
+																"sourceStart": 89,
+																"sourceEnd": 115
+															},
+															"Code Block": [
+																{
+																	"position": {
+																		"sourceStart": 99,
+																		"sourceEnd": 109
+																	},
+																	"Let": {
+																		"name": {
+																			"Name": "x"
+																		},
+																		"mutable": false,
+																		"type": {
+																			"position": {
+																				"sourceStart": 106,
+																				"sourceEnd": 108
+																			},
+																			"Top Level Expression": {
+																				"expr": {
+																					"position": {
+																						"sourceStart": 106,
+																						"sourceEnd": 108
+																					},
+																					"Keyword Expression": {
+																						"keyword": "i32"
+																					}
+																				}
+																			}
+																		}
+																	}
+																},
+															]
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							},
+						]
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 121,
+				"sourceEnd": 174
+			},
+			"StmtSpecifier": {
+				"specifier": "extern",
+				"call_list": {
+					"position": {
+						"sourceStart": 128,
+						"sourceEnd": 141
+					},
+					"call list": [
+						{
+							"position": {
+								"sourceStart": 128,
+								"sourceEnd": 130
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 128,
+										"sourceEnd": 130
+									},
+									"String Value Expr": {
+										"string": "C"
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 133,
+								"sourceEnd": 141
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 133,
+										"sourceEnd": 141
+									},
+									"String Value Expr": {
+										"string": "libname"
+									}
+								}
+							}
+						},
+					]
+				},
+				"stmt": {
+					"position": {
+						"sourceStart": 144,
+						"sourceEnd": 174
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 144,
+							"sourceEnd": 174
+						},
+						"Function": {
+							"name": {
+								"Name": "SSL_new"
+							},
+							"parameters": {
+								"position": {
+									"sourceStart": 159,
+									"sourceEnd": 166
+								},
+								"function parameter list": [
+									{
+										"position": {
+											"sourceStart": 160,
+											"sourceEnd": 165
+										},
+										"Function Parameter": {
+											"Function Parameter": {
+												"name": {
+													"Name": "a"
+												},
+												"type": {
+													"position": {
+														"sourceStart": 163,
+														"sourceEnd": 165
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 163,
+																"sourceEnd": 165
+															},
+															"Keyword Expression": {
+																"keyword": "i32"
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+								]
+							},
+							"return": {
+								"position": {
+									"sourceStart": 171,
+									"sourceEnd": 173
+								},
+								"Top Level Expression": {
+									"expr": {
+										"position": {
+											"sourceStart": 171,
+											"sourceEnd": 173
+										},
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 176,
+				"sourceEnd": 230
+			},
+			"StmtSpecifier": {
+				"specifier": "extern",
+				"call_list": {
+					"position": {
+						"sourceStart": 183,
+						"sourceEnd": 196
+					},
+					"call list": [
+						{
+							"position": {
+								"sourceStart": 183,
+								"sourceEnd": 185
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 183,
+										"sourceEnd": 185
+									},
+									"String Value Expr": {
+										"string": "C"
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 188,
+								"sourceEnd": 196
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 188,
+										"sourceEnd": 196
+									},
+									"String Value Expr": {
+										"string": "libname"
+									}
+								}
+							}
+						},
+					]
+				},
+				"stmt": {
+					"position": {
+						"sourceStart": 199,
+						"sourceEnd": 230
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 199,
+							"sourceEnd": 230
+						},
+						"Function": {
+							"name": {
+								"Name": "SSL_free"
+							},
+							"parameters": {
+								"position": {
+									"sourceStart": 215,
+									"sourceEnd": 222
+								},
+								"function parameter list": [
+									{
+										"position": {
+											"sourceStart": 216,
+											"sourceEnd": 221
+										},
+										"Function Parameter": {
+											"Function Parameter": {
+												"name": {
+													"Name": "a"
+												},
+												"type": {
+													"position": {
+														"sourceStart": 219,
+														"sourceEnd": 221
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 219,
+																"sourceEnd": 221
+															},
+															"Keyword Expression": {
+																"keyword": "i32"
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+								]
+							},
+							"return": {
+								"position": {
+									"sourceStart": 227,
+									"sourceEnd": 229
+								},
+								"Top Level Expression": {
+									"expr": {
+										"position": {
+											"sourceStart": 227,
+											"sourceEnd": 229
+										},
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+	]
+}
