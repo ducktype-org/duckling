@@ -29,7 +29,7 @@ namespace pst {
 
 			case Keyword::Fun:
 				return internal::parseStmt<Fun>(state);
-			
+
 			case Keyword::FunDecl:
 				return internal::parseStmt<FunDecl>(state);
 

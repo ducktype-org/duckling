@@ -41,7 +41,7 @@ namespace pst {
 		if (SPECIFIEIRS_CALL_LIST_REQUIRED.contains(out->specifier)) {
 			state.parse(out).one(out->specifier);
 			MBox<CallList> call_list;
-			
+
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
 				state.log(makeBox<BadCallError>(dia::SourcePosition(state.getPosition())));
 				return nullptr;
@@ -49,7 +49,7 @@ namespace pst {
 
 			state.parse(out).goDown();
 			state.parse(out).one(&call_list);
-			
+
 			if (!call_list) return nullptr;
 			state.parse(out).goUpAndSkip();
 

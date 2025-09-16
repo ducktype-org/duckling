@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../meta.hpp"
 #include "../lists/call_list.hpp"
+#include "../meta.hpp"
 
 namespace pst {
 	/**
@@ -19,14 +19,9 @@ namespace pst {
 		NAMED_CHILD_OPT(call_list, CallList);
 
 	public:
-		static constexpr std::array SPECIFIERS_ARRAY = {
-			Keyword::Public,
-			Keyword::Private,
-			Keyword::Protected,
-			Keyword::Extern,
-			Keyword::Test,
-			Keyword::Debug
-		};
+		static constexpr std::array SPECIFIERS_ARRAY
+			= { Keyword::Public, Keyword::Private, Keyword::Protected,
+			    Keyword::Extern, Keyword::Test,    Keyword::Debug };
 
 		static constexpr std::array SPECIFIEIRS_CALL_LIST_REQUIRED_ARRAY = {
 			Keyword::Extern,

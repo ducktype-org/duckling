@@ -25,9 +25,7 @@ namespace pst {
 			return params.give();
 		}
 
-		bool trailingSemicolon() override {
-			return true;
-		}
+		bool trailingSemicolon() override { return true; }
 
 		[[nodiscard]]
 		/**
@@ -38,7 +36,7 @@ namespace pst {
 		}
 
 		static MBox<FunDecl> parse(LangParserState& state);
-		void             dprint(std::ostream& out) const final;
+		void                 dprint(std::ostream& out) const final;
 		~FunDecl() final = default;
 
 		[[nodiscard]]

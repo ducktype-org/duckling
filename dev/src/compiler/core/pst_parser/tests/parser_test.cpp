@@ -181,7 +181,7 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
-	void testFunDecl() {testJsonRelativePath("ffi.duck", "ffi.json");}
+	void testFunDecl() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
