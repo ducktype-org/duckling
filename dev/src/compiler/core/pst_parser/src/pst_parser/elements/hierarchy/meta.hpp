@@ -58,6 +58,7 @@ namespace pst {
 		Alias,
 		Fun,
 		FunDecl,
+		Pattern,
 		Namespace,
 		CodeDecl,
 		StmtSpecifier,

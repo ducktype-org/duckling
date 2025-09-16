@@ -25,6 +25,7 @@ namespace lang_def {
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::FunDecl, "fundecl", KeywordFlags() },
+			{ Keyword::Pattern, "pattern", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
 			{ Keyword::Import, "import", KeywordFlags() },
@@ -50,6 +51,7 @@ namespace lang_def {
 			{ Keyword::Catch, "catch", KeywordFlags() },
 			{ Keyword::Test, "test", KeywordFlags() },
 			{ Keyword::Debug, "debug", KeywordFlags() },
+			{ Keyword::Match, "match", KeywordFlags() },
 			{ Keyword::Switch, "switch", KeywordFlags() },
 			{ Keyword::Case, "case", KeywordFlags() },
 
@@ -160,6 +162,7 @@ namespace lang_def {
 		{ Special::AtSign, "@" },
 		{ Special::HashSign, "#" },
 		{ Special::DollarSign, "$" },
+		{ Special::Underscore, "_" },
 	});
 
 	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({

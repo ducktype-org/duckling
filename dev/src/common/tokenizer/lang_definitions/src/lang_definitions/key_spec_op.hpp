@@ -31,6 +31,7 @@ namespace lang_def {
 		// Non-code declaration
 		Fun,
 		FunDecl,
+		Pattern,
 		Class,
 		Namespace,
 		Import,
@@ -61,6 +62,7 @@ namespace lang_def {
 		Catch,
 		Test,
 		Debug,
+		Match,
 		Switch,
 		Case,
 
@@ -187,6 +189,7 @@ namespace lang_def {
 		Comma,
 		DollarSign,
 		HashSign,
+		Underscore,
 		//...
 	};
 
