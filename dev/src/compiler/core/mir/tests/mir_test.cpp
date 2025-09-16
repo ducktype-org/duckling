@@ -460,8 +460,9 @@ private:
 					compiler::mir::Instruction&   assignment
 						= mir_rep.blocks[mir_rep.block_order[3]].instructions[0];
 
-					mir_rep.debugPrint(std::cerr);
-					assignment.debugPrint(std::cerr);
+					// If this test fails use the following to find the correct Instruction.
+					// mir_rep.debugPrint(std::cerr);
+					// assignment.debugPrint(std::cerr);
 					assertEqual(
 						compiler::mir::Operation::Assign,
 						assignment.operation,
