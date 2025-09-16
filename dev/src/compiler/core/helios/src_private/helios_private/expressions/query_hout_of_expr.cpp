@@ -383,10 +383,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
 				for (size_t i = 0; i < expr_count; ++i) {
-					auto unlocked_opt = stmt->getSubExpr(i).unlockOpt(ctx);
-					CORE_ASSERT(unlocked_opt.has_value(), "empty subexpr in comparison");
-
-					auto result = fromPST(ctx, unlocked_opt.value());
+					auto result = fromPST(ctx, stmt->getSubExpr(i));
 					if (result.hasError())
 						return;
 					else
