@@ -185,13 +185,15 @@ namespace compiler::mir {
 			}
 
 			void fillNop(ScopeRef scope) {
-				fill(Instruction{
-					Operation::Nop,
-					{},
-					{},
-					{},
-					scope,
-				});
+				fill(
+					Instruction{
+						Operation::Nop,
+						{},
+						{},
+						{},
+						scope,
+					}
+				);
 			}
 
 			friend struct BlockBuilder;
@@ -377,12 +379,14 @@ namespace compiler::mir {
 		 * Adds a local variable to MIR function, from helios_id representing it.
 		 */
 		MutLocalRef addLocal(const helios::SymID helios_id) {
-			local_list.emplaceBack(MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
-			});
+			local_list.emplaceBack(
+				MirLocal{
+					helios_id,
+					ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+						"Handling ERRORS in MIR is not supported yet..."
+					),
+				}
+			);
 			return local_list.last();
 		}
 
@@ -391,13 +395,15 @@ namespace compiler::mir {
 		 */
 		MutLocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
 			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
-			local_list.emplaceBack(MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
-				parameter_index,
-			});
+			local_list.emplaceBack(
+				MirLocal{
+					helios_id,
+					ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+						"Handling ERRORS in MIR is not supported yet..."
+					),
+					parameter_index,
+				}
+			);
 			return local_list.last();
 		}
 
@@ -589,13 +595,15 @@ namespace compiler::mir {
 		) {
 			variant_match(value) {
 				variant_case(MIRValue, val) {
-					hole.fill(Instruction{
-						Operation::Assign,
-						target,
-						{ val },
-						flags,
-						scope,
-					});
+					hole.fill(
+						Instruction{
+							Operation::Assign,
+							target,
+							{ val },
+							flags,
+							scope,
+						}
+					);
 				}
 				variant_case(Finalizer, res_data) {
 					CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
@@ -783,13 +791,15 @@ namespace compiler::mir {
 			auto else_scope = function.newScope(parent_scope);
 
 			auto else_block = function.newBlock();
-			else_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
+			else_block->setTerminator(
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, else_scope }
+			);
 			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
 			auto then_block = function.newBlock();
-			then_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
+			then_block->setTerminator(
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, then_scope }
+			);
 			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
 			auto condition_block = function.newBlock();
@@ -818,13 +828,15 @@ namespace compiler::mir {
 				);
 			}
 
-			condition_block->setTerminator(Instruction{
-				Operation::Branch,
-				{},
-				{ *possible_condition_res, then_body->getID(), else_body->getID() },
-				{},
-				condition_scope,
-			});
+			condition_block->setTerminator(
+				Instruction{
+					Operation::Branch,
+					{},
+					{ *possible_condition_res, then_body->getID(), else_body->getID() },
+					{},
+					condition_scope,
+				}
+			);
 
 			output({ lowered_condition.begin });
 		}
@@ -873,13 +885,15 @@ namespace compiler::mir {
 				);
 			}
 
-			condition_continuation_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
-				{},
-				condition_scope,
-			});
+			condition_continuation_block->setTerminator(
+				{
+					Operation::Branch,
+					{},
+					{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
+					{},
+					condition_scope,
+				}
+			);
 
 			output({ entry_block });
 		}
@@ -1077,7 +1091,8 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
+		void visitTernaryOperatorExpr(
+			const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
@@ -1109,13 +1124,17 @@ namespace compiler::mir {
 				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
 
 
-			condition_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
-				{},
-				expr_scope,
-			});
+			condition_block->setTerminator(
+				{
+					Operation::Branch,
+					{},
+					{ lowered_condition.getResult(function),
+			          then_block->getID(),
+			          else_block->getID() },
+					{},
+					expr_scope,
+				}
+			);
 
 			// Return (always value).
 			valueOutput(lowered_condition.begin, target_location);
@@ -1146,8 +1165,9 @@ namespace compiler::mir {
 			CORE_ASSERT(chain_expr.expressions.size() != 1, "Single element chain comparison");
 			CORE_ASSERT(
 				chain_expr.operators.size() == chain_expr.expressions.size() - 1,
-				"Operands: " + std::to_string(chain_expr.operators.size()) + " expressions: "
-					+ std::to_string(chain_expr.expressions.size()) + ", but expected equal counts."
+				"Operands: " + std::to_string(chain_expr.operators.size())
+					+ " expressions: " + std::to_string(chain_expr.expressions.size())
+					+ ", but expected one less operator then expression."
 			);
 
 			using namespace std::views;
@@ -1157,8 +1177,9 @@ namespace compiler::mir {
 			auto prev_cmp_hole         = last_comparison_block->addHole();
 
 			// After the last comparison, continue regardless of the result.
-			last_comparison_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+			last_comparison_block->setTerminator(
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
 
 			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
@@ -1182,21 +1203,25 @@ namespace compiler::mir {
 				// Place for the next comparison.
 				BlockBuilderRef new_comparison_block = function.newBlock();
 				auto            new_cmp_hole         = new_comparison_block->addHole();
-				new_comparison_block->setTerminator(Instruction{
-					Operation::Branch,
-					{},
-					{ boolean_output, prev_block->getID(), continuation->getID() },
-					{},
-					expr_scope });  // We exaluate prev_value only after this comparison is true, as
-				                    // prev_cmp will be the first comparison it is a part of.
+				new_comparison_block->setTerminator(
+					Instruction{ Operation::Branch,
+				                 {},
+				                 { boolean_output, prev_block->getID(), continuation->getID() },
+				                 {},
+				                 expr_scope }
+				);  // We exaluate prev_value only after this comparison is true, as
+				    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
-				auto new_lowered_expr = lowerExpr(*expr, new_comparison_block, function, expr_scope);
-				auto new_value   = new_lowered_expr.getResult(function);
+				auto new_lowered_expr
+					= lowerExpr(*expr, new_comparison_block, function, expr_scope);
+				auto new_value = new_lowered_expr.getResult(function);
 
 				// We create the prev_cmp, as we only now have both expressions.
-				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
+				prev_cmp_hole.fill(
+					Instruction{
+						comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope }
+				);
 
 				prev_block    = new_lowered_expr.begin;
 				prev_cmp_hole = new_cmp_hole;
@@ -1212,11 +1237,13 @@ namespace compiler::mir {
 			auto first_block = last_lowered.begin;
 
 			// The first comparison to be performed.
-			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
-			                                { boolean_output },
-			                                { first_value, prev_value },
-			                                { flagConstruct(boolean_output) },
-			                                expr_scope });
+			prev_cmp_hole.fill(
+				Instruction{ mir_operators.front(),
+			                 { boolean_output },
+			                 { first_value, prev_value },
+			                 { flagConstruct(boolean_output) },
+			                 expr_scope }
+			);
 
 			valueOutput(first_block, boolean_output);
 		}
@@ -1519,12 +1546,14 @@ namespace compiler::mir {
 				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
 				                              function_type };
 			function_builder.setName(
-				base::StrID(base::strConcat(
-								"_GLOBAL_",
-								key.global_data.original_name,
-								key.global_data.helios_symbol.queryUnstablePerfectHash()
+				base::StrID(
+					base::strConcat(
+						"_GLOBAL_",
+						key.global_data.original_name,
+						key.global_data.helios_symbol.queryUnstablePerfectHash()
+					)
+						.c_str()
 				)
-			                    .c_str())
 			);
 
 			auto last_block = function_builder.newBlock();
@@ -1541,13 +1570,15 @@ namespace compiler::mir {
 				function_builder.getTopLevelScope()
 			);
 
-			assing_instr.fill(Instruction{
-				Operation::Assign,
-				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
-				{ lowerexpr_res.getResult(function_builder) },
-				{},
-				function_builder.getTopLevelScope(),
-			});
+			assing_instr.fill(
+				Instruction{
+					Operation::Assign,
+					{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+					{ lowerexpr_res.getResult(function_builder) },
+					{},
+					function_builder.getTopLevelScope(),
+				}
+			);
 
 			function_builder.setEntry(lowerexpr_res.begin);
 
