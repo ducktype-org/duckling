@@ -11,7 +11,7 @@ Tests:
       default:
         Output:
           String: ""
-        ExitCode: 100
+        ExitCode: 0
   comparison-chain:
     Cases:
       default:
