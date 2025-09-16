@@ -219,7 +219,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::StmtSpecifier, true>  protected_specifier{ "protected class x{}" };
 	Example<pst::StmtSpecifier, true>  public_block{ "public {class x{}}" };
 	Example<pst::StmtSpecifier, true>  extern_block{ "extern (\"C\") {class x{}}" };
-	Example<pst::StmtSpecifier, true>  extern_block_two{ "extern (\"C\", \"obj.o\") {class x{}}" };
+	Example<pst::StmtSpecifier, true>  extern_block_two{ R"(extern ("C", "obj.o") {class x{}})" };
 	Example<pst::StmtSpecifier, false> bad_specifier{ "def class x{}" };
 	Example<pst::StmtSpecifier, false> empty_specifier{ "public" };
 	Example<pst::StmtSpecifier, false> bad_extern_block{ "extern {class x{}}" };
