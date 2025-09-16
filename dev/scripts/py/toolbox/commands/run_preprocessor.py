@@ -1,13 +1,12 @@
 from ..impl.run_preprocessor import run_preprocessor_impl
-from .helpers import (
-    build_dir
-)
+from .helpers import build_dir
 from click import command, option
+
 
 @command()
 @build_dir(
-    prompt="build directory with docs enabled", 
-    help="The name of the build directory with enabled docs."
+    prompt="build directory with docs enabled",
+    help="The name of the build directory with enabled docs.",
 )
 @option(
     "-c",

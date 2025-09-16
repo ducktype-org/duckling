@@ -13,7 +13,7 @@ from ..impl.list_files import list_files_impl
     "--extensions",
     multiple=True,
     help="File extensions to include (e.g., --extensions .cpp --extensions .hpp). "
-         "If not specified, all files are included.",
+    "If not specified, all files are included.",
 )
 @option(
     "--modified",
@@ -31,18 +31,24 @@ from ..impl.list_files import list_files_impl
 )
 @no_merge_base(
     help="Compare against the latest commit on branch instead of the merge base. "
-         "This feature allows running on a shallow clone.",
+    "This feature allows running on a shallow clone.",
 )
-def list_files(extensions: Tuple[str, ...], only_modified: bool, lines: bool, branch: str, no_merge_base: bool) -> None:
+def list_files(
+    extensions: Tuple[str, ...],
+    only_modified: bool,
+    lines: bool,
+    branch: str,
+    no_merge_base: bool,
+) -> None:
     """List files in the repository based on specified criteria.
-    
+
     By default, lists all tracked files. Use --modified to list only modified files compared to origin/main.
     Use --extensions to filter by file type (e.g., --extensions .cpp --extensions .hpp).
     Use --lines to get line ranges for each file (full ranges for all files, or specific ranges for modified files).
     """
     # Convert extensions tuple to list, or None if empty
     ext_list = list(extensions) if extensions else None
-    
+
     files: Union[List[str], Dict[str, List[Tuple[int, int]]]] = list_files_impl(
         extensions=ext_list,
         branch=branch,
@@ -50,7 +56,7 @@ def list_files(extensions: Tuple[str, ...], only_modified: bool, lines: bool, br
         no_merge_base=no_merge_base,
         lines=lines,
     )
-    
+
     # Output files or files with line ranges
     if lines:
         # When lines flag is used, output is a dict

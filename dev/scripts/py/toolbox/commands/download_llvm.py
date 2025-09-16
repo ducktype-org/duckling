@@ -4,6 +4,7 @@ from .helpers import (
 )
 from click import command, option, Choice
 
+
 @command()
 @llvm_version(
     help="Version of LLVM release to compile, ex. 19.1.7",

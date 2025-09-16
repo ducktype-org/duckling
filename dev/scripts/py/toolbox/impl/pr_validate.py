@@ -9,10 +9,7 @@ from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 
 
 def pr_validate_impl(
-        clang_tidy_path: str,
-        clang_format_path: str,
-        build_dir: str,
-        thread_count: int
+    clang_tidy_path: str, clang_format_path: str, build_dir: str, thread_count: int
 ):
     # Step 1 - build
     bash_command(
@@ -30,7 +27,8 @@ def pr_validate_impl(
         fail_fast=False,
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
-        build_dir=build_dir)
+        build_dir=build_dir,
+    )
 
     # Step 4 - duck linter
     if not duck_linter_impl():
