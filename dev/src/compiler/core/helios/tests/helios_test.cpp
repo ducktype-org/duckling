@@ -527,7 +527,7 @@ private:
 		}
 
 		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: write a test that checks comparison chain compile-time evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
 		try {
 			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
