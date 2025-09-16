@@ -1164,9 +1164,6 @@ namespace compiler::mir {
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			// Construct the boolean output during the first comparison (it is cleared later).
-			std::vector<mir::OperationFlag> flags = { flagConstruct(boolean_output) };
-
 			// The left-over value. We mantain that this has to partake in only one comparison,
 			// which will be placed in prev_cmp_hole.boolean
 			auto first_lowered = lowerExpr(
@@ -1199,8 +1196,7 @@ namespace compiler::mir {
 
 				// We create the prev_cmp, as we only now have both expressions.
 				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { expr_result, prev_value }, flags, expr_scope });
-				flags.clear();
+					comp, { boolean_output }, { expr_result, prev_value }, {}, expr_scope });
 
 				prev_block    = lowered_block.begin;
 				prev_cmp_hole = new_cmp_hole;
@@ -1219,7 +1215,7 @@ namespace compiler::mir {
 			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
 			                                { boolean_output },
 			                                { first_value, prev_value },
-			                                flags,
+			                                { flagConstruct(boolean_output) },
 			                                expr_scope });
 
 			valueOutput(first_block, boolean_output);
