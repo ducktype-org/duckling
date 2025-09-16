@@ -1191,18 +1191,18 @@ namespace compiler::mir {
 				                    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
-				auto lowered_block = lowerExpr(*expr, new_comparison_block, function, expr_scope);
-				auto expr_result   = lowered_block.getResult(function);
+				auto new_lowered_expr = lowerExpr(*expr, new_comparison_block, function, expr_scope);
+				auto new_value   = new_lowered_expr.getResult(function);
 
 				// We create the prev_cmp, as we only now have both expressions.
 				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { expr_result, prev_value }, {}, expr_scope });
+					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
 
-				prev_block    = lowered_block.begin;
+				prev_block    = new_lowered_expr.begin;
 				prev_cmp_hole = new_cmp_hole;
 
 				// expr_result participated in the previous comparion fulfilling the invariant.
-				prev_value = expr_result;
+				prev_value = new_value;
 			}
 
 			// The first expression to be evaluated.
