@@ -1154,55 +1154,68 @@ namespace compiler::mir {
 
 			// Place for a comparison instruction
 			auto last_comparison_block = function.newBlock();
+			auto prev_cmp_hole         = last_comparison_block->addHole();
+
+			// After the last comparison, continue regardless of the result.
 			last_comparison_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
 
-			auto prev_cmp_hole = last_comparison_block->addHole();
-
+			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			auto last_lowered = lowerExpr(
-				*chain_expr.expressions.back(), last_comparison_block, function, expr_scope
-			);
-
-			auto prev_value = last_lowered.getResult(function);
-			auto prev_block = last_lowered.begin;
-
-			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
-			auto expressions   = chain_expr.expressions | drop(1) | reverse | drop(1);
-			auto comparisons   = mir_operators | drop(1) | reverse;
-
-			// Construct the boolean output during the first comparison.
+			// Construct the boolean output during the first comparison (it is cleared later).
 			std::vector<mir::OperationFlag> flags = { flagConstruct(boolean_output) };
 
-			for (const auto& [expr, comp]: zip(expressions, comparisons)) {
-				BlockBuilderRef new_jump_block = function.newBlock();
-				auto            cmp_hole       = new_jump_block->addHole();
-				auto lowered_block = lowerExpr(*expr, new_jump_block, function, expr_scope);
-				auto expr_result   = lowered_block.getResult(function);
+			// The left-over value. We mantain that this has to partake in only one comparison,
+			// which will be placed in prev_cmp_hole.boolean
+			auto first_lowered = lowerExpr(
+				*chain_expr.expressions.back(), last_comparison_block, function, expr_scope
+			);
+			auto prev_value = first_lowered.getResult(function);
+			auto prev_block = first_lowered.begin;
 
-				new_jump_block->setTerminator(Instruction{
+			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
+
+			// First and last expressions require special handling. We build them in reverse, as usual.
+			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);
+			auto comparisons = mir_operators | drop(1) | reverse;
+
+			for (const auto& [expr, comp]: zip(expressions, comparisons)) {
+				// Place for the next comparison.
+				BlockBuilderRef new_comparison_block = function.newBlock();
+				auto            new_cmp_hole         = new_comparison_block->addHole();
+				new_comparison_block->setTerminator(Instruction{
 					Operation::Branch,
 					{},
 					{ boolean_output, prev_block->getID(), continuation->getID() },
 					{},
-					expr_scope });
+					expr_scope });  // We exaluate prev_value only after this comparison is true, as
+				                    // prev_cmp will be the first comparison it is a part of.
 
+				// Next expression (completes the prev_cmp).
+				auto lowered_block = lowerExpr(*expr, new_comparison_block, function, expr_scope);
+				auto expr_result   = lowered_block.getResult(function);
+
+				// We create the prev_cmp, as we only now have both expressions.
 				prev_cmp_hole.fill(Instruction{
 					comp, { boolean_output }, { expr_result, prev_value }, flags, expr_scope });
 				flags.clear();
 
 				prev_block    = lowered_block.begin;
-				prev_value    = expr_result;
-				prev_cmp_hole = cmp_hole;
+				prev_cmp_hole = new_cmp_hole;
+
+				// expr_result participated in the previous comparion fulfilling the invariant.
+				prev_value = expr_result;
 			}
 
-			auto first_lowered
+			// The first expression to be evaluated.
+			auto last_lowered
 				= lowerExpr(*chain_expr.expressions.front(), prev_block, function, expr_scope);
-			auto first_value = first_lowered.getResult(function);
-			auto first_block = first_lowered.begin;
+			auto first_value = last_lowered.getResult(function);
+			auto first_block = last_lowered.begin;
 
+			// The first comparison to be performed.
 			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
 			                                { boolean_output },
 			                                { first_value, prev_value },

@@ -281,7 +281,7 @@ namespace compiler::helios {
 				};
 
 				auto evaluated_exprs = chain_expr.expressions | transform(evaluate_subexpr);
-
+				// Each expression is evaluated lazily, when it becomes usefull.
 
 				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
 				if (evaluated.hasError()) {
