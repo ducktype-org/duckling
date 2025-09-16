@@ -1151,6 +1151,12 @@ namespace compiler::mir {
 					+ ", but expected one less operator then expression."
 			);
 
+			auto lower_subexpr_with_result
+				= [this](CRef<hc::Expr> expression, BlockBuilderRef next_block) {
+					  auto lowered = lowerExpr(*expression, next_block, function, expr_scope);
+					  return std::pair{ lowered.begin, lowered.getResult(function) };
+				  };
+
 			using namespace std::views;
 
 			// Place for a comparison instruction
@@ -1167,11 +1173,9 @@ namespace compiler::mir {
 
 			// The left-over value. We mantain that this has to partake in only one comparison,
 			// which will be placed in prev_cmp_hole.boolean
-			auto first_lowered = lowerExpr(
-				*chain_expr.expressions.back(), last_comparison_block, function, expr_scope
+			auto [prev_block, prev_value] = lower_subexpr_with_result(
+				chain_expr.expressions.back().ref(), last_comparison_block
 			);
-			auto prev_value = first_lowered.getResult(function);
-			auto prev_block = first_lowered.begin;
 
 			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
 
@@ -1192,15 +1196,14 @@ namespace compiler::mir {
 				                    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
-				auto new_lowered_expr
-					= lowerExpr(*expr, new_comparison_block, function, expr_scope);
-				auto new_value = new_lowered_expr.getResult(function);
+				auto [new_block, new_value]
+					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
 
 				// We create the prev_cmp, as we only now have both expressions.
 				prev_cmp_hole.fill(Instruction{
 					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
 
-				prev_block    = new_lowered_expr.begin;
+				prev_block    = new_block;
 				prev_cmp_hole = new_cmp_hole;
 
 				// expr_result participated in the previous comparion fulfilling the invariant.
@@ -1208,10 +1211,8 @@ namespace compiler::mir {
 			}
 
 			// The first expression to be evaluated.
-			auto last_lowered
-				= lowerExpr(*chain_expr.expressions.front(), prev_block, function, expr_scope);
-			auto first_value = last_lowered.getResult(function);
-			auto first_block = last_lowered.begin;
+			auto [first_block, first_value]
+				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
 
 			// The first comparison to be performed.
 			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
