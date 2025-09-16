@@ -3,7 +3,7 @@ fun main() -> i64 = {
     let y: i64 = 1;
 
     if (1 > 2) { 
-        builtin_output_i64(1); #
+        builtin_output_i64(1); # not printed
     }
 
     if (2 != 1 == x >= -1) {
