@@ -13,14 +13,14 @@
 #include <utility>
 
 namespace vm::low {
-	using ByteCode = std::vector<MicroInstruction>;
+	using MicroByteCode = std::vector<MicroInstruction>;
 
 	/**
-	 * @brief Function data.
+	 * @brief Micro bytecode representation of function data.
 	 */
-	struct FuncData {
+	struct LowFuncData {
 		base::StrID           name;
-		ByteCode              bc;
+		MicroByteCode         bc;
 		usize                 local_stack_size;
 		usize                 arg_size;
 		usize                 ret_size;
@@ -29,9 +29,9 @@ namespace vm::low {
 	};
 
 	/**
-	 * @brief Global data.
+	 * @brief Micro bytecode representation of Global data.
 	 */
-	struct GlobData {
+	struct LowGlobalData {
 		TypeCRef                    type;
 		base::Optional<base::StrID> ctor_name;
 		base::Optional<base::StrID> dtor_name;
@@ -46,11 +46,14 @@ namespace vm::low {
 	 * @note The order of functions in the `std::vector<FuncData>` is important, as the `ID` of
 	 * the function in the function calls is the index in this vector. Similar holds for
 	 * `std::vector<code::GlobalData>` - global data.
+	 *
+	 * TODOP: Represents the MicroBytecode program. It's always valid.
 	 */
-	struct LowVMProgram {
+	class LowVMProgram {
+	public:
 		LowVMProgram(
 			Box<TypeMetadata>                      types,
-			const std::vector<FuncData>&           functions,
+			const std::vector<LowFuncData>&        functions,
 			const std::vector<code::GlobalData>&   global_data,
 			const base::HashMap<u64, base::StrID>& method_name_pool
 		):
@@ -65,16 +68,24 @@ namespace vm::low {
 				if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
 				if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 
-				GlobData data{ .type      = this->types->at(global.type),
-					           .ctor_name = ctor_name,
-					           .dtor_name = dtor_name };
+				LowGlobalData data{ .type      = this->types->at(global.type),
+					                .ctor_name = ctor_name,
+					                .dtor_name = dtor_name };
 				this->global_data.insert(data, global.name);
 			}
 		}
 
-		Box<TypeMetadata>                    types;
-		ObjIdNameMap<FuncData, usize>        functions;
-		ObjIdNameMap<GlobData, GlobalDataID> global_data;
+		// TODOP: Modify the state of LowVMProgram. Assumes that the injected "thing" is always
+		// valid and should be verified by the validator.
+		void addFunction(const LowFuncData& func);
+		void addType(const LowFuncData& func);
+		void addGlobal(const LowFuncData& func);
+
+
+	private:
+		Box<TypeMetadata>                         types;
+		ObjIdNameMap<LowFuncData, usize>          functions;
+		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<u64, base::StrID> method_name_pool;

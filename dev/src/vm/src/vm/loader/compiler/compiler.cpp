@@ -95,53 +95,6 @@ namespace vm::loader::compiler {
 			CORE_UNREACHABLE();
 		}
 
-		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
-			// This is guaranteed to exist by builders.
-			code::FuncSignature   signature       = ctx.function->signature;
-			u64                   parameters_size = 0;
-			std::vector<TypeCRef> parameters;
-			for (const auto& param: signature.parameters) {
-				parameters.emplace_back(ctx.type_map.at(param.str));
-				auto type = ctx.type_map.at(param.str);
-				parameters_size += type->getSize();
-			}
-
-			low::ByteCode bc;
-			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
-				const auto& op    = ctx.function->body[op_idx];
-				u64         arg_0 = 0;
-				u64         arg_1 = 0;
-				variant_match(op) {
-#define HANDLE_OPCODE_0ARGS(opcode) \
-	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)              \
-	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {       \
-		arg_0 = getOpCodeArgValue(ctx, op_idx, instr.arg0); \
-	}
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)   \
-	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {       \
-		arg_0 = getOpCodeArgValue(ctx, op_idx, instr.arg0); \
-		arg_1 = getOpCodeArgValue(ctx, op_idx, instr.arg1); \
-	}
-#include <vm/bytecode/opcode_definitions.hpp>
-				}
-
-				bc.emplace_back(makeLowInstruction(
-					low::fix8FromInstr(op),
-					vm::safeReadBytes<u64>(arg_0),
-					vm::safeReadBytes<u64>(arg_1)
-				));
-			}
-			return low::FuncData{ .name             = ctx.function->name,
-				                  .bc               = std::move(bc),
-				                  .local_stack_size = ctx.local_stack_size,
-				                  .arg_size         = parameters_size,
-				                  .ret_size    = ctx.type_map.at(signature.result_type)->getSize(),
-				                  .parameters  = std::move(parameters),
-				                  .result_type = ctx.type_map.at(signature.result_type) };
-			;
-		}
-
 		void splitCodeAndLabels(CompilationContext& ctx) {
 			code::Function new_func = ctx.function.value();
 			new_func.body.clear();
@@ -291,9 +244,58 @@ namespace vm::loader::compiler {
 			ctx.local_offset_map = std::move(offsets);
 			ctx.local_stack_size = max_stack_size;
 		}
+
+		low::LowFuncData compileFunction(CompilationContext& ctx) {
+			// This is guaranteed to exist by builders.
+			code::FuncSignature   signature       = ctx.function->signature;
+			u64                   parameters_size = 0;
+			std::vector<TypeCRef> parameters;
+			for (const auto& param: signature.parameters) {
+				parameters.emplace_back(ctx.type_map.at(param.str));
+				auto type = ctx.type_map.at(param.str);
+				parameters_size += type->getSize();
+			}
+
+			low::MicroByteCode bc;
+			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
+				const auto& op    = ctx.function->body[op_idx];
+				u64         arg_0 = 0;
+				u64         arg_1 = 0;
+				variant_match(op) {
+#define HANDLE_OPCODE_0ARGS(opcode) \
+	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)              \
+	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {       \
+		arg_0 = getOpCodeArgValue(ctx, op_idx, instr.arg0); \
+	}
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)   \
+	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {       \
+		arg_0 = getOpCodeArgValue(ctx, op_idx, instr.arg0); \
+		arg_1 = getOpCodeArgValue(ctx, op_idx, instr.arg1); \
+	}
+#include <vm/bytecode/opcode_definitions.hpp>
+				}
+
+				bc.emplace_back(makeLowInstruction(
+					low::fix8FromInstr(op),
+					vm::safeReadBytes<u64>(arg_0),
+					vm::safeReadBytes<u64>(arg_1)
+				));
+			}
+			return low::LowFuncData{ .name             = ctx.function->name,
+				                     .bc               = std::move(bc),
+				                     .local_stack_size = ctx.local_stack_size,
+				                     .arg_size         = parameters_size,
+				                     .ret_size = ctx.type_map.at(signature.result_type)->getSize(),
+				                     .parameters  = std::move(parameters),
+				                     .result_type = ctx.type_map.at(signature.result_type) };
+			;
+		}
 	}
 
-	low::LowVMProgram compile(const code::ValidProgram& program) {
+	low::LowVMProgram compile(const code::HighVMProgram& program) {
+		// TODOP: We should probably get rid of metadata here or pass it by by reference.
+		// Even better, create it in the HighVMProgram and use it here
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
 		u64                             current_ix = 0;
@@ -301,6 +303,7 @@ namespace vm::loader::compiler {
 		base::HashMap<base::StrID, u64> method_name_to_id;
 		for (const auto& type: *types) {
 			if_opt_some(type.getInheritanceMetadata(), metadata) {
+				// TODOP: Modify this issue number.
 				//@todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 				for (auto& [name, impl]: metadata->vtable) {
 					if (!method_name_to_id.contains(name)) {
@@ -312,7 +315,7 @@ namespace vm::loader::compiler {
 			}
 		}
 
-		std::vector<low::FuncData> converted_functions;
+		std::vector<low::LowFuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
 		ObjIdNameMap<TypeCRef, GlobalDataID> globals;
@@ -328,7 +331,7 @@ namespace vm::loader::compiler {
 			splitCodeAndLabels(ctx);
 			calculateOffsets(ctx);
 
-			auto converted_func = changeFuncToFuncData(ctx);
+			auto converted_func = compileFunction(ctx);
 			converted_functions.push_back(converted_func);
 		}
 

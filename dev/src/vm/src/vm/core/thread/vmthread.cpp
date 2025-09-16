@@ -110,16 +110,16 @@ namespace vm {
 	 *
 	 * @note For more detailed explanation go to `createProgramStartFunction`.
 	 */
-	low::FuncData VMThread::createStartFunctionFor(
-		const low::FuncData& func, const FunctionRunArguments& func_args
+	low::LowFuncData VMThread::createStartFunctionFor(
+		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                          .bc               = {},
-			                          .local_stack_size = 0,
-			                          .arg_size         = 0,
-			                          .ret_size         = func.result_type->getSize(),
-			                          .parameters       = {},
-			                          .result_type      = func.result_type };
+		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                             .bc               = {},
+			                             .local_stack_size = 0,
+			                             .arg_size         = 0,
+			                             .ret_size         = func.result_type->getSize(),
+			                             .parameters       = {},
+			                             .result_type      = func.result_type };
 
 		u64         result_type_id     = func.result_type->getID().asInt();
 		const auto& funcs              = executing_program->functions;
@@ -180,8 +180,8 @@ namespace vm {
 	 * complicated, after we start using VmValue or default value constructors which have to be
 	 * invoked before main.
 	 */
-	low::FuncData VMThread::createProgramStartFunction(
-		const low::FuncData& func, const ProgramRunArguments& args
+	low::LowFuncData VMThread::createProgramStartFunction(
+		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
@@ -194,13 +194,13 @@ namespace vm {
 		auto str_ptr_type     = executing_program->types->at(base::StrID("ptr_string"));
 		auto byte_type        = executing_program->types->at(base::StrID("byte"));
 
-		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                          .bc               = {},
-			                          .local_stack_size = 72,
-			                          .arg_size    = i64_type->getSize() + argv_ptr_type->getSize(),
-			                          .ret_size    = main_return_type->getSize(),
-			                          .parameters  = { i64_type, argv_ptr_type },
-			                          .result_type = func.result_type };
+		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                             .bc               = {},
+			                             .local_stack_size = 72,
+			                             .arg_size = i64_type->getSize() + argv_ptr_type->getSize(),
+			                             .ret_size = main_return_type->getSize(),
+			                             .parameters  = { i64_type, argv_ptr_type },
+			                             .result_type = func.result_type };
 
 		// TypeIDs to pass to opcodes.
 		u64 func_ret_type_id = main_return_type->getID().asInt();
@@ -348,7 +348,7 @@ namespace vm {
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 	Ref<VmValue> VMThread::executeFunction(
-		const low::FuncData& start_function, const low::FuncData& func
+		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
@@ -366,7 +366,8 @@ namespace vm {
 		// so we turn off pedantic warnings
 		// for this case
 		PUSH_DIAGNOSTIC
-		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
+		_Pragma(
+			"GCC diagnostic ignored \"-Wpedantic\""
 		) constexpr static std::array<void*, OP_CASES_COUNT>
 			opcode_label = {
 
@@ -528,8 +529,8 @@ namespace vm {
 												"Called function does not exist: "
 												+ global->ctor_name.value().str()
 											);
-					low::FuncData start_function = createStartFunctionFor(func, {});
-					const auto    exit_value     = executeFunction(start_function, func);
+					low::LowFuncData start_function = createStartFunctionFor(func, {});
+					const auto       exit_value     = executeFunction(start_function, func);
 					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -540,7 +541,7 @@ namespace vm {
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
 			                        .expect("Called function does not exist: " + func_name);
-			std::optional<low::FuncData> start_function;
+			std::optional<low::LowFuncData> start_function;
 			variant_match(run_arguments) {
 				variant_case(ProgramRunArguments, program_run_arguments) {
 					start_function = createProgramStartFunction(func, program_run_arguments);
@@ -568,8 +569,8 @@ namespace vm {
 												"Called function does not exist: "
 												+ global->dtor_name.value().str()
 											);
-					low::FuncData start_function = createStartFunctionFor(func, {});
-					const auto    exit_value     = executeFunction(start_function, func);
+					low::LowFuncData start_function = createStartFunctionFor(func, {});
+					const auto       exit_value     = executeFunction(start_function, func);
 					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -634,15 +635,20 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id
+								= static_cast<u64>(index),  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

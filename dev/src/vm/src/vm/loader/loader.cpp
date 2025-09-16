@@ -96,6 +96,7 @@ namespace {
 
 #undef HANDLE_OPCODE
 
+	// TODOP: Add docs.
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
 	}
@@ -145,6 +146,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						function.signature.parameters.emplace_back(param_id);
 					}
 
+					// TODOP: Reserve.
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));
 
@@ -164,8 +166,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	LoaderLogger log;
 	try {
-		program = program.newInsertCode(code_collection);
-		return compiler::compile(program);
+		// TODOP: Here we should decide which funcitons to compile.
+		high_program = high_program.newInsertCode(code_collection);
+		return compiler::compile(high_program);
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
 			e.label,

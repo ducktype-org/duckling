@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/optional.hpp"
 #include <base/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -20,27 +21,34 @@ namespace vm::code {
 	 *
 	 * @note Valid in this context also does not mean it contains a `main` function, as this is not
 	 * valid bytecode's assumption, but rather VMThread's.
+	 *
+
+	 * This represents a program in FatBytecode. It;'s invariant is that the code in this container
+	 * always represents a valid program. If a function which invalidates the state is injected we
+	 * throw an appropriate error.
 	 */
-	class ValidProgram {
-		ValidProgram() = default;
+	// TODOP: Modify this comment.
+	class HighVMProgram {
+		HighVMProgram() = default;
 
 	public:
 		bool is_stdlib_included = false;
 
-		ValidProgram(const ValidProgram&)            = default;
-		ValidProgram(ValidProgram&&) noexcept        = default;
-		ValidProgram& operator=(const ValidProgram&) = default;
-		ValidProgram& operator=(ValidProgram&&)      = default;
+		// TODOP: Can this be copied? Will CRefs be okay?
+		HighVMProgram(const HighVMProgram&)            = default;
+		HighVMProgram(HighVMProgram&&) noexcept        = default;
+		HighVMProgram& operator=(const HighVMProgram&) = default;
+		HighVMProgram& operator=(HighVMProgram&&)      = default;
 
 		/**
 		 * @brief Creates a new ValidProgram with nothing inside.
 		 */
-		static ValidProgram empty();
+		static HighVMProgram empty();
 
 		/**
 		 * @brief Creates a new ValidProgram object with builtin types pre-inserted.
 		 */
-		static ValidProgram withBuiltins();
+		static HighVMProgram withBuiltins();
 
 		/**
 		 * @brief Produces valid CodeCollection.
@@ -58,7 +66,7 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram newInsertCode(const CodeCollection& collection) const;
+		HighVMProgram newInsertCode(const CodeCollection& collection) const;
 
 		/**
 		 * @brief Inserts code in-place.
@@ -99,6 +107,14 @@ namespace vm::code {
 		ObjIdNameMap<Function>   function_map;
 		ObjIdNameMap<GlobalData> globals_map;
 
+		// TODOP
+		// Initialized by null, has value after produceTypeMetadata().
+		// It should have the ownership and LowProgram has just a ref
+		base::Optional<MBox<TypeMetadata>> type_metadata{};
+
+
+		// TODOP: Temporary storage.
+
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
 		 * available in the program (including builtin functions). Used for type verification of
@@ -107,7 +123,7 @@ namespace vm::code {
 		 * available in the program, since `function_map` building is done after type verification.
 		 */
 		base::HashMap<base::StrID, FuncSignature> available_functions;
-
+		// TODOP: This should get removed once and for all.
 		TypeContext type_context;
 
 		bool valid = true;

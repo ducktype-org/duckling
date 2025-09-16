@@ -1,4 +1,5 @@
 #include "type_metadata.hpp"
+#include <iostream>
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
@@ -16,6 +17,7 @@ namespace vm {
 	}
 
 	void TypeMetadata::finalize() {
+		std::cout << "Finalizing\n";
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 

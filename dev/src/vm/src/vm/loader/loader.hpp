@@ -20,13 +20,16 @@ namespace vm::loader {
 	 * @brief Loader class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		code::ValidProgram program = code::ValidProgram::withBuiltins();
+		code::HighVMProgram high_program = code::HighVMProgram::withBuiltins();
+		low::LowVMProgram low_program{};
 
 		/**
 		 * @brief Parses a list of files, returns an intermediate loader-only program
 		 * representation.
 		 */
-		std::expected<code::CodeCollection, LoaderLogger> loadFiles(const std::vector<fs::File>& files
+		// TODOP: Comment is false. CodeCollection is not loader only.
+		std::expected<code::CodeCollection, LoaderLogger> loadFiles(
+			const std::vector<fs::File>& files
 		);
 
 	public:

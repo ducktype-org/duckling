@@ -9,27 +9,28 @@
 #include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 
-vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
+vm::code::HighVMProgram vm::code::HighVMProgram::empty() { return {}; }
 
-vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
-	auto program         = ValidProgram();
+vm::code::HighVMProgram vm::code::HighVMProgram::withBuiltins() {
+	auto program         = HighVMProgram();
 	program.type_context = getBuiltinTypes();
 	return program;
 }
 
-Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
+Box<vm::TypeMetadata> vm::code::HighVMProgram::produceTypeMetadata() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.validateAndProduceTypeMetadata(available_functions);
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCollection& collection
+vm::code::HighVMProgram vm::code::HighVMProgram::newInsertCode(
+	const code::CodeCollection& collection
 ) const {
-	ValidProgram copy = *this;
+	HighVMProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;
 }
 
-void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
+void vm::code::HighVMProgram::insertCode(const CodeCollection& collection) {
 	valid = false;
 
 	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
@@ -41,11 +42,11 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 	valid = true;
 }
 
-void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
+void vm::code::HighVMProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
 	for (const auto& type: new_types) type_context.insertType(type);
 }
 
-void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
+void vm::code::HighVMProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
@@ -57,7 +58,7 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	}
 }
 
-void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
+void vm::code::HighVMProgram::insertFunctions(const std::vector<Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata(available_functions);
 
 	for (const auto& func: new_functions) {
@@ -71,22 +72,22 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 	}
 }
 
-const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::HighVMProgram::types() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.getCurrentTypes();
 }
 
-const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
+const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::HighVMProgram::globals() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return globals_map;
 }
 
-const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+const vm::ObjIdNameMap<vm::code::Function>& vm::code::HighVMProgram::functions() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return function_map;
 }
 
-vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
+vm::code::CodeCollection vm::code::HighVMProgram::produceValidCodeCollection() const {
 	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return { .functions = { function_map.begin(), function_map.end() },
 		     .types
