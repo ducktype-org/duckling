@@ -8,7 +8,7 @@ fun good1(c: i64) = {
 fun good2(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
-    if (13 < b < 16){
+    if (b < 16){
         a = b; # this is move (in test)
     }
     a = 3;

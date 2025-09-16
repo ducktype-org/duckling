@@ -458,7 +458,7 @@ private:
 
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
 					compiler::mir::Instruction&   assignment
-						= mir_rep.blocks[mir_rep.block_order[3]].instructions[0];
+						= mir_rep.blocks[mir_rep.block_order[2]].instructions[0];
 
 					// If this test fails use the following to find the correct Instruction.
 					// mir_rep.debugPrint(std::cerr);
