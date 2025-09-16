@@ -197,14 +197,8 @@ namespace compiler::helios::code {
 		case BooleanOr:
 			out << " or ";
 			break;
-
-		case IntegerLt:
-		case IntegerLteq:
-		case IntegerGt:
-		case IntegerGteq:
-		case IntegerEq:
-		case IntegerNeq:
-			CORE_PANIC("comparisons should be handled by ComparisonChain, not BinaryOperator");
+		default:
+			CORE_UNREACHABLE();
 		}
 		rhs->debugPrint(out);
 	}
