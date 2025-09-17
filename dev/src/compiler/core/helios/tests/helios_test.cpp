@@ -1042,7 +1042,7 @@ private:
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
-
+		
 		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
@@ -1098,20 +1098,25 @@ private:
 						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
 					));
 
-				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[0].content.body->statements[0])
+				// if this ever change, adjust the test:
+				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo0");
+				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo1");
+				auto foo0_body = hout_unit.functions.at(0).content.body;
+				auto foo1_body = hout_unit.functions.at(1).content.body;
+
+				Ref var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*foo0_body->statements.at(0))
+				);
+				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+
+				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*foo1_body->statements.at(0))
 				);
 
 				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
 				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[0].content.body->statements[1])
-				);
-
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
-
-				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[1].content.body->statements[0])
+					&(*foo1_body->statements.at(1))
 				);
 
 				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
