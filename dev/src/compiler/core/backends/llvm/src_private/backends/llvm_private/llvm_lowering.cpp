@@ -110,7 +110,7 @@ namespace compiler::backend_llvm {
 	 * @return llvm::LLVMContext&
 	 */
 	llvm::LLVMContext& getLLVMContext() {
-		static llvm::LLVMContext context;
+		thread_local llvm::LLVMContext context;
 		return context;
 	}
 
@@ -373,14 +373,14 @@ namespace compiler::backend_llvm {
 					// We need to load them before using them.
 					const auto local_ptr = local_register_map[lir_local].get();
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), lir_local->layout), local_ptr
+						typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
 					);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_case(lir::LirGlobal, lir_global) {
 					auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), *lir_global.layout), global_ptr.get()
+						typeFromLayout(builder.getContext(), *lir_global.layout), global_ptr.get()
 					);
 				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
