@@ -1042,7 +1042,7 @@ private:
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
-		
+
 		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
