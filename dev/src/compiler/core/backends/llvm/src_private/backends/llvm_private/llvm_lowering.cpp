@@ -100,6 +100,20 @@ namespace compiler::backend_llvm {
 
 	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
+	/**
+	 * @brief Returns reference to the llvm context.
+	 * @note as per https://llvm.org/doxygen/classllvm_1_1LLVMContext.html#details
+	 * single context can't be used my multiple threads.
+	 * @note as of 9.11.2024 I did not find the reason, to have more than one context per thread,
+	 * hence this function.
+	 *
+	 * @return llvm::LLVMContext&
+	 */
+	llvm::LLVMContext& getLLVMContext() {
+		thread_local llvm::LLVMContext context;
+		return context;
+	}
+
 	auto voidType(llvm::LLVMContext& context) { return llvm::Type::getVoidTy(context); }
 
 	auto i64Type(llvm::LLVMContext& context) { return llvm::Type::getInt64Ty(context); }
@@ -565,18 +579,17 @@ namespace compiler::backend_llvm {
 
 	Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
 		init();
+		llvm::LLVMContext& context = getLLVMContext();
 
-		Box<llvm::LLVMContext> context = makeBox<llvm::LLVMContext>();
-		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), *context.refMut());
-		return makeBox<ModuleImpl>(std::move(context), std::move(llvm_module));
+		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
+		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
 	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
-		Box<llvm::LLVMContext> context = makeBox<llvm::LLVMContext>();
 		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
 		llvm::SMDiagnostic error;
-		auto               m = llvm::parseIR(*memory_buffer.get(), error, *context.refMut());
+		auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
 		if (!m) {
 			std::string              error_message;
 			llvm::raw_string_ostream error_stream(error_message);
@@ -585,13 +598,13 @@ namespace compiler::backend_llvm {
 		}
 
 		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
-		return makeBox<ModuleImpl>(std::move(context), std::move(llvm_module));
+		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
 	llvm::Function* addFunctionToModuleInternal(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	) {
-		LirFunction2LLVM lir2llvm{ *module->context.refMut(), ctx, lir_function, module->module.refMut() };
+		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		return lir2llvm.createFunction();
 	}
 
