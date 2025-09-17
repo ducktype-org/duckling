@@ -112,8 +112,8 @@ def run_test(
         case_path = path + "/" + case.name
         try:
             match run_case(test, case, dry, verbose, log_file):
-                case Failure(f):
-                    print_failure(f"Case `{case.name}` has failed because: {f.error}")
+                case Failure(error):
+                    print_failure(f"Case `{case.name}` has failed because: {error}")
                     stats.failed.append(case_path)
                 case Success():
                     if not dry:
