@@ -105,6 +105,8 @@ private:
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
 		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
 
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
@@ -423,6 +425,10 @@ private:
 	}
 
 	void testExprTree() {
+		auto symbol_name = [](const char* name, auto&& symbol) {
+			return base::strConcat("(Symbol ", name, " (", symbol.queryUnstablePerfectHash(), "))");
+		};
+
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getConstValueAs<i64>("V1", root_scope));
@@ -452,16 +458,22 @@ private:
 		tree_v12->debugPrint(out_v12);
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
-		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.queryUnstablePerfectHash(), "))");
+		auto sym_v3_repr = symbol_name("V3", sym_v3);
 		ASSERT_EQUAL(
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
 
-		auto get_cmp  = getChain("CMP", root_scope).back();
-		auto expr_cmp = getExprOfConst(get_cmp);
-		Ref  expr_cmp_casted
-			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
-		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
+		ASSERT_EQUAL(false, getConstValueAs<bool>("CMP", root_scope));
+		auto              get_cmp  = getChain("CMP", root_scope).back();
+		auto              expr_cmp = getExprOfConst(get_cmp);
+		std::stringstream out_cmp;
+		expr_cmp->debugPrint(out_cmp);
+		ASSERT_EQUAL_PRINT(
+			(base::strConcat(
+				symbol_name("V1", sym_v1), "<3<=4==5!=6>=7>", symbol_name("VM1", sym_vm1)
+			)),
+			out_cmp.str()
+		);
 
 		auto get_str  = getChain("STR", root_scope).back();
 		auto expr_str = getExprOfConst(get_str);
@@ -509,6 +521,22 @@ private:
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		// This fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		try {
+			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
