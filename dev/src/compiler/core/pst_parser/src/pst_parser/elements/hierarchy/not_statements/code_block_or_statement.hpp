@@ -16,10 +16,7 @@ namespace pst {
 		NAMED_CHILD_OPT(code_block, CodeBlock);
 
 	public:
-		enum class Type {
-			SingleStmt,
-			CodeBlock
-		};
+		enum class Type { SingleStmt, CodeBlock };
 
 		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
@@ -39,9 +36,9 @@ namespace pst {
 
 		[[nodiscard]]
 		Type getType() const;
-		
+
 		/**
-		 * @brief Get the stored statement. Panics if is in code block state. 
+		 * @brief Get the stored statement. Panics if is in code block state.
 		 */
 		[[nodiscard]]
 		AccessLocked<Stmt> getStmt() const;

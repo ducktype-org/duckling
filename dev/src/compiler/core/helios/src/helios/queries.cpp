@@ -124,23 +124,20 @@ namespace compiler::helios {
 		static code::CodeBlock queryCodeOfSingleStmtFunctionBody(
 			query::Context& ctx, pst::Access<pst::CodeBlockOrStmt> body
 		) {
-			CORE_ASSERT(
-				body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt,
-				"Bad body type!"
-			);
+			CORE_ASSERT(body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt, "Bad body type!");
 
 			code::CodeBlock block({});
 
-			auto stmt = body->getStmt().unlock(ctx);
+			auto stmt    = body->getStmt().unlock(ctx);
 			auto as_expr = stmt.dynamicCast<pst::ExprStmt>();
 			if (as_expr) {
-				auto expr = ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
-				                .expect("Not handling errors here yet... (single expr function body)");
+				auto expr
+					= ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
+				          .expect("Not handling errors here yet... (single expr function body)");
 				// @TODO #1291 coerce expr to function return type
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr)));
 				return block;
-			}
-			else {
+			} else {
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 						stmt->getSourcePosition(),
@@ -174,7 +171,7 @@ namespace compiler::helios {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
 					                .expect("Not handling errors here yet... (return expr)");
-					
+
 					// @TODO #1291 coerce expr to function return type
 					output(code::ReturnStmt(std::move(expr)));
 				} else {
@@ -368,11 +365,11 @@ namespace compiler::helios {
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					// The `fun abc() = expr;` case.
 
-					code::CodeBlock function_body = queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
+					code::CodeBlock function_body
+						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
 					output.content.body
 						= std::make_shared<const code::CodeBlock>(std::move(function_body));
-				}
-				else {
+				} else {
 					CORE_ASSERT(
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
@@ -380,10 +377,8 @@ namespace compiler::helios {
 					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
 					output.content.body
 						= std::make_shared<const code::CodeBlock>(std::move(function_body));
-
 				}
 
-				
 
 				// parameters:
 

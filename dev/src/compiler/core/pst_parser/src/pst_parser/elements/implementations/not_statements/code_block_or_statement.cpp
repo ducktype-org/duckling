@@ -54,10 +54,7 @@ namespace pst {
 	}
 
 	AccessLocked<Stmt> CodeBlockOrStmt::getStmt() const {
-		CORE_ASSERT(
-			stmt.has_value(),
-			"No stmt present when getting single statement"
-		);
+		CORE_ASSERT(stmt.has_value(), "No stmt present when getting single statement");
 		return stmt.value().give();
 	}
 }
