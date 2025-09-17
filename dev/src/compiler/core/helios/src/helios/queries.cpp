@@ -134,7 +134,7 @@ namespace compiler::helios {
 			auto stmt = body->getStmt().unlock(ctx);
 			auto as_expr = stmt.dynamicCast<pst::ExprStmt>();
 			if (as_expr) {
-				auto expr = ctx.query<QueryHoutOfExpr>({ as_expr.value()->getExpr() })
+				auto expr = ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
 				                .expect("Not handling errors here yet... (single expr function body)");
 				// @TODO #1291 coerce expr to function return type
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr)));
