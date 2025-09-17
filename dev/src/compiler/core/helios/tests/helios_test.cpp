@@ -59,6 +59,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -853,6 +854,26 @@ private:
 		ASSERT_EQUAL(
 			square_symbol, compiler::helios::getIdentifierExprSymID(call_expr->callee.ref()).value()
 		);
+	}
+
+	void testFunctions() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		// modify it as needed:
+		ASSERT_EQUAL(1, hout->functions.size());
+
+		for (auto& function: hout->functions) {
+			if (function.original_name == base::StrID("stmtBody1")) {
+				ASSERT_EQUAL(1, function.content.body->statements.size());
+				auto stmt        = function.content.body->statements.at(0).ref();
+				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
+				Ref  ret_expr    = stmt_casted->value.ref();
+				Ref  ret_expr_casted
+					= dynamic_cast<const compiler::helios::code::LiteralIntExpr*>(&*ret_expr);
+				ASSERT_EQUAL(1, ret_expr_casted->value);
+			}
+		}
 	}
 
 	void testBuiltinFunctions() {
