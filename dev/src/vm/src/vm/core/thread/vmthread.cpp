@@ -1,6 +1,7 @@
 
 #include "vmthread.hpp"
 
+#include "kill_process_exception.hpp"
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
@@ -13,7 +14,6 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/kill_process_exception.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>

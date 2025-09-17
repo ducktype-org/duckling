@@ -33,7 +33,7 @@ namespace vm {
 	 * @brief The API for using the virtual process of the VM.
 	 * It manages process's data, loader and threads.
 	 *
-	 * VMProcess is an abstract concepts that represents the program's execution environment.
+	 * VMProcess is an abstract concept that represents the program's execution environment.
 	 *
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
