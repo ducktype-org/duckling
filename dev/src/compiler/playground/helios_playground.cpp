@@ -71,7 +71,7 @@ int notMain(int argc, const char* const* argv) {
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
 		auto i_deps
-			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOFFun>(
+			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOfFun>(
 				i.original_symbol, pst_access_id
 			);
 		printQueryDeps(i_deps);

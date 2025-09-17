@@ -63,7 +63,7 @@ int notMain(int argc, const char* const* argv) {
 	for (auto& i: top_level->functions) {
 		if (i.original_name == base::StrID("main")) {
 			auto positions
-				= pst::queryPositionDependencies<helios::QueryCodeOFFun>(i.original_symbol);
+				= pst::queryPositionDependencies<helios::QueryCodeOfFun>(i.original_symbol);
 
 			printer::PrinterOStream str;
 			dia::printHighlightedPositions(str, positions);

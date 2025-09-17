@@ -276,11 +276,11 @@ private:
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout.functions) {
 				std::cerr << fun.original_name.str() << " i dependent on\n";
-				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOFFun>(
+				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.original_symbol
 				);
 
-				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOFFun>(
+				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.original_symbol
 				);
 

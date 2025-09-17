@@ -39,7 +39,7 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
-						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+						out.functions.push_back(ctx.query<QueryCodeOfFun>(sym));
 				}
 			}
 			return out;
@@ -88,7 +88,7 @@ namespace compiler::helios {
 					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
-					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+					out.functions.push_back(ctx.query<QueryCodeOfFun>(sym));
 			}
 
 			return out;
@@ -99,7 +99,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
-	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
+	struct IMPLEMENT_QUERY(QueryCodeOfFun, HOUTFunction) {
 		/**
 		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or pst::CodeBlockOrStmt
 		 * Might be changed into query in the future

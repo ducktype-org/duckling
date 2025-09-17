@@ -37,5 +37,5 @@ namespace compiler::helios {
 	 * @brief Query code of a function.
 	 * @note Works only for SymID-s that actually represent a function
 	 */
-	DECLARE_QUERY(QueryCodeOFFun, SymID, HOUTFunction);
+	DECLARE_QUERY(QueryCodeOfFun, SymID, HOUTFunction);
 }
