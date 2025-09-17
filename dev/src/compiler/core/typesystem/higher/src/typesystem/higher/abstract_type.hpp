@@ -107,7 +107,7 @@ namespace tsh {
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
 		 *
-		 * It is needed to determine if createing a lifetime flag is needed during LIR lowering.
+		 * Used to determine if creating a lifetime flag is needed during LIR lowering.
 		 *
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
