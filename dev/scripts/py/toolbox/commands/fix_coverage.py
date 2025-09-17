@@ -5,9 +5,7 @@ from ..impl.fix_coverage import fix_coverage_impl
 
 
 @command()
-@build_dir(
-    help="The name of the directory"
-)
+@build_dir(help="The name of the directory")
 @option(
     "-p",
     "--precision",
@@ -21,5 +19,6 @@ from ..impl.fix_coverage import fix_coverage_impl
 )
 def fix_coverage(*args, **kwargs):
     """Fixes coverage issues by removing stale coverage files inside the given build directory.
-    This process helps ensure accurate coverage reporting and may involve surgical or nuke approaches."""
+    This process helps ensure accurate coverage reporting and may involve surgical or nuke approaches.
+    """
     fix_coverage_impl(*args, **kwargs)

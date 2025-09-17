@@ -19,3 +19,4 @@ SubDirs:
   - expressions
   - samples
   - statements
+  - functions
