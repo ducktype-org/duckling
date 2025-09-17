@@ -83,6 +83,30 @@ namespace pst {
 		}
 	}
 
+	void LangElement::calcHashRecursive() {
+		calcHash();
+		for(auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) {
+					el->calcHashRecursive();
+				}
+				variant_case(InternalNamedChild, el) {
+					el.element->calcHashRecursive();
+				}
+			}
+		}
+	}
+
+	void LangElement::calcHash() {
+		HashAlg partial_hash;
+		addToHash(partial_hash, getElementPath());
+		addToHash(partial_hash, elementType());
+		hash = calcStableHash(partial_hash);
+
+		// Can be used to turn on unstable hashing for testing purposes.
+		// hash = getID().asInt();
+	}
+
 	void LangElement::addToken(CRef<tpc::Token> t) {
 		sub_elements.emplace_back(t);
 		setLastToken(t->getPosition());

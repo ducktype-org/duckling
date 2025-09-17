@@ -11,5 +11,9 @@ namespace pst {
 
 	void ExprStmt::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }
 
+	u64 ExprStmt::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
+
 	void ExprStmt::acceptVisitor(PstVisitor& visitor) const { visitor.visitExprStmt(*this); }
 }

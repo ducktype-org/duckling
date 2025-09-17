@@ -33,5 +33,10 @@ namespace pst {
 		out << "}";
 	}
 
+	u64 Import::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, alias);
+		return partial_hash.finalize();
+	}
+
 	void Import::acceptVisitor(PstVisitor& visitor) const { visitor.visitImport(*this); }
 }

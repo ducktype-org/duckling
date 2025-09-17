@@ -27,5 +27,9 @@ namespace pst {
 		out << "}";
 	}
 
+	u64 Expand::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
+
 	void Expand::acceptVisitor(PstVisitor& visitor) const { visitor.visitExpand(*this); }
 }

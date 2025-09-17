@@ -35,6 +35,10 @@ namespace pst {
 		return out;
 	}
 
+	u64 Attribute::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
+
 	void Attribute::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\" : ";

@@ -48,6 +48,10 @@ namespace pst {
 		out << "}";
 	}
 
+	u64 ExprHolder::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
+
 	namespace {
 		bool universalEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)

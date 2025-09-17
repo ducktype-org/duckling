@@ -70,6 +70,7 @@ namespace pst {
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
 			calcElementPaths();
+			calcHashes();	
 		}
 
 		/**
@@ -94,6 +95,10 @@ namespace pst {
 		}
 
 		void calcElementPaths() {
+			if (auto ref = element.internalMut()) ref->calcElementPaths({});
+		}
+
+		void calcHashes() {
 			if (auto ref = element.internalMut()) ref->calcElementPaths({});
 		}
 

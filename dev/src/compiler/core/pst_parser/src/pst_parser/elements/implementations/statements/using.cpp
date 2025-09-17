@@ -14,9 +14,11 @@ namespace pst {
 		return out;
 	}
 
-	bool Using::isStar() const { return names.internal()->getStar(); }
-
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
+
+	u64 Using::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
 
 	void Using::acceptVisitor(PstVisitor& visitor) const { visitor.visitUsing(*this); }
 }

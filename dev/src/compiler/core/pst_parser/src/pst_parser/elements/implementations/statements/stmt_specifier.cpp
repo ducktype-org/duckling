@@ -35,6 +35,11 @@ namespace pst {
 		out << "}";
 	}
 
+	u64 StmtSpecifier::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, lang_def::keywordToStr(specifier));
+		return partial_hash.finalize();
+	}
+
 	bool StmtSpecifier::trailingSemicolon() { return false; }
 
 	void StmtSpecifier::acceptVisitor(PstVisitor& visitor) const {

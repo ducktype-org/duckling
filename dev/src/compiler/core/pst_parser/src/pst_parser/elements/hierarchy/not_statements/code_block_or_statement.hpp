@@ -25,6 +25,7 @@ namespace pst {
 		);
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
+		u64 calcStableHash(HashAlg&) const override;
 
 		using const_iterator = CodeBlockOrStmtIterator;
 		[[nodiscard]]

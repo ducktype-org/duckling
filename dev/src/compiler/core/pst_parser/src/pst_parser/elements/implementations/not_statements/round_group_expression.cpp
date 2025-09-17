@@ -36,4 +36,8 @@ namespace pst {
 	}
 
 	void RoundGroupExpr::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }
+
+	u64 RoundGroupExpr::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
 }

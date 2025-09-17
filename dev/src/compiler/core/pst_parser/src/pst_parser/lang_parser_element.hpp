@@ -5,6 +5,8 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
+#include <hashing/hash.hpp>
+
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
@@ -49,6 +51,10 @@ namespace pst {
 			elements.emplace_back(ext);
 		}
 
+		friend constexpr auto hashDecompose(const ElementPath& t) noexcept { 
+			return std::tie(t.elements); 
+		}
+
 		/**
 		 * @brief Return the path as a string by joining with '.'
 		 */
@@ -63,6 +69,8 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+	protected:
+		using HashAlg = hashing::Fnv1a_64;
 	public:
 		using SubToken = base::CRef<lexer::Token>;
 
@@ -182,6 +190,23 @@ namespace pst {
 		 */
 		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
 
+	private:
+		/**
+		 * @brief Calculates the hashes recursively for the element and all children.
+		 */
+		void calcHashRecursive();
+
+		/**
+		 * @brief Calculates the hash for this element, can be modified to change between stable and unstable hashes.
+		 */
+		void calcHash();
+
+		/**
+		 * @brief Calculates a stable hash.
+		 */
+		[[nodiscard]] 
+		virtual u64 calcStableHash([[maybe_unused]]HashAlg& partial_hash) const {return 0;};
+
 	public:
 		/**
 		 * @brief View all sub-elements.
@@ -239,6 +264,12 @@ namespace pst {
 			return id;
 		}
 
+		[[nodiscard]]
+		u64 getHash() const {
+			CORE_ASSERT(hash.has_value(), "Hash not calculated for this" + elementType());
+			return hash.value();
+		}
+
 		/**
 		 * @return Whether an element is just a statement aggregate.
 		 * As of 11.12.2024 there are 4 statement aggregates:
@@ -293,7 +324,7 @@ namespace pst {
 
 		[[nodiscard]]
 		const ElementPath& getElementPath() const {
-			CORE_ASSERT(element_path.has_value(), "element path not calculated");
+			CORE_ASSERT(element_path.has_value(), "element path not calculated for this " + elementType());
 			return element_path.value();
 		}
 
@@ -307,6 +338,7 @@ namespace pst {
 		std::vector<InternalSubElement>           sub_elements;
 		base::Optional<AccessLocked<LangElement>> parent;
 		base::Optional<ElementPath>               element_path;
+		base::Optional<u64>                       hash;
 
 		/**
 		 * @brief Kind of the element.

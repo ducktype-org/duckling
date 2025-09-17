@@ -14,6 +14,8 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
 		static MBox<Action> parse(LangParserState& state);
 		~Action() override = default;
+		[[nodiscard]]
+		u64 calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
