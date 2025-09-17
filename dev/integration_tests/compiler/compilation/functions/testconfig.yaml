@@ -5,12 +5,12 @@ Tests:
     Cases: 
       default:
         Output:
-          String: "5 \n7"
+          String: "5 \n7 \n"
         ExitCode: 0
   single_stmt_body:
     Cases:
       default:
         Output:
-          String: "5 \n7"
+          String: "5 \n7 \n"
         ExitCode: 0
 
