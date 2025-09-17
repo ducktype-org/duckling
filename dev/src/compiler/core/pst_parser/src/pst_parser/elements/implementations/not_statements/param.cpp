@@ -1,12 +1,12 @@
-#include "../../hierarchy/not_statements/fun_param.hpp"
+#include "../../hierarchy/not_statements/param.hpp"
 
 #include "preamble.hpp"
 
 namespace pst {
 
-	MBox<FunParam> FunParam::parse(LangParserState& state) {
+	MBox<Param> Param::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeBox<FunParam>(position);
+		auto out      = makeBox<Param>(position);
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 
@@ -17,12 +17,12 @@ namespace pst {
 		return out;
 	}
 
-	base::Optional<AccessLocked<UniversalExprHolder>> FunParam::getValue() const {
+	base::Optional<AccessLocked<UniversalExprHolder>> Param::getValue() const {
 		return initial.map([](const auto& v) { return v.give(); });
 	}
 
-	void FunParam::dprint(std::ostream& out) const {
-		out << "{\"Function Parameter\": {";
+	void Param::dprint(std::ostream& out) const {
+		out << "{\"Parameter\": {";
 
 		out << R"("name": )";
 		nullAwareDprint(name, out);
@@ -36,5 +36,5 @@ namespace pst {
 		out << "}}";
 	}
 
-	void FunParam::acceptVisitor(PstVisitor& visitor) const { visitor.visitFunParam(*this); }
+	void Param::acceptVisitor(PstVisitor& visitor) const { visitor.visitParam(*this); }
 }
