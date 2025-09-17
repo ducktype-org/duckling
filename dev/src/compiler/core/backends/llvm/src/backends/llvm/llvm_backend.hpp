@@ -31,6 +31,8 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Encapsulates a llvm module in a way
 	 * that does not require to include llvm headers.
+	 * 
+	 * You can safely create many Module instances in different threads.
 	 */
 	struct Module final {
 	private:
