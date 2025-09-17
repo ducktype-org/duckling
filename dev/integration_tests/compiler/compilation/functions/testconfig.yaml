@@ -1,0 +1,16 @@
+# Tests for statements
+
+Tests:
+  simple:
+    Cases: 
+      default:
+        Output:
+          String: "5 \n7"
+        ExitCode: 0
+  single_stmt_body:
+    Cases:
+      default:
+        Output:
+          String: "5 \n7"
+        ExitCode: 0
+
