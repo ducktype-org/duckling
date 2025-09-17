@@ -24,6 +24,7 @@ from ..helpers import (
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
+
 def tester_impl(
     clean: bool,
     dry: bool,
@@ -78,6 +79,7 @@ def tester_impl(
         )
     elif not clean:
         print_success(f"All tests have run successfully!")
+
 
 def run_test(
     test: Test,
