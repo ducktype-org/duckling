@@ -13,6 +13,7 @@
 #include <base/box.hpp>
 
 #include <vector>
+#include <map>
 
 namespace dia {
 	using nlohmann::json;
@@ -20,14 +21,14 @@ namespace dia {
 	class InteractiveMessage {
 	private:
 		Box<dia::InteractiveContent>           content;
-		std::vector<Box<dia::InteractiveNote>> notes;
+		std::map<std::string, Box<dia::InteractiveNote>> notes;
 
 	public:
 		InteractiveMessage(
-			Box<dia::InteractiveContent> content, std::vector<Box<dia::InteractiveNote>>&& notes
+			Box<dia::InteractiveContent> content, std::map<std::string, Box<dia::InteractiveNote>>&& notes
 		):
 			  content(std::move(content)),
-			  notes(std::forward<decltype(notes)>(notes)) {}
+			  notes(std::move(notes)) {}
 
 		friend void to_json(json& j, const InteractiveMessage& message) { j = message.tojson(); }
 
@@ -38,7 +39,7 @@ namespace dia {
 	public:
 		ExampleMessage():
 			  InteractiveMessage(
-				  base::makeBox<ExampleContent>(), std::vector<Box<dia::InteractiveNote>>()
+				  base::makeBox<ExampleContent>(), std::map<std::string, Box<dia::InteractiveNote>>()
 			  ) {}
 	};
 
@@ -97,7 +98,7 @@ namespace dia {
 				  base::makeBox<Content>(
 					  base::makeBox<Params>(op, std::move(lhs), std::move(rhs)), position, pst, ctx
 				  ),
-				  std::vector<Box<dia::InteractiveNote>>{}
+				  std::map<std::string, Box<dia::InteractiveNote>>{}
 			  ) {}
 	};
 
@@ -112,7 +113,7 @@ namespace dia {
 					  base::makeBox<EmptyParams>(),
 					  base::makeBox<SimpleCode>(position, pointer_message{ "cause", position })
 				  ),
-				  std::vector<Box<dia::InteractiveNote>>{}
+				  std::map<std::string, Box<dia::InteractiveNote>>{}
 			  ) {}
 	};
 
@@ -130,7 +131,7 @@ namespace dia {
 
 			json tojson() override { return { "message", message }; }
 		};
-
+	public:
 		TODOError(dia::SourcePosition position, const std::string& message):
 			  dia::InteractiveMessage(
 				  makeBox<InteractiveContent>(
@@ -140,7 +141,7 @@ namespace dia {
 					  base::makeBox<Params>(message),
 					  base::makeBox<SimpleCode>(position, pointer_message{ "cause", position })
 				  ),
-				  std::vector<Box<dia::InteractiveNote>>{}
+				  std::map<std::string, Box<dia::InteractiveNote>>{}
 			  ) {}
 	};
 }

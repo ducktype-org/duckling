@@ -170,6 +170,8 @@ namespace compiler::helios::code {
 				} else {
 					lhs = std::move(fromPST(ctx, stmt->getLeftOperand())).value();
 					rhs = std::move(fromPST(ctx, stmt->getRightOperand())).value();
+
+			dia::InteractiveLogger::log(base::makeBox<dia::TODOError>(stmt->getSourcePosition(), "just testing"));
 					dia::InteractiveLogger::log(base::makeBox<dia::OperatorNotFound>(
 						stmt->getSourcePosition(),
 						stmt->getOperator(),

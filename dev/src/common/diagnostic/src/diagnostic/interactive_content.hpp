@@ -117,6 +117,7 @@ namespace dia {
 	};
 
 	class InteractiveNote: public InteractiveContent {
+	public:
 		InteractiveNote(
 			const std::string& family, const std::string& name, Box<ContentParams> params
 		):
@@ -131,5 +132,10 @@ namespace dia {
 			  InteractiveContent(
 				  ContentType::NOTE, family, name, std::move(params), std::move(code_sample)
 			  ) {}
+		bool is_displayed() const {
+			return is_default_displayed;
+		}
+	private:
+		const bool is_default_displayed = true;
 	};
 }
