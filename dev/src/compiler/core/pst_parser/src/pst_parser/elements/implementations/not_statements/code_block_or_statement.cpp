@@ -29,10 +29,10 @@ namespace pst {
 			nullAwareDprint(stmt.value(), out);
 	}
 
-	u64 CodeBlockOrStmt::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& CodeBlockOrStmt::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, code_block.has_value());
 		addToHash(partial_hash, stmt.has_value());
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {

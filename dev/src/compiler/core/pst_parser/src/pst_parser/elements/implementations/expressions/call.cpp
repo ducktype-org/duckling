@@ -54,9 +54,9 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	u64 Call::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Call::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type);
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void Call::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitCall(*this); }

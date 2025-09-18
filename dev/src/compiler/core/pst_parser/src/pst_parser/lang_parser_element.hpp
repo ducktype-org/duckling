@@ -85,6 +85,11 @@ namespace pst {
 		 */
 		friend class Stmt;
 
+		/**
+		 * @brief Needed for access to hash methods.
+		 */
+		friend class ClassStmt;
+
 	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
@@ -202,10 +207,16 @@ namespace pst {
 		void calcHash();
 
 		/**
-		 * @brief Calculates a stable hash.
+		 * @brief Calculates the whole hash for the element including common parts like path and element type. Can be overriden for specific parent elements that add common information.
+		 */
+		[[nodiscard]]
+		virtual HashAlg calcStableHashMeta() const;
+
+		/**
+		 * @brief Adds the element specific information to the hash. Should be overriden for each element.
 		 */
 		[[nodiscard]] 
-		virtual u64 calcStableHash([[maybe_unused]]HashAlg& partial_hash) const {return 0;};
+		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const {return partial_hash;};
 
 	public:
 		/**

@@ -36,10 +36,10 @@ namespace pst {
 		out << "}}";
 	}
 
-	u64 FunParam::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& FunParam::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, initial.has_value());
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void FunParam::acceptVisitor(PstVisitor& visitor) const { visitor.visitFunParam(*this); }

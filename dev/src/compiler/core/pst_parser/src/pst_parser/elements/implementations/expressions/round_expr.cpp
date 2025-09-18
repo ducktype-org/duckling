@@ -48,8 +48,8 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	u64 RoundExpr::calcStableHash(HashAlg& partial_hash) const {
-		return partial_hash.finalize();
+	LangElement::HashAlg& RoundExpr::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
 	}
 
 	void RoundExpr::acceptExprVisitor(PstExprVisitor& visitor) const {

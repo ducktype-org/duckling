@@ -55,11 +55,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	u64 Access::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Access::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.str());
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void Access::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitAccess(*this); }

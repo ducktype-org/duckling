@@ -31,7 +31,7 @@ namespace pst {
 		}
 
 		void dprint(std::ostream& out) const final;
-		u64 calcStableHash(HashAlg&) const override;
+		HashAlg& calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		AccessLocked<ExprElement> getExpr() const {

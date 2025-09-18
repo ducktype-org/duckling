@@ -48,8 +48,8 @@ namespace pst {
 		out << "}";
 	}
 
-	u64 ExprHolder::calcStableHash(HashAlg& partial_hash) const {
-		return partial_hash.finalize();
+	LangElement::HashAlg& ExprHolder::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
 	}
 
 	namespace {

@@ -35,7 +35,7 @@ namespace pst {
 
 		~ClassBlock() override = default;
 		void dprint(std::ostream& out) const final;
-		u64 calcStableHash(HashAlg&) const override;
+		HashAlg& calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

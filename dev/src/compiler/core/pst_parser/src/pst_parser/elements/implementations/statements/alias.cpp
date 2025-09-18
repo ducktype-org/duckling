@@ -34,9 +34,9 @@ namespace pst {
 		return out;
 	}
 
-	u64 Alias::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Alias::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void Alias::dprint(std::ostream& out) const {

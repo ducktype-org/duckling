@@ -16,9 +16,9 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	u64 BinaryOperator::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& BinaryOperator::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, op);
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void BinaryOperator::acceptExprVisitor(PstExprVisitor& visitor) const {

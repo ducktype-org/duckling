@@ -98,13 +98,17 @@ namespace pst {
 	}
 
 	void LangElement::calcHash() {
-		HashAlg partial_hash;
-		addToHash(partial_hash, getElementPath());
-		addToHash(partial_hash, elementType());
-		hash = calcStableHash(partial_hash);
+		hash = calcStableHashMeta().finalize();
 
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
+	}
+		
+	LangElement::HashAlg LangElement::calcStableHashMeta() const {
+		HashAlg partial_hash;
+		addToHash(partial_hash, getElementPath());
+		addToHash(partial_hash, elementType());
+		return calcStableHash(partial_hash);
 	}
 
 	void LangElement::addToken(CRef<tpc::Token> t) {

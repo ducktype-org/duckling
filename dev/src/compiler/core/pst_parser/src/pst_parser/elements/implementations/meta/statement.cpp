@@ -109,6 +109,14 @@ namespace pst {
 		return out;
 	}
 
+	LangElement::HashAlg Stmt::calcStableHashMeta() const {
+		HashAlg partial_hash;
+		addToHash(partial_hash, getElementPath());
+		addToHash(partial_hash, elementType());
+		addToHash(partial_hash, attributes.size());
+		return calcStableHash(partial_hash);
+	}
+
 	void Stmt::calcElementPathsRecursive() {
 		auto        path       = getElementPath();
 		ElementPath attrs_path = { path, "attributes" };

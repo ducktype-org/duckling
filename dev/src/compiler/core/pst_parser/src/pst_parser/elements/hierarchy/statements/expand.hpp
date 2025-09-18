@@ -15,7 +15,7 @@ namespace pst {
 
 		~Expand() final = default;
 		void dprint(std::ostream& out) const final;
-		u64 calcStableHash(HashAlg&) const override;
+		HashAlg& calcStableHash(HashAlg&) const override;
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 

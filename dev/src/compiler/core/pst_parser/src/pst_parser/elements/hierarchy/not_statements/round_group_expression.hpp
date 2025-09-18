@@ -17,7 +17,7 @@ namespace pst {
 		static MBox<RoundGroupExpr> parse(LangParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
-		u64 calcStableHash(HashAlg&) const override;
+		HashAlg& calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

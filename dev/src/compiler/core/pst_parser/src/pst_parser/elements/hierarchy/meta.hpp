@@ -116,6 +116,8 @@ namespace pst {
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 
+		HashAlg calcStableHashMeta() const override;
+
 		/**
 		 * @note This might need to return a vector of borrow pointers instead
 		 */
@@ -214,6 +216,8 @@ namespace pst {
 		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
 
 		const ClassContext& getContext() { return { context }; }
+
+		HashAlg calcStableHashMeta() const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

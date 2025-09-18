@@ -73,7 +73,7 @@ namespace pst {
 		out << "]";
 	}
 
-	u64 CodeBlock::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& CodeBlock::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, statements.size());
 		addToHash(partial_hash, type);
 		if (type == CodeBlockType::Unordered) {
@@ -84,6 +84,6 @@ namespace pst {
 			std::ranges::sort(symbols_available_data);
 			addToHash(partial_hash, symbols_available_data);
 		}
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 }

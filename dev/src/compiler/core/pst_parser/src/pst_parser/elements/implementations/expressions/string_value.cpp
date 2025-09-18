@@ -70,9 +70,9 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	u64 ExprStrValue::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& ExprStrValue::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, string);	
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void ExprStrValue::acceptExprVisitor(PstExprVisitor& visitor) const {

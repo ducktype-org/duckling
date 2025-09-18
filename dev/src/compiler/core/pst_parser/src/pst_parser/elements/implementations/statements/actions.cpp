@@ -63,9 +63,9 @@ namespace pst {
 		}
 	}
 
-	u64 Action::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Action::calcStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, expr.has_value());
-		return partial_hash.finalize();
+		return partial_hash;
 	}
 
 	void Return::dprint(std::ostream& out) const {
