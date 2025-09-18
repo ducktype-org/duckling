@@ -20,6 +20,11 @@ namespace pst {
 		}
 	};
 
+	LangElement::HashAlg& AccessBlock::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, specifier);
+		return partial_hash;
+	}
+
 	MBox<AccessBlock> AccessBlock::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeBox<AccessBlock>(position, ctx);

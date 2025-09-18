@@ -195,7 +195,7 @@ namespace pst {
 		 */
 		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
 
-	private:
+	protected:
 		/**
 		 * @brief Calculates the hashes recursively for the element and all children.
 		 */
@@ -216,7 +216,7 @@ namespace pst {
 		 * @brief Adds the element specific information to the hash. Should be overriden for each element.
 		 */
 		[[nodiscard]] 
-		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const {return partial_hash;};
+		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const;
 
 	public:
 		/**

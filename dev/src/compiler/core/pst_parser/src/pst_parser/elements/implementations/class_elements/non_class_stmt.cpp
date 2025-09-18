@@ -29,6 +29,10 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& NonClassStmt::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void NonClassStmt::acceptVisitor(PstVisitor& visitor) const {
 		inner_stmt.internal()->acceptVisitor(visitor);
 	}

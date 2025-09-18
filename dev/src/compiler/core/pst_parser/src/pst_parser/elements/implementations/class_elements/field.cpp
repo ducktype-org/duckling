@@ -44,5 +44,11 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& Field::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, is_mutable);
+		addToHash(partial_hash, name);
+		return partial_hash;
+	}
+
 	void Field::acceptVisitor(PstVisitor& visitor) const { visitor.visitField(*this); }
 }
