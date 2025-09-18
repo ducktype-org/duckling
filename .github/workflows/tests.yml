@@ -21,7 +21,7 @@ env:
   CC_COMPILER: gcc-14
   GCOV_VERSION: gcov-14
   BUILD_SYSTEM: Ninja
-#  LINKER_TYPE: MOLD  # Temporarily disabled due to disk space issues on GH runners. See #1021
+  LINKER_TYPE: MOLD
 
 jobs:
   determine-runners:
@@ -184,12 +184,10 @@ jobs:
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
+              -D STRIP_SYMBOL_INFORMATION=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
-#              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
-#              Temporarily disabled due to disk space issues on GH runners. See #1021
-#              When enabling, move this line upwards, so that it is before the cmake-flags value.
-
+              
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
@@ -204,6 +202,22 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- all build_all_playgrounds
         continue-on-error: true
+
+      - name: Show disk usage
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          echo "build:"
+          du -hs ${{ env.BUILD_DIR }}
+          
+          echo "build/lib:"
+          du -hs ${{ env.BUILD_DIR }}/lib
+
+          echo "build/bin:"
+          du -hs ${{ env.BUILD_DIR }}/bin
+          
+          echo "ccache:"
+          du -hs ${{ env.CCACHE_DIR }}
+
 
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,

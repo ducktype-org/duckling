@@ -33,6 +33,7 @@
 #pragma once
 
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <variant>
 
@@ -43,6 +44,17 @@ namespace base {
 
 		template<class T1, class T2, template<class> class U>
 		struct IsOfSameClassImpl<U<T1>, U<T2>>: public std::true_type {};
+
+		template<typename Tup>
+		struct VariantHoldsOneOfImpl;
+
+		template<typename... Ts>
+		struct VariantHoldsOneOfImpl<std::tuple<Ts...>> {
+			template<typename... VariantArgs>
+			constexpr bool operator()(const std::variant<VariantArgs...>& v) const {
+				return (std::holds_alternative<Ts>(v) || ...);
+			}
+		};
 	}
 
 	/**
@@ -107,6 +119,47 @@ namespace base {
 	 */
 	template<typename T, typename VariantT>
 	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
+
+	/**
+	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.
+	 * @tparam T The type to check for.
+	 * @tparam Tup The tuple type.
+	 */
+	template<typename T, typename Tup>
+	struct is_tuple_member;
+
+	template<typename T, typename... Ts>
+	struct is_tuple_member<T, std::tuple<Ts...>>: std::disjunction<std::is_same<T, Ts>...> {};
+
+	/**
+	 * @brief Helper variable template for `is_in_tuple`.
+	 */
+	template<typename T, typename Tup>
+	inline constexpr bool IS_TUPLE_MEMBER_V = is_tuple_member<T, Tup>::value;
+
+	/**
+	 * @brief Concept that checks if a type `T` is present in a tuple `Tup`.
+	 */
+	template<typename T, typename Tup>
+	concept IsTupleMember = IS_TUPLE_MEMBER_V<T, Tup>;
+
+	/**
+	 * @brief A convenient type alias for concatenating multiple tuples.
+	 */
+	template<typename... Tups>
+	using tuple_cat_t = decltype(std::tuple_cat(std::declval<Tups>()...));
+
+	/**
+	 * @brief Checks if a variant holds one of the types specified in a tuple.
+	 * @tparam TupleOfTypes A std::tuple containing the types to check for.
+	 * @param v The variant to check.
+	 * @return True if the variant currently holds one of the types from TupleOfTypes, false
+	 * otherwise.
+	 */
+	template<typename TupleOfTypes, typename... VariantArgs>
+	constexpr bool variantHoldsOneOf(const std::variant<VariantArgs...>& v) {
+		return internal::VariantHoldsOneOfImpl<TupleOfTypes>{}(v);
+	}
 
 	/**
 	 * @brief Checks if A implies B.

@@ -15,9 +15,9 @@ namespace pst::expr {
 	class Ternary final: public ExprElement {
 		using Lower = LogicOr;
 
-		AccessInternal<ExprElement> condition;
-		AccessInternal<ExprElement> if_true;
-		AccessInternal<ExprElement> if_false;
+		NAMED_CHILD(condition, ExprElement);
+		NAMED_CHILD(if_true, ExprElement);
+		NAMED_CHILD(if_false, ExprElement);
 
 	public:
 		explicit Ternary(const dia::SourcePosition& position): ExprElement(position, 800) {}
