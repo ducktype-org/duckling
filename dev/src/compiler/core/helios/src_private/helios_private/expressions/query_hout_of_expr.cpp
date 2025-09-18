@@ -190,6 +190,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
+				std::cout << "Visiting identifier literal\n";
 				// note: this is a mock, it should be unified with ChainExpr
 				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
@@ -425,11 +426,13 @@ namespace compiler::helios::code {
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			// std::cerr << "\nExpr: \n";
-			// root->debugPrint(std::cerr);
-			// std::cerr << '\n'
+			std::cout << "fromPST\n";
+			std::cout << "Expr: \n";
+			element.unlock(ctx)->debugPrint(std::cout);
+			std::cout << '\n';
 
 			PstExprToHoutExprVisitor visitor(ctx);
+			std::cout << "Visiting...\n";
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
@@ -449,6 +452,9 @@ namespace compiler::helios {
 			);
 
 			// @TODO static assert this is top-expr
+			std::cout << "QueryHoutOfExpr for:\n";
+			key.element.illegalAccess().value()->debugPrint(std::cout);
+			std::cout << "\n";
 			return code::fromPST(ctx, key.element);
 		}
 

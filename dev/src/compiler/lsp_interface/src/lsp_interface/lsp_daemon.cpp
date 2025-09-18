@@ -172,7 +172,6 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
 	([&virtual_root](const std::string& base64_path, const uint& offset) {
 		try {
-			std::cout << "Entering GTD\n";
 			const auto relative_path = base64::decode_into<std::string>(base64_path);
 			const auto path          = virtual_root.getFilePath().join(relative_path);
 
@@ -193,10 +192,6 @@ void server(i32 port) {
 				};
 				auto pst_root = pst->getRootElement();
 				auto element    = lsp::findElement(pst_root, offset);
-				auto autoelement = element.illegalAccess();
-				if (autoelement.has_value()) std::cout << "found element: " << autoelement.value().toJSON() <<  "\n";
-				else std::cout << "found element: " << element.illegalAccess().toJSON() <<  "\n";
-				std::cout << "found element: " << element.illegalAccess().toJSON() <<  "\n";
 				auto definition = lsp::findDefinition(element);
 				if (definition.has_value()) out.push_back(definition.value().toJSON());
 			}
