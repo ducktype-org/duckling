@@ -138,6 +138,15 @@ namespace tsh {
 		}
 
 		/**
+		 * @brief Cast the object to another type from the AbstractType hierarchy in an OOP way.
+		 * @tparam ABSTRACT_TYPE The target type from the AbstractType hierarchy.
+		 */
+		template<std::derived_from<AbstractType> ABSTRACT_TYPE>
+		ABSTRACT_TYPE as() const {
+			return ABSTRACT_TYPE(pimpl);
+		}
+
+		/**
 		 * @brief Compare with another AbstractType.
 		 *
 		 * The comparison is arbitrary and should only be used for
