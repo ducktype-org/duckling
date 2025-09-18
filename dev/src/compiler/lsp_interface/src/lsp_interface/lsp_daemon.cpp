@@ -172,32 +172,58 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
 	([&virtual_root](const std::string& base64_path, const uint& offset) {
 		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
+			std::cout << "Entering GTD\n";
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			const auto path          = virtual_root.getFilePath().join(relative_path);
 
-			if (!fs::FilePath(virtual_root.getFilePath().join(path)).exists())
-				return crow::response(404, "File not found");
+			if (!path.exists()) return crow::response(404, "File not found");
 
-			auto file = fs::File(virtual_root.getFilePath().join(path));
+			const auto file        = fs::File(path);
+			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+			std::vector<std::string> out;
 
-			// TODO: fix PST definition to enable definition finding
-			auto       tokens = lexer::tokenizeFile(file);
-			pst::PST<> pst(std::move(tokens));
-
-			if (pst.getLogger()->bad()) {
-				std::stringstream ss;
-				pst.getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
+			for (auto& source_file: file_vector) {
+				auto pst = source_file->getPST();
+				// @TODO figure out logging strategy
+				if (pst->getLogger()->bad()) {
+					std::stringstream ss;
+					pst->getLogger()->dumpLog(true, ss);
+					std::cerr << ss.str() << "\n";
+					continue;
+				};
+				auto pst_root = pst->getRootElement();
+				auto element    = lsp::findElement(pst_root, offset);
+				auto autoelement = element.illegalAccess();
+				if (autoelement.has_value()) std::cout << "found element: " << autoelement.value().toJSON() <<  "\n";
+				else std::cout << "found element: " << element.illegalAccess().toJSON() <<  "\n";
+				std::cout << "found element: " << element.illegalAccess().toJSON() <<  "\n";
+				auto definition = lsp::findDefinition(element);
+				if (definition.has_value()) out.push_back(definition.value().toJSON());
 			}
 
-			auto pst_root   = pst.getRootElement();
-			auto element    = lsp::findElement(pst_root, offset);
-			auto definition = lsp::findDefinition(element);
 
-			if (!definition.has_value()) return crow::response(200, "[]");
+			// TODO: fix PST definition to enable definition finding
+			// auto       tokens = lexer::tokenizeFile(file);
+			// pst::PST<> pst(std::move(tokens));
 
-			std::vector<std::string> out = { definition.value().toJSON() };
+			// if (pst.getLogger()->bad()) {
+			// 	std::stringstream ss;
+			// 	pst.getLogger()->dumpLog(true, ss);
+			// 	return crow::response(200, ss.str());
+			// }
+
+			// auto pst_root   = pst.getRootElement();
+			// auto element    = lsp::findElement(pst_root, offset);
+			// auto definition = lsp::findDefinition(element);
+
+			// if (!definition.has_value()) return crow::response(200, "[]");
+
+			// std::vector<std::string> out = { definition.value().toJSON() };
 			return crow::response(200, lsp::jsonList(out));
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+		} catch (const std::exception& e) {
+			std::cout << e.what() << "\n";
+			return crow::response(400, e.what());
+		}
 	});
 
 
