@@ -24,7 +24,7 @@
 namespace compiler::helios {
 
 	// for friend:
-	struct ImplementationOf_QueryCodeOFFun;
+	struct ImplementationOf_QueryCodeOfFun;
 
 	namespace code {
 		// Forward declaration:
@@ -98,7 +98,7 @@ namespace compiler::helios {
 		 */
 		HOUTFunction(SymID symbol, query::Context& ctx);
 
-		friend ImplementationOf_QueryCodeOFFun;
+		friend ImplementationOf_QueryCodeOfFun;
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };
