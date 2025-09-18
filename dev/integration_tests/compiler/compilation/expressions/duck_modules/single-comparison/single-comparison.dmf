@@ -65,8 +65,8 @@ fun main() -> i64 = {
         builtin_output_i64(12);
     }
 
-    let a: i32 = 5;
-    let b: i32 = 6;
+    let a: i64 = 5;
+    let b: i64 = 6;
 
     #           ( false )
     #             6 < 5
