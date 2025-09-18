@@ -14,6 +14,8 @@ namespace pst {
 		NAMED_CHILD(implements, ImplementsList);
 		NAMED_CHILD(body, ClassBlock);
 
+	protected:
+		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class, ElementKind::Class);
 

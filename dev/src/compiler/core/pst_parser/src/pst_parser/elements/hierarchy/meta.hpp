@@ -212,12 +212,13 @@ namespace pst {
 	private:
 		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
 
+	protected:
+		[[nodiscard]]
+		HashAlg calcStableHashMeta() const override;
 	public:
 		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
 
 		const ClassContext& getContext() { return { context }; }
-
-		HashAlg calcStableHashMeta() const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

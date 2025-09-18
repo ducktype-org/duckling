@@ -216,7 +216,7 @@ namespace pst {
 		 * @brief Adds the element specific information to the hash. Should be overriden for each element.
 		 */
 		[[nodiscard]] 
-		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const;
+		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const = 0;
 
 	public:
 		/**

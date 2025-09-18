@@ -39,5 +39,11 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& Fun::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, name);
+		addToHash(partial_hash, ret.has_value());
+		return partial_hash;
+	}
+
 	void Fun::acceptVisitor(PstVisitor& visitor) const { visitor.visitFun(*this); }
 }

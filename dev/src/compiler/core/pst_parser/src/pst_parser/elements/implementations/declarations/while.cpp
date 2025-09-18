@@ -28,6 +28,11 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& While::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, optional_name);
+		return partial_hash;
+	}
+
 	AccessLocked<ExprHolder> While::getCondition() const { return condition.internal()->getExpr(); }
 
 	void While::acceptVisitor(PstVisitor& visitor) const { visitor.visitWhile(*this); }
