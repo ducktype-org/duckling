@@ -22,8 +22,8 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 		~ExprCharValue() override = default;
-		void dprint(std::ostream& out) const final;
-		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		void     dprint(std::ostream& out) const final;
+		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]

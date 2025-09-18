@@ -30,7 +30,7 @@ namespace pst {
 			return "Top Level Expression";
 		}
 
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
 		HashAlg& calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]

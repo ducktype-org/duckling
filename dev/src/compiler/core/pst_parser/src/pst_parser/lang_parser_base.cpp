@@ -85,14 +85,10 @@ namespace pst {
 
 	void LangElement::calcHashRecursive() {
 		calcHash();
-		for(auto& sub_el: sub_elements) {
+		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {
-				variant_case(InternalChild, el) {
-					el->calcHashRecursive();
-				}
-				variant_case(InternalNamedChild, el) {
-					el.element->calcHashRecursive();
-				}
+				variant_case(InternalChild, el) { el->calcHashRecursive(); }
+				variant_case(InternalNamedChild, el) { el.element->calcHashRecursive(); }
 			}
 		}
 	}
@@ -103,7 +99,7 @@ namespace pst {
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}
-		
+
 	LangElement::HashAlg LangElement::calcStableHashMeta() const {
 		HashAlg partial_hash;
 		addToHash(partial_hash, getElementPath());

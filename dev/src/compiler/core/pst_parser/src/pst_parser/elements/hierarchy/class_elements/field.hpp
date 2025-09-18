@@ -14,6 +14,7 @@ namespace pst {
 		NAMED_CHILD_OPT(init, CommaExprHolder);
 
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
 		CLASS_STMT_PARSE(Field);

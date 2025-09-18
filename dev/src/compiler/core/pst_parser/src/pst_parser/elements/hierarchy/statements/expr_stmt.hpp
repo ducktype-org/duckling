@@ -17,7 +17,7 @@ namespace pst {
 		static MBox<ExprStmt> parse(LangParserState& state);
 
 		~ExprStmt() override = default;
-		void dprint(std::ostream& out) const override;
+		void     dprint(std::ostream& out) const override;
 		HashAlg& calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]

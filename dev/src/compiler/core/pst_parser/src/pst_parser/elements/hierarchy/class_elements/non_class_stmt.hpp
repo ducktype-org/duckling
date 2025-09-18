@@ -13,6 +13,7 @@ namespace pst {
 		NAMED_CHILD(inner_stmt, Stmt);
 
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
 		CLASS_STMT_PARSE(NonClassStmt);

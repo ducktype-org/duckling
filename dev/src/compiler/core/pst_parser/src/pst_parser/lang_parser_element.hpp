@@ -5,12 +5,11 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
-#include <hashing/hash.hpp>
-
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
 
+#include <hashing/hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -51,8 +50,8 @@ namespace pst {
 			elements.emplace_back(ext);
 		}
 
-		friend constexpr auto hashDecompose(const ElementPath& t) noexcept { 
-			return std::tie(t.elements); 
+		friend constexpr auto hashDecompose(const ElementPath& t) noexcept {
+			return std::tie(t.elements);
 		}
 
 		/**
@@ -71,6 +70,7 @@ namespace pst {
 	class LangElement: public tpc::Element {
 	protected:
 		using HashAlg = hashing::Fnv1a_64;
+
 	public:
 		using SubToken = base::CRef<lexer::Token>;
 
@@ -202,21 +202,25 @@ namespace pst {
 		void calcHashRecursive();
 
 		/**
-		 * @brief Calculates the hash for this element, can be modified to change between stable and unstable hashes.
+		 * @brief Calculates the hash for this element, can be modified to change between stable and
+		 * unstable hashes.
 		 */
 		void calcHash();
 
 		/**
-		 * @brief Calculates the whole hash for the element including common parts like path and element type. Can be overriden for specific parent elements that add common information.
+		 * @brief Calculates the whole hash for the element including common parts like path and
+		 * element type. Can be overriden for specific parent elements that add common information.
 		 */
 		[[nodiscard]]
 		virtual HashAlg calcStableHashMeta() const;
 
 		/**
-		 * @brief Adds the element specific information to the hash. Should be overriden for each element.
+		 * @brief Adds the element specific information to the hash. Should be overriden for each
+		 * element.
 		 */
-		[[nodiscard]] 
-		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const = 0;
+		[[nodiscard]]
+		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const
+			= 0;
 
 	public:
 		/**
@@ -335,7 +339,9 @@ namespace pst {
 
 		[[nodiscard]]
 		const ElementPath& getElementPath() const {
-			CORE_ASSERT(element_path.has_value(), "element path not calculated for this " + elementType());
+			CORE_ASSERT(
+				element_path.has_value(), "element path not calculated for this " + elementType()
+			);
 			return element_path.value();
 		}
 

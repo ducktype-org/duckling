@@ -78,9 +78,8 @@ namespace pst {
 		addToHash(partial_hash, type);
 		if (type == CodeBlockType::Unordered) {
 			std::vector<std::pair<std::string, usize>> symbols_available_data;
-			for(auto& [name, vec]: by_symbol) {
-				symbols_available_data.emplace_back(name.str(), vec.size());	
-			}
+			for (auto& [name, vec]: by_symbol)
+				symbols_available_data.emplace_back(name.str(), vec.size());
 			std::ranges::sort(symbols_available_data);
 			addToHash(partial_hash, symbols_available_data);
 		}

@@ -19,7 +19,7 @@ namespace pst {
 		}
 
 		~Using() final = default;
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
 		HashAlg& calcStableHash(HashAlg&) const override;
 
 		void acceptVisitor(PstVisitor& visitor) const override;

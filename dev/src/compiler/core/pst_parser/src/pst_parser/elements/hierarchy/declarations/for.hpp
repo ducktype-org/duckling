@@ -15,6 +15,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
 

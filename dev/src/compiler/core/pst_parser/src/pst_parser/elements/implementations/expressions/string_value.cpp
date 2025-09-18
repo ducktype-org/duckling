@@ -71,7 +71,7 @@ namespace pst::expr {
 	}
 
 	LangElement::HashAlg& ExprStrValue::calcStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, string);	
+		addToHash(partial_hash, string);
 		return partial_hash;
 	}
 

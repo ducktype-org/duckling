@@ -17,6 +17,7 @@ namespace pst {
 		           ///< the move constructor)
 
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
 		CLASS_STMT_PARSE(ClassSpecial);

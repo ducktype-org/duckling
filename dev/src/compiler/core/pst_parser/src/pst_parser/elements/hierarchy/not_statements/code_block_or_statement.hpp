@@ -24,7 +24,7 @@ namespace pst {
 			LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
 		);
 		~CodeBlockOrStmt() final = default;
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
 		HashAlg& calcStableHash(HashAlg&) const override;
 
 		using const_iterator = CodeBlockOrStmtIterator;

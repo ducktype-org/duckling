@@ -38,8 +38,8 @@ namespace pst::expr {
 		}
 
 		~ComparisonChain() override = default;
-		void dprint(std::ostream& out) const final;
-		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		void     dprint(std::ostream& out) const final;
+		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& calcStableHash(HashAlg&) const override;
 
 		void calcElementPathsRecursive() override;

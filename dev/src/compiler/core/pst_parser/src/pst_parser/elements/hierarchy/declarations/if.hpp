@@ -14,6 +14,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
 			element_kind = ElementKind::If;

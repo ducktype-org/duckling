@@ -9,6 +9,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace, ElementKind::Namespace);
 

@@ -215,6 +215,7 @@ namespace pst {
 	protected:
 		[[nodiscard]]
 		HashAlg calcStableHashMeta() const override;
+
 	public:
 		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
 

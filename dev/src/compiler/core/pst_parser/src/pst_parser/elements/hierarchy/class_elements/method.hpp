@@ -15,6 +15,7 @@ namespace pst {
 		NAMED_CHILD(body, CodeBlock);
 
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
 		CLASS_STMT_PARSE(Method);

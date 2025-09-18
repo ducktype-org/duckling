@@ -31,4 +31,15 @@ namespace pst {
 		}
 		return base::OK;
 	}
+
+	base::OkBad checkUniqueHashes(AccessLocked<pst::LangElement> root) {
+		std::set<u64> hashes;
+		auto          elements = viewAllSubTreeElements(root);
+		for (auto& element: elements) {
+			u64 hash = element.illegalAccess().value()->getHash();
+			if (hashes.contains(hash)) return base::BAD;
+			hashes.insert(hash);
+		}
+		return base::OK;
+	}
 }

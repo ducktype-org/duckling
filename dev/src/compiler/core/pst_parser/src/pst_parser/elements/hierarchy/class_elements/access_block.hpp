@@ -20,6 +20,7 @@ namespace pst {
 		NAMED_CHILD(block, ClassBlock);
 
 		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
 		CLASS_STMT_PARSE(AccessBlock);
