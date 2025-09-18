@@ -13,7 +13,7 @@
 			"problemMatcher": [
 				"$tsc"
 			],
-			"path": "dev/DucklingLS"
+			"path": "dev/src/DucklingLS"
 		},
 		{
 			"label": "npm: watch",
@@ -31,7 +31,7 @@
 			"problemMatcher": [
 				"$tsc-watch"
 			],
-			"path": "dev/DucklingLS"
+			"path": "dev/src/DucklingLS"
 		}
 	]
 }
