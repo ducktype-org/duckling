@@ -14,6 +14,7 @@ Path to requirements.txt file relative to "dev/" directory
 """
 requirements_path = "requirements.txt"
 
+
 def setup_venv_impl():
     if not Path(".venv").exists():
         log_info("Creating venv...")

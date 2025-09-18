@@ -7,8 +7,8 @@ import requests
 import math
 
 from .helpers import (
-    bash_command, 
-    exit_with_error, 
+    bash_command,
+    exit_with_error,
     log_info,
 )
 

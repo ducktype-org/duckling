@@ -1,5 +1,5 @@
-fun arg1(a: i64) -> i64 = return 0;
-fun arg0() -> i64 = return 0;
+fun arg1(a: i64) -> i64 = 0;
+fun arg0() -> i64 = 0;
 
 fun foo() -> i64 = {
     let x: i64 = 123;
