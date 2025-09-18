@@ -91,6 +91,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	u64 ChainExpr::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, chain.size());
+		return partial_hash.finalize();
+	}
+
 	void ChainExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitChainExpr(*this);
 	}

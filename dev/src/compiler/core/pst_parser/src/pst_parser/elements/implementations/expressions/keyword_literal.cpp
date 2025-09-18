@@ -30,6 +30,12 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	u64 KeywordLiteral::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, keyword);
+		addToHash(partial_hash, template_specifier.has_value());
+		return partial_hash.finalize();
+	}
+
 	void KeywordLiteral::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitKeywordLiteral(*this);
 	}

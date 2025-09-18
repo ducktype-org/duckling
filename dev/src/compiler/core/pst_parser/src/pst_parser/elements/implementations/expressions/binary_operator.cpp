@@ -16,6 +16,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	u64 BinaryOperator::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, op);
+		return partial_hash.finalize();
+	}
+
 	void BinaryOperator::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitBinaryOperator(*this);
 	}

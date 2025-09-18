@@ -19,6 +19,7 @@ namespace pst::expr {
 		~SuffixOperator() override = default;
 		void dprint(std::ostream& out) const final;
 		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		u64 calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

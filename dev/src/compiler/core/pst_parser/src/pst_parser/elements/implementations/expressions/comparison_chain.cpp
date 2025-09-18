@@ -52,6 +52,12 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	u64 ComparisonChain::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, sub_expr.size());
+		addToHash(partial_hash, operators.size());
+		return partial_hash.finalize();
+	}
+
 	void ComparisonChain::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitComparisonChain(*this);
 	}

@@ -141,6 +141,10 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	u64 Ternary::calcStableHash(HashAlg& partial_hash) const {
+		return partial_hash.finalize();
+	}
+
 	void Ternary::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitTernary(*this); }
 
 	AccessLocked<ExprElement> Ternary::getCondition() const { return condition.give(); }

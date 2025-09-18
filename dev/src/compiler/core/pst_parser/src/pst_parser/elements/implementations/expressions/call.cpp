@@ -54,6 +54,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	u64 Call::calcStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, type);
+		return partial_hash.finalize();
+	}
+
 	void Call::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitCall(*this); }
 
 	lexer::Token::BracketType Call::getType() const { return type; }

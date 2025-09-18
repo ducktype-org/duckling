@@ -20,6 +20,7 @@ namespace pst::expr {
 		~Call() override = default;
 		void dprint(std::ostream& out) const final;
 		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		u64 calcStableHash(HashAlg&) const override;
 
 		[[nodiscard]] lexer::Token::BracketType getType() const;
 
