@@ -59,7 +59,7 @@ namespace compiler::backend_llvm {
 						features,
 						opt,
 						llvm::Reloc::PIC_,
-						llvm::CodeModel::Small,
+						std::nullopt,
 						llvm::CodeGenOptLevel::None
 					));
 				return this->target_machine.refMut().toOpt().value();
