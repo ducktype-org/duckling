@@ -1,7 +1,4 @@
 #pragma once
-#include "diagnostics.hpp"
-#include "side_panel.hpp"
-
 #include <proto/view.grpc.pb.h>
 #include <proto/view.pb.h>
 
@@ -28,61 +25,20 @@ namespace dia_app {
 		 * but were visible before - just reset them to initial state.
 		 */
 		class ViewManager {
-		private:
-			std::vector<Diagnostic>                            diagnostics;
-			std::vector<SidePath>                              side_paths;
-			base::HashMap<component_id_t, component_context_t> id_to_component_context;
-
 		public:
-			ViewManager(std::vector<Diagnostic> diagnostics, std::vector<SidePath> side_paths);
+			static ViewManager createFromJson(const json& input) {
+				return ViewManager();
+			}
 
-			static ViewManager createFromJson(const json& input);
+			void getView(::view::ViewResponse* response) {}
 
-			void getView(::view::ViewResponse* response);
-
-			void click(const ::view::ClickRequest* request, ::view::ClickResponse* response);
+			void click(const ::view::ClickRequest* request, ::view::ClickResponse* response) {}
 
 			void closeSideInfo(
 				const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response
-			);
+			) {}
 
-			void getEdge(const ::view::EdgeRequest* request, ::view::EdgeResponse* response);
+			void getEdge(const ::view::EdgeRequest* request, ::view::EdgeResponse* response) {}
 		};
-
-		class ViewServiceImpl: public ::view::ViewService::Service {
-		private:
-			ViewManager vm;
-
-		public:
-			ViewServiceImpl(ViewManager vm);
-
-			static ViewServiceImpl createFromJson(const json& input);
-
-			::grpc::Status GetView(
-				::grpc::ServerContext*     context,
-				const ::view::ViewRequest* request,
-				::view::ViewResponse*      response
-			) override;
-
-			::grpc::Status Click(
-				::grpc::ServerContext*      context,
-				const ::view::ClickRequest* request,
-				::view::ClickResponse*      response
-			) override;
-
-			::grpc::Status CloseSideInfo(
-				::grpc::ServerContext*              context,
-				const ::view::CloseSideInfoRequest* request,
-				::view::CloseSideInfoResponse*      response
-			) override;
-
-			::grpc::Status GetEdge(
-				::grpc::ServerContext*     context,
-				const ::view::EdgeRequest* request,
-				::view::EdgeResponse*      response
-			) override;
-		};
-
-		void runViewManagerRPCServer(const json& input);
 	}  // namespace view_manager
 }  // namespace dia_app
