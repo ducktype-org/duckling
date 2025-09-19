@@ -117,6 +117,7 @@ namespace pst {
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 
+		[[nodiscard]]
 		HashAlg calcStableHashMeta() const override;
 
 		/**
