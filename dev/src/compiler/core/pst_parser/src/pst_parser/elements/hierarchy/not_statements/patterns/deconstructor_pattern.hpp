@@ -12,6 +12,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		explicit DeconstructorPattern(const dia::SourcePosition& position):
 			  AnalysisPattern(position) {

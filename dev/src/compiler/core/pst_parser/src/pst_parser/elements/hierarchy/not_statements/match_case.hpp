@@ -37,6 +37,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		explicit MatchCase(dia::SourcePosition& pos): NotStmt(pos) {
 			this->element_kind = ElementKind::MatchCase;

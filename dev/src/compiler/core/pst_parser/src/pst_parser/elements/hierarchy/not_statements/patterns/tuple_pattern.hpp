@@ -11,6 +11,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		// explicit TuplePattern(const dia::SourcePosition& position);
 		explicit TuplePattern(const dia::SourcePosition& position): AnalysisPattern(position) {

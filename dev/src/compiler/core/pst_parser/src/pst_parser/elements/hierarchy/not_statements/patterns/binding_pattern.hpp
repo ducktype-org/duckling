@@ -10,6 +10,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		explicit BindingPattern(const dia::SourcePosition& position): AnalysisPattern(position) {
 			this->element_kind = ElementKind::BindingPattern;

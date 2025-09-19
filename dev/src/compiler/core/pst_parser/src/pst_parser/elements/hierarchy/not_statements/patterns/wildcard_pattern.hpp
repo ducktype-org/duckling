@@ -9,6 +9,7 @@ namespace pst {
 	class WildcardPattern final: public AnalysisPattern {
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		explicit WildcardPattern(const dia::SourcePosition& position): AnalysisPattern(position) {
 			this->element_kind = ElementKind::WildcardPattern;

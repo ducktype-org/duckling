@@ -20,6 +20,7 @@ namespace pst::expr {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 810) {
 			this->element_kind = ElementKind::Match;

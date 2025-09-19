@@ -13,6 +13,7 @@ namespace pst {
 
 	protected:
 		HashAlg& calcStableHash(HashAlg&) const override;
+
 	public:
 		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {
 			this->element_kind = ElementKind::FlowPattern;
