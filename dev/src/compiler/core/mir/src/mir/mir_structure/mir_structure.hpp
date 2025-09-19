@@ -39,11 +39,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	*/
 	IntegerAdd,
 	IntegerSub,
+	IntegerNeg,
 	IntegerMul,
 	IntegerDiv,
 	IntegerMod,
-	IntegerLt,
-	IntegerNeg,
+	
+	IntegerLt,    // Less then
+	IntegerGt,    // Greater then
+	IntegerLteq,  // Less then or equal to
+	IntegerGteq,  // Greater then or equal to
+	IntegerEq,    // Equal to
+	IntegerNeq,   // Not equal to
+
 
 	BooleanAnd,
 	BooleanOr,

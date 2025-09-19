@@ -20,6 +20,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <cmath>
+#include <ranges>
 #include <type_traits>
 
 namespace compiler::helios {
@@ -250,6 +251,59 @@ namespace compiler::helios {
 					result = evalHoutExpr(ctx, expr.if_true.ref());
 				else
 					result = evalHoutExpr(ctx, expr.if_false.ref());
+			}
+
+			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
+				auto compare = [](i64 first, i64 second, code::BuiltinBinary operation) {
+					using enum code::BuiltinBinary;
+					switch (operation) {
+					case IntegerLt:
+						return first < second;
+					case IntegerGt:
+						return first > second;
+					case IntegerLteq:
+						return first <= second;
+					case IntegerGteq:
+						return first >= second;
+					case IntegerEq:
+						return first == second;
+					case IntegerNeq:
+						return first != second;
+					default:
+						CORE_UNREACHABLE();
+					}
+				};
+
+				using namespace std::views;
+
+				auto evaluate_subexpr = [this](const base::Box<code::Expr>& expr) {
+					return evalHoutExpr(ctx, expr.ref());
+				};
+
+				// Each expression is evaluated lazily, when it becomes useful.
+				auto evaluated_exprs = chain_expr.expressions | transform(evaluate_subexpr);
+
+				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
+				if (evaluated.hasError()) {
+					result = query::QError(errors::Failed(evaluated.error()));
+					return;
+				}
+				auto prev_value = evaluated.value();
+				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
+					if (next_expr.hasError()) {
+						result = query::QError(errors::Failed(evaluated.error()));
+						return;
+					}
+
+					auto next_value = next_expr.value();
+					if (!compare(*prev_value.asI64(), *next_value.asI64(), comp)) {
+						result = CompileTimeValue{ false };
+						return;
+					}
+
+					prev_value = next_value;
+				}
+				result = CompileTimeValue{ true };
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {

@@ -435,7 +435,7 @@ private:
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
 
-			for (auto& fun: functions) {
+			for (const compiler::helios::HOUTFunction& fun: functions) {
 				if (fun.original_name.str() == "good1") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
@@ -455,10 +455,23 @@ private:
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
 
+
 					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
-					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
-						compiler::mir::OperationFlag::Flag::Move, tmp
+					compiler::mir::Instruction&   assignment
+						= mir_rep.blocks[mir_rep.block_order[2]].instructions[0];
+
+					// If this test fails use the following to find the correct Instruction.
+					// mir_rep.debugPrint(std::cerr);
+					// assignment.debugPrint(std::cerr);
+					assertEqual(
+						compiler::mir::Operation::Assign,
+						assignment.operation,
+						"Fragile test, please fix (good2, assignment)"
 					);
+					assertTrue(
+						assignment.arguments[0].isLocal(), "Fragile test, please fix (good2, local)"
+					);
+					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
 					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}

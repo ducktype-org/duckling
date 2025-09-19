@@ -4,9 +4,9 @@ from pathlib import Path
 
 from .cpp_linter import get_files_for_linter
 from .helpers import (
-    log_info, 
-    log_warning, 
-    log_new_line, 
+    log_info,
+    log_warning,
+    log_new_line,
 )
 
 _RELATIVE_IMPORT_REGEX = re.compile(r'#include "(.*?)"')
