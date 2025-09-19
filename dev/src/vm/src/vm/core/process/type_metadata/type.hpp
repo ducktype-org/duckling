@@ -15,6 +15,7 @@ namespace vm {
 	class TypeMetadata;
 
 	/// Size of type in bytes
+	// TODOP: Resolve that todo.
 	// @TODO: change to strongly typed int
 	using TypeSize = u64;
 

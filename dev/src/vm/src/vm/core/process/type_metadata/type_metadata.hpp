@@ -39,6 +39,18 @@ namespace vm {
 		 */
 		void finalize();
 
+
+		/**
+		 * @brief Unfinalize the type metadata for injecting new types.
+		 */
+		void unfinalize();
+
+		/**
+		 * @brief Finalize the type metadata again after new types where injected.
+		 */
+		// TODOP: May be not needed
+		void refinalize();
+
 		[[nodiscard]]
 		TypeCRef at(TypeID id) const;
 		TypeRef  at(TypeID id);
@@ -62,5 +74,7 @@ namespace vm {
 		auto end() const { return types.end(); }
 
 		auto end() { return types.end(); }
+
+		usize size() { return types.size(); }
 	};
 }

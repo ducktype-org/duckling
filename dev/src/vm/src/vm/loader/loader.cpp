@@ -12,6 +12,8 @@
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 
+#include "vm/bytecode/validator/type_builder.hpp"
+#include "vm/bytecode/validator/type_validator.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -20,6 +22,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -96,13 +99,16 @@ namespace {
 
 #undef HANDLE_OPCODE
 
-	// TODOP: Add docs.
+	/**
+	 * @brief Translates a parsed opcode (`parser::OpCode`) into a high-level bytecode instruction
+	 * (`vm::code::Instruction`).
+	 */
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
 	}
 }
 
-std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
+std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	const std::vector<fs::File>& files
 ) {
 	match_optional(parser::parse(files)) {
@@ -146,7 +152,6 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						function.signature.parameters.emplace_back(param_id);
 					}
 
-					// TODOP: Reserve.
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));
 
@@ -161,14 +166,27 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::loadAndCompile(
 	const code::CodeCollection& code_collection
 ) {
+	// Skip if no new code was added.
+	if (code_collection.functions.empty() && code_collection.types.empty()
+	    && code_collection.global_data.empty()) {
+		return compiler.getLowProgram();
+	}
+
 	LoaderLogger log;
 	try {
-		// TODOP: Here we should decide which funcitons to compile.
-		high_program = high_program.newInsertCode(code_collection);
-		return compiler::compile(high_program);
+		// @note: This function creates a copy of the current program state and tries inserting new
+		// code into it. If it fails, an exception is thrown and `validated_high_program` in the
+		// loader stays unchanged.
+		validated_high_program = validated_high_program.tryInsertCode(code_collection);
+
+		// @note: After successfully inserting code into `validated_high_program` we compile it to
+		// the low level representation. This step cannot fail since the code was already validated.
+		compiler.recompile(validated_high_program);
+		
+		return compiler.getLowProgram();
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
 			e.label,
@@ -203,10 +221,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	return std::unexpected(std::move(log));
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::loadAndCompile(
 	const std::vector<fs::File>& file_paths
 ) {
-	auto opt_code_collection = loadFiles(file_paths);
-	if (opt_code_collection.has_value()) return getProgram({ *std::move(opt_code_collection) });
+	auto opt_code_collection = parseFiles(file_paths);
+	if (opt_code_collection.has_value()) return loadAndCompile({ *std::move(opt_code_collection) });
 	return std::unexpected(std::move(opt_code_collection).error());
 }

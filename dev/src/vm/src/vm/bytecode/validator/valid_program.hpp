@@ -1,6 +1,8 @@
 #pragma once
 
+#include "base/maps.hpp"
 #include "base/optional.hpp"
+#include "base/string_id.hpp"
 #include <base/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -66,7 +68,29 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		HighVMProgram newInsertCode(const CodeCollection& collection) const;
+		HighVMProgram tryInsertCode(const CodeCollection& collection) const;
+
+
+		const ObjIdNameMap<TypeOfData>& types() const;
+
+		const TypeContext& getTypeContext() const;
+
+		const ObjIdNameMap<GlobalData>& globals() const;
+
+		const ObjIdNameMap<Function>& functions() const;
+
+		// TODOP: Do something with that.
+		const base::HashMap<base::StrID, FuncSignature>& getAvailableFunctions() const;
+
+
+	private:
+		ObjIdNameMap<Function>   function_map;
+		ObjIdNameMap<GlobalData> globals_map;
+
+		// TODOP
+		// Initialized by null, has value after produceTypeMetadata().
+		// It should have the ownership and LowProgram has just a ref
+		// base::Optional<MBox<TypeMetadata>> type_metadata{};
 
 		/**
 		 * @brief Inserts code in-place.
@@ -77,13 +101,6 @@ namespace vm::code {
 		 */
 		void insertCode(const CodeCollection& collection);
 
-		const ObjIdNameMap<TypeOfData>& types() const;
-
-		const ObjIdNameMap<GlobalData>& globals() const;
-
-		const ObjIdNameMap<Function>& functions() const;
-
-	private:
 		/**
 		 * @brief Inserts types. May invalidate state.
 		 * Can insert the same type multiple times.
@@ -104,17 +121,6 @@ namespace vm::code {
 		 */
 		void insertFunctions(const std::vector<Function>& new_functions);
 
-		ObjIdNameMap<Function>   function_map;
-		ObjIdNameMap<GlobalData> globals_map;
-
-		// TODOP
-		// Initialized by null, has value after produceTypeMetadata().
-		// It should have the ownership and LowProgram has just a ref
-		base::Optional<MBox<TypeMetadata>> type_metadata{};
-
-
-		// TODOP: Temporary storage.
-
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
 		 * available in the program (including builtin functions). Used for type verification of
@@ -125,7 +131,5 @@ namespace vm::code {
 		base::HashMap<base::StrID, FuncSignature> available_functions;
 		// TODOP: This should get removed once and for all.
 		TypeContext type_context;
-
-		bool valid = true;
 	};
 }

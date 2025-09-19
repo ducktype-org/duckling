@@ -639,6 +639,7 @@ namespace compiler::backend_vm {
 		}
 
 		// Insert and validate types:
+		// TODOP: Fix that thing
 		valid_program.insertCode(compiled_types);
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {

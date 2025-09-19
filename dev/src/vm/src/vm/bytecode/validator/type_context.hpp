@@ -24,6 +24,7 @@ namespace vm::code {
 		 * @param functions Functions available in program, callable with 'call_func'. Used to
 		 * validate method implementation completeness of class types.
 		 */
+		// TODOP: Remove that function.
 		Box<TypeMetadata> validateAndProduceTypeMetadata(
 			const base::HashMap<base::StrID, FuncSignature>& available_functions
 		) const;

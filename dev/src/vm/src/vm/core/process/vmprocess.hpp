@@ -69,8 +69,9 @@ namespace vm {
 
 
 		/**
-		 * @brief A loader instance for this VMProcess. Stores the high level representation of the
-		 * LowVMProgram stored in `loaded_program`.
+		 * @brief A loader instance for this VMProcess. Stores the high level and low level
+		 * representation of the currently executed program. `loaded_program` references the low
+		 * representation which exists in this class.
 		 */
 		loader::Loader loader{};
 

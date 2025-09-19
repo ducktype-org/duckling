@@ -18,11 +18,10 @@ vm::code::HighVMProgram vm::code::HighVMProgram::withBuiltins() {
 }
 
 Box<vm::TypeMetadata> vm::code::HighVMProgram::produceTypeMetadata() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.validateAndProduceTypeMetadata(available_functions);
 }
 
-vm::code::HighVMProgram vm::code::HighVMProgram::newInsertCode(
+vm::code::HighVMProgram vm::code::HighVMProgram::tryInsertCode(
 	const code::CodeCollection& collection
 ) const {
 	HighVMProgram copy = *this;
@@ -31,15 +30,11 @@ vm::code::HighVMProgram vm::code::HighVMProgram::newInsertCode(
 }
 
 void vm::code::HighVMProgram::insertCode(const CodeCollection& collection) {
-	valid = false;
-
 	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
 
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertFunctions(collection.functions);
-
-	valid = true;
 }
 
 void vm::code::HighVMProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
@@ -73,22 +68,18 @@ void vm::code::HighVMProgram::insertFunctions(const std::vector<Function>& new_f
 }
 
 const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::HighVMProgram::types() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.getCurrentTypes();
 }
 
 const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::HighVMProgram::globals() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return globals_map;
 }
 
 const vm::ObjIdNameMap<vm::code::Function>& vm::code::HighVMProgram::functions() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return function_map;
 }
 
 vm::code::CodeCollection vm::code::HighVMProgram::produceValidCodeCollection() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return { .functions = { function_map.begin(), function_map.end() },
 		     .types
 		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
