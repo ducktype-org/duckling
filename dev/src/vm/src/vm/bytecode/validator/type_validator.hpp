@@ -3,32 +3,20 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-namespace vm::code {
+namespace vm::code::detail {
 	/**
-	 * @brief TypeContext allows for first adding a set of types,
-	 * and then validating and building them.
+	 * @brief Validates the types in the given TypeContext.
+	 * Firstly, detects any cycles in the type hierarchy (including the cycles in the inheritance
+	 * hierarchy), then checks each type individually and inheritance hierarchy soundness. Throws a
+	 * builder error if types are invalid in current context.
+	 *
+	 * For the complete list of specific checks see `vm/src/vm/bytecode/validator/readme.md`.
 	 */
-	class TypeContext {
-	public:
-		/**
-		 * @brief Inserts a new type. If a type is duplicated throws DuplicatedTypeError.
-		 */
-		void insertType(const TypeOfData& type);
-
-		const ObjIdNameMap<TypeOfData>& getCurrentTypes() const;
-
-		/**
-		 * @brief Creates TypeMetadata by building types.
-		 * @param functions Functions available in the program, callable with `call_func`
-		 */
-		Box<TypeMetadata> validateAndProduceTypeMetadata(
-			const base::HashMap<base::StrID, FuncSignature>& functions
-		) const;
-
-	private:
-		ObjIdNameMap<TypeOfData> types;
-	};
+	void validateTypes(
+		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
+	);
 }

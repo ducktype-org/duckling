@@ -1,5 +1,5 @@
 from ..impl.integration.tester import (
-    DEFAULT_LOG_FILE_PATH, 
+    DEFAULT_LOG_FILE_PATH,
     tester_impl,
 )
 from .helpers import (
@@ -7,6 +7,7 @@ from .helpers import (
     verbose,
 )
 from click import command, option
+
 
 @command()
 @build_dir(
@@ -47,9 +48,7 @@ from click import command, option
     default="",
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
 )
-@verbose(
-    help="Prints some debug information about test cases"
-)
+@verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):
     """Runs integration tests"""
     tester_impl(*args, **kwargs)

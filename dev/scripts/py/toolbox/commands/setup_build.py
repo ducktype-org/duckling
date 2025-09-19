@@ -12,9 +12,7 @@ from click import Choice, option, command
 
 
 @command()
-@build_dir(
-    help="The name of the directory."
-)
+@build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
 )
@@ -76,7 +74,8 @@ from click import Choice, option, command
     help="The build type.",
     default="Debug",
     type=Choice(
-        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"], case_sensitive=False
+        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
+        case_sensitive=False,
     ),
 )
 @option(

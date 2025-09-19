@@ -1,0 +1,44 @@
+#pragma once
+
+#include "../meta.hpp"
+
+namespace pst {
+	/**
+	 * @brief Declaration of a single function or pattern argument.
+	 */
+	class Param final: public NotStmt {
+		tpc::Identifier name;
+		NAMED_CHILD(type, UniversalExprHolder);
+		NAMED_CHILD_OPT(initial, UniversalExprHolder);
+
+	public:
+		explicit Param(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::Param;
+		}
+
+		static MBox<Param> parse(LangParserState& state);
+		~Param() final = default;
+		void dprint(std::ostream& out) const final;
+		HashAlg& calcStableHash(HashAlg&) const override;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Parameter";
+		}
+
+		[[nodiscard]]
+		AccessLocked<ExprHolder> getType() const {
+			return type.give();
+		}
+
+		[[nodiscard]]
+		base::StrID getName() const {
+			return name.value;
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<UniversalExprHolder>> getValue() const;
+
+		void acceptVisitor(PstVisitor& visitor) const final;
+	};
+}

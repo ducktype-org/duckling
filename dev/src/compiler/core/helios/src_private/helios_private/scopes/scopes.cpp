@@ -173,7 +173,7 @@ namespace compiler::helios {
 				return ElementScopeKind::Transparent;
 		}
 
-		case pst::ElementKind::FunParam:
+		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 

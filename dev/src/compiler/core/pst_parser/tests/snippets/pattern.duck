@@ -1,0 +1,7 @@
+pattern Point(p: ref Point) -> (i32, i32) = {
+    return (p.x, p.y);
+}
+
+pattern Even(x: i32) -> ?i32 = {
+    return if x % 2 == 0 then x / 2 else none;
+}

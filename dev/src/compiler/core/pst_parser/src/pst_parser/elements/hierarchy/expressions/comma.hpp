@@ -10,7 +10,7 @@ namespace pst::expr {
 	 * expression doesn't cause problems with other parsing.
 	 */
 	class Comma final: public ExprElement {
-		using Lower = Ternary;
+		using Lower = MatchExpr;
 
 		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 

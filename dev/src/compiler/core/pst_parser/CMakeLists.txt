@@ -33,6 +33,7 @@ set_source_files_properties(${ClassElementsImplementationFiles}
 file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"src/pst_parser/elements/implementations/meta/*.cpp"
 	"src/pst_parser/elements/implementations/not_statements/*.cpp"
+	"src/pst_parser/elements/implementations/not_statements/patterns/*.cpp"
 	"src/pst_parser/elements/implementations/lists/*.cpp"
 )
 set_source_files_properties(${OtherElementsImplementationFiles}

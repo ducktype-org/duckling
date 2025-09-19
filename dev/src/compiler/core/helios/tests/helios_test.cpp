@@ -59,6 +59,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -105,6 +106,8 @@ private:
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
 		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
 
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
@@ -423,6 +426,10 @@ private:
 	}
 
 	void testExprTree() {
+		auto symbol_name = [](const char* name, auto&& symbol) {
+			return base::strConcat("(Symbol ", name, " (", symbol.queryUnstablePerfectHash(), "))");
+		};
+
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getConstValueAs<i64>("V1", root_scope));
@@ -452,16 +459,22 @@ private:
 		tree_v12->debugPrint(out_v12);
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
-		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.queryUnstablePerfectHash(), "))");
+		auto sym_v3_repr = symbol_name("V3", sym_v3);
 		ASSERT_EQUAL(
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
 
-		auto get_cmp  = getChain("CMP", root_scope).back();
-		auto expr_cmp = getExprOfConst(get_cmp);
-		Ref  expr_cmp_casted
-			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
-		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
+		ASSERT_EQUAL(false, getConstValueAs<bool>("CMP", root_scope));
+		auto              get_cmp  = getChain("CMP", root_scope).back();
+		auto              expr_cmp = getExprOfConst(get_cmp);
+		std::stringstream out_cmp;
+		expr_cmp->debugPrint(out_cmp);
+		ASSERT_EQUAL_PRINT(
+			(base::strConcat(
+				symbol_name("V1", sym_v1), "<3<=4==5!=6>=7>", symbol_name("VM1", sym_vm1)
+			)),
+			out_cmp.str()
+		);
 
 		auto get_str  = getChain("STR", root_scope).back();
 		auto expr_str = getExprOfConst(get_str);
@@ -509,6 +522,22 @@ private:
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		// This fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		try {
+			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
@@ -827,6 +856,26 @@ private:
 		);
 	}
 
+	void testFunctions() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		// modify it as needed:
+		ASSERT_EQUAL(1, hout->functions.size());
+
+		for (auto& function: hout->functions) {
+			if (function.original_name == base::StrID("stmtBody1")) {
+				ASSERT_EQUAL(1, function.content.body->statements.size());
+				auto stmt        = function.content.body->statements.at(0).ref();
+				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
+				Ref  ret_expr    = stmt_casted->value.ref();
+				Ref  ret_expr_casted
+					= dynamic_cast<const compiler::helios::code::LiteralIntExpr*>(&*ret_expr);
+				ASSERT_EQUAL(1, ret_expr_casted->value);
+			}
+		}
+	}
+
 	void testBuiltinFunctions() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/builtins")));
 		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -1049,20 +1098,25 @@ private:
 						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
 					));
 
-				auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[0].content.body->statements[0])
+				// if this ever change, adjust the test:
+				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo0");
+				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo1");
+				auto foo0_body = hout_unit.functions.at(0).content.body;
+				auto foo1_body = hout_unit.functions.at(1).content.body;
+
+				Ref var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*foo0_body->statements.at(0))
+				);
+				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+
+				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+					&(*foo1_body->statements.at(0))
 				);
 
 				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
 				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[0].content.body->statements[1])
-				);
-
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
-
-				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*hout_unit.functions[1].content.body->statements[0])
+					&(*foo1_body->statements.at(1))
 				);
 
 				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
