@@ -77,6 +77,7 @@ public:
 		TESTER_ADD_TEST(testVisitor);
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
+		TESTER_ADD_TEST(testFunDecl);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -179,6 +180,8 @@ private:
 	void testClass() { testJsonRelativePath("class.duck", "class.json"); }
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
+
+	void testFunDecl() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
