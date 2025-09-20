@@ -31,9 +31,6 @@
 #include <ranges>
 
 namespace vm::loader::compiler {
-	/**
-	 * @brief Transforms a given argument into it's low level representation.
-	 */
 	u64 Compiler::lowerArgument(
 		const FunctionCompilationContext& ctx,
 		const usize                       instruction_index,
@@ -68,8 +65,7 @@ namespace vm::loader::compiler {
 				return static_cast<u64>(field_offset);
 			}
 			variant_case(vm::opargs::FunctionName, func) {
-				// TODOP: Think how to remove high program from here.
-				return u64(*ctx.high_program.functions().idOf(func.function_name));
+				return u64(*global_ctx.function_forward_declarations.idOf(func.function_name));
 			}
 			variant_case(vm::opargs::BuiltinFunctionName, func) {
 				auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
@@ -78,14 +74,14 @@ namespace vm::loader::compiler {
 				);
 			}
 			variant_case(vm::opargs::MethodName, method) {
-				return base::safeIntConv<u64>(method_name_to_id[method.method_name]);
+				return base::safeIntConv<u64>(global_ctx.method_name_to_id[method.method_name]);
 			}
 			variant_case(vm::opargs::Label, label) {
 				// Labels are guaranteed to exist by static verification.
 				auto pos = ctx.label_positions.at(label.label_name);
 				// We have to calculate the
 				// difference instead of absolute jump position,
-				// because our instruction counter is a pointer.
+				// because our instruction index is a pointer.
 				return static_cast<u64>(pos) - static_cast<u64>(instruction_index) - 1;
 			}
 			variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
@@ -125,13 +121,6 @@ namespace vm::loader::compiler {
 		return bc;
 	}
 
-	/**
-	 * @brief Calculates the stack offsets of stack variables.
-	 * Since in HighVMProgram variables are represented by names not indexes on the stack.
-	 * This function creates an offset map which is used in compileFunction to change the
-	 * variable names to numeric offsets.
-	 * @note Assumes all variables in the program have a unique name.
-	 */
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		base::HashMap<base::StrID, usize> offsets;
 		std::vector<usize>                type_size_stack;
@@ -225,9 +214,9 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				variant_case(Op_call_func, instr) {
-					usize number_of_params = ctx.high_program.functions()
-					                             .at(instr.arg0.function_name)
-					                             ->signature.parameters.size();
+					usize number_of_params
+						= global_ctx.function_forward_declarations.at(instr.arg0.function_name)
+					          ->signature.parameters.size();
 					for (usize i = 0; i < number_of_params; i++) pop();
 					index++;
 				}
@@ -258,10 +247,6 @@ namespace vm::loader::compiler {
 		ctx.local_stack_size = max_stack_size;
 	}
 
-	/**
-	 * @brief Removes all label instructions from the compiled function and stores their
-	 * positions in the label_positions map which is used later when dealing with jumps.
-	 */
 	void Compiler::splitCodeAndLabels(FunctionCompilationContext& ctx) {
 		std::vector<code::Instruction>    instructions_without_labels;
 		base::HashMap<base::StrID, usize> label_positions;
@@ -278,11 +263,13 @@ namespace vm::loader::compiler {
 		ctx.label_positions             = std::move(label_positions);
 	}
 
-	void Compiler::compileNewFunctions(
-		const std::vector<code::Function>& new_functions, const code::ValidProgram& high_program
-	) {
+	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
+		// Forward declare all functions
+		for (const auto& function: new_functions)
+			global_ctx.function_forward_declarations.insert(function, function.name);
+
 		for (const auto& function: new_functions) {
-			FunctionCompilationContext ctx(function, high_program);
+			FunctionCompilationContext ctx(function);
 			splitCodeAndLabels(ctx);
 			calculateOffsets(ctx);
 
@@ -343,9 +330,9 @@ namespace vm::loader::compiler {
 			if_opt_some(type_from_metadata->getInheritanceMetadata(), metadata) {
 				//@todo: https://github.com/ducktype-org/duckling/issues/962
 				for (auto& [name, impl]: metadata->vtable) {
-					if (!method_name_to_id.contains(name)) {
-						u64 new_id = method_name_to_id.size();
-						method_name_to_id.put(name, new_id);
+					if (!global_ctx.method_name_to_id.contains(name)) {
+						u64 new_id = global_ctx.method_name_to_id.size();
+						global_ctx.method_name_to_id.put(name, new_id);
 						low_program.method_name_pool.put(new_id, name);
 					}
 				}
@@ -364,7 +351,7 @@ namespace vm::loader::compiler {
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
-		compileNewFunctions(new_functions, high_program);
+		compileNewFunctions(new_functions);
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }

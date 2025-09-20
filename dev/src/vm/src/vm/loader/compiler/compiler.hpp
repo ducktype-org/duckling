@@ -49,31 +49,30 @@ namespace vm::loader::compiler {
 
 	private:
 		/**
-		 * @brief The microbytecode program representation being built and managed by the compiler.
+		 * @brief Stores the shared, global state required for the entire compilation process.
 		 */
-		low::LowVMProgram low_program;
-
-		/**
-		 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
-		 * This is a crucial lookup table used during the instruction lowering phase to
-		 * resolve symbolic method names into numeric IDs.
-		 */
-		base::HashMap<base::StrID, u64> method_name_to_id;
+		struct GlobalCompilationContext {
+			/**
+			 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
+			 * This is a crucial lookup table used during the instruction lowering phase to
+			 * resolve symbolic method names into numeric IDs.
+			 */
+			base::HashMap<base::StrID, u64> method_name_to_id;
+			/**
+			 * @brief A complete list of all functions which will be added in the compilation process.
+			 * Used when lowering call instructions to translate the function name to it's index.
+			 */
+			ObjIdNameMap<code::Function> function_forward_declarations;
+		};
 
 		/**
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
 		 */
 		struct FunctionCompilationContext {
-			FunctionCompilationContext(
-				const code::Function& func, const code::ValidProgram& high_program
-			):
-				  function(func),
-				  high_program(high_program) {}
+			FunctionCompilationContext(const code::Function& func): function(func) {}
 
-			// TODOP: Remove high_program?
 			/// The high level function definition.
-			const code::Function&     function;
-			const code::ValidProgram& high_program;
+			const code::Function& function;
 			/// Function code after the label instructions have been removed.
 			std::vector<code::Instruction> instructions_without_labels;
 			/// A mapping from a label's name to it's instruction index in the function instruction list.
@@ -83,6 +82,12 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size = 0;
 		};
+
+		/**
+		 * @brief The microbytecode program representation being built and managed by the compiler.
+		 */
+		low::LowVMProgram        low_program;
+		GlobalCompilationContext global_ctx;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.
@@ -111,10 +116,7 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		// TODOP: Remove high_program from here.
-		void compileNewFunctions(
-			const std::vector<code::Function>& new_functions, const code::ValidProgram& high_program
-		);
+		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
 		 * @brief Removes label instructions from the compiled functions code. Calculates label
@@ -124,9 +126,11 @@ namespace vm::loader::compiler {
 		void splitCodeAndLabels(FunctionCompilationContext& ctx);
 
 		/**
-		 * @brief Calculates stack offsets of local variables and the maximum size of the local
-		 * stack used by the compiled function. Populates the context's `local_offset_map` and
-		 * `local_stack_size` which is used when lowering instructions to microbytecode.
+		 * @brief Calculates the stack offsets of stack variables.
+		 * Since in ValidProgram variables are represented by names not indexes on the stack.
+		 * This function creates an offset map which is used in `lowerInstructions` to change the
+		 * variable names to numeric offsets.
+		 * @note Assumes all variables in the program have a unique name.
 		 */
 		void calculateOffsets(FunctionCompilationContext& ctx);
 

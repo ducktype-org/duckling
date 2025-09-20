@@ -12,7 +12,6 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-#include <unordered_set>
 
 namespace vm::code {
 	/**
@@ -25,11 +24,10 @@ namespace vm::code {
 	 * valid bytecode's assumption, but rather VMThread's.
 	 */
 	class ValidProgram {
-		ValidProgram() = default;
-
 	public:
 		bool is_stdlib_included = false;
 
+		ValidProgram() = default;
 		ValidProgram(const ValidProgram&)            = default;
 		ValidProgram(ValidProgram&&) noexcept        = default;
 		ValidProgram& operator=(const ValidProgram&) = default;
