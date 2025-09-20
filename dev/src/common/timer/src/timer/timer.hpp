@@ -36,6 +36,7 @@ namespace timer {
 
 	/**
 	 * RAII-like object to add time to a given Duration variable.
+     * Measures time from construction to destruction and adds it to the given Duration reference.
 	 */
 	struct AddToTime final {
 		AddToTime(Ref<Duration> to_add): to_add(to_add), start(now()) {}
@@ -53,7 +54,7 @@ namespace timer {
 
 	/**
 	 * Simple utility type to measure time in a typical scenario.
-	 * The time from start to end.
+	 * Measures time between startMeasurement() and endMeasurement() calls.
 	 */
 	struct TimeMeasurement final {
 		void startMeasurement() {
