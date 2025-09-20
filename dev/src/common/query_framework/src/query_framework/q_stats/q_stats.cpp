@@ -63,8 +63,9 @@ namespace query {
 			std::cerr << "Query ID: " << query_id.getData().name << "\n";
 			std::cerr << "    Number of Calls:   " << stat_data.num_calls << "\n";
 			std::cerr << "    Number of P-Calls: " << stat_data.num_provide_calls << "\n";
-			std::cerr << "    Total Call Time:   " << stat_data.total_call_time.count() << "ms\n";
-			std::cerr << "\n";
+			std::cerr << "    Total Call Time:   ";
+			timer::printAs(std::cerr, stat_data.total_call_time, timer::TimeUnit::Milliseconds);
+			std::cerr << "\n\n";
 		}
 	}
 }
