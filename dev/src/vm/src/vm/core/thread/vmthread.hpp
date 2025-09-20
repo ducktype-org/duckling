@@ -191,8 +191,8 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
-		 * @brief Creates a new thread that runs the code in the Executor service.
-		 * Blocks until the thread is running.
+		 * @brief Creates a new thread that runs the code.
+		 * Blocks until the thread is not running.
 		 *
 		 * @param program - program for the thread to run,
 		 * @param func_name - name of the function to run,

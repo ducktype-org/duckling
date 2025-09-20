@@ -26,6 +26,7 @@ namespace pst {
 		Class,
 		Variable,
 		Fun,
+		FunDecl,
 		Pattern,
 		Block,
 

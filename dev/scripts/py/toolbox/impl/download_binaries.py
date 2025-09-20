@@ -22,6 +22,7 @@ FILES_TO_DOWNLOAD: list[InternetFile] = [
     ),
 ]
 
+
 def download_binaries_impl(force=False, single=False):
     log_info(
         f"Downloading binary files {'WITH force' if force else 'WITHOUT force'}..."

@@ -44,4 +44,17 @@ namespace pst {
 			return { stmt->give(), 1 };
 		CORE_UNREACHABLE();
 	}
+
+	CodeBlockOrStmt::Type CodeBlockOrStmt::getType() const {
+		if (stmt.has_value())
+			return Type::SingleStmt;
+		else if (code_block.has_value())
+			return Type::CodeBlock;
+		CORE_UNREACHABLE();
+	}
+
+	AccessLocked<Stmt> CodeBlockOrStmt::getStmt() const {
+		CORE_ASSERT(stmt.has_value(), "No stmt present when getting single statement");
+		return stmt.value().give();
+	}
 }
