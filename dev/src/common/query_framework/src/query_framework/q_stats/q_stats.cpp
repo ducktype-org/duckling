@@ -56,7 +56,7 @@ namespace query {
 	}
 
 	CallStatsObject::~CallStatsObject() {
-		Ref  data_ref = getQueryStatData(query_id);
+		Ref data_ref = getQueryStatData(query_id);
 		data_ref->current_call_measurement.endMeasurement();
 
 		if (was_provide_call) data_ref->num_provide_calls += 1;

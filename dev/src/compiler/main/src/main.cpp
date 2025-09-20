@@ -271,7 +271,7 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("print-statistics")) {
 						if (not query::USE_STATS) {
 							std::cerr << "Warning: Query statistics are disabled at compile time. "
-				                         "No query statistics will be printed.\n";
+										 "No query statistics will be printed.\n";
 						}
 						query::printStats();
 
