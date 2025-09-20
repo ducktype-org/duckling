@@ -25,12 +25,6 @@ namespace query {
 			u64             num_calls         = 0;
 			u64             num_provide_calls = 0;
 			timer::Duration total_call_time   = timer::Duration::zero();
-
-			/**
-			 * Used to measure time between calls. It will not work correctly in multi-threaded
-			 * scenarios, but it's acceptable for now.
-			 */
-			timer::TimeMeasurement current_call_measurement;
 		};
 
 		/**
@@ -51,17 +45,17 @@ namespace query {
 		Ref data_ref = getQueryStatData(query_id);
 
 		data_ref->num_calls++;
-		data_ref->current_call_measurement.reset();
-		data_ref->current_call_measurement.startMeasurement();
+		this->call_time.reset();
+		this->call_time.startMeasurement();
 	}
 
 	CallStatsObject::~CallStatsObject() {
 		Ref data_ref = getQueryStatData(query_id);
-		data_ref->current_call_measurement.endMeasurement();
+		this->call_time.endMeasurement();
 
 		if (was_provide_call) data_ref->num_provide_calls += 1;
 
-		data_ref->total_call_time += data_ref->current_call_measurement.duration();
+		data_ref->total_call_time += this->call_time.duration();
 	}
 
 	void printStats() {

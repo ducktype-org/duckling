@@ -58,32 +58,32 @@ namespace timer {
 	 */
 	struct TimeMeasurement final {
 		void startMeasurement() {
-			CORE_ASSERT(state == NotStarted, "Measurement already started or ended");
-			state = Started;
+			CORE_ASSERT(state == State::NotStarted, "Measurement already started or ended");
+			state = State::Started;
 			start = timer::now();
 		}
 
 		void endMeasurement() {
-			CORE_ASSERT(state == Started, "Measurement not started or already ended");
-			state = Ended;
+			CORE_ASSERT(state == State::Started, "Measurement not started or already ended");
+			state = State::Ended;
 			end   = timer::now();
 		}
 
 		/**
 		 * Reset the measurement to its initial state.
 		 */
-		void reset() { state = NotStarted; }
+		void reset() { state = State::NotStarted; }
 
 		[[nodiscard]]
 		Duration duration() const {
-			CORE_ASSERT(state == Ended, "Measurement not ended");
+			CORE_ASSERT(state == State::Ended, "Measurement not ended");
 			return timer::duration(start, end);
 		}
 
 	private:
-		enum State { NotStarted, Started, Ended };
+		enum class State { NotStarted, Started, Ended };
 
-		State     state = NotStarted;
+		State     state = State::NotStarted;
 		TimeStamp start;
 		TimeStamp end;
 	};
