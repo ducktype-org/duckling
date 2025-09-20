@@ -950,9 +950,8 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(
-		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
-	) const {
+	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
+		const {
 		auto dst_ptr_tod = current_stack.at(instruction.arg0.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.arg1.var_name);
 

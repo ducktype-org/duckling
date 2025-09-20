@@ -23,20 +23,13 @@ namespace vm::code {
 	 *
 	 * @note Valid in this context also does not mean it contains a `main` function, as this is not
 	 * valid bytecode's assumption, but rather VMThread's.
-	 *
-
-	 * This represents a program in FatBytecode. It;'s invariant is that the code in this container
-	 * always represents a valid program. If a function which invalidates the state is injected we
-	 * throw an appropriate error.
 	 */
-	// TODOP: Modify this comment.
 	class HighVMProgram {
 		HighVMProgram() = default;
 
 	public:
 		bool is_stdlib_included = false;
 
-		// TODOP: Can this be copied? Will CRefs be okay?
 		HighVMProgram(const HighVMProgram&)            = default;
 		HighVMProgram(HighVMProgram&&) noexcept        = default;
 		HighVMProgram& operator=(const HighVMProgram&) = default;
@@ -55,6 +48,7 @@ namespace vm::code {
 		/**
 		 * @brief Produces valid CodeCollection.
 		 */
+		// TODOP: Do something with that
 		CodeCollection produceValidCodeCollection() const;
 
 		/**
@@ -89,17 +83,22 @@ namespace vm::code {
 		 * invalid code and mustn't be used! If you don't want to lose the state, place use
 		 * `tryInsertCode`.
 		 */
+		// TODOP: Do something with that
 		void insertCode(const CodeCollection& collection);
 
 	private:
 		ObjIdNameMap<Function>   function_map;
 		ObjIdNameMap<GlobalData> globals_map;
+		TypeContext              type_context;
 
-		// TODOP
-		// Initialized by null, has value after produceTypeMetadata().
-		// It should have the ownership and LowProgram has just a ref
-		// base::Optional<MBox<TypeMetadata>> type_metadata{};
-
+		/**
+		 * @brief Contains a mapping from function name to function signature for all functions
+		 * available in the program (including builtin functions). Used for type verification of
+		 * class and interface types to check if implementations of declared methods match the
+		 * expected signatures. This map basically stores forward declarations of functions
+		 * available in the program, since `function_map` building is done after type verification.
+		 */
+		base::HashMap<base::StrID, FuncSignature> available_functions;
 
 		/**
 		 * @brief Inserts types. May invalidate state.
@@ -120,16 +119,5 @@ namespace vm::code {
 		 * produce dead code.
 		 */
 		void insertFunctions(const std::vector<Function>& new_functions);
-
-		/**
-		 * @brief Contains a mapping from function name to function signature for all functions
-		 * available in the program (including builtin functions). Used for type verification of
-		 * class and interface types to check if implementations of declared methods match the
-		 * expected signatures. This map basically stores forward declarations of functions
-		 * available in the program, since `function_map` building is done after type verification.
-		 */
-		base::HashMap<base::StrID, FuncSignature> available_functions;
-		// TODOP: This should get removed once and for all.
-		TypeContext type_context;
 	};
 }

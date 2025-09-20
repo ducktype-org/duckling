@@ -127,9 +127,10 @@ namespace {
 		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx, interface_name, error_context_inh, [&]() {
-					return InvalidImplementsError(inh, interface_name);
-				}
+				ctx,
+				interface_name,
+				error_context_inh,
+				[&]() { return InvalidImplementsError(inh, interface_name); }
 			);
 			insertImplementationsRecursive(implementations, interface, error_context_inh, ctx);
 		}

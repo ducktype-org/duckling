@@ -13,17 +13,15 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-#include <utility>
-
 namespace vm::low {
-	using MicroByteCode = std::vector<MicroInstruction>;
+	using MicroBytecode = std::vector<MicroInstruction>;
 
 	/**
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
 		base::StrID           name;
-		MicroByteCode         bc;
+		MicroBytecode         bc;
 		usize                 local_stack_size;
 		usize                 arg_size;
 		usize                 ret_size;
@@ -32,7 +30,7 @@ namespace vm::low {
 	};
 
 	/**
-	 * @brief Micro bytecode representation of Global data.
+	 * @brief Micro bytecode representation of global data.
 	 */
 	struct LowGlobalData {
 		TypeCRef                    type;
@@ -41,25 +39,20 @@ namespace vm::low {
 	};
 
 	/**
-	 * @brief Representation of the program VM runs.
-	 * TODOP: FIx this comment.
-	 * Parser creates this structure from a list of ParsedFile structures after validation.
-	 * Executor uses it to execute the code.
-	 * @note In the future, this class will use micro bytecode instead.
+	 * @brief Representation of the micro bytecode program which the VM runs.
+	 * This is the final form of bytecode produced by the loader module which is executable by
+	 * `VMThread`.
 	 *
-	 * // TODOP: Fix this comment as well.
-	 * @note The order of functions in the `std::vector<FuncData>` is important, as the `ID` of
-	 * the function in the function calls is the index in this vector. Similar holds for
-	 * `std::vector<code::GlobalData>` - global data.
+	 * @note The program represented by this structure is always valid as it was verified in the
+	 * loading stage.
 	 *
-	 * TODOP: Represents the MicroBytecode program. It's always valid.
-	 * TODOP: This is just a simple container for the low representation of the program
+	 * @note The order of functions in the `ObjIdNameMap<LowFuncData, usize>` is important, as the
+	 * `ID` of the function used when performing function calls is the index in the `std::vector`
+	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
+	 * GlobalDataID>` - global data.
 	 */
-	class LowVMProgram {
-	public:
-		LowVMProgram(): types(makeBox<TypeMetadata>()) {}
-
-		Box<TypeMetadata>                         types;
+	struct LowVMProgram {
+		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the

@@ -21,8 +21,6 @@ namespace vm {
 	}
 
 	void TypeMetadata::finalize() {
-		// TODOP: Remove that
-		std::cout << "Finalizing\n";
 		CORE_ASSERT(
 			state == TypeMetadataState::AddingTypes,
 			"Tried to finalize type metadata when it was not in the AddingTypes state"

@@ -63,8 +63,12 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		// TODOP: Add docs.
-		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
+		/**
+		 * @brief The program being executed by this process.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
+		 * nullptr if no code was loaded.
+		 */
+		MCRef<vm::low::LowVMProgram> loaded_program = nullptr;
 
 		Memory memory;
 

@@ -68,9 +68,8 @@ namespace vm::loader::compiler {
 				return static_cast<u64>(field_offset);
 			}
 			variant_case(vm::opargs::FunctionName, func) {
-				std::cout << "hello\n";
+				// TODOP: Think how to remove high program from here.
 				return u64(*ctx.high_program.functions().idOf(func.function_name));
-				// return u64(*low_program.functions.idOf(func.function_name));
 			}
 			variant_case(vm::opargs::BuiltinFunctionName, func) {
 				auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
@@ -97,8 +96,8 @@ namespace vm::loader::compiler {
 	/**
 	 * @brief Compiles a single function. Refactor this
 	 */
-	low::MicroByteCode Compiler::lowerInstructions(const FunctionCompilationContext& ctx) {
-		low::MicroByteCode bc;
+	low::MicroBytecode Compiler::lowerInstructions(const FunctionCompilationContext& ctx) {
+		low::MicroBytecode bc;
 		bc.reserve(ctx.instructions_without_labels.size());
 
 		for (auto [op_idx, op]: std::views::enumerate(ctx.instructions_without_labels)) {
@@ -142,10 +141,9 @@ namespace vm::loader::compiler {
 		auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
 			if_opt_some(offsets.atMaybe(local.var_name), offset) {
 				if (*offset != curr_stack_size) {
-					// TODOP: Fix that
-					// ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
 					CORE_PANIC(
-						"DuplicatedLocalNameError - used a variable again at a different offset"
+						"DuplicatedLocalNameError - used a variable again at a different offset "
+						"which wasn't detected by the function validator"
 					);
 				}
 			}
@@ -280,7 +278,6 @@ namespace vm::loader::compiler {
 		ctx.label_positions             = std::move(label_positions);
 	}
 
-	// TODOP: Add a comment that this can't fail after verification.
 	void Compiler::compileNewFunctions(
 		const std::vector<code::Function>& new_functions, const code::HighVMProgram& high_program
 	) {
@@ -296,7 +293,6 @@ namespace vm::loader::compiler {
 			parameters.reserve(signature.parameters.size());
 
 			for (const auto& param: signature.parameters) {
-				std::cout << "Hello from types\n";
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
 				parameters_size += type->getSize();
@@ -339,7 +335,6 @@ namespace vm::loader::compiler {
 		if (std::ranges::empty(new_types)) return;
 
 		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx);
-		std::cout << "Type meta rebuilt\n";
 
 		// Update method ID to name maps, since new methods may have appeared after new types where
 		// added.
@@ -360,19 +355,16 @@ namespace vm::loader::compiler {
 
 	void Compiler::recompile(const code::HighVMProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
-		std::cout << "Compiled new types\n";
 
 		auto new_globals = high_program.globals() | std::views::drop(low_program.global_data.size())
 		                 | std::ranges::to<std::vector<code::GlobalData>>();
 
 		compileNewGlobals(new_globals);
-		std::cout << "Compiled new globals\n";
 
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
 		compileNewFunctions(new_functions, high_program);
-		std::cout << "Compiled new functions\n";
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }

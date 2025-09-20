@@ -29,19 +29,21 @@ namespace vm {
 		TypeMetadata& operator=(TypeMetadata&&)      = delete;
 
 		/**
-		 * @note This function shouldn't be used after finalize().
+		 * @brief Adds a type to the set of types.
+		 * @note This function should only be used when TypeMetadata is in AddingTypes state.
+		 * If working with TypeMetadata which was finalized, use `unfinalize()` first, then add
+		 * types and call `finalize()` again.
 		 */
 		TypeRef addType(Type&& type);
 
 		/**
 		 * @brief Finalize adding types.
-		 * @note This function shouldn't be called twice.
 		 */
 		void finalize();
 
 		/**
 		 * @brief Unfinalize the type metadata for injecting new types.
-		 * If type metadata was already in AddingTypes state then nothing is done.
+		 * If type metadata was already unfinalized (in AddingTypes state) then nothing is done.
 		 */
 		void unfinalize();
 

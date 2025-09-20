@@ -70,9 +70,9 @@ namespace vm::loader::compiler {
 				  function(func),
 				  high_program(high_program) {}
 
-			// TODOP: Remove?
+			// TODOP: Remove high_program?
 			/// The high level function definition.
-			const code::Function& function;
+			const code::Function&      function;
 			const code::HighVMProgram& high_program;
 			/// Function code after the label instructions have been removed.
 			std::vector<code::Instruction> instructions_without_labels;
@@ -118,15 +118,16 @@ namespace vm::loader::compiler {
 
 		/**
 		 * @brief Removes label instructions from the compiled functions code. Calculates label
-		 * positions.
+		 * positions. Populates the context's `instructions_without_labels` and `label_positions`
+		 * which is used when lowering instructions to microbytecode.
 		 */
 		void splitCodeAndLabels(FunctionCompilationContext& ctx);
 
 		/**
 		 * @brief Calculates stack offsets of local variables and the maximum size of the local
-		 * stack used by the function.
+		 * stack used by the compiled function. Populates the context's `local_offset_map` and
+		 * `local_stack_size` which is used when lowering instructions to microbytecode.
 		 */
-		// TODOP: Docs
 		void calculateOffsets(FunctionCompilationContext& ctx);
 
 		/**
@@ -135,7 +136,7 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		low::MicroByteCode lowerInstructions(const FunctionCompilationContext& ctx);
+		low::MicroBytecode lowerInstructions(const FunctionCompilationContext& ctx);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)

@@ -22,8 +22,7 @@ Box<vm::TypeMetadata> vm::code::HighVMProgram::produceTypeMetadata() const {
 	return type_context.validateAndProduceTypeMetadata(available_functions);
 }
 
-vm::code::HighVMProgram vm::code::HighVMProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::HighVMProgram vm::code::HighVMProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	HighVMProgram copy = *this;
 	copy.insertCode(collection);

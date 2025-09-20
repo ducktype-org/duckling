@@ -118,9 +118,10 @@ namespace vm {
 		std::atomic<bool> execution_request_break = false;
 
 		/**
-		 * @brief Holds the currently executed program.
+		 * @brief The program being executed by this thread.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
+		 * nullptr if no code was loaded.
 		 */
-		// TODOP: Maybe this should be initialized with empty state.
 		MCRef<low::LowVMProgram> executing_program = nullptr;
 
 		/**

@@ -13,7 +13,6 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	const base::HashMap<base::StrID, FuncSignature>& available_functions
 ) const {
 	// TODOP: Resolve an issue tha tall types are validated after code injection.
-	std::cout << "Validate and produce typemeta\n";
 	detail::validateTypes(*this, available_functions);
 	return detail::buildTypeMetadata(*this);
 }
