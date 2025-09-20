@@ -8,6 +8,7 @@
 
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst.hpp>
@@ -285,7 +286,7 @@ clah::Clah getClahForMain() {
 						std::cerr << " - Backend compilation time: ";
 						timer::printAs(
 							std::cerr,
-							compiler::driver::backend_compilation_time,
+							compiler::driver::getBackendCompilationTime(),
 							timer::TimeUnit::Milliseconds
 						);
 						std::cerr << "\n\n";
