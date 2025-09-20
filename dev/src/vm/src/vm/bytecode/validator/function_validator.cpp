@@ -257,7 +257,7 @@ class FunctionValidator {
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
-		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+		// https://github.com/ducktype-org/duckling/issues/962
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
@@ -950,8 +950,9 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
+	void validateUpcast(
+		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const {
 		auto dst_ptr_tod = current_stack.at(instruction.arg0.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.arg1.var_name);
 

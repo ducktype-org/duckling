@@ -33,11 +33,7 @@ namespace vm {
 	}
 
 	void TypeMetadata::unfinalize() {
-		CORE_ASSERT(
-			state == TypeMetadataState::Finalized,
-			"Tried unfinalizing type metadata which was not finalized"
-		);
-		state = TypeMetadataState::AddingTypes;
+		if (state == TypeMetadataState::Finalized) state = TypeMetadataState::AddingTypes;
 	}
 
 	TypeCRef TypeMetadata::at(TypeID id) const { return types.at(id); }

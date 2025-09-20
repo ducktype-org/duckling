@@ -68,6 +68,7 @@ namespace vm::loader::compiler {
 				return static_cast<u64>(field_offset);
 			}
 			variant_case(vm::opargs::FunctionName, func) {
+				std::cout << "hello\n";
 				return u64(*ctx.high_program.functions().idOf(func.function_name));
 				// return u64(*low_program.functions.idOf(func.function_name));
 			}
@@ -163,8 +164,7 @@ namespace vm::loader::compiler {
 		};
 
 		auto seek_method_param_count = [&](const base::StrID& method_name) -> base::Optional<u64> {
-			// TODOP: FIx comment.
-			// @todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+			// @todo: https://github.com/ducktype-org/duckling/issues/962
 			auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
 				if_opt_some(type.getInheritanceMetadata(), inh_meta) {
 					return (*inh_meta).virtual_methods.contains(method_name);
@@ -227,12 +227,10 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				variant_case(Op_call_func, instr) {
-					for (usize i = 0;
-					     i < low_program.functions.at((instr.arg0.function_name))->parameters.size();
-					     // TODOP: Broken
-					     i++) {
-						pop();
-					}
+					usize number_of_params = ctx.high_program.functions()
+					                             .at(instr.arg0.function_name)
+					                             ->signature.parameters.size();
+					for (usize i = 0; i < number_of_params; i++) pop();
 					index++;
 				}
 				variant_case(Op_call_builtin_func, instr) {
@@ -298,6 +296,7 @@ namespace vm::loader::compiler {
 			parameters.reserve(signature.parameters.size());
 
 			for (const auto& param: signature.parameters) {
+				std::cout << "Hello from types\n";
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
 				parameters_size += type->getSize();
@@ -340,6 +339,7 @@ namespace vm::loader::compiler {
 		if (std::ranges::empty(new_types)) return;
 
 		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx);
+		std::cout << "Type meta rebuilt\n";
 
 		// Update method ID to name maps, since new methods may have appeared after new types where
 		// added.
@@ -360,16 +360,19 @@ namespace vm::loader::compiler {
 
 	void Compiler::recompile(const code::HighVMProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
+		std::cout << "Compiled new types\n";
 
 		auto new_globals = high_program.globals() | std::views::drop(low_program.global_data.size())
 		                 | std::ranges::to<std::vector<code::GlobalData>>();
 
 		compileNewGlobals(new_globals);
+		std::cout << "Compiled new globals\n";
 
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
 		compileNewFunctions(new_functions, high_program);
+		std::cout << "Compiled new functions\n";
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }

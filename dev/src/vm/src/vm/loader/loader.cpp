@@ -181,10 +181,12 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 		// code into it. If it fails, an exception is thrown and `validated_high_program` in the
 		// loader stays unchanged.
 		validated_high_program = validated_high_program.tryInsertCode(code_collection);
+		std::cout << "PROGRAM VALIDATED\n";
 
 		// @note: After successfully inserting code into `validated_high_program` we compile it to
 		// the low level representation. This step cannot fail since the code was already validated.
 		compiler.recompile(validated_high_program);
+		std::cout << "PROGRAM RECOMPILED\n";
 		return compiler.getLowProgram();
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
