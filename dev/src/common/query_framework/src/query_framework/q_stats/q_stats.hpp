@@ -5,7 +5,7 @@
 namespace query {
 	/**
 	 *  Whether the query statistics collection is enabled or not.
-	 *  @TODO #1058: Change it to proper, runtime config
+	 *  @TODO #1058: Change it to proper runtime/comptime config value
 	 */
 	constexpr bool USE_STATS = true;
 
@@ -28,8 +28,12 @@ namespace query {
 		~CallStatsObject();
 	};
 
+    /**
+     * Mock struct used in query implementations when statistics are disabled.
+     */
 	struct NoStats final {
 		NoStats(internal::QueryID) {}
+        bool was_provide_call = false;
 	};
 
 	/**

@@ -25,6 +25,7 @@
 #include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <timer/timer.hpp>
 
 #include <iostream>
 
@@ -231,6 +232,14 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-statistics")
+	                     .addShortDesc("Print execution time statistics.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-graph")
+	                     .addShortDesc("Print the query graph after the compilation.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -241,6 +250,12 @@ clah::Clah getClahForMain() {
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
+					
+					// @TODO #1058: make graph/statistics printing configuration better.
+
+					timer::TimeMeasurement total_compilation_time;
+					total_compilation_time.startMeasurement();
+					
 
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto backend_type    = options.isFlag("dvm-backend")
@@ -251,9 +266,25 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
 
-					query::printStats();
+					total_compilation_time.endMeasurement();
 
-					query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
+					if (options.isFlag("print-statistics")) {
+						if (not query::USE_STATS) {
+							std::cerr << "Warning: Query statistics are disabled at compile time. No query statistics will be printed.\n";
+						}
+						query::printStats();
+
+						std::cerr << "\nTotal compilation time: ";
+						timer::printAs(std::cerr, total_compilation_time.duration(), timer::TimeUnit::Milliseconds);
+						std::cerr << "\n";
+						std::cerr << " - Backend compilation time: ";
+						timer::printAs(std::cerr, compiler::driver::backend_compilation_time, timer::TimeUnit::Milliseconds);
+						std::cerr << "\n\n";
+					}
+
+					if (options.isFlag("print-graph")) {
+						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
+					}
 
 					return 0;
 				})
