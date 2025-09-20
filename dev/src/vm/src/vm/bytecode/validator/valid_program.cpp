@@ -4,13 +4,10 @@
 
 #include <base/string_id.hpp>
 
-#include "vm/bytecode/validator/type_builder.hpp"
-#include "vm/bytecode/validator/type_context.hpp"
-#include "vm/bytecode/validator/type_validator.hpp"
 #include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/bytecode/validator/type_builder.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
@@ -27,8 +24,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .global_data = { globals_map.begin(), globals_map.end() } };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);

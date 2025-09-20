@@ -1,20 +1,16 @@
 #include "compiler.hpp"
 
-#include <asio/detail/composed_work.hpp>
-
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
-#include "vm/bytecode/validator/type_builder.hpp"
-#include "vm/bytecode/validator/valid_program.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/type_builder.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
@@ -96,9 +92,10 @@ namespace vm::loader::compiler {
 		low::MicroBytecode bc;
 		bc.reserve(ctx.instructions_without_labels.size());
 
-		for (auto [op_idx, op]: std::views::enumerate(ctx.instructions_without_labels)) {
-			u64 arg_0 = 0;
-			u64 arg_1 = 0;
+		for (usize op_idx = 0; op_idx < ctx.instructions_without_labels.size(); ++op_idx) {
+			const auto& op    = ctx.instructions_without_labels[op_idx];
+			u64         arg_0 = 0;
+			u64         arg_1 = 0;
 			variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}

@@ -1,13 +1,8 @@
 #include "type_validator.hpp"
 
-#include "base/maps.hpp"
-
-#include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace {
 	using namespace vm::code::detail;
@@ -127,9 +122,10 @@ namespace {
 		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx, interface_name, error_context_inh, [&]() {
-					return InvalidImplementsError(inh, interface_name);
-				}
+				ctx,
+				interface_name,
+				error_context_inh,
+				[&]() { return InvalidImplementsError(inh, interface_name); }
 			);
 			insertImplementationsRecursive(implementations, interface, error_context_inh, ctx);
 		}
@@ -392,4 +388,3 @@ void vm::code::detail::validateTypesIntegrity(const TypeContext& ctx) {
 	};
 	for (const auto& type: types) helper(type);
 }
-

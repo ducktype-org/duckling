@@ -12,10 +12,7 @@
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 
-#include "vm/bytecode/validator/type_builder.hpp"
-#include "vm/bytecode/validator/type_validator.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -33,7 +30,6 @@
 #include <vm/loader/logger.hpp>
 
 #include <expected>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 

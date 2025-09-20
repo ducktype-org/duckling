@@ -5,10 +5,6 @@
 
 #include "instruction.hpp"
 
-#include "base/ints.hpp"
-#include "base/maps.hpp"
-
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>

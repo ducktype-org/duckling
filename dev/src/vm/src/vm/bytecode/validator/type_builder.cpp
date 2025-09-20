@@ -1,6 +1,5 @@
 #include "type_builder.hpp"
 
-#include "vm/bytecode/validator/type_context.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
