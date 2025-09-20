@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include "base/maps.hpp"
+#include "base/string_id.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
@@ -24,9 +27,17 @@ namespace vm::code::detail {
 	 * @note Throws a builder error if type is invalid in current context.
 	 * @note Assumes all cycles in the hierarchy (ctx) where detected.
 	 */
-	void validateType(
-		const TypeOfData&                                type,
-		const TypeContext&                               ctx,
-		const base::HashMap<base::StrID, FuncSignature>& functions
+	// TODOP: Make that exist
+	// void validateType(
+	// 	const TypeOfData&                                type,
+	// 	const TypeContext&                               ctx,
+	// 	const base::HashMap<base::StrID, FuncSignature>& functions
+	// );
+
+	// TODOP: Add docs.
+	void validateTypes(
+		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& available_functions
 	);
+
+	// TODOP: Revalidate types.
 }

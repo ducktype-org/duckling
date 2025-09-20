@@ -39,7 +39,6 @@ namespace vm::loader {
 		 */
 		compiler::Compiler compiler{};
 
-
 		/**
 		 * @brief Parses a list of files and returns an intermediate program representation.
 		 * @return Either the parsed `CodeCollection` on success, or a `LoaderLogger` with parsing
@@ -56,7 +55,7 @@ namespace vm::loader {
 		 * @brief Injects new code from given file paths to the current program state and
 		 * returns a low-level program representation of the current loader state.
 		 */
-		std::expected<vm::low::LowVMProgram, LoaderLogger> loadAndCompile(
+		std::expected<CRef<vm::low::LowVMProgram>, LoaderLogger> loadAndCompile(
 			const std::vector<fs::File>& file_path
 		);
 
@@ -64,7 +63,7 @@ namespace vm::loader {
 		 * @brief Injects new code from a given high-level code representation, returns a
 		 * low-level program representation of the current loader state.
 		 */
-		std::expected<vm::low::LowVMProgram, LoaderLogger> loadAndCompile(
+		std::expected<CRef<vm::low::LowVMProgram>, LoaderLogger> loadAndCompile(
 			const code::CodeCollection& code_collection
 		);
 	};

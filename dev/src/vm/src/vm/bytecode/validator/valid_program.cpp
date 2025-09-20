@@ -4,6 +4,7 @@
 
 #include <base/string_id.hpp>
 
+#include "vm/bytecode/validator/type_context.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
@@ -38,6 +39,7 @@ void vm::code::HighVMProgram::insertCode(const CodeCollection& collection) {
 }
 
 void vm::code::HighVMProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
+	// TODOP: Rebuild types instead of build from zero.
 	for (const auto& type: new_types) type_context.insertType(type);
 }
 
@@ -69,6 +71,10 @@ void vm::code::HighVMProgram::insertFunctions(const std::vector<Function>& new_f
 
 const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::HighVMProgram::types() const {
 	return type_context.getCurrentTypes();
+}
+
+const vm::code::TypeContext& vm::code::HighVMProgram::getTypeContext() const {
+	return type_context;
 }
 
 const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::HighVMProgram::globals() const {

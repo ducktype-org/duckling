@@ -943,7 +943,7 @@ namespace vm {
 				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
 				// null. This is one of two possible approaches:
 				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to
-				// null-poiner (what we do here)
+				// null-pointer (what we do here)
 				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
 				// C-nullptr as their data, but on DVM level we would still allow pointer
 				// [0-sized-block, nullptr] to exist. Any access to such block would simply

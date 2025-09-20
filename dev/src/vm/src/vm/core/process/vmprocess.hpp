@@ -63,7 +63,8 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::low::LowVMProgram> loaded_program = {};
+		// TODOP: Add docs.
+		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
 
 		Memory memory;
 

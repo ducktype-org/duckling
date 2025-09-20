@@ -15,7 +15,7 @@ Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
 	// TODOP: Resolve an issue tha tall types are validated after code injection.
 	std::cout << "Validate and produce typemeta\n";
 	detail::validateTypes(*this, available_functions);
-	return detail::buildTypes(*this);
+	return detail::buildTypeMetadata(*this);
 }
 
 const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }

@@ -57,13 +57,13 @@ namespace vm::low {
 	 */
 	class LowVMProgram {
 	public:
-		LowVMProgram();
+		LowVMProgram(): types(makeBox<TypeMetadata>()) {}
 
 		Box<TypeMetadata>                         types;
-		ObjIdNameMap<LowFuncData, usize>          functions;
-		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data;
+		ObjIdNameMap<LowFuncData, usize>          functions{};
+		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
-		base::HashMap<u64, base::StrID> method_name_pool;
+		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
 }

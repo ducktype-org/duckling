@@ -68,7 +68,8 @@ namespace vm::loader::compiler {
 				return static_cast<u64>(field_offset);
 			}
 			variant_case(vm::opargs::FunctionName, func) {
-				return u64(*low_program.functions.idOf(func.function_name));
+				return u64(*ctx.high_program.functions().idOf(func.function_name));
+				// return u64(*low_program.functions.idOf(func.function_name));
 			}
 			variant_case(vm::opargs::BuiltinFunctionName, func) {
 				auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
@@ -97,13 +98,11 @@ namespace vm::loader::compiler {
 	 */
 	low::MicroByteCode Compiler::lowerInstructions(const FunctionCompilationContext& ctx) {
 		low::MicroByteCode bc;
-		bc.reserve(ctx.function->body.size());
+		bc.reserve(ctx.instructions_without_labels.size());
 
-		// TODOP: views/ranges?
-		for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
-			const auto& op    = ctx.function->body[op_idx];
-			u64         arg_0 = 0;
-			u64         arg_1 = 0;
+		for (auto [op_idx, op]: std::views::enumerate(ctx.instructions_without_labels)) {
+			u64 arg_0 = 0;
+			u64 arg_1 = 0;
 			variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
@@ -179,18 +178,18 @@ namespace vm::loader::compiler {
 			CORE_UNREACHABLE();
 		};
 
-		code::FuncSignature func_signature = ctx.function->signature;
+		code::FuncSignature func_signature = ctx.function.signature;
 		push(base::StrID("ret_val"), func_signature.result_type.str);
 		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
-			{ ctx.function->body.size(), {}, 0 }  // sentinel
+			{ ctx.instructions_without_labels.size(), {}, 0 }  // sentinel
 		};
-		std::vector<bool> visited_instructions(ctx.function->body.size());
+		std::vector<bool> visited_instructions(ctx.instructions_without_labels.size());
 		usize             index = 0;
 
-		while (index != ctx.function->body.size()) {
+		while (index != ctx.instructions_without_labels.size()) {
 			if (visited_instructions[index]) {
 				std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
 				dfs_stack.pop_back();
@@ -198,7 +197,7 @@ namespace vm::loader::compiler {
 			}
 			visited_instructions[index] = true;
 
-			variant_match(ctx.function->body[index]) {
+			variant_match(ctx.instructions_without_labels[index]) {
 				using namespace code::instructions;
 				variant_case(Op_init_lany_type, instr) {
 					push(instr.arg0, instr.arg1);
@@ -230,6 +229,7 @@ namespace vm::loader::compiler {
 				variant_case(Op_call_func, instr) {
 					for (usize i = 0;
 					     i < low_program.functions.at((instr.arg0.function_name))->parameters.size();
+					     // TODOP: Broken
 					     i++) {
 						pop();
 					}
@@ -267,27 +267,27 @@ namespace vm::loader::compiler {
 	 * positions in the label_positions map which is used later when dealing with jumps.
 	 */
 	void Compiler::splitCodeAndLabels(FunctionCompilationContext& ctx) {
-		code::Function new_func = ctx.function.value();
-		new_func.body.clear();
+		std::vector<code::Instruction>    instructions_without_labels;
 		base::HashMap<base::StrID, usize> label_positions;
-		for (const auto& instr: ctx.function.value().body) {
+		for (const auto& instr: ctx.function.body) {
 			variant_match(instr) {
 				variant_case_novalue(code::instructions::Comment) {}
 				variant_case(code::instructions::Op_label, label) {
-					label_positions.put(label.arg0.label_name, new_func.body.size());
+					label_positions.put(label.arg0.label_name, instructions_without_labels.size());
 				}
-				variant_default { new_func.body.push_back(instr); }
+				variant_default { instructions_without_labels.push_back(instr); }
 			}
 		}
-		ctx.function        = std::move(new_func);
-		ctx.label_positions = std::move(label_positions);
+		ctx.instructions_without_labels = std::move(instructions_without_labels);
+		ctx.label_positions             = std::move(label_positions);
 	}
 
 	// TODOP: Add a comment that this can't fail after verification.
-	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
+	void Compiler::compileNewFunctions(
+		const std::vector<code::Function>& new_functions, const code::HighVMProgram& high_program
+	) {
 		for (const auto& function: new_functions) {
-			FunctionCompilationContext ctx;
-			ctx.function = function;
+			FunctionCompilationContext ctx(function, high_program);
 			splitCodeAndLabels(ctx);
 			calculateOffsets(ctx);
 
@@ -339,7 +339,7 @@ namespace vm::loader::compiler {
 		auto new_types = ctx.getCurrentTypes() | std::views::drop(low_program.types->size());
 		if (std::ranges::empty(new_types)) return;
 
-		vm::code::detail::rebuildTypeMetadata(low_program.types.ref(), ctx);
+		vm::code::detail::rebuildTypeMetadata(low_program.types.refMut(), ctx);
 
 		// Update method ID to name maps, since new methods may have appeared after new types where
 		// added.
@@ -369,8 +369,8 @@ namespace vm::loader::compiler {
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
-		compileNewFunctions(new_functions);
+		compileNewFunctions(new_functions, high_program);
 	}
 
-	const low::LowVMProgram& Compiler::getLowProgram() const { return low_program; }
+	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 }

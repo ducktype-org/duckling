@@ -1,5 +1,7 @@
 #include "type_validator.hpp"
 
+#include "base/maps.hpp"
+
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -391,4 +393,11 @@ void vm::code::detail::validateTypesIntegrity(const TypeContext& ctx) {
 		status[name] = Done;
 	};
 	for (const auto& type: types) helper(type);
+}
+
+void vm::code::detail::validateTypes(
+	const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& available_functions
+) {
+	validateTypesIntegrity(ctx);
+	for (const auto& type: ctx.getCurrentTypes()) validateType(type, ctx, available_functions);
 }

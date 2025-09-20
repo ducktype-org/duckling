@@ -195,10 +195,10 @@ Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& ctx
 	auto types = ctx.getCurrentTypes() | std::ranges::to<std::vector<TypeOfData>>();
 
 	// Declare all types first.
-	declareTypes(type_metadata.ref(), types);
+	declareTypes(type_metadata.refMut(), types);
 
 	// Well-define every type.
-	defineTypes(type_metadata.ref(), ctx, types);
+	defineTypes(type_metadata.refMut(), ctx, types);
 
 	type_metadata->finalize();
 	return type_metadata;
@@ -209,7 +209,7 @@ void vm::code::detail::rebuildTypeMetadata(
 ) {
 	auto new_types = ctx.getCurrentTypes() | std::views::drop(type_metadata->size())
 	               | std::ranges::to<std::vector<TypeOfData>>();
-	if (std::ranges::empty_view(new_types)) return;
+	if (std::ranges::empty(new_types)) return;
 
 	// Reopen type metadata for addition;
 	type_metadata->unfinalize();

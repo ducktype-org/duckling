@@ -82,6 +82,14 @@ namespace vm::code {
 		// TODOP: Do something with that.
 		const base::HashMap<base::StrID, FuncSignature>& getAvailableFunctions() const;
 
+		/**
+		 * @brief Inserts code in-place.
+		 * @note If the newly injected code invalidates the state,
+		 * an exception of `ValidationError` base is thrown. This means this object will contain
+		 * invalid code and mustn't be used! If you don't want to lose the state, place use
+		 * `tryInsertCode`.
+		 */
+		void insertCode(const CodeCollection& collection);
 
 	private:
 		ObjIdNameMap<Function>   function_map;
@@ -92,14 +100,6 @@ namespace vm::code {
 		// It should have the ownership and LowProgram has just a ref
 		// base::Optional<MBox<TypeMetadata>> type_metadata{};
 
-		/**
-		 * @brief Inserts code in-place.
-		 * @note If the newly injected code invalidates the state,
-		 * an exception of `ValidationError` base is thrown. This means this object will contain
-		 * invalid code and mustn't be used! If you don't want to lose the state, place use
-		 * `newInsertCode`.
-		 */
-		void insertCode(const CodeCollection& collection);
 
 		/**
 		 * @brief Inserts types. May invalidate state.

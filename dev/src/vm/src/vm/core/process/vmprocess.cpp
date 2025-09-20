@@ -35,8 +35,8 @@ namespace vm {
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
-		std::unique_lock                                       lock(rw_global);
-		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
+		std::unique_lock                                             lock(rw_global);
+		std::expected<CRef<low::LowVMProgram>, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
 				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
 				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
@@ -45,7 +45,7 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
-			loaded_program.emplace(*std::move(code_result));
+			loaded_program = *code_result;
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -62,7 +62,7 @@ namespace vm {
 		if (!loaded_program.has_value()) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		bool response
-			= getMainVMThread().spawnThreadAndRun(&*loaded_program, func_name, run_arguments);
+			= getMainVMThread().spawnThreadAndRun(*loaded_program, func_name, run_arguments);
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -243,7 +243,7 @@ namespace vm {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto res = loaded_program->types->atMaybe(
+						auto res = (*loaded_program)->types->atMaybe(
 							base::StrID(type_request.type_name.c_str())
 						);
 						match_optional(res) {
@@ -264,7 +264,7 @@ namespace vm {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto maybe_type = loaded_program->types->atMaybe(
+						auto maybe_type = (*loaded_program)->types->atMaybe(
 							base::StrID(vmvalue_request.type_name.c_str())
 						);
 						match_optional(maybe_type) {
@@ -322,7 +322,7 @@ namespace vm {
 		for (auto& t: vm_threads)
 			if (t.exec_thread) (void) (stop());
 		if (loaded_program.has_value())
-			getMainVMThread().execGlobalDestructors(&loaded_program.value());
+			getMainVMThread().execGlobalDestructors(loaded_program.value());
 		for (auto& vm_value: owned_vm_values) vm_value->freeData();
 	}
 

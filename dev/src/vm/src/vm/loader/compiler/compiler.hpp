@@ -4,6 +4,7 @@
 #include "base/string_id.hpp"
 
 #include "vm/bytecode/bytecode.hpp"
+#include "vm/bytecode/instructions.hpp"
 #include "vm/bytecode/opcode_args.hpp"
 #include "vm/bytecode/type_of_data.hpp"
 #include "vm/bytecode/validator/type_context.hpp"
@@ -13,7 +14,6 @@
 #include "vm/core/process/type_metadata/type_metadata.hpp"
 #include "vm/core/thread/low_program/low_program.hpp"
 #include "vm/utils/stable_obj_id_name_map.hpp"
-#include <vm/loader/loader.hpp>
 
 namespace vm::loader::compiler {
 	/**
@@ -45,7 +45,7 @@ namespace vm::loader::compiler {
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
-		const low::LowVMProgram& getLowProgram() const;
+		CRef<low::LowVMProgram> getLowProgram() const;
 
 	private:
 		/**
@@ -64,8 +64,18 @@ namespace vm::loader::compiler {
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
 		 */
 		struct FunctionCompilationContext {
-			/// Function after the label instructions have been removed.
-			base::Optional<code::Function> function{};
+			FunctionCompilationContext(
+				const code::Function& func, const code::HighVMProgram& high_program
+			):
+				  function(func),
+				  high_program(high_program) {}
+
+			// TODOP: Remove?
+			/// The high level function definition.
+			const code::Function& function;
+			const code::HighVMProgram& high_program;
+			/// Function code after the label instructions have been removed.
+			std::vector<code::Instruction> instructions_without_labels;
 			/// A mapping from a label's name to it's instruction index in the function instruction list.
 			base::HashMap<base::StrID, usize> label_positions{};
 			/// A mapping from a local variable's name to its offset on the function's local stack.
@@ -101,7 +111,10 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		void compileNewFunctions(const std::vector<code::Function>& new_functions);
+		// TODOP: Remove high_program from here.
+		void compileNewFunctions(
+			const std::vector<code::Function>& new_functions, const code::HighVMProgram& high_program
+		);
 
 		/**
 		 * @brief Removes label instructions from the compiled functions code. Calculates label
@@ -113,6 +126,7 @@ namespace vm::loader::compiler {
 		 * @brief Calculates stack offsets of local variables and the maximum size of the local
 		 * stack used by the function.
 		 */
+		// TODOP: Docs
 		void calculateOffsets(FunctionCompilationContext& ctx);
 
 		/**
