@@ -10,7 +10,8 @@ namespace timer {
 	/**
 	 * Duration type used for measuring time intervals.
 	 * @important: default initialization is undefined (might not be zero).
-	 * @note Can be changed to more precise type if needed (e.g. std::chrono::duration<long double, std::milli>).
+	 * @note Can be changed to more precise type if needed (e.g. std::chrono::duration<long double,
+	 * std::milli>).
 	 */
 	using Duration = std::chrono::nanoseconds;
 

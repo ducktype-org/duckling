@@ -1,7 +1,8 @@
 #pragma once
 
+#include <timer/timer.hpp>  // @TODO #404: relax it, so query does not leak timer
+
 #include <query_framework/internal/query_data/query_id.hpp>
-#include <timer/timer.hpp> // @TODO #404: relax it, so query does not leak timer
 
 namespace query {
 	/**
@@ -18,7 +19,7 @@ namespace query {
 		internal::QueryID query_id;
 		bool              was_provide_call = false;
 
-        timer::TimeMeasurement call_time = {};
+		timer::TimeMeasurement call_time = {};
 
 		/**
 		 * Call when query call starts
