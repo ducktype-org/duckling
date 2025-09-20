@@ -79,7 +79,7 @@ namespace query::internal {
 		u64                   id = 0;
 		for (auto& [k, v]: node_deps) {
 			index[k] = id++;
-			out << id << " " << k.q_id.getData().name << "\n"; 
+			out << id << " " << k.q_id.getData().name << "\n";
 		}
 
 		for (auto& [k, v]: node_deps)

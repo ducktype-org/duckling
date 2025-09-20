@@ -22,9 +22,9 @@
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
 #include <printer/stream_printer.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
 
