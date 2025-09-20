@@ -12,32 +12,24 @@
 
 namespace vm::code::detail {
 	/**
-	 * @brief Validates the types in the given TypeContext.
-	 * Firstly, detects any cycles in the type hierarchy (including the cycles in the inheritance
-	 * hierarchy), then checks each type individually and inheritance hierarchy soundness. Throws a
-	 * builder error if types are invalid in current context.
-	 *
-	 * For the complete list of specific checks see `vm/src/vm/bytecode/validator/readme.md`.
+	 * @brief Validates the integrity of the types in the given TypeContext.
+	 * Detects any cycles in the type hierarchy (including the cycles in the inheritance
+	 * hierarchy),
+	 * @note Throws a builder error if the type context is invalid.
 	 */
-	// TODOP: Check for cycles in the hierarchy.
 	void validateTypesIntegrity(const TypeContext& ctx);
 
-	/*
-	 * @brief Validate a single given type.
+	/**
+	 * @brief Validates a single type in the given context.
+	 * For the complete list of specific checks see `vm/src/vm/bytecode/validator/readme.md`.
+	 *
 	 * @note Throws a builder error if type is invalid in current context.
-	 * @note Assumes all cycles in the hierarchy (ctx) where detected.
+	 * @note Assumes all cycles in the hierarchy (ctx) where detected (use validateTypesIntegrity()
+	 * first).
 	 */
-	// TODOP: Make that exist
-	// void validateType(
-	// 	const TypeOfData&                                type,
-	// 	const TypeContext&                               ctx,
-	// 	const base::HashMap<base::StrID, FuncSignature>& functions
-	// );
-
-	// TODOP: Add docs.
-	void validateTypes(
-		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& available_functions
+	void validateType(
+		const TypeOfData&                                type,
+		const TypeContext&                               ctx,
+		const base::HashMap<base::StrID, FuncSignature>& functions
 	);
-
-	// TODOP: Revalidate types.
 }

@@ -127,10 +127,9 @@ namespace {
 		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(inh, interface_name); }
+				ctx, interface_name, error_context_inh, [&]() {
+					return InvalidImplementsError(inh, interface_name);
+				}
 			);
 			insertImplementationsRecursive(implementations, interface, error_context_inh, ctx);
 		}
@@ -289,69 +288,67 @@ namespace {
 			interfaces.put(impl);
 		}
 	}
+}
 
-	/**
-	 * @brief Throws a builder error if type is invalid in current context.
-	 */
-	void validateType(
-		const TypeOfData&                                type,
-		const TypeContext&                               ctx,
-		const base::HashMap<base::StrID, FuncSignature>& functions
-	) {
-		auto& types = ctx.getCurrentTypes();
-		variant_match(type) {
-			variant_case(PrimitiveType, primitive) {
-				if (primitive.size == 0) throw InvalidPrimitiveSizeError(primitive);
-			}
-			variant_case(PointerType, pointer) {
-				if (!types.contains(pointer.inner))
-					throw UnknownSubtypeError(pointer, pointer.inner);
-			}
-			variant_case(FixedSizeTableType, fixed_table) {
-				if (!types.contains(fixed_table.inner))
-					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
-			}
-			variant_case(DynamicTableType, dynamic_table) {
-				if (!types.contains(dynamic_table.inner))
-					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
-			}
-			variant_case(FunctionType, function) {
-				for (auto& param: function.parameters)
-					if (!types.contains(param)) throw UnknownSubtypeError(function, param);
-				if (!types.contains(function.result))
-					throw UnknownSubtypeError(function, function.result);
-			}
-			variant_case(VariantType, variant) {
-				for (auto& alternative: variant.variant_alternatives)
-					if (!types.contains(alternative))
-						throw UnknownSubtypeError(variant, alternative);
-				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
-			}
-			variant_case(DataType, data) { validateFieldDuplicatesAndSubtypeExistence(data, ctx); }
-			variant_case(InterfaceType, interface) {
-				base::HashMap<base::StrID, base::StrID> virtual_methods;
-				insertVirtualMethodsRecursive(virtual_methods, interface, interface, ctx);
+/**
+ * @brief Throws a builder error if type is invalid in current context.
+ */
+void vm::code::detail::validateType(
+	const TypeOfData&                                type,
+	const TypeContext&                               ctx,
+	const base::HashMap<base::StrID, FuncSignature>& functions
+) {
+	auto& types = ctx.getCurrentTypes();
+	variant_match(type) {
+		variant_case(PrimitiveType, primitive) {
+			if (primitive.size == 0) throw InvalidPrimitiveSizeError(primitive);
+		}
+		variant_case(PointerType, pointer) {
+			if (!types.contains(pointer.inner)) throw UnknownSubtypeError(pointer, pointer.inner);
+		}
+		variant_case(FixedSizeTableType, fixed_table) {
+			if (!types.contains(fixed_table.inner))
+				throw UnknownSubtypeError(fixed_table, fixed_table.inner);
+		}
+		variant_case(DynamicTableType, dynamic_table) {
+			if (!types.contains(dynamic_table.inner))
+				throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
+		}
+		variant_case(FunctionType, function) {
+			for (auto& param: function.parameters)
+				if (!types.contains(param)) throw UnknownSubtypeError(function, param);
+			if (!types.contains(function.result))
+				throw UnknownSubtypeError(function, function.result);
+		}
+		variant_case(VariantType, variant) {
+			for (auto& alternative: variant.variant_alternatives)
+				if (!types.contains(alternative)) throw UnknownSubtypeError(variant, alternative);
+			if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
+		}
+		variant_case(DataType, data) { validateFieldDuplicatesAndSubtypeExistence(data, ctx); }
+		variant_case(InterfaceType, interface) {
+			base::HashMap<base::StrID, base::StrID> virtual_methods;
+			insertVirtualMethodsRecursive(virtual_methods, interface, interface, ctx);
 
-				validateImplementsDuplicates(interface);
-				validateVMethodSignatures(interface, ctx);
-				validateImplementations(interface, virtual_methods, ctx, functions);
-			}
-			variant_case(ClassType, clazz) {
-				// All virtual methods that can be implemented by this class (including superclass
-				// and interface vmethods as well).
-				base::HashMap<base::StrID, base::StrID> virtual_methods;
-				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, ctx);
+			validateImplementsDuplicates(interface);
+			validateVMethodSignatures(interface, ctx);
+			validateImplementations(interface, virtual_methods, ctx, functions);
+		}
+		variant_case(ClassType, clazz) {
+			// All virtual methods that can be implemented by this class (including superclass
+			// and interface vmethods as well).
+			base::HashMap<base::StrID, base::StrID> virtual_methods;
+			insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, ctx);
 
-				validateFieldDuplicatesAndSubtypeExistence(clazz, ctx);
-				validateImplementsDuplicates(clazz);
-				validateVMethodSignatures(clazz, ctx);
-				validateImplementations(clazz, virtual_methods, ctx, functions);
-				if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods, ctx);
-			}
-			variant_case_novalue(OpaqueType) {}
-			variant_default {
-				CORE_PANIC("Unhandled type during type validation: ", typeToString(type));
-			}
+			validateFieldDuplicatesAndSubtypeExistence(clazz, ctx);
+			validateImplementsDuplicates(clazz);
+			validateVMethodSignatures(clazz, ctx);
+			validateImplementations(clazz, virtual_methods, ctx, functions);
+			if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods, ctx);
+		}
+		variant_case_novalue(OpaqueType) {}
+		variant_default {
+			CORE_PANIC("Unhandled type during type validation: ", typeToString(type));
 		}
 	}
 }
@@ -396,9 +393,3 @@ void vm::code::detail::validateTypesIntegrity(const TypeContext& ctx) {
 	for (const auto& type: types) helper(type);
 }
 
-void vm::code::detail::validateTypes(
-	const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& available_functions
-) {
-	validateTypesIntegrity(ctx);
-	for (const auto& type: ctx.getCurrentTypes()) validateType(type, ctx, available_functions);
-}

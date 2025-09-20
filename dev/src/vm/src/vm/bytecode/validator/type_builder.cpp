@@ -185,8 +185,6 @@ namespace {
 			}
 		}
 	}
-
-
 }
 
 Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& ctx) {

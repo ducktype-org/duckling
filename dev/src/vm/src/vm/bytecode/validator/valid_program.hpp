@@ -49,12 +49,6 @@ namespace vm::code {
 		CodeCollection produceValidCodeCollection() const;
 
 		/**
-		 * @brief Produces TypeMetadata, that is isomorphic with its state.
-		 * @TODO: Fix an issue, that TypeMetadata has to be built twice.
-		 */
-		Box<TypeMetadata> produceTypeMetadata() const;
-
-		/**
 		 * @brief Creates a new ValidProgram object with inserted code.
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.

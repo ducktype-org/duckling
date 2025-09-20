@@ -1138,7 +1138,7 @@ public:
 	}
 };
 
-vm::code::Function vm::code::validateAndExtractReachableCode(
+vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const ObjIdNameMap<TypeOfData>&                  tod_map,
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,

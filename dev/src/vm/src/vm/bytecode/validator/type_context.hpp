@@ -15,19 +15,8 @@ namespace vm::code {
 		/**
 		 * @brief Inserts a new type. If a type is duplicated throws DuplicatedTypeError.
 		 */
-		void insertType(const TypeOfData& type);
-
+		void                            insertType(const TypeOfData& type);
 		const ObjIdNameMap<TypeOfData>& getCurrentTypes() const;
-
-		/**
-		 * @brief Creates TypeMetadata by building types.
-		 * @param functions Functions available in program, callable with 'call_func'. Used to
-		 * validate method implementation completeness of class types.
-		 */
-		// TODOP: Remove that function.
-		Box<TypeMetadata> validateAndProduceTypeMetadata(
-			const base::HashMap<base::StrID, FuncSignature>& available_functions
-		) const;
 
 	private:
 		ObjIdNameMap<TypeOfData> types;

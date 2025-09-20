@@ -9,14 +9,6 @@
 
 using namespace vm::code;
 
-Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
-	const base::HashMap<base::StrID, FuncSignature>& available_functions
-) const {
-	// TODOP: Resolve an issue tha tall types are validated after code injection.
-	detail::validateTypes(*this, available_functions);
-	return detail::buildTypeMetadata(*this);
-}
-
 const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
 
 void TypeContext::insertType(const TypeOfData& type) {

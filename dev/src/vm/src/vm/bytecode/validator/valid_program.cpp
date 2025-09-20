@@ -4,7 +4,9 @@
 
 #include <base/string_id.hpp>
 
+#include "vm/bytecode/validator/type_builder.hpp"
 #include "vm/bytecode/validator/type_context.hpp"
+#include "vm/bytecode/validator/type_validator.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
@@ -25,11 +27,8 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .global_data = { globals_map.begin(), globals_map.end() } };
 }
 
-Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
-	return type_context.validateAndProduceTypeMetadata(available_functions);
-}
-
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
@@ -58,8 +57,14 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
-	// TODOP: Rebuild types instead of build from zero.
+	if (new_types.empty()) return;
 	for (const auto& type: new_types) type_context.insertType(type);
+
+	// Check if no cycles in hierarchy appeared after injection.
+	detail::validateTypesIntegrity(type_context);
+
+	// Validate only the newly added types.
+	for (const auto& type: new_types) detail::validateType(type, type_context, available_functions);
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
@@ -75,13 +80,13 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
-	auto type_metadata = type_context.validateAndProduceTypeMetadata(available_functions);
+	auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
-		auto validated_function = validateAndExtractReachableCode(
+		auto validated_function = detail::validateAndExtractReachableCode(
 			type_context.getCurrentTypes(), *type_metadata, globals_map, available_functions, func
 		);
 		function_map.insert(validated_function, validated_function.name);
