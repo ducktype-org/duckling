@@ -28,12 +28,13 @@ namespace query {
 		~CallStatsObject();
 	};
 
-    /**
-     * Mock struct used in query implementations when statistics are disabled.
-     */
+	/**
+	 * Mock struct used in query implementations when statistics are disabled.
+	 */
 	struct NoStats final {
 		NoStats(internal::QueryID) {}
-        bool was_provide_call = false;
+
+		bool was_provide_call = false;
 	};
 
 	/**

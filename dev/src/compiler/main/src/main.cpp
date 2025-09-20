@@ -11,6 +11,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst.hpp>
+#include <timer/timer.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -25,7 +26,6 @@
 #include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <timer/timer.hpp>
 
 #include <iostream>
 
@@ -250,12 +250,12 @@ clah::Clah getClahForMain() {
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
-					
+
 					// @TODO #1058: make graph/statistics printing configuration better.
 
 					timer::TimeMeasurement total_compilation_time;
 					total_compilation_time.startMeasurement();
-					
+
 
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto backend_type    = options.isFlag("dvm-backend")
@@ -270,21 +270,29 @@ clah::Clah getClahForMain() {
 
 					if (options.isFlag("print-statistics")) {
 						if (not query::USE_STATS) {
-							std::cerr << "Warning: Query statistics are disabled at compile time. No query statistics will be printed.\n";
+							std::cerr << "Warning: Query statistics are disabled at compile time. "
+				                         "No query statistics will be printed.\n";
 						}
 						query::printStats();
 
 						std::cerr << "\nTotal compilation time: ";
-						timer::printAs(std::cerr, total_compilation_time.duration(), timer::TimeUnit::Milliseconds);
+						timer::printAs(
+							std::cerr,
+							total_compilation_time.duration(),
+							timer::TimeUnit::Milliseconds
+						);
 						std::cerr << "\n";
 						std::cerr << " - Backend compilation time: ";
-						timer::printAs(std::cerr, compiler::driver::backend_compilation_time, timer::TimeUnit::Milliseconds);
+						timer::printAs(
+							std::cerr,
+							compiler::driver::backend_compilation_time,
+							timer::TimeUnit::Milliseconds
+						);
 						std::cerr << "\n\n";
 					}
 
-					if (options.isFlag("print-graph")) {
+					if (options.isFlag("print-graph"))
 						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
-					}
 
 					return 0;
 				})
