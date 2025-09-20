@@ -30,7 +30,7 @@ namespace vm::loader {
 		 * This object is incrementally updated with new, validated code. It is initialized with the
 		 * VM's built-in types.
 		 */
-		code::HighVMProgram validated_high_program = code::HighVMProgram::withBuiltins();
+		code::ValidProgram validated_high_program = code::ValidProgram::withBuiltins();
 
 		/**
 		 * @brief The stateful compiler instance for this loader.

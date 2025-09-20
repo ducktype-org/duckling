@@ -279,7 +279,7 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::compileNewFunctions(
-		const std::vector<code::Function>& new_functions, const code::HighVMProgram& high_program
+		const std::vector<code::Function>& new_functions, const code::ValidProgram& high_program
 	) {
 		for (const auto& function: new_functions) {
 			FunctionCompilationContext ctx(function, high_program);
@@ -298,7 +298,7 @@ namespace vm::loader::compiler {
 				parameters_size += type->getSize();
 			}
 
-			low::MicroByteCode bytecode = lowerInstructions(ctx);
+			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			low_program.functions.insert(
 				low::LowFuncData{ .name             = function.name,
@@ -353,7 +353,7 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::recompile(const code::HighVMProgram& high_program) {
+	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
 
 		auto new_globals = high_program.globals() | std::views::drop(low_program.global_data.size())

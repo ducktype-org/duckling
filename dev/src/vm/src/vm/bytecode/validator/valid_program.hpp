@@ -24,31 +24,30 @@ namespace vm::code {
 	 * @note Valid in this context also does not mean it contains a `main` function, as this is not
 	 * valid bytecode's assumption, but rather VMThread's.
 	 */
-	class HighVMProgram {
-		HighVMProgram() = default;
+	class ValidProgram {
+		ValidProgram() = default;
 
 	public:
 		bool is_stdlib_included = false;
 
-		HighVMProgram(const HighVMProgram&)            = default;
-		HighVMProgram(HighVMProgram&&) noexcept        = default;
-		HighVMProgram& operator=(const HighVMProgram&) = default;
-		HighVMProgram& operator=(HighVMProgram&&)      = default;
+		ValidProgram(const ValidProgram&)            = default;
+		ValidProgram(ValidProgram&&) noexcept        = default;
+		ValidProgram& operator=(const ValidProgram&) = default;
+		ValidProgram& operator=(ValidProgram&&)      = default;
 
 		/**
 		 * @brief Creates a new ValidProgram with nothing inside.
 		 */
-		static HighVMProgram empty();
+		static ValidProgram empty();
 
 		/**
 		 * @brief Creates a new ValidProgram object with builtin types pre-inserted.
 		 */
-		static HighVMProgram withBuiltins();
+		static ValidProgram withBuiltins();
 
 		/**
-		 * @brief Produces valid CodeCollection.
+		 * @brief Produces valid CodeCollection from the internal state of this object.
 		 */
-		// TODOP: Do something with that
 		CodeCollection produceValidCodeCollection() const;
 
 		/**
@@ -62,7 +61,7 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		HighVMProgram tryInsertCode(const CodeCollection& collection) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection) const;
 
 
 		const ObjIdNameMap<TypeOfData>& types() const;
@@ -72,19 +71,6 @@ namespace vm::code {
 		const ObjIdNameMap<GlobalData>& globals() const;
 
 		const ObjIdNameMap<Function>& functions() const;
-
-		// TODOP: Do something with that.
-		const base::HashMap<base::StrID, FuncSignature>& getAvailableFunctions() const;
-
-		/**
-		 * @brief Inserts code in-place.
-		 * @note If the newly injected code invalidates the state,
-		 * an exception of `ValidationError` base is thrown. This means this object will contain
-		 * invalid code and mustn't be used! If you don't want to lose the state, place use
-		 * `tryInsertCode`.
-		 */
-		// TODOP: Do something with that
-		void insertCode(const CodeCollection& collection);
 
 	private:
 		ObjIdNameMap<Function>   function_map;
@@ -99,6 +85,14 @@ namespace vm::code {
 		 * available in the program, since `function_map` building is done after type verification.
 		 */
 		base::HashMap<base::StrID, FuncSignature> available_functions;
+
+		/**
+		 * @brief Inserts code in-place.
+		 * @note If the newly injected code invalidates the state, an exception of `ValidationError`
+		 * base is thrown. This means this object will contain invalid code and mustn't be used! If
+		 * you don't want to lose the state, place use `tryInsertCode`.
+		 */
+		void insertCode(const CodeCollection& collection);
 
 		/**
 		 * @brief Inserts types. May invalidate state.

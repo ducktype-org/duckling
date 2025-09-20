@@ -10,39 +10,59 @@
 #include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 
-vm::code::HighVMProgram vm::code::HighVMProgram::empty() { return {}; }
+vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
-vm::code::HighVMProgram vm::code::HighVMProgram::withBuiltins() {
-	auto program         = HighVMProgram();
+vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
+	auto program         = ValidProgram();
 	program.type_context = getBuiltinTypes();
 	return program;
 }
 
-Box<vm::TypeMetadata> vm::code::HighVMProgram::produceTypeMetadata() const {
+vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
+	return { .functions = { function_map.begin(), function_map.end() },
+		     .types
+		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
+		     .global_data = { globals_map.begin(), globals_map.end() } };
+}
+
+Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
 	return type_context.validateAndProduceTypeMetadata(available_functions);
 }
 
-vm::code::HighVMProgram vm::code::HighVMProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
-	HighVMProgram copy = *this;
+	ValidProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;
 }
 
-void vm::code::HighVMProgram::insertCode(const CodeCollection& collection) {
-	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
+const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+	return type_context.getCurrentTypes();
+}
 
+const vm::code::TypeContext& vm::code::ValidProgram::getTypeContext() const { return type_context; }
+
+const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
+	return globals_map;
+}
+
+const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+	return function_map;
+}
+
+void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
+	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertFunctions(collection.functions);
 }
 
-void vm::code::HighVMProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
+void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
 	// TODOP: Rebuild types instead of build from zero.
 	for (const auto& type: new_types) type_context.insertType(type);
 }
 
-void vm::code::HighVMProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
+void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
@@ -54,7 +74,7 @@ void vm::code::HighVMProgram::insertGlobals(const std::vector<GlobalData>& new_g
 	}
 }
 
-void vm::code::HighVMProgram::insertFunctions(const std::vector<Function>& new_functions) {
+void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata(available_functions);
 
 	for (const auto& func: new_functions) {
@@ -66,27 +86,4 @@ void vm::code::HighVMProgram::insertFunctions(const std::vector<Function>& new_f
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
-}
-
-const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::HighVMProgram::types() const {
-	return type_context.getCurrentTypes();
-}
-
-const vm::code::TypeContext& vm::code::HighVMProgram::getTypeContext() const {
-	return type_context;
-}
-
-const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::HighVMProgram::globals() const {
-	return globals_map;
-}
-
-const vm::ObjIdNameMap<vm::code::Function>& vm::code::HighVMProgram::functions() const {
-	return function_map;
-}
-
-vm::code::CodeCollection vm::code::HighVMProgram::produceValidCodeCollection() const {
-	return { .functions = { function_map.begin(), function_map.end() },
-		     .types
-		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
-		     .global_data = { globals_map.begin(), globals_map.end() } };
 }

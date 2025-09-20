@@ -68,7 +68,7 @@ namespace vm {
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
 		 * nullptr if no code was loaded.
 		 */
-		MCRef<vm::low::LowVMProgram> loaded_program = nullptr;
+		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
 
 		Memory memory;
 

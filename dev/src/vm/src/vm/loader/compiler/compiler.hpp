@@ -39,7 +39,7 @@ namespace vm::loader::compiler {
 		 *
 		 * @note The compilation never fails as the given code was statically verified.
 		 */
-		void recompile(const code::HighVMProgram& high_program);
+		void recompile(const code::ValidProgram& high_program);
 
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
@@ -65,15 +65,15 @@ namespace vm::loader::compiler {
 		 */
 		struct FunctionCompilationContext {
 			FunctionCompilationContext(
-				const code::Function& func, const code::HighVMProgram& high_program
+				const code::Function& func, const code::ValidProgram& high_program
 			):
 				  function(func),
 				  high_program(high_program) {}
 
 			// TODOP: Remove high_program?
 			/// The high level function definition.
-			const code::Function&      function;
-			const code::HighVMProgram& high_program;
+			const code::Function&     function;
+			const code::ValidProgram& high_program;
 			/// Function code after the label instructions have been removed.
 			std::vector<code::Instruction> instructions_without_labels;
 			/// A mapping from a label's name to it's instruction index in the function instruction list.
@@ -113,7 +113,7 @@ namespace vm::loader::compiler {
 		 */
 		// TODOP: Remove high_program from here.
 		void compileNewFunctions(
-			const std::vector<code::Function>& new_functions, const code::HighVMProgram& high_program
+			const std::vector<code::Function>& new_functions, const code::ValidProgram& high_program
 		);
 
 		/**
