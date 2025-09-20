@@ -6,6 +6,11 @@
 
 namespace timer {
 	using TimeStamp = decltype(std::chrono::high_resolution_clock::now());
+
+    /**
+     * Duration type used for measuring time intervals.
+     * @important: default initialization is undefined (might not be zero). 
+     */
 	using Duration  = std::chrono::nanoseconds;
 
 	enum class TimeUnit { Nanoseconds, Microseconds, Milliseconds, Seconds };
@@ -62,6 +67,13 @@ namespace timer {
 			state = Ended;
 			end   = timer::now();
 		}
+
+        /**
+         * Reset the measurement to its initial state.
+         */
+        void reset() {
+            state = NotStarted;
+        }
 
 		[[nodiscard]]
 		Duration duration() const {
