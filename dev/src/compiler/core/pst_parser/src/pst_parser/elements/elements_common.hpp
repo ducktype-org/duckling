@@ -58,13 +58,15 @@ namespace pst::internal {
 	};
 
 	/**
-	 * @brief These are helper static functions returning names that can be  passed to templates.
+	 * @brief These are helper static functions returning names that can be passed to templates.
 	 */
 	class NameGetters {
 	public:
 		NameGetters() = delete;
 
 		static std::string parameterList() { return "function parameter"; }
+
+		static std::string flowPatternList() { return "flow pattern"; }
 
 		static std::string returnList() { return "function return type"; }
 
@@ -103,8 +105,6 @@ namespace pst::internal {
 		ForwardBorrowIterator(const ForwardBorrowIterator& other): it(other.it) {}
 
 		ForwardBorrowIterator(const internal_iterator& other): it(other) {}
-
-		explicit ForwardBorrowIterator(const AccessInternal<ParserElement>* ptr): it(ptr) {}
 
 		value_type operator*() const { return it->give(); }
 

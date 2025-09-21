@@ -174,8 +174,8 @@
 												"sourceStart": 87,
 												"sourceEnd": 92
 											},
-											"Function Parameter": {
-												"Function Parameter": {
+											"Parameter": {
+												"Parameter": {
 													"name": {
 														"Name": "a"
 													},
@@ -204,8 +204,8 @@
 												"sourceStart": 95,
 												"sourceEnd": 100
 											},
-											"Function Parameter": {
-												"Function Parameter": {
+											"Parameter": {
+												"Parameter": {
 													"name": {
 														"Name": "c"
 													},
@@ -344,8 +344,8 @@
 												"sourceStart": 137,
 												"sourceEnd": 142
 											},
-											"Function Parameter": {
-												"Function Parameter": {
+											"Parameter": {
+												"Parameter": {
 													"name": {
 														"Name": "z"
 													},
@@ -579,8 +579,8 @@
 																"sourceStart": 251,
 																"sourceEnd": 255
 															},
-															"Function Parameter": {
-																"Function Parameter": {
+															"Parameter": {
+																"Parameter": {
 																	"name": {
 																		"Name": "c"
 																	},

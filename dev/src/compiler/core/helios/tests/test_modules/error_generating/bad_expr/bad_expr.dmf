@@ -1,6 +1,9 @@
 const InvalidExpr: i32 = +1+;
 const InvalidSym: i32 = A + 1;
 
+const InvalidCompMiddle: bool = 1 < foo() == 5;
+const InvalidCompFirst: bool  = foo() >= 4;
+
 # Ambiguity
 const B: i32 = 1;
 const B: i32 = 2;

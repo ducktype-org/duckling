@@ -26,6 +26,8 @@ namespace pst {
 		Namespace,
 		Class,
 		Fun,
+		FunDecl,
+		Pattern,
 		For,
 		Variable,
 		If,
@@ -36,9 +38,15 @@ namespace pst {
 		CopyConstructor,
 		Destructor,
 		AccessBlock,
-		FunParam,
-		CallArgument,
+		Param,
+		CallArgument
+		FlowPattern,
+		AnalysisPattern,
+		DeconstructorPattern,
+		TuplePattern,
+		WildcardPattern,
+		BindingPattern,
+		ValuePattern,
 		Expand,
-		CodeBlock,
 	);
 }

@@ -2,7 +2,7 @@
 
 #include "../../hierarchy/expressions/assignment.hpp"
 #include "../../hierarchy/expressions/comma.hpp"
-#include "../../hierarchy/expressions/ternary.hpp"
+#include "../../hierarchy/expressions/match_expr.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
@@ -64,7 +64,7 @@ namespace pst {
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseUniversal(LangParserState& state) {
-		return expr::parseUntil<expr::Ternary, universalEnd>(state);
+		return expr::parseUntil<expr::MatchExpr, universalEnd>(state);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {

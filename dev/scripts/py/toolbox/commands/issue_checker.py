@@ -8,12 +8,9 @@ from ..impl.helpers import (
 )
 from click import argument, command
 
+
 @command()
-@argument(
-    "issues", 
-    nargs=-1, 
-    type=str
-)
+@argument("issues", nargs=-1, type=str)
 @branch(
     help="The branch relative to which the diff is created.",
 )

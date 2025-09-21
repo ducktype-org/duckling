@@ -1,6 +1,7 @@
 from ..impl.download_binaries import download_binaries_impl
 from click import command, option
 
+
 @command()
 @option(
     "-f",

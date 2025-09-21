@@ -1,7 +1,7 @@
 #include "../../hierarchy/class_elements/constructor.hpp"
 
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
-#include "../../hierarchy/not_statements/fun_param.hpp"   // IWYU pragma: keep
+#include "../../hierarchy/not_statements/param.hpp"       // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -23,7 +23,9 @@ namespace pst {
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).all(NamedOperator::Assign, &out->body);
+		state.parse(out)
+			.all(NamedOperator::Assign)
+			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
 		return out;
 	}

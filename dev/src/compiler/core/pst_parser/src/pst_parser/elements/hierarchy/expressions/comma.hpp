@@ -10,9 +10,9 @@ namespace pst::expr {
 	 * expression doesn't cause problems with other parsing.
 	 */
 	class Comma final: public ExprElement {
-		using Lower = Ternary;
+		using Lower = MatchExpr;
 
-		std::vector<AccessInternal<ExprElement>> expressions;
+		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 
 	public:
 		explicit Comma(const dia::SourcePosition& position): ExprElement(position, 900) {}
@@ -35,5 +35,7 @@ namespace pst::expr {
 				= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };
 			return std::ranges::ref_view(expressions) | transform(give_one);
 		}
+
+		void calcElementPathsRecursive() override;
 	};
 }

@@ -9,8 +9,8 @@ namespace pst::expr {
 	class ChainExpr final: public ExprElement {
 		using Lower = Atom;
 
-		AccessInternal<ExprElement>              atom;
-		std::vector<AccessInternal<ExprElement>> chain;
+		NAMED_CHILD(atom, ExprElement);
+		std::vector<AccessInternalAnonymous<ExprElement>> chain;
 
 		/**
 		 * @brief checks length before the start of the next link
@@ -41,5 +41,7 @@ namespace pst::expr {
 				= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };
 			return std::ranges::ref_view(chain) | transform(give_one);
 		}
+
+		void calcElementPathsRecursive() override;
 	};
 }

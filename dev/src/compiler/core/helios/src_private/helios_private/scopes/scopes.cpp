@@ -174,7 +174,7 @@ namespace compiler::helios {
 				return ElementScopeKind::Transparent;
 		}
 
-		case pst::ElementKind::FunParam:
+		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 
@@ -352,7 +352,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt.unlock(ctx)->isDeclaration()) {
+				if (stmt.unlock(ctx)->isDeclaration() != pst::DeclKind::None) {
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 					symbols.emplace_back(sym_id);
 				}

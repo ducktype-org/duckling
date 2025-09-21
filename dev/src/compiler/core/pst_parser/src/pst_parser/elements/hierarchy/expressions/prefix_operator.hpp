@@ -8,8 +8,8 @@ namespace pst::expr {
 	 */
 	class PrefixOperator: public ExprElement {
 	protected:
-		AccessInternal<ExprElement> expr;
-		Operator                    op;
+		NAMED_CHILD(expr, ExprElement);
+		Operator op;
 
 	public:
 		explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):

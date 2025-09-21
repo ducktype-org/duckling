@@ -7,8 +7,8 @@ namespace pst {
 	 * @brief Alias statement.
 	 */
 	class Alias final: public Stmt {
-		tpc::Identifier            name;
-		AccessInternal<DottedName> points_to;
+		tpc::Identifier name;
+		NAMED_CHILD(points_to, DottedName);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias, ElementKind::Alias);
@@ -35,8 +35,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const final {
-			return true;
+		DeclKind isDeclaration() const final {
+			return DeclKind::Symbol;
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return name.value;
 		}
 	};
 }
