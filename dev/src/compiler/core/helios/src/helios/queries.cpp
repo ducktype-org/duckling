@@ -442,16 +442,14 @@ namespace compiler::helios {
 
 					code::CodeBlock function_body
 						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
-					output.body
-						= std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				} else {
 					CORE_ASSERT(
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-					output.body
-						= std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
 
 				this->out.emplace(std::move(output));
