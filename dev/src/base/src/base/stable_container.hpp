@@ -13,16 +13,21 @@
 namespace base {
 	namespace internal {
 		/**
-		* @class Wrap
-		* @brief this is the class from which BaseCRTP should publicly inherit random access operations (iterator boilerplate)
-		* @note BaseCRTP should hold visible for Wrap member variable `it` and static method `factory(Wrapped)->BaseCRTP`
-		* @tparam Wrapped - type of iterator which is being wrapped (type of `it`)
-		*/
-		template<typename BaseCRTP,typename Wrapped>
+		 * @class Wrap
+		 * @brief this is the class from which BaseCRTP should publicly inherit random access
+		 * operations (iterator boilerplate)
+		 * @note BaseCRTP should hold visible for Wrap member variable `it` and static method
+		 * `factory(Wrapped)->BaseCRTP`
+		 * @tparam Wrapped - type of iterator which is being wrapped (type of `it`)
+		 * @tparam BaseCRTP - a base type for
+		 * [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
+		 */
+		template<typename BaseCRTP, typename Wrapped>
 		class Wrap {
 		private:
 			Wrap() = default;
 			friend BaseCRTP;
+
 		public:
 			using difference_type   = typename Wrapped::difference_type;
 			using iterator_category = std::random_access_iterator_tag;
@@ -32,18 +37,14 @@ namespace base {
 				return self;
 			}
 
-			BaseCRTP operator++(this BaseCRTP &self, int) {
-				return BaseCRTP::factory(self.it++);
-			}
+			BaseCRTP operator++(this BaseCRTP& self, int) { return BaseCRTP::factory(self.it++); }
 
 			BaseCRTP& operator--(this BaseCRTP& self) {
 				--self;
 				return self;
 			}
 
-			BaseCRTP operator--(this BaseCRTP &self, int) {
-				return BaseCRTP::factory(self.it--);
-			}
+			BaseCRTP operator--(this BaseCRTP& self, int) { return BaseCRTP::factory(self.it--); }
 
 			BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
 				self.it += diff;
@@ -95,8 +96,8 @@ namespace base {
 				"When this fail, figure out what to do."
 			);
 
-			using I = typename ContainerT::iterator;
-			using CI = typename ContainerT::const_iterator; 
+			using I  = typename ContainerT::iterator;
+			using CI = typename ContainerT::const_iterator;
 
 			BaseStableVector(ContainerT&& data): data(std::move(data)) {}
 
@@ -168,30 +169,33 @@ namespace base {
 				data.emplace_back(makeBox<Data>(std::forward<Args>(args)...));
 			}
 
-			class Iterator : public Wrap<Iterator, I> {
+			class Iterator: public Wrap<Iterator, I> {
 			private:
 				using Impl = Wrap<Iterator, I>;
 				friend Impl;
 				friend BaseStableVector<Data>;
 				I it;
-				
+
 				static constexpr Iterator factory(I&& u) {
 					Iterator ans;
 					ans.it = std::move(u);
 					return ans;
 				}
+
 			public:
 				using typename Impl::difference_type;
 				using value_type = Data;
-				using reference = value_type &;
-				using pointer = value_type*;
+				using reference  = value_type&;
+				using pointer    = value_type*;
 
 				pointer operator->() const { return it->operator->(); }
+
 				reference operator*() const { return **it; }
+
 				reference operator[](difference_type diff) const { return *it[diff]; }
 			};
 
-			class ConstIterator : public Wrap<ConstIterator, CI> {
+			class ConstIterator: public Wrap<ConstIterator, CI> {
 			private:
 				using Impl = Wrap<ConstIterator, CI>;
 				friend Impl;
@@ -203,23 +207,24 @@ namespace base {
 					ans.it = std::move(u);
 					return ans;
 				}
+
 			public:
 				using typename Impl::difference_type;
 				using value_type = Data;
-				using reference = value_type const &;
-				using pointer = value_type const *;
+				using reference  = const value_type&;
+				using pointer    = const value_type*;
 
 				pointer operator->() const { return it->operator->(); }
+
 				reference operator*() const { return **it; }
+
 				reference operator[](difference_type diff) const { return *it[diff]; }
 			};
 
-			Iterator erase(Iterator pos) {
-				return Iterator::factory(data.erase(pos.it));
-			}
+			Iterator erase(Iterator pos) { return Iterator::factory(data.erase(pos.it)); }
 
 			Iterator begin() { return Iterator::factory(data.begin()); }
-			
+
 			ConstIterator begin() const { return ConstIterator::factory(data.cbegin()); }
 
 			Iterator end() { return Iterator::factory(data.end()); }
