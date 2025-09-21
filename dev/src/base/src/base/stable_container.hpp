@@ -7,7 +7,7 @@
 #include "box.hpp"
 #include "ref.hpp"
 
-#include <deque>
+#include <vector>
 #include <iterator>
 
 namespace base {
