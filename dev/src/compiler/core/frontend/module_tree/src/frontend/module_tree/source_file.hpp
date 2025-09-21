@@ -44,11 +44,6 @@ namespace compiler::frontend {
 		 */
 		void update();
 
-		/*
-		 * This function allows loading the content of the file and cache it only when needed.
-		 */
-		void loadContent();
-
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 		friend struct ImplementationOf_QueryFilePST;

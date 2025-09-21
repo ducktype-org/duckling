@@ -62,7 +62,16 @@ namespace compiler::frontend {
 		parse_tree.reset();
 	}
 
-	void SourceFile::loadContent() {
+	CRef<pst::PST<>> SourceFile::getPST() {
+		if (parse_tree) {
+			return &parse_tree.value();
+		} else {
+			parse_tree.emplace(pst::PST(file));
+			return &parse_tree.value();
+		}
+	}
+
+	base::SharedView SourceFile::getCachedContent() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 		if (to_content.contains(abs_path)) {
 			CORE_ASSERT(
@@ -78,21 +87,7 @@ namespace compiler::frontend {
 		} else {
 			to_content.put(abs_path, file.getContent());
 		}
-	}
-
-	CRef<pst::PST<>> SourceFile::getPST() {
-		if (parse_tree) {
-			return &parse_tree.value();
-		} else {
-			parse_tree.emplace(pst::PST(file));
-			return &parse_tree.value();
-		}
-	}
-
-	base::SharedView SourceFile::getCachedContent() {
-		this->loadContent();
-		auto abs_path = this->file.getFilePath().absolute().getPath();
-		auto it       = to_content.find(abs_path);
+		auto it = to_content.find(abs_path);
 		if (it != to_content.end()) return it->second;
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());

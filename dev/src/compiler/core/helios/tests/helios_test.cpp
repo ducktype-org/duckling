@@ -1100,10 +1100,10 @@ private:
 					));
 
 				// if this ever change, adjust the test:
-				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo0");
-				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo1");
-				auto foo0_body = hout_unit.functions.at(0).content.body;
-				auto foo1_body = hout_unit.functions.at(1).content.body;
+				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo0");
+				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo1");
+				auto foo0_body = hout_unit.functions.at(1).content.body;
+				auto foo1_body = hout_unit.functions.at(0).content.body;
 
 				Ref var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
 					&(*foo0_body->statements.at(0))
