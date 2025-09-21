@@ -107,6 +107,9 @@ namespace base {
 				"When this fail, figure out what to do."
 			);
 
+			using I = typename ContainerT::iterator;
+			using CI = typename ContainerT::const_iterator; 
+
 			BaseStableVector(ContainerT&& data): data(std::move(data)) {}
 
 			BaseStableVector(const ContainerT& data): data(data) {}
@@ -114,9 +117,6 @@ namespace base {
 		public:
 			using RefT  = Ref<Data>;
 			using CRefT = CRef<Data>;
-
-			using Iterator      = ContainerT::iterator;
-			using ConstIterator = ContainerT::const_iterator;
 
 			BaseStableVector()                   = default;
 			BaseStableVector(BaseStableVector&&) = default;
@@ -180,13 +180,59 @@ namespace base {
 				data.emplace_back(makeBox<Data>(std::forward<Args>(args)...));
 			}
 
-			Iterator begin() { return Iterator{ data.begin() }; }
+			class Iterator : public Secret<Iterator>::template Wrap<I> {
+			private:
+				using Impl = typename Secret<Iterator>::template Wrap<I>;
+				friend Impl;
+				friend BaseStableVector<Data>;
+				I it;
+				
+				static constexpr Iterator factory(I&& u) {
+					Iterator ans;
+					ans.it = std::move(u);
+					return ans;
+				}
+			public:
+				using typename Impl::difference_type;
+				using value_type = Data;
+				using reference = value_type &;
+				using pointer = value_type*;
 
-			ConstIterator begin() const { return ConstIterator{ data.cbegin() }; }
+				pointer operator->() const { return it->operator->(); }
+				reference operator*() const { return **it; }
+				reference operator[](difference_type diff) const { return *it[diff]; }
+			};
 
-			Iterator end() { return Iterator{ data.end() }; }
+			class ConstIterator : public Secret<ConstIterator>::template Wrap<CI> {
+			private:
+				using Impl = typename Secret<ConstIterator>::template Wrap<CI>;
+				friend Impl;
+				friend BaseStableVector<Data>;
+				CI it;
 
-			ConstIterator end() const { return ConstIterator{ data.cend() }; }
+				static constexpr ConstIterator factory(CI&& u) {
+					ConstIterator ans;
+					ans.it = std::move(u);
+					return ans;
+				}
+			public:
+				using typename Impl::difference_type;
+				using value_type = Data;
+				using reference = value_type const &;
+				using pointer = value_type const *;
+
+				pointer operator->() const { return it->operator->(); }
+				reference operator*() const { return **it; }
+				reference operator[](difference_type diff) const { return *it[diff]; }
+			};
+
+			Iterator begin() { return Iterator::factory(data.begin()); }
+			
+			ConstIterator begin() const { return ConstIterator::factory(data.cbegin()); }
+
+			Iterator end() { return Iterator::factory(data.end()); }
+
+			ConstIterator end() const { return ConstIterator::factory(data.cend()); }
 		};
 
 	}
