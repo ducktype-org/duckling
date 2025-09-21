@@ -1,3 +1,4 @@
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
@@ -297,9 +298,9 @@ private:
 	}
 
 	void testHoutVisitor() {
-		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::File(path("test_modules/visitor_test_module"))
-		);
+		auto module
+			= compiler::frontend::createModuleTree(fs::File(path("test_modules/visitor_test_module")
+		    ));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -1099,10 +1100,10 @@ private:
 					));
 
 				// if this ever change, adjust the test:
-				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo0");
-				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo1");
-				auto foo0_body = hout_unit.functions.at(0).content.body;
-				auto foo1_body = hout_unit.functions.at(1).content.body;
+				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo0");
+				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo1");
+				auto foo0_body = hout_unit.functions.at(1).content.body;
+				auto foo1_body = hout_unit.functions.at(0).content.body;
 
 				Ref var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
 					&(*foo0_body->statements.at(0))

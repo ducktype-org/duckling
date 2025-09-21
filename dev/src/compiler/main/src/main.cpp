@@ -8,6 +8,7 @@
 
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst.hpp>
@@ -166,8 +167,7 @@ clah::Clah getClahForMain() {
 
 							   // @TODO: error handling
 							   using namespace compiler;
-							   auto root
-								   = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+							   auto root = frontend::createModuleTree(path_to_compile);
 							   auto top_level
 								   = query::entryPoint<helios::QueryTopLevelEntities>(root);
 							   std::cout << top_level->debugPrint();
@@ -209,7 +209,7 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+					auto root = frontend::createModuleTree(path_to_compile);
 
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
@@ -272,8 +272,7 @@ clah::Clah getClahForMain() {
 			}
 		);
 
-							   auto root
-								   = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+							   auto root = frontend::createModuleTree(path_to_compile);
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {
