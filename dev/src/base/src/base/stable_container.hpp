@@ -25,7 +25,7 @@ namespace base {
 
 			/**
 			* @class Wrap
-			* @brief this is the class from which BaseCRTP should publicly inherit random access operations
+			* @brief this is the class from which BaseCRTP should publicly inherit random access operations (iterator boilerplate)
 			* @note BaseCRTP should hold visible for Wrap member variable `it` and static method `factory(Wrapped)->BaseCRTP`
 			* @tparam Wrapped - type of iterator which is being wrapped (type of `it`)
 			*/
@@ -179,11 +179,11 @@ namespace base {
 
 			Iterator begin() { return Iterator{ data.begin() }; }
 
-			ConstIterator begin() const { return ConstIterator{ data.begin() }; }
+			ConstIterator begin() const { return ConstIterator{ data.cbegin() }; }
 
 			Iterator end() { return Iterator{ data.end() }; }
 
-			ConstIterator end() const { return ConstIterator{ data.end() }; }
+			ConstIterator end() const { return ConstIterator{ data.cend() }; }
 		};
 
 	}
