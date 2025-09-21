@@ -31,6 +31,9 @@ namespace base {
 			*/
 			template<typename Wrapped>
 			class Wrap {
+			private:
+				Wrap() = default;
+				friend BaseCRTP;
 			public:
 				using difference_type   = typename Wrapped::difference_type;
 				using iterator_category = std::random_access_iterator_tag;
