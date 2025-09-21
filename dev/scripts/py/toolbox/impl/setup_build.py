@@ -23,6 +23,7 @@ def setup_build_impl(
     coverage,
     linker,
     shared_libs,
+    strip_symbol_information,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -47,13 +48,14 @@ def setup_build_impl(
         f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
         f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
         f"-D BUILD_SHARED_LIBS={'ON' if shared_libs else 'OFF'}",
+        f"-D STRIP_SYMBOL_INFORMATION={'ON' if strip_symbol_information else 'OFF'}",
     ]
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
         else:
             cmd_parts.append(f'-D CMAKE_CXX_FLAGS="-fuse-ld={linker.lower()}"')
-    
+
     cmd = " ".join(cmd_parts)
 
     log_info("Setting up a build folder...")

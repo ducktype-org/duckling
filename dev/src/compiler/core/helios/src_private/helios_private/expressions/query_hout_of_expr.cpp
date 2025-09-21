@@ -374,17 +374,21 @@ namespace compiler::helios::code {
 			}
 
 			void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> stmt) override {
-				// for now we only compile chains of length 1 (i.e. not chains).
+				using namespace ::std::views;
 
-				CORE_ASSERT(stmt->getOperators().size() == 1, "Not a chain of length 1");
+				const auto& pst_operators  = stmt->getOperators();
+				size_t      operator_count = std::ranges::size(pst_operators);
+				size_t      expr_count     = operator_count + 1;
 
-				auto lhs_res = fromPST(ctx, stmt->getSubExpr(0));
-				auto rhs_res = fromPST(ctx, stmt->getSubExpr(1));
-
-				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
-
-				auto lhs = std::move(lhs_res).value();
-				auto rhs = std::move(rhs_res).value();
+				std::vector<Box<Expr>> result_exprs;
+				result_exprs.reserve(expr_count);
+				for (size_t i = 0; i < expr_count; ++i) {
+					auto result = fromPST(ctx, stmt->getSubExpr(i));
+					if (result.hasError())
+						return;
+					else
+						result_exprs.push_back(std::move(result.value()));
+				}
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -394,19 +398,27 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin
-					= binaryBuiltin(stmt->getOperators().at(0), std::move(lhs), std::move(rhs));
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
-				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
-					// failed
+
+				std::vector<BuiltinBinary> operators;
+				operators.reserve(operator_count);
+				for (size_t i = 0; i < operator_count; ++i) {
+					match_optional(findBinaryBuiltin(
+						pst_operators.at(i), result_exprs.at(i).ref(), result_exprs.at(i + 1).ref()
+					)) {
+						opt_some(op) { operators.push_back(op); }
+						opt_none {
+							ctx.log(makeBox<
+									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+								stmt->getSourcePosition(), "No builtin operator found"
+							));
+							return;
+						}
+					}
 				}
+
+				node = makeBox<ChainComparisonExpr>(
+					ctx, std::move(result_exprs), std::move(operators)
+				);
 			}
 		};
 

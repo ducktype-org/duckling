@@ -43,6 +43,7 @@ public:
 		TESTER_ADD_TEST(testGlobals);
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLirGlobal);
+		TESTER_ADD_TEST(testLifetimeFlags);
 	}
 
 private:
@@ -137,7 +138,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			// this might change in the future:
-			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
@@ -252,7 +253,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
 			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
 
 			// Check local variable 'a'
@@ -324,8 +325,24 @@ private:
 			auto some_global_lir = lir::LirGlobal::fromHOUT(ctx, some_global);
 			ASSERT_EQUAL(lir::LirGlobalType::Variable, some_global_lir.type);
 			ASSERT_EQUAL(lir::LirGlobalType::Variable, g_lir.type);
-			ASSERT_EQUAL(false, g_lir.inital_value.has_value());
+			ASSERT_EQUAL(false, g_lir.initial_value.has_value());
 		});
+	}
+
+	void testLifetimeFlags() {
+		// @TODO #1262: this test doesn't make much sense yet, add proper tests when classes and
+		// composite types such as variants are fully added.
+		auto module = getLirOfModule(path("modules/lifetime_flags"));
+		ASSERT_EQUAL(3, module.ctors.size());
+
+		auto my_int = module.houtGlobal("my_int");
+		ASSERT_TRUE(my_int.type.hasNoOpDestructor());
+
+		auto my_bool = module.houtGlobal("my_bool");
+		ASSERT_TRUE(my_bool.type.hasNoOpDestructor());
+
+		auto my_float = module.houtGlobal("my_float");
+		ASSERT_TRUE(my_float.type.hasNoOpDestructor());
 	}
 };
 

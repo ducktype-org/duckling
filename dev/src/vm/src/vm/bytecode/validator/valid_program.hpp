@@ -4,7 +4,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -99,6 +99,13 @@ namespace vm::code {
 		ObjIdNameMap<Function>   function_map;
 		ObjIdNameMap<GlobalData> globals_map;
 
+		/**
+		 * @brief Contains a mapping from function name to function signature for all functions
+		 * available in the program (including builtin functions). Used for type verification of
+		 * class and interface types to check if implementations of declared methods match the
+		 * expected signatures. This map basically stores forward declarations of functions
+		 * available in the program, since `function_map` building is done after type verification.
+		 */
 		base::HashMap<base::StrID, FuncSignature> available_functions;
 
 		TypeContext type_context;

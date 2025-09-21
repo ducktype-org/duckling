@@ -1,7 +1,8 @@
 from .helpers import (
-    bash_command_get_output, 
+    bash_command_get_output,
     log_info,
 )
+
 
 def todo_counter_impl(branch: str, count_only: bool, pattern: list[str]):
 

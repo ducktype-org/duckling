@@ -2,10 +2,7 @@
 
 #include "status.hpp"
 
-#include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
-
-#include <memory>
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
@@ -14,15 +11,6 @@ struct nlohmann::adl_serializer<base::RawView> {
 
 	static void from_json(const json&, const base::RawView&) {
 		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (maybe yet).");
-	}
-};
-
-template<>
-struct nlohmann::adl_serializer<vm::BlockID> {
-	static void to_json(json& j, const vm::BlockID& e) { j = std::to_string(static_cast<u64>(e)); }
-
-	static void from_json(const json& j, vm::BlockID& e) {
-		e = static_cast<vm::BlockID>(std::stoull(j.get<std::string>()));
 	}
 };
 
@@ -46,11 +34,6 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Output, output);
 		};
 
-		struct Block {
-			base::RawView data;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
-		};
-
 		struct Type {
 			TypeCRef type;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, type);
@@ -59,11 +42,6 @@ namespace vm::api {
 		struct VmValue {
 			Box<::vm::VmValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
-		};
-
-		struct BlockIDs {
-			std::vector<BlockID> ids;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(BlockIDs, ids);
 		};
 
 		struct CodePosition {
@@ -76,10 +54,8 @@ namespace vm::api {
 	using Response = std::variant<
 		ProcStatus,
 		response::Output,
-		response::Block,
 		response::Type,
 		response::Empty,
-		response::BlockIDs,
 		response::CodePosition,
 		response::VmValue,
 		ExitValue>;

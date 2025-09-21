@@ -1,6 +1,7 @@
 from ..impl.todo_counter import todo_counter_impl
 from click import command, option
 
+
 @command()
 @option(
     "-b",

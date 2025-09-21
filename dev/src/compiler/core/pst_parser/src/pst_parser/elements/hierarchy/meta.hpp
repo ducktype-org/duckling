@@ -35,11 +35,30 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
+	/**
+	 * @brief Three declaration options:
+	 *
+	 * * None - This statement doesn't introduce any symbols. For example an expression statement or
+	 * a return statement.
+	 * * Symbol - This statement introduces a symbol. For example a function
+	 * declaration, import, using and variable declaration.
+	 * * Transparent - This statement contains or
+	 * links somewhere where there might be introduced. For example a macro expansion or a specifier
+	 * block.
+	 */
+	enum class DeclKind {
+		None,
+		Symbol,
+		Transparent,
+	};
+
 	enum class StmtKind {
 		Import,
 		Using,
 		Alias,
 		Fun,
+		FunDecl,
+		Pattern,
 		Namespace,
 		CodeDecl,
 		StmtSpecifier,
@@ -67,7 +86,8 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<AccessInternal<Attribute>>;
+		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
+		using AttrBoxList = std::vector<Box<Attribute>>;
 
 		AttrList attributes;
 
@@ -75,16 +95,18 @@ namespace pst {
 			  LangElement(position),
 			  kind(kind) {}
 
-		static AttrList collectAttributes(LangParserState& state);
+		static AttrBoxList collectAttributes(LangParserState& state);
 
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
 		 */
-		void addAttributes(AttrList&& additions);
+		void addAttributes(LangParserState& state, AttrBoxList&& additions);
 
 		void dprintAttributes(std::ostream& out) const;
 
 		void dprintPrefix(std::ostream& out) const override;
+
+		void calcElementPathsRecursive() override;
 
 	public:
 		[[nodiscard]]
@@ -133,8 +155,16 @@ namespace pst {
 		 * always be equivalent to intuitive thinking about declarations.
 		 */
 		[[nodiscard]]
-		virtual bool isDeclaration() const {
-			return false;
+		virtual DeclKind isDeclaration() const {
+			return DeclKind::None;
+		}
+
+		/**
+		 * @brief Get the symbol name declared by a given statement if it exists.
+		 */
+		[[nodiscard]]
+		virtual base::Optional<base::StrID> getDeclSymbolName() const {
+			return {};
 		}
 	};
 

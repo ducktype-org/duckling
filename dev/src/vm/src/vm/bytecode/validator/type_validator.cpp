@@ -1,26 +1,14 @@
 #include "type_validator.hpp"
 
-#include <base/string_id.hpp>
-
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace {
-	using namespace vm::code;
-	using FieldVector = std::vector<std::pair<base::StrID, vm::TypeRef>>;
-
-	template<typename T>
-	concept InheritableTypeConcept
-		= std::is_same_v<T, ClassType> || std::is_same_v<T, InterfaceType>;
-	template<typename T>
-	concept FieldableTypeConcept = std::is_same_v<T, ClassType> || std::is_same_v<T, DataType>;
-	template<typename F>
-	concept ErrorFactoryConcept
-		= std::invocable<F> && std::is_base_of_v<ValidationError, std::invoke_result_t<F>>;
-	template<typename T>
-	concept TypeOfDataConcept = std::is_constructible_v<TypeOfData, T>;
+	using namespace vm::code::detail;
 
 /**
  * @brief Retrieves a type with a given name from the `TypeContext` and checks if it has an
@@ -273,10 +261,16 @@ namespace {
 
 	/**
 	 * @brief Validates that there are no duplicate field names within a FieldableType and its
-	 * hierarchy.
+	 * hierarchy and that field types exist in the context.
 	 */
 	template<FieldableTypeConcept FieldableType>
-	void validateFieldDuplicates(const FieldableType& fieldable, const TypeContext& ctx) {
+	void validateFieldDuplicatesAndSubtypeExistence(
+		const FieldableType& fieldable, const TypeContext& ctx
+	) {
+		for (auto& field: fieldable.fields)
+			if (!ctx.getCurrentTypes().contains(field.type))
+				throw UnknownSubtypeError(fieldable, field.type);
+
 		base::HashMap<base::StrID, base::StrID> fields;
 		insertFieldsRecursive(fields, fieldable, fieldable, ctx);
 	}
@@ -295,112 +289,6 @@ namespace {
 	}
 
 	/**
-	 * @brief Recursively builds a vtable layout for an InheritableType.
-	 */
-	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
-	void buildVTableRecursive(
-		const InheritableType&                   inh,
-		const ErrorContextType&                  error_context_inh,
-		base::HashMap<base::StrID, base::StrID>& vtable,
-		vm::TypeMetadata&                        metadata,
-		const TypeContext&                       ctx
-	) {
-		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
-		for (const auto& interface_name: inh.implements) {
-			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(error_context_inh, interface_name); }
-			);
-			buildVTableRecursive(interface, error_context_inh, vtable, metadata, ctx);
-		}
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			if (inh.extends) {
-				const auto& super_class
-					= getType<ClassType>(ctx, *inh.extends, error_context_inh, [&]() {
-						  return InvalidExtendsError(inh, *inh.extends);
-					  });
-				buildVTableRecursive(super_class, error_context_inh, vtable, metadata, ctx);
-			}
-		}
-	}
-
-	/**
-	 * @brief Builds a vector of fields (FieldVector) for an InheritableType. Collects all
-	 * fields from superclasses.
-	 */
-	template<InheritableTypeConcept InheritableType>
-	FieldVector buildFieldVector(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
-	) {
-		auto to_low_type = [&](const TypeOfData& tod) {
-			return metadata.at(VISIT(tod, type, return type.name));
-		};
-		FieldVector fields{ { base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) } };
-
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			std::function<void(const vm::code::ClassType&)> collect_class_fields_recursive
-				= [&](const vm::code::ClassType& clazz) {
-					  if (clazz.extends) {
-						  const auto& super_class_code
-							  = getType<ClassType>(ctx, *clazz.extends, clazz, [&]() {
-									return InvalidExtendsError(clazz, *clazz.extends);
-								});
-						  collect_class_fields_recursive(super_class_code);
-					  }
-
-					  for (const Field& field_code: clazz.fields) {
-						  fields.emplace_back(
-							  field_code.name,
-							  metadata.atMaybe(field_code.type)
-								  .expect<UnknownSubtypeError>(clazz, field_code.name)
-						  );
-					  }
-				  };
-			collect_class_fields_recursive(inh);
-		}
-		return fields;
-	}
-
-	/**
-	 * @brief Builds inheritance metadata for a given inheritable. Builds a field vector and a
-	 * vtable.
-	 */
-	template<InheritableTypeConcept InheritableType>
-	vm::InheritanceMetadata buildInheritanceMetadata(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
-	) {
-		vm::TypeCRef tp            = metadata.at(inh.name);
-		auto         get_type_cref = [&](base::StrID name) -> vm::TypeCRef {
-            return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
-		};
-		auto implements = inh.implements | std::views::transform(get_type_cref)
-		                | std::ranges::to<std::vector>();
-
-		base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
-		for (auto& method: inh.virtual_methods)
-			virtual_methods.put(method.name, get_type_cref(method.type));
-
-		base::HashMap<base::StrID, base::StrID> vtable;
-		buildVTableRecursive(inh, inh, vtable, metadata, ctx);
-
-		vm::InheritanceMetadata::Kind kind;
-		if constexpr (std::is_same_v<InheritableType, ClassType>) {
-			kind = vm::InheritanceMetadata::Class{
-				.is_abstract = inh.is_abstract,
-				.extends     = inh.extends.map(get_type_cref),
-			};
-		} else {
-			kind = vm::InheritanceMetadata::Interface{};
-		}
-
-		return {
-			tp, kind, std::move(implements), std::move(virtual_methods), std::move(vtable),
-		};
-	}
-
-	/**
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
 	void validateType(
@@ -408,11 +296,36 @@ namespace {
 		const TypeContext&                               ctx,
 		const base::HashMap<base::StrID, FuncSignature>& functions
 	) {
+		auto& types = ctx.getCurrentTypes();
 		variant_match(type) {
+			variant_case(PrimitiveType, primitive) {
+				if (primitive.size == 0) throw InvalidPrimitiveSizeError(primitive);
+			}
+			variant_case(PointerType, pointer) {
+				if (!types.contains(pointer.inner))
+					throw UnknownSubtypeError(pointer, pointer.inner);
+			}
+			variant_case(FixedSizeTableType, fixed_table) {
+				if (!types.contains(fixed_table.inner))
+					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
+			}
+			variant_case(DynamicTableType, dynamic_table) {
+				if (!types.contains(dynamic_table.inner))
+					throw UnknownSubtypeError(dynamic_table, dynamic_table.inner);
+			}
+			variant_case(FunctionType, function) {
+				for (auto& param: function.parameters)
+					if (!types.contains(param)) throw UnknownSubtypeError(function, param);
+				if (!types.contains(function.result))
+					throw UnknownSubtypeError(function, function.result);
+			}
 			variant_case(VariantType, variant) {
+				for (auto& alternative: variant.variant_alternatives)
+					if (!types.contains(alternative))
+						throw UnknownSubtypeError(variant, alternative);
 				if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
 			}
-			variant_case(DataType, data) { validateFieldDuplicates(data, ctx); }
+			variant_case(DataType, data) { validateFieldDuplicatesAndSubtypeExistence(data, ctx); }
 			variant_case(InterfaceType, interface) {
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, interface, interface, ctx);
@@ -422,169 +335,66 @@ namespace {
 				validateImplementations(interface, virtual_methods, ctx, functions);
 			}
 			variant_case(ClassType, clazz) {
-				// All virtual methods that can be implemented by this class(including superclass
+				// All virtual methods that can be implemented by this class (including superclass
 				// and interface vmethods as well).
 				base::HashMap<base::StrID, base::StrID> virtual_methods;
 				insertVirtualMethodsRecursive(virtual_methods, clazz, clazz, ctx);
 
-				validateFieldDuplicates(clazz, ctx);
+				validateFieldDuplicatesAndSubtypeExistence(clazz, ctx);
 				validateImplementsDuplicates(clazz);
 				validateVMethodSignatures(clazz, ctx);
 				validateImplementations(clazz, virtual_methods, ctx, functions);
 				if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods, ctx);
 			}
+			variant_case_novalue(OpaqueType) {}
+			variant_default {
+				CORE_PANIC("Unhandled type during type validation: ", typeToString(type));
+			}
 		}
-	}
-
-	/**
-	 * @brief Throws a builder error if types are invalid in current context.
-	 * Checks each type individually and inheritance
-	 * hierarchy soundness.
-	 */
-	void validateTypes(
-		const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
-	) {
-		// Check for cycles in hierarchy.
-		enum Status { Waiting, Visited, Done };
-
-		auto& types = ctx.getCurrentTypes();
-
-		base::HashMap<base::StrID, Status> status;
-		for (const auto& type: types) status.put(typeName(type), Waiting);
-
-		// explicit object parameter lambdas don't seem to work with class members, hence the
-		// reference
-		auto& types_ref = types;
-		auto  helper    = [&](this auto self, const auto& type) {
-            auto name = typeName(type);
-            if (status[name] == Visited)
-                throw CycleInHierarchyError(type);
-            else if (status[name] == Done)
-                return;
-
-            status[name] = Visited;
-            variant_match(type) {
-                variant_case(ClassType, clazz) {
-                    if_opt_some(clazz.extends, superclass) {
-                        if (!types_ref.contains(superclass))
-                            throw InvalidExtendsError(clazz, superclass);
-                        self(*types_ref.at(superclass));
-                    }
-                    for (auto iface: clazz.implements) {
-                        if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz, iface);
-                        self(*types_ref.at(iface));
-                    }
-                }
-                variant_case(InterfaceType, interface) {
-                    for (auto iface: interface.implements) {
-                        if (!types_ref.contains(iface))
-                            throw InvalidImplementsError(interface, iface);
-                        self(*types_ref.at(iface));
-                    }
-                }
-            }
-            status[name] = Done;
-		};
-		for (const auto& type: types) helper(type);
-
-		// @note: Following validation assumes cycles in class hierarchy where detected.
-		for (const auto& type: types) validateType(type, ctx, functions);
 	}
 }
 
-Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
-	const base::HashMap<base::StrID, FuncSignature>& available_functions
-) const {
-	validateTypes(*this, available_functions);
-	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
+void vm::code::detail::validateTypes(
+	const TypeContext& ctx, const base::HashMap<base::StrID, FuncSignature>& functions
+) {
+	// Check for cycles in hierarchy.
+	enum Status { Waiting, Visited, Done };
 
-	// Declare all types first
-	for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
+	auto& types = ctx.getCurrentTypes();
 
-	// Well-define every type.
-	for (const auto& type: types) {
+	base::HashMap<base::StrID, Status> status;
+	for (const auto& type: types) status.put(typeName(type), Waiting);
+
+	auto helper = [&](this auto self, const auto& type) {
+		auto name = typeName(type);
+		if (status[name] == Visited)
+			throw CycleInHierarchyError(type);
+		else if (status[name] == Done)
+			return;
+
+		status[name] = Visited;
 		variant_match(type) {
-			variant_case(PrimitiveType, data) {
-				if (data.size == 0) throw InvalidPrimitiveSizeError(data);
-				metadata->at(data.name)->definePrimitive(data.size);
-			}
-			variant_case(PointerType, data) {
-				metadata->at(data.name)->definePointer(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
-				);
-			}
-			variant_case(FixedSizeTableType, data) {
-				metadata->at(data.name)->defineFixedSizeTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
-					data.table_size
-				);
-			}
-			variant_case(DynamicTableType, data) {
-				metadata->at(data.name)->defineDynamicTable(
-					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
-				);
-			}
-			variant_case(DataType, data) {
-				FieldVector fields;
-				fields.reserve(data.fields.size());
-				for (auto& field: data.fields)
-					fields.emplace_back(
-						field.name,
-						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
-					);
-				metadata->at(data.name)->defineData(fields, {});
-			}
-			variant_case(VariantType, data) {
-				std::vector<vm::TypeRef> variants;
-				variants.reserve(data.variant_alternatives.size());
-				for (auto& variant: data.variant_alternatives)
-					variants.emplace_back(
-						metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
-					);
-				metadata->at(data.name)->defineVariant(variants);
-			}
-			variant_case(FunctionType, data) {
-				std::vector<vm::TypeCRef> parameters;
-				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
-				metadata->at(data.name)->defineFunction(
-					parameters,
-					metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
-				);
-			}
-			variant_case(OpaqueType, opaque) {
-				metadata->at(opaque.name)->defineOpaque(opaque.size);
-			}
 			variant_case(ClassType, clazz) {
-				TypeRef                 tp     = metadata->at(clazz.name);
-				FieldVector             fields = buildFieldVector(clazz, *metadata, *this);
-				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(clazz, *metadata, *this);
-				tp->defineData(fields, std::move(inh_metadata));
+				if_opt_some(clazz.extends, superclass) {
+					if (!types.contains(superclass)) throw InvalidExtendsError(clazz, superclass);
+					self(*types.at(superclass));
+				}
+				for (auto iface: clazz.implements) {
+					if (!types.contains(iface)) throw InvalidImplementsError(clazz, iface);
+					self(*types.at(iface));
+				}
 			}
 			variant_case(InterfaceType, interface) {
-				TypeRef                 tp     = metadata->at(interface.name);
-				FieldVector             fields = buildFieldVector(interface, *metadata, *this);
-				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(interface, *metadata, *this);
-
-				tp->defineData(fields, std::move(inh_metadata));
+				for (auto iface: interface.implements) {
+					if (!types.contains(iface)) throw InvalidImplementsError(interface, iface);
+					self(*types.at(iface));
+				}
 			}
-			variant_default { CORE_PANIC("bad type"); }
 		}
-	}
-	metadata->finalize();
-	return metadata;
-}
+		status[name] = Done;
+	};
+	for (const auto& type: types) helper(type);
 
-const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
-
-void TypeContext::insertType(const TypeOfData& type) {
-	const auto name = typeName(type);
-	match_optional(types.atMaybe(name)) {
-		opt_some(previous_type) {
-			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);
-		}
-		opt_none { types.insert(type, name); }
-	}
+	// @note: Following validation assumes no cycles in class hierarchy were detected.
+	for (const auto& type: types) validateType(type, ctx, functions);
 }

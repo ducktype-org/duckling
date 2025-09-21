@@ -14,7 +14,7 @@ import shlex
 @click.option("-v", default=True, help="Verbose.")
 def save_objdump(filepath, function, o, v):
     """Dumps `opFuns` and `internalCallMain` functions from VM to assembly.
-       Calls "objdump" on VM executable binary file and saves the output to a text file."""
+    Calls "objdump" on VM executable binary file and saves the output to a text file."""
     basename = pathlib.Path(filepath).stem
     result_file_path = o or basename + ".asm"
 
@@ -43,7 +43,7 @@ def save_objdump(filepath, function, o, v):
 def prettify_function_body(lines):
     fun_name = lines[0]
     lines = lines[1:]
-    
+
     # Removes line numbers from objdump output
     lines = [line.split(":")[1:] for line in lines[1:]]  # remove line numbers
     lines = [":".join(line) for line in lines]

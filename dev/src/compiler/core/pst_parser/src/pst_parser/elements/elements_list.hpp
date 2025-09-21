@@ -12,8 +12,9 @@ namespace pst {
 	class AtrArgList;
 	class InitList;
 	class CallList;
+	class FlowPatternList;
 	// Not Statements
-	class FunParam;
+	class Param;
 	class DottedName;
 	class Attribute;
 	class CodeBlock;
@@ -22,6 +23,13 @@ namespace pst {
 	class ClassBlockOrStmt;
 	class RoundGroupExpr;
 	class ExprElement;
+	class FlowPattern;
+	class AnalysisPattern;
+	class DeconstructorPattern;
+	class TuplePattern;
+	class WildcardPattern;
+	class BindingPattern;
+	class ValuePattern;
 	// Statements
 	class Import;
 	class StmtSpecifier;
@@ -40,6 +48,8 @@ namespace pst {
 	class Variable;
 	class Const;
 	class Fun;
+	class FunDecl;
+	class Pattern;
 	class If;
 	class While;
 	class For;
@@ -77,6 +87,7 @@ namespace pst {
 		class ChainExpr;
 		class RoundExpr;
 		class BlockExpr;
+		class MatchExpr;
 		class GeneralPrefix;
 		class GeneralSuffix;
 		class GeneralBinary;
