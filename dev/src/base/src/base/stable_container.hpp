@@ -7,8 +7,8 @@
 #include "box.hpp"
 #include "ref.hpp"
 
-#include <vector>
 #include <iterator>
+#include <vector>
 
 namespace base {
 	namespace internal {
@@ -223,6 +223,8 @@ namespace base {
 
 			Iterator erase(Iterator pos) { return Iterator::factory(data.erase(pos.it)); }
 
+			Iterator erase(ConstIterator pos) const { return Iterator::factory(data.erase(pos.it)); }
+
 			Iterator begin() { return Iterator::factory(data.begin()); }
 
 			ConstIterator begin() const { return ConstIterator::factory(data.cbegin()); }
@@ -272,7 +274,7 @@ namespace base {
 		StableVector<const Data> toConstData() && { return std::move(*this); }
 
 		using Base::size, Base::empty, Base::notEmpty, Base::pushBack, Base::lastIndex,
-			Base::emplaceBack;
+			Base::emplaceBack, Base::erase;
 		using RefT          = Base::CRefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::ConstIterator;
@@ -317,7 +319,7 @@ namespace base {
 		StableVector(const StableVector&) = delete;
 
 		using Base::size, Base::empty, Base::notEmpty, Base::operator[], Base::pushBack, Base::last,
-			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end;
+			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end, Base::erase;
 		using RefT          = Base::RefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::Iterator;
