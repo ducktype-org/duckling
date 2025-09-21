@@ -94,13 +94,13 @@ namespace base {
 
 		/**
 		 * @class BaseStableVector
-		 * @brief Wrapper class over a container (std::deque) which returns Ref/CRef on access.
+		 * @brief Wrapper class over a container (std::vector<Box>) which returns Ref/CRef on access.
 		 * @details It is used to allow a seamless conversion from StableVector<Data> to
 		 * StableVector<const Data>.
 		 */
 		template<class Data>
 		class BaseStableVector {
-			using ContainerT = std::deque<Data>;
+			using ContainerT = std::vector<Box>;
 			ContainerT data;
 			static_assert(
 				std::is_same_v<typename ContainerT::size_type, usize>,
@@ -144,26 +144,26 @@ namespace base {
 
 			[[nodiscard]]
 			RefT operator[](usize pos) {
-				return RefT{ &data.at(pos) };
+				return data.at(pos)->refMut();
 			}
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return CRefT{ &data.at(pos) };
+				return data.at(pos)->ref();
 			}
 
-			void pushBack(const Data& value) { data.emplace_back(value); }
+			void pushBack(const Data& value) { data.emplace_back(makeBox<Data>(value)); }
 
-			void pushBack(Data&& value) { data.emplace_back(std::move(value)); }
+			void pushBack(Data&& value) { data.emplace_back(makeBox<Data>(std::move(value))); }
 
 			[[nodiscard]]
 			RefT last() {
-				return &data.back();
+				return data.back()->refMut();
 			}
 
 			[[nodiscard]]
 			CRefT last() const {
-				return &data.back();
+				return data.back()->ref();
 			}
 
 			/**
@@ -177,7 +177,7 @@ namespace base {
 
 			template<class... Args>
 			void emplaceBack(Args&&... args) {
-				data.emplace_back(std::forward<Args>(args)...);
+				data.emplace_back(makeBox<Data>(std::forward<Args>(args)...));
 			}
 
 			Iterator begin() { return Iterator{ data.begin() }; }
