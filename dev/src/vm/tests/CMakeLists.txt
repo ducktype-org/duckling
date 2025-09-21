@@ -63,6 +63,8 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
                 inheritance/inheritance_hierarchy_correctness.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_vtable_setting_test inheritance/vtable_setting.cpp
+                USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_code_injection_test injection/code_injection.cpp
                 USES ${libvm} Tester ${vmtester})

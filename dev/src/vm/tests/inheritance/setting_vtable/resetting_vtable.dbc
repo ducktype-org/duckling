@@ -1,0 +1,71 @@
+type pointer: pointer_Animal Animal
+type pointer: pointer_Dog Dog
+type pointer: pointer_Chiuaua Chiuaua
+
+# ========== VIRTUAL METHOD DECLARATIONS ==============
+type fun: method_toHumanYears {pointer_Animal} void
+
+# ============ CLASSES DEFINITIONS ============
+type class: Animal {
+    abstract: true;
+    virtual_methods: {
+        toHumanYears: method_toHumanYears, 
+    };
+}
+
+type class: Dog {
+    abstract: false;
+    extends: Animal;
+    implementations: {
+        toHumanYears: dog_year_to_human_years,
+    };
+}
+
+type class: Chiuaua {
+    abstract: false;
+    extends: Dog;
+    implementations: {
+        toHumanYears: chiuaua_year_to_human_years,
+    };
+}
+
+
+# ============ METHODS IMPLEMENTATION ============ 
+
+# Implementation for Dog.
+function dog_year_to_human_years {pointer_Dog} -> void {
+    init_lany_type         call_res,      i64;
+    init_lany_type         call_arg,      i64;
+    mov_l64_imm            call_arg,        0;
+    call_builtin_func      builtin_output_i64;
+    deinit;
+    ret;
+}
+
+# Implementation for Chiuaua.
+function chiuaua_year_to_human_years {pointer_Chiuaua} -> void {
+    init_lany_type         call_res,      i64;
+    init_lany_type         call_arg,      i64;
+    mov_l64_imm            call_arg,        1;
+    call_builtin_func      builtin_output_i64;
+    deinit;
+    ret;
+}
+
+function main {} -> i64 {
+    init_lany_type  chiuaua_ptr, pointer_Chiuaua;
+    alloc_lptr_type chiuaua_ptr, Chiuaua;
+    setVTable_lptr_type  chiuaua_ptr, Chiuaua;
+
+    init_lany_type temp1, pointer_Chiuaua;
+    mov_lptr_lptr temp1, chiuaua_ptr;
+    virtual_call_lptr_method  temp1, toHumanYears;
+
+    init_lany_type  dog_ptr, pointer_Dog;
+	upcast_lptr_lptr dog_ptr, chiuaua_ptr;
+
+    setVTable_lptr_type  dog_ptr, Dog;
+    virtual_call_lptr_method  dog_ptr, toHumanYears;
+
+    ret;
+}

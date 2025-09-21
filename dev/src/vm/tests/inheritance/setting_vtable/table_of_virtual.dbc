@@ -1,0 +1,56 @@
+type pointer: pointer_Animal Animal
+type pointer: pointer_Dog Dog
+
+# ========== VIRTUAL METHOD DECLARATIONS ==============
+type fun: method_toHumanYears {pointer_Animal} void
+
+# ============ CLASSES DEFINITIONS ============
+type class: Animal {
+    abstract: true;
+    virtual_methods: {
+        toHumanYears: method_toHumanYears, 
+    };
+}
+
+type class: Dog {
+    abstract: false;
+    extends: Animal;
+    implementations: {
+        toHumanYears: dog_year_to_human_years,
+    };
+}
+
+type fixed_size_table: dog_table Dog 2
+type pointer:          dog_table_ptr dog_table
+
+# ============ METHODS IMPLEMENTATION ============ 
+
+# Implementation for Dog.
+function dog_year_to_human_years {pointer_Dog} -> void {
+    init_lany_type         call_res,      i64;
+    init_lany_type         call_arg0,     i64;
+    mov_l64_imm            call_arg0,       0;
+    call_builtin_func      builtin_output_i64;
+    deinit;
+    ret;
+}
+
+function main {} -> i64 {
+    # Dog array[2];
+    init_lany_type                  array, dog_table_ptr;
+    alloc_lptr_type                 array, dog_table;
+
+    # Dog* dog_ptr = &array[0]
+    init_lany_type                  index, i64;
+    mov_l64_imm                     index, 0;
+
+    init_lany_type                  dog_ptr, pointer_Dog;
+    fixedSizeTableLea_lptr_lptr     dog_ptr, array;
+    ext_l64 index;
+    
+    # dog_ptr->toHumanYears
+    setVTable_lptr_type dog_ptr, Dog; # vtable only to first element
+    virtual_call_lptr_method dog_ptr, toHumanYears;
+
+    ret;
+}
