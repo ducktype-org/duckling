@@ -437,22 +437,22 @@ namespace compiler::helios {
 				// body:
 				auto fun_body = stmt->getBody();
 
-		if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
-							// The `fun abc() = expr;` case.
+				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					// The `fun abc() = expr;` case.
 
-							code::CodeBlock function_body
-								= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
-							output.content.body
-								= std::make_shared<const code::CodeBlock>(std::move(function_body));
-						} else {
-							CORE_ASSERT(
-								fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
-								"This should not happen"
-							);
-							code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-							output.content.body
-								= std::make_shared<const code::CodeBlock>(std::move(function_body));
-						}
+					code::CodeBlock function_body
+						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
+					output.body
+						= std::make_shared<const code::CodeBlock>(std::move(function_body));
+				} else {
+					CORE_ASSERT(
+						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						"This should not happen"
+					);
+					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
+					output.body
+						= std::make_shared<const code::CodeBlock>(std::move(function_body));
+				}
 
 				this->out.emplace(std::move(output));
 			}

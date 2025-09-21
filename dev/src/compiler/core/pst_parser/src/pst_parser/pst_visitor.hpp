@@ -39,7 +39,7 @@ namespace pst {
 		Destructor,
 		AccessBlock,
 		Param,
-		CallArgument
+		CallArgument,
 		FlowPattern,
 		AnalysisPattern,
 		DeconstructorPattern,

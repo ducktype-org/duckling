@@ -10,7 +10,9 @@ namespace pst {
 	 */
 	class CallArgument final: public NotStmt {
 		base::Optional<tpc::Identifier>               arg_name;
-		AccessInternal<UniversalExprHolderLowerLevel> arg;
+		//AccessInternalAnonymous<UniversalExprHolderLowerLevel> arg;
+		//NAMED_CHILD(UniversalExprHolderLowerLevel, arg);
+		NAMED_CHILD(arg, UniversalExprHolderLowerLevel);
 
 	public:
 		explicit CallArgument(const dia::SourcePosition& pos): NotStmt(pos) {

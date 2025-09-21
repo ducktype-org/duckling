@@ -865,8 +865,8 @@ private:
 
 		for (auto& function: hout->functions) {
 			if (function.original_name == base::StrID("stmtBody1")) {
-				ASSERT_EQUAL(1, function.content.body->statements.size());
-				auto stmt        = function.content.body->statements.at(0).ref();
+				ASSERT_EQUAL(1, function.body->statements.size());
+				auto stmt        = function.body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
 				Ref  ret_expr    = stmt_casted->value.ref();
 				Ref  ret_expr_casted
@@ -1098,7 +1098,7 @@ private:
 						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
 					));
 
-								for (const auto& fun: hout_unit.functions) {
+				for (const auto& fun: hout_unit.functions) {
 					if (fun.original_name.str() == "foo0") {
 						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
 							&(*fun.body->statements[0])
