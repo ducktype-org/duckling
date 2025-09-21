@@ -214,6 +214,10 @@ namespace base {
 				reference operator[](difference_type diff) const { return *it[diff]; }
 			};
 
+			Iterator erase(Iterator pos) {
+				return Iterator::factory(data.erase(pos.it));
+			}
+
 			Iterator begin() { return Iterator::factory(data.begin()); }
 			
 			ConstIterator begin() const { return ConstIterator::factory(data.cbegin()); }
