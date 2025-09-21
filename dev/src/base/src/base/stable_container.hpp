@@ -100,7 +100,7 @@ namespace base {
 		 */
 		template<class Data>
 		class BaseStableVector {
-			using ContainerT = std::vector<Box>;
+			using ContainerT = std::vector<Box<Data>>;
 			ContainerT data;
 			static_assert(
 				std::is_same_v<typename ContainerT::size_type, usize>,
@@ -144,12 +144,12 @@ namespace base {
 
 			[[nodiscard]]
 			RefT operator[](usize pos) {
-				return data.at(pos)->refMut();
+				return data.at(pos).refMut();
 			}
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return data.at(pos)->ref();
+				return data.at(pos).ref();
 			}
 
 			void pushBack(const Data& value) { data.emplace_back(makeBox<Data>(value)); }
@@ -158,12 +158,12 @@ namespace base {
 
 			[[nodiscard]]
 			RefT last() {
-				return data.back()->refMut();
+				return data.back().refMut();
 			}
 
 			[[nodiscard]]
 			CRefT last() const {
-				return data.back()->ref();
+				return data.back().ref();
 			}
 
 			/**
