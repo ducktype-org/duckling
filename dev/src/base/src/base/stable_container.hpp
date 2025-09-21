@@ -13,83 +13,71 @@
 namespace base {
 	namespace internal {
 		/**
-		* @class Secret
-		* @brief purpose of this class is to protect subclass from mimischievous use
-		* @note contents are marked private, and thus only friends can make use of them
-		* @tparam BaseCRTP - a base type for [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
+		* @class Wrap
+		* @brief this is the class from which BaseCRTP should publicly inherit random access operations (iterator boilerplate)
+		* @note BaseCRTP should hold visible for Wrap member variable `it` and static method `factory(Wrapped)->BaseCRTP`
+		* @tparam Wrapped - type of iterator which is being wrapped (type of `it`)
 		*/
-		template<typename BaseCRTP>
-		class Secret {
+		template<typename BaseCRTP,typename Wrapped>
+		class Wrap {
 		private:
+			Wrap() = default;
 			friend BaseCRTP;
+		public:
+			using difference_type   = typename Wrapped::difference_type;
+			using iterator_category = std::random_access_iterator_tag;
 
-			/**
-			* @class Wrap
-			* @brief this is the class from which BaseCRTP should publicly inherit random access operations (iterator boilerplate)
-			* @note BaseCRTP should hold visible for Wrap member variable `it` and static method `factory(Wrapped)->BaseCRTP`
-			* @tparam Wrapped - type of iterator which is being wrapped (type of `it`)
-			*/
-			template<typename Wrapped>
-			class Wrap {
-			private:
-				Wrap() = default;
-				friend BaseCRTP;
-			public:
-				using difference_type   = typename Wrapped::difference_type;
-				using iterator_category = std::random_access_iterator_tag;
+			BaseCRTP& operator++(this BaseCRTP& self) {
+				++self.it;
+				return self;
+			}
 
-				BaseCRTP& operator++(this BaseCRTP& self) {
-					++self.it;
-					return self;
-				}
+			BaseCRTP operator++(this BaseCRTP &self, int) {
+				return BaseCRTP::factory(self.it++);
+			}
 
-				BaseCRTP operator++(this BaseCRTP &self, int) {
-					return BaseCRTP::factory(self.it++);
-				}
+			BaseCRTP& operator--(this BaseCRTP& self) {
+				--self;
+				return self;
+			}
 
-				BaseCRTP& operator--(this BaseCRTP& self) {
-					--self;
-					return self;
-				}
+			BaseCRTP operator--(this BaseCRTP &self, int) {
+				return BaseCRTP::factory(self.it--);
+			}
 
-				BaseCRTP operator--(this BaseCRTP &self, int) {
-					return BaseCRTP::factory(self.it--);
-				}
+			BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
+				self.it += diff;
+				return self;
+			}
 
-				BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
-					self.it += diff;
-					return self;
-				}
+			BaseCRTP operator+(this const BaseCRTP& self, const difference_type diff) {
+				return BaseCRTP::factory(self.it + diff);
+			}
 
-				BaseCRTP operator+(this const BaseCRTP& self, const difference_type diff) {
-					return BaseCRTP::factory(self.it + diff);
-				}
+			friend BaseCRTP operator+(const difference_type diff, const BaseCRTP& iter) {
+				return BaseCRTP::factory(iter.it + diff);
+			}
 
-				friend BaseCRTP operator+(const difference_type diff, const BaseCRTP& iter) {
-					return BaseCRTP::factory(iter.it + diff);
-				}
+			BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
+				self.it -= diff;
+				return self;
+			}
 
-				BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
-					self.it -= diff;
-					return self;
-				}
+			BaseCRTP operator-(this const BaseCRTP& self, const difference_type diff) {
+				return BaseCRTP::factory(self.it - diff);
+			}
 
-				BaseCRTP operator-(this const BaseCRTP& self, const difference_type diff) {
-					return BaseCRTP::factory(self.it - diff);
-				}
+			difference_type operator-(this const BaseCRTP& self, const BaseCRTP& other) {
+				return self.it - other.it;
+			}
 
-				difference_type operator-(this const BaseCRTP& self, const BaseCRTP& other) {
-					return self.it - other.it;
-				}
+			bool operator==(this const BaseCRTP& self, const BaseCRTP& other) {
+				return self.it == other.it;
+			}
 
-				bool operator==(this const BaseCRTP& self, const BaseCRTP& other) {
-					return self.it == other.it;
-				}
-
-				auto operator<=>(this const BaseCRTP& self, const BaseCRTP& other) {
-					return self.it <=> other.it;
-				}
-			};
+			auto operator<=>(this const BaseCRTP& self, const BaseCRTP& other) {
+				return self.it <=> other.it;
+			}
 		};
 
 		/**
@@ -180,9 +168,9 @@ namespace base {
 				data.emplace_back(makeBox<Data>(std::forward<Args>(args)...));
 			}
 
-			class Iterator : public Secret<Iterator>::template Wrap<I> {
+			class Iterator : public Wrap<Iterator, I> {
 			private:
-				using Impl = typename Secret<Iterator>::template Wrap<I>;
+				using Impl = Wrap<Iterator, I>;
 				friend Impl;
 				friend BaseStableVector<Data>;
 				I it;
@@ -203,9 +191,9 @@ namespace base {
 				reference operator[](difference_type diff) const { return *it[diff]; }
 			};
 
-			class ConstIterator : public Secret<ConstIterator>::template Wrap<CI> {
+			class ConstIterator : public Wrap<ConstIterator, CI> {
 			private:
-				using Impl = typename Secret<ConstIterator>::template Wrap<CI>;
+				using Impl = Wrap<ConstIterator, CI>;
 				friend Impl;
 				friend BaseStableVector<Data>;
 				CI it;
