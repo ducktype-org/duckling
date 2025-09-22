@@ -70,12 +70,11 @@ namespace dia_app {
 			);
 
 			static base::Optional<base::Box<CodeSection>> createFromInfo(
-				const message_template::Info&                       info,
-				ViewConstructor&                                    view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context,
-				const std::function<hl_id_t(std::string)>&          hl_name_to_id,
-				const std::function<u32()>&                         get_next_id,
-				const std::function<hl_id_t(std::string)>&          group_to_id
+				const message_template::Info&              info,
+				ViewConstructor&                           view_constructor,
+				const std::function<hl_id_t(std::string)>& hl_name_to_id,
+				const std::function<u32()>&                get_next_id,
+				const std::function<hl_id_t(std::string)>& group_to_id
 			);
 
 			base::Box<::view::Section> getView(ViewConstructor& vc) const override;
@@ -110,10 +109,14 @@ namespace dia_app {
 			);
 
 			static Info createFromInfo(
-				const message_template::Info& info, ViewConstructor& view_constructor
+				const message_template::Info&              info,
+				ViewConstructor&                           view_constructor,
+				const std::function<hl_id_t(std::string)>& hl_name_to_id,
+				const std::function<u32()>&                get_next_id,
+				const std::function<hl_id_t(std::string)>& group_to_id
 			);
 
-			base::Box<::view::Info> getView() const;
+			base::Box<::view::Info> getView(ViewConstructor& vc) const;
 		};
 
 		class Diagnostic {
@@ -123,9 +126,14 @@ namespace dia_app {
 		public:
 			Diagnostic(std::vector<Info> infos);
 
-			static Diagnostic createFromViewConstructor(ViewConstructor& view_constructor);
+			static Diagnostic createFromViewConstructor(
+				ViewConstructor&                           view_constructor,
+				const std::function<hl_id_t(std::string)>& hl_name_to_id,
+				const std::function<u32()>&                get_next_id,
+				const std::function<hl_id_t(std::string)>& group_to_id
+			);
 
-			base::Box<::view::Diagnostic> getView() const;
+			base::Box<::view::Diagnostic> getView(ViewConstructor& vc) const;
 		};
 	}  // namespace view_manager
 }  // namespace dia_app

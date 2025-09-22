@@ -338,10 +338,6 @@ namespace dia_app {
 			}
 		};
 
-		// @TODO implement toComponent in this visitor pattern.
-		// This will enable great decoupling between the View Constructor
-		// and View Manager source code and facilitate further development
-		// of the laziness mechanism.
 		class ToComponentVisitor {
 		private:
 			ViewConstructor& vc;
