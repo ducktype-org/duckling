@@ -55,7 +55,7 @@ namespace query {
 
 		if (was_provide_call) data_ref->num_provide_calls += 1;
 
-		data_ref->total_call_time += this->call_time.duration();
+		data_ref->total_call_time.value += this->call_time.duration().value;
 	}
 
 	void printStats() {
