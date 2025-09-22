@@ -22,19 +22,14 @@ namespace base {
 		template<class Data>
 		class BaseStableVector {
 		private:
+			using father_t = BaseStableVector;
 			class Node {
 				usize idx;
-				BaseStableVector& father;
+				father_t& father;
 				Data content;
 
-				Node(usize p, BaseStableVector& f, const Data& c): idx(p), father(f), content(c) {}
-				Node(usize p, BaseStableVector& f, Data&& c):
-					  idx(p),
-					  father(f),
-					  content(std::move(c)) {}
-
 				template<typename... Args>
-				Node(usize p, BaseStableVector& f, Args&&... args):
+				Node(usize p, father_t& f, Args&&... args):
 					  idx(p),
 					  father(f),
 					  content(std::forward<Args>(args)...) {}
@@ -243,16 +238,18 @@ namespace base {
 			class Iterator: public Wrap<Iterator, Data> {
 			private:
 				friend Wrap<Iterator, Data>;
-				friend BaseStableVector;
+				friend father_t;
 				I it;
+				father_t* father;
 			};
 			friend Wrap<Iterator, Data>;
 
 			class ConstIterator: public Wrap<ConstIterator, const Data> {
 			private:
 				friend Wrap<ConstIterator, const Data>;
-				friend BaseStableVector;
+				friend father_t;
 				CI it;
+				father_t* father;
 			};
 			friend Wrap<ConstIterator, const Data>;
 
