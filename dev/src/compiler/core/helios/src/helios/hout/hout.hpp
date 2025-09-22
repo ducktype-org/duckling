@@ -87,13 +87,14 @@ namespace compiler::helios {
 	/**
 	 * @brief placeholder for functions, methods, etc. It is declaration extended by function content.
 	 */
-	struct HOUTFunction: public HOUTFunctionDeclaration {
-		using HOUTFunctionDeclaration::HOUTFunctionDeclaration;
+	struct HOUTFunction {
 		// @TODO (maybe in declaration?):
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunction(const HOUTFunctionDeclaration&);
 		HOUTFunction(HOUTFunctionDeclaration&&);
+
+		HOUTFunctionDeclaration declaration;
 
 		/**
 		 * @note use of shared_ptr's is intentional, as they
@@ -101,7 +102,13 @@ namespace compiler::helios {
 		 * In the future we might optimize it to single (or zero) shared_ptr, but
 		 * that will require some boilerplate.
 		 */
+
 		std::shared_ptr<const code::CodeBlock> body;
+
+		bool operator==(const HOUTFunction& oth) const { return declaration == oth.declaration; }
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
 
 		[[nodiscard]]
 		std::string debugPrint() const;

@@ -640,7 +640,7 @@ namespace compiler::mir {
 			variant_match(function_helios_symbol) {
 				variant_case(FunctionSymID, function_sym) {
 					CORE_ASSERT(
-						function_sym.id == hout_function.original_symbol,
+						function_sym.id == hout_function.declaration.original_symbol,
 						"Bad function passed to LocalVarCollectionVisitor"
 					);
 				}
@@ -654,7 +654,7 @@ namespace compiler::mir {
 			}
 
 			u64 parameter_index = 0;
-			for (const auto& parameter: *hout_function.parameters) {
+			for (const auto& parameter: *hout_function.declaration.parameters) {
 				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
 				local->setLifetimeScope(function.getTopLevelScope());
 				parameter_index++;
@@ -1381,8 +1381,9 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
-		FunctionBuilder function_builder{ ctx, FunctionSymID{ function.original_symbol } };
-		function_builder.setName(function.original_name);
+		FunctionBuilder function_builder{ ctx,
+			                              FunctionSymID{ function.declaration.original_symbol } };
+		function_builder.setName(function.declaration.original_name);
 
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);

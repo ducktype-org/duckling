@@ -68,19 +68,22 @@ namespace compiler::helios {
 		return out.str();
 	}
 
+	u64 HOUTFunction::queryUnstablePerfectHash() const {
+		// @note for know it doesn't depend on body
+		return declaration.queryUnstablePerfectHash();
+	}
+
 	std::string HOUTFunction::debugPrint() const {
 		std::stringstream out;
 		out << "{\n";
 		for (auto& stmt: body->statements) stmt->debugPrint(out, 1);
 		out << "}\n";
-		return HOUTFunctionDeclaration::debugPrint() + out.str();
+		return declaration.debugPrint() + out.str();
 	}
 
-	HOUTFunction::HOUTFunction(const HOUTFunctionDeclaration& other):
-		  HOUTFunctionDeclaration(other) {}
+	HOUTFunction::HOUTFunction(const HOUTFunctionDeclaration& other): declaration(other) {}
 
-	HOUTFunction::HOUTFunction(HOUTFunctionDeclaration&& other):
-		  HOUTFunctionDeclaration(std::move(other)) {}
+	HOUTFunction::HOUTFunction(HOUTFunctionDeclaration&& other): declaration(std::move(other)) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		std::stringstream out;

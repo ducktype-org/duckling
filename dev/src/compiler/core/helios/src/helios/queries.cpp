@@ -113,7 +113,7 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: rest, flags, attributes, etc
-				HOUTFunction output(original_symbol, ctx);
+				HOUTFunctionDeclaration output(original_symbol, ctx);
 
 				std::vector<code::Parameter> parameters;
 				for (auto param: *stmt->getParams().unlock(ctx)) {
