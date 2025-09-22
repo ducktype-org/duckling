@@ -4,6 +4,7 @@
 #include "utils.hpp"
 
 #include <proto/view.pb.h>
+
 #include <memory>
 
 namespace dia_app {
@@ -80,10 +81,10 @@ namespace dia_app {
 			const InteractiveComponent& component
 		) {
 			auto [visible_suffix, visible_mid] = component.primary->accept(*this);
-			auto wrap_in_interactive = [&](base::Optional<base::Box<::view::HlComponent>> son)
-				->base::Optional<base::Box<::view::HlComponent>> {
+			auto wrap_in_interactive = [&](base::Optional<base::Box<::view::HlComponent>> son
+			                           ) -> base::Optional<base::Box<::view::HlComponent>> {
 				if (son.has_value()) {
-					auto result = makeBox<::view::HlComponent>();
+					auto  result            = makeBox<::view::HlComponent>();
 					auto* interactive_proto = result->mutable_interactive_component();
 					interactive_proto->set_component_id(component.id);
 					interactive_proto->set_status(
@@ -92,7 +93,8 @@ namespace dia_app {
 							: ::view::VisibilityStatus::Alternative
 					);
 					// Need a releasable owner for protobuf adoption
-					std::unique_ptr<::view::HlComponent> primary_ptr = std::make_unique<::view::HlComponent>();
+					std::unique_ptr<::view::HlComponent> primary_ptr
+						= std::make_unique<::view::HlComponent>();
 					primary_ptr->Swap(&*son.value());
 					interactive_proto->set_allocated_primary_component(primary_ptr.release());
 					return result;
@@ -101,9 +103,8 @@ namespace dia_app {
 				}
 			};
 			std::vector<line_data_t<::view::HlComponent>> result;
-			for (auto& mid: visible_mid) {
+			for (auto& mid: visible_mid)
 				result.emplace_back(mid.first, wrap_in_interactive(std::move(mid.second)));
-			}
 			return { wrap_in_interactive(std::move(visible_suffix)), std::move(result) };
 		}
 
@@ -123,7 +124,8 @@ namespace dia_app {
 			// If there are associated side infos, expose component_id for interactions.
 			if (!component.assoc_side_entries.empty())
 				nohl_component_box->mutable_text_component()->set_component_id(component.id);
-			return { line_suffix_data_t<::view::NoHlComponent>{ std::move(nohl_component_box) }, std::vector<line_data_t<::view::NoHlComponent>>{} };
+			return { line_suffix_data_t<::view::NoHlComponent>{ std::move(nohl_component_box) },
+				     std::vector<line_data_t<::view::NoHlComponent>>{} };
 		}
 
 		component_get_view_data_t<::view::NoHlComponent> GetNoHlViewVisitor::visitCodeComponent(
@@ -194,10 +196,10 @@ namespace dia_app {
 			const InteractiveComponent& component
 		) {
 			auto [visible_suffix, visible_mid] = component.primary->accept(*this);
-			auto wrap_in_interactive = [&](base::Optional<base::Box<::view::NoHlComponent>> son)
-				->base::Optional<base::Box<::view::NoHlComponent>> {
+			auto wrap_in_interactive = [&](base::Optional<base::Box<::view::NoHlComponent>> son
+			                           ) -> base::Optional<base::Box<::view::NoHlComponent>> {
 				if (son.has_value()) {
-					auto result = makeBox<::view::NoHlComponent>();
+					auto  result            = makeBox<::view::NoHlComponent>();
 					auto* interactive_proto = result->mutable_interactive_component();
 					interactive_proto->set_component_id(component.id);
 					interactive_proto->set_status(
@@ -206,7 +208,8 @@ namespace dia_app {
 							: ::view::VisibilityStatus::Alternative
 					);
 					// Need a releasable owner for protobuf adoption
-					std::unique_ptr<::view::NoHlComponent> primary_ptr = std::make_unique<::view::NoHlComponent>();
+					std::unique_ptr<::view::NoHlComponent> primary_ptr
+						= std::make_unique<::view::NoHlComponent>();
 					primary_ptr->Swap(&*son.value());
 					interactive_proto->set_allocated_primary_component(primary_ptr.release());
 					return result;
@@ -215,7 +218,8 @@ namespace dia_app {
 				}
 			};
 			std::vector<line_data_t<::view::NoHlComponent>> result;
-			for (auto& mid: visible_mid) result.emplace_back(mid.first, wrap_in_interactive(std::move(mid.second)));
+			for (auto& mid: visible_mid)
+				result.emplace_back(mid.first, wrap_in_interactive(std::move(mid.second)));
 			return { wrap_in_interactive(std::move(visible_suffix)), std::move(result) };
 		}
 
