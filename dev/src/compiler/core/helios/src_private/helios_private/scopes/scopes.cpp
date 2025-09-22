@@ -28,6 +28,7 @@
 #include <query_framework/query_result.hpp>
 
 #include <set>
+#include <iostream>
 
 namespace compiler::helios {
 
@@ -208,9 +209,11 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
+			std::cout << "QueryPrimaryCodeScopeFor\n";
 			auto element            = element_key.element.unlock(ctx);
 			auto element_scope_kind = getScopeKind(ctx, element_key.element);
 
+			std::cout << "Got element scope kind\n";
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(
@@ -219,12 +222,15 @@ namespace compiler::helios {
 				));
 			}
 
+			std::cout << "element valid\n";
+
 			ScopeID parent = element->getParent().has_value()
 			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
 			                   : ctx.query<QueryRootScopeOf>(
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );
 
+			std::cout << "Got parent\n";
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
 			// simple parent sanity check:

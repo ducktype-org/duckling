@@ -194,6 +194,8 @@ namespace compiler::helios::code {
 				// note: this is a mock, it should be unified with ChainExpr
 				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
+				std::cout << "Got scope\n";
+
 				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 					stmt->getName().position, ctx, stmt->getName().value
 				);
