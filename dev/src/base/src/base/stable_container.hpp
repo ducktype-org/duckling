@@ -14,75 +14,6 @@
 namespace base {
 	namespace internal {
 		/**
-		 * @class Wrap
-		 * @brief this is the class from which BaseCRTP should publicly inherit random access
-		 * operations (iterator boilerplate)
-		 * @note BaseCRTP should hold visible for Wrap member variable `it` and static method
-		 * `factory(Wrapped)->BaseCRTP`
-		 * @tparam Wrapped - type of iterator which is being wrapped (type of `it`)
-		 * @tparam BaseCRTP - a base type for
-		 * [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
-		 */
-		template<typename BaseCRTP, typename Wrapped>
-		class Wrap {
-		private:
-			Wrap() = default;
-			friend BaseCRTP;
-
-		public:
-			using difference_type   = i64;
-			using iterator_category = std::random_access_iterator_tag;
-
-			BaseCRTP& operator++(this BaseCRTP& self) {
-				BaseCRTP::factory(self, 1);
-				return self;
-			}
-
-			BaseCRTP operator++(this BaseCRTP& self, int) { return BaseCRTP::factory(self, 1); }
-
-			BaseCRTP& operator--(this BaseCRTP& self) {
-				BaseCRTP::factory(self, -1);
-				return self;
-			}
-
-			BaseCRTP operator--(this BaseCRTP& self, int) { return BaseCRTP::factory(self, -1); }
-
-			BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
-				BaseCRTP::factory(self, diff);
-				return self;
-			}
-
-			BaseCRTP operator+(this BaseCRTP self, const difference_type diff) {
-				return self += diff;
-			}
-
-			friend BaseCRTP operator+(const difference_type diff, BaseCRTP iter) {
-				return iter += diff;
-			}
-
-			BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
-				BaseCRTP::factory(self, - diff);
-				return self;
-			}
-
-			BaseCRTP operator-(this BaseCRTP self, const difference_type diff) {
-				return self -= diff;
-			}
-
-			difference_type operator-(this const BaseCRTP& self, const BaseCRTP& other) {
-				return BaseCRTP::getPos(self) - BaseCRTP::getPos(other);
-			}
-
-			bool operator==(this const BaseCRTP& self, const BaseCRTP& other) {
-				return (self - other) == 0;
-			}
-
-			auto operator<=>(this const BaseCRTP& self, const BaseCRTP& other) {
-				return (self - other) <=> 0;
-			}
-		};
-
-		/**
 		 * @class BaseStableVector
 		 * @brief Wrapper class over a container (std::vector<Box>) which returns Ref/CRef on access.
 		 * @details It is used to allow a seamless conversion from StableVector<Data> to
@@ -193,69 +124,137 @@ namespace base {
 				data.emplace_back(makeBox<Node>(data.size(), *this, std::forward<Args>(args)...));
 			}
 
-			class Iterator: public Wrap<Iterator, I> {
+		private:
+			/**
+			* @class Wrap
+			* @brief this is the class from which BaseCRTP should publicly inherit random access
+			* operations (iterator boilerplate)
+			* @tparam ValT - type of hel value (used to determine iterator traits)
+			* @tparam BaseCRTP - a base type for
+			* [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
+			*/
+			template <typename BaseCRTP, typename ValT>
+			class Wrap {
 			private:
-				using Impl = Wrap<Iterator, I>;
-				friend Impl;
-				friend BaseStableVector<Data>;
-				I it;
+				Wrap() = default;
+				friend BaseCRTP;
 
-				static constexpr u64 getPos(Iterator& iter) {
+				static constexpr u64 getPos(const BaseCRTP& iter) {
 					return iter.it == nullptr
-					       ? iter.it->father.size()
-						   : iter.it->idx; 
+							? iter.father->size()
+							: iter.it->idx;
 				}
 
-				static constexpr Iterator factory(Iterator& iter, i64 diff) {
-					I ans = iter;
-					u64 newPos = getPos(iter) + diff;
-					auto& arr = iter->father;
+				static constexpr BaseCRTP factory(BaseCRTP& iter, i64 diff) {
+					BaseCRTP ans = iter;
+					u64 newPos = getPos(iter) + diff;	// <- always positive: negatives are just really big numbers
+					const auto& data = iter.father->data;
 
-					iter = (newPos < arr.size())
-						? arr[newPos].refMut()->get()
+					iter.it = (newPos < data.size())
+						? data[newPos]
 						: nullptr;
 					
 					return ans;
 				}
-
-			public:
-				using typename Impl::difference_type;
-				using value_type = Data;
-				using reference  = value_type&;
-				using pointer    = value_type*;
-
-				pointer operator->() const { return &it->content; }
-
-				reference operator*() const { return it->content; }
-
-				reference operator[](difference_type diff) const { return *(this + diff); }
-			};
-
-			class ConstIterator: public Wrap<ConstIterator, CI> {
-			private:
-				using Impl = Wrap<ConstIterator, CI>;
-				friend Impl;
-				friend BaseStableVector<Data>;
-				CI it;
-
-				static constexpr ConstIterator factory(CI&& u) {
-					ConstIterator ans;
-					ans.it = std::move(u);
-					return ans;
+				
+				static constexpr void assertValid(const BaseCRTP& iter) {
+					assert(iter.it != nullptr);
+					
+					const auto& node = *iter.it;
+					assert(iter.father == &node.father);
+					assert(node.content.has_value());		// <- Could be removed for performance
+					
+					const auto& data = iter.father->data;
+					assert(node.idx < data.size());
+					assert(iter.it == data[node.idx]);
 				}
 
 			public:
-				using typename Impl::difference_type;
-				using value_type = Data;
-				using reference  = const value_type&;
-				using pointer    = const value_type*;
+				using difference_type = i64;
+				using iterator_category = std::random_access_iterator_tag;
+				using value_type = std::remove_cvref_t<ValT>;
+				using reference = ValT&;
+				using pointer = ValT*;
+				
+				BaseCRTP& operator++(this BaseCRTP& self) {
+					factory(self, 1);
+					return self;
+				}
 
-				pointer operator->() const { return &it->content; }
+				BaseCRTP operator++(this BaseCRTP& self, int) { return factory(self, 1); }
 
-				reference operator*() const { return it->content; }
+				BaseCRTP& operator--(this BaseCRTP& self) {
+					factory(self, -1);
+					return self;
+				}
 
-				reference operator[](difference_type diff) const { return *(this + diff); }
+				BaseCRTP operator--(this BaseCRTP& self, int) { return factory(self, -1); }
+
+				BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
+					factory(self, diff);
+					return self;
+				}
+
+				BaseCRTP operator+(this BaseCRTP self, const difference_type diff) {
+					return self += diff;
+				}
+
+				friend BaseCRTP operator+(const difference_type diff, BaseCRTP iter) {
+					return iter += diff;
+				}
+
+				BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
+					factory(self, - diff);
+					return self;
+				}
+
+				BaseCRTP operator-(this BaseCRTP self, const difference_type diff) {
+					return self -= diff;
+				}
+
+				difference_type operator-(this const BaseCRTP& self, const BaseCRTP& other) {
+					return getPos(self) - getPos(other);
+				}
+
+				bool operator==(this const BaseCRTP& self, const BaseCRTP& other) {
+					return (self - other) == 0;
+				}
+
+				auto operator<=>(this const BaseCRTP& self, const BaseCRTP& other) {
+					return (self - other) <=> 0;
+				}
+
+				pointer operator->(this const BaseCRTP &self) {
+					assertValid(self);
+					return &self.it->content.value();
+				}
+
+				reference operator*(this const BaseCRTP &self) {
+					assertValid(self);
+					return self.it->content.value();
+				}
+
+				reference operator[](this const BaseCRTP &self, difference_type diff) {
+					return *(self + diff);
+				}
 			};
+
+
+			class Iterator: public Wrap<Iterator, Data> {
+			private:
+				friend Wrap<Iterator, Data>;
+				friend BaseStableVector;
+				I it;
+			};
+			friend Wrap<Iterator, Data>;
+
+			class ConstIterator: public Wrap<ConstIterator, const Data> {
+			private:
+				friend Wrap<ConstIterator, const Data>;
+				friend BaseStableVector;
+				CI it;
+			};
+			friend Wrap<ConstIterator, const Data>;
 
 			Iterator erase(Iterator del) {
 				u64 pos = Iterator::getPos(del);
