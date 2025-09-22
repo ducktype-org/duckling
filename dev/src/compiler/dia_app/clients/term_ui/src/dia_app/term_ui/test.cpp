@@ -64,7 +64,7 @@ Info sample_2() {
 		5'051,
 		"that is quite some underlining",
 		"The underlining strategy is complex and non-trivial. It may be used to convey additional "
-	    "information.",
+		"information.",
 		code
 	);
 
@@ -125,7 +125,7 @@ Info sample_5() {
 		15,
 		"docs color, nice one",
 		"Again, do not use error underlining within non-error messages. This is for demonstration "
-	    "purposes only.",
+		"purposes only.",
 		code
 	);
 

@@ -17,9 +17,7 @@ json dia::InteractiveMessage::tojson() const {
 		for (auto& note: notes) {
 			auto note_symbols = note.second->get_symbols();
 			content_symbols.insert(note_symbols.begin(), note_symbols.end());
-			if (note.second->is_displayed()) {
-				res["displayed_secondary_infos"].push_back(note.first);
-			}
+			if (note.second->is_displayed()) res["displayed_secondary_infos"].push_back(note.first);
 		}
 		if (!content_symbols.empty()) {
 			json j = content_symbols;

@@ -26,9 +26,7 @@ namespace dia_app {
 		 */
 		class ViewManager {
 		public:
-			static ViewManager createFromJson(const json& input) {
-				return ViewManager();
-			}
+			static ViewManager createFromJson(const json& input) { return ViewManager(); }
 
 			void getView(::view::ViewResponse* response) {}
 

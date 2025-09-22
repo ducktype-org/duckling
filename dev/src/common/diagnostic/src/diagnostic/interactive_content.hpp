@@ -1,17 +1,19 @@
 #pragma once
 
 #include "common.hpp"
-#include "diagnostic/source_position.hpp"
 #include "interactive_code.hpp"
 #include "serializable.hpp"
 #include "typesystem/higher/abstract_type.hpp"
 
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <json/json.hpp>
 
 #include "base/optional.hpp"
 #include <base/box.hpp>
+
+#include "diagnostic/source_position.hpp"
+
+#include <json/json.hpp>
 
 #include <string_view>
 #include <utility>
@@ -132,9 +134,9 @@ namespace dia {
 			  InteractiveContent(
 				  ContentType::NOTE, family, name, std::move(params), std::move(code_sample)
 			  ) {}
-		bool is_displayed() const {
-			return is_default_displayed;
-		}
+
+		bool is_displayed() const { return is_default_displayed; }
+
 	private:
 		const bool is_default_displayed = true;
 	};

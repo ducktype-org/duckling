@@ -3,11 +3,12 @@
 #include "../../hierarchy/expr_holders.hpp"                            // IWYU pragma: keep
 #include "../../hierarchy/expressions/comma.hpp"
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
-#include "diagnostic/interactive_logger.hpp"
-#include "diagnostic/interactive_message.hpp"
 #include "preamble.hpp"
 
 #include "base/box.hpp"
+
+#include "diagnostic/interactive_logger.hpp"
+#include "diagnostic/interactive_message.hpp"
 
 namespace pst {
 	class ForBracketError final: public dia::Error {

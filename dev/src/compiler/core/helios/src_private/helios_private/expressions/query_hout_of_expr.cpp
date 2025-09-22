@@ -1,8 +1,5 @@
 #include "query_hout_of_expr.hpp"
 
-#include "diagnostic/interactive_logger.hpp"
-#include "diagnostic/interactive_message.hpp"
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -23,6 +20,8 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 
+#include "diagnostic/interactive_logger.hpp"
+#include "diagnostic/interactive_message.hpp"
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
@@ -171,7 +170,9 @@ namespace compiler::helios::code {
 					lhs = std::move(fromPST(ctx, stmt->getLeftOperand())).value();
 					rhs = std::move(fromPST(ctx, stmt->getRightOperand())).value();
 
-			dia::InteractiveLogger::log(base::makeBox<dia::TODOError>(stmt->getSourcePosition(), "just testing"));
+					dia::InteractiveLogger::log(
+						base::makeBox<dia::TODOError>(stmt->getSourcePosition(), "just testing")
+					);
 					dia::InteractiveLogger::log(base::makeBox<dia::OperatorNotFound>(
 						stmt->getSourcePosition(),
 						stmt->getOperator(),
