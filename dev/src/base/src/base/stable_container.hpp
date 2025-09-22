@@ -146,6 +146,7 @@ namespace base {
 			private:
 				Wrap() = default;
 				friend BaseCRTP;
+				friend father_t;
 
 				static constexpr u64 getPos(const BaseCRTP& iter) {
 					return iter.it == nullptr
@@ -164,7 +165,7 @@ namespace base {
 					
 					return ans;
 				}
-				
+
 				static constexpr void assertValid(const BaseCRTP& iter) {
 					CORE_ASSERT(iter.it != nullptr, "iterator is end() of container; don't dereference");
 					

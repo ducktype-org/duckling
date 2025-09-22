@@ -15,7 +15,8 @@ class StableListTestSimple: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(simpleTest);;
+		TESTER_ADD_TEST(removalStabilityTest);
 		TESTER_ADD_TEST(stableHashMapTest);
 		TESTER_ADD_TEST(stableHashMapTestStability);
 	}
@@ -72,6 +73,25 @@ private:
 
 		assertTrue(*ref == 4, "Stable list ref not stable");
 		assertTrue(*c_ref == 2, "Bad stable list c_ref");
+	}
+
+	void removalStabilityTest() {
+		base::StableVector<usize> vector;
+		std::vector<Ref<usize>>   ptrs;
+
+		for (usize i = 0; i < 100; i++) {
+			vector.pushBack(i);
+			ptrs.push_back(vector[i]);
+		}
+
+		for (usize x = 0; x < 100; x++) {
+			usize idx = ((x * 3) + 7) % vector.size();
+			Ref<usize> el = vector[idx];
+			static usize orig_idx = *el;
+			ASSERT_EQUAL(el, ptrs[orig_idx]);
+			auto remove = vector.begin() + i64(idx);
+			vector.erase(remove);
+		}
 	}
 
 	template<class StableIt>
