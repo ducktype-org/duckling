@@ -106,7 +106,7 @@ namespace compiler::helios {
 
 			base::Optional<HOUTFunctionDeclaration> out;
 
-			declarationVisitor(query::Context& ctx, SymID symbol):
+			DeclarationVisitor(query::Context& ctx, SymID symbol):
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
@@ -164,7 +164,7 @@ namespace compiler::helios {
 				"Function declaration processing called on non-function symbol"
 			);
 
-			declarationVisitor func_maker(ctx, key);
+			DeclarationVisitor func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);
 
 			return func_maker.out.value();

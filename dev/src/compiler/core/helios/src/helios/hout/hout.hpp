@@ -69,9 +69,9 @@ namespace compiler::helios {
 		 */
 		helios::ScopeID top_lifetime_scope;
 
-		bool operator==(const HOUTFunctionDeclaration& oth) const {
+		/*bool operator==(const HOUTFunctionDeclaration& oth) const {
 			return original_symbol == oth.original_symbol;
-		}
+		}*/
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -105,7 +105,7 @@ namespace compiler::helios {
 
 		std::shared_ptr<const code::CodeBlock> body;
 
-		bool operator==(const HOUTFunction& oth) const { return declaration == oth.declaration; }
+		//bool operator==(const HOUTFunction& oth) const { return declaration == oth.declaration; }
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
