@@ -1,9 +1,8 @@
 #pragma once
 
 #include "expr_lowering.hpp"
-#include "stmt_lowering.hpp"
-
 #include "mir_builders.hpp"
+#include "stmt_lowering.hpp"
 
 #include <mir/mir_structure/mir_structure.hpp>
 
