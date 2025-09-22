@@ -37,6 +37,8 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunctionDeclaration final {
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
+		// @TODO:
+		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunctionDeclaration() = delete;
 
@@ -84,8 +86,6 @@ namespace compiler::helios {
 	 * @brief placeholder for functions, methods, etc. It is declaration extended by function content.
 	 */
 	struct HOUTFunction final {
-		// @TODO (maybe in declaration?):
-		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunction(const HOUTFunctionDeclaration&);
 		HOUTFunction(HOUTFunctionDeclaration&&);
