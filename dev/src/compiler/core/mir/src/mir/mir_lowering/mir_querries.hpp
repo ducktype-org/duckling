@@ -9,7 +9,7 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::mir {
-
+	
 	struct KeyOf_LowerToMirFunction {
 		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
 		helios::HOUTFunction function;

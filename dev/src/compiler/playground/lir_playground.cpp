@@ -1,7 +1,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_querries.hpp>
 
 #include <base/int_conv.hpp>
 #include <base/variant.hpp>

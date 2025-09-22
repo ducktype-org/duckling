@@ -322,6 +322,27 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Creates construct flag for given local.
+	 */
+	constexpr OperationFlag flagConstruct(LocalRef local) {
+		return { .flag = OperationFlag::Flag::Construct, .local = local };
+	}
+
+	/**
+	 * @brief Creates destruct flag for given local.
+	 */
+	constexpr OperationFlag flagDestruct(LocalRef local) {
+		return { .flag = OperationFlag::Flag::Destruct, .local = local };
+	}
+
+	/**
+	 * @brief Creates move flag for given local.
+	 */
+	constexpr OperationFlag flagMove(LocalRef local) {
+		return { .flag = OperationFlag::Flag::Move, .local = local };
+	}
+
+	/**
 	 * @brief Single instruction of MIR code.
 	 */
 	struct Instruction final {
