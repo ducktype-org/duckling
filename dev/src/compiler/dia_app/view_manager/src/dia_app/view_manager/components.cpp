@@ -1,6 +1,4 @@
 #include "components.hpp"
-
-#include "side_panel.hpp"
 #include "utils.hpp"
 
 #include <proto/view.pb.h>
@@ -93,8 +91,7 @@ namespace dia_app {
 							: ::view::VisibilityStatus::Alternative
 					);
 					// Need a releasable owner for protobuf adoption
-					std::unique_ptr<::view::HlComponent> primary_ptr
-						= std::make_unique<::view::HlComponent>();
+					base::Box<::view::HlComponent> primary_ptr = makeBox<::view::HlComponent>();
 					primary_ptr->Swap(&*son.value());
 					interactive_proto->set_allocated_primary_component(primary_ptr.release());
 					return result;
@@ -208,8 +205,7 @@ namespace dia_app {
 							: ::view::VisibilityStatus::Alternative
 					);
 					// Need a releasable owner for protobuf adoption
-					std::unique_ptr<::view::NoHlComponent> primary_ptr
-						= std::make_unique<::view::NoHlComponent>();
+					base::Box<::view::NoHlComponent> primary_ptr = makeBox<::view::NoHlComponent>();
 					primary_ptr->Swap(&*son.value());
 					interactive_proto->set_allocated_primary_component(primary_ptr.release());
 					return result;

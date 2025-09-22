@@ -120,6 +120,18 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
+		/**
+		 * @brief Releases ownership of the managed object and returns the raw pointer.
+		 * After this call, the Box is set to nullptr and will not delete the object.
+		 *
+		 * @return T* raw pointer to the managed object
+		 */
+		T* release() noexcept {
+			T* out = ptr;
+			ptr    = nullptr;
+			return out;
+		}
+
 		~Box() {
 			::base::extend::BoxPtrDeleter<T>::del(ptr
 			);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:

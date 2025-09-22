@@ -34,7 +34,7 @@ namespace dia_app {
 				hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
 			);
 
-			base::Box<::view::HlMessage> getView() const;
+			base::Box<::view::HlMessage> getView(ViewConstructor &vc) const;
 		};
 
 		class Section {
@@ -43,7 +43,7 @@ namespace dia_app {
 		public:
 			virtual ~Section();
 
-			virtual base::Box<::view::Section> getView() const;
+			virtual base::Box<::view::Section> getView(ViewConstructor &vc) const;
 		};
 
 		class TextSection: public Section {
@@ -53,29 +53,30 @@ namespace dia_app {
 		public:
 			TextSection(std::shared_ptr<Component> root);
 
-			base::Box<::view::Section> getView() const override;
+			base::Box<::view::Section> getView(ViewConstructor &vc) const override;
 		};
 
 		class CodeSection: public Section {
 		private:
-			CodeMetadata               code_metadata;
+			base::Box<CodeMetadata>               code_metadata;
 			std::shared_ptr<Component> root;
 			std::vector<HlMessage>     hl_messages;
 
 		public:
 			CodeSection(
-				CodeMetadata               code_metadata,
+				base::Box<CodeMetadata>               code_metadata,
 				std::shared_ptr<Component> root,
 				std::vector<HlMessage>     hl_messages
 			);
 
-			static base::Box<CodeSection> createFromInfo(
+			static base::Optional<base::Box<CodeSection>> createFromInfo(
 				const message_template::Info&                       info,
-				std::shared_ptr<ViewConstructor>&                   view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context
+				ViewConstructor&                   view_constructor,
+				base::HashMap<component_id_t, component_context_t>& id_to_component_context,
+                std::function<hl_id_t(std::string)> hl_name_to_id
 			);
 
-			base::Box<::view::Section> getView() const override;
+			base::Box<::view::Section> getView(ViewConstructor &vc) const override;
 		};
 
 		using error_code_t = uint32_t;
