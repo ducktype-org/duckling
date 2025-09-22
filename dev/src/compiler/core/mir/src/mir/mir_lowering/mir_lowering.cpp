@@ -1382,7 +1382,7 @@ namespace compiler::mir {
 
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
 		FunctionBuilder function_builder{ ctx,
-			                              FunctionSymID{ function.declaration.original_symbol } };
+			                              FunctionSymID{ function.declaration.original_symbol }, };
 		function_builder.setName(function.declaration.original_name);
 
 		LocalVarCollectionVisitor visitor{ function_builder };
