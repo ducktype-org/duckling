@@ -15,7 +15,7 @@ class StableListTestSimple: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(simpleTest);;
+		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(removalStabilityTest);
 		TESTER_ADD_TEST(stableHashMapTest);
 		TESTER_ADD_TEST(stableHashMapTestStability);
@@ -85,8 +85,8 @@ private:
 		}
 
 		for (usize x = 0; x < 100; x++) {
-			usize idx = ((x * 3) + 7) % vector.size();
-			Ref<usize> el = vector[idx];
+			usize        idx      = ((x * 3) + 7) % vector.size();
+			Ref<usize>   el       = vector[idx];
 			static usize orig_idx = *el;
 			ASSERT_EQUAL(el, ptrs[orig_idx]);
 			auto remove = vector.begin() + i64(idx);

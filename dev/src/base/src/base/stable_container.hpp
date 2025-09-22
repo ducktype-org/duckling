@@ -6,11 +6,12 @@
 
 #include "ref.hpp"
 
-#include <iterator>
-#include <vector>
-#include <deque>
 #include "base/exceptions.hpp"
 #include "base/ints.hpp"
+
+#include <deque>
+#include <iterator>
+#include <vector>
 
 namespace base {
 	namespace internal {
@@ -28,8 +29,8 @@ namespace base {
 			class Node {
 			private:
 				friend father_t;
-				usize idx;
-				father_t& father;
+				usize               idx;
+				father_t&           father;
 				std::optional<Data> content;
 
 			public:
@@ -81,12 +82,12 @@ namespace base {
 
 			[[nodiscard]]
 			RefT operator[](usize pos) {
-				return RefT{&data.at(pos)->content.value()};
+				return RefT{ &data.at(pos)->content.value() };
 			}
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return CRefT{&data.at(pos)->content.value()};
+				return CRefT{ &data.at(pos)->content.value() };
 			}
 
 			template<class... Args>
@@ -96,31 +97,27 @@ namespace base {
 					data.push_back(&nodes.back());
 					return;
 				}
-				
+
 				Node* place = available.back();
 				available.pop_back();
-				
+
 				place->idx = data.size();
 				place->content.emplace(std::forward<Args>(args)...);
 				data.push_back(place);
 			}
 
-			void pushBack(const Data& value) {
-				emplaceBack(value);
-			}
+			void pushBack(const Data& value) { emplaceBack(value); }
 
-			void pushBack(Data&& value) {
-				emplaceBack(std::move(value));
-			}
+			void pushBack(Data&& value) { emplaceBack(std::move(value)); }
 
 			[[nodiscard]]
 			RefT last() {
-				return RefT{&data.back()->content.value()};
+				return RefT{ &data.back()->content.value() };
 			}
 
 			[[nodiscard]]
 			CRefT last() const {
-				return CRefT{&data.back()->content.value()};
+				return CRefT{ &data.back()->content.value() };
 			}
 
 			/**
@@ -134,14 +131,14 @@ namespace base {
 
 		private:
 			/**
-			* @class Wrap
-			* @brief this is the class from which BaseCRTP should publicly inherit random access
-			* operations (iterator boilerplate)
-			* @tparam ValT - type of hel value (used to determine iterator traits)
-			* @tparam BaseCRTP - a base type for
-			* [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
-			*/
-			template <typename BaseCRTP, typename ValT>
+			 * @class Wrap
+			 * @brief this is the class from which BaseCRTP should publicly inherit random access
+			 * operations (iterator boilerplate)
+			 * @tparam ValT - type of hel value (used to determine iterator traits)
+			 * @tparam BaseCRTP - a base type for
+			 * [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
+			 */
+			template<typename BaseCRTP, typename ValT>
 			class Wrap {
 			private:
 				Wrap() = default;
@@ -149,42 +146,45 @@ namespace base {
 				friend father_t;
 
 				static constexpr u64 getPos(const BaseCRTP& iter) {
-					return iter.it == nullptr
-							? iter.father->size()
-							: iter.it->idx;
+					return iter.it == nullptr ? iter.father->size() : iter.it->idx;
 				}
 
 				static constexpr BaseCRTP factory(BaseCRTP& iter, i64 diff) {
-					BaseCRTP ans = iter;
-					u64 pos = getPos(iter) + diff;	// <- always positive: negatives are just really big numbers
+					BaseCRTP    ans  = iter;
+					u64         pos  = getPos(iter) + diff;
 					const auto& data = iter.father->data;
 
-					iter.it = (pos < data.size())
-						? data[pos]
-						: nullptr;
-					
+					iter.it = (pos < data.size()) ? data[pos] : nullptr;
+
 					return ans;
 				}
 
 				static constexpr void assertValid(const BaseCRTP& iter) {
-					CORE_ASSERT(iter.it != nullptr, "iterator is end() of container; don't dereference");
-					
+					CORE_ASSERT(
+						iter.it != nullptr, "iterator is end() of container; don't dereference"
+					);
+
 					const auto& node = *iter.it;
-					CORE_ASSERT(iter.father == &node.father, "value belongs to different container than iterator");
-					CORE_ASSERT(node.content.has_value(), "no value is stored");		// <- Could be removed for performance
-					
+					CORE_ASSERT(
+						iter.father == &node.father,
+						"value belongs to different container than iterator"
+					);
+					CORE_ASSERT(
+						node.content.has_value(), "no value is stored"
+					);  // <- Could be removed for performance
+
 					const auto& data = iter.father->data;
 					CORE_ASSERT(node.idx < data.size(), "iterator is outside the bounds");
 					CORE_ASSERT(iter.it == data[node.idx], "container and iterator don't match");
 				}
 
 			public:
-				using difference_type = i64;
+				using difference_type   = i64;
 				using iterator_category = std::random_access_iterator_tag;
-				using value_type = std::remove_cvref_t<ValT>;
-				using reference = ValT&;
-				using pointer = ValT*;
-				
+				using value_type        = std::remove_cvref_t<ValT>;
+				using reference         = ValT&;
+				using pointer           = ValT*;
+
 				BaseCRTP& operator++(this BaseCRTP& self) {
 					factory(self, 1);
 					return self;
@@ -213,7 +213,7 @@ namespace base {
 				}
 
 				BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
-					factory(self, - diff);
+					factory(self, -diff);
 					return self;
 				}
 
@@ -233,17 +233,17 @@ namespace base {
 					return (self - other) <=> 0;
 				}
 
-				pointer operator->(this const BaseCRTP &self) {
+				pointer operator->(this const BaseCRTP& self) {
 					assertValid(self);
 					return &self.it->content.value();
 				}
 
-				reference operator*(this const BaseCRTP &self) {
+				reference operator*(this const BaseCRTP& self) {
 					assertValid(self);
 					return self.it->content.value();
 				}
 
-				reference operator[](this const BaseCRTP &self, difference_type diff) {
+				reference operator[](this const BaseCRTP& self, difference_type diff) {
 					return *(self + diff);
 				}
 			};
@@ -253,48 +253,48 @@ namespace base {
 			private:
 				friend Wrap<Iterator, Data>;
 				friend father_t;
-				Node* it;
+				Node*     it;
 				father_t* father;
 
 				static Iterator make(Node* iter, father_t* f) {
 					Iterator ans;
-					ans.it = iter;
+					ans.it     = iter;
 					ans.father = f;
 					return ans;
 				}
 			};
+
 			friend Wrap<Iterator, Data>;
 
 			class ConstIterator: public Wrap<ConstIterator, const Data> {
 			private:
 				friend Wrap<ConstIterator, const Data>;
 				friend father_t;
-				Node* it;
+				Node*           it;
 				const father_t* father;
 
 				static ConstIterator make(Node* iter, const father_t* f) {
 					ConstIterator ans;
-					ans.it = iter;
+					ans.it     = iter;
 					ans.father = f;
 					return ans;
 				}
 			};
+
 			friend Wrap<ConstIterator, const Data>;
 
 			/**
-			* @brief erase function
-			* @note don't pass the end() or Iterators from other containers
-			* @param del 
-			* @return Iterator to the new position
-			*/
+			 * @brief erase function
+			 * @note don't pass the end() or Iterators from other containers
+			 * @param del
+			 * @return Iterator to the new position
+			 */
 			Iterator erase(Iterator del) {
 				Iterator::Wrap::assertValid(del);
 				CORE_ASSERT(del.father == this, "was given iterator of other container");
 
 				u64 pos = Iterator::getPos(del);
-				for (u64 i = pos; i < data.size(); ++i) {
-					data[i]->idx--;
-				}
+				for (u64 i = pos; i < data.size(); ++i) data[i]->idx--;
 				data.erase(data.begin() + pos);
 
 				auto del_node = del.it;
@@ -302,25 +302,19 @@ namespace base {
 				available.push_back(del_node);
 
 				auto new_ptr = (pos + 1 < data.size()) ? data[pos] : nullptr;
-				
+
 				return Iterator::make(new_ptr, this);
 			}
 
-			Iterator begin() {
-				return Iterator::make(size() ? data[0] : nullptr, this);
-			}
+			Iterator begin() { return Iterator::make(size() ? data[0] : nullptr, this); }
 
 			ConstIterator begin() const {
 				return ConstIterator::make(size() ? data[0] : nullptr, this);
 			}
 
-			Iterator end() {
-				return Iterator::make(nullptr, this);
-			}
+			Iterator end() { return Iterator::make(nullptr, this); }
 
-			ConstIterator end() const {
-				return ConstIterator::make(nullptr, this);
-			}
+			ConstIterator end() const { return ConstIterator::make(nullptr, this); }
 		};
 
 	}
