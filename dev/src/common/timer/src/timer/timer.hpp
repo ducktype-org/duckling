@@ -9,11 +9,26 @@ namespace timer {
 
 	/**
 	 * Duration type used for measuring time intervals.
-	 * @important: default initialization is undefined (might not be zero).
-	 * @note Can be changed to more precise type if needed (e.g. std::chrono::duration<long double,
-	 * std::milli>).
+	 * This is just a simple wrapper around std::chrono::nanoseconds,
+	 * that adds default zero-initialization, to avoid accidental UB.
+	 * Intended use case is to just access the `value` field directly when needed.
 	 */
-	using Duration = std::chrono::nanoseconds;
+	struct Duration final {
+		/**
+		 * @note Can be changed to more precise type if needed (e.g. std::chrono::duration<long
+		 * double, std::milli>).
+		 */
+		using DurationValueT = std::chrono::nanoseconds;
+
+		DurationValueT value = DurationValueT::zero();
+
+		static Duration zero() { return Duration{}; }
+
+		[[nodiscard]]
+		constexpr auto count() const {
+			return value.count();
+		}
+	};
 
 	enum class TimeUnit { Nanoseconds, Microseconds, Milliseconds, Seconds };
 
@@ -33,7 +48,7 @@ namespace timer {
 	 * Inline for performance -- to not impact measured code.
 	 */
 	inline Duration duration(const TimeStamp& start, const TimeStamp& end) {
-		return std::chrono::duration_cast<Duration>(end - start);
+		return Duration{ std::chrono::duration_cast<Duration::DurationValueT>(end - start) };
 	}
 
 	/**
@@ -43,7 +58,7 @@ namespace timer {
 	struct AddToTime final {
 		AddToTime(Ref<Duration> to_add): to_add(to_add), start(now()) {}
 
-		~AddToTime() { *to_add += timer::duration(start, now()); }
+		~AddToTime() { to_add->value += timer::duration(start, now()).value; }
 
 	private:
 		/**

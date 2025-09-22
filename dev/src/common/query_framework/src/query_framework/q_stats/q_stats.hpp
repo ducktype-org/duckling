@@ -12,7 +12,7 @@ namespace query {
 	constexpr bool USE_STATS = true;
 
 	/**
-	 * RAII-like object to collect statistics about query calls.
+	 * RAII-like object to collect statistics about a single query call.
 	 * Should be used in a way that encapsulates the entire call to a query function.
 	 */
 	struct CallStatsObject final {
