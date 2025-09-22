@@ -35,7 +35,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Storage of information coming from function declaration without processing its body.
 	 */
-	struct HOUTFunctionDeclaration {
+	struct HOUTFunctionDeclaration final {
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
 
 		HOUTFunctionDeclaration() = delete;
