@@ -162,15 +162,15 @@ namespace base {
 				}
 				
 				static constexpr void assertValid(const BaseCRTP& iter) {
-					assert(iter.it != nullptr);
+					CORE_ASSERT(iter.it != nullptr, "iterator is end() of container; don't dereference");
 					
 					const auto& node = *iter.it;
-					assert(iter.father == &node.father);
-					assert(node.content.has_value());		// <- Could be removed for performance
+					CORE_ASSERT(iter.father == &node.father, "value belongs to different container than iterator");
+					CORE_ASSERT(node.content.has_value(), "no value is stored");		// <- Could be removed for performance
 					
 					const auto& data = iter.father->data;
-					assert(node.idx < data.size());
-					assert(iter.it == data[node.idx]);
+					CORE_ASSERT(node.idx < data.size(), "iterator is outside the bounds");
+					CORE_ASSERT(iter.it == data[node.idx], "container and iterator don't match");
 				}
 
 			public:
@@ -243,15 +243,12 @@ namespace base {
 				}
 			};
 
-			using I  = Node*;
-			using CI = Node*;
-
 		public:
 			class Iterator: public Wrap<Iterator, Data> {
 			private:
 				friend Wrap<Iterator, Data>;
 				friend father_t;
-				I it;
+				Node* it;
 				father_t* father;
 			};
 			friend Wrap<Iterator, Data>;
@@ -260,7 +257,7 @@ namespace base {
 			private:
 				friend Wrap<ConstIterator, const Data>;
 				friend father_t;
-				CI it;
+				Node* it;
 				father_t* father;
 			};
 			friend Wrap<ConstIterator, const Data>;
