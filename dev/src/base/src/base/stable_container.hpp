@@ -10,6 +10,7 @@
 #include <iterator>
 #include <vector>
 #include <deque>
+#include "base/exceptions.hpp"
 #include "base/ints.hpp"
 
 namespace base {
@@ -262,13 +263,29 @@ namespace base {
 			};
 			friend Wrap<ConstIterator, const Data>;
 
+			/**
+			* @brief erase function
+			* @note don't pass the end() or Iterators from other containers
+			* @param del 
+			* @return Iterator to the new position
+			*/
 			Iterator erase(Iterator del) {
+				Iterator::Wrap::assertValid(del);
+				CORE_ASSERT(del.father == this, "was given iterator of other container");
+
 				u64 pos = Iterator::getPos(del);
-				for (u64 i = pos; i < size(); ++i) {
+				for (u64 i = pos; i < data.size(); ++i) {
 					data[i]->idx--;
 				}
 				data.erase(data.begin() + pos);
-				return data.begin() + pos;
+
+				auto del_node = del.it;
+				del_node->content.reset();
+				available.push_back(del_node);
+
+				auto new_ptr = (pos + 1 < data.size()) ? data[pos] : nullptr;
+				
+				return Iterator(new_ptr, *this);
 			}
 
 			Iterator erase(ConstIterator pos) const { return Iterator::factory(data.erase(pos.it)); }
