@@ -39,8 +39,10 @@ namespace compiler::helios::code {
 		usize                        normal_args_position = 0, used_named_args = 0;
 		for (auto& param: *(decl.parameters)) {
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
-				if (named_arguments.contains(param.name))
-					return ++used_named_args, std::move(named_arguments[param.name]);
+				if (named_arguments.contains(param.name)) {
+				   used_named_args++;
+					return std::move(named_arguments[param.name]);
+			 }
 				else if (normal_args_position < normal_arguments.size())
 					return std::move(normal_arguments[normal_args_position++]);
 				else if (param.initial_value.has_value())
