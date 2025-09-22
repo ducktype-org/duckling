@@ -2,20 +2,21 @@
 
 #include "helios/scope_symbol_id.hpp"
 #include "interactive_logger.hpp"
-#include "printer/stream_printer.hpp"
 #include "pst_parser/access.hpp"
-#include "query_framework/query_int.hpp"
 
 #include <helios/queries.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <pst_parser/lang_parser_element.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <token_source/source.hpp>
 
 #include "base/exceptions.hpp"
 #include "base/optional.hpp"
 #include "base/ref.hpp"
+
+#include "printer/stream_printer.hpp"
+#include "query_framework/query_int.hpp"
+#include <query_framework/query_entry_point.hpp>
+#include <token_source/source.hpp>
 
 #include <ostream>
 #include <vector>
@@ -27,7 +28,7 @@ namespace {
 		auto              lines = source->viewSplitRange(start, end);
 		std::vector<json> v;
 		for (auto& l: lines) {
-			v.emplace_back(json{{"type", "code"}, {"content", l.second.stdString()}});
+			v.emplace_back(json{ { "type", "code" }, { "content", l.second.stdString() } });
 			v.push_back({ { "type", "start_line" }, { "number", l.first + 1 } });
 		}
 		if (!v.empty()) v.pop_back();

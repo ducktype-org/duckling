@@ -7,13 +7,14 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <json/json.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
 #include <base/ref.hpp>
+
+#include <json/json.hpp>
 
 #include <set>
 #include <string>
@@ -40,7 +41,7 @@ namespace dia {
 		json tojson() {
 			auto j        = json::object();
 			j["location"] = position;
-			j["content"]  =  serialize_code();
+			j["content"]  = serialize_code();
 			return j;
 		}
 

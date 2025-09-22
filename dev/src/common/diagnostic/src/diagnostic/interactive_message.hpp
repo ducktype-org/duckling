@@ -1,31 +1,34 @@
 #pragma once
 
 #include "common.hpp"
-#include "diagnostic/interactive_code.hpp"
 #include "interactive_content.hpp"
-#include "query_framework/query_int.hpp"
 
 #include <helios/hout/elements/expr.hpp>
-#include <json/json.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include "base/string_id.hpp"
 #include <base/box.hpp>
 
-#include <vector>
+#include "diagnostic/interactive_code.hpp"
+#include "query_framework/query_int.hpp"
+
+#include <json/json.hpp>
+
 #include <map>
+#include <vector>
 
 namespace dia {
 	using nlohmann::json;
 
 	class InteractiveMessage {
 	private:
-		Box<dia::InteractiveContent>           content;
+		Box<dia::InteractiveContent>                     content;
 		std::map<std::string, Box<dia::InteractiveNote>> notes;
 
 	public:
 		InteractiveMessage(
-			Box<dia::InteractiveContent> content, std::map<std::string, Box<dia::InteractiveNote>>&& notes
+			Box<dia::InteractiveContent>                       content,
+			std::map<std::string, Box<dia::InteractiveNote>>&& notes
 		):
 			  content(std::move(content)),
 			  notes(std::move(notes)) {}
@@ -119,7 +122,8 @@ namespace dia {
 
 	class RoundBracket: public ParseError {
 	public:
-		RoundBracket(dia::SourcePosition position): ParseError("parse", "for_round_bracket", position) {}
+		RoundBracket(dia::SourcePosition position):
+			  ParseError("parse", "for_round_bracket", position) {}
 	};
 
 	class TODOError: public InteractiveMessage {
@@ -131,6 +135,7 @@ namespace dia {
 
 			json tojson() override { return { "message", message }; }
 		};
+
 	public:
 		TODOError(dia::SourcePosition position, const std::string& message):
 			  dia::InteractiveMessage(

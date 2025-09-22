@@ -4,11 +4,12 @@
 
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>
-#include <json/json.hpp>
 
 #include "base/optional.hpp"
 #include "base/stringifyable_enum.hpp"
 #include <base/box.hpp>
+
+#include <json/json.hpp>
 
 #include <set>
 #include <type_traits>
@@ -70,10 +71,10 @@ namespace nlohmann {
 		static void to_json(json& j, const std::set<T>& symbols) {
 			j = json::object();
 			for (auto& s: symbols) {
-				json symbol_json = s;
-				symbol_json["assoc_infos"] = json::array();
+				json symbol_json                                = s;
+				symbol_json["assoc_infos"]                      = json::array();
 				j[std::to_string(s.queryUnstablePerfectHash())] = symbol_json;
-			} 
+			}
 		}
 	};
 
