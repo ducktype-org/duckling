@@ -251,6 +251,13 @@ namespace base {
 				friend father_t;
 				Node* it;
 				father_t* father;
+
+				static Iterator make(Node* iter, father_t* f) {
+					Iterator ans;
+					ans.it = iter;
+					ans.father = f;
+					return ans;
+				}
 			};
 			friend Wrap<Iterator, Data>;
 
@@ -260,6 +267,13 @@ namespace base {
 				friend father_t;
 				Node* it;
 				father_t* father;
+
+				static ConstIterator make(Node* iter, const father_t* f) {
+					ConstIterator ans;
+					ans.it = iter;
+					ans.father = f;
+					return ans;
+				}
 			};
 			friend Wrap<ConstIterator, const Data>;
 
@@ -285,18 +299,24 @@ namespace base {
 
 				auto new_ptr = (pos + 1 < data.size()) ? data[pos] : nullptr;
 				
-				return Iterator(new_ptr, *this);
+				return Iterator::make(new_ptr, this);
 			}
 
-			Iterator erase(ConstIterator pos) const { return Iterator::factory(data.erase(pos.it)); }
+			Iterator begin() {
+				return Iterator::make(size() ? &data[0] : nullptr, this);
+			}
 
-			Iterator begin() { return Iterator::factory(data.begin()); }
+			ConstIterator begin() const {
+				return ConstIterator::make(size() ? &data[0] : nullptr, this);
+			}
 
-			ConstIterator begin() const { return ConstIterator::factory(data.cbegin()); }
+			Iterator end() {
+				return Iterator::make(nullptr, this);
+			}
 
-			Iterator end() { return Iterator::factory(data.end()); }
-
-			ConstIterator end() const { return ConstIterator::factory(data.cend()); }
+			ConstIterator end() const {
+				return ConstIterator::make(nullptr, this);
+			}
 		};
 
 	}
