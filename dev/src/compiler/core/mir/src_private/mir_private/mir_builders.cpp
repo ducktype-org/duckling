@@ -1,5 +1,13 @@
 #include "mir_builders.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <typesystem/higher/queries/types.hpp>
+
+#include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
+
 namespace compiler::mir {
 	[[nodiscard]]
 	bool compiler::mir::BlockBuilder::InstructionHole::isEmpty() const {
@@ -22,15 +30,13 @@ namespace compiler::mir {
 	}
 
 	void compiler::mir::BlockBuilder::InstructionHole::fillNop(ScopeRef scope) {
-		fill(
-			Instruction{
-				Operation::Nop,
-				{},
-				{},
-				{},
-				scope,
-			}
-		);
+		fill(Instruction{
+			Operation::Nop,
+			{},
+			{},
+			{},
+			scope,
+		});
 	}
 
 	compiler::mir::BlockBuilder::BlockBuilder(usize vector_index): id(vector_index) {}
@@ -169,14 +175,12 @@ namespace compiler::mir {
 	 * Adds a local variable to MIR function, from helios_id representing it.
 	 */
 	MutLocalRef compiler::mir::FunctionBuilder::addLocal(const helios::SymID helios_id) {
-		local_list.emplaceBack(
-			MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
-			}
-		);
+		local_list.emplaceBack(MirLocal{
+			helios_id,
+			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+				"Handling ERRORS in MIR is not supported yet..."
+			),
+		});
 		return local_list.last();
 	}
 
@@ -187,15 +191,13 @@ namespace compiler::mir {
 		const helios::SymID helios_id, u64 parameter_index
 	) {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
-		local_list.emplaceBack(
-			MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
-				parameter_index,
-			}
-		);
+		local_list.emplaceBack(MirLocal{
+			helios_id,
+			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+				"Handling ERRORS in MIR is not supported yet..."
+			),
+			parameter_index,
+		});
 		return local_list.last();
 	}
 

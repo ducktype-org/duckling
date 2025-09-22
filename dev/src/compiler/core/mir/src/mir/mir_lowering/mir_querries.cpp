@@ -1,13 +1,15 @@
 #include "mir_querries.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
-#include "mir_validation.hpp"
 #include "mir_lifetimes.hpp"
+#include "mir_validation.hpp"
 
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
 #include <mir_private/mir_lowering.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
+#include <query_framework/query_impl.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 

@@ -1,14 +1,12 @@
 #pragma once
 
-#include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios/symbols/symbol_kind.hpp>
+#include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
-#include <base/variant.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <vector>
 
 namespace compiler::mir {
 	struct BlockBuilder;
@@ -201,4 +199,3 @@ namespace compiler::mir {
 		HSymID getHeliosSymbol() const;
 	};
 }
-
