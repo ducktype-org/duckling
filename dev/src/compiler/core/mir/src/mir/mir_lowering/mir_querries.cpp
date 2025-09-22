@@ -1,6 +1,8 @@
 #include "mir_querries.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
+#include "mir_validation.hpp"
+#include "mir_lifetimes.hpp"
 
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
@@ -8,6 +10,9 @@
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+
+#include <stack>
+#include <unordered_set>
 
 namespace compiler::mir {
 	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
