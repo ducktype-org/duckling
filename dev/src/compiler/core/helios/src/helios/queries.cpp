@@ -160,8 +160,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::BuiltinFunction,
-				"Function declaration processing called on non-function symbol"
+				kind(key) == SymbolKind::Function, "Function declaration processing called on non-function symbol"
 			);
 
 			DeclarationVisitor func_maker(ctx, key);
