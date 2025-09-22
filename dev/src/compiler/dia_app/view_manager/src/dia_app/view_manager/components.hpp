@@ -100,11 +100,11 @@ namespace dia_app {
 			InteractionType       interaction;
 
 		public:
-			void visitTextComponent(const TextComponent& component);
-			void visitCodeComponent(const CodeComponent& component);
-			void visitConcatComponent(const ConcatComponent& component);
-			void visitInteractiveComponent(const InteractiveComponent& component);
-			void visitStartLineComponent(const StartLineComponent& component);
+			void visitTextComponent(TextComponent& component);
+			void visitCodeComponent(CodeComponent& component);
+			void visitConcatComponent(ConcatComponent& component);
+			void visitInteractiveComponent(InteractiveComponent& component);
+			void visitStartLineComponent(StartLineComponent& component);
 		};
 
 		struct InteractionContext {

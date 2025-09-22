@@ -4,6 +4,7 @@
 #include "utils.hpp"
 
 #include <proto/view.pb.h>
+#include <memory>
 
 namespace dia_app {
 	namespace view_manager {
@@ -79,10 +80,10 @@ namespace dia_app {
 			const InteractiveComponent& component
 		) {
 			auto [visible_suffix, visible_mid] = component.primary->accept(*this);
-			auto wrap_in_interactive[&](base::Optional<base::Box<::view::HlComponent>> son)
+			auto wrap_in_interactive = [&](base::Optional<base::Box<::view::HlComponent>> son)
 				->base::Optional<base::Box<::view::HlComponent>> {
 				if (son.has_value()) {
-					base::Box < ::view::HlComponent >> result = makeBox<::view::HlComponent>();
+					auto result = makeBox<::view::HlComponent>();
 					auto* interactive_proto = result->mutable_interactive_component();
 					interactive_proto->set_component_id(component.id);
 					interactive_proto->set_status(
@@ -90,14 +91,19 @@ namespace dia_app {
 							? ::view::VisibilityStatus::Primary
 							: ::view::VisibilityStatus::Alternative
 					);
-					interactive_proto->set_allocated_primary_component(std::move(son).release());
+					// Need a releasable owner for protobuf adoption
+					std::unique_ptr<::view::HlComponent> primary_ptr = std::make_unique<::view::HlComponent>();
+					primary_ptr->Swap(&*son.value());
+					interactive_proto->set_allocated_primary_component(primary_ptr.release());
 					return result;
 				} else {
 					return {};
 				}
+			};
+			std::vector<line_data_t<::view::HlComponent>> result;
+			for (auto& mid: visible_mid) {
+				result.emplace_back(mid.first, wrap_in_interactive(std::move(mid.second)));
 			}
-			std::vector<base::Optional<base::Box<::view::HlComponent>>> result;
-			for (auto& mid: visible_mid) result.emplace_back(wrap_in_interactive(std::move(mid)));
 			return { wrap_in_interactive(std::move(visible_suffix)), std::move(result) };
 		}
 
@@ -117,8 +123,7 @@ namespace dia_app {
 			// If there are associated side infos, expose component_id for interactions.
 			if (!component.assoc_side_entries.empty())
 				nohl_component_box->mutable_text_component()->set_component_id(component.id);
-			return { line_suffix_data_t<::view::NoHlComponent>{ std::move(nohl_component_box) },
-				     {} };
+			return { line_suffix_data_t<::view::NoHlComponent>{ std::move(nohl_component_box) }, std::vector<line_data_t<::view::NoHlComponent>>{} };
 		}
 
 		component_get_view_data_t<::view::NoHlComponent> GetNoHlViewVisitor::visitCodeComponent(
@@ -130,7 +135,7 @@ namespace dia_app {
 			if (!component.assoc_side_entries.empty())
 				nohl_component_box->mutable_code_component()->set_component_id(component.id);
 			return { line_suffix_data_t<::view::NoHlComponent>{ std::move(nohl_component_box) },
-				     {} };
+				     std::vector<line_data_t<::view::NoHlComponent>>{} };
 		}
 
 		// Helper to wrap a single no-highlight line into a concat
@@ -189,10 +194,10 @@ namespace dia_app {
 			const InteractiveComponent& component
 		) {
 			auto [visible_suffix, visible_mid] = component.primary->accept(*this);
-			auto wrap_in_interactive[&](base::Optional<base::Box<::view::NoHlComponent>> son)
+			auto wrap_in_interactive = [&](base::Optional<base::Box<::view::NoHlComponent>> son)
 				->base::Optional<base::Box<::view::NoHlComponent>> {
 				if (son.has_value()) {
-					base::Box < ::view::NoHlComponent >> result = makeBox<::view::NoHlComponent>();
+					auto result = makeBox<::view::NoHlComponent>();
 					auto* interactive_proto = result->mutable_interactive_component();
 					interactive_proto->set_component_id(component.id);
 					interactive_proto->set_status(
@@ -200,14 +205,17 @@ namespace dia_app {
 							? ::view::VisibilityStatus::Primary
 							: ::view::VisibilityStatus::Alternative
 					);
-					interactive_proto->set_allocated_primary_component(std::move(son).release());
+					// Need a releasable owner for protobuf adoption
+					std::unique_ptr<::view::NoHlComponent> primary_ptr = std::make_unique<::view::NoHlComponent>();
+					primary_ptr->Swap(&*son.value());
+					interactive_proto->set_allocated_primary_component(primary_ptr.release());
 					return result;
 				} else {
 					return {};
 				}
-			}
-			std::vector<base::Optional<base::Box<::view::NoHlComponent>>> result;
-			for (auto& mid: visible_mid) result.emplace_back(wrap_in_interactive(std::move(mid)));
+			};
+			std::vector<line_data_t<::view::NoHlComponent>> result;
+			for (auto& mid: visible_mid) result.emplace_back(mid.first, wrap_in_interactive(std::move(mid.second)));
 			return { wrap_in_interactive(std::move(visible_suffix)), std::move(result) };
 		}
 
@@ -219,25 +227,25 @@ namespace dia_app {
 			return { line_suffix_data_t<::view::NoHlComponent>{}, std::move(mid_lines) };
 		}
 
-		void InteractionVisitor::visitTextComponent(const TextComponent& component) {
+		void InteractionVisitor::visitTextComponent(TextComponent& component) {
 			// TODO: Do something with side entries for side panel
-			auto parent = component.parent.lock();
+			auto parent = component.parent->lock();
 			if (parent) parent->accept(*this);
 		}
 
-		void InteractionVisitor::visitCodeComponent(const CodeComponent& component) {
+		void InteractionVisitor::visitCodeComponent(CodeComponent& component) {
 			// TODO: Do something with side entries for side panel
-			auto parent = component.parent.lock();
+			auto parent = component.parent->lock();
 			if (parent) parent->accept(*this);
 		}
 
-		void InteractionVisitor::visitConcatComponent(const ConcatComponent& component) {
-			auto parent = component.parent.lock();
+		void InteractionVisitor::visitConcatComponent(ConcatComponent& component) {
+			auto parent = component.parent->lock();
 			if (parent) parent->accept(*this);
 		}
 
-		void InteractionVisitor::visitInteractiveComponent(const InteractiveComponent& component) {
-			base::swap(component.primary, component.alternative);
+		void InteractionVisitor::visitInteractiveComponent(InteractiveComponent& component) {
+			std::swap(component.primary, component.alternative);
 			component.primary->reset();
 			if (component.status == InteractiveComponent::Status::Primary)
 				component.status = InteractiveComponent::Status::Alternative;
@@ -245,8 +253,8 @@ namespace dia_app {
 				component.status = InteractiveComponent::Status::Primary;
 		}
 
-		void InteractionVisitor::visitStartLineComponent(const StartLineComponent& component) {
-			auto parent = component.parent.lock();
+		void InteractionVisitor::visitStartLineComponent(StartLineComponent& component) {
+			auto parent = component.parent->lock();
 			if (parent) parent->accept(*this);
 		}
 
