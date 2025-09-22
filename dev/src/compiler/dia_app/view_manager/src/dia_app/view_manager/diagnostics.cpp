@@ -1,4 +1,5 @@
 #include "diagnostics.hpp"
+
 #include "display_elements.hpp"
 
 namespace dia_app {
@@ -49,29 +50,27 @@ namespace dia_app {
 			}
 		}
 
-        template<class T>
-        std::vector<line_data_t<T>> filterEmptyLines(component_get_view_data_t<T> data) {
-            UNIMPLEMENTED();
-        }
+		template<class T>
+		std::vector<line_data_t<T>> filterEmptyLines(component_get_view_data_t<T> data) {
+			UNIMPLEMENTED();
+		}
 
-		base::Box<::view::HlMessage> HlMessage::getView(ViewConstructor &vc) const {
+		base::Box<::view::HlMessage> HlMessage::getView(ViewConstructor& vc) const {
 			auto result = base::makeBox<::view::HlMessage>();
 			result->set_tag(this->tag);
 			result->set_priority(this->priority);
 			result->set_type(toProtocol(this->type));
-            GetNoHlViewVisitor visitor = GetNoHlViewVisitor(vc);
-			auto components = filterEmptyLines(this->content->accept(visitor));
-            // TODO: To be resolved what type we want from filterEmptyLines. Currently we just need a list of components.
-            // IDK if it's needed to filter here...
+			GetNoHlViewVisitor visitor    = GetNoHlViewVisitor(vc);
+			auto               components = filterEmptyLines(this->content->accept(visitor));
+			// TODO: To be resolved what type we want from filterEmptyLines. Currently we just need
+			// a list of components. IDK if it's needed to filter here...
 			for (auto& elm: components) {
-                if (
-                    elm.second.has_value()
-                ) {
-                    result->mutable_message()
-                        ->mutable_concat_component()
-                        ->mutable_components()
-                        ->AddAllocated(elm.second.value().release());
-                }
+				if (elm.second.has_value()) {
+					result->mutable_message()
+						->mutable_concat_component()
+						->mutable_components()
+						->AddAllocated(elm.second.value().release());
+				}
 			}
 			return result;
 		}
@@ -80,21 +79,21 @@ namespace dia_app {
 
 		Section::~Section() {}
 
-		base::Box<::view::Section> Section::getView(ViewConstructor &vc) const {
-			assert(false);
-		}
+		base::Box<::view::Section> Section::getView(ViewConstructor& vc) const { assert(false); }
 
 		// TextSection
 
 		TextSection::TextSection(std::shared_ptr<Component> root): root(std::move(root)) {}
 
-        std::unique_ptr<::view::NoHlComponent> concatNoHlLines(std::vector<line_data_t<::view::NoHlComponent>> lines) {
-            UNIMPLEMENTED();
-        }
+		std::unique_ptr<::view::NoHlComponent> concatNoHlLines(
+			std::vector<line_data_t<::view::NoHlComponent>> lines
+		) {
+			UNIMPLEMENTED();
+		}
 
-		base::Box<::view::Section> TextSection::getView(ViewConstructor &vc) const {
-			auto result       = base::makeBox<::view::Section>();
-            GetNoHlViewVisitor visitor = GetNoHlViewVisitor(vc);
+		base::Box<::view::Section> TextSection::getView(ViewConstructor& vc) const {
+			auto               result  = base::makeBox<::view::Section>();
+			GetNoHlViewVisitor visitor = GetNoHlViewVisitor(vc);
 			auto text_section = concatNoHlLines(filterEmptyLines(this->root->accept(visitor)));
 			result->set_allocated_text_section(text_section.release());
 			return result;
@@ -103,7 +102,7 @@ namespace dia_app {
 		// CodeSection
 
 		CodeSection::CodeSection(
-			base::Box<CodeMetadata>               code_metadata,
+			base::Box<CodeMetadata>    code_metadata,
 			std::shared_ptr<Component> root,
 			std::vector<HlMessage>     hl_messages
 		):
@@ -112,10 +111,12 @@ namespace dia_app {
 			  hl_messages(std::move(hl_messages)) {}
 
 		base::Optional<base::Box<CodeSection>> CodeSection::createFromInfo(
-				const message_template::Info&                       info,
-				ViewConstructor&                   view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context,
-                std::function<hl_id_t(std::string)> hl_name_to_id
+			const message_template::Info&                       info,
+			ViewConstructor&                                    view_constructor,
+			base::HashMap<component_id_t, component_context_t>& id_to_component_context,
+			const std::function<hl_id_t(std::string)>&          hl_name_to_id,
+			const std::function<u32()>&                         get_next_id,
+			const std::function<hl_id_t(std::string)>&          group_to_id
 		) {
 			if (!info.code.has_value()) return {};
 			auto& code = info.code.value();
@@ -124,28 +125,14 @@ namespace dia_app {
 
 			// Mapping from highlight names is created before processing the root component
 			std::vector<HlMessage> hl_messages;
-            hl_id_t next_component_id = 0;
-            std::function<u32()>                              get_next_id = [&next_component_id]() {
-                return next_component_id++;
-            };
-            base::HashMap<std::string, hl_id_t> group_to_id_map; 
-            hl_id_t next_group_id = 0;
-            std::function<view_manager::hl_id_t(std::string)> group_to_id = [&group_to_id_map, &next_group_id](std::string str) {
-                auto ptr = group_to_id_map.find(str);
-                if (ptr == group_to_id_map.end()) {
-                    group_to_id_map[str] = next_group_id;
-                    next_group_id++;
-                }
-                return group_to_id_map[str];
-            };
 			{
 				for (const auto& [name, pointer_message]: info.pointer_messages) {
-                    dia_file::ToComponentVisitor visitor = dia_file::ToComponentVisitor(
-                        view_constructor,
-                        dia_file::DisplayElement::AccData(),
-                        get_next_id,
-                        group_to_id
-                    );
+					dia_file::ToComponentVisitor visitor = dia_file::ToComponentVisitor(
+						view_constructor,
+						dia_file::DisplayElement::AccData(),
+						get_next_id,
+						group_to_id
+					);
 					hl_messages.emplace_back(
 						hl_name_to_id(name),
 						pointer_message.priority,
@@ -154,26 +141,25 @@ namespace dia_app {
 					);
 				}
 			}
-            dia_file::ToComponentVisitor visitor = dia_file::ToComponentVisitor(
-                        view_constructor,
-                        dia_file::DisplayElement::AccData(),
-                        get_next_id,
-                        group_to_id
-                    );
+			dia_file::ToComponentVisitor visitor = dia_file::ToComponentVisitor(
+				view_constructor, dia_file::DisplayElement::AccData(), get_next_id, group_to_id
+			);
 			auto root = code.content->accept(visitor);
 
-			return base::makeBox<CodeSection>(std::move(code_metadata), std::move(root), std::move(hl_messages));
+			return base::makeBox<CodeSection>(
+				std::move(code_metadata), std::move(root), std::move(hl_messages)
+			);
 		}
 
-		base::Box<::view::Section> CodeSection::getView(ViewConstructor &vc) const {
+		base::Box<::view::Section> CodeSection::getView(ViewConstructor& vc) const {
 			auto result = base::makeBox<::view::Section>();
 			{
 				auto metadata = this->code_metadata->getView();
 				result->mutable_code_section()->set_allocated_metadata(metadata.release());
 			}
 			{
-                GetHlViewVisitor visitor = GetHlViewVisitor(vc);
-				auto [suffix, mid] = this->root->accept(visitor);
+				GetHlViewVisitor visitor = GetHlViewVisitor(vc);
+				auto [suffix, mid]       = this->root->accept(visitor);
 				std::vector<std::unique_ptr<::view::CodeLine>> lines;
 				if (suffix.has_value()) {
 					auto line = std::make_unique<::view::CodeLine>();
@@ -250,8 +236,8 @@ namespace dia_app {
 
 		// Info
 		Info::Info(
-			Metadata                              metadata,
-			std::shared_ptr<Component>            header,
+			Metadata                        metadata,
+			std::shared_ptr<Component>      header,
 			std::vector<base::Box<Section>> sections
 		):
 			  metadata(metadata),
@@ -259,79 +245,84 @@ namespace dia_app {
 			  sections(std::move(sections)) {}
 
 		Info Info::createFromInfo(
-				const message_template::Info&                       info,
-				std::shared_ptr<ViewConstructor>&                   view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context
+			const message_template::Info& info, ViewConstructor& view_constructor
 		) {
-            UNIMPLEMENTED();
-		// 	auto                                  metadata = Metadata::createFromInfo(info);
-		// 	std::vector<std::unique_ptr<Section>> sections;
-		// 	assert(info.header_message);
-		// 	auto header       = info.header_message->toComponent(creation_context);
-		// 	auto code_section = CodeSection::createFromInfo(info, creation_context);
-		// 	if (code_section) sections.emplace_back(std::move(code_section));
-		// 	if (info.description) {
-		// 		sections.emplace_back(
-		// 			std::make_unique<TextSection>(info.description->toComponent(creation_context))
-		// 		);
-		// 	}
-		// 	debug("Number of sections: ", ssize(sections));
-		// 	return Info(metadata, std::move(header), std::move(sections));
-		// }
+			hl_id_t              next_component_id = 0;
+			std::function<u32()> get_next_id
+				= [&next_component_id]() { return next_component_id++; };
+			base::HashMap<std::string, hl_id_t>               group_to_id_map;
+			hl_id_t                                           next_group_id = 0;
+			std::function<view_manager::hl_id_t(std::string)> group_to_id
+				= [&group_to_id_map, &next_group_id](std::string str) {
+					  auto ptr = group_to_id_map.find(str);
+					  if (ptr == group_to_id_map.end()) {
+						  group_to_id_map[str] = next_group_id;
+						  next_group_id++;
+					  }
+					  return group_to_id_map[str];
+				  };
+			UNIMPLEMENTED();
+			// 	auto                                  metadata = Metadata::createFromInfo(info);
+			// 	std::vector<base::Box<Section>> sections;
+			// 	assert(info.header_message);
+			//     dia_file::ToComponentVisitor visitor = dia_file::ToComponentVisitor(
+			//         view_constructor,
+			//         dia_file::DisplayElement::AccData(),
 
-		// std::unique_ptr<::view::Info> Info::getView() const {
-		// 	auto info = std::make_unique<::view::Info>();
-		// 	{
-		// 		auto metadata = this->metadata.getView();
-		// 		info->set_allocated_metadata(metadata.release());
-		// 	}
-		// 	{
-		// 		auto header = concatNoHlLines(filterEmptyLines(this->header->getNoHlView()));
-		// 		info->set_allocated_header(header.release());
-		// 	}
-		// 	{
-		// 		std::vector<std::unique_ptr<::view::Section>> section_view(ssize(this->sections));
-		// 		std::transform(
-		// 			sections.begin(),
-		// 			sections.end(),
-		// 			section_view.begin(),
-		// 			[](const std::unique_ptr<Section>& section) { return section->getView(); }
-		// 		);
-		// 		debug("While adding view sections: allocated sections cnt: ", ssize(section_view));
-		// 		for (auto& elm: section_view) {
-		// 			if (elm != nullptr) {
-		// 				debug("non-nullptr");
-		// 				info->mutable_sections()->AddAllocated(elm.release());
-		// 			} else {
-		// 				debug("nullptr");
-		// 			}
-		// 		}
-		// 	}
-		// 	return info;
+			//     )
+			// 	auto header       = info.header_message->toComponent(creation_context);
+			// 	auto code_section = CodeSection::createFromInfo(info, creation_context);
+			// 	if (code_section) sections.emplace_back(std::move(code_section));
+			// 	if (info.description) {
+			// 		sections.emplace_back(
+			// 			std::make_unique<TextSection>(info.description->toComponent(creation_context))
+			// 		);
+			// 	}
+			// 	return Info(metadata, std::move(header), std::move(sections));
+			// }
+
+			// std::unique_ptr<::view::Info> Info::getView() const {
+			// 	auto info = std::make_unique<::view::Info>();
+			// 	{
+			// 		auto metadata = this->metadata.getView();
+			// 		info->set_allocated_metadata(metadata.release());
+			// 	}
+			// 	{
+			// 		auto header = concatNoHlLines(filterEmptyLines(this->header->getNoHlView()));
+			// 		info->set_allocated_header(header.release());
+			// 	}
+			// 	{
+			// 		std::vector<std::unique_ptr<::view::Section>>
+			// section_view(ssize(this->sections)); 		std::transform( 			sections.begin(),
+			// 			sections.end(),
+			// 			section_view.begin(),
+			// 			[](const std::unique_ptr<Section>& section) { return section->getView(); }
+			// 		);
+			// 		for (auto& elm: section_view) {
+			// 			if (elm != nullptr) {
+			// 				info->mutable_sections()->AddAllocated(elm.release());
+			// 			}
+			// 		}
+			// 	}
+			// 	return info;
 		}
 
 		// Diagnostic
 
 		Diagnostic::Diagnostic(std::vector<Info> infos): infos(std::move(infos)) {}
 
-		Diagnostic Diagnostic::createFromViewConstructor(
-				std::shared_ptr<ViewConstructor>&                   view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context
-		) {
-            UNIMPLEMENTED();
-			// std::vector<Info>            infos;
-			// const message_template::Info info = *view_constructor->loadMainInfo();
-			// infos.emplace_back(Info::createFromInfo(info, creation_context));
-			// for (auto info_handle: view_constructor->displayed_secondary_infos) {
-			// 	infos.emplace_back(Info::createFromInfo(
-			// 		*view_constructor->loadSecondaryInfo(info_handle), creation_context
-			// 	));
-			// }
-			// return Diagnostic(std::move(infos));
+		Diagnostic Diagnostic::createFromViewConstructor(ViewConstructor& view_constructor) {
+			std::vector<Info> infos;
+			infos.emplace_back(Info::createFromInfo(view_constructor.getMainInfo(), view_constructor)
+			);
+			auto secondary_infos = view_constructor.getDisplayedSecondaryInfos();
+			for (const auto& info: secondary_infos)
+				infos.emplace_back(Info::createFromInfo(info, view_constructor));
+			return Diagnostic(std::move(infos));
 		}
 
 		base::Box<::view::Diagnostic> Diagnostic::getView() const {
-            UNIMPLEMENTED();
+			UNIMPLEMENTED();
 			// debug("Diagnostic::getView() begin");
 			// auto diagnostic = std::make_unique<::view::Diagnostic>();
 			// std::vector<std::unique_ptr<::view::Info>> info_view(ssize(this->infos));
@@ -341,9 +332,9 @@ namespace dia_app {
 			// 	info_view.begin(),
 			// 	[](const Info& info) { return info.getView(); }
 			// );
-			// for (auto& info: info_view) diagnostic->mutable_infos()->AddAllocated(info.release());
-			// debug("Diagnostic::getView() end");
-			// return diagnostic;
+			// for (auto& info: info_view)
+			// diagnostic->mutable_infos()->AddAllocated(info.release()); debug("Diagnostic::getView()
+			// end"); return diagnostic;
 		}
 	}  // namespace view_manager
 }  // namespace dia_app

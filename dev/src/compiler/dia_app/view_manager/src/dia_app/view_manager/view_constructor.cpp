@@ -33,6 +33,14 @@ namespace dia_app {
 		return getInfo(secondary_infos[id]);
 	}
 
+	std::vector<message_template::Info> ViewConstructor::getDisplayedSecondaryInfos() {
+		std::vector<message_template::Info> result;
+		result.reserve(this->displayed_secondary_infos.size());
+		for (const auto& info_id: this->displayed_secondary_infos)
+			result.emplace_back(this->getSecondaryInfo(info_id));
+		return result;
+	}
+
 	message_template::Info ViewConstructor::getMainInfo() { return getInfo(main_info); }
 
 	const ViewConstructor::Entity& ViewConstructor::getEntity(EntityID id) {

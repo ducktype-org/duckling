@@ -3,6 +3,7 @@
 
 #include <base/box.hpp>
 #include <base/visitor.hpp>
+
 #include <utility>
 
 namespace dia_app {
@@ -352,11 +353,16 @@ namespace dia_app {
 			void accumulateData(const DisplayElement& el);
 
 		public:
-			ToComponentVisitor(ViewConstructor& vc,
-			DisplayElement::AccData                           acc_data,
-			std::function<u32()>                              get_next_id,
-			std::function<view_manager::hl_id_t(std::string)> group_to_id) :
-			vc(vc), acc_data(std::move(acc_data)), get_next_id(std::move(get_next_id)), group_to_id(std::move(group_to_id)) {}
+			ToComponentVisitor(
+				ViewConstructor&                                  vc,
+				DisplayElement::AccData                           acc_data,
+				std::function<u32()>                              get_next_id,
+				std::function<view_manager::hl_id_t(std::string)> group_to_id
+			):
+				  vc(vc),
+				  acc_data(std::move(acc_data)),
+				  get_next_id(std::move(get_next_id)),
+				  group_to_id(std::move(group_to_id)) {}
 
 			std::shared_ptr<view_manager::Component> visitTextDElement(const TextDElement& el);
 			std::shared_ptr<view_manager::Component> visitCodeDElement(const CodeDElement& el);

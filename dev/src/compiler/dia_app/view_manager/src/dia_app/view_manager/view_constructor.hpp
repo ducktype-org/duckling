@@ -57,6 +57,8 @@ namespace dia_app {
 		// appropriate info template.
 		// Fetches and caches the info parameters if necessary.
 		message_template::Info getSecondaryInfo(InfoID id);
+		// Get all secondary infor identified by `displayed_secondary_infos`.
+		std::vector<message_template::Info> getDisplayedSecondaryInfos();
 
 	private:
 		// Get the entity identified by `id`, fetching and caching the result

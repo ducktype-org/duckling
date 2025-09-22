@@ -45,7 +45,7 @@ namespace dia_app {
 			ViewConstructor& vc;
 
 		public:
-			GetHlViewVisitor(ViewConstructor &vc) : vc(vc) {}
+			GetHlViewVisitor(ViewConstructor& vc): vc(vc) {}
 
 			component_get_view_data_t<::view::HlComponent> visitCodeComponent(
 				const CodeComponent& component
@@ -68,7 +68,7 @@ namespace dia_app {
 
 
 		public:
-			GetNoHlViewVisitor(ViewConstructor &vc) : vc(vc) {}
+			GetNoHlViewVisitor(ViewConstructor& vc): vc(vc) {}
 
 			component_get_view_data_t<::view::NoHlComponent> visitTextComponent(
 				const TextComponent& component

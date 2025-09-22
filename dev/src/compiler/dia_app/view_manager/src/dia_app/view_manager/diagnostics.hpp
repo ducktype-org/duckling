@@ -34,7 +34,7 @@ namespace dia_app {
 				hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
 			);
 
-			base::Box<::view::HlMessage> getView(ViewConstructor &vc) const;
+			base::Box<::view::HlMessage> getView(ViewConstructor& vc) const;
 		};
 
 		class Section {
@@ -43,7 +43,7 @@ namespace dia_app {
 		public:
 			virtual ~Section();
 
-			virtual base::Box<::view::Section> getView(ViewConstructor &vc) const;
+			virtual base::Box<::view::Section> getView(ViewConstructor& vc) const;
 		};
 
 		class TextSection: public Section {
@@ -53,30 +53,32 @@ namespace dia_app {
 		public:
 			TextSection(std::shared_ptr<Component> root);
 
-			base::Box<::view::Section> getView(ViewConstructor &vc) const override;
+			base::Box<::view::Section> getView(ViewConstructor& vc) const override;
 		};
 
 		class CodeSection: public Section {
 		private:
-			base::Box<CodeMetadata>               code_metadata;
+			base::Box<CodeMetadata>    code_metadata;
 			std::shared_ptr<Component> root;
 			std::vector<HlMessage>     hl_messages;
 
 		public:
 			CodeSection(
-				base::Box<CodeMetadata>               code_metadata,
+				base::Box<CodeMetadata>    code_metadata,
 				std::shared_ptr<Component> root,
 				std::vector<HlMessage>     hl_messages
 			);
 
 			static base::Optional<base::Box<CodeSection>> createFromInfo(
 				const message_template::Info&                       info,
-				ViewConstructor&                   view_constructor,
+				ViewConstructor&                                    view_constructor,
 				base::HashMap<component_id_t, component_context_t>& id_to_component_context,
-                std::function<hl_id_t(std::string)> hl_name_to_id
+				const std::function<hl_id_t(std::string)>&          hl_name_to_id,
+				const std::function<u32()>&                         get_next_id,
+				const std::function<hl_id_t(std::string)>&          group_to_id
 			);
 
-			base::Box<::view::Section> getView(ViewConstructor &vc) const override;
+			base::Box<::view::Section> getView(ViewConstructor& vc) const override;
 		};
 
 		using error_code_t = uint32_t;
@@ -108,9 +110,7 @@ namespace dia_app {
 			);
 
 			static Info createFromInfo(
-				const message_template::Info&                       info,
-				std::shared_ptr<ViewConstructor>&                   view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context
+				const message_template::Info& info, ViewConstructor& view_constructor
 			);
 
 			base::Box<::view::Info> getView() const;
@@ -123,10 +123,7 @@ namespace dia_app {
 		public:
 			Diagnostic(std::vector<Info> infos);
 
-			static Diagnostic createFromViewConstructor(
-				std::shared_ptr<ViewConstructor>&                   view_constructor,
-				base::HashMap<component_id_t, component_context_t>& id_to_component_context
-			);
+			static Diagnostic createFromViewConstructor(ViewConstructor& view_constructor);
 
 			base::Box<::view::Diagnostic> getView() const;
 		};

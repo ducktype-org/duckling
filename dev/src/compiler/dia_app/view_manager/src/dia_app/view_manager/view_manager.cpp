@@ -9,17 +9,17 @@ namespace dia_app {
 
 		ViewManager ViewManager::createFromJson(const json& input) {
 			UNIMPLEMENTED();
-			std::vector<Diagnostic>                       diagnostics;
+			std::vector<Diagnostic> diagnostics;
 			for (uint error_id = 0; error_id < input.size(); ++error_id) {
 				auto view_constructor = std::make_shared<ViewConstructor>(error_id, input);
 				// Update the view constructor context (necessary for fetching lazy content).
-			creation_context->data_handle.emplace(view_constructor->dataHandle());
+				creation_context->data_handle.emplace(view_constructor->dataHandle());
 
-			view_constructors.emplace_back(view_constructor);
-			creation_context->view_constructor = view_constructor;
-			diagnostics.emplace_back(
-				Diagnostic::createFromViewConstructor(view_constructor, creation_context)
-			);
+				view_constructors.emplace_back(view_constructor);
+				creation_context->view_constructor = view_constructor;
+				diagnostics.emplace_back(
+					Diagnostic::createFromViewConstructor(view_constructor, creation_context)
+				);
 			}
 			debug("ViewManager::createFromJson end");
 			auto result = ViewManager(
