@@ -28,13 +28,12 @@ namespace dia_app {
 		 */
 		class ViewManager {
 		private:
-			std::vector<Diagnostic>                            diagnostics;
-			base::HashMap<component_id_t, component_context_t> id_to_component_context;
+			std::vector<std::pair<Diagnostic, ViewConstructor>>                            diagnostics;
 
 		public:
-			ViewManager(std::vector<Diagnostic> diagnostics);
+			ViewManager(std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics);
 
-			static ViewManager createFromJson(const json& input);
+			static ViewManager createFromJson(json input);
 
 			void getView(::view::ViewResponse* response);
 

@@ -1,39 +1,56 @@
 #include "view_manager.hpp"
+#include "fetcher.hpp"
 
 namespace dia_app {
 	namespace view_manager {
 		// ViewManager
 
-		ViewManager::ViewManager(std::vector<Diagnostic> diagnostics):
+		ViewManager::ViewManager(std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics):
 			  diagnostics(std::move(diagnostics)) {}
 
-		ViewManager ViewManager::createFromJson(const json& input) {
-			UNIMPLEMENTED();
-			std::vector<Diagnostic> diagnostics;
-			for (uint error_id = 0; error_id < input.size(); ++error_id) {
-				auto view_constructor = std::make_shared<ViewConstructor>(error_id, input);
-				// Update the view constructor context (necessary for fetching lazy content).
-				creation_context->data_handle.emplace(view_constructor->dataHandle());
+		ViewManager ViewManager::createFromJson(json input) {
+			fetcher::initialize(std::move(input));
+			
+			hl_id_t              next_component_id = 0;
+			std::function<u32()> get_next_id
+				= [&next_component_id]() { return next_component_id++; };
+			base::HashMap<std::string, hl_id_t>               group_to_id_map;
+			hl_id_t                                           next_group_id = 0;
+			std::function<view_manager::hl_id_t(std::string)> group_to_id
+				= [&group_to_id_map, &next_group_id](const std::string& str) {
+					  auto ptr = group_to_id_map.find(str);
+					  if (ptr == group_to_id_map.end()) {
+						  group_to_id_map[str] = next_group_id;
+						  next_group_id++;
+					  }
+					  return group_to_id_map[str];
+				  };
+			base::HashMap<std::string, hl_id_t>               hl_name_to_id_map;
+			hl_id_t                                           next_hl_id = 0;
+			std::function<view_manager::hl_id_t(std::string)> hl_name_to_id
+				= [&hl_name_to_id_map, &next_hl_id](const std::string& str) {
+					  auto ptr = hl_name_to_id_map.find(str);
+					  if (ptr == hl_name_to_id_map.end()) {
+						  hl_name_to_id_map[str] = next_hl_id;
+						  next_hl_id++;
+					  }
+					  return hl_name_to_id_map[str];
+				  };
 
-				view_constructors.emplace_back(view_constructor);
-				creation_context->view_constructor = view_constructor;
-				diagnostics.emplace_back(
-					Diagnostic::createFromViewConstructor(view_constructor, creation_context)
-				);
+			std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics;
+			for (uint info_group_id = 0; info_group_id < fetcher::getInfoGroupCount(); ++info_group_id) {
+				auto vc = fetcher::generateViewConstructor(info_group_id);
+
+				diagnostics.emplace_back(Diagnostic::createFromViewConstructor(vc, hl_name_to_id, get_next_id, group_to_id), vc);
 			}
-			debug("ViewManager::createFromJson end");
-			auto result = ViewManager(
-				std::move(diagnostics),
-				std::vector<SidePath>(),
-				std::move(view_constructors),
-				std::move(creation_context)
+			return ViewManager(
+				std::move(diagnostics)
 			);
-			return result;
 		}
 
 		void ViewManager::getView(::view::ViewResponse* response) {
-			for (const auto& diagnostic: this->diagnostics)
-				response->mutable_diagnostics()->AddAllocated(diagnostic.getView().release());
+			for (auto& [diagnostic, vc]: this->diagnostics)
+				response->mutable_diagnostics()->AddAllocated(diagnostic.getView(vc).release());
 		}
 
 		void ViewManager::click(
