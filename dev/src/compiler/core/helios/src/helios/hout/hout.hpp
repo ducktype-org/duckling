@@ -87,7 +87,7 @@ namespace compiler::helios {
 	/**
 	 * @brief placeholder for functions, methods, etc. It is declaration extended by function content.
 	 */
-	struct HOUTFunction {
+	struct HOUTFunction final {
 		// @TODO (maybe in declaration?):
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 

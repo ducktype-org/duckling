@@ -100,7 +100,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
-		struct declarationVisitor final: public pst::PstVisitorPanicky {
+		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
 

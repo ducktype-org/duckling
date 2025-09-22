@@ -10,7 +10,7 @@
 namespace compiler::helios::code {
 
 	/**
-	 * @brief Determines the correct function to call from the given call expression and creates
+	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from the given call expression and creates
 	 * callexpr from it. The function is selected based on argument types and named arguments. If no
 	 * function or multiple functions match the call, nullopt is returned.
 	 * @param candidates Contains all candidate functions that could be called.
