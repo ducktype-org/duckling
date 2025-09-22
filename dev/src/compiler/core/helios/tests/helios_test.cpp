@@ -1,3 +1,4 @@
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
@@ -297,9 +298,9 @@ private:
 	}
 
 	void testHoutVisitor() {
-		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::File(path("test_modules/visitor_test_module"))
-		);
+		auto module
+			= compiler::frontend::createModuleTree(fs::File(path("test_modules/visitor_test_module")
+		    ));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
