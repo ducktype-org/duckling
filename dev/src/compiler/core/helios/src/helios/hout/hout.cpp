@@ -67,7 +67,7 @@ namespace compiler::helios {
 	}
 
 	u64 HOUTFunction::queryUnstablePerfectHash() const {
-		// @note for know it doesn't depend on body
+		// @note for now it doesn't depend on body
 		return declaration.queryUnstablePerfectHash();
 	}
 
