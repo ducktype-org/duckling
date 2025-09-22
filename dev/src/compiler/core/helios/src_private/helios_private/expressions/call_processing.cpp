@@ -127,7 +127,7 @@ namespace compiler::helios::code {
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	) {
-		CORE_ASSERT(candidates.size() == 1, "Overloading is not implemented yet");
+		if (candidates.size() != 1) throw base::NotYetImplemented("Overloading is not implemented yet");
 
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                normal_arguments;
