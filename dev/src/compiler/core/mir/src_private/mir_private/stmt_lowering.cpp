@@ -1,6 +1,11 @@
 #include "stmt_lowering.hpp"
 
 #include "mir_lowering.hpp"
+
+#include <helios/hout/elements/stmt.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
+#include <base/optional.hpp>
+
 #include <ranges>
 
 namespace compiler::mir {
@@ -21,7 +26,8 @@ namespace compiler::mir {
 	):
 		  continuation(continuation),
 		  function(function),
-		  parent_scope(parent_scope) {}
+		  parent_scope(parent_scope),
+		  out{} {}
 
 	void StmtBlockVisitor::output(StmtLowerRes value) {
 		CORE_ASSERT(this->out.empty(), "Output already set.");
@@ -97,13 +103,15 @@ namespace compiler::mir {
 		auto else_scope = function.newScope(parent_scope);
 
 		auto else_block = function.newBlock();
-		else_block->setTerminator(Instruction{
-			Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
+		else_block->setTerminator(
+			Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, else_scope }
+		);
 		auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
 
 		auto then_block = function.newBlock();
-		then_block->setTerminator(Instruction{
-			Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
+		then_block->setTerminator(
+			Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, then_scope }
+		);
 		auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
 
 		auto condition_block = function.newBlock();
@@ -132,13 +140,15 @@ namespace compiler::mir {
 			);
 		}
 
-		condition_block->setTerminator(Instruction{
-			Operation::Branch,
-			{},
-			{ *possible_condition_res, then_body->getID(), else_body->getID() },
-			{},
-			condition_scope,
-		});
+		condition_block->setTerminator(
+			Instruction{
+				Operation::Branch,
+				{},
+				{ *possible_condition_res, then_body->getID(), else_body->getID() },
+				{},
+				condition_scope,
+			}
+		);
 
 		output({ lowered_condition.begin });
 	}
@@ -185,13 +195,15 @@ namespace compiler::mir {
 			);
 		}
 
-		condition_continuation_block->setTerminator({
-			Operation::Branch,
-			{},
-			{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
-			{},
-			condition_scope,
-		});
+		condition_continuation_block->setTerminator(
+			{
+				Operation::Branch,
+				{},
+				{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
+				{},
+				condition_scope,
+			}
+		);
 
 		output({ entry_block });
 	}

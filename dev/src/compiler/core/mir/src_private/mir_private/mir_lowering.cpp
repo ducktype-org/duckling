@@ -10,19 +10,10 @@
 #include "stmt_lowering.hpp"
 
 #include <helios/hout/elements.hpp>
-#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries/types.hpp>
-
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
-
-#include <query_framework/query_impl.hpp>
 
 #include <ranges>
-#include <variant>
 
 namespace compiler::mir {
 	namespace hc = helios::code;
