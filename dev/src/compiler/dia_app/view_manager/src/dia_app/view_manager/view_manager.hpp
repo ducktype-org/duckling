@@ -1,6 +1,5 @@
 #pragma once
 #include "diagnostics.hpp"
-#include "side_panel.hpp"
 
 #include <proto/view.grpc.pb.h>
 #include <proto/view.pb.h>
@@ -30,11 +29,10 @@ namespace dia_app {
 		class ViewManager {
 		private:
 			std::vector<Diagnostic>                            diagnostics;
-			std::vector<SidePath>                              side_paths;
 			base::HashMap<component_id_t, component_context_t> id_to_component_context;
 
 		public:
-			ViewManager(std::vector<Diagnostic> diagnostics, std::vector<SidePath> side_paths);
+			ViewManager(std::vector<Diagnostic> diagnostics);
 
 			static ViewManager createFromJson(const json& input);
 
