@@ -82,7 +82,7 @@ namespace base {
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return CRefT{&data.at(pos)->content};
+				return CRefT{&data.at(pos)->content.value()};
 			}
 
 			template<class... Args>
