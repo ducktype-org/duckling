@@ -6,6 +6,7 @@
 
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/hout/visitors.hpp>
 #include <mir_private/mir_lowering.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
