@@ -44,8 +44,6 @@ namespace compiler::helios {
 	}
 
 	u64 HOUTFunctionDeclaration::queryUnstablePerfectHash() const {
-		// @note: see
-		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
 		return original_symbol.queryUnstablePerfectHash();
 	}
 

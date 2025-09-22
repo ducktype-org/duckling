@@ -10,8 +10,6 @@ namespace pst {
 	 */
 	class CallArgument final: public NotStmt {
 		base::Optional<tpc::Identifier> arg_name;
-		// AccessInternalAnonymous<UniversalExprHolderLowerLevel> arg;
-		// NAMED_CHILD(UniversalExprHolderLowerLevel, arg);
 		NAMED_CHILD(arg, UniversalExprHolderLowerLevel);
 
 	public:

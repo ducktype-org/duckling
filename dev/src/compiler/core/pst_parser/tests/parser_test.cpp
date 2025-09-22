@@ -136,12 +136,14 @@ private:
 
 		auto             correct_content = fs::File(json_file).getContent();
 		std::string_view correct_string  = correct_content.view().stringView();
+
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
 			assertTrue(
 				pst.getLogger()->good(), "there are unexpected errors in Duckling source-code"
 			);
 		}
+
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		// @TODO: Do we want to print some information about the differences or the bad output to a
 		// file?
