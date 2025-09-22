@@ -9,6 +9,7 @@
 
 #include <iterator>
 #include <vector>
+#include <deque>
 #include "base/ints.hpp"
 
 namespace base {
@@ -26,28 +27,25 @@ namespace base {
 			class Node {
 				usize idx;
 				father_t& father;
-				Data content;
+				std::optional<Data> content;
 
 				template<typename... Args>
 				Node(usize p, father_t& f, Args&&... args):
 					  idx(p),
 					  father(f),
-					  content(std::forward<Args>(args)...) {}
+					  content(std::in_place, std::forward<Args>(args)...) {}
 			};
 
-			using ContainerT = std::vector<Box<Node>>;
+			using ContainerT = std::vector<Node*>;
 			ContainerT data;
 			static_assert(
 				std::is_same_v<typename ContainerT::size_type, usize>,
 				"When this fail, figure out what to do."
 			);
 
-			using I  = Node*;
-			using CI = Node const *;
-
-			BaseStableVector(ContainerT&& data): data(std::move(data)) {}
-
-			BaseStableVector(const ContainerT& data): data(data) {}
+			using AllocatedT = std::deque<Node>;
+			AllocatedT nodes;
+			ContainerT available;
 
 		public:
 			using RefT  = Ref<Data>;
@@ -79,12 +77,12 @@ namespace base {
 
 			[[nodiscard]]
 			RefT operator[](usize pos) {
-				return &data.at(pos)->content;
+				return RefT{&data.at(pos)->content.value()};
 			}
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return &data.at(pos)->content;
+				return CRefT{&data.at(pos)->content};
 			}
 
 			void pushBack(const Data& value) {
@@ -97,12 +95,12 @@ namespace base {
 
 			[[nodiscard]]
 			RefT last() {
-				return &data.back()->content;
+				return RefT{&data.back()->content.value()};
 			}
 
 			[[nodiscard]]
 			CRefT last() const {
-				return &data.back()->content;
+				return CRefT{&data.back()->content.value()};
 			}
 
 			/**
@@ -234,7 +232,10 @@ namespace base {
 				}
 			};
 
+			using I  = Node*;
+			using CI = Node*;
 
+		public:
 			class Iterator: public Wrap<Iterator, Data> {
 			private:
 				friend Wrap<Iterator, Data>;
