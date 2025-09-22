@@ -6,9 +6,9 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/query_impl.hpp>
-
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::mir {
 	struct BlockBuilder;
