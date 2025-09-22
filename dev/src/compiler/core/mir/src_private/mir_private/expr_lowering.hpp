@@ -2,17 +2,14 @@
 
 #include "mir_builders.hpp"
 
-#include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/hout/visitors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <variant>
 
 namespace compiler::mir {
-    namespace hc = helios::code;
-    
+	namespace hc = helios::code;
+
 	/**
 	 * @brief Represents a partial result of expression lowering.
 	 *
@@ -95,65 +92,4 @@ namespace compiler::mir {
 		FunctionBuilder& function,
 		ScopeRef         expr_scope
 	);
-
-	/**
-	 * @brief Visitor that implements actual logic of lowering expression.
-	 * @note The result of the visitor is stored in out member. To store expr
-	 * result somewhere, call finalize with place to store it
-	 */
-	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
-		BlockBuilderRef continuation;
-
-		base::Optional<ExprLowerRes> out;
-
-		FunctionBuilder& function;
-
-		/**
-		 * The scope of the expression, where it and its result should live in.
-		 */
-		ScopeRef expr_scope;
-
-		ExprBlockVisitor(
-			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
-		);
-
-		void output(ExprLowerRes&& lowering_result);
-
-		void valueOutput(BlockBuilderRef begin, const MIRValue& value);
-
-		void noValueOutput(
-			BlockBuilderRef                      begin,
-			const BlockBuilder::InstructionHole& hole,
-			const Instruction&                   instr,
-			const tsh::SymbolType<>&             type
-		);
-
-		void visitLiteralIntExpr(const hc::LiteralIntExpr&) override;
-		void visitLiteralBoolExpr(const hc::LiteralBoolExpr&) override;
-		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override;
-		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override;
-		void visitIdentifierExpr(const hc::IdentifierExpr&) override;
-		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr&) override;
-		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr&) override;
-		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr&) override;
-		void visitParenthesisExpr(const hc::ParenthesisExpr&) override;
-		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override;
-		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override;
-		void visitAccessExpr(const hc::AccessExpr&) override;
-		void visitSequenceExpr(const hc::SequenceExpr&) override;
-		void visitChainComparisonExpr(const hc::ChainComparisonExpr&) override;
-		void visitCallExpr(const hc::CallExpr&) override;
-
-	private:
-		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin);
-		static Operation builtinUnaryToOperation(const hc::BuiltinUnary builtin);
-
-		/**
-		 * Get the type of a location, assuming that it is a local value.
-		 * @param location A MIR location which holds a local value.
-		 * @param ctx The query context for AbstractType generation.
-		 * @return The type of the local value.
-		 */
-		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx);
-	};
 }
