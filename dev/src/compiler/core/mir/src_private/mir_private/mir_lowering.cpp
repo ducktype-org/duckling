@@ -62,14 +62,12 @@ namespace compiler::mir {
 		return last_result;
 	}
 
-	compiler::mir::ExprLowerRes::ExprLowerRes(
-		BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value
-	):
+	ExprLowerRes::ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value):
 		  begin{ begin },
 		  value{ std::move(value) } {}
 
 	[[nodiscard]]
-	tsh::SymbolType<> compiler::mir::ExprLowerRes::getResultType() {
+	tsh::SymbolType<> ExprLowerRes::getResultType() {
 		variant_match(value) {
 			variant_case(Finalizer, res_data) { return res_data.type; }
 			variant_default { CORE_PANIC("Function can be run only if MIRValue is not stored"); }
@@ -78,7 +76,7 @@ namespace compiler::mir {
 	}
 
 	[[nodiscard]]
-	base::Optional<MIRValue> compiler::mir::ExprLowerRes::getResultIfStored() {
+	base::Optional<MIRValue> ExprLowerRes::getResultIfStored() {
 		variant_match(value) {
 			variant_case(MIRValue, val) { return val; }
 			variant_case_novalue(Finalizer) { return std::nullopt; }
@@ -87,7 +85,7 @@ namespace compiler::mir {
 	}
 
 	[[nodiscard]]
-	MIRValue compiler::mir::ExprLowerRes::getResult(FunctionBuilder& function) {
+	MIRValue ExprLowerRes::getResult(FunctionBuilder& function) {
 		variant_match(value) {
 			variant_case(MIRValue, val) { return val; }
 			variant_case(Finalizer, res_data) {
@@ -102,7 +100,7 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
-	void compiler::mir::ExprLowerRes::storeResultInGivenVariable(
+	void ExprLowerRes::storeResultInGivenVariable(
 		const std::variant<LocalRef, MirGlobal>& target,
 		BlockBuilder::InstructionHole&           hole,
 		const std::vector<OperationFlag>&        flags,
@@ -130,19 +128,19 @@ namespace compiler::mir {
 		}
 	}
 
-	compiler::mir::StmtBlockVisitor::StmtBlockVisitor(
+	StmtBlockVisitor::StmtBlockVisitor(
 		BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
 	):
 		  continuation(continuation),
 		  function(function),
 		  parent_scope(parent_scope) {}
 
-	void compiler::mir::StmtBlockVisitor::output(StmtLowerRes value) {
+	void StmtBlockVisitor::output(StmtLowerRes value) {
 		CORE_ASSERT(this->out.empty(), "Output already set.");
 		this->out.emplace(value);
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitReturnStmt(const hc::ReturnStmt& stmt) {
+	void StmtBlockVisitor::visitReturnStmt(const hc::ReturnStmt& stmt) {
 		auto return_block = function.newBlock();
 		auto return_scope = function.newScope(parent_scope);
 
@@ -186,14 +184,14 @@ namespace compiler::mir {
 		output({ expr_res.begin });
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitVoidReturnStmt(const hc::VoidReturnStmt&) {
+	void StmtBlockVisitor::visitVoidReturnStmt(const hc::VoidReturnStmt&) {
 		auto return_block = function.newBlock();
 		auto return_scope = function.newScope(parent_scope);
 		return_block->setTerminator({ Operation::ReturnVoid, {}, {}, {}, return_scope });
 		output({ return_block });
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitExprStmt(const hc::ExprStmt& stmt) {
+	void StmtBlockVisitor::visitExprStmt(const hc::ExprStmt& stmt) {
 		auto expr_scope  = function.newScope(parent_scope);
 		auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
@@ -201,7 +199,7 @@ namespace compiler::mir {
 		output({ expr_result.begin });
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitIfStmt(const hc::IfStmt& stmt) {
+	void StmtBlockVisitor::visitIfStmt(const hc::IfStmt& stmt) {
 		auto condition_scope = function.newScope(parent_scope);
 
 		// I'm not sure if we need these scopes,
@@ -257,7 +255,7 @@ namespace compiler::mir {
 		output({ lowered_condition.begin });
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitWhileStmt(const hc::WhileStmt& stmt) {
+	void StmtBlockVisitor::visitWhileStmt(const hc::WhileStmt& stmt) {
 		auto condition_scope = function.newScope(parent_scope);
 
 		auto condition_continuation_block = function.newBlock();
@@ -310,7 +308,7 @@ namespace compiler::mir {
 		output({ entry_block });
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitVariableStmt(const hc::VariableStmt& stmt) {
+	void StmtBlockVisitor::visitVariableStmt(const hc::VariableStmt& stmt) {
 		auto optional_local = function.findLocal(stmt.helios_symbol);
 
 		CORE_ASSERT(
@@ -343,7 +341,7 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
-	void compiler::mir::StmtBlockVisitor::visitAssignmentStmt(const hc::AssignmentStmt& stmt) {
+	void StmtBlockVisitor::visitAssignmentStmt(const hc::AssignmentStmt& stmt) {
 		// TODO: #448 Search for location in global scope as well.
 		auto assignment_scope = function.newScope(parent_scope);
 
@@ -380,24 +378,24 @@ namespace compiler::mir {
 		);
 	}
 
-	compiler::mir::ExprBlockVisitor::ExprBlockVisitor(
+	ExprBlockVisitor::ExprBlockVisitor(
 		BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
 	):
 		  continuation(continuation),
 		  function(function),
 		  expr_scope(expr_scope) {}
 
-	void compiler::mir::ExprBlockVisitor::output(ExprLowerRes&& lowering_result) {
+	void ExprBlockVisitor::output(ExprLowerRes&& lowering_result) {
 		CORE_ASSERT(out.empty(), "Output already set.");
 		out.emplace(std::move(lowering_result));
 	}
 
-	void compiler::mir::ExprBlockVisitor::valueOutput(BlockBuilderRef begin, const MIRValue& value) {
+	void ExprBlockVisitor::valueOutput(BlockBuilderRef begin, const MIRValue& value) {
 		CORE_ASSERT(out.empty(), "Output already set.");
 		out.emplace(ExprLowerRes(begin, value));
 	}
 
-	void compiler::mir::ExprBlockVisitor::noValueOutput(
+	void ExprBlockVisitor::noValueOutput(
 		BlockBuilderRef                      begin,
 		const BlockBuilder::InstructionHole& hole,
 		const Instruction&                   instr,
@@ -408,23 +406,23 @@ namespace compiler::mir {
 		out.emplace(ExprLowerRes(begin, ExprLowerRes::Finalizer(hole, instr, type)));
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitLiteralIntExpr(const hc::LiteralIntExpr& expr) {
+	void ExprBlockVisitor::visitLiteralIntExpr(const hc::LiteralIntExpr& expr) {
 		valueOutput(continuation, MIRValue{ MirIntegerConst{ expr.value } });
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) {
+	void ExprBlockVisitor::visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) {
 		valueOutput(continuation, MIRValue{ MirBoolConst{ expr.value } });
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitLiteralStringExpr(const hc::LiteralStringExpr&) {
+	void ExprBlockVisitor::visitLiteralStringExpr(const hc::LiteralStringExpr&) {
 		throw base::NotYetImplemented("string literal");
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitLiteralTypeExpr(const hc::LiteralTypeExpr&) {
+	void ExprBlockVisitor::visitLiteralTypeExpr(const hc::LiteralTypeExpr&) {
 		throw base::NotYetImplemented("type literal");
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitIdentifierExpr(const hc::IdentifierExpr& expr) {
+	void ExprBlockVisitor::visitIdentifierExpr(const hc::IdentifierExpr& expr) {
 		auto optional_local = function.findLocal(expr.symbol);
 
 		if (optional_local.has_value()) {
@@ -438,8 +436,7 @@ namespace compiler::mir {
 		}
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr
-	) {
+	void ExprBlockVisitor::visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) {
 		// Construct the result of the expression in reverse.
 		auto target_construction_hole = continuation->addHole();
 
@@ -468,7 +465,7 @@ namespace compiler::mir {
 		);
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) {
+	void ExprBlockVisitor::visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) {
 		// Construct the result of the expression in reverse.
 		auto       target_construction_hole = continuation->addHole();
 		auto       lowered     = lowerExpr(*expr.expr, continuation, function, expr_scope);
@@ -486,7 +483,7 @@ namespace compiler::mir {
 		);
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitTernaryOperatorExpr(
+	void ExprBlockVisitor::visitTernaryOperatorExpr(
 		const helios::code::TernaryOperatorExpr& ternary_expr
 	) {
 		// Get info about the target.
@@ -529,30 +526,27 @@ namespace compiler::mir {
 		valueOutput(lowered_condition.begin, target_location);
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitParenthesisExpr(const hc::ParenthesisExpr& expr) {
+	void ExprBlockVisitor::visitParenthesisExpr(const hc::ParenthesisExpr& expr) {
 		output(lowerExpr(*expr.inner, continuation, function, expr_scope));
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) {
+	void ExprBlockVisitor::visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) {
 		throw base::NotYetImplemented("tuple constructor");
 	}
 
-	void compiler::mir::ExprBlockVisitor::
-		visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) {
+	void ExprBlockVisitor::visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) {
 		throw base::NotYetImplemented("variant constructor");
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitAccessExpr(const hc::AccessExpr&) {
+	void ExprBlockVisitor::visitAccessExpr(const hc::AccessExpr&) {
 		throw base::NotYetImplemented("access expr lowering");
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitSequenceExpr(const hc::SequenceExpr&) {
+	void ExprBlockVisitor::visitSequenceExpr(const hc::SequenceExpr&) {
 		throw base::NotYetImplemented("sequence expr lowering");
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitChainComparisonExpr(
-		const hc::ChainComparisonExpr& chain_expr
-	) {
+	void ExprBlockVisitor::visitChainComparisonExpr(const hc::ChainComparisonExpr& chain_expr) {
 		CORE_ASSERT(!chain_expr.expressions.empty(), "Empty chain comparison");
 		CORE_ASSERT(chain_expr.expressions.size() != 1, "Single element chain comparison");
 		CORE_ASSERT(
@@ -634,7 +628,7 @@ namespace compiler::mir {
 		valueOutput(first_block, boolean_output);
 	}
 
-	void compiler::mir::ExprBlockVisitor::visitCallExpr(const hc::CallExpr& expr) {
+	void ExprBlockVisitor::visitCallExpr(const hc::CallExpr& expr) {
 		auto call = continuation->addHole();
 
 		auto                  sub_continuation = continuation;
@@ -672,9 +666,7 @@ namespace compiler::mir {
 		);
 	}
 
-	Operation compiler::mir::ExprBlockVisitor::builtinBinaryToOperation(
-		const hc::BuiltinBinary builtin
-	) {
+	Operation ExprBlockVisitor::builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
 		using enum hc::BuiltinBinary;
 		switch (builtin) {
 		case IntegerAdd:
@@ -711,8 +703,7 @@ namespace compiler::mir {
 		}
 	}
 
-	Operation compiler::mir::ExprBlockVisitor::builtinUnaryToOperation(const hc::BuiltinUnary builtin
-	) {
+	Operation ExprBlockVisitor::builtinUnaryToOperation(const hc::BuiltinUnary builtin) {
 		using enum hc::BuiltinUnary;
 		switch (builtin) {
 		case IntegerNegation:
@@ -724,9 +715,7 @@ namespace compiler::mir {
 		}
 	}
 
-	tsh::SymbolType<> compiler::mir::ExprBlockVisitor::locationType(
-		const MIRValue location, query::Context& ctx
-	) {
+	tsh::SymbolType<> ExprBlockVisitor::locationType(const MIRValue location, query::Context& ctx) {
 		variant_match(location.getVariant()) {
 			variant_case_novalue(MirIntegerConst) {
 				return tsh::SymbolType<>{

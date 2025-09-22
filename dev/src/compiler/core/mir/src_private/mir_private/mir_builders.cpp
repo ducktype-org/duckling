@@ -10,17 +10,17 @@
 
 namespace compiler::mir {
 	[[nodiscard]]
-	bool compiler::mir::BlockBuilder::InstructionHole::isEmpty() const {
+	bool BlockBuilder::InstructionHole::isEmpty() const {
 		return block_ref->reversed_instruction.at(position).empty();
 	}
 
-	compiler::mir::BlockBuilder::InstructionHole::InstructionHole(
+	BlockBuilder::InstructionHole::InstructionHole(
 		BlockBuilderRef block_ref, usize position
 	):
 		  block_ref(block_ref),
 		  position(position) {}
 
-	void compiler::mir::BlockBuilder::InstructionHole::fill(Instruction instruction) {
+	void BlockBuilder::InstructionHole::fill(Instruction instruction) {
 		CORE_ASSERT(isEmpty(), "Hole is already filled");
 		CORE_ASSERT(
 			not isTerminating(instruction.operation),
@@ -29,7 +29,7 @@ namespace compiler::mir {
 		block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 	}
 
-	void compiler::mir::BlockBuilder::InstructionHole::fillNop(ScopeRef scope) {
+	void BlockBuilder::InstructionHole::fillNop(ScopeRef scope) {
 		fill(Instruction{
 			Operation::Nop,
 			{},
@@ -39,10 +39,10 @@ namespace compiler::mir {
 		});
 	}
 
-	compiler::mir::BlockBuilder::BlockBuilder(usize vector_index): id(vector_index) {}
+	BlockBuilder::BlockBuilder(usize vector_index): id(vector_index) {}
 
 	[[nodiscard]]
-	Block compiler::mir::BlockBuilder::build() const {
+	Block BlockBuilder::build() const {
 		std::vector<Instruction> instructions;
 		for (const auto& instruction: reversed_instruction | std::views::reverse) {
 			CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
@@ -60,7 +60,7 @@ namespace compiler::mir {
 	 * @note Instructions are added from last to first
 	 * @param instr
 	 */
-	void compiler::mir::BlockBuilder::addInstruction(Instruction instr) {
+	void BlockBuilder::addInstruction(Instruction instr) {
 		CORE_ASSERT(
 			not isTerminating(instr.operation), "Instruction must not be a terminating instruction"
 		);
@@ -73,7 +73,7 @@ namespace compiler::mir {
 	 * else will be lowered.
 	 * @return InstructionHole
 	 */
-	BlockBuilder::InstructionHole compiler::mir::BlockBuilder::addHole() {
+	BlockBuilder::InstructionHole BlockBuilder::addHole() {
 		// this emplaces empty optional:
 		reversed_instruction.emplace_back();
 
@@ -82,7 +82,7 @@ namespace compiler::mir {
 		return { this, reversed_instruction.size() - 1 };
 	}
 
-	void compiler::mir::BlockBuilder::setTerminator(Instruction instruction) {
+	void BlockBuilder::setTerminator(Instruction instruction) {
 		CORE_ASSERT(not terminator.has_value(), "terminator already set.");
 		CORE_ASSERT(
 			isTerminating(instruction.operation), "Terminator must be a terminating instruction"
@@ -91,11 +91,11 @@ namespace compiler::mir {
 	}
 
 	[[nodiscard]]
-	BlockID compiler::mir::BlockBuilder::getID() const {
+	BlockID BlockBuilder::getID() const {
 		return id;
 	}
 
-	compiler::mir::FunctionBuilder::FunctionBuilder(query::Context& ctx, const HSymID helios_symbol):
+	FunctionBuilder::FunctionBuilder(query::Context& ctx, const HSymID helios_symbol):
 		  function_type([&]() {
 			  variant_match(helios_symbol) {
 				  variant_case(FunctionSymID, fun_sym) {
@@ -118,7 +118,7 @@ namespace compiler::mir {
 		  ctx(ctx),
 		  helios_symbol(helios_symbol) {}
 
-	compiler::mir::FunctionBuilder::FunctionBuilder(
+	FunctionBuilder::FunctionBuilder(
 		query::Context& ctx, const HSymID helios_symbol, tsh::FunctionAbstractType function_type
 	):
 		  function_type(function_type),
@@ -128,7 +128,7 @@ namespace compiler::mir {
 		  helios_symbol(helios_symbol) {}
 
 	[[nodiscard]]
-	Function compiler::mir::FunctionBuilder::build() {
+	Function FunctionBuilder::build() {
 		CORE_ASSERT(entry_block.has_value(), "Entry block not set");
 		auto entry_block_id = entry_block.value()->getID();
 
@@ -166,7 +166,7 @@ namespace compiler::mir {
 		};
 	}
 
-	void compiler::mir::FunctionBuilder::setName(base::StrID name) {
+	void FunctionBuilder::setName(base::StrID name) {
 		CORE_ASSERT(not this->name.has_value(), "Name already set");
 		this->name.emplace(name);
 	}
@@ -174,7 +174,7 @@ namespace compiler::mir {
 	/**
 	 * Adds a local variable to MIR function, from helios_id representing it.
 	 */
-	MutLocalRef compiler::mir::FunctionBuilder::addLocal(const helios::SymID helios_id) {
+	MutLocalRef FunctionBuilder::addLocal(const helios::SymID helios_id) {
 		local_list.emplaceBack(MirLocal{
 			helios_id,
 			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
@@ -187,7 +187,7 @@ namespace compiler::mir {
 	/**
 	 * Adds a local parameter variable to MIR function from helios_id representing it.
 	 */
-	MutLocalRef compiler::mir::FunctionBuilder::addParameter(
+	MutLocalRef FunctionBuilder::addParameter(
 		const helios::SymID helios_id, u64 parameter_index
 	) {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
@@ -205,7 +205,7 @@ namespace compiler::mir {
 	 * Creates a temporary local value, and also sets its lifetime scope.
 	 */
 	[[nodiscard]]
-	MutLocalRef compiler::mir::FunctionBuilder::addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
+	MutLocalRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
 		local_list.emplaceBack(MirLocal{ type });
 		auto tmp = local_list.last();
 		tmp->setLifetimeScope(scope);
@@ -218,7 +218,7 @@ namespace compiler::mir {
 	 * Sets its lifetime scope to no_lifetime_scope.
 	 */
 	[[nodiscard]]
-	MutLocalRef compiler::mir::FunctionBuilder::addNoLifetimeTmp(const tsh::SymbolType<> type) {
+	MutLocalRef FunctionBuilder::addNoLifetimeTmp(const tsh::SymbolType<> type) {
 		return addTmp(type, no_lifetime_scope);
 	}
 
@@ -229,7 +229,7 @@ namespace compiler::mir {
 	 * the result of the condition.
 	 */
 	[[nodiscard]]
-	MutLocalRef compiler::mir::FunctionBuilder::addNoLifetimeBoolTmp() {
+	MutLocalRef FunctionBuilder::addNoLifetimeBoolTmp() {
 		auto type = tsh::SymbolType<>(
 			ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
 		);
@@ -242,7 +242,7 @@ namespace compiler::mir {
 	 * @return The local variable reference, if found.
 	 */
 	[[nodiscard]]
-	base::Optional<MutLocalRef> compiler::mir::FunctionBuilder::findLocal(
+	base::Optional<MutLocalRef> FunctionBuilder::findLocal(
 		const helios::SymID helios_id
 	) {
 		// @TODO: Optimize into a hashmap.
@@ -252,35 +252,35 @@ namespace compiler::mir {
 	}
 
 	[[nodiscard]]
-	BlockBuilderRef compiler::mir::FunctionBuilder::newBlock() {
+	BlockBuilderRef FunctionBuilder::newBlock() {
 		auto vector_index = blocks.size();
 		blocks.emplaceBack(BlockBuilder{ vector_index });
 		CORE_ASSERT(u64(blocks.last()->getID()) == blocks.lastIndex(), "Bad block id");
 		return blocks.last();
 	}
 
-	void compiler::mir::FunctionBuilder::setEntry(BlockBuilderRef block) {
+	void FunctionBuilder::setEntry(BlockBuilderRef block) {
 		CORE_ASSERT(entry_block.empty(), "Entry block already set.");
 		entry_block.emplace(block);
 	}
 
 	[[nodiscard]]
-	ScopeRef compiler::mir::FunctionBuilder::getTopLevelScope() const {
+	ScopeRef FunctionBuilder::getTopLevelScope() const {
 		return top_level_scope;
 	}
 
 	[[nodiscard]]
-	ScopeRef compiler::mir::FunctionBuilder::getNoLifetimeScope() const {
+	ScopeRef FunctionBuilder::getNoLifetimeScope() const {
 		return no_lifetime_scope;
 	}
 
 	[[nodiscard]]
-	ScopeRef compiler::mir::FunctionBuilder::newScope(ScopeRef parent) {
+	ScopeRef FunctionBuilder::newScope(ScopeRef parent) {
 		return lifetime_scope_tree.newScope(parent);
 	}
 
 	[[nodiscard]]
-	query::Context& compiler::mir::FunctionBuilder::getContext() {
+	query::Context& FunctionBuilder::getContext() {
 		return ctx;
 	}
 
@@ -288,7 +288,7 @@ namespace compiler::mir {
 	 * This is needed only for some assertins.
 	 */
 	[[nodiscard]]
-	FunctionBuilder::HSymID compiler::mir::FunctionBuilder::getHeliosSymbol() const {
+	FunctionBuilder::HSymID FunctionBuilder::getHeliosSymbol() const {
 		return helios_symbol;
 	}
 }
