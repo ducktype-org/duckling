@@ -144,61 +144,6 @@ namespace compiler::mir {
 		}
 	}
 
-	void compiler::mir::LocalVarCollectionVisitor::goOverCodeBlock(const hc::CodeBlock& code_block) {
-		for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
-	}
-
-	void compiler::mir::LocalVarCollectionVisitor::collect(const helios::HOUTFunction& hout_function
-	) {
-		auto function_helios_symbol = function.getHeliosSymbol();
-		variant_match(function_helios_symbol) {
-			variant_case(FunctionSymID, function_sym) {
-				CORE_ASSERT(
-					function_sym.id == hout_function.original_symbol,
-					"Bad function passed to LocalVarCollectionVisitor"
-				);
-			}
-
-			variant_default {
-				CORE_PANIC(
-					"The Function wasn't created from HOUTFunction, so you should not use "
-					"collect."
-				);
-			}
-		}
-
-		u64 parameter_index = 0;
-		for (const auto& parameter: *hout_function.content.parameters) {
-			auto local = function.addParameter(parameter.helios_symbol, parameter_index);
-			local->setLifetimeScope(function.getTopLevelScope());
-			parameter_index++;
-		}
-		goOverCodeBlock(*hout_function.content.body);
-	}
-
-	void compiler::mir::LocalVarCollectionVisitor::visitVariableStmt(const hc::VariableStmt& stmt) {
-		function.addLocal(stmt.helios_symbol);
-	}
-
-	void compiler::mir::LocalVarCollectionVisitor::visitIfStmt(const hc::IfStmt& stmt) {
-		goOverCodeBlock(stmt.then_body);
-		goOverCodeBlock(stmt.else_body);
-	}
-
-	void compiler::mir::LocalVarCollectionVisitor::visitWhileStmt(const hc::WhileStmt& stmt) {
-		goOverCodeBlock(stmt.body);
-	}
-
-	// Explicit empty boilerplate. Expected changes when block expressions are implemented.
-
-	void compiler::mir::LocalVarCollectionVisitor::visitReturnStmt(const hc::ReturnStmt&) {}
-
-	void compiler::mir::LocalVarCollectionVisitor::visitVoidReturnStmt(const hc::VoidReturnStmt&) {}
-
-	void compiler::mir::LocalVarCollectionVisitor::visitExprStmt(const hc::ExprStmt&) {}
-
-	void compiler::mir::LocalVarCollectionVisitor::visitAssignmentStmt(const hc::AssignmentStmt&) {}
-
 	compiler::mir::StmtBlockVisitor::StmtBlockVisitor(
 		BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
 	):

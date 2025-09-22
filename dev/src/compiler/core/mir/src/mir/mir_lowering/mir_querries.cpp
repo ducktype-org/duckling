@@ -25,6 +25,78 @@ namespace compiler::mir {
 		return global_data.helios_symbol.queryUnstablePerfectHash();
 	}
 
+	/**
+	 * @brief Visitor that collects all local variables in the function and adds them directly
+	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
+	 * other local variables. Scope of other local variables is set when visiting VariableStmt
+	 * in StmtBlockVisitor, since only then is the scope of the variable known.
+	 */
+	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
+		FunctionBuilder& function;
+
+		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
+
+		/**
+		 * Helper function that recursively goes over the code block and collects all local
+		 * variables.
+		 */
+		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
+		}
+
+		/**
+		 * @brief Collects all local variables in the function and adds them directly to the
+		 * FunctionBuilder.
+		 */
+		void collect(const helios::HOUTFunction& hout_function) {
+			auto function_helios_symbol = function.getHeliosSymbol();
+			variant_match(function_helios_symbol) {
+				variant_case(FunctionSymID, function_sym) {
+					CORE_ASSERT(
+						function_sym.id == hout_function.original_symbol,
+						"Bad function passed to LocalVarCollectionVisitor"
+					);
+				}
+
+				variant_default {
+					CORE_PANIC(
+						"The Function wasn't created from HOUTFunction, so you should not use "
+						"collect."
+					);
+				}
+			}
+
+			u64 parameter_index = 0;
+			for (const auto& parameter: *hout_function.content.parameters) {
+				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
+				local->setLifetimeScope(function.getTopLevelScope());
+				parameter_index++;
+			}
+			goOverCodeBlock(*hout_function.content.body);
+		}
+
+		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			function.addLocal(stmt.helios_symbol);
+		}
+
+		void visitIfStmt(const hc::IfStmt& stmt) override {
+			goOverCodeBlock(stmt.then_body);
+			goOverCodeBlock(stmt.else_body);
+		}
+
+		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
+
+		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
+
+		void visitReturnStmt(const hc::ReturnStmt&) override {}
+
+		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {}
+
+		void visitExprStmt(const hc::ExprStmt&) override {}
+
+		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
+	};
+
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
 		FunctionBuilder function_builder{ ctx, FunctionSymID{ function.original_symbol } };
 		function_builder.setName(function.original_name);

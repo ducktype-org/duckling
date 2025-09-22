@@ -137,38 +137,6 @@ namespace compiler::mir {
 	);
 
 	/**
-	 * @brief Visitor that collects all local variables in the function and adds them directly
-	 * to the FunctionBuilder. It sets variable scopes for parameters, but doesn't set it for
-	 * other local variables. Scope of other local variables is set when visiting VariableStmt
-	 * in StmtBlockVisitor, since only then is the scope of the variable known.
-	 */
-	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
-		FunctionBuilder& function;
-
-		LocalVarCollectionVisitor(FunctionBuilder& function);
-
-		/**
-		 * Helper function that recursively goes over the code block and collects all local
-		 * variables.
-		 */
-		void goOverCodeBlock(const hc::CodeBlock& code_block);
-
-		/**
-		 * @brief Collects all local variables in the function and adds them directly to the
-		 * FunctionBuilder.
-		 */
-		void collect(const helios::HOUTFunction& hout_function);
-
-		void visitVariableStmt(const hc::VariableStmt& stmt) override;
-		void visitIfStmt(const hc::IfStmt& stmt) override;
-		void visitWhileStmt(const hc::WhileStmt& stmt) override;
-		void visitReturnStmt(const hc::ReturnStmt&) override;
-		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override;
-		void visitExprStmt(const hc::ExprStmt&) override;
-		void visitAssignmentStmt(const hc::AssignmentStmt&) override;
-	};
-
-	/**
 	 * @brief Visitor that implements actual logic of lowering statements.
 	 * @note The result of the visitor is stored in out member.
 	 */
