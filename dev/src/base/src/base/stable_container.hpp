@@ -151,11 +151,11 @@ namespace base {
 
 				static constexpr BaseCRTP factory(BaseCRTP& iter, i64 diff) {
 					BaseCRTP ans = iter;
-					u64 newPos = getPos(iter) + diff;	// <- always positive: negatives are just really big numbers
+					u64 pos = getPos(iter) + diff;	// <- always positive: negatives are just really big numbers
 					const auto& data = iter.father->data;
 
-					iter.it = (newPos < data.size())
-						? data[newPos]
+					iter.it = (pos < data.size())
+						? data[pos]
 						: nullptr;
 					
 					return ans;
