@@ -40,10 +40,9 @@ namespace compiler::helios::code {
 		for (auto& param: *(decl.parameters)) {
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
 				if (named_arguments.contains(param.name)) {
-				   used_named_args++;
+					used_named_args++;
 					return std::move(named_arguments[param.name]);
-			 }
-				else if (normal_args_position < normal_arguments.size())
+				} else if (normal_args_position < normal_arguments.size())
 					return std::move(normal_arguments[normal_args_position++]);
 				else if (param.initial_value.has_value())
 					return std::move(param.initial_value.value());
@@ -124,12 +123,13 @@ namespace compiler::helios::code {
 		}
 	}
 
-	base::Optional<Box<CallExpr>> processFunctionCall(
+	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	) {
-		if (candidates.size() != 1) throw base::NotYetImplemented("Overloading is not implemented yet");
+		if (candidates.size() != 1)
+			throw base::NotYetImplemented("Overloading is not implemented yet");
 
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                normal_arguments;
@@ -137,14 +137,15 @@ namespace compiler::helios::code {
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasError()) return std::nullopt;
+			if (arg_expr.hasError()) return query::QError(errors::Failed());
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().value;
-				if (named_arguments.contains(arg_name)) return std::nullopt;  // Not unique names.
+				if (named_arguments.contains(arg_name))
+					return query::QError(errors::Failed());  // Not unique names.
 				named_arguments.emplace(arg_name, std::move(arg_expr.value()));
 			} else {
 				if (!named_arguments.empty())
-					return std::nullopt;  // Normal argument after named one.
+					return query::QError(errors::Failed());  // Normal argument after named one.
 				normal_arguments.emplace_back(std::move(arg_expr.value()));
 			}
 		}
@@ -154,12 +155,15 @@ namespace compiler::helios::code {
 			match_optional(attempFitting(ctx, fun, normal_arguments, named_arguments)) {
 				opt_some(call_res) {
 					if (result.has_value())
-						return std::nullopt;  // At least 2 functions fit.
+						return query::QError(errors::Failed());  // At least 2 functions fit.
 					else
 						result = std::move(call_res);
 				}
 			}
 		}
-		return result;
+		if (result.has_value())
+			return std::move(result.value());
+		else
+			return query::QError(errors::Failed());
 	}
 }

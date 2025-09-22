@@ -86,7 +86,6 @@ namespace compiler::helios {
 	 * @brief placeholder for functions, methods, etc. It is declaration extended by function content.
 	 */
 	struct HOUTFunction final {
-
 		HOUTFunction(const HOUTFunctionDeclaration&);
 		HOUTFunction(HOUTFunctionDeclaration&&);
 
