@@ -119,10 +119,6 @@ namespace fs {
 			return are_equal;
 		}
 
-		// @TODO: remove query #937
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
-
 		[[nodiscard]]
 		base::SharedView getContent() const;
 		[[nodiscard]]

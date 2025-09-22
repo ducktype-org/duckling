@@ -108,9 +108,7 @@ void server(i32 port) {
 		try {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
-			query::entryPoint<compiler::frontend::QueryModuleTree>(
-				fs::File(virtual_root.getFilePath().join(path))
-			);
+			compiler::frontend::createModuleTree(fs::File(virtual_root.getFilePath().join(path)));
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
