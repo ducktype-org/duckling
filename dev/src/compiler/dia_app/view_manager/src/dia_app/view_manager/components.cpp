@@ -347,7 +347,8 @@ namespace dia_app {
 		}
 
 		void ConcatComponent::reset() {
-			for (auto& component: this->components) component.reset();
+			for (auto& component: this->components)
+				if (component) component->reset();
 		}
 
 		// InteractiveComponent
@@ -365,13 +366,13 @@ namespace dia_app {
 		component_get_view_data_t<::view::HlComponent> InteractiveComponent::accept(
 			GetHlViewVisitor& visitor
 		) const {
-			visitor.visitInteractiveComponent(*this);
+			return visitor.visitInteractiveComponent(*this);
 		}
 
 		component_get_view_data_t<::view::NoHlComponent> InteractiveComponent::accept(
 			GetNoHlViewVisitor& visitor
 		) const {
-			visitor.visitInteractiveComponent(*this);
+			return visitor.visitInteractiveComponent(*this);
 		}
 
 		void InteractiveComponent::accept(InteractionVisitor& visitor) {
@@ -382,9 +383,9 @@ namespace dia_app {
 			if (this->status == Status::Alternative) {
 				swap(this->primary, this->alternative);
 				this->status = Status::Primary;
-				this->primary.reset();
-				this->alternative.reset();
 			}
+			if (this->primary) this->primary->reset();
+			if (this->alternative) this->alternative->reset();
 		}
 
 		// StartLineComponent
