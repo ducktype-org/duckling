@@ -6,7 +6,6 @@
 
 #include "mir_lowering.hpp"
 
-#include "mir_builders.hpp"
 #include "stmt_lowering.hpp"
 
 #include <helios/hout/elements.hpp>
