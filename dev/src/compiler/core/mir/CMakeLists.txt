@@ -1,5 +1,7 @@
 add_library(MIR
 	src_private/mir_private/mir_lowering.cpp
+	src_private/mir_private/stmt_lowering.cpp
+	src_private/mir_private/expr_lowering.cpp
 	src_private/mir_private/mir_builders.cpp
 
 	src/mir/mir_lowering/mir_lifetimes.cpp

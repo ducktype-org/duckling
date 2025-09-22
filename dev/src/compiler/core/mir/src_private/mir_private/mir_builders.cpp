@@ -14,9 +14,7 @@ namespace compiler::mir {
 		return block_ref->reversed_instruction.at(position).empty();
 	}
 
-	BlockBuilder::InstructionHole::InstructionHole(
-		BlockBuilderRef block_ref, usize position
-	):
+	BlockBuilder::InstructionHole::InstructionHole(BlockBuilderRef block_ref, usize position):
 		  block_ref(block_ref),
 		  position(position) {}
 
@@ -187,9 +185,7 @@ namespace compiler::mir {
 	/**
 	 * Adds a local parameter variable to MIR function from helios_id representing it.
 	 */
-	MutLocalRef FunctionBuilder::addParameter(
-		const helios::SymID helios_id, u64 parameter_index
-	) {
+	MutLocalRef FunctionBuilder::addParameter(const helios::SymID helios_id, u64 parameter_index) {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 		local_list.emplaceBack(MirLocal{
 			helios_id,
@@ -242,9 +238,7 @@ namespace compiler::mir {
 	 * @return The local variable reference, if found.
 	 */
 	[[nodiscard]]
-	base::Optional<MutLocalRef> FunctionBuilder::findLocal(
-		const helios::SymID helios_id
-	) {
+	base::Optional<MutLocalRef> FunctionBuilder::findLocal(const helios::SymID helios_id) {
 		// @TODO: Optimize into a hashmap.
 		for (auto& local: local_list)
 			if (local.helios_id == helios_id) return &local;
