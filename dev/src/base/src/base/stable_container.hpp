@@ -4,7 +4,6 @@
  */
 #pragma once
 
-#include "box.hpp"
 #include "ref.hpp"
 
 #include <iterator>
@@ -25,11 +24,15 @@ namespace base {
 		class BaseStableVector {
 		private:
 			using father_t = BaseStableVector;
+
 			class Node {
+			private:
+				friend father_t;
 				usize idx;
 				father_t& father;
 				std::optional<Data> content;
 
+			public:
 				template<typename... Args>
 				Node(usize p, father_t& f, Args&&... args):
 					  idx(p),
@@ -266,7 +269,7 @@ namespace base {
 				friend Wrap<ConstIterator, const Data>;
 				friend father_t;
 				Node* it;
-				father_t* father;
+				const father_t* father;
 
 				static ConstIterator make(Node* iter, const father_t* f) {
 					ConstIterator ans;
@@ -303,11 +306,11 @@ namespace base {
 			}
 
 			Iterator begin() {
-				return Iterator::make(size() ? &data[0] : nullptr, this);
+				return Iterator::make(size() ? data[0] : nullptr, this);
 			}
 
 			ConstIterator begin() const {
-				return ConstIterator::make(size() ? &data[0] : nullptr, this);
+				return ConstIterator::make(size() ? data[0] : nullptr, this);
 			}
 
 			Iterator end() {
