@@ -85,12 +85,28 @@ namespace base {
 				return CRefT{&data.at(pos)->content};
 			}
 
+			template<class... Args>
+			void emplaceBack(Args&&... args) {
+				if (available.empty()) {
+					nodes.emplace_back(data.size(), *this, std::forward<Args>(args)...);
+					data.push_back(&nodes.back());
+					return;
+				}
+				
+				Node* place = available.back();
+				available.pop_back();
+				
+				place->idx = data.size();
+				place->content.emplace(std::forward<Args>(args)...);
+				data.push_back(place);
+			}
+
 			void pushBack(const Data& value) {
-				data.emplace_back(makeBox<Node>(data.size(), *this, value));
+				emplaceBack(value);
 			}
 
 			void pushBack(Data&& value) {
-				data.emplace_back(makeBox<Node>(data.size(), *this, std::move(value)));
+				emplaceBack(std::move(value));
 			}
 
 			[[nodiscard]]
@@ -110,11 +126,6 @@ namespace base {
 			usize lastIndex() const {
 				CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty BaseStableVector");
 				return size() - 1;
-			}
-
-			template<class... Args>
-			void emplaceBack(Args&&... args) {
-				data.emplace_back(makeBox<Node>(data.size(), *this, std::forward<Args>(args)...));
 			}
 
 		private:
