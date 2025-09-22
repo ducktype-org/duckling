@@ -62,6 +62,10 @@ namespace compiler::mir {
 			out.emplace(ExprLowerRes(begin, ExprLowerRes::Finalizer(hole, instr, type)));
 		}
 
+		ExprLowerRes lowerSubExpr(const hc::Expr& expr, BlockBuilderRef continuation) {
+			return lowerExpr(expr, continuation, function, expr_scope);
+		}
+
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			valueOutput(continuation, MIRValue{ MirIntegerConst{ expr.value } });
 		}
@@ -96,10 +100,10 @@ namespace compiler::mir {
 			// Construct the result of the expression in reverse.
 			auto target_construction_hole = continuation->addHole();
 
-			auto       lowered_right = lowerExpr(*expr.rhs, continuation, function, expr_scope);
+			auto       lowered_right = lowerSubExpr(*expr.rhs, continuation);
 			const auto res_right     = lowered_right.getResult(function);
-			auto lowered_left   = lowerExpr(*expr.lhs, lowered_right.begin, function, expr_scope);
-			const auto res_left = lowered_left.getResult(function);
+			auto       lowered_left  = lowerSubExpr(*expr.lhs, lowered_right.begin);
+			const auto res_left      = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
@@ -124,8 +128,8 @@ namespace compiler::mir {
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
 			auto       target_construction_hole = continuation->addHole();
-			auto       lowered     = lowerExpr(*expr.expr, continuation, function, expr_scope);
-			const auto res_lowered = lowered.getResult(function);
+			auto       lowered                  = lowerSubExpr(*expr.expr, continuation);
+			const auto res_lowered              = lowered.getResult(function);
 
 			const auto result_type = expr.expression_type.getSymbolType();
 
@@ -152,7 +156,7 @@ namespace compiler::mir {
 				);
 				auto assign_hole = block->addHole();
 
-				auto lowered_block = lowerExpr(case_expr, block, function, expr_scope);
+				auto lowered_block = lowerSubExpr(case_expr, block);
 
 				lowered_block.storeResultInGivenVariable(
 					target_location, assign_hole, { flagConstruct(target_location) }, expr_scope
@@ -166,9 +170,8 @@ namespace compiler::mir {
 			auto then_block = build_case_block(*ternary_expr.if_true);
 
 			// Build branching.
-			auto condition_block = function.newBlock();
-			auto lowered_condition
-				= lowerExpr(*ternary_expr.condition, condition_block, function, expr_scope);
+			auto condition_block   = function.newBlock();
+			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
 			condition_block->setTerminator({
@@ -184,7 +187,7 @@ namespace compiler::mir {
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
-			output(lowerExpr(*expr.inner, continuation, function, expr_scope));
+			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
 		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
@@ -215,7 +218,7 @@ namespace compiler::mir {
 
 			auto lower_subexpr_with_result
 				= [this](CRef<hc::Expr> expression, BlockBuilderRef next_block) {
-					  auto lowered = lowerExpr(*expression, next_block, function, expr_scope);
+					  auto lowered = lowerSubExpr(*expression, next_block);
 					  return std::pair{ lowered.begin, lowered.getResult(function) };
 				  };
 
@@ -301,7 +304,7 @@ namespace compiler::mir {
 			}
 			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
-				auto arg_lowered = lowerExpr(*arg, sub_continuation, function, expr_scope);
+				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 
 				args.push_back(arg_lowered.getResult(function));
 				sub_continuation = arg_lowered.begin;
