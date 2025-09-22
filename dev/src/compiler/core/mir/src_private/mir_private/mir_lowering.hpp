@@ -239,7 +239,7 @@ namespace compiler::mir {
 			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
 		);
 
-		void output(ExprLowerRes lowering_result);
+		void output(ExprLowerRes&& lowering_result);
 
 		void valueOutput(BlockBuilderRef begin, const MIRValue& value);
 

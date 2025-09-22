@@ -456,9 +456,9 @@ namespace compiler::mir {
 		  function(function),
 		  expr_scope(expr_scope) {}
 
-	void compiler::mir::ExprBlockVisitor::output(ExprLowerRes lowering_result) {
+	void compiler::mir::ExprBlockVisitor::output(ExprLowerRes&& lowering_result) {
 		CORE_ASSERT(out.empty(), "Output already set.");
-		out.emplace(lowering_result);
+		out.emplace(std::move(lowering_result));
 	}
 
 	void compiler::mir::ExprBlockVisitor::valueOutput(BlockBuilderRef begin, const MIRValue& value) {
