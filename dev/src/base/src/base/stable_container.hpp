@@ -9,6 +9,7 @@
 
 #include <iterator>
 #include <vector>
+#include "base/ints.hpp"
 
 namespace base {
 	namespace internal {
@@ -29,55 +30,55 @@ namespace base {
 			friend BaseCRTP;
 
 		public:
-			using difference_type   = typename Wrapped::difference_type;
+			using difference_type   = i64;
 			using iterator_category = std::random_access_iterator_tag;
 
 			BaseCRTP& operator++(this BaseCRTP& self) {
-				++self.it;
+				BaseCRTP::factory(self, 1);
 				return self;
 			}
 
-			BaseCRTP operator++(this BaseCRTP& self, int) { return BaseCRTP::factory(self.it++); }
+			BaseCRTP operator++(this BaseCRTP& self, int) { return BaseCRTP::factory(self, 1); }
 
 			BaseCRTP& operator--(this BaseCRTP& self) {
-				--self;
+				BaseCRTP::factory(self, -1);
 				return self;
 			}
 
-			BaseCRTP operator--(this BaseCRTP& self, int) { return BaseCRTP::factory(self.it--); }
+			BaseCRTP operator--(this BaseCRTP& self, int) { return BaseCRTP::factory(self, -1); }
 
 			BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
-				self.it += diff;
+				BaseCRTP::factory(self, diff);
 				return self;
 			}
 
-			BaseCRTP operator+(this const BaseCRTP& self, const difference_type diff) {
-				return BaseCRTP::factory(self.it + diff);
+			BaseCRTP operator+(this BaseCRTP self, const difference_type diff) {
+				return self += diff;
 			}
 
-			friend BaseCRTP operator+(const difference_type diff, const BaseCRTP& iter) {
-				return BaseCRTP::factory(iter.it + diff);
+			friend BaseCRTP operator+(const difference_type diff, BaseCRTP iter) {
+				return iter += diff;
 			}
 
 			BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
-				self.it -= diff;
+				BaseCRTP::factory(self, - diff);
 				return self;
 			}
 
-			BaseCRTP operator-(this const BaseCRTP& self, const difference_type diff) {
-				return BaseCRTP::factory(self.it - diff);
+			BaseCRTP operator-(this BaseCRTP self, const difference_type diff) {
+				return self -= diff;
 			}
 
 			difference_type operator-(this const BaseCRTP& self, const BaseCRTP& other) {
-				return self.it - other.it;
+				return BaseCRTP::getPos(self) - BaseCRTP::getPos(other);
 			}
 
 			bool operator==(this const BaseCRTP& self, const BaseCRTP& other) {
-				return self.it == other.it;
+				return (self - other) == 0;
 			}
 
 			auto operator<=>(this const BaseCRTP& self, const BaseCRTP& other) {
-				return self.it <=> other.it;
+				return (self - other) <=> 0;
 			}
 		};
 
@@ -89,15 +90,34 @@ namespace base {
 		 */
 		template<class Data>
 		class BaseStableVector {
-			using ContainerT = std::vector<Box<Data>>;
+		private:
+			class Node {
+				usize idx;
+				BaseStableVector& father;
+				Data content;
+
+				Node(usize p, BaseStableVector& f, const Data& c): idx(p), father(f), content(c) {}
+				Node(usize p, BaseStableVector& f, Data&& c):
+					  idx(p),
+					  father(f),
+					  content(std::move(c)) {}
+
+				template<typename... Args>
+				Node(usize p, BaseStableVector& f, Args&&... args):
+					  idx(p),
+					  father(f),
+					  content(std::forward<Args>(args)...) {}
+			};
+
+			using ContainerT = std::vector<Box<Node>>;
 			ContainerT data;
 			static_assert(
 				std::is_same_v<typename ContainerT::size_type, usize>,
 				"When this fail, figure out what to do."
 			);
 
-			using I  = typename ContainerT::iterator;
-			using CI = typename ContainerT::const_iterator;
+			using I  = Node*;
+			using CI = Node const *;
 
 			BaseStableVector(ContainerT&& data): data(std::move(data)) {}
 
@@ -133,26 +153,30 @@ namespace base {
 
 			[[nodiscard]]
 			RefT operator[](usize pos) {
-				return data.at(pos).refMut();
+				return &data.at(pos)->content;
 			}
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return data.at(pos).ref();
+				return &data.at(pos)->content;
 			}
 
-			void pushBack(const Data& value) { data.emplace_back(makeBox<Data>(value)); }
+			void pushBack(const Data& value) {
+				data.emplace_back(makeBox<Node>(data.size(), *this, value));
+			}
 
-			void pushBack(Data&& value) { data.emplace_back(makeBox<Data>(std::move(value))); }
+			void pushBack(Data&& value) {
+				data.emplace_back(makeBox<Node>(data.size(), *this, std::move(value)));
+			}
 
 			[[nodiscard]]
 			RefT last() {
-				return data.back().refMut();
+				return &data.back()->content;
 			}
 
 			[[nodiscard]]
 			CRefT last() const {
-				return data.back().ref();
+				return &data.back()->content;
 			}
 
 			/**
@@ -166,7 +190,7 @@ namespace base {
 
 			template<class... Args>
 			void emplaceBack(Args&&... args) {
-				data.emplace_back(makeBox<Data>(std::forward<Args>(args)...));
+				data.emplace_back(makeBox<Node>(data.size(), *this, std::forward<Args>(args)...));
 			}
 
 			class Iterator: public Wrap<Iterator, I> {
@@ -176,9 +200,21 @@ namespace base {
 				friend BaseStableVector<Data>;
 				I it;
 
-				static constexpr Iterator factory(I&& u) {
-					Iterator ans;
-					ans.it = std::move(u);
+				static constexpr u64 getPos(Iterator& iter) {
+					return iter.it == nullptr
+					       ? iter.it->father.size()
+						   : iter.it->idx; 
+				}
+
+				static constexpr Iterator factory(Iterator& iter, i64 diff) {
+					I ans = iter;
+					u64 newPos = getPos(iter) + diff;
+					auto& arr = iter->father;
+
+					iter = (newPos < arr.size())
+						? arr[newPos].refMut()->get()
+						: nullptr;
+					
 					return ans;
 				}
 
@@ -188,11 +224,11 @@ namespace base {
 				using reference  = value_type&;
 				using pointer    = value_type*;
 
-				pointer operator->() const { return it->operator->(); }
+				pointer operator->() const { return &it->content; }
 
-				reference operator*() const { return **it; }
+				reference operator*() const { return it->content; }
 
-				reference operator[](difference_type diff) const { return *it[diff]; }
+				reference operator[](difference_type diff) const { return *(this + diff); }
 			};
 
 			class ConstIterator: public Wrap<ConstIterator, CI> {
@@ -214,14 +250,21 @@ namespace base {
 				using reference  = const value_type&;
 				using pointer    = const value_type*;
 
-				pointer operator->() const { return it->operator->(); }
+				pointer operator->() const { return &it->content; }
 
-				reference operator*() const { return **it; }
+				reference operator*() const { return it->content; }
 
-				reference operator[](difference_type diff) const { return *it[diff]; }
+				reference operator[](difference_type diff) const { return *(this + diff); }
 			};
 
-			Iterator erase(Iterator pos) { return Iterator::factory(data.erase(pos.it)); }
+			Iterator erase(Iterator del) {
+				u64 pos = Iterator::getPos(del);
+				for (u64 i = pos; i < size(); ++i) {
+					data[i]->idx--;
+				}
+				data.erase(data.begin() + pos);
+				return data.begin() + pos;
+			}
 
 			Iterator erase(ConstIterator pos) const { return Iterator::factory(data.erase(pos.it)); }
 
