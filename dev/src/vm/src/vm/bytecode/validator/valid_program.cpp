@@ -23,8 +23,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .global_data = std::ranges::to<std::vector>(globals_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);

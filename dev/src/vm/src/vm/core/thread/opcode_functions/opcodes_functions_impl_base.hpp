@@ -449,7 +449,7 @@ namespace vm {
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
 			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			const auto  method_name      = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto  method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
 			const auto  implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
@@ -637,8 +637,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto type
-				= thread.executing_program->getTypes().at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+			auto type    = thread.executing_program->getTypes().at(
+                TypeID(base::safeIntConv<usize>(instr->arg1))
+            );
 
 			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
@@ -664,8 +665,9 @@ namespace vm {
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
 			auto       parent_block        = frame->block_stack[variant_block_index];
-			auto       wanted_type
-				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+			auto       wanted_type         = thread.executing_program->getTypes().at(
+                vm::TypeID(static_cast<usize>(instr[1].arg0))
+            );
 
 			auto view_block_ref
 				= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
@@ -701,8 +703,9 @@ namespace vm {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       wanted_type
-				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+			auto       wanted_type     = thread.executing_program->getTypes().at(
+                vm::TypeID(static_cast<usize>(instr[1].arg0))
+            );
 
 			auto view_block_ref
 				= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
@@ -740,8 +743,9 @@ namespace vm {
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
 
-			auto dst_type
-				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+			auto dst_type = thread.executing_program->getTypes().at(
+				vm::TypeID(static_cast<usize>(instr[1].arg0))
+			);
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));

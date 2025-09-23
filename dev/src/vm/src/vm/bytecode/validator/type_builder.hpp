@@ -21,11 +21,10 @@ namespace vm::code::detail {
 	 *
 	 * @note One could wonder why pass the whole `TypeContext` instead of only a vector of new_types.
 	 * The answer is we need the full type context in order to build vtables for inheritable types.
-	 * One solution to this could be to move vtable building to `TypeMetadata::finalize()`.
-	 * @todo: https://github.com/ducktype-org/duckling/issues/1218
 	 *
 	 * @note Assumes that the newly added types won't invalidate the state. Before calling this
-	 * function you should use `vm::code::detail::revalidateTypes()`.
+	 * function you should use `vm::code::detail::validateTypesIntegrity()` on the whole context and
+	 * `vm::code::detail::validateType()` on every new type.
 	 */
 	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const TypeContext& new_ctx);
 }

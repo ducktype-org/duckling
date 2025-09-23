@@ -206,8 +206,8 @@ void vm::code::detail::rebuildTypeMetadata(
 ) {
 	auto new_types = new_ctx.getCurrentTypes() | std::views::drop(type_metadata->size())
 	               | std::ranges::to<std::vector<TypeOfData>>();
-	
-	// Reopen type metadata for addition;
+
+	// Reopen type metadata for addition.
 	type_metadata->unfinalize();
 
 	// Declare new types.
