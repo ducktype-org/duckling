@@ -1,0 +1,19 @@
+[{
+    "main_info": {
+        "metadata": {
+            "type": "error",
+            "family": "misc",
+            "name": "todo"
+        },
+        "params": {
+            "message": {
+                "type": "grouping",
+                "content": "interactive component (default content)",
+                "alt_content": "interactive component (alternative content)"
+            }
+        }
+    },
+    "secondary_infos": {},
+    "displayed_secondary_infos": [],
+    "entities": {}
+}]

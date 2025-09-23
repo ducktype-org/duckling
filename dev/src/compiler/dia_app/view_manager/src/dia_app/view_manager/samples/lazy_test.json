@@ -3,11 +3,11 @@
     "main_info": {
       "metadata": {
         "type": "error",
-        "family": TODO,
-        "name": TODO
+        "family": "misc",
+        "name": "todo"
       },
       "params": {
-        TODO: {
+        "message": {
           "type": "entity",
           "refers_to": "e1",
           "content": "open lazy info"
@@ -24,15 +24,14 @@
     "i1": {
       "metadata": {
         "type": "error",
-        "family": TODO,
-        "name": TODO
+        "family": "misc",
+        "name": "todo"
       },
       "params": {
-        TODO: {
+        "message": {
           "type": "entity",
           "refers_to": "e2",
-          "content":
-{"type": "lazy", "handle": "el2"}
+          "content": {"type": "lazy", "handle": "el2"}
         }
       }
     }
