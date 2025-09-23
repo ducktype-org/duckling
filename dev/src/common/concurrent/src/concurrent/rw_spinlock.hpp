@@ -112,5 +112,24 @@ namespace concurrent {
             lock->releaseWrite();
         }
     };
-    
+
+    template<class T>
+    struct WithReadLockObject final {
+    private:
+        T obj;
+        RWSpinLock lock;
+    public:
+        template<class Func>
+        auto withReadLock(Func f) {
+            WithReadLock l(&lock);
+            return f(&obj);
+        }
+
+        template<class Func>
+        auto withWriteLock(Func f) {
+            WithWriteLock l(&lock);
+            return f(&obj);
+        }
+    };
+
 }
