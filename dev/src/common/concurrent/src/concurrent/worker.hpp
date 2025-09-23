@@ -1,4 +1,7 @@
+#pragma once
+
 #include <base/ints.hpp>
+#include <random>
 
 namespace concurrent {
 	// using WorkerID = u64;
@@ -8,8 +11,17 @@ namespace concurrent {
 	 * Some operations might require access the data of the worker.
 	 */
 	struct WorkerData final {
-		u64 id; // worker ID
+		WorkerData(u64 id, std::minstd_rand rng);
+	public:
+		WorkerData() = delete;
+		WorkerData(const WorkerData&) = delete;
+		WorkerData& operator=(const WorkerData&) = delete;
+		WorkerData(WorkerData&&) = delete;
+		WorkerData& operator=(WorkerData&&) = delete;
 
-		// rng -- per worker
+		static WorkerData make();
+
+		u64 id;
+		std::minstd_rand rng;
 	};
 }

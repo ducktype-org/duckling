@@ -18,30 +18,11 @@ namespace concurrent {
 
 	template<class T, u64 BLOCK_SIZE = 2'048>
 	class SingleThreadedAllocator final {
-		/**
-		 * Storage for one object. Always stable in memory.
-		 *
-		 * @note Can be later changed to non-optional, but then the allocator
-		 * has to deal with object lifetimes.
-		 */
-		struct Storage final {
-		private:
-			// std::optional<T> value; // @OPT-NOTE: optional here adds 20%
-			ObjStorage<T> value;
-			// T value;
-		public:
-			
-			auto emplace(auto&&... args) {
-				return value.construct(std::forward<decltype(args)>(args)...);
-				// value = T(std::forward<decltype(args)>(args)...);
-				// value = T(std::forward<decltype(args)>(args)...);
-			}
-			void destroy() { value.destroy(); }
-			Ref<T> valueRef() { return value.get(); }
-		};
+		
+		using StorageT = ObjStorage<T>;
 
 		struct Buffer final {
-			std::array<Storage, BLOCK_SIZE> items;
+			std::array<StorageT, BLOCK_SIZE> items;
 		};
 
 		struct BufferIndex final {
@@ -69,8 +50,8 @@ namespace concurrent {
 
 			Ref storage = &buffers[bidx.buffer_idx]->items[bidx.item_idx];
 
-			storage->emplace(std::forward<decltype(args)>(args)...);
-			return storage->valueRef();
+			storage->construct(std::forward<decltype(args)>(args)...);
+			return storage->get();
 		}
 
 		void free(Ref<T>) {
@@ -91,7 +72,7 @@ namespace concurrent {
 	class ConcurrentSingleTypeAllocatorTake2 final {
 
 
-	}
+	};
 
 
 

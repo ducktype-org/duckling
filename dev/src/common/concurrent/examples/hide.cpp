@@ -6,8 +6,13 @@
 // concurrent::ConcurrentSingleTypeAllocator<THide, 1'024 * 8> allocator;
 concurrent::SingleThreadedAllocator<THide, 1'024ull * 128> allocator;
 
-THide* allocateHide() {
+THide* allocateHide(Ref<concurrent::WorkerData>) {
 	// auto item = allocator.allocateEmplace(42);
 	// return &*item;
 	return new THide(42);
 }
+
+// void deallocateHide(THide* item) {
+// 	// allocator.deallocate(item);
+// 	delete item;
+// }

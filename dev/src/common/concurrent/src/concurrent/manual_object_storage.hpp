@@ -10,11 +10,12 @@ namespace concurrent {
     /**
      * Lifetime management for a single object.
      * Note: destructor must be called manually.
+     * Any wrong usage results in undefined behavior.
      * See: https://en.cppreference.com/w/cpp/utility/launder.html
-     * @TODO: does it work for polymorphic types? Does it work at all?
      */
     template<class T>
     struct ObjStorage {
+        // @TODO: // optional can be used in dev builds with assertion in destructor
     private:
         alignas (T) std::byte data[sizeof(T)];
 
@@ -33,6 +34,4 @@ namespace concurrent {
         }
     };
 
-
-    
 }

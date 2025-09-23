@@ -1,5 +1,6 @@
 add_library(Concurrent
 	src/concurrent/concurrent_allocator.hpp
+	src/concurrent/worker.cpp
 )
 
 make_module(Concurrent USES Base)

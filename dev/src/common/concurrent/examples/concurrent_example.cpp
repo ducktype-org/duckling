@@ -5,9 +5,11 @@
 #include <iostream>
 
 #include <concurrent/manual_object_storage.hpp>
+#include <concurrent/worker.hpp>
+#include <base/ref.hpp>
 
-void job() {
-	for (int i = 0; i < 10'000'000; i++) allocateHide();
+void job(Ref<concurrent::WorkerData> worker) {
+	for (int i = 0; i < 10'000'000; i++) allocateHide(worker);
 }
 
 // class A {
@@ -31,7 +33,10 @@ int main() {
 	// spawn NUM_THREADS threads doing allocations:
 	std::vector<std::thread> threads;
 	threads.reserve(NUM_THREADS);
-	for (int i = 0; i < NUM_THREADS; i++) threads.emplace_back(job);
+	for (int i = 0; i < NUM_THREADS; i++) threads.emplace_back([]() {
+		auto worker_data = concurrent::WorkerData::make();
+		job(&worker_data);
+	});
 	for (auto& t: threads) t.join();
 	return 0;
 
