@@ -405,14 +405,14 @@ namespace vm {
 			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_signature->parameters[i];
-				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
+				TypeCRef          real_type = thread.executing_program->getTypes().at(arg_type);
 				auto              block     = frame->block_stack[first_arg_idx + i];
 				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id,
-				thread.executing_program->types->at(function_signature->result_type),
+				thread.executing_program->getTypes().at(function_signature->result_type),
 				thread.process,
 				thread,
 				args
@@ -449,11 +449,11 @@ namespace vm {
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
 			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			const auto  method_name      = thread.executing_program->method_name_pool[instr->arg1];
+			const auto  method_name      = thread.executing_program->getMethodNamePool()[instr->arg1];
 			const auto  implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
-				= *thread.executing_program->functions.idOf(implementation_name);
+				= *thread.executing_program->getFunctions().idOf(implementation_name);
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
@@ -463,7 +463,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
 			auto  function_id = static_cast<usize>(instr->arg0);
-			auto& function    = thread.executing_program->functions[function_id];
+			auto& function    = thread.executing_program->getFunctions()[function_id];
 			instr             = function.bc.data();
 
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
@@ -597,7 +597,7 @@ namespace vm {
 		{
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
+				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto       block   = thread.process_memory.allocateHeap(type);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
@@ -638,7 +638,7 @@ namespace vm {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto type
-				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+				= thread.executing_program->getTypes().at(TypeID(base::safeIntConv<usize>(instr->arg1)));
 
 			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
@@ -653,7 +653,7 @@ namespace vm {
 			auto variant_block       = frame->block_stack[variant_block_index];
 			thread.process_memory.setNestedViewBlock(
 				Pointer(variant_block, 0),
-				thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+				thread.executing_program->getTypes().at(TypeID(u64(instr->arg1)))
 			);
 		}
 		FUNCTION_CONT(1);
@@ -665,7 +665,7 @@ namespace vm {
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
 			auto       parent_block        = frame->block_stack[variant_block_index];
 			auto       wanted_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			auto view_block_ref
 				= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
@@ -691,7 +691,7 @@ namespace vm {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 			thread.process_memory.setNestedViewBlock(
-				variant_pointer, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+				variant_pointer, thread.executing_program->getTypes().at(TypeID(u64(instr->arg1)))
 			);
 		}
 		FUNCTION_CONT(1);
@@ -702,7 +702,7 @@ namespace vm {
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
 			auto       wanted_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			auto view_block_ref
 				= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
@@ -741,7 +741,7 @@ namespace vm {
 			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
 
 			auto dst_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
@@ -936,7 +936,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto pointed_type   = thread.executing_program->types->at(TypeID(instr->arg1));
+			auto pointed_type   = thread.executing_program->getTypes().at(TypeID(instr->arg1));
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
 			if (new_elem_count == 0) {

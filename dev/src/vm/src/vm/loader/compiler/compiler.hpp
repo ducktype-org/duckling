@@ -36,7 +36,7 @@ namespace vm::loader::compiler {
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
-		CRef<low::LowVMProgram> getLowProgram() const;
+		CRef<vm::low::LowVMProgram> getLowProgram() const;
 
 	private:
 		/**
@@ -77,7 +77,7 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */
-		low::LowVMProgram        low_program;
+		vm::low::LowVMProgram        low_program;
 		GlobalCompilationContext global_ctx;
 
 		/**

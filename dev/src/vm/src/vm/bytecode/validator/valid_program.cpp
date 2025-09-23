@@ -18,13 +18,13 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
-	return { .functions = { function_map.begin(), function_map.end() },
-		     .types
-		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
-		     .global_data = { globals_map.begin(), globals_map.end() } };
+	return { .functions   = std::ranges::to<std::vector>(function_map),
+		     .types       = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
+		     .global_data = std::ranges::to<std::vector>(globals_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
 	copy.insertCode(collection);

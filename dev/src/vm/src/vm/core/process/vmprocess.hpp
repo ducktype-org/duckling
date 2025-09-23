@@ -63,7 +63,7 @@ namespace vm {
 		/**
 		 * @brief The program being executed by this process.
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
-		 * nullptr if no code was loaded.
+		 * is empty if no code was loaded.
 		 */
 		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
 

@@ -122,7 +122,7 @@ namespace vm {
 			                             .result_type      = func.result_type };
 
 		u64         result_type_id     = func.result_type->getID().asInt();
-		const auto& funcs              = executing_program->functions;
+		const auto& funcs              = executing_program->getFunctions();
 		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
@@ -186,13 +186,14 @@ namespace vm {
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
 
-		auto main_return_type = func.result_type;
-		auto argv_type        = executing_program->types->at(base::StrID("argv"));
-		auto argv_ptr_type    = executing_program->types->at(base::StrID("ptr_argv"));
-		auto i64_type         = executing_program->types->at(base::StrID("i64"));
-		auto str_type         = executing_program->types->at(base::StrID("string"));
-		auto str_ptr_type     = executing_program->types->at(base::StrID("ptr_string"));
-		auto byte_type        = executing_program->types->at(base::StrID("byte"));
+		auto        main_return_type = func.result_type;
+		const auto& types            = executing_program->getTypes();
+		auto        argv_type        = types.at(base::StrID("argv"));
+		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
+		auto        i64_type         = types.at(base::StrID("i64"));
+		auto        str_type         = types.at(base::StrID("string"));
+		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
+		auto        byte_type        = types.at(base::StrID("byte"));
 
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
 			                             .bc               = {},
@@ -211,7 +212,7 @@ namespace vm {
 		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
 		u64 byte_type_id     = byte_type->getID().asInt();
 
-		const auto& funcs              = executing_program->functions;
+		const auto& funcs              = executing_program->getFunctions();
 		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
@@ -366,7 +367,8 @@ namespace vm {
 		// so we turn off pedantic warnings
 		// for this case
 		PUSH_DIAGNOSTIC
-		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
+		_Pragma(
+			"GCC diagnostic ignored \"-Wpedantic\""
 		) constexpr static std::array<void*, OP_CASES_COUNT>
 			opcode_label = {
 
@@ -517,12 +519,12 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		executing_program = program;
-		for (const auto& [global, id, name]: program->global_data.allData()) {
+		for (const auto& [global, id, name]: program->getGlobals().allData()) {
 			// Insert the global data if it hasn't been initialized; then run constructor if present
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->functions
+					const auto& func = *executing_program->getFunctions()
 					                        .atMaybe(base::StrID(global->ctor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
@@ -538,7 +540,7 @@ namespace vm {
 		}
 
 		try {
-			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
+			const auto& func = *executing_program->getFunctions().atMaybe(base::StrID(func_name.data()))
 			                        .expect("Called function does not exist: " + func_name);
 			std::optional<low::LowFuncData> start_function;
 			variant_match(run_arguments) {
@@ -559,10 +561,10 @@ namespace vm {
 
 	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
 		executing_program = program;
-		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
+		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->functions
+					const auto& func = *executing_program->getFunctions()
 					                        .atMaybe(base::StrID(global->dtor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
@@ -631,18 +633,23 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
-					const auto& func = executing_program->functions[index];
+				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
+					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id
+								= static_cast<u64>(index),  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

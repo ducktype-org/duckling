@@ -9,6 +9,10 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+namespace vm::loader::compiler {
+	class Compiler;
+}
+
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
@@ -39,6 +43,7 @@ namespace vm::low {
 	 * This is the final form of bytecode produced by the loader module which is executable by
 	 * `VMThread`.
 	 *
+	 * @note This structure can only be created by the compiler.
 	 * @note The program represented by this structure is always valid as it was verified in the
 	 * loading stage.
 	 *
@@ -47,7 +52,22 @@ namespace vm::low {
 	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
 	 * GlobalDataID>` - global data.
 	 */
-	struct LowVMProgram {
+	class LowVMProgram {
+	public:
+		friend class vm::loader::compiler::Compiler;
+
+		const TypeMetadata& getTypes() const { return *types; }
+
+		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const { return functions; }
+
+		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const { return global_data; }
+
+		const base::HashMap<u64, base::StrID>& getMethodNamePool() const {
+			return method_name_pool;
+		}
+
+	private:
+		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
@@ -55,4 +75,5 @@ namespace vm::low {
 		// names of called functions.
 		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
+
 }

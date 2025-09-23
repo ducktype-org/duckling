@@ -220,6 +220,6 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 	const std::vector<fs::File>& file_paths
 ) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile({ *std::move(opt_code_collection) });
+	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
