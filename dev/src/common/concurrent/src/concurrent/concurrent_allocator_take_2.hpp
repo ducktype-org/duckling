@@ -2,6 +2,7 @@
 
 #include "atomic_u64.hpp"
 #include "rw_spinlock.hpp"
+#include "manual_object_storage.hpp"
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -10,6 +11,7 @@
 
 #include <array>
 #include <optional>
+#include <deque>
 
 namespace concurrent {
 
@@ -23,16 +25,18 @@ namespace concurrent {
 		 */
 		struct Storage final {
 		private:
-			std::optional<T> value;
+			// std::optional<T> value; // @OPT-NOTE: optional here adds 20%
+			ObjStorage<T> value;
 			// T value;
 		public:
 			
 			auto emplace(auto&&... args) {
-				return value.emplace(std::forward<decltype(args)>(args)...);
+				return value.construct(std::forward<decltype(args)>(args)...);
+				// value = T(std::forward<decltype(args)>(args)...);
 				// value = T(std::forward<decltype(args)>(args)...);
 			}
-			// void destroy() { value.~T(); }
-			Ref<T> valueRef() { return &value.value(); }
+			void destroy() { value.destroy(); }
+			Ref<T> valueRef() { return value.get(); }
 		};
 
 		struct Buffer final {
@@ -57,11 +61,12 @@ namespace concurrent {
 			u64 idx = next_free_idx++;
 			BufferIndex bidx = toBufferIndex(idx);
 
-			while (bidx.buffer_idx >= buffers.size()) {
-				buffers.push_back(makeBox<Buffer>());
+			if (bidx.buffer_idx >= buffers.size()) {
+				[[unlikely]]
+				buffers.emplace_back();
 			}
-			
-			Ref storage = &buffers[bidx.buffer_idx]->items[bidx.item_idx];
+
+			Ref storage = &buffers[bidx.buffer_idx].items[bidx.item_idx];
 
 			storage->emplace(std::forward<decltype(args)>(args)...);
 			return storage->valueRef();
@@ -78,7 +83,7 @@ namespace concurrent {
 	private:
 
 		u64 next_free_idx = 0;
-		std::vector<Box<Buffer>> buffers;
+		std::deque<Buffer> buffers;
 	};
 
 	// template<class T, u64 BLOCK_SIZE = 2'048, u64 WORKERS = 8>
