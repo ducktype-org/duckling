@@ -46,7 +46,7 @@ namespace compiler::helios {
 		HOUTFunctionDeclaration(HOUTFunctionDeclaration&&)      = default;
 
 		/**
-		 * @note it is used for hashes, and == only
+		 * @note it is used for hashes
 		 * @note For now it works,
 		 * but in the future with generics, and templates it might not
 		 * We might want to add actual hash?
@@ -97,7 +97,6 @@ namespace compiler::helios {
 		 * In the future we might optimize it to single (or zero) shared_ptr, but
 		 * that will require some boilerplate.
 		 */
-
 		std::shared_ptr<const code::CodeBlock> body;
 
 		[[nodiscard]]

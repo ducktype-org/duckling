@@ -11,6 +11,7 @@ namespace pst {
 			out->arg_name = name;
 			state.parse(out).one(lang_def::NamedOperator::Assign);
 		}
+
 		state.parse(out).one(&out->arg);
 		return out;
 	}
