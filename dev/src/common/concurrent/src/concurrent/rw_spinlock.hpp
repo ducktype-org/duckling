@@ -86,4 +86,31 @@ namespace concurrent {
         }
 
     };
+
+    struct WithReadLock final {
+    private:
+        Ref<RWSpinLock> lock;
+    public:
+        explicit WithReadLock(Ref<RWSpinLock> lock) : lock(lock) {
+            lock->acquireRead();
+        }
+
+        ~WithReadLock() {
+            lock->releaseRead();
+        }
+    };
+
+    struct WithWriteLock final {
+    private:
+        Ref<RWSpinLock> lock;
+    public:
+        explicit WithWriteLock(Ref<RWSpinLock> lock) : lock(lock) {
+            lock->acquireWrite();
+        }
+
+        ~WithWriteLock() {
+            lock->releaseWrite();
+        }
+    };
+    
 }

@@ -10,8 +10,10 @@ namespace concurrent {
     private:
         // test: see what using atomic flag gives
         std::atomic<bool> value;
+        static_assert(std::atomic<bool>::is_always_lock_free, "bool is not lock-free");
 
     public:
+        AtomicBool() : value(false) {}
         AtomicBool(bool value) : value(value) {}
 
         [[nodiscard]]

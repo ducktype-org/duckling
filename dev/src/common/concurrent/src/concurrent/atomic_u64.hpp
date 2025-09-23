@@ -6,7 +6,9 @@
 #include "utils.hpp"
 
 namespace concurrent {
-
+    /**
+     * @note in the future, optimizing the memory order could result in much better performance, especially on ARM.
+     */
     struct AtomicU64 final {
     private:
         std::atomic<u64> value;
