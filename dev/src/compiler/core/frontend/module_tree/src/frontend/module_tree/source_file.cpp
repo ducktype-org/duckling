@@ -39,20 +39,6 @@ namespace compiler::frontend {
 	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
 		auto abs_path = file.getFilePath().absolute().getPath();
 
-		if (to_content.contains(abs_path)) {
-			CORE_ASSERT(
-				to_content.at(abs_path).view() == file.getContent().view(),
-				base::strConcat(
-					"SourceFile with path '",
-					abs_path.string(),
-					"' already exists with different content. "
-					"Delete the existing SourceFile first or call "
-					"update handler from the ModuleModifier."
-				)
-			);
-		} else {
-			to_content.put(abs_path, file.getContent());
-		}
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
 		files.pushBack(SourceFile(std::move(file), linked_module));
@@ -70,7 +56,7 @@ namespace compiler::frontend {
 	void SourceFile::update() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 		// Update content in cache
-		to_content.insert_or_assign(abs_path, this->file.getContent());
+		to_content.erase(abs_path);
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 		// reset the parse tree
 		parse_tree.reset();
@@ -85,9 +71,23 @@ namespace compiler::frontend {
 		}
 	}
 
-	base::SharedView SourceFile::getCachedContent() const {
+	base::SharedView SourceFile::getCachedContent() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
-		auto it       = to_content.find(abs_path);
+		if (to_content.contains(abs_path)) {
+			CORE_ASSERT(
+				to_content.at(abs_path).view() == file.getContent().view(),
+				base::strConcat(
+					"SourceFile with path '",
+					abs_path.string(),
+					"' already exists with different content. "
+					"Delete the existing SourceFile first or call "
+					"update handler from the ModuleModifier."
+				)
+			);
+		} else {
+			to_content.put(abs_path, file.getContent());
+		}
+		auto it = to_content.find(abs_path);
 		if (it != to_content.end()) return it->second;
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
