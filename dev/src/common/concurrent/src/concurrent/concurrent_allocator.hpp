@@ -69,9 +69,9 @@ namespace concurrent {
             }
 
             buffers.withWriteLock([&](Ref<BufferList> b) {
-                auto size = b->size();
-                b->emplace_back(box<Buffer>());
-
+                while (b->size() <= bidx.buffer_idx) {
+                    b->emplace_back(makeBox<Buffer>());
+                }
 
                 result = MRef<Storage>(&b->at(bidx.buffer_idx)->items[bidx.item_idx]);
             });
@@ -85,9 +85,9 @@ namespace concurrent {
         template<typename... Args>
         Ref<T> allocateEmplace(Args&&... args) {
             auto storage = getNextFreeStorage();
-            CORE_ASSERT(storage->value.empty(), "Storage already in use");
+            CORE_ASSERT(not storage->value.has_value(), "Storage already in use");
             storage->value.emplace(std::forward<Args>(args)...);
-            return Ref<T>(std::move(storage->value));
+            return Ref<T>(&storage->value.value());
         }
 
         void free(Ref<T> ) {
