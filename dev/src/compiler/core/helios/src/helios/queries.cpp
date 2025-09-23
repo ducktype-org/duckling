@@ -180,6 +180,10 @@ namespace compiler::helios {
 				auto location_type  = location_expr->expression_type.getSymbolType();
 				auto new_value_type = new_value_expr->expression_type.getSymbolType();
 
+				// When this code was being written, this check could not be tested.
+				// The optional result of this visitor is getting unwrapped without
+				// checking for emptiness, which causes a panic.
+				// @todo write a test for this once helios error handling is more robust
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
 					ctx.log(
@@ -276,6 +280,11 @@ namespace compiler::helios {
 
 				if (stmt->getValue().empty()) {
 					// no initial value case
+
+					// When this code was being written, this check could not be tested.
+					// The optional result of this visitor is getting unwrapped without
+					// checking for emptiness, which causes a panic.
+					// @todo write a test for this once helios error handling is more robust
 					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
