@@ -159,7 +159,7 @@ namespace dia {
 
 	void to_json(json& j, const SourcePosition& pos) {
 		auto [line, column] = pos.getStartLineColumn();
-		j                   = json{ { "file", pos.getSource()->getPath().strView() },
+		j                   = json{ { "file", pos.getSource()->getFile().getFilePath().strView() },
 			                        { "line", line },
 			                        { "column", column } };
 	}
