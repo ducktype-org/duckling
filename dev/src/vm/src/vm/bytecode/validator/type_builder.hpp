@@ -17,7 +17,7 @@ namespace vm::code::detail {
 	 * @param new_ctx New set of types containing both the old and new types. New types from this
 	 * stucture will be added to the type metadata.
 	 *
-	 * @note This function does not invalidate the old references in the given type_metadata
+	 * @note This function does not invalidate the old references in the given `type_metadata`
 	 *
 	 * @note One could wonder why pass the whole `TypeContext` instead of only a vector of new_types.
 	 * The answer is we need the full type context in order to build vtables for inheritable types.

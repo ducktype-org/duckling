@@ -53,12 +53,9 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
-	if (new_types.empty()) return;
 	for (const auto& type: new_types) type_context.insertType(type);
-
 	// Check if no cycles in hierarchy appeared after injection.
 	detail::validateTypesIntegrity(type_context);
-
 	// Validate only the newly added types.
 	for (const auto& type: new_types) detail::validateType(type, type_context, available_functions);
 }
@@ -76,6 +73,7 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
+	// @note: This is a temporary built type metadata for the sake of function verification.
 	auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& func: new_functions) {

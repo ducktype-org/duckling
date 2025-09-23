@@ -7,15 +7,16 @@
 
 namespace vm::code {
 	/**
-	 * @brief TypeContext allows for first adding a set of types,
-	 * and then validating and building them.
+	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
+	 * main entry point for type verification and building.
 	 */
 	class TypeContext {
 	public:
 		/**
 		 * @brief Inserts a new type. If a type is duplicated throws DuplicatedTypeError.
 		 */
-		void                            insertType(const TypeOfData& type);
+		void insertType(const TypeOfData& type);
+
 		const ObjIdNameMap<TypeOfData>& getCurrentTypes() const;
 
 	private:

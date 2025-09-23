@@ -10,6 +10,7 @@ namespace vm {
 	 * @brief Holds metadata about all types in the program.
 	 * @note Copy/Move constructors are deleted, because inner types hold cross-references to
 	 * themselves, so moving or copying them may invalidate their state.
+	 * @note This structure should be created by `vm::code::detail::buildTypeMetadata()`.
 	 */
 	class TypeMetadata final {
 	private:

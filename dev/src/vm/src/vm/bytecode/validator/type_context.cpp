@@ -6,7 +6,6 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-
 using namespace vm::code;
 
 const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }

@@ -29,6 +29,12 @@ namespace vm::loader::compiler {
 		 * @param high_program The new, complete, and validated high-level program representation.
 		 *
 		 * @note The compilation never fails as the given code was statically verified.
+		 *
+		 * @warning This function is stateful and operates incrementally. It is crucial
+		 * that each `high_program` passed to this function is an extension of the one from the
+		 * previous call. The compiler assumes that the existing set of program elements (types,
+		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
+		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
 		void recompile(const code::ValidProgram& high_program);
 
@@ -77,7 +83,7 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */
-		vm::low::LowVMProgram        low_program;
+		vm::low::LowVMProgram    low_program;
 		GlobalCompilationContext global_ctx;
 
 		/**
