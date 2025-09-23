@@ -1,6 +1,6 @@
 #pragma once
 
-constexpr int NUM_THREADS = 1;
+constexpr int NUM_THREADS = 8;
 
 
 struct THide final {

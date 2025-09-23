@@ -11,6 +11,7 @@
 
 #include <array>
 #include <optional>
+#include <list>
 #include <deque>
 
 namespace concurrent {
@@ -63,10 +64,10 @@ namespace concurrent {
 
 			if (bidx.buffer_idx >= buffers.size()) {
 				[[unlikely]]
-				buffers.emplace_back();
+				buffers.emplace_back(makeBox<Buffer>());
 			}
 
-			Ref storage = &buffers[bidx.buffer_idx].items[bidx.item_idx];
+			Ref storage = &buffers[bidx.buffer_idx]->items[bidx.item_idx];
 
 			storage->emplace(std::forward<decltype(args)>(args)...);
 			return storage->valueRef();
@@ -83,11 +84,14 @@ namespace concurrent {
 	private:
 
 		u64 next_free_idx = 0;
-		std::deque<Buffer> buffers;
+		std::vector<Box<Buffer>> buffers;
 	};
 
-	// template<class T, u64 BLOCK_SIZE = 2'048, u64 WORKERS = 8>
-	// class ConcurrentSingleTypeAllocatorTake2 final {
+	template<class T, u64 BLOCK_SIZE = 2'048, u64 WORKERS = 8>
+	class ConcurrentSingleTypeAllocatorTake2 final {
+
+
+	}
 
 
 

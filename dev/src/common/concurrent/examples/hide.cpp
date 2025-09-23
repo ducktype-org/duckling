@@ -7,7 +7,7 @@
 concurrent::SingleThreadedAllocator<THide, 1'024ull * 128> allocator;
 
 THide* allocateHide() {
-	auto item = allocator.allocateEmplace(42);
-	return &*item;
-	// return new THide(42);
+	// auto item = allocator.allocateEmplace(42);
+	// return &*item;
+	return new THide(42);
 }
