@@ -266,10 +266,8 @@ namespace compiler::helios::mangler {
 					if (child->getElementKind() == pst::ElementKind::ParamList) {
 						pst::Access<pst::ParamList> list
 							= child.dynamicCast<pst::ParamList>().value();
-						for (auto begin = list->begin(); begin != list->end(); ++begin) {
-							pst::Access<pst::FunParam> param = (*begin).unlock(ctx);
-
-							auto expr = param->getType().unlock(ctx)->getExpr();
+						for (auto param: std::ranges::subrange(list->begin(), list->end())) {
+							auto expr = param.unlock(ctx)->getType().unlock(ctx)->getExpr();
 
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);

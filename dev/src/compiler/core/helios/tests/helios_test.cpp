@@ -943,27 +943,27 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
-		auto globA = find_global(hout_unit, base::StrID("A")).value();
-		std::cerr << "\nGlobal variable name: " << globA.original_name.strView() << '\n';
-		auto mangled_globA = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = globA.helios_symbol,
+		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
+		std::cerr << "\nGlobal variable name: " << glob_a.original_name.strView() << '\n';
+		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key              = glob_a.helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 0,
 		      .additional_metadata     = std::nullopt }
 		);
-		std::cerr << "Mangled symbol: " << mangled_globA.strView() << '\n';
-		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_globA.str());
+		std::cerr << "Mangled symbol: " << mangled_glob_a.strView() << '\n';
+		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
-		auto glob = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob.original_name.strView() << '\n';
-		auto mangled_glob = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob.helios_symbol,
+		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
+		std::cerr << "\nGlobal Variable name: " << glob_b.original_name.strView() << '\n';
+		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key              = glob_b.helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 321,
 		      .additional_metadata     = "metadata_v321" }
 		);
-		std::cerr << "Mangled symbol: " << mangled_glob.strView() << '\n';
-		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.str());
+		std::cerr << "Mangled symbol: " << mangled_glob_b.strView() << '\n';
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
 		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
 		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
@@ -999,7 +999,9 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.str());
-		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.str());
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
+		std::cerr << "taw3e8\t" << mangled_glob_a.strView() << '\n';
+		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 

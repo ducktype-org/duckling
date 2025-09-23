@@ -145,7 +145,7 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "md"                              // module destructor
                         | "gc"                              // global variable constructor
                         | "gd"                              // global variable destructor
-//                      | ...                               // todo: virtual tables, generic structures, named parameter tables, guard variables, ...
+//                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
 
@@ -200,8 +200,8 @@ either in the scheme or it's implementation, they should be reflected here.
                          | "ix"	                            // []
                          | "cv" <type>	                    // (cast)
                          | "nm" <identifier> <type> <type>  // (named binary operator)
-                         | "Nm" <identifier> <type>         // (named unary prefix operator)
-                         | "nM" <identifier> <type>         // (named unary postfix operator)
+                         | "nu" <identifier> <type>         // (named unary prefix operator)
+                         | "nU" <identifier> <type>         // (named unary postfix operator)
 
 <opt-metadata> ::= "" | <metadata>
 // there are no restrictions on <vendor-metadata>, any characters are allowed
