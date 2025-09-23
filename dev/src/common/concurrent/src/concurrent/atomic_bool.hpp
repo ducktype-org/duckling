@@ -6,7 +6,7 @@
 
 namespace concurrent {
 
-    struct AtomicBool {
+    struct AtomicBool final {
     private:
         // test: see what using atomic flag gives
         std::atomic<bool> value;
@@ -14,12 +14,15 @@ namespace concurrent {
     public:
         AtomicBool(bool value) : value(value) {}
 
-        bool load() {
+        [[nodiscard]]
+        bool load() const noexcept {
             return value.load();
         }
-        void store(bool desired) {
+        void store(bool desired) noexcept {
             value.store(desired);
         }
+
+        [[nodiscard]]
         CmpRes cmpAndSwap(bool expected, bool desired) {
             bool res = value.compare_exchange_strong(expected, desired);
             return res ? CmpRes::Changed : CmpRes::NotChanged;

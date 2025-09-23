@@ -7,13 +7,13 @@
 
 namespace concurrent {
 
-    struct AtomicU64 {
+    struct AtomicU64 final {
     private:
         std::atomic<u64> value;
         static_assert(std::atomic<u64>::is_always_lock_free, "u64 is not lock-free");
 
     public:
-
+        AtomicU64() : value(0) {}
         AtomicU64(u64 value) : value(value) {}
 
         [[nodiscard]]
