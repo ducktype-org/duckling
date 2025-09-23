@@ -27,8 +27,8 @@ namespace concurrent {
 		};
 
 		struct BufferIndex final {
-			u64 buffer_idx;
-			u64 item_idx;
+			u64 buffer_idx = 0;
+			u64 item_idx = 0;
 		};
 
 		constexpr static BufferIndex toBufferIndex(u64 idx) {
@@ -38,20 +38,36 @@ namespace concurrent {
 			};
 		}
 	public:
+		SingleThreadedAllocator() {
+			buffers.emplace_back(makeBox<Buffer>());
+		}
 
 		Ref<T> allocateEmplace(auto&&... args) {
-			// this will be the index of the item:
-			u64 idx = next_free_idx++;
-			BufferIndex bidx = toBufferIndex(idx);
+			// @TODO: add a lot of assertions
 
-			if (bidx.buffer_idx >= buffers.size()) {
+			
+			// this will be the index of the item:
+			// u64 idx = next_free_idx++;
+			// BufferIndex bidx = toBufferIndex(idx);
+
+			next_free_idx.item_idx++;
+			
+			if (next_free_idx.item_idx >= BLOCK_SIZE) {
 				[[unlikely]]
+				next_free_idx.item_idx = 0;
+				next_free_idx.buffer_idx++;
 				buffers.emplace_back(makeBox<Buffer>());
 			}
 
-			Ref storage = &buffers[bidx.buffer_idx]->items[bidx.item_idx];
+			// if (bidx.buffer_idx >= buffers.size()) {
+			// 	[[unlikely]]
+			// 	buffers.emplace_back(makeBox<Buffer>());
+			// }
+
+			Ref storage = &buffers[next_free_idx.buffer_idx]->items[next_free_idx.item_idx];
 
 			storage->construct(std::forward<decltype(args)>(args)...);
+
 			return storage->get();
 		}
 
@@ -65,7 +81,7 @@ namespace concurrent {
 
 	private:
 
-		u64 next_free_idx = 0;
+		BufferIndex next_free_idx;
 		std::vector<Box<Buffer>> buffers;
 	};
 
