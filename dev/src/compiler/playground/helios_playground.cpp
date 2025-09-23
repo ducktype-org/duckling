@@ -1,3 +1,4 @@
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
@@ -52,7 +53,7 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = frontend::createModuleTree(path_to_compile);
 
 	defer(printContextErrors());
 

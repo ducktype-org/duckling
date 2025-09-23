@@ -12,8 +12,8 @@ namespace pst::expr {
 	class ComparisonChain final: public ExprElement {
 		using Lower = GeneralBinary;
 
-		std::vector<AccessInternal<ExprElement>> sub_expr;
-		std::vector<Operator>                    operators;
+		std::vector<AccessInternalAnonymous<ExprElement>> sub_expr;
+		std::vector<Operator>                             operators;
 
 		static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
@@ -40,5 +40,7 @@ namespace pst::expr {
 		~ComparisonChain() override = default;
 		void dprint(std::ostream& out) const final;
 		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+		void calcElementPathsRecursive() override;
 	};
 }

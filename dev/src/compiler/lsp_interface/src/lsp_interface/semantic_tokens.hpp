@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <frontend/module_tree/source_file.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/ints.hpp>
@@ -64,6 +65,7 @@ namespace lsp {
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
-	void        getSemanticTokens(pst::AccessLocked<pst::LangElement>, std::vector<SemanticToken>&);
-	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement>);
+	std::string getSemanticTokens(base::Ref<compiler::frontend::SourceFile>);
+	std::string getSemanticTokens(const std::vector<base::Ref<compiler::frontend::SourceFile>>& files
+	);
 }

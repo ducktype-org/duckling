@@ -4,6 +4,7 @@
 #include "../../hierarchy/expressions/char_value.hpp"
 #include "../../hierarchy/expressions/identifier_literal.hpp"
 #include "../../hierarchy/expressions/keyword_literal.hpp"
+#include "../../hierarchy/expressions/match_expr.hpp"
 #include "../../hierarchy/expressions/round_expr.hpp"
 #include "../../hierarchy/expressions/string_value.hpp"
 #include "../../hierarchy/expressions/value.hpp"
@@ -28,9 +29,10 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> Atom::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+		if (!checkLength(state, length))
+			return nullptr;
 
-		if (state[0].isKeyword()) {
+		else if (state[0].isKeyword()) {
 			return KeywordLiteral::parse(state, length);
 		} else if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state, length);

@@ -39,4 +39,9 @@ namespace vm::code {
 	 * @brief Stringifies an instruction.
 	 */
 	std::string instructionToString(const Instruction& instruction);
+
+	/**
+	 * @brief Stringifies a type.
+	 */
+	std::string typeToString(const TypeOfData& type);
 }

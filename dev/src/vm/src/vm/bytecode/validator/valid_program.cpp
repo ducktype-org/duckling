@@ -9,8 +9,6 @@
 #include <vm/bytecode/validator/function_validator.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 
-#include <unordered_set>
-
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {

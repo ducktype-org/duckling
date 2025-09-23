@@ -76,6 +76,12 @@ namespace tsh::internal {
 		representation = "Tuple" + stringifyTypeVector(this->components);
 	}
 
+	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
+		for (const auto& component: components)
+			if (!component.hasNoOpDestructor()) return false;
+		return true;
+	}
+
 	FunctionAbstractTypeImpl::FunctionAbstractTypeImpl(
 		std::vector<SymbolType<>> parameter_types,
 		const SymbolType<>        result_type,
@@ -121,6 +127,12 @@ namespace tsh::internal {
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
+	}
+
+	bool VariantAbstractTypeImpl::hasNoOpDestructor() const {
+		for (const auto& type: underlying_types)
+			if (!type.hasNoOpDestructor()) return false;
+		return true;
 	}
 
 	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol): symbol(symbol) {

@@ -144,7 +144,13 @@ namespace compiler::helios::code {
 		IntegerMod,
 		IntegerPow,
 
-		IntegerLt,  //< Less than
+		// Comparison operators
+		IntegerLt,    // Less then
+		IntegerLteq,  // Less then or equal to
+		IntegerGt,    // Greater then
+		IntegerGteq,  // Greater then or equal to
+		IntegerEq,    // Equal
+		IntegerNeq,   // Not equal
 
 		BooleanAnd,
 		BooleanOr,
@@ -274,6 +280,25 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> expressions;
 
 		SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief Represents a chain comparison, like "a < b == c >= d"
+	 * The result is a logical and of each separate comparison.
+	 * @TODO: User defined comparison operators.
+	 */
+	struct ChainComparisonExpr final: public Expr {
+		std::vector<base::Box<Expr>> expressions;
+		std::vector<BuiltinBinary>   operators;
+
+		ChainComparisonExpr(
+			query::Context&              ctx,
+			std::vector<base::Box<Expr>> expressions,
+			std::vector<BuiltinBinary>   operators
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

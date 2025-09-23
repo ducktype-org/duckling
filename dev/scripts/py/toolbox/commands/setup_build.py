@@ -12,9 +12,7 @@ from click import Choice, option, command
 
 
 @command()
-@build_dir(
-    help="The name of the directory."
-)
+@build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
 )
@@ -76,13 +74,22 @@ from click import Choice, option, command
     help="The build type.",
     default="Debug",
     type=Choice(
-        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"], case_sensitive=False
+        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
+        case_sensitive=False,
     ),
 )
 @option(
     "--shared_libs",
     prompt="Build shared libraries",
     help="Whether to use shared or static libraries.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--strip-symbol-information",
+    prompt="Strip all symbol information from binaries:",
+    help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,
     default=False,
     is_flag=True,

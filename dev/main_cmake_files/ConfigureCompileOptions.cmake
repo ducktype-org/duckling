@@ -1,4 +1,5 @@
 option(USE_MARCH_NATIVE "Use -march=native. This should be disabled for portable builds" OFF)
+option(STRIP_SYMBOL_INFORMATION "Strip symbol information from binaries" OFF)
 
 # disable compiler-specific extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -70,7 +71,10 @@ set(CMAKE_CXX_FLAGS_RELEASEOPT "-O2 -DBUILD_TYPE_RELEASE -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG      ${CMAKE_CXX_FLAGS_DEVDEBUG})
 
 
-# Strip binaries from symbols in Release build
-if(CMAKE_BUILD_TYPE MATCHES "^Release.*$")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
+if(STRIP_SYMBOL_INFORMATION)
+	# if not gcc/clang, this might fail:
+	if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+		message(FATAL_ERROR "Error: STRIP_SYMBOL_INFORMATION will likely fail (as is) compilers other then GCC and Clang. Fix or validate it first.")
+	endif()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
 endif()
