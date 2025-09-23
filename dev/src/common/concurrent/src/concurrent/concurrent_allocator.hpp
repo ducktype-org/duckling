@@ -65,7 +65,7 @@ namespace concurrent {
 			{
 				WithReadLock lock(&buffer_lock);
 				if (bidx.buffer_idx < buffers.size()) {
-					result = MRef<Storage>(&buffers.at(bidx.buffer_idx)->items[bidx.item_idx]);
+					result = MRef<Storage>(&buffers[bidx.buffer_idx]->items[bidx.item_idx]);
 				}
 			}
 
@@ -80,7 +80,7 @@ namespace concurrent {
 				WithWriteLock lock(&buffer_lock);
 				while (buffers.size() <= bidx.buffer_idx) buffers.emplace_back(makeBox<Buffer>());
 
-				result = MRef<Storage>(&buffers.at(bidx.buffer_idx)->items[bidx.item_idx]);
+				result = MRef<Storage>(&buffers[bidx.buffer_idx]->items[bidx.item_idx]);
 			}
 
 			return result.toOpt().value();
