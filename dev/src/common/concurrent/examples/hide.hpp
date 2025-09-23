@@ -3,7 +3,7 @@
 #include <concurrent/worker.hpp>
 #include <base/ref.hpp>
 
-constexpr int NUM_THREADS = 8;
+constexpr int NUM_THREADS = 16;
 
 
 struct THide final {

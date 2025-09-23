@@ -2,6 +2,7 @@
 
 #include "atomic_u64.hpp"
 #include "rw_spinlock.hpp"
+#include "worker.hpp"
 #include "manual_object_storage.hpp"
 
 #include <base/box.hpp>
@@ -68,8 +69,22 @@ namespace concurrent {
 		std::vector<Box<Buffer>> buffers;
 	};
 
+	/**
+	 * Concurrent allocator for a single type.
+	 * @TODO: free operations, reuse freed items, balance pools between workers
+	 */
 	template<class T, u64 BLOCK_SIZE = 2'048, u64 WORKERS = 8>
 	class ConcurrentSingleTypeAllocatorTake2 final {
+		std::array<SingleThreadedAllocator<T, BLOCK_SIZE>, WORKERS> allocators;
+
+	public:
+		Ref<T> allocateEmplace(Ref<WorkerData> worker, auto&&... args) noexcept {
+			// @TODO: change to core assert:
+			// CORE_ASSERT(worker->id < WORKERS, "Too many workers for the allocator");
+
+			return allocators.at(worker->id).allocateEmplace(std::forward<decltype(args)>(args)...);
+		}
+
 
 
 	};
