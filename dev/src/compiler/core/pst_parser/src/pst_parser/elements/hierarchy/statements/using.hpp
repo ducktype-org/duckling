@@ -33,7 +33,7 @@ namespace pst {
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
-			return DeclKind::Transparent;
+			return DeclKind::Symbol;
 		}
 	};
 }

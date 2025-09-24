@@ -47,5 +47,21 @@ namespace pst {
 		DeclKind isDeclaration() const final {
 			return DeclKind::Transparent;
 		}
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getContent() const {
+			return code_block_or_stmt.give();
+		}
+
+		[[nodiscard]]
+		Keyword getSpecifier() const {
+			return specifier;
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<CallList>> getArgs() const {
+			return call_list.map([](const auto& v) -> AccessLocked<CallList>
+				{ return v.give(); });
+		}
 	};
 }

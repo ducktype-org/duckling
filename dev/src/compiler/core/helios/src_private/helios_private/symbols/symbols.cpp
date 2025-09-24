@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "pst_parser/lang_parser_element.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <helios/ctv/ctv.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -184,6 +186,10 @@ namespace compiler::helios {
 			.scope       = scope,
 			.pst_element = stmt,
 		};
+		CORE_ASSERT(
+			stmt->isDeclaration() == pst::DeclKind::Symbol,
+			"When statement declares a symbol it should have a symbol DeclKind"
+		);
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
@@ -623,4 +629,35 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
+
+	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
+
+			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
+
+			auto parent = pst_element->getParent();
+			while (parent) {
+				if (auto stmt_specifier_opt = parent->unlock(ctx).dynamicCast<pst::StmtSpecifier>())
+					specifiers.emplace_back(stmt_specifier_opt.value());
+				else if (auto block_opt = parent->unlock(ctx).dynamicCast<pst::CodeBlock>()) {
+					// When we encounter code block we also check if it is inside specifier 
+					// and move up 2 levels in that case
+					parent = block_opt.value()->getParent();
+					if (auto second_stmt_specifier_opt = parent->unlock(ctx).dynamicCast<pst::StmtSpecifier>())
+						specifiers.emplace_back(second_stmt_specifier_opt.value());
+				}
+				else
+					break;
+				
+				parent = parent.value().unlock(ctx)->getParent();
+			}
+
+			return specifiers;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
 }

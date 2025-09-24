@@ -13,6 +13,7 @@
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
@@ -26,6 +27,7 @@
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include "pst_parser/elements/hierarchy/meta.hpp"
 
 #include <set>
 
@@ -351,9 +353,25 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt.unlock(ctx)->isDeclaration() != pst::DeclKind::None) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
-					symbols.emplace_back(sym_id);
+				switch (stmt.unlock(ctx)->isDeclaration()) {
+					case pst::DeclKind::Symbol: {
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						symbols.emplace_back(sym_id);
+						break;
+					}
+					case pst::DeclKind::Transparent: {
+						if (auto stmt_specifier_opt = stmt.unlock(ctx).template dynamicCast<pst::StmtSpecifier>()) {
+							auto stmt_specifier = stmt_specifier_opt.value();
+							auto inner_symbols = filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent()));
+							symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
+						}
+						break;
+					}
+					case pst::DeclKind::None:
+						// do nothing
+						break;
+					default:
+						CORE_PANIC("Not handled PST element in filterSymbolsFromStmtList");
 				}
 			}
 			return symbols;
