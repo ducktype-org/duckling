@@ -58,7 +58,7 @@ add_library(PstParser
 set_target_properties(PstParser PROPERTIES UNITY_BUILD ON)
 set_target_properties(PstParser PROPERTIES UNITY_BUILD_MODE GROUP)
 
-make_module(PstParser USES Lexer UnicodeClassification Printer TPC QueryFramework)
+make_module(PstParser USES Lexer UnicodeClassification Printer TPC QueryFramework DiagnosticInteractive)
 
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)

@@ -15,6 +15,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
+#include <helios/errors/operator_not_found.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>

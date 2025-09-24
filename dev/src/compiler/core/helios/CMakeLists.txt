@@ -26,9 +26,10 @@ add_library(HELIOS STATIC
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
 	src/helios/ctv/ctv.cpp
+	src/helios/errors/operator_not_found.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher LibVM MIR LIR DVMBackend)
+make_module(HELIOS USES Base HELIOS_SYMBOLS QueryFramework PstParser ModuleTree TypeSystemHigher LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp 
 	USES Base TypeSystemHigher PstParser HELIOS

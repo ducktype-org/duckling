@@ -1,8 +1,12 @@
 #pragma once
 
-#include "../../scope_symbol_id.hpp"
+#include <helios/scope_symbol_id.hpp>
 
 #include <helios/utils/symbol_list.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/simple.hpp>
+
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/box.hpp>
@@ -277,4 +281,21 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
+}
+
+namespace nlohmann {
+	template<>
+	struct adl_serializer<compiler::helios::SymID> {
+		static void to_json(json& j, const compiler::helios::SymID symbol) {
+			j = { { "kind", compiler::helios::kind(symbol) } };
+
+			// Handle kind specific serialisation.
+			switch (compiler::helios::kind(symbol)) {
+			default:
+				break;
+			};
+		}
+	};
+
+
 }

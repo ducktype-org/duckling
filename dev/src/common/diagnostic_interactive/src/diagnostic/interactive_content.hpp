@@ -3,10 +3,8 @@
 #include "common.hpp"
 #include "interactive_code.hpp"
 #include "serializable.hpp"
-#include "typesystem/higher/abstract_type.hpp"
-
 #include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/symbol_kind.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 
 #include "base/optional.hpp"
 #include <base/box.hpp>

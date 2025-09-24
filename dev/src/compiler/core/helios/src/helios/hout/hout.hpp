@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "../scope_symbol_id.hpp"
+#include "helios/scope_symbol_id.hpp"
 #include "elements/expr.hpp"  // IWYU pragma: export
 
 #include <helios/ctv/ctv.hpp>

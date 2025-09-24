@@ -3,7 +3,6 @@
 #include "common.hpp"
 #include "interactive_content.hpp"
 
-#include <helios/hout/elements/expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include "base/string_id.hpp"
@@ -11,6 +10,7 @@
 
 #include "diagnostic/interactive_code.hpp"
 #include "query_framework/query_int.hpp"
+#include <helios/scope_symbol_id.hpp>
 
 #include <json/json.hpp>
 
@@ -43,65 +43,6 @@ namespace dia {
 		ExampleMessage():
 			  InteractiveMessage(
 				  base::makeBox<ExampleContent>(), std::map<std::string, Box<dia::InteractiveNote>>()
-			  ) {}
-	};
-
-	using compiler::helios::code::Expr;
-
-	class OperatorNotFound: public InteractiveMessage {
-		class Params: public ContentParams {
-		public:
-			base::StrID op;
-			Box<Expr>   lhs;
-			Box<Expr>   rhs;
-
-			Params(base::StrID op, Box<Expr> lhs, Box<Expr> rhs):
-				  ContentParams(),
-				  op(op),
-				  lhs(std::move(lhs)),
-				  rhs(std::move(rhs)) {
-				auto& lhs_type = this->lhs->expression_type;
-				auto& rhs_type = this->rhs->expression_type;
-				types.insert(lhs_type.getType());
-				types.insert(rhs_type.getType());
-			}
-
-			json tojson() override;
-		};
-
-		class Content: public InteractiveContent {
-		public:
-			Content(
-				Box<ContentParams>                  params,
-				dia::SourcePosition                 position,
-				pst::AccessLocked<pst::LangElement> pst,
-				query::Context&                     ctx
-			):
-				  InteractiveContent(
-					  ContentType::ERROR,
-					  "type_check",
-					  "no_match_2op",
-					  std::move(params),
-					  base::makeBox<InteractiveCode>(
-						  position, pst, ctx, dia::pointer_message{ "cause", position }
-					  )
-				  ) {}
-		};
-
-	public:
-		OperatorNotFound(
-			dia::SourcePosition                 position,
-			base::StrID                         op,
-			Box<Expr>                           lhs,
-			Box<Expr>                           rhs,
-			pst::AccessLocked<pst::LangElement> pst,
-			query::Context&                     ctx
-		):
-			  InteractiveMessage(
-				  base::makeBox<Content>(
-					  base::makeBox<Params>(op, std::move(lhs), std::move(rhs)), position, pst, ctx
-				  ),
-				  std::map<std::string, Box<dia::InteractiveNote>>{}
 			  ) {}
 	};
 

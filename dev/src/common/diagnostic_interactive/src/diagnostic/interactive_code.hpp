@@ -2,7 +2,7 @@
 
 #include "common.hpp"
 #include "pst_parser/lang_parser_element.hpp"
-#include "source_position.hpp"
+#include <diagnostic/source_position.hpp>
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/scope_symbol_id.hpp>

@@ -1,13 +1,10 @@
 #pragma once
 
-#include "typesystem/higher/abstract_type.hpp"
-
-#include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/simple.hpp>
-
 #include "base/optional.hpp"
 #include "base/stringifyable_enum.hpp"
 #include <base/box.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 
 #include <json/json.hpp>
 
@@ -32,33 +29,6 @@ namespace nlohmann {
 		static void to_json(json& j, const base::Optional<T>& opt) {
 			if_opt_some(opt, val) { j = val; }
 			if_opt_none(opt) { j = json{}; }
-		}
-	};
-
-	template<>
-	struct adl_serializer<compiler::helios::SymID> {
-		static void to_json(json& j, const compiler::helios::SymID symbol) {
-			j = { { "kind", compiler::helios::kind(symbol) } };
-
-			// Handle kind specific serialisation.
-			switch (compiler::helios::kind(symbol)) {
-			default:
-				break;
-			};
-		}
-	};
-
-	template<>
-	struct adl_serializer<tsh::AbstractType> {
-		static void to_json(json& j, const tsh::AbstractType type) {
-			j = { { "name", std::vector<std::string>{ type.toString() } },
-				  { "kind", base::enumToStr(type.getKind()).str() } };
-
-			// Handle kind specific serialisation.
-			switch (type.getKind()) {
-			default:
-				break;
-			};
 		}
 	};
 
