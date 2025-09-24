@@ -19,7 +19,7 @@ namespace compiler::helios::code {
 	 * error is returned.
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param call_expr The PST call expression representing the function call.
-	 * @TODO: #1029 implement overloading. Most of logic is implemented, make attempFitting function
+	 * @TODO: #1300 #1029 implement overloading. Most of logic is implemented, make attempt. Fitting function
 	 * not destroy containers. Currently candidates must have size 1. Requires #1300
 	 */
 	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
