@@ -83,7 +83,8 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief placeholder for functions, methods, etc. It is declaration extended by function content.
+	 * @brief HOUT representation for function, etc. It is declaration extended by function content.
+	 * @note it should be used for all function-like entities (macros, methods, etc.)
 	 */
 	struct HOUTFunction final {
 		HOUTFunction(const HOUTFunctionDeclaration&);
