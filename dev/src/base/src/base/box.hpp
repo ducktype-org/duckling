@@ -7,8 +7,12 @@ namespace base {
 
 	/**
 	 * @brief Default deleter functor used by Box, MBox.
+	 *
 	 * @note Adding specialization for custom types with macros
+	 * DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and
+	 * DEFAULT_BOX_PTR_DELETER_DEFINITION(T) is supported and
 	 * can be used to avoid delete on incomplete types.
+	 * This effectively moves the definition into the cpp file, where the type is complete.
 	 *
 	 * @tparam T
 	*/
@@ -18,6 +22,7 @@ namespace base {
 
 		static void del(T* ptr) { delete ptr; }
 	};
+
 
 
 	/**
@@ -35,6 +40,7 @@ namespace base {
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class Box final {
 	private:
+
 		T* ptr;
 
 		template<class U, class UDeleter>
@@ -48,6 +54,12 @@ namespace base {
 		}
 
 		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+
+		/*
+		* Shorthand for creating a Box with the same deleter.
+		*/
+		template<class U>
+		using SDBox = Box<U, Deleter>;
 
 	public:
 		Box()               = delete;
@@ -67,7 +79,7 @@ namespace base {
 		Box(Box&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
 
 		template<class U>
-		Box(Box<U>&& other) noexcept: ptr{ std::move(other).ptr } {
+		Box(SDBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
@@ -82,7 +94,7 @@ namespace base {
 		 * @return Box&
 		 */
 		template<class U>
-		Box& operator=(Box<U>&& oth) noexcept {
+		Box& operator=(SDBox<U>&& oth) noexcept {
 			Deleter::del(ptr);
 			ptr     = std::move(oth).ptr;
 			oth.ptr = nullptr;
@@ -161,6 +173,20 @@ namespace base {
 		 */
 		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
 
+		/**
+		 * @brief Shorthand for creating a Box with the same deleter.
+		 */
+		template<class U>
+		using SDBox = Box<U, Deleter>;
+
+		/**
+		 * @brief Shorthand for creating a MBox with the same deleter.
+		 */
+		template<class U>
+		using SDMBox = MBox<U, Deleter>;
+
+
+
 	public:
 		MBox() = default;
 
@@ -171,12 +197,12 @@ namespace base {
 		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
 
 		template<class U>
-		MBox(Box<U>&& other) noexcept: ptr{ std::move(other).ptr } {
+		MBox(SDBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
 		template<class U>
-		MBox(MBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
+		MBox(SDMBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
@@ -190,7 +216,7 @@ namespace base {
 		 * @return MBox&
 		 */
 		template<class U>
-		MBox& operator=(MBox<U>&& oth) noexcept {
+		MBox& operator=(SDMBox<U>&& oth) noexcept {
 			Deleter::del(ptr);
 			ptr     = std::move(oth).ptr;
 			oth.ptr = nullptr;
@@ -205,7 +231,7 @@ namespace base {
 		 * @return MBox&
 		 */
 		template<class U>
-		MBox& operator=(Box<U>&& oth) noexcept {
+		MBox& operator=(SDBox<U>&& oth) noexcept {
 			Deleter::del(ptr);
 			ptr     = std::move(oth).ptr;
 			oth.ptr = nullptr;
@@ -272,13 +298,13 @@ namespace base {
 		 * @brief Method that converts MBox to Optional<Box>.
 		 * It leaves MBox in null state.
 		 *
-		 * @return Optional<Box<T>>
+		 * @return Optional<SDBox<T>>
 		 */
-		Optional<Box<T>> toOptBox() && {
+		Optional<SDBox<T>> toOptBox() && {
 			T* output = ptr;
 			ptr       = nullptr;
 			if (output == nullptr) return {};
-			return Box<T>::fromPointer(output);
+			return SDBox<T>::fromPointer(output);
 		}
 
 		~MBox() { Deleter::del(ptr); }
@@ -288,16 +314,16 @@ namespace base {
 	template<class U, class UDeleter>
 	MBox(Box<U, UDeleter>&&) noexcept -> MBox<U, UDeleter>;
 
-	template<class T, class... Args>
-	inline Box<T> makeBox(Args&&... args) {
-		return Box<T>::fromPointer(new T(std::forward<Args>(args)...));
+	template<class T, class Deleter = DefaultBoxPtrDeleter<T>, class... Args>
+	inline Box<T, Deleter> makeBox(Args&&... args) {
+		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...));
 	}
 
-	template<class T>
-	using CBox = Box<const T>;
+	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
+	using CBox = Box<const T, Deleter>;
 
-	template<class T>
-	using MCBox = MBox<const T>;
+	template<class T, class Deleter = DefaultBoxPtrDeleter<const T>>
+	using MCBox = MBox<const T, Deleter>;
 }
 
 // global namespace export:
@@ -306,3 +332,35 @@ using base::CBox;
 using base::makeBox;
 using base::MBox;
 using base::MCBox;
+
+
+/**
+ * @brief Macro for declaring a specialization of DefaultBoxPtrDeleter for type T.
+ * It should be used near the type declaration / forward declaration.
+ * It has to be used in pair with DEFAULT_BOX_PTR_DELETER_DEFINITION(T).
+ * See DefaultBoxPtrDeleter documentation for more details.
+ *
+ * @important It has to be used in top-level.
+ *
+ * @param T type for which the specialization is declared
+*/
+#define DEFAULT_BOX_PTR_DELETER_DECLARATION(T) \
+	template<>                 \
+	struct ::base::DefaultBoxPtrDeleter<T> { \
+		static void del(T* ptr);   \
+	};
+
+/**
+ * @brief Macro for defining a specialization of DefaultBoxPtrDeleter for type T.
+ * It should be used where type is complete.
+ * It has to be used in pair with DEFAULT_BOX_PTR_DELETER_DECLARATION(T).
+ * See DefaultBoxPtrDeleter documentation for more details.
+ *
+ * @important It has to be used in top-level.
+ *
+ * @param T type for which the specialization is declared
+*/
+#define DEFAULT_BOX_PTR_DELETER_DEFINITION(T) \
+	void ::base::DefaultBoxPtrDeleter<T>::del(T* ptr) { \
+		delete ptr;   \
+	};
