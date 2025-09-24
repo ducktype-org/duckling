@@ -254,7 +254,7 @@ class TestHTTPClient:
             url=f"http://localhost:{tcp_port}/dummy/hello",
             method="GET",
             connect_timeout=1,
-            network_interface="eth2137",  # connection on this interface should time out
+            network_interface="eth91235",  # connection on this interface should time out
         )
 
         with BytesIO() as buf:

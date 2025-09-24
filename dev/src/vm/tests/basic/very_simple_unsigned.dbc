@@ -24,7 +24,7 @@ function main { i64, ptr_argv } -> i64 {
 
     label Loop;
     add_l64_l64 tmp, tmp2;
-    cmpEq_l64_imm tmp, 2137;
+    cmpEq_l64_imm tmp, 1235;
     jmpIfNot_label Loop;
     umod_l64_imm tmp, 999999;
 
