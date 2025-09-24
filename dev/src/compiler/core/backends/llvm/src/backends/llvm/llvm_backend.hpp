@@ -10,20 +10,7 @@
 
 #include <filesystem>
 
-namespace compiler::backend_llvm {
-	struct ModuleImpl;
-}
-
-namespace compiler::backend_llvm {
-	// Forward declaration for deleter function
-	void deleteModuleImpl(ModuleImpl* ptr);
-}
-
-/**
- * @brief Custom Box/MBox deleter for ModuleImpl.
- * It is needed to avoid UB with delete on incomplete type.
- */
-BOX_MAKE_PTR_DELETER(compiler::backend_llvm::ModuleImpl, compiler::backend_llvm::deleteModuleImpl);
+#include "module_impl_fd.hpp"
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };

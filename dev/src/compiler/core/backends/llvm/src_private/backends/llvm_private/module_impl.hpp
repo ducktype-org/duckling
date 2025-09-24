@@ -10,6 +10,8 @@ LLVM_INCLUDE_END()
 
 #include <base/box.hpp>
 
+#include <backends/llvm/module_impl_fd.hpp>
+
 namespace compiler::backend_llvm {
 
 	/**
@@ -29,3 +31,5 @@ namespace compiler::backend_llvm {
 		friend struct Module;
 	};
 }
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_llvm::ModuleImpl)
