@@ -107,7 +107,7 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
 	 */
-	base::Optional<Box<CallExpr>> attempFitting(
+	base::Optional<Box<CallExpr>> attemptFitting(
 		query::Context&                        ctx,
 		SymID                                  fun,
 		std::vector<Box<Expr>>&                normal_arguments,
@@ -152,7 +152,7 @@ namespace compiler::helios::code {
 
 		base::Optional<Box<CallExpr>> result;
 		for (const auto& fun: candidates) {
-			match_optional(attempFitting(ctx, fun, normal_arguments, named_arguments)) {
+			match_optional(attemptFitting(ctx, fun, normal_arguments, named_arguments)) {
 				opt_some(call_res) {
 					if (result.has_value())
 						return query::QError(errors::Failed());  // At least 2 functions fit.
