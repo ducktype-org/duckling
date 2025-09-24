@@ -83,9 +83,8 @@ namespace base {
 		 */
 		template<class U>
 		Box& operator=(Box<U>&& oth) noexcept {
-			deleter(ptr);
+			Deleter::del(ptr);
 			ptr     = std::move(oth).ptr;
-	
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -125,7 +124,7 @@ namespace base {
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
 		~Box() {
-			deleter(ptr);
+			Deleter::del(ptr);
 		}
 	};
 
@@ -167,12 +166,6 @@ namespace base {
 
 		MBox(std::nullptr_t) {}
 
-		/**
-		 * @brief Constructs an MBox from a raw pointer.
-		 * It takes ownership of the pointer.
-		 */
-		static MBox fromPointer(T* ptr) noexcept { return MBox(ptr); }
-
 		MBox(const MBox& other) = delete;
 
 		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
@@ -182,9 +175,8 @@ namespace base {
 			other.ptr = nullptr;
 		}
 
-		template<class U, class UDeleter>
-		MBox(MBox<U, UDeleter>&& other) noexcept requires(std::is_convertible_v<U*, T*> && (std::is_same_v<Deleter, UDeleter> || std::is_default_constructible_v<Deleter>))
-			: ptr{ std::move(other).ptr }, deleter{ initializeDeleter<UDeleter>(std::move(other.deleter)) } {
+		template<class U>
+		MBox(MBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
@@ -194,19 +186,13 @@ namespace base {
 		 * @brief Move assignment. The object previously pointed to by the MBox is deleted.
 		 *
 		 * @tparam U
-		 * @tparam UDeleter
 		 * @param oth
 		 * @return MBox&
 		 */
-		template<class U, class UDeleter>
-		MBox& operator=(MBox<U, UDeleter>&& oth) noexcept requires(std::is_convertible_v<U*, T*> && (std::is_same_v<Deleter, UDeleter> || std::is_default_constructible_v<Deleter>)) {
-			deleter(ptr);
+		template<class U>
+		MBox& operator=(MBox<U>&& oth) noexcept {
+			Deleter::del(ptr);
 			ptr     = std::move(oth).ptr;
-			if constexpr (std::is_same_v<Deleter, UDeleter>) {
-				deleter = std::move(oth.deleter);
-			} else {
-				deleter = Deleter{};
-			}
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -215,19 +201,13 @@ namespace base {
 		 * @brief Move assignment. The object previously pointed to by the MBox is deleted.
 		 *
 		 * @tparam U
-		 * @tparam UDeleter
 		 * @param oth
 		 * @return MBox&
 		 */
-		template<class U, class UDeleter>
-		MBox& operator=(Box<U, UDeleter>&& oth) noexcept requires(std::is_convertible_v<U*, T*> && (std::is_same_v<Deleter, UDeleter> || std::is_default_constructible_v<Deleter>)) {
-			deleter(ptr);
+		template<class U>
+		MBox& operator=(Box<U>&& oth) noexcept {
+			Deleter::del(ptr);
 			ptr     = std::move(oth).ptr;
-			if constexpr (std::is_same_v<Deleter, UDeleter>) {
-				deleter = std::move(oth.deleter);
-			} else {
-				deleter = Deleter{};
-			}
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -292,16 +272,16 @@ namespace base {
 		 * @brief Method that converts MBox to Optional<Box>.
 		 * It leaves MBox in null state.
 		 *
-		 * @return Optional<Box<T, Deleter>>
+		 * @return Optional<Box<T>>
 		 */
-		Optional<Box<T, Deleter>> toOptBox() && {
+		Optional<Box<T>> toOptBox() && {
 			T* output = ptr;
 			ptr       = nullptr;
 			if (output == nullptr) return {};
-			return Box<T, Deleter>::fromPointer(output, std::move(deleter));
+			return Box<T>::fromPointer(output);
 		}
 
-		~MBox() { deleter(ptr); }
+		~MBox() { Deleter::del(ptr); }
 	};
 
 	// Deduction guide for constructing a MBox from a Box:
