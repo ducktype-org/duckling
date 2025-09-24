@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
 	 * invalidated. Requires #1300.
 	 */
-	base::Optional<Box<CallExpr>> attempFittingFun(
+	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
 		SymID                                  fun,
 		std::vector<Box<Expr>>&                normal_arguments,
@@ -76,7 +76,7 @@ namespace compiler::helios::code {
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
 	 * invalidated. Requires #1300.
 	 */
-	base::Optional<Box<CallExpr>> attempFittingBuiltin(
+	base::Optional<Box<CallExpr>> attemptFittingBuiltin(
 		query::Context&                        ctx,
 		SymID                                  fun,
 		std::vector<Box<Expr>>&                normal_arguments,
@@ -115,9 +115,9 @@ namespace compiler::helios::code {
 	) {
 		switch (kind(fun)) {
 		case SymbolKind::Function:
-			return attempFittingFun(ctx, fun, normal_arguments, named_arguments);
+			return attemptFittingFun(ctx, fun, normal_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
-			return attempFittingBuiltin(ctx, fun, normal_arguments, named_arguments);
+			return attemptFittingBuiltin(ctx, fun, normal_arguments, named_arguments);
 		default:
 			CORE_PANIC("Function candidate is neither a function nor a builtin function");
 		}
