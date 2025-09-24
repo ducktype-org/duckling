@@ -15,15 +15,13 @@ namespace base {
 	 * This effectively moves the definition into the cpp file, where the type is complete.
 	 *
 	 * @tparam T
-	*/
+	 */
 	template<class T>
 	struct DefaultBoxPtrDeleter {
 		static_assert(IS_COMPLETE_V<T>);
 
 		static void del(T* ptr) { delete ptr; }
 	};
-
-
 
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
@@ -32,15 +30,17 @@ namespace base {
 	 * Attempt to use it after that will result in a panic. In the future we might consider
 	 * removing this check in release build for performance.
 	 *
-	 * @note Currently only stateless deleters are supported. If the need for stateful deleters arises, we can add support for them by storing the deleter instance in the Box (e.g. [no_unique_address]] Deleter deleter;).
+	 * @note Currently only stateless deleters are supported. If the need for stateful deleters
+	 * arises, we can add support for them by storing the deleter instance in the Box (e.g.
+	 * [no_unique_address]] Deleter deleter;).
 	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has to define static method `void del(T*)`.
+	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has
+	 * to define static method `void del(T*)`.
 	 */
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class Box final {
 	private:
-
 		T* ptr;
 
 		template<class U, class UDeleter>
@@ -56,8 +56,8 @@ namespace base {
 		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
 
 		/*
-		* Shorthand for creating a Box with the same deleter.
-		*/
+		 * Shorthand for creating a Box with the same deleter.
+		 */
 		template<class U>
 		using SDBox = Box<U, Deleter>;
 
@@ -134,9 +134,7 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
-		~Box() {
-			Deleter::del(ptr);
-		}
+		~Box() { Deleter::del(ptr); }
 	};
 
 	/**
@@ -146,10 +144,13 @@ namespace base {
 	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In
 	 * the future we might consider removing this check in release build for performance.
 	 *
-	 * @note Currently only stateless deleters are supported. If the need for stateful deleters arises, we can add support for them by storing the deleter instance in the Box (e.g. [no_unique_address]] Deleter deleter;).
+	 * @note Currently only stateless deleters are supported. If the need for stateful deleters
+	 * arises, we can add support for them by storing the deleter instance in the Box (e.g.
+	 * [no_unique_address]] Deleter deleter;).
 	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has to define static method `void del(T*)`.
+	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has
+	 * to define static method `void del(T*)`.
 	 */
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class MBox final {
@@ -340,11 +341,11 @@ using base::MCBox;
  * @important It has to be used in top-level.
  *
  * @param T type for which the specialization is declared
-*/
+ */
 #define DEFAULT_BOX_PTR_DELETER_DECLARATION(T) \
-	template<>                 \
-	struct ::base::DefaultBoxPtrDeleter<T> { \
-		static void del(T* ptr);   \
+	template<>                                 \
+	struct ::base::DefaultBoxPtrDeleter<T> {   \
+		static void del(T* ptr);               \
 	};
 
 /**
@@ -356,8 +357,6 @@ using base::MCBox;
  * @important It has to be used in top-level.
  *
  * @param T type for which the specialization is declared
-*/
+ */
 #define DEFAULT_BOX_PTR_DELETER_DEFINITION(T) \
-	void ::base::DefaultBoxPtrDeleter<T>::del(T* ptr) { \
-		delete ptr;   \
-	};
+	void ::base::DefaultBoxPtrDeleter<T>::del(T* ptr) { delete ptr; }

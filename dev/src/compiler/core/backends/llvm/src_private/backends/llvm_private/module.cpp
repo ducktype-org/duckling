@@ -11,9 +11,7 @@
 #include <iostream>
 
 namespace compiler::backend_llvm {
-	void deleteModuleImpl(ModuleImpl* ptr) {
-		delete ptr;
-	}
+	void deleteModuleImpl(ModuleImpl* ptr) { delete ptr; }
 }
 
 namespace compiler::backend_llvm {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "module_impl_fd.hpp"
+
 #include <lir/lir_structure/function_forward.hpp>
 
 #include <base/box.hpp>
@@ -9,8 +11,6 @@
 #include <query_framework/context_fd.hpp>
 
 #include <filesystem>
-
-#include "module_impl_fd.hpp"
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };

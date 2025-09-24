@@ -7,4 +7,3 @@ namespace compiler::backend_llvm {
 }
 
 DEFAULT_BOX_PTR_DELETER_DECLARATION(compiler::backend_llvm::ModuleImpl)
-
