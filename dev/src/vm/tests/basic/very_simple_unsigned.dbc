@@ -20,7 +20,7 @@ function main { i64, ptr_argv } -> i64 {
     ucmpG_l64_l64 tmp, tmp2;
     ucmpG_l64_imm tmp, 0;
     jmpIfNot_label Finish;
-    mov_l64_imm tmp, 2130;
+    mov_l64_imm tmp, 1228;
 
     label Loop;
     add_l64_l64 tmp, tmp2;
