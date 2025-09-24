@@ -25,6 +25,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
+	// @TODO: #1306
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;
@@ -73,6 +74,7 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
 	// @note: This is a temporary built type metadata for the sake of function verification.
+	// @TODO: #1306
 	auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& func: new_functions) {
