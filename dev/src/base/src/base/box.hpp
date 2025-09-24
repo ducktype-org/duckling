@@ -23,6 +23,7 @@ namespace base {
 		static void del(T* ptr) { delete ptr; }
 	};
 
+
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
 	 * scope. It is not nullable, and it is not copyable.

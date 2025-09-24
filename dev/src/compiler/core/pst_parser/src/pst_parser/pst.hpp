@@ -7,13 +7,6 @@
 
 #include <token_source/source.hpp>
 
-namespace pst::internal {
-	void deleteState(pst::LangParserState* ptr);
-}
-
-// Custom deleter to not include full state definition
-BOX_MAKE_PTR_DELETER(pst::LangParserState, pst::internal::deleteState);
-
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
