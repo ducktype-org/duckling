@@ -129,7 +129,7 @@ namespace compiler::helios {
 			}
 		};
 
-		static auto handle_function(Context& ctx, SymID sym) {
+		static auto handleFunction(Context& ctx, SymID sym) {
 			auto                           declaration = ctx.query<QueryDeclOfFun>(sym);
 			std::vector<tsh::SymbolType<>> param_types{};
 			param_types.reserve(declaration.parameters->size());
@@ -148,7 +148,7 @@ namespace compiler::helios {
 			variant_match(symbol_ref->other) {
 				variant_case(PstSymbolData, pst_data) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
-					if (kind(key) == SymbolKind::Function) return handle_function(ctx, key);
+					if (kind(key) == SymbolKind::Function) return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
