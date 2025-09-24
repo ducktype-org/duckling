@@ -48,6 +48,7 @@ namespace base {
 		}
 
 		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+
 	public:
 		Box()               = delete;
 		Box(std::nullptr_t) = delete;
@@ -80,15 +81,11 @@ namespace base {
 		 * @param oth
 		 * @return Box&
 		 */
-		template<class U, class UDeleter>
-		Box& operator=(Box<U, UDeleter>&& oth) noexcept requires(std::is_convertible_v<U*, T*> && (std::is_same_v<Deleter, UDeleter> || std::is_default_constructible_v<Deleter>)) {
+		template<class U>
+		Box& operator=(Box<U>&& oth) noexcept {
 			deleter(ptr);
 			ptr     = std::move(oth).ptr;
-			if constexpr (std::is_same_v<Deleter, UDeleter>) {
-				deleter = std::move(oth.deleter);
-			} else {
-				deleter = Deleter{};
-			}
+	
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -139,15 +136,15 @@ namespace base {
 	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In
 	 * the future we might consider removing this check in release build for performance.
 	 *
+	 * @note Currently only stateless deleters are supported. If the need for stateful deleters arises, we can add support for them by storing the deleter instance in the Box (e.g. [no_unique_address]] Deleter deleter;).
+	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter deleter type, defaults to DefaultDeleter<T> for backward compatibility
+	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has to define static method `void del(T*)`.
 	 */
-	template<class T, class Deleter = DefaultDeleter<T>>
+	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class MBox final {
 	private:
 		T* ptr = nullptr;
-		// Use no_unique_address to avoid storage overhead for stateless deleters
-		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
 		friend class MBox;
@@ -163,16 +160,12 @@ namespace base {
 		 * @brief Constructs an MBox from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
-		explicit MBox(T* ptr) noexcept: ptr{ ptr }, deleter{} {}
-
-		explicit MBox(T* ptr, const Deleter& del) noexcept: ptr{ ptr }, deleter{ del } {}
-
-		explicit MBox(T* ptr, Deleter&& del) noexcept: ptr{ ptr }, deleter{ std::move(del) } {}
+		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
 
 	public:
 		MBox() = default;
 
-		MBox(std::nullptr_t) : deleter{} {}
+		MBox(std::nullptr_t) {}
 
 		/**
 		 * @brief Constructs an MBox from a raw pointer.
@@ -180,25 +173,12 @@ namespace base {
 		 */
 		static MBox fromPointer(T* ptr) noexcept { return MBox(ptr); }
 
-		/**
-		 * @brief Constructs an MBox from a raw pointer with a custom deleter.
-		 * It takes ownership of the pointer.
-		 */
-		static MBox fromPointer(T* ptr, const Deleter& del) noexcept { return MBox(ptr, del); }
-
-		/**
-		 * @brief Constructs an MBox from a raw pointer with a custom deleter (move version).
-		 * It takes ownership of the pointer.
-		 */
-		static MBox fromPointer(T* ptr, Deleter&& del) noexcept { return MBox(ptr, std::move(del)); }
-
 		MBox(const MBox& other) = delete;
 
-		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other.deleter) } { other.ptr = nullptr; }
+		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
 
-		template<class U, class UDeleter>
-		MBox(Box<U, UDeleter>&& other) noexcept requires(std::is_convertible_v<U*, T*> && (std::is_same_v<Deleter, UDeleter> || std::is_default_constructible_v<Deleter>))
-			: ptr{ std::move(other).ptr }, deleter{ initializeDeleter<UDeleter>(std::move(other.deleter)) } {
+		template<class U>
+		MBox(Box<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
