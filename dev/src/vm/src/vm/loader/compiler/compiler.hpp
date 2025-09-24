@@ -48,7 +48,7 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief Stores the shared, global state required for the entire compilation process.
 		 */
-		struct GlobalCompilationContext {
+		struct ProgramCompilationContext {
 			/**
 			 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
 			 * This is a crucial lookup table used during the instruction lowering phase to
@@ -83,8 +83,8 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief The microbytecode program representation being built and managed by the compiler.
 		 */
-		vm::low::LowVMProgram    low_program;
-		GlobalCompilationContext global_ctx;
+		vm::low::LowVMProgram     low_program;
+		ProgramCompilationContext program_ctx;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.
