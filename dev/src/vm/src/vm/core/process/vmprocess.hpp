@@ -60,10 +60,21 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::low::LowVMProgram> loaded_program = {};
+		/**
+		 * @brief The program being executed by this process.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
+		 * is empty if no code was loaded.
+		 */
+		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
 
 		Memory memory;
 
+
+		/**
+		 * @brief A loader instance for this VMProcess. Stores the high level and low level
+		 * representation of the currently executed program. `loaded_program` references the low
+		 * representation which exists in this class.
+		 */
 		loader::Loader loader{};
 
 		/**
@@ -81,7 +92,7 @@ namespace vm {
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
+			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
 
 		/**
