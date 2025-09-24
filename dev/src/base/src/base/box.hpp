@@ -5,98 +5,20 @@
 
 namespace base {
 
-	namespace extend {
-		/**
-		 * @brief Pointer deleter functor used by Box, MBox.
-		 * @note Adding specialization for custom types
-		 * can be used to avoid delete on incomplete types.
-		 *
-		 * @tparam T
-		 */
-		template<class T>
-		struct BoxPtrDeleter {
-			static_assert(IS_COMPLETE_V<T>);
-
-			static void del(T* ptr) { delete ptr; }
-		};
-	}
-
 	/**
-	 * @brief Default deleter for Box/MBox that uses the legacy BoxPtrDeleter system.
-	 * This maintains backward compatibility with existing specializations.
-	 * 
-	 * @tparam T The type to delete
-	 */
+	 * @brief Default deleter functor used by Box, MBox.
+	 * @note Adding specialization for custom types with macros
+	 * can be used to avoid delete on incomplete types.
+	 *
+	 * @tparam T
+	*/
 	template<class T>
-	struct DefaultDeleter {
-		void operator()(T* ptr) const {
-			extend::BoxPtrDeleter<T>::del(ptr);
-		}
+	struct DefaultBoxPtrDeleter {
+		static_assert(IS_COMPLETE_V<T>);
+
+		static void del(T* ptr) { delete ptr; }
 	};
 
-	/**
-	 * @brief Function pointer deleter for Box/MBox.
-	 * Useful for C-style APIs or custom deletion functions.
-	 * 
-	 * @tparam T The type to delete
-	 */
-	template<class T>
-	struct FunctionDeleter {
-		using DeleterFunction = void(*)(T*);
-		DeleterFunction deleter;
-
-		explicit FunctionDeleter(DeleterFunction del) : deleter(del) {}
-
-		void operator()(T* ptr) const {
-			if (deleter && ptr) {
-				deleter(ptr);
-			}
-		}
-	};
-
-	/**
-	 * @brief Macro to create a simple function-based deleter.
-	 * Usage: BOX_MAKE_DELETER(MyDeleter, my_delete_function)
-	 * This creates a deleter type that calls the specified function.
-	 */
-	#define BOX_MAKE_DELETER(DeleterName, DeleteFunction) \
-		struct DeleterName { \
-			template<class T> \
-			void operator()(T* ptr) const { \
-				DeleteFunction(ptr); \
-			} \
-		}
-
-	/**
-	 * @brief Macro to create a method-based deleter.
-	 * Usage: BOX_MAKE_METHOD_DELETER(MyDeleter, destroy)
-	 * This creates a deleter type that calls the specified method on the object.
-	 * The method is responsible for any cleanup including deletion.
-	 */
-	#define BOX_MAKE_METHOD_DELETER(DeleterName, MethodName) \
-		struct DeleterName { \
-			template<class T> \
-			void operator()(T* ptr) const { \
-				if (ptr) { \
-					ptr->MethodName(); \
-				} \
-			} \
-		}
-
-	/**
-	 * @brief Macro to create a BoxPtrDeleter specialization with a function.
-	 * Usage: BOX_MAKE_PTR_DELETER(MyType, my_delete_function)
-	 * This creates a complete BoxPtrDeleter specialization that calls the specified function.
-	 */
-	#define BOX_MAKE_PTR_DELETER(Type, DeleteFunction) \
-		namespace base::extend { \
-			template<> \
-			struct BoxPtrDeleter<Type> { \
-				static void del(Type* ptr) { \
-					DeleteFunction(ptr); \
-				} \
-			}; \
-		}
 
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
@@ -105,15 +27,15 @@ namespace base {
 	 * Attempt to use it after that will result in a panic. In the future we might consider
 	 * removing this check in release build for performance.
 	 *
+	 * @note Currently only stateless deleters are supported. If the need for stateful deleters arises, we can add support for them by storing the deleter instance in the Box (e.g. [no_unique_address]] Deleter deleter;).
+	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter deleter type, defaults to DefaultDeleter<T> for backward compatibility
+	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has to define static method `void del(T*)`.
 	 */
-	template<class T, class Deleter = DefaultDeleter<T>>
+	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class Box final {
 	private:
 		T* ptr;
-		// Use no_unique_address to avoid storage overhead for stateless deleters
-		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
 		friend class Box;
@@ -125,21 +47,7 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
-		template<class UDeleter>
-		Deleter initializeDeleter(UDeleter&& other_deleter) {
-			if constexpr (std::is_same_v<Deleter, std::remove_cvref_t<UDeleter>>) {
-				return std::forward<UDeleter>(other_deleter);
-			} else {
-				return Deleter{};
-			}
-		}
-
-		explicit Box(T* ptr) noexcept: ptr{ ptr }, deleter{} { assertNotNull(); }
-
-		explicit Box(T* ptr, const Deleter& del) noexcept: ptr{ ptr }, deleter{ del } { assertNotNull(); }
-
-		explicit Box(T* ptr, Deleter&& del) noexcept: ptr{ ptr }, deleter{ std::move(del) } { assertNotNull(); }
-
+		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
 	public:
 		Box()               = delete;
 		Box(std::nullptr_t) = delete;
@@ -153,25 +61,12 @@ namespace base {
 		 */
 		static Box fromPointer(T* ptr) noexcept { return Box(ptr); }
 
-		/**
-		 * @brief Constructs a Box from a raw pointer with a custom deleter.
-		 * It takes ownership of the pointer.
-		 */
-		static Box fromPointer(T* ptr, const Deleter& del) noexcept { return Box(ptr, del); }
-
-		/**
-		 * @brief Constructs a Box from a raw pointer with a custom deleter (move version).
-		 * It takes ownership of the pointer.
-		 */
-		static Box fromPointer(T* ptr, Deleter&& del) noexcept { return Box(ptr, std::move(del)); }
-
 		Box(const Box& other) = delete;
 
-		Box(Box&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other.deleter) } { other.ptr = nullptr; }
+		Box(Box&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
 
-		template<class U, class UDeleter>
-		Box(Box<U, UDeleter>&& other) noexcept requires(std::is_convertible_v<U*, T*> && (std::is_same_v<Deleter, UDeleter> || std::is_default_constructible_v<Deleter>))
-			: ptr{ std::move(other).ptr }, deleter{ initializeDeleter<UDeleter>(std::move(other.deleter)) } {
+		template<class U>
+		Box(Box<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
@@ -262,15 +157,6 @@ namespace base {
 
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) CORE_PANIC("MBox was in null state, when non-null was required!");
-		}
-
-		template<class UDeleter>
-		Deleter initializeDeleter(UDeleter&& other_deleter) {
-			if constexpr (std::is_same_v<Deleter, std::remove_cvref_t<UDeleter>>) {
-				return std::forward<UDeleter>(other_deleter);
-			} else {
-				return Deleter{};
-			}
 		}
 
 		/**
