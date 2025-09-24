@@ -17,6 +17,9 @@ namespace compiler::helios::code {
 	 * the given call expression and creates callexpr from it. The function is selected based on
 	 * argument types and named arguments. If no function or multiple functions match the call, an
 	 * error is returned.
+	 * 
+	 * @note takes actual symbols that might be called, does not perform any lookup.
+	 * 
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param call_expr The PST call expression representing the function call.
 	 * @TODO: #1300 #1029 implement overloading. Most of logic is implemented, make attempt. Fitting function
