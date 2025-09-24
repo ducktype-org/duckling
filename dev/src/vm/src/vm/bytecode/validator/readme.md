@@ -124,19 +124,19 @@ Let `T` be the type of value pointed to by `target`. In this last phase
 of checks, we verify that `src` points to a structure (data) of some type `S'
 such that `S` holds a field named `field` of type `T`.
 
-## Type Validator
+## Type Validator and Type Builder
 
-The `type_validator.hpp` and its corresponding `.cpp` file implement the
-validation and final construction of the type system. The main entry point
-is the `TypeContext` class, which aggregates a collection of high-level type
-definitions (`TypeOfData`) and, upon request, validates them and produces a
-low-level, runtime-ready representation (`TypeMetadata`), which contain
-execution specific attributes (like built v-tables for oop types). Any errors
-found during validation result in a `vm::code::ValidationError` subclass being
-thrown.
+The `type_validator.hpp` and its corresponding `.cpp` file implement the validation 
+of the type system, while the construction is handled by `type_builder.hpp` and its 
+`.cpp` file. The main entry point is the `TypeContext` class, which aggregates a 
+collection of high-level type definitions (`TypeOfData`) and, upon request, validates 
+them and produces a low-level, runtime-ready representation (`TypeMetadata`). This 
+representation, created using `type_validator.hpp` and `type_builder.hpp`, 
+contains execution-specific attributes such as built v-tables for OOP types. Any errors
+found during validation result in a `vm::code::ValidationError` subclass being thrown.
 
-The process is split into two main phases managed by the `validateAndProduceTypeMetadata`
-function: validation and building.
+This entire process is split into two main phases, validation and building, which are 
+managed by the `validateAndProduceTypeMetadata` function.
 
 ### Validation Phase
 
@@ -198,8 +198,9 @@ individually against a set of rules.
 ### Building Phase
 
 Once all validations pass, the `TypeContext` proceeds to build the `TypeMetadata`
-object. This involves translating the high-level, declarative `TypeOfData` into
-the low-level, concrete `vm::Type` representation used in the VM's runtime.
+object. This involves `buildTypes` function which translates the high-level, 
+declarative `TypeOfData` into the low-level, concrete `vm::Type` representation 
+used in the VM's runtime.
 *   **Type Resolution**:
     All type names are resolved to direct references (`TypeRef` or `TypeCRef`).
     Previously, component types (e.g. types of fields in a data type) were held

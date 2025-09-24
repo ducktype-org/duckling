@@ -3,6 +3,7 @@
 LLVM_INCLUDE_BEGIN()
 
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/IRBuilder.h>
@@ -35,7 +36,39 @@ LLVM_INCLUDE_END()
 
 #include <iostream>
 
-// useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
+// useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
+namespace {
+	/**
+	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
+	 * @param ctv The CTV to convert.
+	 * @param llvm_type The expected type.
+	 * @return The created llvm::Constant*.
+	 */
+	auto ctvToLLVMConstant(const compiler::helios::CompileTimeValue& ctv, llvm::Type* llvm_type) {
+		variant_match(ctv.getStorage()) {
+			variant_case(i64, val) {
+				if (!llvm_type->isIntegerTy()) {
+					CORE_PANIC(
+						"LLVM lowering : Type mismatch. CTV is an integer, but LLVM type is not"
+					);
+				}
+				return llvm::ConstantInt::getSigned(llvm_type, val);
+			}
+			variant_case(bool, val) {
+				if (!llvm_type->isIntegerTy(1)) {
+					CORE_PANIC(
+						"LLVM lowering : Type mismatch. CTV is a boolean, but LLVM type is not"
+					);
+				}
+				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);
+			}
+			variant_default {
+				throw base::NotYetImplemented("Conversion from CTV to LLVM constant for this type.");
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+}
 
 namespace compiler::backend_llvm {
 
@@ -77,7 +110,7 @@ namespace compiler::backend_llvm {
 	 * @return llvm::LLVMContext&
 	 */
 	llvm::LLVMContext& getLLVMContext() {
-		static llvm::LLVMContext context;
+		thread_local llvm::LLVMContext context;
 		return context;
 	}
 
@@ -204,10 +237,10 @@ namespace compiler::backend_llvm {
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
-		if (lir_global.inital_value.has_value()) {
-			global->setInitializer(llvm::ConstantInt::getSigned(
-				global->getValueType(), static_cast<i64>(lir_global.inital_value.value())
-			));
+		if (lir_global.initial_value.has_value()) {
+			global->setInitializer(
+				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
+			);
 		} else {
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}
@@ -340,14 +373,14 @@ namespace compiler::backend_llvm {
 					// We need to load them before using them.
 					const auto local_ptr = local_register_map[lir_local].get();
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), lir_local->layout), local_ptr
+						typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
 					);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_case(lir::LirGlobal, lir_global) {
 					auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), *lir_global.layout), global_ptr.get()
+						typeFromLayout(builder.getContext(), *lir_global.layout), global_ptr.get()
 					);
 				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
@@ -447,6 +480,22 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
 			case IntegerSLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
+			case IntegerULteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULE)
+			case IntegerSLteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLE)
+			case IntegerUGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGT)
+			case IntegerSGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGT)
+			case IntegerUGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGE)
+			case IntegerSGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGE)
+			case IntegerEq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpEQ)
+			case IntegerNeq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);

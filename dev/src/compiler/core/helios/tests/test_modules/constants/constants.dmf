@@ -3,7 +3,7 @@ const D: i64 = A + (B + C);
 const C: i64 = X;
 
 namespace N {
-	alias X = A;
+	alias X = A; # X = 1
 }
 
 alias H = NN.NNN.A;
@@ -11,9 +11,9 @@ const H2: i64 = H;
 
 const A: i64 = 1;
 
-const B: i64 = (X - 6) + (1 + A);
+const B: i64 = (X - 6) + (1 + A); # B = -3
 
-const E: i64 = 2 + 2 * 2;
+const E: i64 = 2 + 2 * 2; # E = 6
 # we have max i32 here, to avoid signed overflow in the compiler.
 const MAX_I32: i64 = 2 ** 31 - 1;
 
@@ -31,7 +31,6 @@ const T0: i64 = 1;
 const T1: i64 = T0 + 1;
 const T2: i64 = T1 + 1;
 
-
 namespace Inner {
 	const Inner_X: i64 = 123;
 }
@@ -41,6 +40,27 @@ const F: i64 = ((A + 1) / 2 + (E + 2) / 2) * 2 * NN.A;
 
 const M: i64 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
 
-fun foo(a: i64) = {
+const BOOL_TRUE = true;
+const BOOL_FALSE = not BOOL_TRUE;
+const LOGIC_AND = BOOL_TRUE and not BOOL_FALSE;
+const LOGIC_OR = not BOOL_TRUE and BOOL_FALSE;
 
+#                             1 >= 1 == -3 + 4 < 6 != 9 > -3
+const TRUE_COMPARISON: bool = A >= 1 ==  B + 4 < 6 != 9 >  B;
+#                              1 < 4 <=  3
+const FALSE_COMPARISON: bool = A < 4 <= -B;
+
+fun add(a: i64, b: i64) -> i64 = {
+    return a + b;
 }
+const VM_SIMPLE_CALL: i64 = add(20, 22);
+const VM_SIMPLE_CALL_2: i64 = add(M, 22);
+
+fun fib(n: i64) -> i64 = {
+   if (n < 2) { return n; }
+   return fib(n - 1) + fib(n - 2);
+}
+
+const FIB_10 = fib(10); # 55
+const COMPLEX_VM_CALL: i64 = add(FIB_10, T2); # 55 + 3 = 58
+const COMPLEX_VM_CALL_2: i64 = add(fib(9), T2); # 34 + 3 = 37

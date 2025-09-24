@@ -25,8 +25,6 @@
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
 
-	ServiceManager& VMProcess::getServices() { return service_manager; }
-
 	api::ProcStatus VMProcess::getStatus() {
 		std::shared_lock lock(rw_status);
 		return status;
@@ -254,15 +252,6 @@ namespace vm {
 				}
 			}
 
-			variant_case(api::request::Block, block_request) {
-				match_optional(validateMemoryRequest()) {
-					opt_some(error) { return std::unexpected(error); }
-					opt_none {
-						return api::Response(api::response::Block{
-							memory.requestBlockData(block_request.block_id) });
-					}
-				}
-			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {
@@ -350,10 +339,10 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
+	void VMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = event;
+			status = new_status;
 		}
 		status_cv.notify_all();
 	}

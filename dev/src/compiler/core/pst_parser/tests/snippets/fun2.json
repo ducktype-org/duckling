@@ -24,8 +24,8 @@
 								"sourceStart": 9,
 								"sourceEnd": 14
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "a"
 									},
@@ -54,8 +54,8 @@
 								"sourceStart": 17,
 								"sourceEnd": 22
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "b"
 									},
@@ -117,8 +117,8 @@
 								"sourceStart": 39,
 								"sourceEnd": 44
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "a"
 									},
@@ -147,8 +147,8 @@
 								"sourceStart": 47,
 								"sourceEnd": 56
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "b"
 									},
@@ -227,8 +227,8 @@
 								"sourceStart": 73,
 								"sourceEnd": 78
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "a"
 									},
@@ -257,8 +257,8 @@
 								"sourceStart": 81,
 								"sourceEnd": 91
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "b"
 									},
@@ -337,8 +337,8 @@
 								"sourceStart": 108,
 								"sourceEnd": 111
 							},
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "a"
 									},

@@ -304,19 +304,6 @@ namespace fs {
 		}
 	}
 
-	u64 File::queryUnstablePerfectHash() const {
-		static u64                      next_hash = 0;
-		static base::HashMap<File, u64> hash_map;
-
-		// @Future: use atMaybe
-		if (hash_map.contains(*this)) return hash_map.at(*this);
-
-		auto hash = next_hash++;
-
-		hash_map.put(*this, hash);
-		return hash;
-	}
-
 	File File::createSubFile(std::string_view new_file_content, std::string_view custom_name) const {
 		requireDirectory(*this);
 		FilePath file_path = genPathInDirectory(*this, custom_name);

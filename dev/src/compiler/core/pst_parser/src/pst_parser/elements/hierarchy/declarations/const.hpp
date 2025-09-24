@@ -7,9 +7,9 @@ namespace pst {
 	 * @brief Const compile time variable declaration.
 	 */
 	class Const final: public Decl {
-		tpc::Identifier                                 name;
-		base::Optional<AccessInternal<CommaExprHolder>> type;
-		base::Optional<AccessInternal<CommaExprHolder>> value;
+		tpc::Identifier name;
+		NAMED_CHILD_OPT(type, CommaExprHolder);
+		NAMED_CHILD_OPT(value, CommaExprHolder);
 
 		template<typename T, lang_def::Keyword key>
 		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);
@@ -35,6 +35,11 @@ namespace pst {
 		base::Optional<AccessLocked<ExprHolder>> getValue() const {
 			if (value.has_value()) return { value.value().give() };
 			return {};
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return getName();
 		}
 
 		~Const() final = default;

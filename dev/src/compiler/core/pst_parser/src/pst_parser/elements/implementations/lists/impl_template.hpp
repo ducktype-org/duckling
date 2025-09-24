@@ -173,9 +173,12 @@ namespace pst {
 						}
 					}
 
-					MBox<ListElements> ref;
-					state.parse(out).template with<ListElements>(&ref, ParsingClass::parse);
-					out->elements.emplace_back(std::move(ref));
+					MBox<ListElements> box;
+					state.parse(out).template with<ListElements>(&box, ParsingClass::parse);
+					if (box.toOpt()) {
+						out->elements.emplace_back(nullptr);
+						state.parse(out).assign(&out->elements.back(), std::move(box));
+					}
 
 					if (isEnding(state, 0)) break;
 					if (isSeparator(state, 0))

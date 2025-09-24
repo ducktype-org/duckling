@@ -42,9 +42,9 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		Box<tokenizer::TokenSource> file;
-		AccessInternal<Element>     element;
-		std::vector<ImportType>     imports;
+		Box<tokenizer::TokenSource>      file;
+		AccessInternalAnonymous<Element> element;
+		std::vector<ImportType>          imports;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -64,6 +64,7 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
+			calcElementPaths();
 		}
 
 		/**
@@ -85,6 +86,10 @@ namespace pst {
 			  : file(tokenizer::makeTokenSource(pos, content)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
+		}
+
+		void calcElementPaths() {
+			if (auto ref = element.internalMut()) ref->calcElementPaths({});
 		}
 
 	public:

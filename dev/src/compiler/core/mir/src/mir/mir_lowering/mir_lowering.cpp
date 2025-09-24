@@ -28,6 +28,7 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <ranges>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -1140,6 +1141,89 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("sequence expr lowering");
 		}
 
+		void visitChainComparisonExpr(const hc::ChainComparisonExpr& chain_expr) override {
+			CORE_ASSERT(!chain_expr.expressions.empty(), "Empty chain comparison");
+			CORE_ASSERT(chain_expr.expressions.size() != 1, "Single element chain comparison");
+			CORE_ASSERT(
+				chain_expr.operators.size() == chain_expr.expressions.size() - 1,
+				"Operands: " + std::to_string(chain_expr.operators.size())
+					+ " expressions: " + std::to_string(chain_expr.expressions.size())
+					+ ", but expected one less operator then expression."
+			);
+
+			auto lower_subexpr_with_result
+				= [this](CRef<hc::Expr> expression, BlockBuilderRef next_block) {
+					  auto lowered = lowerExpr(*expression, next_block, function, expr_scope);
+					  return std::pair{ lowered.begin, lowered.getResult(function) };
+				  };
+
+			using namespace std::views;
+
+			// Place for a comparison instruction
+			auto last_comparison_block = function.newBlock();
+			auto prev_cmp_hole         = last_comparison_block->addHole();
+
+			// After the last comparison, continue regardless of the result.
+			last_comparison_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+
+			// The result of evaluating the expression (result of the last evaluated sub-expression).
+			auto boolean_output
+				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
+
+			// The left-over value. We mantain that this has to partake in only one comparison,
+			// which will be placed in prev_cmp_hole.boolean
+			auto [prev_block, prev_value] = lower_subexpr_with_result(
+				chain_expr.expressions.back().ref(), last_comparison_block
+			);
+
+			auto mir_operators = chain_expr.operators | transform(builtinBinaryToOperation);
+
+			// First and last expressions require special handling. We build them in reverse, as usual.
+			auto expressions = chain_expr.expressions | drop(1) | reverse | drop(1);
+			auto comparisons = mir_operators | drop(1) | reverse;
+
+			for (const auto& [expr, comp]: zip(expressions, comparisons)) {
+				// Place for the next comparison.
+				BlockBuilderRef new_comparison_block = function.newBlock();
+				auto            new_cmp_hole         = new_comparison_block->addHole();
+				new_comparison_block->setTerminator(Instruction{
+					Operation::Branch,
+					{},
+					{ boolean_output, prev_block->getID(), continuation->getID() },
+					{},
+					expr_scope });  // We exaluate prev_value only after this comparison is true, as
+				                    // prev_cmp will be the first comparison it is a part of.
+
+				// Next expression (completes the prev_cmp).
+				auto [new_block, new_value]
+					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
+
+				// We create the prev_cmp, as we only now have both expressions.
+				prev_cmp_hole.fill(Instruction{
+					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
+
+				prev_block    = new_block;
+				prev_cmp_hole = new_cmp_hole;
+
+				// expr_result participated in the previous comparion fulfilling the invariant.
+				prev_value = new_value;
+			}
+
+			// The first expression to be evaluated.
+			auto [first_block, first_value]
+				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
+
+			// The first comparison to be performed.
+			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
+			                                { boolean_output },
+			                                { first_value, prev_value },
+			                                { flagConstruct(boolean_output) },
+			                                expr_scope });
+
+			valueOutput(first_block, boolean_output);
+		}
+
 		void visitCallExpr(const hc::CallExpr& expr) override {
 			auto call = continuation->addHole();
 
@@ -1197,6 +1281,16 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Exponentiation on variables");
 			case IntegerLt:
 				return Operation::IntegerLt;
+			case IntegerGt:
+				return Operation::IntegerGt;
+			case IntegerLteq:
+				return Operation::IntegerLteq;
+			case IntegerGteq:
+				return Operation::IntegerGteq;
+			case IntegerEq:
+				return Operation::IntegerEq;
+			case IntegerNeq:
+				return Operation::IntegerNeq;
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:

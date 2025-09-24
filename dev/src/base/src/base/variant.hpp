@@ -86,6 +86,25 @@ namespace base::internal {
 		using ClearedVariantT = std::remove_const_t<std::remove_reference_t<VariantT>>;
 		return AlternativeIndexAux<ClearedVariantT, T>::findIndex();
 	}
+
+}
+
+namespace base {
+	/**
+	 * @brief Helper function for filtering variants
+	 */
+	template<typename T, typename U>
+	static bool holds(const U& el) {
+		return std::holds_alternative<T>(el);
+	}
+
+	/**
+	 * @brief Helper function for extracting from variants
+	 */
+	template<typename T, typename U>
+	static T choose(const U& el) {
+		return std::get<T>(el);
+	}
 }
 
 /**

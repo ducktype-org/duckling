@@ -7,7 +7,22 @@ namespace pst {
 	 * @brief Top-level element that is the root of the pst of a single file.
 	 */
 	class TopLevel final: public Decl {
-		std::vector<AccessInternal<Stmt>> statements;
+		std::vector<AccessInternalAnonymous<Stmt>> statements;
+
+		/**
+		 * This is the division of statements inside the block based on their symbol declaration
+		 * kind and the symbol they declare, more detailed information about symbol declaration
+		 * kinds is in the declaration of Stmt.
+		 */
+		base::Map<base::StrID, std::vector<AccessLocked<Stmt>>> by_symbol;
+		std::vector<AccessLocked<Stmt>>                         no_symbol;
+		std::vector<AccessLocked<Stmt>>                         transparent;
+
+		/**
+		 * @brief Fills the by_symbol, no_symbol and transparent variables to reflect an ordered
+		 * code block.
+		 */
+		void fillSymbols();
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel, ElementKind::TopLevel);
@@ -35,5 +50,12 @@ namespace pst {
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
+
+		[[nodiscard]]
+		DeclKind isDeclaration() const final {
+			return DeclKind::Transparent;
+		}
+
+		void calcElementPathsRecursive() override;
 	};
 }

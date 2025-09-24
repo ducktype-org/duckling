@@ -8,9 +8,9 @@ namespace pst::expr {
 	 * .?][name][optionally template specifier]`
 	 */
 	class Access final: public ExprElement {
-		base::StrID                                 type;  ///< either `.` or `.?`
-		tpc::Identifier                             name;
-		base::Optional<AccessInternal<ExprElement>> template_specifier;
+		base::StrID     type;  ///< either `.` or `.?`
+		tpc::Identifier name;
+		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
