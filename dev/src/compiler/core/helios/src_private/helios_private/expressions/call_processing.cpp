@@ -52,6 +52,7 @@ namespace compiler::helios::code {
 
 			match_optional(get_arg()) {
 				opt_some(arg) {
+					// @TODO: #1300 (for consideration)
 					auto coerced = coerceExpression(std::move(arg), param.type);
 					if (coerced.hasError())
 						return std::nullopt;
@@ -93,6 +94,7 @@ namespace compiler::helios::code {
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+			// @TODO: #1300 (for consideration)
 			auto coerced = coerceExpression(
 				std::move(normal_arguments[i]), call_type.getType().getParameterTypes()[i]
 			);
@@ -155,6 +157,7 @@ namespace compiler::helios::code {
 			match_optional(attemptFitting(ctx, fun, normal_arguments, named_arguments)) {
 				opt_some(call_res) {
 					if (result.has_value())
+						// @TODO: #1029 add proper diagnostic here
 						return query::QError(errors::Failed());  // At least 2 functions fit.
 					else
 						result = std::move(call_res);
