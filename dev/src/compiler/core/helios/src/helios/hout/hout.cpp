@@ -33,12 +33,10 @@ namespace compiler::helios {
 		return out;
 	}
 
-	HOUTFunctionDeclaration::HOUTFunctionDeclaration(SymID symbol, query::Context& ctx):
+	HOUTFunctionDeclaration::HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
-		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               ->expect("Handling errors in HOUT is not supported yet")
-	               .getType()),
+		  return_type(ret_type),
 		  top_lifetime_scope(parent(scope(symbol)).value()) {
 		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
 	}
@@ -51,7 +49,8 @@ namespace compiler::helios {
 		std::stringstream out;
 		out << "fun ";
 		out << original_name.strView() << " : ";
-		out << this->type.toString() << "\n";
+		out << "Return type: ";
+		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
 		if (parameters->empty()) out << "  none\n";
 		for (auto& param: *parameters) {

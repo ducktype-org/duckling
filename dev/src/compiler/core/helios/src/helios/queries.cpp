@@ -4,6 +4,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -14,6 +15,8 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
@@ -113,8 +116,32 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: rest, flags, attributes, etc
-				HOUTFunctionDeclaration output(original_symbol, ctx);
 
+
+				// Return type:
+				auto ret = stmt->getRet();
+
+				// Default return type is a direct unit.
+				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				if (ret.has_value()) {
+					if (auto ctv
+					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
+						if (auto maybe_type = ctv.value().asType())
+							ret_type = maybe_type.value();
+						else
+							return;
+					} else {
+						// We just fail here, because we can't continue without type.
+						return;
+					}
+				}
+
+				// Parameters:
 				std::vector<code::Parameter> parameters;
 				for (auto param: *stmt->getParams().unlock(ctx)) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
@@ -151,6 +178,7 @@ namespace compiler::helios {
 					}
 				}
 
+				HOUTFunctionDeclaration output(original_symbol, ret_type);
 				output.parameters
 					= std::make_shared<std::vector<code::Parameter>>(std::move(parameters));
 

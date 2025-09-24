@@ -55,15 +55,16 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
-		tsh::FunctionAbstractType type;
+		tsh::SymbolType<> return_type;
 
 		/**
 		 * @note use of shared_ptr's is intentional, as they
 		 * work well for incomplete types, and fit the use case.
 		 * In the future we might optimize it to single (or zero) shared_ptr, but
-		 * that will require some boilerplate.
+		 * that will require some boilerplate. Stored vector can't be const, because
+		 * it is moved (contains boxes), when handling initial arguments. @TODO #1300
 		 */
-		std::shared_ptr<const std::vector<code::Parameter>> parameters;
+		std::shared_ptr<std::vector<code::Parameter>> parameters;
 
 		/**
 		 * @brief Lifetime scope, thats higher
@@ -78,7 +79,7 @@ namespace compiler::helios {
 		std::string debugPrint() const;
 
 	private:
-		HOUTFunctionDeclaration(SymID symbol, query::Context& ctx);
+		HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type);
 		friend ImplementationOf_QueryDeclOfFun;
 	};
 
