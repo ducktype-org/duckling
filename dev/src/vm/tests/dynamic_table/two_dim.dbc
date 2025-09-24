@@ -9,7 +9,7 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type inner_ptr, inner_ptr_dtable;
     init_lany_type outer_ptr, outer_ptr_dtable;
 
-    mov_l64_imm val, 2137;
+    mov_l64_imm val, 1235;
     mov_l64_imm size, 5;
     dynTableReAlloc_lptr_type inner_ptr, dtable_i64;
     ext_l64 size;
