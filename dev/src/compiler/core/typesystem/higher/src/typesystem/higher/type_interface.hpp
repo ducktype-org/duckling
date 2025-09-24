@@ -235,7 +235,7 @@ namespace tsh {
 		 */
 		explicit TypeInterface(const std::vector<InterfaceElement>& elements);
 
-		std::vector<InterfaceElement> getElements() const { return elements;}
+		const std::vector<InterfaceElement>& getElements() const { return elements; }
 
 		/**
 		 * @brief Gets all the elements of an interface, grouped by name.
@@ -251,6 +251,26 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		const std::vector<InterfaceElement>& getElementsWithName(base::StrID name) const;
+
+		/**
+		 * @brief Gets a view of all the fields of this interface.
+		 * @return A view of all the fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isField(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the methods of this interface.
+		 * @return A view of all the methods of this interface.
+		 */
+		[[nodiscard]]
+		auto getMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
+		}
 
 		/*-------------------------*\
 		|    OVERLOAD RESOLUTION    |
@@ -347,10 +367,10 @@ namespace tsh {
 		 * @return The elements which match the name.
 		 */
 		ResolutionResult resolve(
-			base::StrID                      name,
-			const std::vector<AbstractType>& positional_arg_types,
-			const std::vector<NamedArgument>&   named_args,
-			query::Context&                  ctx
+			base::StrID                       name,
+			const std::vector<AbstractType>&  positional_arg_types,
+			const std::vector<NamedArgument>& named_args,
+			query::Context&                   ctx
 		) const;
 
 		/**
@@ -365,7 +385,8 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx
+		ResolutionResult resolve(
+			base::StrID name, AbstractType single_arg_type, query::Context& ctx
 		) const;
 
 		/**

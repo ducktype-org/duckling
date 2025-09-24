@@ -35,8 +35,7 @@ namespace tsh {
 	const std::vector<InterfaceElement>& TypeInterface::getElementsWithName(const base::StrID name
 	) const {
 		static constexpr std::vector<InterfaceElement> empty{};
-		if (elements_by_name.contains(name))
-			return elements_by_name.at(name);
+		if (elements_by_name.contains(name)) return elements_by_name.at(name);
 		return empty;
 	}
 

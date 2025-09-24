@@ -623,4 +623,23 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
+
+	namespace houtgen {
+		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
+			return { std::hash<base::StrID>()(name),
+					 generated_symbol_data.queryUnstablePerfectHash() };
+		}
+
+		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymID) {
+			static auto provide(Context&, QKey key) -> PResult {
+				return putInSymtable(
+					SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data)
+				);
+			}
+
+			QUERY_AUTO_CACHE_COPY
+		};
+
+		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
+	}
 }

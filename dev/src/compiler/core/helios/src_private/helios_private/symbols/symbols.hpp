@@ -4,14 +4,13 @@
  */
 #pragma once
 
+#include "symbol_data.hpp"
+
 #include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/generic_query_key.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
 
 #include <base/bit256.hpp>
 #include <base/string_id.hpp>
@@ -83,5 +82,17 @@ namespace compiler::helios {
 		 * @note Non-global builtins will likely exist, for example: `i64.max`.
 		 */
 		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
+	}
+
+	namespace houtgen {
+		struct KeyFor_QueryGeneratedSymbol {
+			base::StrID                    name;
+			GeneratedSymbolData generated_symbol_data;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID);
 	}
 }

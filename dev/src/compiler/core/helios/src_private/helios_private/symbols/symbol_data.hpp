@@ -9,6 +9,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <hashing/hash.hpp>
+
 namespace compiler::helios {
 	/**
 	 * Symbol data shared by all symbols.
@@ -19,7 +21,7 @@ namespace compiler::helios {
 		 *
 		 * @note In the future there might also be anonymous symbols (symbols with no name), like:
 		 * `let _ = 5;`, lambdas, `using a.*`, etc.
-		 * For now we workaround it, as all things that could be anonymous are also a wildcard.
+		 * For now, we work around it, as all things that could be anonymous are also a wildcard.
 		 * Those symbols will also need to have mangled name.
 		 */
 		base::StrID name;
@@ -74,31 +76,78 @@ namespace compiler::helios {
 		};
 	}
 
+	namespace houtgen {
+		struct GeneratedSymbolData final {
+			// Data for a compiler-generated implicit constructor.
+			struct ImplicitConstructor final {
+				SymID classSymbol;  // The symbol of the class this constructor belongs to.
+
+				[[nodiscard]]
+				u64 queryUnstablePerfectHash() const {
+					return hashing::justHash(classSymbol.ref.get());
+				}
+			};
+
+			// Data for a compiler-generated variable within a function.
+			struct Variable final {
+				SymID functionSymbol;  // The symbol of the function this variable belongs to.
+				u64   argumentIndex;   // The index of the argument this variable represents.
+
+				[[nodiscard]]
+				u64 queryUnstablePerfectHash() const {
+					return hashing::justHash(functionSymbol.ref.get(), argumentIndex);
+				}
+			};
+
+			std::variant<ImplicitConstructor, Variable> data;
+
+			[[nodiscard]]
+			u64 queryUnstablePerfectHash() const {
+				return VISIT(data, d, return d.queryUnstablePerfectHash(););
+			}
+		};
+	}
+
 	/**
 	 * @brief Stores generic symbol data.
 	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using OtherData = std::variant<PstSymbolData, builtin::BuiltinFunctionData>;
+		using OtherData
+			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, houtgen::GeneratedSymbolData>;
 
 		CommonSymbolData common;
 		OtherData        other;
 
-		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
+		static auto makePSTSymbolData(const CommonSymbolData common_data, PstSymbolData pst_data) {
 			return SymbolData{
 				.common = common_data,
 				.other  = pst_data,
 			};
 		}
 
-		static auto makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
+		static auto makeBuiltinFunction(
+			const base::StrID name, builtin::BuiltinFunctionData builtin_data
+		) {
 			return SymbolData{
 				.common = {
 					.name = name,
 					.kind = SymbolKind::BuiltinFunction,
 				},
 				.other  = builtin_data,
+			};
+		}
+
+		static auto makeGeneratedSymbol(
+			const base::StrID name, houtgen::GeneratedSymbolData generated_data
+		) {
+			return SymbolData{
+				.common = {
+					.name = name,
+					.kind = SymbolKind::Generated,
+				},
+				.other  = generated_data,
 			};
 		}
 
