@@ -1,10 +1,10 @@
 #include "query_type_of_symbol.hpp"
 
+#include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios/symbols/simple.hpp>
 #include <pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
@@ -111,7 +111,6 @@ namespace compiler::helios {
 			}
 
 			void visitFun(pst::Access<pst::Fun> fun) final {
-
 				CORE_PANIC("THIS PR");
 
 				// auto locked_params = fun->getParams();
@@ -153,7 +152,7 @@ namespace compiler::helios {
 				// 	}
 				// }
 				// setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryFunctionType>({ param_types,
-				                                                                //   ret_type }));
+				//   ret_type }));
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
