@@ -89,7 +89,6 @@ namespace base {
 		 * @brief Move assignment. The object previously pointed to by the Box is deleted.
 		 *
 		 * @tparam U
-		 * @tparam UDeleter
 		 * @param oth
 		 * @return Box&
 		 */
@@ -184,8 +183,6 @@ namespace base {
 		 */
 		template<class U>
 		using SDMBox = MBox<U, Deleter>;
-
-
 
 	public:
 		MBox() = default;
