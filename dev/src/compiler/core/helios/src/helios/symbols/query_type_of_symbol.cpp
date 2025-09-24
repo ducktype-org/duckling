@@ -4,6 +4,7 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios/symbols/simple.hpp>
 #include <pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
@@ -110,46 +111,49 @@ namespace compiler::helios {
 			}
 
 			void visitFun(pst::Access<pst::Fun> fun) final {
-				auto locked_params = fun->getParams();
-				auto params        = locked_params.unlock(ctx);
-				auto ret           = fun->getRet();
 
-				std::vector<tsh::SymbolType<>> param_types{};
-				param_types.reserve(params->size());
+				CORE_PANIC("THIS PR");
 
-				for (auto param: *params) {
-					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+				// auto locked_params = fun->getParams();
+				// auto params        = locked_params.unlock(ctx);
+				// auto ret           = fun->getRet();
 
-					if (param_type->hasValue()) {
-						param_types.emplace_back(param_type->value());
-					} else {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-				}
+				// std::vector<tsh::SymbolType<>> param_types{};
+				// param_types.reserve(params->size());
 
-				// Default return type is a direct unit.
-				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				// for (auto param: *params) {
+				// 	auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+				// 	auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
 
-				if (ret.has_value()) {
-					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType())
-							ret_type = maybe_type.value();
-						else
-							return;
-					} else {
-						// We just fail here, because we can't continue without type.
-						return;
-					}
-				}
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryFunctionType>({ param_types,
-				                                                                  ret_type }));
+				// 	if (param_type->hasValue()) {
+				// 		param_types.emplace_back(param_type->value());
+				// 	} else {
+				// 		// we just fail here, because we can't continue without type
+				// 		return;
+				// 	}
+				// }
+
+				// // Default return type is a direct unit.
+				// tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+				// 	ctx.query<tsh::QueryUnitType>({}),
+				// 	tsh::ReferenceKind::Direct,
+				// 	tsh::Mutability::Mutable,
+				// };
+
+				// if (ret.has_value()) {
+				// 	if (auto ctv
+				// 	    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
+				// 		if (auto maybe_type = ctv.value().asType())
+				// 			ret_type = maybe_type.value();
+				// 		else
+				// 			return;
+				// 	} else {
+				// 		// We just fail here, because we can't continue without type.
+				// 		return;
+				// 	}
+				// }
+				// setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryFunctionType>({ param_types,
+				                                                                //   ret_type }));
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
@@ -174,6 +178,10 @@ namespace compiler::helios {
 
 			variant_match(symbol_ref->other) {
 				variant_case(PstSymbolData, pst_data) {
+					if (kind(key) == SymbolKind::Function) {
+						// .... PR
+						CORE_PANIC("THIS PR");
+					}
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
 					if_opt_some(visitor.symbol_type, type) { return type; }
