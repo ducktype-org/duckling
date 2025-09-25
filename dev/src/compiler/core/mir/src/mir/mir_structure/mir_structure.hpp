@@ -346,9 +346,11 @@ namespace compiler::mir {
 	 * @brief Single instruction of MIR code.
 	 */
 	struct Instruction final {
+		using Output = std::variant<LocalRef, MirGlobal>;
+
 		Operation operation = Operation::Uninitialized;
 
-		base::Optional<std::variant<LocalRef, MirGlobal>> output;
+		base::Optional<Output> output;
 
 		std::vector<MIRValue> arguments;
 
@@ -372,11 +374,11 @@ namespace compiler::mir {
 		Instruction(Instruction&&) = default;
 
 		Instruction(
-			Operation                                         operation,
-			base::Optional<std::variant<LocalRef, MirGlobal>> output,
-			std::vector<MIRValue>                             arguments,
-			std::vector<OperationFlag>                        flags,
-			ScopeRef                                          scope
+			Operation                  operation,
+			base::Optional<Output>     output,
+			std::vector<MIRValue>      arguments,
+			std::vector<OperationFlag> flags,
+			ScopeRef                   scope
 		):
 			  operation(operation),
 			  output(output),

@@ -455,10 +455,10 @@ namespace compiler::mir {
 	}
 
 	void ExprLowerRes::storeResultInGivenVariable(
-		const std::variant<LocalRef, MirGlobal>& target,
-		BlockBuilder::InstructionHole&           hole,
-		const std::vector<OperationFlag>&        flags,
-		ScopeRef                                 scope
+		const Instruction::Output&        target,
+		BlockBuilder::InstructionHole&    hole,
+		const std::vector<OperationFlag>& flags,
+		ScopeRef                          scope
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
