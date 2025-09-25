@@ -332,6 +332,7 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
+			std::cout << "getScopes\n";
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
 			ScopeGrabPseudoVisitor scope_grab(ctx);
@@ -616,6 +617,7 @@ namespace compiler::helios {
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
+		std::cout << "queryRootScopeOfMainModuleFile\n";
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
 		auto main_file_root_scope

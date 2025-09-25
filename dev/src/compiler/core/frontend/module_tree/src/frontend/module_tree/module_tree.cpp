@@ -569,11 +569,13 @@ namespace compiler::frontend {
 	 ****************/
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::cout << "starting QueryFilePST\n";
 			Ref<SourceFile> file
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
 					key
 				);
 			auto pst = file->getPST();
+			std::cout << "element put\n";
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 			// @todo modify it, when making proper helios errors

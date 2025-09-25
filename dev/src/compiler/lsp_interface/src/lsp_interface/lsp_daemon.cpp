@@ -72,14 +72,26 @@ void server(i32 port) {
 		try {
 			const auto path    = base64::decode_into<std::string>(base64_path);
 			const auto content = base64::decode_into<std::string>(base64_content);
-
+			std::cout << "putfile\n";
 			if (!virtual_root.getFilePath().join(path).exists()) {
-				(void) virtual_root.createSubFile(content, path);
-			} else {
-				auto file = fs::File(virtual_root.getFilePath().join(path));
-				file.writeToFile(content);
-				compiler::frontend::ModuleTreeModifier::fileModified(file);
+				(void) virtual_root.createSubFile("", path);
 			}
+			std::cout << "file created\n";
+			auto file = fs::File(virtual_root.getFilePath().join(path));
+			std::cout << "path collected\n";
+			file.writeToFile(content);
+			std::cout << "file written\n";
+			compiler::frontend::ModuleTreeModifier::fileModified(file);
+			std::cout << "file modified\n";
+			query::utils::withContextDo([&file](query::Context& ctx) {
+				std::cout << "withcontextdo\n";
+				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+				std::cout << "src_files.size() = " << src_files.size() << "\n";
+				for (auto& src_file : src_files) {
+					ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+				}
+			});
+			
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
