@@ -266,10 +266,13 @@ namespace compiler::helios::code {
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
-			// @TODO write tests for this case when parser will support it
-			// @TODO after overloading will be implementing, improve lookup and provide correct
-			// candidates for processFunctionCall
 
+			// @note: previous mock-implementation of this function
+			// was deleted in PR #1239. See it for reference.
+
+			// @TODO #520 improve type lookup and provide correct
+			// candidates for processFunctionCall
+			// @TODO write tests for this case, when it will be implemented
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
@@ -371,7 +374,11 @@ namespace compiler::helios::code {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			auto res = processFunctionCall(query_ctx, lookup_result->leaves, call_expr);
+			// @TODO #981: make it better: 
+			// @TODO: #1029 handle overloads:
+			auto callee = lookup_result->getAsSingle().value().back();
+
+			auto res = processFunctionCall(query_ctx, { callee }, call_expr);
 			if (res.hasError()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
