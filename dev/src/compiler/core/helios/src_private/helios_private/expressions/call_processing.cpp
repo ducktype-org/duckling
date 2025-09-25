@@ -36,14 +36,16 @@ namespace compiler::helios::code {
 	) {
 		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
 		std::vector<base::Box<Expr>> coerced_arguments;
-		usize                        normal_args_position = 0, used_named_args = 0;
+		usize                        normal_args_position = 0;
+		usize                        used_named_args = 0;
+
 		for (auto& param: *(decl.parameters)) {
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
 				if (named_arguments.contains(param.name)) {
 					used_named_args++;
-					return std::move(named_arguments[param.name]);
+					return std::move(named_arguments.at(param.name));
 				} else if (normal_args_position < normal_arguments.size())
-					return std::move(normal_arguments[normal_args_position++]);
+					return std::move(normal_arguments.at(normal_args_position++));
 				else if (param.initial_value.has_value())
 					return std::move(param.initial_value.value());
 				else
@@ -90,7 +92,7 @@ namespace compiler::helios::code {
 
 		if (call_type.getType().getParameterTypes().size() != normal_arguments.size()
 		    || !named_arguments.empty())
-			return std::nullopt;  // Builtin functions doesn't support named arguments.
+			return std::nullopt;  // Builtin functions don't support named arguments (for now).
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {

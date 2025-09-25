@@ -66,11 +66,6 @@ namespace compiler::helios {
 		 */
 		std::shared_ptr<std::vector<code::Parameter>> parameters;
 
-		/**
-		 * @brief Lifetime scope, thats higher
-		 * then any lifetime scope in the function (including parameters)
-		 */
-		helios::ScopeID top_lifetime_scope;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -79,7 +74,7 @@ namespace compiler::helios {
 		std::string debugPrint() const;
 
 	private:
-		HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type);
+		HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type, const std::shared_ptr<std::vector<code::Parameter>>& parameters);
 		friend ImplementationOf_QueryDeclOfFun;
 	};
 
@@ -88,8 +83,11 @@ namespace compiler::helios {
 	 * @note it should be used for all function-like entities (macros, methods, etc.)
 	 */
 	struct HOUTFunction final {
-		HOUTFunction(const HOUTFunctionDeclaration&);
-		HOUTFunction(HOUTFunctionDeclaration&&);
+	private:
+		HOUTFunction(HOUTFunctionDeclaration, const std::shared_ptr<const code::CodeBlock>& body);
+		friend struct ImplementationOf_QueryCodeOFFun;
+	public:
+		HOUTFunction() = delete;
 
 		HOUTFunctionDeclaration declaration;
 

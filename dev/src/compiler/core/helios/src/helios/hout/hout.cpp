@@ -33,11 +33,11 @@ namespace compiler::helios {
 		return out;
 	}
 
-	HOUTFunctionDeclaration::HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type):
+	HOUTFunctionDeclaration::HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type,const std::shared_ptr<std::vector<code::Parameter>>& parameters):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
-		  top_lifetime_scope(parent(scope(symbol)).value()) {
+		  parameters(parameters) {
 		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
 	}
 
@@ -78,9 +78,7 @@ namespace compiler::helios {
 		return declaration.debugPrint() + out.str();
 	}
 
-	HOUTFunction::HOUTFunction(const HOUTFunctionDeclaration& other): declaration(other) {}
-
-	HOUTFunction::HOUTFunction(HOUTFunctionDeclaration&& other): declaration(std::move(other)) {}
+	HOUTFunction::HOUTFunction(HOUTFunctionDeclaration other, const std::shared_ptr<const code::CodeBlock>& body): declaration(std::move(other)), body(body) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		std::stringstream out;

@@ -178,9 +178,7 @@ namespace compiler::helios {
 					}
 				}
 
-				HOUTFunctionDeclaration output(original_symbol, ret_type);
-				output.parameters
-					= std::make_shared<std::vector<code::Parameter>>(std::move(parameters));
+				HOUTFunctionDeclaration output(original_symbol, ret_type, std::make_shared<std::vector<code::Parameter>>(std::move(parameters)));
 
 				this->out.emplace(std::move(output));
 			}
@@ -458,9 +456,9 @@ namespace compiler::helios {
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
 				auto         decl = ctx.query<QueryDeclOfFun>(original_symbol);
-				HOUTFunction output(decl);
-
+				
 				// body:
+				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
 				auto fun_body = stmt->getBody();
 
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
@@ -468,17 +466,18 @@ namespace compiler::helios {
 
 					code::CodeBlock function_body
 						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
-					output.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				} else {
 					CORE_ASSERT(
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-					output.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
+				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
-				this->out.emplace(std::move(output));
+				this->out.emplace(HOUTFunction{decl, output_body});
 			}
 		};
 
