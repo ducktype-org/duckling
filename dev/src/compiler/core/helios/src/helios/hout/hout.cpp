@@ -33,7 +33,11 @@ namespace compiler::helios {
 		return out;
 	}
 
-	HOUTFunctionDeclaration::HOUTFunctionDeclaration(SymID symbol, tsh::SymbolType<> ret_type,const std::shared_ptr<std::vector<code::Parameter>>& parameters):
+	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
+		SymID                                                symbol,
+		tsh::SymbolType<>                                    ret_type,
+		const std::shared_ptr<std::vector<code::Parameter>>& parameters
+	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
@@ -78,7 +82,11 @@ namespace compiler::helios {
 		return declaration.debugPrint() + out.str();
 	}
 
-	HOUTFunction::HOUTFunction(HOUTFunctionDeclaration other, const std::shared_ptr<const code::CodeBlock>& body): declaration(std::move(other)), body(body) {}
+	HOUTFunction::HOUTFunction(
+		HOUTFunctionDeclaration other, const std::shared_ptr<const code::CodeBlock>& body
+	):
+		  declaration(std::move(other)),
+		  body(body) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		std::stringstream out;

@@ -37,7 +37,7 @@ namespace compiler::helios::code {
 		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0;
-		usize                        used_named_args = 0;
+		usize                        used_named_args      = 0;
 
 		for (auto& param: *(decl.parameters)) {
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {

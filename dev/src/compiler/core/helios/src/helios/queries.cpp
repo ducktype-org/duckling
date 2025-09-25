@@ -178,7 +178,11 @@ namespace compiler::helios {
 					}
 				}
 
-				HOUTFunctionDeclaration output(original_symbol, ret_type, std::make_shared<std::vector<code::Parameter>>(std::move(parameters)));
+				HOUTFunctionDeclaration output(
+					original_symbol,
+					ret_type,
+					std::make_shared<std::vector<code::Parameter>>(std::move(parameters))
+				);
 
 				this->out.emplace(std::move(output));
 			}
@@ -455,11 +459,11 @@ namespace compiler::helios {
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
-				auto         decl = ctx.query<QueryDeclOfFun>(original_symbol);
-				
+				auto decl = ctx.query<QueryDeclOfFun>(original_symbol);
+
 				// body:
 				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
-				auto fun_body = stmt->getBody();
+				auto                                   fun_body    = stmt->getBody();
 
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					// The `fun abc() = expr;` case.
@@ -477,7 +481,7 @@ namespace compiler::helios {
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
-				this->out.emplace(HOUTFunction{decl, output_body});
+				this->out.emplace(HOUTFunction{ decl, output_body });
 			}
 		};
 
