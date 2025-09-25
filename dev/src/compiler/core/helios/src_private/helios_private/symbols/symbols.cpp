@@ -1,5 +1,6 @@
 #include "symbols.hpp"
 
+#include "pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp"
 #include "pst_parser/lang_parser_element.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -631,26 +632,74 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
+		template<typename... Kinds>
+		static bool areAncestors(
+			query::Context& ctx, pst::Access<pst::LangElement> el, Kinds... kinds
+		) {
+			return areAncestorsImpl(ctx, el, kinds...);
+		}
+
+		// Base case: no more kinds to check → success
+		static bool areAncestorsImpl(query::Context&, pst::Access<pst::LangElement>) {
+			return true;
+		}
+
+		// Recursive case: check current kind, then move up
+		template<typename... Rest>
+		static bool areAncestorsImpl(
+			query::Context&               ctx,
+			pst::Access<pst::LangElement> el,
+			pst::ElementKind              expected,
+			Rest... rest
+		) {
+			if (auto parent = el->getParent()) {
+				auto parent_el = parent.value().unlock(ctx);
+				if (parent_el->getElementKind() == expected)
+					return areAncestorsImpl(ctx, parent_el, rest...);
+			}
+			return false;
+		}
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
 
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
-			auto parent = pst_element->getParent();
-			while (parent) {
-				if (auto stmt_specifier_opt = parent->unlock(ctx).dynamicCast<pst::StmtSpecifier>())
-					specifiers.emplace_back(stmt_specifier_opt.value());
-				else if (auto block_opt = parent->unlock(ctx).dynamicCast<pst::CodeBlock>()) {
-					// When we encounter code block we also check if it is inside specifier 
-					// and move up 2 levels in that case
-					parent = block_opt.value()->getParent();
-					if (auto second_stmt_specifier_opt = parent->unlock(ctx).dynamicCast<pst::StmtSpecifier>())
-						specifiers.emplace_back(second_stmt_specifier_opt.value());
-				}
-				else
+			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
+			// or "Stmt" child. So single statement can have a specifier when it is wrapped in
+			// "CodeBlockOrStmt" and "StmtSpecifier" or in the "CodeBlock", "CodeBlockOrStmt" and
+			// "StmtSpecifier".
+			while (true) {
+				if (areAncestors(
+						ctx,
+						pst_element,
+						pst::ElementKind::CodeBlockOrStmt,
+						pst::ElementKind::StmtSpecifier
+					)) {
+					pst_element
+						= pst_element->getParent().value().unlock(ctx)->getParent().value().unlock(
+							ctx
+						);
+				} else if (areAncestors(
+							   ctx,
+							   pst_element,
+							   pst::ElementKind::CodeBlock,
+							   pst::ElementKind::CodeBlockOrStmt,
+							   pst::ElementKind::StmtSpecifier
+						   )) {
+					pst_element = pst_element->getParent()
+					                  .value()
+					                  .unlock(ctx)
+					                  ->getParent()
+					                  .value()
+					                  .unlock(ctx)
+					                  ->getParent()
+					                  .value()
+					                  .unlock(ctx);
+				} else {
 					break;
-				
-				parent = parent.value().unlock(ctx)->getParent();
+				}
+				specifiers.emplace_back(pst_element.dynamicCast<pst::StmtSpecifier>().value());
 			}
 
 			return specifiers;

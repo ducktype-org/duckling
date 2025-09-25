@@ -1,0 +1,30 @@
+# Test file for statement specifiers - simplified
+
+# Basic extern("C") function  
+extern("C") fun cFunction() -> i32 = 42;
+
+# Private function
+private fun privateFunction() -> i32 = 123;
+
+# Public function
+public fun publicFunction() -> i32 = 111;
+
+# Multiple specifiers with order test
+extern("C") private fun cPrivateFunction() -> i32 = 999;
+
+# Library extern function
+extern("C", "mylib") fun libFunction() -> i32 = 777;
+
+# Function with incorrect ABI (for error testing)
+extern("InvalidABI") fun invalidAbiFunction() -> i32 = 0;
+
+# Extern("C") block to test block-level specifiers
+extern("C") {
+    fun cBlockFunction() -> i32 = 555;
+    public fun cBlockPublicFunction() -> i32 = 666;
+}
+
+# Basic struct (no specifiers)
+class RegularStruct {
+     x: i32;
+}
