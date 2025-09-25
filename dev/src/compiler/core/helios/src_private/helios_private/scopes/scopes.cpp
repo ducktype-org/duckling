@@ -375,9 +375,9 @@ namespace compiler::helios {
                             ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else if (auto using_opt
-					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(using_opt.value());
+					} else {
+						// Currently only "using stmt" has transparent decl kind, but>>F declares a symbol.
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
 					}
 					break;

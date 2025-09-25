@@ -187,14 +187,20 @@ namespace compiler::helios {
 			.scope       = scope,
 			.pst_element = stmt,
 		};
-		CORE_ASSERT(
-			stmt->isDeclaration() == pst::DeclKind::Symbol,
-			"When statement declares a symbol it should have a symbol DeclKind"
-		);
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto function = stmt.dynamicCast<pst::Fun>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = function->getName(),
+					.kind = SymbolKind::Function,
+				},
+				pst_data
+			));
+		}
+		case pst::StmtKind::FunDecl: {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
 					.name = function->getName(),
@@ -632,6 +638,8 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
+		// @TODO do not unlock the elements and only cast them
+		
 		template<typename... Kinds>
 		static bool areAncestors(
 			query::Context& ctx, pst::Access<pst::LangElement> el, Kinds... kinds
