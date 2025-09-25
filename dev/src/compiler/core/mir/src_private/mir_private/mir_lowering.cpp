@@ -30,6 +30,4 @@ namespace compiler::mir {
 		}
 		return last_result;
 	}
-
-	// @TODO: StmtExprBoolJmpVisitor for jumping code
 }
