@@ -374,7 +374,7 @@ namespace compiler::helios::code {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			// @TODO #981: make it better: 
+			// @TODO #981: make it better:
 			// @TODO: #1029 handle overloads:
 			auto callee = lookup_result->getAsSingle().value().back();
 
