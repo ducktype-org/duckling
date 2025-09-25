@@ -12,7 +12,7 @@ fun foo(a: i32, b: i32) -> i32 = {
 }
 
 fun foo1(a: i64, b:i64 = 5) -> i64 ={
-    builtin_output_i64(2137);
+    builtin_output_i64(1234);
     return 0;
 }
 
