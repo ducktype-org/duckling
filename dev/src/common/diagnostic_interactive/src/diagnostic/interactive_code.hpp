@@ -23,7 +23,14 @@
 namespace dia {
 	using pointer_message = dia::pointer_message;
 	using nlohmann::json;
-
+	
+	/*
+	 * Responsible for creating a code sample. 
+	 * Available child classes:
+	 * 	- InteractiveCode, which creates a code sample semanticly structured and enriched with compiler symbols.
+	 * 	 Needed for all of view manager features to be available.
+	 * 	- SimpleCode, which just outputs the code as a block of text.
+	*/ 
 	class AbstractCode {
 	protected:
 		dia::SourcePosition                       position;

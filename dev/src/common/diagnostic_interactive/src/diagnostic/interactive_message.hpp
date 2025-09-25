@@ -19,7 +19,11 @@
 
 namespace dia {
 	using nlohmann::json;
-
+	/* This is the main error class. If you want to create a new error, you need to inherit from this class.
+	 * It composes of the main content and side notes providing additional information.
+	 *
+	 * Check out compiler/code/helios/errors/operator_not_found to see how to create a custom error from scrach.
+	*/
 	class InteractiveMessage {
 	private:
 		Box<dia::InteractiveContent>                     content;
@@ -67,6 +71,11 @@ namespace dia {
 			  ParseError("parse", "for_round_bracket", position) {}
 	};
 
+	/*
+	 * Placeholder class. You can use it to report errors while developing some functionality,
+	 * with the intention to replace it with something custom later.
+	 * 
+	*/ 
 	class TODOError: public InteractiveMessage {
 		class Params: public ContentParams {
 			const std::string message;

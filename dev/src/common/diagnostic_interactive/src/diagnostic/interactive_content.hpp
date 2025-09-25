@@ -27,7 +27,10 @@ namespace dia {
 	)
 
 	using nlohmann::json;
-
+	/*
+	 * Part of the InteractiveContent. Child classes are meant to gather the information about the error
+	 * and output them in form of error template parameters.
+	*/
 	class ContentParams {
 	protected:
 		std::set<compiler::helios::SymID> symbols{};
@@ -47,7 +50,13 @@ namespace dia {
 	public:
 		json tojson() override { return json::object(); }
 	};
-
+	
+	/*
+	 * Class representing actual individual error message. Idenifies error template that should be used by error family and name.
+	 * Contains of ContentParams and code sample.
+	 *
+	 * Also responsible to gather all of the symbols and types contained in the message.
+	*/
 	class InteractiveContent {
 	private:
 		const ContentType                       content_type;
