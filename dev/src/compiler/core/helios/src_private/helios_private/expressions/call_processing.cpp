@@ -34,7 +34,10 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
+		// note: this has to be a copy, because we move default arguments from it:
+		// @TODO: #1300 just change to clone
 		auto                         decl = ctx.query<QueryDeclOfFun>(fun);
+
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0;
 		usize                        used_named_args      = 0;
