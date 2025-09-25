@@ -22,7 +22,12 @@ namespace {
 	 * information from this map into PST nodes.
 	 */
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
-
+	static void printmapdebug() {
+		std::cout << "Root element file back map:\n";
+		for (const auto& [key, value]: root_element_file_back_map) {
+			std::cout << "  " << key.asInt() << " -> " << value.queryUnstablePerfectHash() << "\n";
+		}
+	}
 	/**
 	 * StableVector that stores all ModuleTree instances.
 	 */
@@ -591,11 +596,18 @@ namespace compiler::frontend {
 	ModuleID extendQueryModuleIDOfPST(
 		[[maybe_unused]] query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 	) {
+		std::cout << "EQMIDPST 1\n";
 		// get top-level:
-		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
-
+		while (element.unlock(ctx)->getParent()) {
+			std::cout << "EQMIDPST 2\n";
+			element = element.unlock(ctx)->getParent().value();
+		}
+		std::cout << "EQMIDPST 3\n";
+		printmapdebug();
+		std::cout << "EQMIDPST 4\n";
 		// this access depends of global state that might become a problem in incremental compilation:
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
+		std::cout << "EQMIDPST 5\n";
 		return GetFileID_Functor::get(file_id)->getModule();
 	}
 }
