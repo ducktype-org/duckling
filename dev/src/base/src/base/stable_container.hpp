@@ -51,6 +51,19 @@ namespace base {
 					Wrap() {}
 
 					~Wrap() {}
+
+					Wrap(Wrap&& other) noexcept: val(std::move(other.val)) {}
+					Wrap(const Wrap& other) : val(other.val) {}
+					
+					Wrap& operator=(Wrap&& other) noexcept {
+						val = std::move(other.val);
+						return *this;
+					}
+
+					Wrap& operator=(const Wrap& other) noexcept {
+						val = other.val;
+						return *this;
+					}
 				};
 
 				std::vector<usize> available;
@@ -60,11 +73,7 @@ namespace base {
 			public:
 				StableAlocator() = default;
 
-				~StableAlocator() {
-					CORE_ASSERT(
-						data.size() == allocated.size(),
-						"sanity check, each cell must have corresponding bit if data is used"
-					);
+				~StableAlocator() noexcept {
 					for (usize i = 0; i < data.size(); i++)
 						if (allocated[i])
 							data.at(i).val.~Node();
@@ -214,11 +223,12 @@ namespace base {
 				using reference         = ValT&;
 				using pointer           = ValT*;
 
+				BaseIterator() = default;
+
 			private:
 				Node*         inner;
 				self_t const* iter_father;
 
-				BaseIterator() = default;
 				friend self_t;
 
 				[[nodiscard]] inline usize getPos() const {
@@ -293,7 +303,7 @@ namespace base {
 					return *this;
 				}
 
-				BaseIterator operator-(const difference_type diff) {
+				BaseIterator operator-(const difference_type diff) const {
 					return BaseIterator(*this) -= diff;
 				}
 
@@ -336,7 +346,6 @@ namespace base {
 				del.assertValid();
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
-				Node& del_node  = *del.inner;
 				usize vec_uidx  = del.getPos();
 				usize alloc_idx = data.at(vec_uidx);
 
