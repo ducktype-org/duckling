@@ -31,9 +31,9 @@ namespace base {
 			class Node final {
 			private:
 				friend father_t;
-				usize               idx;
-				father_t* const           node_father;
-				Data content;
+				usize           idx;
+				father_t* const node_father;
+				Data            content;
 
 			public:
 				template<typename... Args>
@@ -43,31 +43,38 @@ namespace base {
 					  content(std::in_place, std::forward<Args>(args)...) {}
 			};
 
-			class StableAlocator{
+			class StableAlocator {
 			private:
 				union Wrap {
 					Node val;
-					Wrap() {};
-					~Wrap() {};
-				};
-				
-				std::vector<usize> available;
-				std::deque<Wrap> data;
-				std::vector<bool> allocated;	
-			public:
 
+					Wrap() {}
+
+					~Wrap() {}
+				};
+
+				std::vector<usize> available;
+				std::deque<Wrap>   data;
+				std::vector<bool>  allocated;
+
+			public:
 				StableAlocator() = default;
-				
+
 				~StableAlocator() {
-					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+					CORE_ASSERT(
+						data.size() == allocated.size(),
+						"sanity check, each cell must have corresponding bit if data is used"
+					);
 					for (usize i = 0; i < data.size(); i++)
-						if (allocated[i])
-							dealloc(i);	
+						if (allocated[i]) dealloc(i);
 				}
-				
+
 				template<typename... Args>
 				usize alloc(Args&&... args) {
-					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+					CORE_ASSERT(
+						data.size() == allocated.size(),
+						"sanity check, each cell must have corresponding bit if data is used"
+					);
 
 					if (available.empty()) {
 						available.push_back(data.size());
@@ -78,26 +85,37 @@ namespace base {
 					usize alloc_idx = available.back();
 					available.pop_back();
 
-					CORE_ASSERT(allocated.at(alloc_idx) == false, "trying to allocate space which is already in use");
+					CORE_ASSERT(
+						allocated.at(alloc_idx) == false,
+						"trying to allocate space which is already in use"
+					);
 					allocated.at(alloc_idx) = true;
-					
+
 					new (&data.at(alloc_idx).val) Node(std::forward<Args>(args)...);
-					
+
 					return alloc_idx;
 				}
-				
+
 				void dealloc(usize alloc_idx) {
-					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
-					
-					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to deallocate already empty space");
+					CORE_ASSERT(
+						data.size() == allocated.size(),
+						"sanity check, each cell must have corresponding bit if data is used"
+					);
+
+					CORE_ASSERT(
+						allocated.at(alloc_idx) == true, "trying to deallocate already empty space"
+					);
 					allocated.at(alloc_idx) = false;
-					
+
 					data.at(alloc_idx).val.~Node();
 					available.push_back(alloc_idx);
 				}
-				
+
 				Node& at(usize alloc_idx) {
-					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+					CORE_ASSERT(
+						data.size() == allocated.size(),
+						"sanity check, each cell must have corresponding bit if data is used"
+					);
 					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to get uninitialized data");
 					return data.at(alloc_idx).val;
 				}
@@ -112,9 +130,7 @@ namespace base {
 
 			StableAlocator memory;
 
-			inline Node& nodeAt(usize vec_idx) {
-				return memory.at(data.at(vec_idx));
-			}
+			inline Node& nodeAt(usize vec_idx) { return memory.at(data.at(vec_idx)); }
 
 		public:
 			using RefT  = Ref<Data>;
@@ -156,9 +172,7 @@ namespace base {
 
 			template<class... Args>
 			void emplaceBack(Args&&... args) {
-				data.push_back(
-					memory.alloc(size(), this, std::forward<Args>(args)...)
-				);
+				data.push_back(memory.alloc(size(), this, std::forward<Args>(args)...));
 			}
 
 			void pushBack(const Data& value) { emplaceBack(value); }
@@ -191,8 +205,7 @@ namespace base {
 			 * @tparam ValT - type of held value (used to determine iterator traits)
 			 */
 			template<typename ValT>
-			requires std::is_same_v<std::remove_cvref_t<ValT>, Data>
-			class BaseIterator {
+			requires std::is_same_v<std::remove_cvref_t<ValT>, Data> class BaseIterator {
 			public:
 				using difference_type   = i64;
 				using iterator_category = std::random_access_iterator_tag;
@@ -203,7 +216,7 @@ namespace base {
 			private:
 				Node*     inner;
 				father_t* iter_father;
-				
+
 				BaseIterator() = default;
 				friend father_t;
 
@@ -212,9 +225,9 @@ namespace base {
 				}
 
 				BaseIterator incThisRetOld(difference_type diff) {
-					BaseIterator    ans  = *this;
-					usize         pos  = getPos() + diff;
-					father_t& my_father = *iter_father;
+					BaseIterator ans       = *this;
+					usize        pos       = getPos() + diff;
+					father_t&    my_father = *iter_father;
 
 					inner = (pos < my_father.size()) ? &my_father.nodeAt(pos) : nullptr;
 
@@ -223,7 +236,7 @@ namespace base {
 
 				static BaseIterator make(Node* iter, father_t* f) {
 					Iterator ans;
-					ans.inner     = iter;
+					ans.inner       = iter;
 					ans.iter_father = f;
 					return ans;
 				}
@@ -233,36 +246,33 @@ namespace base {
 						inner != nullptr, "iterator is end() of container; don't dereference"
 					);
 
-					const Node& node = *inner;
-					father_t& node_father = *node.node_father;
-					usize pos = node.idx;
+					const Node& node        = *inner;
+					father_t&   node_father = *node.node_father;
+					usize       pos         = node.idx;
 					CORE_ASSERT(
 						iter_father == &node_father,
 						"value belongs to different container than iterator"
 					);
 
-					CORE_ASSERT(inner == &node_father.nodeAt(pos), "container and iterator don't agree");
+					CORE_ASSERT(
+						inner == &node_father.nodeAt(pos), "container and iterator don't agree"
+					);
 				}
 
 			public:
-
 				BaseIterator& operator++() {
 					incThisRetOld(1);
 					return *this;
 				}
 
-				BaseIterator operator++(int) {
-					return incThisRetOld(1);
-				}
+				BaseIterator operator++(int) { return incThisRetOld(1); }
 
 				BaseIterator& operator--() {
 					incThisRetOld(-1);
 					return *this;
 				}
 
-				BaseIterator operator--(int) {
-					return incThisRetOld(-1);
-				}
+				BaseIterator operator--(int) { return incThisRetOld(-1); }
 
 				BaseIterator& operator+=(difference_type diff) {
 					incThisRetOld(diff);
@@ -308,13 +318,11 @@ namespace base {
 					return inner->content;
 				}
 
-				reference operator[](difference_type diff) const {
-					return *(*this + diff);
-				}
+				reference operator[](difference_type diff) const { return *(*this + diff); }
 			};
 
 		public:
-			using Iterator = BaseIterator<Data>;
+			using Iterator      = BaseIterator<Data>;
 			using ConstIterator = BaseIterator<const Data>;
 
 			/**
@@ -327,14 +335,12 @@ namespace base {
 				del.assertValid();
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
-				Node& del_node = *del.inner;
-				usize vec_uidx = del.getPos();
+				Node& del_node  = *del.inner;
+				usize vec_uidx  = del.getPos();
 				usize alloc_idx = data.at(vec_uidx);
-				
-				for (usize i = vec_uidx; i < size(); ++i) {
-					nodeAt(i).idx--;
-				}
-				
+
+				for (usize i = vec_uidx; i < size(); ++i) nodeAt(i).idx--;
+
 				i64 vec_sidx = static_cast<i64>(vec_uidx);
 				data.erase(data.begin() + vec_sidx);
 
@@ -343,36 +349,29 @@ namespace base {
 				return begin() + vec_sidx;
 			}
 
-			Iterator begin() {
-				return Iterator::make(size() ? &nodeAt(0) : nullptr, this);
-			}
+			Iterator begin() { return Iterator::make(size() ? &nodeAt(0) : nullptr, this); }
 
 			ConstIterator begin() const {
 				return ConstIterator::make(size() ? &nodeAt(0) : nullptr, this);
 			}
 
-			Iterator end() {
-				return Iterator::make(nullptr, this);
-			}
+			Iterator end() { return Iterator::make(nullptr, this); }
 
-			ConstIterator end() const {
-				return ConstIterator::make(nullptr, this);
-			}
-			
+			ConstIterator end() const { return ConstIterator::make(nullptr, this); }
+
 			/**
-			* @brief retrieval of Iterator from a Ref to held value
-			* @note UB when passing reference not allocated via Stable Vector
-			* @param ref 
-			* @return Iterator 
-			*/
+			 * @brief retrieval of Iterator from a Ref to held value
+			 * @note UB when passing reference not allocated via Stable Vector
+			 * @param ref
+			 * @return Iterator
+			 */
 			static Iterator fromRef(Ref<Data> ref) {
 				// not sure if this is legal...
 				static constexpr auto offset = offsetof(Node, content);
 
-				Node *node_ptr = reinterpret_cast<Node *>(
-					reinterpret_cast<byte*>(ref.get()) - offset
-				);
-				father_t *father = node_ptr->node_father;
+				Node* node_ptr
+					= reinterpret_cast<Node*>(reinterpret_cast<byte*>(ref.get()) - offset);
+				father_t* father = node_ptr->node_father;
 
 				return Iterator::make(node_ptr, father);
 			}
