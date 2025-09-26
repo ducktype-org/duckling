@@ -52,7 +52,18 @@ namespace dia_app {
 
 		template<class T>
 		std::vector<line_data_t<T>> filterEmptyLines(component_get_view_data_t<T> data) {
-			UNIMPLEMENTED();
+			std::vector<line_data_t<T>> result;
+			// Prefix content (before the first explicit line start)
+			if (data.first.has_value()) {
+				result.emplace_back(line_metadata_t{}, std::move(data.first.value()));
+			}
+			// Mid lines: keep only non-empty components
+			for (auto& [meta, comp]: data.second) {
+				if (comp.has_value()) {
+					result.emplace_back(meta, std::move(comp.value()));
+				}
+			}
+			return result;
 		}
 
 		base::Box<::view::HlMessage> HlMessage::getView(ViewConstructor& vc) const {
@@ -88,7 +99,23 @@ namespace dia_app {
 		base::Box<::view::NoHlComponent> concatNoHlLines(
 			std::vector<line_data_t<::view::NoHlComponent>> lines
 		) {
-			UNIMPLEMENTED();
+			// Build a single NoHl concat component with newlines between lines
+			auto result = base::makeBox<::view::NoHlComponent>();
+			auto* repeated = result->mutable_concat_component()->mutable_components();
+			bool first = true;
+			for (auto& [ignored_meta, component_opt]: lines) {
+				if (!component_opt.has_value()) continue;
+				if (!first) {
+					// Insert a newline between non-empty lines
+					auto newline = base::makeBox<::view::NoHlComponent>();
+					newline->mutable_text_component()->set_content("\n");
+					repeated->AddAllocated(newline.release());
+				}
+				first = false;
+				// Append the actual line content
+				repeated->AddAllocated(component_opt.value().release());
+			}
+			return result;
 		}
 
 		base::Box<::view::Section> TextSection::getView(ViewConstructor& vc) const {
