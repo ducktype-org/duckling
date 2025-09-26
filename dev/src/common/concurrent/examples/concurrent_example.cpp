@@ -1,19 +1,20 @@
 #include "hide.hpp"
 
-#include <thread>
-#include <vector>
-#include <iostream>
-
 #include <concurrent/manual_object_storage.hpp>
 #include <concurrent/worker.hpp>
+
 #include <base/ref.hpp>
+
+#include <iostream>
+#include <thread>
+#include <vector>
 
 void job(Ref<concurrent::WorkerData> worker) {
 	for (int i = 0; i < 10'000'000; i++) allocateHide(worker);
 }
 
 // class A {
-// public:	
+// public:
 // 	int x = 0x01;
 // 	virtual ~A() = default;
 // };
@@ -22,21 +23,19 @@ void job(Ref<concurrent::WorkerData> worker) {
 template<class T>
 void printBytes(const T& obj) {
 	auto bytes = std::as_bytes(std::span<const T>(&obj, 1));
-	for (auto b: bytes) {
-		std::cerr << std::hex << (int)b << " ";
-	}
+	for (auto b: bytes) std::cerr << std::hex << (int) b << " ";
 	std::cerr << "\n";
 }
-
 
 int main() {
 	// spawn NUM_THREADS threads doing allocations:
 	std::vector<std::thread> threads;
 	threads.reserve(NUM_THREADS);
-	for (int i = 0; i < NUM_THREADS; i++) threads.emplace_back([]() {
-		auto worker_data = concurrent::WorkerData::make();
-		job(&worker_data);
-	});
+	for (int i = 0; i < NUM_THREADS; i++)
+		threads.emplace_back([]() {
+			auto worker_data = concurrent::WorkerData::make();
+			job(&worker_data);
+		});
 	for (auto& t: threads) t.join();
 	return 0;
 
@@ -61,6 +60,4 @@ int main() {
 	// // printBytes(a);
 	// std::cerr << &a << "\n";
 	// std::cerr << &(a.x) << "\n";
-
-
 }

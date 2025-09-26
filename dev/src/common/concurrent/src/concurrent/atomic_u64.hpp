@@ -11,9 +11,9 @@ namespace concurrent {
 
 	namespace internal {
 		/**
-		* @note in the future, optimizing the memory order could result in much better performance,
-		* especially on ARM.
-		*/
+		 * @note in the future, optimizing the memory order could result in much better performance,
+		 * especially on ARM.
+		 */
 		struct AtomicU64 final {
 		private:
 			std::atomic<u64> value;
@@ -51,9 +51,9 @@ namespace concurrent {
 			}
 
 			/**
-			* Decrement the value if it is not zero.
-			* Does not avoid the ABA problem, if unlucky, can fail randomly.
-			*/
+			 * Decrement the value if it is not zero.
+			 * Does not avoid the ABA problem, if unlucky, can fail randomly.
+			 */
 			CmpRes decIfNonZero() {
 				u64 expected = value.load();
 				if (expected == 0) return CmpRes::NotChanged;
@@ -69,26 +69,41 @@ namespace concurrent {
 		struct MockAtomicU64 final {
 		private:
 			u64 value;
+
 		public:
 			MockAtomicU64(): value(0) {}
+
 			MockAtomicU64(u64 value): value(value) {}
+
 			[[nodiscard]]
-			u64 load() const noexcept { return value; }
+			u64 load() const noexcept {
+				return value;
+			}
+
 			void store(u64 desired) noexcept { value = desired; }
+
 			auto inc() noexcept { return value++; }
+
 			auto dec() noexcept { return value--; }
+
 			auto add(u64 v) noexcept {
-				auto tmp = value; value += v; return tmp; 
+				auto tmp = value;
+				value += v;
+				return tmp;
 			}
+
 			auto sub(u64 v) noexcept {
-				auto tmp = value; value -= v; return tmp;
+				auto tmp = value;
+				value -= v;
+				return tmp;
 			}
+
 			CmpRes cmpAndSwap(u64 expected, u64 desired) {
 				if (value == expected) {
 					value = desired;
 					return CmpRes::Changed;
 				} else {
-					return CmpRes::NotChanged;	
+					return CmpRes::NotChanged;
 				}
 			}
 		};
@@ -96,7 +111,5 @@ namespace concurrent {
 
 	using AtomicU64 = internal::AtomicU64;
 
-
-	
 
 }

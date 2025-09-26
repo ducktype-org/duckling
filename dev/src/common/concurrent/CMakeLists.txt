@@ -14,3 +14,7 @@ add_example(concurrent_example examples/concurrent_example.cpp
 # add target sources:
 target_sources(Concurrent PRIVATE
 	examples/hide.cpp)
+
+
+add_example(stable_vs_my_hashmap examples/stable_vs_my_hashmap.cpp
+	USES Concurrent Base)

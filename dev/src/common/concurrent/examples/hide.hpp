@@ -1,10 +1,10 @@
 #pragma once
 
 #include <concurrent/worker.hpp>
+
 #include <base/ref.hpp>
 
-constexpr int NUM_THREADS = 1;
-
+constexpr int NUM_THREADS = 8;
 
 struct THide final {
 	long long x;

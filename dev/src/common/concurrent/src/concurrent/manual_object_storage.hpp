@@ -2,36 +2,33 @@
 
 #pragma once
 
-#include <utility>
 #include <new>
+#include <utility>
 
 namespace concurrent {
 
-    /**
-     * Lifetime management for a single object.
-     * Note: destructor must be called manually.
-     * Any wrong usage results in undefined behavior.
-     * See: https://en.cppreference.com/w/cpp/utility/launder.html
-     */
-    template<class T>
-    struct ObjStorage {
-        // @TODO: // optional can be used in dev builds with assertion in destructor
-    private:
-        alignas (T) std::byte data[sizeof(T)];
+	/**
+	 * Lifetime management for a single object.
+	 * Note: destructor must be called manually.
+	 * Any wrong usage results in undefined behavior.
+	 * See: https://en.cppreference.com/w/cpp/utility/launder.html
+	 */
+	template<class T>
+	struct ObjStorage {
+		// @TODO: // optional can be used in dev builds with assertion in destructor
 
-    public:
-        template<class... Args>
-        void construct(Args&&... args) {
-            new (data) T(std::forward<Args>(args)...);
-        }
+	private:
+		alignas(T) std::byte data[sizeof(T)];
 
-        void destroy() {
-            this->get()->~T();
-        }
+	public:
+		template<class... Args>
+		void construct(Args&&... args) {
+			new (data) T(std::forward<Args>(args)...);
+		}
 
-        T* get() {
-            return std::launder(reinterpret_cast<T*>(&data));
-        }
-    };
+		void destroy() { this->get()->~T(); }
+
+		T* get() { return std::launder(reinterpret_cast<T*>(&data)); }
+	};
 
 }

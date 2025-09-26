@@ -1,9 +1,9 @@
 #pragma once
 
 #include "atomic_u64.hpp"
+#include "manual_object_storage.hpp"
 #include "rw_spinlock.hpp"
 #include "worker.hpp"
-#include "manual_object_storage.hpp"
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -11,15 +11,14 @@
 #include <base/ref.hpp>
 
 #include <array>
-#include <optional>
-#include <list>
 #include <deque>
+#include <list>
+#include <optional>
 
 namespace concurrent {
 
 	template<class T, u64 BLOCK_SIZE = 2'048>
 	class SingleThreadedAllocator final {
-		
 		using StorageT = ObjStorage<T>;
 
 		struct Buffer final {
@@ -28,7 +27,7 @@ namespace concurrent {
 
 		struct BufferIndex final {
 			u64 buffer_idx = 0;
-			u64 item_idx = 0;
+			u64 item_idx   = 0;
 		};
 
 		constexpr static BufferIndex toBufferIndex(u64 idx) {
@@ -37,24 +36,22 @@ namespace concurrent {
 				.item_idx   = idx % BLOCK_SIZE,
 			};
 		}
+
 	public:
-		SingleThreadedAllocator() {
-			buffers.emplace_back(makeBox<Buffer>());
-		}
+		SingleThreadedAllocator() { buffers.emplace_back(makeBox<Buffer>()); }
 
 		Ref<T> allocateEmplace(auto&&... args) {
 			// @TODO: add a lot of assertions
 
-			
+
 			// this will be the index of the item:
 			// u64 idx = next_free_idx++;
 			// BufferIndex bidx = toBufferIndex(idx);
 
 			next_free_idx.item_idx++;
-			
+
 			if (next_free_idx.item_idx >= BLOCK_SIZE) {
-				[[unlikely]]
-				next_free_idx.item_idx = 0;
+				[[unlikely]] next_free_idx.item_idx = 0;
 				next_free_idx.buffer_idx++;
 				buffers.emplace_back(makeBox<Buffer>());
 			}
@@ -80,8 +77,7 @@ namespace concurrent {
 		}
 
 	private:
-
-		BufferIndex next_free_idx;
+		BufferIndex              next_free_idx;
 		std::vector<Box<Buffer>> buffers;
 	};
 
@@ -100,14 +96,7 @@ namespace concurrent {
 
 			return allocators.at(worker->id).allocateEmplace(std::forward<decltype(args)>(args)...);
 		}
-
-
-
 	};
-
-
-
-
 
 	// };
 }

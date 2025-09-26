@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/ints.hpp>
+
 #include <random>
 
 namespace concurrent {
@@ -12,16 +13,17 @@ namespace concurrent {
 	 */
 	struct WorkerData final {
 		WorkerData(u64 id, std::minstd_rand rng);
+
 	public:
-		WorkerData() = delete;
-		WorkerData(const WorkerData&) = delete;
+		WorkerData()                             = delete;
+		WorkerData(const WorkerData&)            = delete;
 		WorkerData& operator=(const WorkerData&) = delete;
-		WorkerData(WorkerData&&) = delete;
-		WorkerData& operator=(WorkerData&&) = delete;
+		WorkerData(WorkerData&&)                 = delete;
+		WorkerData& operator=(WorkerData&&)      = delete;
 
 		static WorkerData make();
 
-		u64 id;
+		u64              id;
 		std::minstd_rand rng;
 	};
 }

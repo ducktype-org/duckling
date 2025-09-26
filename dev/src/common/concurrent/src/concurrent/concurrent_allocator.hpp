@@ -64,9 +64,8 @@ namespace concurrent {
 			// });
 			{
 				WithReadLock lock(&buffer_lock);
-				if (bidx.buffer_idx < buffers.size()) {
+				if (bidx.buffer_idx < buffers.size())
 					result = MRef<Storage>(&buffers[bidx.buffer_idx]->items[bidx.item_idx]);
-				}
 			}
 
 			if (result.toOpt().has_value()) return result.toOpt().value();
