@@ -1,8 +1,5 @@
 #include "scopes.hpp"
 
-#include "pst_parser/element_kind.hpp"
-#include "pst_parser/elements/hierarchy/meta.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/simple.hpp>

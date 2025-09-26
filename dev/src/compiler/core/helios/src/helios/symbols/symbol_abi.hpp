@@ -2,11 +2,14 @@
 
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+
+#include <variant>
 
 namespace compiler::helios {
 

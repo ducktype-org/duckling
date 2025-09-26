@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../lists/call_list.hpp"
 #include "../meta.hpp"
 
 namespace pst {
@@ -60,7 +59,10 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<CallList>> getArgs() const {
-			return call_list.map([](const auto& v) -> AccessLocked<CallList> { return v.give(); });
+			if (call_list.has_value())
+				return call_list->give();
+			else
+				return {};
 		}
 	};
 }

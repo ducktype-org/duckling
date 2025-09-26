@@ -1,20 +1,45 @@
 
+
 #include "symbol_abi.hpp"
 
-#include "helios_private/symbols/symbols.hpp"
-
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/access.hpp>
 #include <pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/call_argument.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include <base/exceptions.hpp>
+
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
+
+
+	query::QResult<base::StrID, errors::Failed> getStrFromExternCallArg(
+		query::Context& ctx, pst::AccessLocked<pst::LangElement> arg
+	) {
+		auto call_arg_opt = arg.unlock(ctx).dynamicCast<pst::CallArgument>();
+		if (!call_arg_opt) return query::QError(errors::Failed());
+
+		if (call_arg_opt.value()->getArgName().has_value())
+			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
+
+		auto expr_holder_opt
+			= call_arg_opt.value()->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>();
+		if (!expr_holder_opt) return query::QError(errors::Failed());
+
+		auto str_lit_opt
+			= expr_holder_opt.value()->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
+		if (!str_lit_opt) return query::QError(errors::Failed());
+
+		return str_lit_opt.value()->getValue().value;
+	}
 
 	QuerySymbolABI_Result getSymbolABI(
 		query::Context& ctx, pst::AccessLocked<pst::CallList> extern_args
@@ -22,26 +47,17 @@ namespace compiler::helios {
 		std::vector<pst::AccessLocked<pst::LangElement>> args{ extern_args.unlock(ctx)->begin(),
 			                                                   extern_args.unlock(ctx)->end() };
 
-		auto expr_holder_opt = args[0].unlock(ctx).dynamicCast<pst::ExprHolder>();
-		if (not expr_holder_opt) return query::QError(errors::Failed());
+		if (args.empty()) return query::QError(errors::Failed());
 
-		auto str_lit_opt
-			= expr_holder_opt.value()->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
-		if (not str_lit_opt) return query::QError(errors::Failed());
+		auto first_arg_result = getStrFromExternCallArg(ctx, args[0]);
+		if (first_arg_result.hasError()) return query::QError(first_arg_result.error());
 
-		auto str = str_lit_opt.value()->getValue();
-		if (str.value == base::StrID("C")) {
+		if (first_arg_result.value() == base::StrID("C")) {
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
-				auto lib_expr_holder_opt = args[1].unlock(ctx).dynamicCast<pst::ExprHolder>();
-				if (not lib_expr_holder_opt) return query::QError(errors::Failed());
+				auto lib_str_lit_opt = getStrFromExternCallArg(ctx, args[1]);
+				if (lib_str_lit_opt.hasError()) return query::QError(lib_str_lit_opt.error());
 
-				auto lib_str_lit_opt = lib_expr_holder_opt.value()
-				                           ->getExpr()
-				                           .unlock(ctx)
-				                           .dynamicCast<pst::expr::ExprStrValue>();
-				if (not lib_str_lit_opt) return query::QError(errors::Failed());
-
-				return CAbi{ .library = lib_str_lit_opt.value()->getValue().value };
+				return CAbi{ .library = lib_str_lit_opt.value() };
 			}
 			return CAbi{};
 		} else {
