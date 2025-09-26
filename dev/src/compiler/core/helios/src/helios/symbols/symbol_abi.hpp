@@ -17,6 +17,10 @@ namespace compiler::helios {
 	 * For example when symbol is has `extern("C")` specifier it will have C ABI.
 	 */
 	struct CAbi {
+		/**
+		 * @brief Name of the library where the symbol is located and (in the future dynamically) linked from.
+		 * e.x. `extern("C" "mylib")`
+		 */
 		base::Optional<base::StrID> library;
 	};
 

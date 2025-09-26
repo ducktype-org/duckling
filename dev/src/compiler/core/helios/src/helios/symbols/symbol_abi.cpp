@@ -21,7 +21,7 @@ namespace compiler::helios {
 	) {
 		std::vector<pst::AccessLocked<pst::LangElement>> args{ extern_args.unlock(ctx)->begin(),
 			                                                   extern_args.unlock(ctx)->end() };
-
+		
 		auto expr_holder_opt = args[0].unlock(ctx).dynamicCast<pst::ExprHolder>();
 		if (not expr_holder_opt) return query::QError(errors::Failed());
 
@@ -30,7 +30,7 @@ namespace compiler::helios {
 
 		auto str = str_lit_opt.value()->getValue();
 		if (str.value == base::StrID("C")) {
-			if (args.size() == 2) {
+			if (args.size() == 2) { // `extern("C" "mylib")` case
 				auto lib_expr_holder_opt = args[1].unlock(ctx).dynamicCast<pst::ExprHolder>();
 				if (not lib_expr_holder_opt) return query::QError(errors::Failed());
 				

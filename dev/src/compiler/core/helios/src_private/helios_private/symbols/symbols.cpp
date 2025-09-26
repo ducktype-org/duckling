@@ -638,23 +638,29 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
-		// @TODO do not unlock the elements and only cast them
-		
+		// @TODO do not unlock whole elements, checking the type of the parent would be enough
+
+		/**
+		 * @brief Check if the ancestors of PST element `el` match the provided kinds in order,
+		 * and return the ancestor if they do.
+		 */
 		template<typename... Kinds>
-		static bool areAncestors(
+		static base::Optional<pst::Access<pst::LangElement>> getAncestor(
 			query::Context& ctx, pst::Access<pst::LangElement> el, Kinds... kinds
 		) {
-			return areAncestorsImpl(ctx, el, kinds...);
+			return getAncestorImpl(ctx, el, kinds...);
 		}
 
 		// Base case: no more kinds to check → success
-		static bool areAncestorsImpl(query::Context&, pst::Access<pst::LangElement>) {
-			return true;
+		static base::Optional<pst::Access<pst::LangElement>> getAncestorImpl(
+			query::Context&, pst::Access<pst::LangElement> el
+		) {
+			return el;
 		}
 
 		// Recursive case: check current kind, then move up
 		template<typename... Rest>
-		static bool areAncestorsImpl(
+		static base::Optional<pst::Access<pst::LangElement>> getAncestorImpl(
 			query::Context&               ctx,
 			pst::Access<pst::LangElement> el,
 			pst::ElementKind              expected,
@@ -663,9 +669,9 @@ namespace compiler::helios {
 			if (auto parent = el->getParent()) {
 				auto parent_el = parent.value().unlock(ctx);
 				if (parent_el->getElementKind() == expected)
-					return areAncestorsImpl(ctx, parent_el, rest...);
+					return getAncestorImpl(ctx, parent_el, rest...);
 			}
-			return false;
+			return {};
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -674,36 +680,27 @@ namespace compiler::helios {
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
 			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
-			// or "Stmt" child. So single statement can have a specifier when it is wrapped in
+			// or "Stmt" child.
+			//
+			// So single statement can have a specifier when it is wrapped in
 			// "CodeBlockOrStmt" and "StmtSpecifier" or in the "CodeBlock", "CodeBlockOrStmt" and
 			// "StmtSpecifier".
 			while (true) {
-				if (areAncestors(
+				if (auto result_stmt = getAncestor(
 						ctx,
 						pst_element,
 						pst::ElementKind::CodeBlockOrStmt,
 						pst::ElementKind::StmtSpecifier
 					)) {
-					pst_element
-						= pst_element->getParent().value().unlock(ctx)->getParent().value().unlock(
-							ctx
-						);
-				} else if (areAncestors(
+					pst_element = *std::move(result_stmt);
+				} else if (auto result_block = getAncestor(
 							   ctx,
 							   pst_element,
 							   pst::ElementKind::CodeBlock,
 							   pst::ElementKind::CodeBlockOrStmt,
 							   pst::ElementKind::StmtSpecifier
 						   )) {
-					pst_element = pst_element->getParent()
-					                  .value()
-					                  .unlock(ctx)
-					                  ->getParent()
-					                  .value()
-					                  .unlock(ctx)
-					                  ->getParent()
-					                  .value()
-					                  .unlock(ctx);
+					pst_element = *std::move(result_block);
 				} else {
 					break;
 				}
