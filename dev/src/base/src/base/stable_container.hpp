@@ -27,18 +27,19 @@ namespace base {
 		private:
 			using father_t = BaseStableVector;
 
+			// for any pointer tricks, the Node has to be of standard layout
 			class Node final {
 			private:
 				friend father_t;
 				usize               idx;
-				father_t&           father;
-				std::optional<Data> content;
+				father_t* const           node_father;
+				Data content;
 
 			public:
 				template<typename... Args>
 				Node(usize p, father_t& f, Args&&... args):
 					  idx(p),
-					  father(f),
+					  node_father(f),
 					  content(std::in_place, std::forward<Args>(args)...) {}
 			};
 
@@ -213,7 +214,7 @@ namespace base {
 				BaseIterator incThisRetOld(difference_type diff) {
 					BaseIterator    ans  = *this;
 					usize         pos  = getPos() + diff;
-					auto& my_father = *iter_father;
+					father_t& my_father = *iter_father;
 
 					inner = (pos < my_father.size()) ? &my_father.nodeAt(pos) : nullptr;
 
@@ -232,8 +233,8 @@ namespace base {
 						inner != nullptr, "iterator is end() of container; don't dereference"
 					);
 
-					const auto& node = *inner;
-					auto& node_father = *node.father;
+					const Node& node = *inner;
+					father_t& node_father = *node.node_father;
 					usize pos = node.idx;
 					CORE_ASSERT(
 						iter_father == &node_father,
@@ -326,7 +327,7 @@ namespace base {
 				del.assertValid();
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
-				auto& del_node = *del.inner;
+				Node& del_node = *del.inner;
 				usize vec_uidx = del.getPos();
 				usize alloc_idx = data.at(vec_uidx);
 				
@@ -356,6 +357,24 @@ namespace base {
 
 			ConstIterator end() const {
 				return ConstIterator::make(nullptr, this);
+			}
+			
+			/**
+			* @brief retrieval of Iterator from a Ref to held value
+			* @note UB when passing reference not allocated via Stable Vector
+			* @param ref 
+			* @return Iterator 
+			*/
+			static Iterator fromRef(Ref<Data> ref) {
+				// not sure if this is legal...
+				static constexpr auto offset = offsetof(Node, content);
+
+				Node *node_ptr = reinterpret_cast<Node *>(
+					reinterpret_cast<byte*>(ref.get()) - offset
+				);
+				father_t *father = node_ptr->node_father;
+
+				return Iterator::make(node_ptr, father);
 			}
 		};
 
