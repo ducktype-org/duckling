@@ -19,6 +19,7 @@ namespace pst {
 	class Param;
 	class DottedName;
 	class Attribute;
+	class CallArgument;
 	class CodeBlock;
 	class CodeBlockOrStmt;
 	class ClassBlock;

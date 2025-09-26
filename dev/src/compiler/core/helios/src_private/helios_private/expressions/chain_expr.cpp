@@ -2,14 +2,17 @@
  * @file chain_expr.cpp
  * @author Wojciech Rzepliński
  */
+
 #include "chain_expr.hpp"
+
+#include "call_processing.hpp"
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
-#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -197,7 +200,18 @@ namespace compiler::helios::code {
 			auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
 
-			return processFunctionCall(lookup_result, ident->getName(), call_expr);
+			auto res = processFunctionCall(query_ctx, lookup_result->leaves, call_expr);
+
+			if (res.hasError()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+						ident->getName().position,
+						base::strConcat("Failed to find correct function: ", ident->getName().value)
+					)
+				);
+				return query::QError(errors::Failed());
+			}
+			return ChainState::ofExpr(std::move(res.value()));
 		}
 
 		/**
@@ -251,48 +265,19 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
-			// @TODO write tests for this case when parser will support it
-			// @TODO maybe chose one style of error messages in this file
+			// @note this function is not run yet.
 
-			std::vector<Box<Expr>> call_arguments;
-			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr
-					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
-				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				call_arguments.emplace_back(std::move(arg_expr.value()));
-			}
-			auto expr_type = current_expr->expression_type.getSymbolType();
-			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
+			// @note: previous mock-implementation of this function
+			// was deleted in PR #1239. See it for reference.
 
-			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						call_expr->getSourcePosition(), "Invalid number of arguments"
-					)
-				);
-				return query::QError(errors::Failed());
-			}
+			// @TODO #520 improve type lookup and provide correct
+			// candidates for processFunctionCall
+			// @TODO write tests for this case, when it will be implemented
 
-			std::vector<base::Box<Expr>> coerced_arguments;
-			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-				auto coerced = coerceExpression(
-					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-				);
-				if (coerced.hasError()) {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							call_expr->getSourcePosition(), "Invalid argument type"
-						)
-					);
-					return query::QError(errors::Failed());
-				}
-				coerced_arguments.emplace_back(std::move(coerced.value()));
-			}
+			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
-			auto node = makeBox<CallExpr>(
-				query_ctx, std::move(current_expr), std::move(coerced_arguments)
-			);
-			return ChainState::ofExpr(std::move(node));
+			if (res.hasError()) return query::QError(errors::Failed());
+			return ChainState::ofExpr(std::move(res.value()));
 		}
 
 		/**
@@ -388,74 +373,28 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState, errors::Failed> {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
-			return processFunctionCall(lookup_result, expr_access->getName(), call_expr);
+
+			// @TODO #981: make it better:
+			// @TODO: #1029 handle overloads:
+			auto callee = lookup_result->getAsSingle().value().back();
+
+			auto res = processFunctionCall(query_ctx, { callee }, call_expr);
+			if (res.hasError()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+						expr_access->getName().position,
+						base::strConcat(
+							"Failed to find correct function: '", expr_access->getName().value
+						)
+					)
+				);
+				return query::QError(errors::Failed());
+			}
+			return ChainState::ofExpr(std::move(res.value()));
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
-		/**
-		 * Helper function of @p processPSTExpr that processes a function call given the
-		 * lookup result of the function name.
-		 */
-		auto processFunctionCall(
-			CRef<LookupResult>           lookup_result,
-			const tpc::Identifier&       name,
-			pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ChainState, errors::Failed> {
-			if (lookup_result->isEmpty()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						name.position, base::strConcat("Function '", name.value, "' not found")
-					)
-				);
-				return query::QError(errors::Failed());
-			}
-			// @TODO: make it better #981:
-			auto callee = lookup_result->getAsSingle().value().back();
-
-			std::vector<Box<Expr>> call_arguments;
-			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr
-					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
-				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				call_arguments.emplace_back(std::move(arg_expr.value()));
-			}
-
-			auto call_type_result = query_ctx.query<QueryTypeOfSymbol>({ callee });
-			if (call_type_result->hasError()) return query::QError(errors::Failed());
-			tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
-
-			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						name.position, "Invalid number of arguments"
-					)
-				);
-				return query::QError(errors::Failed());
-			}
-
-			std::vector<base::Box<Expr>> coerced_arguments;
-			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-				auto coerced = coerceExpression(
-					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-				);
-				if (coerced.hasError()) {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							name.position, "Invalid argument type"
-						)
-					);
-					return query::QError(errors::Failed());
-				}
-				coerced_arguments.emplace_back(std::move(coerced.value()));
-			}
-
-			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
-			auto node            = makeBox<CallExpr>(
-                query_ctx, std::move(identifier_expr), std::move(coerced_arguments)
-            );
-			return ChainState::ofExpr(std::move(node));
-		}
 
 		/**
 		 * Helper function of @p processPSTExpr that processes a value given the
