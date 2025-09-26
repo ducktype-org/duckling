@@ -30,3 +30,4 @@ namespace pst {
 		virtual void acceptExprVisitor(expr::PstExprVisitor& visitor) const = 0;
 	};
 }
+

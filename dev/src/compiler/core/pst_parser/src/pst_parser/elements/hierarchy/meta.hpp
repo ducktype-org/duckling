@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../../lang_parser_element.hpp"
+#include "../../elements/elements_list.hpp"
+
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 
@@ -14,7 +16,6 @@
 #include <set>
 
 namespace pst {
-	class Attribute;
 
 	using StateCondition = bool(const LangParserState&, i64);
 

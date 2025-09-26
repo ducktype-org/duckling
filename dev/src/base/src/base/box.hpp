@@ -4,6 +4,8 @@
 #include "ref.hpp"
 #include "type_traits.hpp"
 
+// TODO THIS PR: remove default construction from fromPointer,
+
 namespace base {
 
 	/**

@@ -75,3 +75,5 @@ namespace pst {
 		return expr::parseUntil<expr::Assignment, assignmentEnd>(state);
 	}
 }
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(pst::ExprElement);
