@@ -257,7 +257,7 @@ class FunctionValidator {
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
-		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+		// https://github.com/ducktype-org/duckling/issues/962
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
@@ -1138,7 +1138,7 @@ public:
 	}
 };
 
-vm::code::Function vm::code::validateAndExtractReachableCode(
+vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const ObjIdNameMap<TypeOfData>&                  tod_map,
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,

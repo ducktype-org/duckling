@@ -602,32 +602,31 @@ namespace compiler::backend_vm {
 		const std::vector<BackendDVMGlobal>&    globals
 	):
 		  module_id(module_id) {
-		CodeCollection                            compiled_types;
 		CodeCollection                            compiled_collection;
 		base::HashMap<base::StrID, FuncSignature> signatures;
 		std::vector<CRef<lir::Function>>          ctors;
 		std::vector<CRef<lir::Function>>          dtors;
 
 		for (const auto& lir_function: functions)
-			insertFunctionDependencies(compiled_types.types, signatures, lir_function);
+			insertFunctionDependencies(compiled_collection.types, signatures, lir_function);
 
 		for (const auto& global: globals) {
 			auto global_type = getTypeFromLayout(*global.lir_global.layout);
-			compiled_types.types.push_back(global_type);
+			compiled_collection.types.push_back(global_type);
 
 			base::Optional<Identifier> ctor_name;
 			base::Optional<Identifier> dtor_name;
 
 			if (global.global_ctor.has_value()) {
 				insertFunctionDependencies(
-					compiled_types.types, signatures, global.global_ctor.value()
+					compiled_collection.types, signatures, global.global_ctor.value()
 				);
 				ctor_name = Identifier(global.global_ctor.value()->mangled_name);
 				ctors.emplace_back(global.global_ctor.value());
 			}
 			if (global.global_dtor.has_value()) {
 				insertFunctionDependencies(
-					compiled_types.types, signatures, global.global_dtor.value()
+					compiled_collection.types, signatures, global.global_dtor.value()
 				);
 				dtor_name = Identifier(global.global_dtor.value()->mangled_name);
 				dtors.emplace_back(global.global_dtor.value());
@@ -637,9 +636,6 @@ namespace compiler::backend_vm {
 			compiled_collection.global_data.push_back(GlobalData{
 				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}
-
-		// Insert and validate types:
-		valid_program.insertCode(compiled_types);
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
@@ -665,8 +661,9 @@ namespace compiler::backend_vm {
 		//@TODO: add dtors when implemented
 
 		for (const auto& lir_function: functions) process_function(lir_function);
+
 		// Insert and validate types, global data and functions:
-		valid_program.insertCode(compiled_collection);
+		valid_program = valid_program.tryInsertCode(compiled_collection);
 	}
 
 	CodeCollection Module::build() const { return valid_program.produceValidCodeCollection(); }

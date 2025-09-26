@@ -298,7 +298,7 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
 		Ref<ModuleTree> module
-			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file->getModule()
 			);
 
@@ -493,6 +493,10 @@ namespace compiler::frontend {
 		return GetModuleID_Functor::get(module)->prettyPrint();
 	}
 
+	ModuleID createModuleTree(const fs::File& file) {
+		return ModuleTreeBuilder::create(file)->getModuleID();
+	}
+
 	/*********************
 	 * QueryParentModule *
 	 *********************/
@@ -565,7 +569,7 @@ namespace compiler::frontend {
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref<SourceFile> file
-				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(
+				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					key
 				);
 			auto pst = file->getPST();

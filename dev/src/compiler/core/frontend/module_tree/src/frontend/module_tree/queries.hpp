@@ -17,12 +17,6 @@ namespace compiler::frontend {
 	std::string printModuleTree(ModuleID);
 
 	/**
-	 * @brief Query entire module tree build from given path.
-	 * @return module id of root-module.
-	 */
-	DECLARE_QUERY(QueryModuleTree, fs::File, ModuleID)
-
-	/**
 	 * @brief Query parent of a module.
 	 * @return parent module, none for root-module.
 	 */

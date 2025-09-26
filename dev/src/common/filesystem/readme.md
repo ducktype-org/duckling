@@ -140,10 +140,6 @@ This separation ensures that:
 - FileManager handles cross-cutting concerns like creation, conversion, and filesystem-wide operations
 - The API remains clean and intuitive for different use cases
 
-## Important Note on Queries
-
-**@TODO remove query #937** - `File` objects point to files and should not be used directly in query operations, as file contents can change dynamically (e.g., during Language Server operations). This limitation will be addressed in future versions to provide better query stability.
-
 ## Example: Complete Virtual Filesystem Workflow
 
 ```cpp

@@ -10,6 +10,7 @@ namespace vm {
 	 * @brief Holds metadata about all types in the program.
 	 * @note Copy/Move constructors are deleted, because inner types hold cross-references to
 	 * themselves, so moving or copying them may invalidate their state.
+	 * @note This structure should be created by `vm::code::detail::buildTypeMetadata()`.
 	 */
 	class TypeMetadata final {
 	private:
@@ -29,15 +30,23 @@ namespace vm {
 		TypeMetadata& operator=(TypeMetadata&&)      = delete;
 
 		/**
-		 * @note This function shouldn't be used after finalize().
+		 * @brief Adds a type to the set of types.
+		 * @note This function should only be used when TypeMetadata is in AddingTypes state.
+		 * If working with TypeMetadata which was finalized, use `unfinalize()` first, then add
+		 * types and call `finalize()` again.
 		 */
 		TypeRef addType(Type&& type);
 
 		/**
 		 * @brief Finalize adding types.
-		 * @note This function shouldn't be called twice.
 		 */
 		void finalize();
+
+		/**
+		 * @brief Unfinalize the type metadata for injecting new types.
+		 * If type metadata was already unfinalized (in AddingTypes state) then nothing is done.
+		 */
+		void unfinalize();
 
 		[[nodiscard]]
 		TypeCRef at(TypeID id) const;
@@ -62,5 +71,7 @@ namespace vm {
 		auto end() const { return types.end(); }
 
 		auto end() { return types.end(); }
+
+		usize size() { return types.size(); }
 	};
 }

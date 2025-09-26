@@ -46,10 +46,10 @@ private:
 
 			auto& functions = unit->functions;
 			ASSERT_EQUAL(4, functions.size());
-			ASSERT_EQUAL(base::StrID("foo1"), functions.at(0).original_name);
-			ASSERT_EQUAL(base::StrID("foo2"), functions.at(1).original_name);
-			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2).original_name);
-			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3).original_name);
+			ASSERT_EQUAL(base::StrID("foo1"), functions.at(0).declaration.original_name);
+			ASSERT_EQUAL(base::StrID("foo2"), functions.at(1).declaration.original_name);
+			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2).declaration.original_name);
+			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3).declaration.original_name);
 
 			auto foo1_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			auto foo2_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(1));
@@ -87,7 +87,7 @@ private:
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
 			ASSERT_EQUAL(3, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration.original_name);
 
 			auto globals = unit->glob_data;
 			ASSERT_EQUAL(2, globals.size());
@@ -204,7 +204,7 @@ private:
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
 			ASSERT_EQUAL(3, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration.original_name);
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
@@ -249,7 +249,7 @@ private:
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
 			ASSERT_EQUAL(3, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration.original_name);
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
@@ -394,10 +394,12 @@ private:
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
 			ASSERT_EQUAL(4, functions.size());
-			ASSERT_EQUAL(functions.at(0).original_name, base::StrID("missing_return"));
-			ASSERT_EQUAL(functions.at(1).original_name, base::StrID("should_add_retvoid"));
-			ASSERT_EQUAL(functions.at(2).original_name, base::StrID("unreachable_end"));
-			ASSERT_EQUAL(functions.at(3).original_name, base::StrID("empty"));
+			ASSERT_EQUAL(functions.at(0).declaration.original_name, base::StrID("missing_return"));
+			ASSERT_EQUAL(
+				functions.at(1).declaration.original_name, base::StrID("should_add_retvoid")
+			);
+			ASSERT_EQUAL(functions.at(2).declaration.original_name, base::StrID("unreachable_end"));
+			ASSERT_EQUAL(functions.at(3).declaration.original_name, base::StrID("empty"));
 
 			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->hasError()
 			);
@@ -436,7 +438,7 @@ private:
 			auto& functions = unit->functions;
 
 			for (const compiler::helios::HOUTFunction& fun: functions) {
-				if (fun.original_name.str() == "good1") {
+				if (fun.declaration.original_name.str() == "good1") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
@@ -450,7 +452,7 @@ private:
 					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
-				if (fun.original_name.str() == "good2") {
+				if (fun.declaration.original_name.str() == "good2") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
@@ -476,7 +478,7 @@ private:
 					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
-				if (fun.original_name.str() == "good3") {
+				if (fun.declaration.original_name.str() == "good3") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
@@ -490,7 +492,7 @@ private:
 					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
-				if (fun.original_name.str() == "good4") {
+				if (fun.declaration.original_name.str() == "good4") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
@@ -504,7 +506,7 @@ private:
 					ASSERT_TRUE(validateFunction(mir_rep).isOk());
 				}
 
-				if (fun.original_name.str() == "bad1") {
+				if (fun.declaration.original_name.str() == "bad1") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
@@ -518,7 +520,7 @@ private:
 					ASSERT_TRUE(validateFunction(mir_rep).isBad());
 				}
 
-				if (fun.original_name.str() == "bad2") {
+				if (fun.declaration.original_name.str() == "bad2") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
@@ -531,7 +533,7 @@ private:
 					ASSERT_TRUE(validateFunction(mir_rep).isBad());
 				}
 
-				if (fun.original_name.str() == "bad3") {
+				if (fun.declaration.original_name.str() == "bad3") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
 					                    .query<compiler::mir::LowerToMirFunction>({ fun })
 					                    ->value();
