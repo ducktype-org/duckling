@@ -7,8 +7,8 @@
 
 namespace vm::code {
 	/**
-	 * @brief TypeContext allows for first adding a set of types,
-	 * and then validating and building them.
+	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
+	 * main entry point for type verification and building.
 	 */
 	class TypeContext {
 	public:
@@ -18,15 +18,6 @@ namespace vm::code {
 		void insertType(const TypeOfData& type);
 
 		const ObjIdNameMap<TypeOfData>& getCurrentTypes() const;
-
-		/**
-		 * @brief Creates TypeMetadata by building types.
-		 * @param functions Functions available in program, callable with 'call_func'. Used to
-		 * validate method implementation completeness of class types.
-		 */
-		Box<TypeMetadata> validateAndProduceTypeMetadata(
-			const base::HashMap<base::StrID, FuncSignature>& available_functions
-		) const;
 
 	private:
 		ObjIdNameMap<TypeOfData> types;
