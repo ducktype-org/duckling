@@ -29,22 +29,26 @@ public:
 	}
 };
 
+// @TODO: it is bugged!
 // assume u64 keys
 template<class T>
 class MyCustomHashMap final {
-	static constexpr usize  INITIAL_BUCKETS = 64;
-	static constexpr double MAX_LOAD_FACTOR = 0.8;
+	static constexpr usize  INITIAL_BUCKETS = 256;
+	static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 	using Key = u64;
 
 	struct Node final {
+		MRef<Node> next;
 		Key        key;
 		T          value;
-		MRef<Node> next;
+		
+		Node(MRef<Node> next, Key key, T value) noexcept
+			: next(next), key(key), value(value) {}
 	};
 
 	std::vector<MRef<Node>>                          buckets;
-	concurrent::SingleThreadedAllocator<Node, 1024> node_allocator;
+	concurrent::SingleThreadedAllocator<Node, 1024>  node_allocator;
 	u64                                              element_count = 0;
 
 	[[nodiscard]]
@@ -54,7 +58,10 @@ class MyCustomHashMap final {
 
 	void rehash() NOEXCEPT{
 		usize                  new_bucket_count = buckets.size() * 4;
+		
 		std::vector<Ref<Node>> all_nodes;
+		all_nodes.reserve(element_count);
+
 		for (const auto& bucket: buckets) {
 			auto current_node = bucket;
 			while (current_node) {
@@ -110,7 +117,7 @@ public:
 	void put(const Key& key, const T& value) NOEXCEPT {
 		MRef maybe_initial_node = buckets[keyToBucket(key)];
 		auto new_node
-			= node_allocator.allocateEmplace(Node{ .key = key, .value = value, .next = nullptr });
+			= node_allocator.allocateEmplace(Node{ nullptr, key, value });
 
 		if (maybe_initial_node)
 			addToBucket(maybe_initial_node.toOpt().value(), new_node);
@@ -132,22 +139,28 @@ public:
 	}
 };
 
+std::minstd_rand rng(42);
+
 template<class Map>
 auto testHashMap() {
+	constexpr usize  NUM_ELEMENTS = 2'000'000;
+
 	Map map;
-	for (u64 i = 0; i < 2'000'000; i++) map.put(i, i * 10);
+	for (u64 i = 0; i < NUM_ELEMENTS; i++) {
+		map.put(rng()%NUM_ELEMENTS, rng());
+	}
 	u64 count = 0;
-	for (u64 i = 0; i < 2'000'000; i++) {
-		auto it = map.atMaybe(i);
+	for (u64 i = 0; i < NUM_ELEMENTS; i++) {
+		auto it = map.atMaybe(rng()%NUM_ELEMENTS);
 		if (it) count++;
 	}
 	return count;
 }
 
 int main() {
-	// auto count = testHashMap<base::StableHashMap<u64, u64>>();
+	auto count = testHashMap<base::StableHashMap<u64, u64>>();
 	// auto count = testHashMap<MyHashMap<u64, u64>>();
-	auto count = testHashMap<MyCustomHashMap<u64>>();
+	// auto count = testHashMap<MyCustomHashMap<u64>>();
 	std::cout << "Number of elements found: " << count << "\n";
 	return 0;
 }
