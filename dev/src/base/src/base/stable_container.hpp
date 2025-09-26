@@ -9,7 +9,6 @@
 #include "base/exceptions.hpp"
 #include "base/ints.hpp"
 
-#include <concepts>
 #include <deque>
 #include <iterator>
 #include <type_traits>
@@ -81,7 +80,7 @@ namespace base {
 					CORE_ASSERT(allocated.at(alloc_idx) == false, "trying to allocate space which is already in use");
 					allocated.at(alloc_idx) = true;
 					
-					new (&data.at(alloc_idx).val) Data(std::forward<Args>(args)...);
+					new (&data.at(alloc_idx).val) Node(std::forward<Args>(args)...);
 					
 					return alloc_idx;
 				}
@@ -92,7 +91,7 @@ namespace base {
 					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to deallocate already empty space");
 					allocated.at(alloc_idx) = false;
 					
-					data.at(alloc_idx).val.~Data();
+					data.at(alloc_idx).val.~Node();
 					available.push_back(alloc_idx);
 				}
 				
@@ -328,14 +327,14 @@ namespace base {
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
 				auto& del_node = *del.inner;
-				usize vec_upos = del.getPos();
-				usize alloc_idx = data.at(vec_upos);
+				usize vec_uidx = del.getPos();
+				usize alloc_idx = data.at(vec_uidx);
 				
-				for (usize i = vec_upos; i < size(); ++i) {
+				for (usize i = vec_uidx; i < size(); ++i) {
 					nodeAt(i).idx--;
 				}
 				
-				i64 vec_sidx = static_cast<i64>(vec_upos);
+				i64 vec_sidx = static_cast<i64>(vec_uidx);
 				data.erase(data.begin() + vec_sidx);
 
 				memory.dealloc(alloc_idx);
