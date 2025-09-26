@@ -44,7 +44,7 @@ namespace base {
 			class StableAlocator{
 			private:
 				union Wrap {
-					Data val;
+					Node val;
 					Wrap() {};
 					~Wrap() {};
 				};
@@ -94,23 +94,25 @@ namespace base {
 					available.push_back(alloc_idx);
 				}
 				
-				Data& at(usize alloc_idx) {
+				Node& at(usize alloc_idx) {
 					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
 					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to get uninitialized data");
 					return data.at(alloc_idx).val;
 				}
 			};
 
-			using ContainerT = std::vector<Node*>;
+			using ContainerT = std::vector<usize>;
 			ContainerT data;
 			static_assert(
 				std::is_same_v<typename ContainerT::size_type, usize>,
 				"When this fail, figure out what to do."
 			);
 
-			using AllocatedT = std::deque<Node>;
-			AllocatedT nodes;
-			ContainerT available;
+			StableAlocator memory;
+
+			inline Node& nodeAt(usize vec_idx) {
+				return memory.at(data.at(vec_idx));
+			}
 
 		public:
 			using RefT  = Ref<Data>;
@@ -142,43 +144,24 @@ namespace base {
 
 			[[nodiscard]]
 			RefT operator[](usize pos) {
-				return RefT{ &data.at(pos)->content.value() };
+				return RefT{ &nodeAt(pos).content };
 			}
 
 			[[nodiscard]]
 			CRefT operator[](usize pos) const {
-				return CRefT{ &data.at(pos)->content.value() };
+				return CRefT{ &nodeAt(pos).content };
 			}
 
 			template<class... Args>
 			void emplaceBack(Args&&... args) {
-				if (available.empty()) {
-					nodes.emplace_back(data.size(), *this, std::forward<Args>(args)...);
-					data.push_back(&nodes.back());
-					return;
-				}
-
-				Node* place = available.back();
-				available.pop_back();
-
-				place->idx = data.size();
-				place->content.emplace(std::forward<Args>(args)...);
-				data.push_back(place);
+				data.push_back(
+					memory.alloc(size(), this, std::forward<Args>(args)...)
+				);
 			}
 
 			void pushBack(const Data& value) { emplaceBack(value); }
 
 			void pushBack(Data&& value) { emplaceBack(std::move(value)); }
-
-			[[nodiscard]]
-			RefT last() {
-				return RefT{ &data.back()->content.value() };
-			}
-
-			[[nodiscard]]
-			CRefT last() const {
-				return CRefT{ &data.back()->content.value() };
-			}
 
 			/**
 			 * Returns index of the last element (i.e. size - 1).
@@ -187,6 +170,16 @@ namespace base {
 			usize lastIndex() const {
 				CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty BaseStableVector");
 				return size() - 1;
+			}
+
+			[[nodiscard]]
+			RefT last() {
+				return RefT{ &nodeAt(lastIndex()).content };
+			}
+
+			[[nodiscard]]
+			CRefT last() const {
+				return CRefT{ &nodeAt(lastIndex()).content };
 			}
 
 		private:
