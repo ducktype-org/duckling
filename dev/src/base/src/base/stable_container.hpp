@@ -41,6 +41,66 @@ namespace base {
 					  content(std::in_place, std::forward<Args>(args)...) {}
 			};
 
+			class StableAlocator{
+			private:
+				union Wrap {
+					Data val;
+					Wrap() {};
+					~Wrap() {};
+				};
+				
+				std::vector<usize> available;
+				std::deque<Wrap> data;
+				std::vector<bool> allocated;	
+			public:
+
+				StableAlocator() = default;
+				
+				~StableAlocator() {
+					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+					for (usize i = 0; i < data.size(); i++)
+						if (allocated[i])
+							dealloc(i);	
+				}
+				
+				template<typename... Args>
+				usize alloc(Args&&... args) {
+					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+
+					if (available.empty()) {
+						available.push_back(data.size());
+						data.emplace_back();
+						allocated.push_back(false);
+					}
+
+					usize alloc_idx = available.back();
+					available.pop_back();
+
+					CORE_ASSERT(allocated.at(alloc_idx) == false, "trying to allocate space which is already in use");
+					allocated.at(alloc_idx) = true;
+					
+					new (&data.at(alloc_idx).val) Data(std::forward<Args>(args)...);
+					
+					return alloc_idx;
+				}
+				
+				void dealloc(usize alloc_idx) {
+					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+					
+					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to deallocate already empty space");
+					allocated.at(alloc_idx) = false;
+					
+					data.at(alloc_idx).val.~Data();
+					available.push_back(alloc_idx);
+				}
+				
+				Data& at(usize alloc_idx) {
+					CORE_ASSERT(data.size() == allocated.size(), "sanity check, each cell must have corresponding bit if data is used");
+					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to get uninitialized data");
+					return data.at(alloc_idx).val;
+				}
+			};
+
 			using ContainerT = std::vector<Node*>;
 			ContainerT data;
 			static_assert(
