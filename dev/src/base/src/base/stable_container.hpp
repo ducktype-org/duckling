@@ -9,8 +9,10 @@
 #include "base/exceptions.hpp"
 #include "base/ints.hpp"
 
+#include <concepts>
 #include <deque>
 #include <iterator>
+#include <type_traits>
 #include <vector>
 
 namespace base {
@@ -26,7 +28,7 @@ namespace base {
 		private:
 			using father_t = BaseStableVector;
 
-			class Node {
+			class Node final {
 			private:
 				friend father_t;
 				usize               idx;
@@ -184,53 +186,13 @@ namespace base {
 
 		private:
 			/**
-			 * @class Wrap
-			 * @brief this is the class from which BaseCRTP should publicly inherit random access
-			 * operations (iterator boilerplate)
-			 * @tparam ValT - type of hel value (used to determine iterator traits)
-			 * @tparam BaseCRTP - a base type for
-			 * [CRTP](https://www.fluentcpp.com/2017/05/12/curiously-recurring-template-pattern/)
+			 * @class BaseIterator
+			 * @brief this is the class which implements both iterator and const_iterator
+			 * @tparam ValT - type of held value (used to determine iterator traits)
 			 */
-			template<typename BaseCRTP, typename ValT>
-			class Wrap {
-			private:
-				Wrap() = default;
-				friend BaseCRTP;
-				friend father_t;
-
-				static constexpr u64 getPos(const BaseCRTP& iter) {
-					return iter.it == nullptr ? iter.father->size() : iter.it->idx;
-				}
-
-				static constexpr BaseCRTP factory(BaseCRTP& iter, i64 diff) {
-					BaseCRTP    ans  = iter;
-					u64         pos  = getPos(iter) + diff;
-					const auto& data = iter.father->data;
-
-					iter.it = (pos < data.size()) ? data[pos] : nullptr;
-
-					return ans;
-				}
-
-				static constexpr void assertValid(const BaseCRTP& iter) {
-					CORE_ASSERT(
-						iter.it != nullptr, "iterator is end() of container; don't dereference"
-					);
-
-					const auto& node = *iter.it;
-					CORE_ASSERT(
-						iter.father == &node.father,
-						"value belongs to different container than iterator"
-					);
-					CORE_ASSERT(
-						node.content.has_value(), "no value is stored"
-					);  // <- Could be removed for performance
-
-					const auto& data = iter.father->data;
-					CORE_ASSERT(node.idx < data.size(), "iterator is outside the bounds");
-					CORE_ASSERT(iter.it == data[node.idx], "container and iterator don't match");
-				}
-
+			template<typename ValT>
+			requires std::is_same_v<std::remove_cvref_t<ValT>, Data>
+			class BaseIterator {
 			public:
 				using difference_type   = i64;
 				using iterator_category = std::random_access_iterator_tag;
@@ -238,103 +200,122 @@ namespace base {
 				using reference         = ValT&;
 				using pointer           = ValT*;
 
-				BaseCRTP& operator++(this BaseCRTP& self) {
-					factory(self, 1);
-					return self;
+			private:
+				Node*     inner;
+				father_t* iter_father;
+				
+				BaseIterator() = default;
+				friend father_t;
+
+				[[nodiscard]] inline usize getPos() const {
+					return inner == nullptr ? iter_father->size() : inner->idx;
 				}
 
-				BaseCRTP operator++(this BaseCRTP& self, int) { return factory(self, 1); }
+				BaseIterator incThisRetOld(difference_type diff) {
+					BaseIterator    ans  = *this;
+					usize         pos  = getPos() + diff;
+					auto& my_father = *iter_father;
 
-				BaseCRTP& operator--(this BaseCRTP& self) {
-					factory(self, -1);
-					return self;
+					inner = (pos < my_father.size()) ? &my_father.nodeAt(pos) : nullptr;
+
+					return ans;
 				}
 
-				BaseCRTP operator--(this BaseCRTP& self, int) { return factory(self, -1); }
-
-				BaseCRTP& operator+=(this BaseCRTP& self, difference_type diff) {
-					factory(self, diff);
-					return self;
+				static BaseIterator make(Node* iter, father_t* f) {
+					Iterator ans;
+					ans.inner     = iter;
+					ans.iter_father = f;
+					return ans;
 				}
 
-				BaseCRTP operator+(this BaseCRTP self, const difference_type diff) {
-					return self += diff;
+				void assertValid() const {
+					CORE_ASSERT(
+						inner != nullptr, "iterator is end() of container; don't dereference"
+					);
+
+					const auto& node = *inner;
+					auto& node_father = *node.father;
+					usize pos = node.idx;
+					CORE_ASSERT(
+						iter_father == &node_father,
+						"value belongs to different container than iterator"
+					);
+
+					CORE_ASSERT(inner == &node_father.nodeAt(pos), "container and iterator don't agree");
 				}
 
-				friend BaseCRTP operator+(const difference_type diff, BaseCRTP iter) {
-					return iter += diff;
+			public:
+
+				BaseIterator& operator++() {
+					incThisRetOld(1);
+					return *this;
 				}
 
-				BaseCRTP& operator-=(this const BaseCRTP& self, difference_type diff) {
-					factory(self, -diff);
-					return self;
+				BaseIterator operator++(int) {
+					return incThisRetOld(1);
 				}
 
-				BaseCRTP operator-(this BaseCRTP self, const difference_type diff) {
-					return self -= diff;
+				BaseIterator& operator--() {
+					incThisRetOld(-1);
+					return *this;
 				}
 
-				difference_type operator-(this const BaseCRTP& self, const BaseCRTP& other) {
-					return getPos(self) - getPos(other);
+				BaseIterator operator--(int) {
+					return incThisRetOld(-1);
 				}
 
-				bool operator==(this const BaseCRTP& self, const BaseCRTP& other) {
+				BaseIterator& operator+=(difference_type diff) {
+					incThisRetOld(diff);
+					return *this;
+				}
+
+				BaseIterator operator+(const difference_type diff) const {
+					return BaseIterator(*this) += diff;
+				}
+
+				friend BaseIterator operator+(const difference_type diff, BaseIterator oth) {
+					return BaseIterator(oth) += diff;
+				}
+
+				BaseIterator& operator-=(difference_type diff) {
+					incThisRetOld(-diff);
+					return *this;
+				}
+
+				BaseIterator operator-(const difference_type diff) {
+					return BaseIterator(*this) -= diff;
+				}
+
+				difference_type operator-(const BaseIterator& oth) const {
+					return getPos() - oth.getPos();
+				}
+
+				bool operator==(this const BaseIterator& self, const BaseIterator& other) {
 					return (self - other) == 0;
 				}
 
-				auto operator<=>(this const BaseCRTP& self, const BaseCRTP& other) {
+				auto operator<=>(this const BaseIterator& self, const BaseIterator& other) {
 					return (self - other) <=> 0;
 				}
 
-				pointer operator->(this const BaseCRTP& self) {
-					assertValid(self);
-					return &self.it->content.value();
+				pointer operator->() const {
+					assertValid();
+					return &inner->content;
 				}
 
-				reference operator*(this const BaseCRTP& self) {
-					assertValid(self);
-					return self.it->content.value();
+				reference operator*() const {
+					assertValid();
+					return inner->content;
 				}
 
-				reference operator[](this const BaseCRTP& self, difference_type diff) {
-					return *(self + diff);
+				reference operator[](difference_type diff) const {
+					return *(*this + diff);
 				}
 			};
 
 		public:
-			class Iterator: public Wrap<Iterator, Data> {
-			private:
-				friend Wrap<Iterator, Data>;
-				friend father_t;
-				Node*     it;
-				father_t* father;
-
-				static Iterator make(Node* iter, father_t* f) {
-					Iterator ans;
-					ans.it     = iter;
-					ans.father = f;
-					return ans;
-				}
-			};
-
-			friend Wrap<Iterator, Data>;
-
-			class ConstIterator: public Wrap<ConstIterator, const Data> {
-			private:
-				friend Wrap<ConstIterator, const Data>;
-				friend father_t;
-				Node*           it;
-				const father_t* father;
-
-				static ConstIterator make(Node* iter, const father_t* f) {
-					ConstIterator ans;
-					ans.it     = iter;
-					ans.father = f;
-					return ans;
-				}
-			};
-
-			friend Wrap<ConstIterator, const Data>;
+			using Iterator = BaseIterator<Data>;
+			using ConstIterator = BaseIterator<const Data>;
 
 			/**
 			 * @brief erase function
@@ -343,31 +324,40 @@ namespace base {
 			 * @return Iterator to the new position
 			 */
 			Iterator erase(Iterator del) {
-				Iterator::Wrap::assertValid(del);
-				CORE_ASSERT(del.father == this, "was given iterator of other container");
+				del.assertValid();
+				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
-				u64 pos = Iterator::getPos(del);
-				for (u64 i = pos; i < data.size(); ++i) data[i]->idx--;
-				data.erase(data.begin() + pos);
+				auto& del_node = *del.inner;
+				usize vec_upos = del.getPos();
+				usize alloc_idx = data.at(vec_upos);
+				
+				for (usize i = vec_upos; i < size(); ++i) {
+					nodeAt(i).idx--;
+				}
+				
+				i64 vec_sidx = static_cast<i64>(vec_upos);
+				data.erase(data.begin() + vec_sidx);
 
-				auto del_node = del.it;
-				del_node->content.reset();
-				available.push_back(del_node);
+				memory.dealloc(alloc_idx);
 
-				auto new_ptr = (pos + 1 < data.size()) ? data[pos] : nullptr;
-
-				return Iterator::make(new_ptr, this);
+				return begin() + vec_sidx;
 			}
 
-			Iterator begin() { return Iterator::make(size() ? data[0] : nullptr, this); }
+			Iterator begin() {
+				return Iterator::make(size() ? &nodeAt(0) : nullptr, this);
+			}
 
 			ConstIterator begin() const {
-				return ConstIterator::make(size() ? data[0] : nullptr, this);
+				return ConstIterator::make(size() ? &nodeAt(0) : nullptr, this);
 			}
 
-			Iterator end() { return Iterator::make(nullptr, this); }
+			Iterator end() {
+				return Iterator::make(nullptr, this);
+			}
 
-			ConstIterator end() const { return ConstIterator::make(nullptr, this); }
+			ConstIterator end() const {
+				return ConstIterator::make(nullptr, this);
+			}
 		};
 
 	}
