@@ -2,6 +2,7 @@
 
 #include "is_complete.hpp"
 #include "ref.hpp"
+#include "type_traits.hpp"
 
 namespace base {
 
@@ -18,7 +19,15 @@ namespace base {
 	 */
 	template<class T>
 	struct DefaultBoxPtrDeleter {
-		static_assert(IS_COMPLETE_V<T>);
+		static_assert(IS_COMPLETE_V<T>, "DefaultBoxPtrDeleter can be used only with complete types. If you need to use it with incomplete type, please provide a specialization using macros DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and DEFAULT_BOX_PTR_DELETER_DEFINITION(T).");
+
+		DefaultBoxPtrDeleter() = default;
+
+		/**
+		 * DefaultBoxPtrDeleter can be constructed from other DefaultBoxPtrDeleter.
+		 */
+		template<class U>
+		DefaultBoxPtrDeleter(const DefaultBoxPtrDeleter<U>&) {}
 
 		static void del(T* ptr) { delete ptr; }
 	};
@@ -31,9 +40,8 @@ namespace base {
 	 * Attempt to use it after that will result in a panic. In the future we might consider
 	 * removing this check in release build for performance.
 	 *
-	 * @note Currently only stateless deleters are supported. If the need for stateful deleters
-	 * arises, we can add support for them by storing the deleter instance in the Box (e.g.
-	 * [no_unique_address]] Deleter deleter;).
+	 * @note Currently deleters are supported if a simple, copy-based way. If the need for
+	 * stranger behavior arises, we can add it as needed.
 	 *
 	 * @tparam T pointed type
 	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has
@@ -42,7 +50,10 @@ namespace base {
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class Box final {
 	private:
+		static_assert(DirectType<Deleter>, "Deleter must be a direct type. This is not present as a requires clause/concept usage, to prevent no-diagnostic-required cases on non matching requirement friend redefinition.");
+
 		T* ptr;
+		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
 		friend class Box;
@@ -54,13 +65,7 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
-		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
-
-		/*
-		 * Shorthand for creating a Box with the same deleter.
-		 */
-		template<class U>
-		using SDBox = Box<U, Deleter>;
+		explicit Box(T* ptr, Deleter deleter) noexcept: ptr{ ptr }, deleter{ std::move(deleter) } { assertNotNull(); }
 
 	public:
 		Box()               = delete;
@@ -73,14 +78,14 @@ namespace base {
 		 * For a regular construction use `makeBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
-		static Box fromPointer(T* ptr) noexcept { return Box(ptr); }
+		static Box fromPointer(T* ptr, Deleter deleter = Deleter{}) noexcept { return Box(ptr, std::move(deleter)); }
 
 		Box(const Box& other) = delete;
 
-		Box(Box&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
+		Box(Box&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other).deleter } { other.ptr = nullptr; }
 
-		template<class U>
-		Box(SDBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
+		template<class U, class UDeleter>
+		Box(Box<U, UDeleter>&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other).deleter } {
 			other.ptr = nullptr;
 		}
 
@@ -93,10 +98,13 @@ namespace base {
 		 * @param oth
 		 * @return Box&
 		 */
-		template<class U>
-		Box& operator=(SDBox<U>&& oth) noexcept {
-			Deleter::del(ptr);
+		template<class U, class UDeleter>
+		Box& operator=(Box<U, UDeleter>&& oth) noexcept {
+			deleter.del(ptr);
+			
 			ptr     = std::move(oth).ptr;
+			deleter = std::move(oth).deleter;
+
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -135,7 +143,7 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
-		~Box() { Deleter::del(ptr); }
+		~Box() { deleter.del(ptr); }
 	};
 
 	/**
@@ -156,7 +164,10 @@ namespace base {
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class MBox final {
 	private:
+		static_assert(DirectType<Deleter>, "Deleter must be a direct type. This is not present as a requires clause/concept usage, to prevent no-diagnostic-required cases on non matching requirement friend redefinition.");
+
 		T* ptr = nullptr;
+		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
 		friend class MBox;
@@ -172,19 +183,8 @@ namespace base {
 		 * @brief Constructs an MBox from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
-		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
+		explicit MBox(T* ptr, Deleter deleter = Deleter{}) noexcept: ptr{ ptr }, deleter{ std::move(deleter) } {}
 
-		/**
-		 * @brief Shorthand for creating a Box with the same deleter.
-		 */
-		template<class U>
-		using SDBox = Box<U, Deleter>;
-
-		/**
-		 * @brief Shorthand for creating a MBox with the same deleter.
-		 */
-		template<class U>
-		using SDMBox = MBox<U, Deleter>;
 
 	public:
 		MBox() = default;
@@ -193,15 +193,15 @@ namespace base {
 
 		MBox(const MBox& other) = delete;
 
-		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
+		MBox(MBox&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other).deleter } { other.ptr = nullptr; }
 
-		template<class U>
-		MBox(SDBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
+		template<class U, class UDeleter>
+		MBox(Box<U, UDeleter>&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other).deleter } {
 			other.ptr = nullptr;
 		}
 
-		template<class U>
-		MBox(SDMBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
+		template<class U, class UDeleter>
+		MBox(MBox<U, UDeleter>&& other) noexcept: ptr{ std::move(other).ptr }, deleter{ std::move(other).deleter } {
 			other.ptr = nullptr;
 		}
 
@@ -214,10 +214,13 @@ namespace base {
 		 * @param oth
 		 * @return MBox&
 		 */
-		template<class U>
-		MBox& operator=(SDMBox<U>&& oth) noexcept {
-			Deleter::del(ptr);
+		template<class U, class UDeleter>
+		MBox& operator=(MBox<U, UDeleter>&& oth) noexcept {
+			deleter.del(ptr);
+
 			ptr     = std::move(oth).ptr;
+			deleter = std::move(oth).deleter;
+			
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -229,10 +232,13 @@ namespace base {
 		 * @param oth
 		 * @return MBox&
 		 */
-		template<class U>
-		MBox& operator=(SDBox<U>&& oth) noexcept {
-			Deleter::del(ptr);
+		template<class U, class UDeleter>
+		MBox& operator=(Box<U, UDeleter>&& oth) noexcept {
+			deleter.del(ptr);
+			
 			ptr     = std::move(oth).ptr;
+			deleter = std::move(oth).deleter;
+			
 			oth.ptr = nullptr;
 			return *this;
 		}
@@ -299,14 +305,14 @@ namespace base {
 		 *
 		 * @return Optional<SDBox<T>>
 		 */
-		Optional<SDBox<T>> toOptBox() && {
+		Optional<Box<T, Deleter>> toOptBox() && {
 			T* output = ptr;
 			ptr       = nullptr;
 			if (output == nullptr) return {};
-			return SDBox<T>::fromPointer(output);
+			return Box<T, Deleter>::fromPointer(output, std::move(deleter));
 		}
 
-		~MBox() { Deleter::del(ptr); }
+		~MBox() { deleter.del(ptr); }
 	};
 
 	// Deduction guide for constructing a MBox from a Box:
@@ -346,6 +352,10 @@ using base::MCBox;
 #define DEFAULT_BOX_PTR_DELETER_DECLARATION(T) \
 	template<>                                 \
 	struct ::base::DefaultBoxPtrDeleter<T> {   \
+		DefaultBoxPtrDeleter() = default;\
+		\
+		template<class U>\
+		DefaultBoxPtrDeleter(const DefaultBoxPtrDeleter<U>&) {}\
 		static void del(T* ptr);               \
 	};
 

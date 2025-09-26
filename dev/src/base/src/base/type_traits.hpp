@@ -82,6 +82,9 @@ namespace base {
 	template<typename T>
 	concept IsNumber = std::is_floating_point_v<T> || std::is_integral_v<T>;
 
+	template<typename T>
+	concept DirectType = (not std::is_reference_v<T>) and (not std::is_pointer_v<T>);
+
 
 	/**
 	 * This concept is used to statically determine if two types are instances of the same templated
