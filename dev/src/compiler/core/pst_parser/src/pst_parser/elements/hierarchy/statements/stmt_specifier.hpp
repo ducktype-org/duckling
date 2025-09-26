@@ -60,8 +60,7 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<CallList>> getArgs() const {
-			return call_list.map([](const auto& v) -> AccessLocked<CallList>
-				{ return v.give(); });
+			return call_list.map([](const auto& v) -> AccessLocked<CallList> { return v.give(); });
 		}
 	};
 }

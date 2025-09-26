@@ -1,14 +1,12 @@
 #pragma once
 
+#include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
-
-
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include <helios/helios_errors.hpp>
 
 namespace compiler::helios {
 
@@ -18,8 +16,8 @@ namespace compiler::helios {
 	 */
 	struct CAbi {
 		/**
-		 * @brief Name of the library where the symbol is located and (in the future dynamically) linked from.
-		 * e.x. `extern("C" "mylib")`
+		 * @brief Name of the library where the symbol is located and (in the future dynamically)
+		 * linked from. e.x. `extern("C" "mylib")`
 		 */
 		base::Optional<base::StrID> library;
 	};
@@ -28,7 +26,7 @@ namespace compiler::helios {
 
 	using SymbolABI = std::variant<DefaultAbi, CAbi>;
 
-    using QuerySymbolABI_Result = query::QResult<SymbolABI, errors::Failed>;
+	using QuerySymbolABI_Result = query::QResult<SymbolABI, errors::Failed>;
 	/**
 	 * @brief Query symbols associated with given element in PST
 	 */

@@ -85,10 +85,9 @@ namespace compiler::helios {
 		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
 	}
 
-	using QuerySpecifiersOfSymbol_Result
-		= std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
-	
-		/**
+	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
+
+	/**
 	 * @brief Query stmt specifiers associated with given symbol in HELIOS
 	 */
 	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>);
