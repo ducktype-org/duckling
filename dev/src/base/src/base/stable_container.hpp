@@ -66,7 +66,8 @@ namespace base {
 						"sanity check, each cell must have corresponding bit if data is used"
 					);
 					for (usize i = 0; i < data.size(); i++)
-						if (allocated[i]) dealloc(i);
+						if (allocated[i])
+							data.at(i).val.~Node();
 				}
 
 				template<typename... Args>
