@@ -50,8 +50,8 @@ namespace concurrent {
 
 			next_free_idx.item_idx++;
 
-			if (next_free_idx.item_idx >= BLOCK_SIZE) {
-				[[unlikely]] next_free_idx.item_idx = 0;
+			if (next_free_idx.item_idx >= BLOCK_SIZE) [[unlikely]] {
+				next_free_idx.item_idx = 0;
 				next_free_idx.buffer_idx++;
 				buffers.emplace_back(makeBox<Buffer>());
 			}

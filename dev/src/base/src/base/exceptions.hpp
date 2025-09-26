@@ -105,7 +105,8 @@ namespace base {
  * @brief base::Panic based throw that allows catching for testing purposes
  */
 #define CORE_PANIC(what, ...) \
-	DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
+	std::unreachable();
+	// DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
 
 /**
  * @brief Wrapper for CORE_PANIC intended to be used
