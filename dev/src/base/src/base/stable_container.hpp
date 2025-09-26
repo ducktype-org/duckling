@@ -25,22 +25,22 @@ namespace base {
 		template<class Data>
 		class BaseStableVector {
 		private:
-			using father_t = BaseStableVector;
+			using self_t = BaseStableVector;
 
 			// for any pointer tricks, the Node has to be of standard layout
 			class Node final {
 			private:
-				friend father_t;
-				usize           idx;
-				father_t* const node_father;
-				Data            content;
+				friend self_t;
+				usize               idx;
+				self_t const* const node_father;
+				Data                content;
 
 			public:
 				template<typename... Args>
-				Node(usize p, father_t& f, Args&&... args):
+				Node(usize p, self_t const* f, Args&&... args):
 					  idx(p),
 					  node_father(f),
-					  content(std::in_place, std::forward<Args>(args)...) {}
+					  content(std::forward<Args>(args)...) {}
 			};
 
 			class StableAlocator {
@@ -128,9 +128,9 @@ namespace base {
 				"When this fail, figure out what to do."
 			);
 
-			StableAlocator memory;
+			mutable StableAlocator memory;
 
-			inline Node& nodeAt(usize vec_idx) { return memory.at(data.at(vec_idx)); }
+			inline Node& nodeAt(usize vec_idx) const { return memory.at(data.at(vec_idx)); }
 
 		public:
 			using RefT  = Ref<Data>;
@@ -214,28 +214,28 @@ namespace base {
 				using pointer           = ValT*;
 
 			private:
-				Node*     inner;
-				father_t* iter_father;
+				Node*         inner;
+				self_t const* iter_father;
 
 				BaseIterator() = default;
-				friend father_t;
+				friend self_t;
 
 				[[nodiscard]] inline usize getPos() const {
 					return inner == nullptr ? iter_father->size() : inner->idx;
 				}
 
 				BaseIterator incThisRetOld(difference_type diff) {
-					BaseIterator ans       = *this;
-					usize        pos       = getPos() + diff;
-					father_t&    my_father = *iter_father;
+					BaseIterator  ans       = *this;
+					usize         pos       = getPos() + diff;
+					self_t const& my_father = *iter_father;
 
 					inner = (pos < my_father.size()) ? &my_father.nodeAt(pos) : nullptr;
 
 					return ans;
 				}
 
-				static BaseIterator make(Node* iter, father_t* f) {
-					Iterator ans;
+				static BaseIterator make(Node* iter, self_t const* f) {
+					BaseIterator ans;
 					ans.inner       = iter;
 					ans.iter_father = f;
 					return ans;
@@ -246,9 +246,9 @@ namespace base {
 						inner != nullptr, "iterator is end() of container; don't dereference"
 					);
 
-					const Node& node        = *inner;
-					father_t&   node_father = *node.node_father;
-					usize       pos         = node.idx;
+					const Node&   node        = *inner;
+					self_t const& node_father = *node.node_father;
+					usize         pos         = node.idx;
 					CORE_ASSERT(
 						iter_father == &node_father,
 						"value belongs to different container than iterator"
@@ -331,7 +331,7 @@ namespace base {
 			 * @param del
 			 * @return Iterator to the new position
 			 */
-			Iterator erase(Iterator del) {
+			Iterator erase(ConstIterator del) {
 				del.assertValid();
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
@@ -347,6 +347,12 @@ namespace base {
 				memory.dealloc(alloc_idx);
 
 				return begin() + vec_sidx;
+			}
+
+			Iterator erase(Iterator del) {
+				ConstIterator del2 = ConstIterator::make(del.inner, del.iter_father);
+
+				return erase(del2);
 			}
 
 			Iterator begin() { return Iterator::make(size() ? &nodeAt(0) : nullptr, this); }
@@ -371,7 +377,7 @@ namespace base {
 
 				Node* node_ptr
 					= reinterpret_cast<Node*>(reinterpret_cast<byte*>(ref.get()) - offset);
-				father_t* father = node_ptr->node_father;
+				self_t const* father = node_ptr->node_father;
 
 				return Iterator::make(node_ptr, father);
 			}
