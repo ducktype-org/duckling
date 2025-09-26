@@ -56,8 +56,13 @@ add_library(PstParser
 	src/pst_parser/pst_visitor.hpp
 )
 
-set_target_properties(PstParser PROPERTIES UNITY_BUILD ON)
-set_target_properties(PstParser PROPERTIES UNITY_BUILD_MODE GROUP)
+if (NOT DISABLE_UNITY_COMPILATION)
+	message("-- PstParser will use UNITY compilation")
+	set_target_properties(PstParser PROPERTIES UNITY_BUILD ON)
+	set_target_properties(PstParser PROPERTIES UNITY_BUILD_MODE GROUP)
+else() # Unity compilation is disabled by default.
+	message("-- PstParser will NOT use UNITY compilation, compilation will be longer")
+endif()
 
 make_module(PstParser USES Lexer UnicodeClassification Printer TPC QueryFramework)
 
