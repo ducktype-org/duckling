@@ -101,7 +101,7 @@ namespace vm {
 			usize                    function_id
 		) {
 			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.executing_program->functions[function_id];
+			auto& called_func  = thread.executing_program->getFunctions()[function_id];
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
@@ -169,7 +169,7 @@ namespace vm {
 			VMThread&                                 thread,
 			TypeID                                    type_id
 		) {
-			auto type     = thread.executing_program->types->at(type_id);
+			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to

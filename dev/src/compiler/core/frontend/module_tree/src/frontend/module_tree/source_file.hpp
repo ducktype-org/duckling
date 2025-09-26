@@ -108,11 +108,12 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Returns cached content for this SourceFile.
+		 * it caches the content when it wasn't previously cached.
 		 * @note Content is cached during SourceFile construction.
 		 * @return Cached base::SharedView for this SourceFile.
 		 * @throws Panics if the content is not found in the cache.
 		 */
-		[[nodiscard]] base::SharedView getCachedContent() const;
+		[[nodiscard]] base::SharedView getCachedContent();
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;

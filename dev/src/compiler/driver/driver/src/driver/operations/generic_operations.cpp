@@ -3,6 +3,7 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
@@ -97,7 +98,7 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	void compilerEntirePackage(const fs::File& package_location, BackendType backend) {
-		auto root = query::entryPoint<frontend::QueryModuleTree>(package_location);
+		auto root = frontend::createModuleTree(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
 
