@@ -1,3 +1,4 @@
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
@@ -278,13 +279,13 @@ private:
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout.functions) {
-				std::cerr << fun.original_name.str() << " i dependent on\n";
+				std::cerr << fun.declaration.original_name.str() << " i dependent on\n";
 				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOFFun>(
-					fun.original_symbol
+					fun.declaration.original_symbol
 				);
 
 				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOFFun>(
-					fun.original_symbol
+					fun.declaration.original_symbol
 				);
 
 				printer::PrinterOStream str;
@@ -297,9 +298,9 @@ private:
 	}
 
 	void testHoutVisitor() {
-		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::File(path("test_modules/visitor_test_module"))
-		);
+		auto module
+			= compiler::frontend::createModuleTree(fs::File(path("test_modules/visitor_test_module")
+		    ));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -307,7 +308,7 @@ private:
 
 		auto the_function = hout->functions.at(0);
 
-		auto& stmt_list = the_function.content.body->statements;
+		auto& stmt_list = the_function.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 6);
 
 		using namespace compiler::helios::code;
@@ -506,6 +507,10 @@ private:
 
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
 
+
+		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+
 		try {
 			getConstValueAs<i64>("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
@@ -553,12 +558,12 @@ private:
 
 		auto& function = hout->functions.at(0);
 
-		ASSERT_EQUAL(function.original_name, "foo");
+		ASSERT_EQUAL(function.declaration.original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.content.body->statements.size(), 10);
+		ASSERT_EQUAL(function.body->statements.size(), 10);
 
-		auto& statements = function.content.body->statements;
+		auto& statements = function.body->statements;
 
 		auto get_var_block = [&](usize i, auto&& code_block) -> decltype(auto) {
 			return dynamic_cast<const compiler::helios::code::VariableStmt&>(
@@ -567,7 +572,7 @@ private:
 		};
 
 		auto get_var_ref
-			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function.content.body); };
+			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function.body); };
 
 
 		auto i32_type = query::entryPoint<tsh::QueryIntegralType>(32);
@@ -722,17 +727,17 @@ private:
 			ASSERT_EQUAL(hout->functions.size(), 2);
 			{
 				auto function = hout->functions.at(0);
-				ASSERT_EQUAL(function.original_name, "foo");
+				ASSERT_EQUAL(function.declaration.original_name, "foo");
 
-				auto& a_param = function.content.parameters->at(0);
+				auto& a_param = function.declaration.parameters->at(0);
 				ASSERT_EQUAL("a", a_param.name);
 				ASSERT_EQUAL(st(int32_type), a_param.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
 
 				// get "a" thru return:
-				ASSERT_EQUAL(function.content.body->statements.size(), 1);
+				ASSERT_EQUAL(function.body->statements.size(), 1);
 
-				auto ret_stmt = function.content.body->statements.at(0).ref();
+				auto ret_stmt = function.body->statements.at(0).ref();
 				auto ret_stmt_casted
 					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
 				assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
@@ -756,9 +761,9 @@ private:
 
 			{
 				auto function = hout->functions.at(1);
-				ASSERT_EQUAL(function.original_name, "bar");
-				auto& abc_param    = function.content.parameters->at(0);
-				auto& second_param = function.content.parameters->at(1);
+				ASSERT_EQUAL(function.declaration.original_name, "bar");
+				auto& abc_param    = function.declaration.parameters->at(0);
+				auto& second_param = function.declaration.parameters->at(1);
 
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
@@ -838,12 +843,12 @@ private:
 		auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(2, hout->functions.size());
+		ASSERT_EQUAL(4, hout->functions.size());
 		std::cerr << hout->debugPrint() << '\n';
 		auto function = hout->functions.at(1);
-		ASSERT_EQUAL(function.original_name, "foo");
+		ASSERT_EQUAL(function.declaration.original_name, "foo");
 		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
-			function.content.body->statements.at(0).ref().get()
+			function.body->statements.at(0).ref().get()
 		);
 		ASSERT_TRUE(variable != nullptr);
 		auto call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(
@@ -864,9 +869,9 @@ private:
 		ASSERT_EQUAL(1, hout->functions.size());
 
 		for (auto& function: hout->functions) {
-			if (function.original_name == base::StrID("stmtBody1")) {
-				ASSERT_EQUAL(1, function.content.body->statements.size());
-				auto stmt        = function.content.body->statements.at(0).ref();
+			if (function.declaration.original_name == base::StrID("stmtBody1")) {
+				ASSERT_EQUAL(1, function.body->statements.size());
+				auto stmt        = function.body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
 				Ref  ret_expr    = stmt_casted->value.ref();
 				Ref  ret_expr_casted
@@ -882,10 +887,10 @@ private:
 		ASSERT_EQUAL(1, hout->functions.size());
 
 		auto function = hout->functions.at(0);
-		ASSERT_EQUAL(function.original_name, "main");
+		ASSERT_EQUAL(function.declaration.original_name, "main");
 
 		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
-			function.content.body->statements.at(0).ref().get()
+			function.body->statements.at(0).ref().get()
 		);
 		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
 			variable_stmt->initial_value->ref().get()
@@ -896,7 +901,7 @@ private:
 		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1_callee));
 
 		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
-			function.content.body->statements.at(1).ref().get()
+			function.body->statements.at(1).ref().get()
 		);
 		Ref  call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		auto call_expr_2_callee
@@ -968,7 +973,7 @@ private:
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
-				if (fun.original_name == name) return fun;
+				if (fun.declaration.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
@@ -982,9 +987,9 @@ private:
 		};
 
 		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
-		std::cerr << "\nFunction name: " << goo.original_name.strView() << '\n';
+		std::cerr << "\nFunction name: " << goo.declaration.original_name.strView() << '\n';
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ goo.original_symbol, 123, "metadata_v123" }
+			{ goo.declaration.original_symbol, 123, "metadata_v123" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
@@ -1012,9 +1017,9 @@ private:
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
-		std::cerr << "\nSub function name: " << sub_fun.original_name.strView() << '\n';
+		std::cerr << "\nSub function name: " << sub_fun.declaration.original_name.strView() << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ sub_fun.original_symbol, 5, "metadata_v5" }
+			{ sub_fun.declaration.original_symbol, 5, "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
 
@@ -1038,7 +1043,7 @@ private:
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
-				if (fun.original_name == name) return fun;
+				if (fun.declaration.original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
@@ -1079,7 +1084,7 @@ private:
 					dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee.ref()
 				)
 					.value(),
-				find_function(hout_unit, base::StrID("foooo")).value().original_symbol
+				find_function(hout_unit, base::StrID("foooo")).value().declaration.original_symbol
 			);
 			expr1->debugPrint(std::cerr);
 			std::cerr << '\n';
@@ -1098,28 +1103,25 @@ private:
 						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
 					));
 
-				// if this ever change, adjust the test:
-				ASSERT_TRUE(hout_unit.functions.at(0).original_name == "foo0");
-				ASSERT_TRUE(hout_unit.functions.at(1).original_name == "foo1");
-				auto foo0_body = hout_unit.functions.at(0).content.body;
-				auto foo1_body = hout_unit.functions.at(1).content.body;
+				for (const auto& fun: hout_unit.functions) {
+					if (fun.declaration.original_name.str() == "foo0") {
+						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+							&(*fun.body->statements[0])
+						);
+						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+					}
+					if (fun.declaration.original_name.str() == "foo1") {
+						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+							&(*fun.body->statements[0])
+						);
+						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
-				Ref var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*foo0_body->statements.at(0))
-				);
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
-
-				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*foo1_body->statements.at(0))
-				);
-
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
-
-				var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-					&(*foo1_body->statements.at(1))
-				);
-
-				ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+						var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
+							&(*fun.body->statements[1])
+						);
+						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
+					}
+				}
 			});
 		}
 	}

@@ -250,7 +250,7 @@ private:
 		auto                     clah = clah::Clah("prog")
 		                .setPreHandler([&](const clah::ParsingResult&) -> int {
 							call_order.emplace_back("pre_handler");
-							return 420;
+							return 421;
 						})
 		                .addSubcommand(clah::Clah("cmd", "A command")
 		                                   .setHandler([&](const clah::ParsingResult&) -> int {
