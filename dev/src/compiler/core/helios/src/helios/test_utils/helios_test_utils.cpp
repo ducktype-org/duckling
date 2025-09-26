@@ -1,5 +1,6 @@
 #include "helios_test_utils.hpp"
 
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -23,7 +24,7 @@
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
-		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
+		auto module = compiler::frontend::createModuleTree(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
 			return queryRootScopeOfMainModuleFile(ctx, module);
