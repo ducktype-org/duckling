@@ -20,7 +20,7 @@ namespace dia_app {
 				= [&group_to_id_map, &next_group_id](const std::string& str) {
 					  auto ptr = group_to_id_map.find(str);
 					  if (ptr == group_to_id_map.end()) {
-						  group_to_id_map[str] = next_group_id;
+						  group_to_id_map.put(str, next_group_id);
 						  next_group_id++;
 					  }
 					  return group_to_id_map[str];
@@ -31,7 +31,7 @@ namespace dia_app {
 				= [&hl_name_to_id_map, &next_hl_id](const std::string& str) {
 					  auto ptr = hl_name_to_id_map.find(str);
 					  if (ptr == hl_name_to_id_map.end()) {
-						  hl_name_to_id_map[str] = next_hl_id;
+						  hl_name_to_id_map.put(str, next_hl_id);
 						  next_hl_id++;
 					  }
 					  return hl_name_to_id_map[str];

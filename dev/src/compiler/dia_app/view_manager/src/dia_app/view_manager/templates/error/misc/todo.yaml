@@ -11,7 +11,7 @@ header_message:
 
 description:
  - "You shouldn't really see this message, but our compiler developer was lazy and used placeholder error template."
- - "Please report this on our github: https://github.com/ducktype-org/duckling"
+ - " Please report this on our github: https://github.com/ducktype-org/duckling"
 
 pointer_messages:
   cause:

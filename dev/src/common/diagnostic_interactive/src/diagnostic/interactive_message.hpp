@@ -83,7 +83,7 @@ namespace dia {
 		public:
 			Params(const std::string& message): message(message) {}
 
-			json tojson() override { return { "message", message }; }
+			json tojson() override { return json::object_t{{ "message", message }}; }
 		};
 
 	public:
