@@ -75,6 +75,10 @@ class MyCustomHashMap final {
 		buckets.clear();
 		buckets.resize(new_bucket_count);
 
+		// @opt: keep bucket ends -- pointers to nullptr MRef nexts
+		// can be used here and in addToBucket to avoid traversing the whole bucket
+		// when adding new nodes
+
 		for (const auto& node: all_nodes) {
 			auto bucket = buckets[keyToBucket(node->key)];
 			if (bucket)
