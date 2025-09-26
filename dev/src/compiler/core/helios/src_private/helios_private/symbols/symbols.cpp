@@ -635,7 +635,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
-		// @TODO do not unlock whole elements, checking the type of the parent would be enough
+		// @TODO do not unlock whole elements, checking the type of the parent would be enough #1321
 
 		/**
 		 * @brief Check if the ancestors of PST element `el` match the provided kinds in order,

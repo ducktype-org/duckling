@@ -1,5 +1,6 @@
 #include "../../hierarchy/statements/stmt_specifier.hpp"
 
+#include "../../hierarchy/lists/call_list.hpp"
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
