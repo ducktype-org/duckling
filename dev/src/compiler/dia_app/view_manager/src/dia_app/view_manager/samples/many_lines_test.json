@@ -21,7 +21,8 @@
                 { "type": "code", "content": "  this is line 2" },
                 { "type": "code", "content": ";" },
                 { "type": "start_line", "number": 3 },
-                { "type": "code", "content": "  this is line 3" },
+                { "type": "start_line", "number": 4 },
+                { "type": "code", "content": "  this is line 4" },
                 { "type": "start_line" },
                 { "type": "code", "content": "and this is an unnumbered line" }
             ]
