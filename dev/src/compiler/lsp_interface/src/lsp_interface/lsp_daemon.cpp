@@ -60,6 +60,25 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/export_keywords")
 	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
+
+	/** @brief Route to init a directory contents recursively in the virtual file system.
+	 * * URL: /init_directory/[base64 relative path]
+	 * @param base64_path The base64 encoded relative path of the rott directory of the workspace.
+	 * @return crow::response The HTTP response indicating the result of the operation.
+	 */
+	CROW_ROUTE(app, "/init_directory/<string>")
+	([&virtual_root](const std::string& base64_path) {
+		try{
+			const auto path = fs::FilePath("/" + base64::decode_into<std::string>(base64_path));
+			
+			lsp::initFiles(path, virtual_root);
+			lsp::initModules(virtual_root.getFilePath().join(path.uri()));
+
+			return crow::response(200, "OK");
+		}
+		catch (const std::exception& e) { std::cout << e.what(); return crow::response(400, e.what());}
+	});
+
 	/**
 	 * @brief Route to add or override a file in the virtual file system.
 	 * * URL: /put_file/[base64 relative path]/[base64 file contents]

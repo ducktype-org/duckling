@@ -2,6 +2,9 @@
 #include <string>
 #include <vector>
 
+#include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
+
 namespace lsp {
 	/**
 	 * @brief Converts a list of strings to a JSON array format.
@@ -18,4 +21,7 @@ namespace lsp {
 	 * @return std::string The JSON object representation of the dictionary.
 	 */
 	std::string jsonDict(const std::map<std::string, std::string>& dict);
+
+	void initFiles(const fs::FilePath& path, const fs::File& vRoot);
+	void initModules(const fs::FilePath& path);
 }

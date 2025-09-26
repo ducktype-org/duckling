@@ -127,26 +127,42 @@ export class CompilerDaemonClient {
 	// This function is called to update the workspace in the daemon
 	public async putWorkspace(connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
-		const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
-		
-		for (let i = 0; i < files.length; i++) {
+		// const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
+		const folders = (await connection.workspace.getWorkspaceFolders())?.map(folder => folder.uri) ?? [];
+		for (const folder of folders) {
 			try {
-				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
-				var base64FileContent: string = Buffer.from(files[i].content).toString('base64');
-
-				var response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
+				var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
+				var response = fetch(`${DAEMON_ADRESS}/init_directory/${base64FilePath}`);
 				var res = await response;
 				if (res.status != 200) {
 					throw new Error(`Error: ${res.status}`);
 				}
 			} catch (error) {
 				if (error instanceof Error) {
-					console.error(`Error processing file ${files[i].path}: ${error.message}`);
+					console.error(`Error processing file ${folder}: ${error.message}`);
 				} else {
-					console.error(`Error processing file ${files[i].path}: ${String(error)}`);
+					console.error(`Error processing file ${folder}: ${String(error)}`);
 				}
 			}
 		}
+		// for (let i = 0; i < files.length; i++) {
+		// 	try {
+		// 		var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
+		// 		var base64FileContent: string = Buffer.from(files[i].content).toString('base64');
+
+		// 		var response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
+		// 		var res = await response;
+		// 		if (res.status != 200) {
+		// 			throw new Error(`Error: ${res.status}`);
+		// 		}
+		// 	} catch (error) {
+		// 		if (error instanceof Error) {
+		// 			console.error(`Error processing file ${files[i].path}: ${error.message}`);
+		// 		} else {
+		// 			console.error(`Error processing file ${files[i].path}: ${String(error)}`);
+		// 		}
+		// 	}
+		// }
 		return;
 	}
 
