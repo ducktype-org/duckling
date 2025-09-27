@@ -20,8 +20,8 @@ namespace base {
 		template<typename ObjT>
 		class StableAlocator {
 		private:
-			std::vector<usize> available;
-			std::deque<std::optional<ObjT>>   data;
+			std::vector<usize>              available;
+			std::deque<std::optional<ObjT>> data;
 
 		public:
 			[[nodiscard]] bool isAllocated(usize alloc_idx) const {
@@ -53,7 +53,7 @@ namespace base {
 				);
 
 				data.at(alloc_idx).reset();
-				
+
 				available.push_back(alloc_idx);
 			}
 
@@ -62,7 +62,7 @@ namespace base {
 				return data.at(alloc_idx).value();
 			}
 		};
-		
+
 		/**
 		 * @class BaseStableVector
 		 * @brief Wrapper class over a container (std::vector<Box>) which returns Ref/CRef on access.
@@ -78,12 +78,12 @@ namespace base {
 			private:
 				friend self_t;
 				usize               pos;
-				self_t const* const NODE_FATHER;
+				const self_t* const NODE_FATHER;
 				Data                content;
 
 			public:
 				template<typename... Args>
-				Node(usize p, self_t const* f, Args&&... args):
+				Node(usize p, const self_t* f, Args&&... args):
 					  pos(p),
 					  NODE_FATHER(f),
 					  content(std::forward<Args>(args)...) {}
@@ -98,9 +98,7 @@ namespace base {
 
 			mutable StableAlocator<Node> memory;
 
-			inline Node& nodeAt(usize vec_pos) const {
-				return memory.at(data.at(vec_pos));
-			}
+			inline Node& nodeAt(usize vec_pos) const { return memory.at(data.at(vec_pos)); }
 
 		public:
 			using RefT  = Ref<Data>;
@@ -187,7 +185,7 @@ namespace base {
 
 			private:
 				Node*         inner;
-				self_t const* iter_father;
+				const self_t* iter_father;
 
 				friend self_t;
 
@@ -198,14 +196,14 @@ namespace base {
 				BaseIterator incThisRetOld(difference_type diff) {
 					BaseIterator  ans       = *this;
 					usize         pos       = getPos() + diff;
-					self_t const& my_father = *iter_father;
+					const self_t& my_father = *iter_father;
 
 					inner = (pos < my_father.size()) ? &my_father.nodeAt(pos) : nullptr;
 
 					return ans;
 				}
 
-				static BaseIterator make(Node* iter, self_t const* f) {
+				static BaseIterator make(Node* iter, const self_t* f) {
 					BaseIterator ans;
 					ans.inner       = iter;
 					ans.iter_father = f;
@@ -218,7 +216,7 @@ namespace base {
 					);
 
 					const Node&   node        = *inner;
-					self_t const& node_father = *node.NODE_FATHER;
+					const self_t& node_father = *node.NODE_FATHER;
 					usize         pos         = node.pos;
 					CORE_ASSERT(
 						iter_father == &node_father,
@@ -306,7 +304,7 @@ namespace base {
 				del.assertValid();
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
-				usize u_vpos  = del.getPos();
+				usize u_vpos    = del.getPos();
 				usize alloc_idx = data.at(u_vpos);
 
 				for (usize i = u_vpos; i < size(); ++i) nodeAt(i).pos--;
@@ -347,7 +345,7 @@ namespace base {
 
 				Node* node_ptr
 					= reinterpret_cast<Node*>(reinterpret_cast<byte*>(ref.get()) - offset);
-				self_t const* father = node_ptr->NODE_FATHER;
+				const self_t* father = node_ptr->NODE_FATHER;
 
 				return Iterator::make(node_ptr, father);
 			}
