@@ -93,6 +93,23 @@ namespace pst {
 		return out;
 	}
 
+	std::vector<MatchCase::CaseBranchView> MatchCase::getBranches() const {
+		constexpr auto to_branch_view = [](const CaseBranch& internal) -> CaseBranchView {
+			return { .condition = internal.condition.has_value()
+									? internal.condition->give()
+									: base::Optional<AccessLocked<UniversalExprHolder>>{},
+						.result    = internal.result.give() };
+		};
+		// std::vector<MatchCase::CaseBranchView> output;
+		// output.reserve(branches.size());
+		// for (const auto& branch: branches) {
+		// 	output.push_back(to_branch_view(branch));
+		// }
+		// return output;
+		return branches | std::views::transform(to_branch_view)
+				| std::ranges::to<std::vector<CaseBranchView>>();
+	}
+
 	void MatchCase::dprint(std::ostream& out) const {
 		out << "{";
 		out << R"("node_type": "Match Case",)";

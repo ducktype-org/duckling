@@ -37,7 +37,7 @@ namespace pst {
 			static auto get_tokens = [](AccessLocked<LangElement> locked) {
 				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
 			};
-			static auto file_location = [](CRef<lexer::Token> tok) {
+			static auto file_location = [](CRef<lexer::Token> tok) -> bool {
 				return tok->getPosition().getLocationType() == dia::LocationType::FileLocationType;
 			};
 

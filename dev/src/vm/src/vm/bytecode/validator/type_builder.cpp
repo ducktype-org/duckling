@@ -204,8 +204,17 @@ Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& ctx
 void vm::code::detail::rebuildTypeMetadata(
 	Ref<vm::TypeMetadata> type_metadata, const TypeContext& new_ctx
 ) {
-	auto new_types = new_ctx.getCurrentTypes() | std::views::drop(type_metadata->size())
-	               | std::ranges::to<std::vector<TypeOfData>>();
+	auto new_types_view = new_ctx.getCurrentTypes() | std::views::drop(type_metadata->size());
+	
+	// @note this is not a std::ranges::to, because it breaks in clang 20 for some reason
+	
+	std::vector<TypeOfData> new_types;
+	new_types.reserve(new_types_view.size());
+
+	for (const auto& type: new_types_view) {
+		new_types.push_back(type);
+	}
+
 
 	// Reopen type metadata for addition.
 	type_metadata->unfinalize();

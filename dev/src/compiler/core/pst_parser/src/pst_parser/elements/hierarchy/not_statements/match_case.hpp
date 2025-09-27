@@ -41,16 +41,7 @@ namespace pst {
 
 		[[nodiscard]] AccessLocked<FlowPattern> getPattern() const { return pattern.give(); }
 
-		[[nodiscard]] auto getBranches() const {
-			auto to_branch_view = [](const CaseBranch& internal) -> CaseBranchView {
-				return { .condition = internal.condition.has_value()
-					                    ? internal.condition->give()
-					                    : base::Optional<AccessLocked<UniversalExprHolder>>{},
-					     .result    = internal.result.give() };
-			};
-			return branches | std::views::transform(to_branch_view)
-			     | std::ranges::to<std::vector<CaseBranchView>>();
-		}
+		[[nodiscard]] std::vector<CaseBranchView> getBranches() const;
 
 		[[nodiscard]]
 		std::string elementType() const override {
