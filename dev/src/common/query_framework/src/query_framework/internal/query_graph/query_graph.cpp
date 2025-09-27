@@ -59,7 +59,7 @@ namespace query::internal {
 		internal::NodeID node_id, QueryID dependency_id
 	) const {
 		std::vector<NodeID> out;
-		
+
 		auto pre_filtered = getNodeDeps(node_id);
 		for (const auto& n: pre_filtered)
 			if (n.q_id == dependency_id) out.push_back(n);

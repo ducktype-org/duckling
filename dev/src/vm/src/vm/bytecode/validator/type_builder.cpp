@@ -1,6 +1,7 @@
 #include "type_builder.hpp"
 
 #include <base/to_hotfix.hpp>
+
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
@@ -83,8 +84,9 @@ namespace {
 	) {
 		vm::TypeCRef tp    = metadata.at(inh.name);
 		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef { return metadata.at(name); };
-		auto implements    = base::makeVectorFromView<vm::TypeCRef>( inh.implements | std::views::transform(get_type_cref)
-										);
+		auto implements    = base::makeVectorFromView<vm::TypeCRef>(
+            inh.implements | std::views::transform(get_type_cref)
+        );
 
 		base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
 		for (auto& method: inh.virtual_methods)
@@ -196,9 +198,7 @@ Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& ctx
 	std::vector<TypeOfData> types;
 	types.reserve(current_types.size());
 
-	for (const auto& type: current_types) {
-		types.push_back(type);
-	}
+	for (const auto& type: current_types) types.push_back(type);
 
 	// Declare all types first.
 	declareTypes(type_metadata.refMut(), types);
@@ -214,14 +214,12 @@ void vm::code::detail::rebuildTypeMetadata(
 	Ref<vm::TypeMetadata> type_metadata, const TypeContext& new_ctx
 ) {
 	auto new_types_view = new_ctx.getCurrentTypes() | std::views::drop(type_metadata->size());
-	
+
 	// @note #1324 this is not a std::ranges::to, because it breaks in clang 20 for some reason
 	std::vector<TypeOfData> new_types;
 	new_types.reserve(new_types_view.size());
 
-	for (const auto& type: new_types_view) {
-		new_types.push_back(type);
-	}
+	for (const auto& type: new_types_view) new_types.push_back(type);
 
 
 	// Reopen type metadata for addition.

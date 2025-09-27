@@ -4,8 +4,8 @@
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
-#include <base/variant.hpp>
 #include <base/to_hotfix.hpp>
+#include <base/variant.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -341,12 +341,15 @@ namespace vm::loader::compiler {
 	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
 
-		auto new_globals = base::makeVectorFromView<code::GlobalData>(high_program.globals() | std::views::drop(low_program.global_data.size()));
+		auto new_globals = base::makeVectorFromView<code::GlobalData>(
+			high_program.globals() | std::views::drop(low_program.global_data.size())
+		);
 
 		compileNewGlobals(new_globals);
 
-		auto new_functions = base::makeVectorFromView<code::Function>(high_program.functions()
-		                   | std::views::drop(low_program.functions.size()));
+		auto new_functions = base::makeVectorFromView<code::Function>(
+			high_program.functions() | std::views::drop(low_program.functions.size())
+		);
 
 		compileNewFunctions(new_functions);
 	}

@@ -161,16 +161,14 @@ namespace compiler::helios {
 			owned_arguments.push_back(std::move(*res));
 		}
 
-		constexpr auto to_vm_value_reference = [](Box<vm::VmValue>& value) -> Ref<vm::VmValue> { return value.refMut(); };
+		constexpr auto to_vm_value_reference
+			= [](Box<vm::VmValue>& value) -> Ref<vm::VmValue> { return value.refMut(); };
 
 		// @note #1323 change it to std::ranges::to
-		auto vm_args_pre_view
-			= owned_arguments | std::views::transform(to_vm_value_reference);
+		auto vm_args_pre_view = owned_arguments | std::views::transform(to_vm_value_reference);
 		vm::FunctionRunArguments vm_args;
 		vm_args.reserve(vm_args_pre_view.size());
-		for (const auto& arg: vm_args_pre_view) {
-			vm_args.emplace_back(arg);
-		}
+		for (const auto& arg: vm_args_pre_view) vm_args.emplace_back(arg);
 
 		if (auto res = vm::api::runFunction(pid, func_name, vm_args); !res)
 			return std::unexpected(VmEvaluationError(

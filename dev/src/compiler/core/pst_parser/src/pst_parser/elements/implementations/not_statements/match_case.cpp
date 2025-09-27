@@ -96,17 +96,15 @@ namespace pst {
 	std::vector<MatchCase::CaseBranchView> MatchCase::getBranches() const {
 		constexpr auto to_branch_view = [](const CaseBranch& internal) -> CaseBranchView {
 			return { .condition = internal.condition.has_value()
-									? internal.condition->give()
-									: base::Optional<AccessLocked<UniversalExprHolder>>{},
-						.result    = internal.result.give() };
+				                    ? internal.condition->give()
+				                    : base::Optional<AccessLocked<UniversalExprHolder>>{},
+				     .result    = internal.result.give() };
 		};
 		// @note: #1323 change it to std::ranges::to.
-		auto view = branches | std::views::transform(to_branch_view);
+		auto                        view = branches | std::views::transform(to_branch_view);
 		std::vector<CaseBranchView> output;
 		output.reserve(view.size());
-		for (const auto& branch: view) {
-			output.emplace_back(branch);
-		}
+		for (const auto& branch: view) output.emplace_back(branch);
 		return output;
 	}
 

@@ -42,10 +42,10 @@ namespace pst {
 			};
 
 			// @note #1323 change it to std::ranges::to
-			auto view_output =  nodes | transform(get_pst_node) | transform(get_tokens)
-			     | filter([](auto opt) { return opt.has_value(); })
-			     | transform([](auto opt) { return opt.value(); }) | std::views::join
-			     | filter(file_location);
+			auto view_output = nodes | transform(get_pst_node) | transform(get_tokens)
+			                 | filter([](auto opt) { return opt.has_value(); })
+			                 | transform([](auto opt) { return opt.value(); }) | std::views::join
+			                 | filter(file_location);
 
 			std::vector<CRef<lexer::Token>> output;
 			for (auto tok: view_output) output.emplace_back(tok);
@@ -55,7 +55,6 @@ namespace pst {
 	}
 
 	std::vector<dia::SourcePosition> queryPositionDependencies(query::internal::NodeID id) {
-
 		constexpr auto get_token_pos = [](CRef<lexer::Token> tok) { return tok->getPosition(); };
 
 		auto x = viewDependentTokens(id) | std::views::transform(get_token_pos);
