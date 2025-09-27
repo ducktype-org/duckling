@@ -45,6 +45,10 @@ namespace pst {
 		return out;
 	}
 
+	base::Optional<AccessLocked<ExprHolder>> Action::getValue() const {
+		return expr.map([](const auto& e) -> AccessLocked<ExprHolder> { return e.give(); });
+	}
+
 	namespace internal {
 		template<base::TemplateStringLiteral name>
 		void simpleActionDprint(
