@@ -45,89 +45,47 @@ namespace base {
 
 			class StableAlocator {
 			private:
-				union Wrap {
-					Node val;
-
-					Wrap() {}
-
-					~Wrap() {}
-
-					Wrap(Wrap&& other) noexcept: val(std::move(other.val)) {}
-					Wrap(const Wrap& other) : val(other.val) {}
-					
-					Wrap& operator=(Wrap&& other) noexcept {
-						val = std::move(other.val);
-						return *this;
-					}
-
-					Wrap& operator=(const Wrap& other) noexcept {
-						val = other.val;
-						return *this;
-					}
-				};
 
 				std::vector<usize> available;
-				std::deque<Wrap>   data;
-				std::vector<bool>  allocated;
+				std::deque<std::optional<Node>>   data;
 
 			public:
-				StableAlocator() = default;
-
-				~StableAlocator() noexcept {
-					for (usize i = 0; i < data.size(); i++)
-						if (allocated[i])
-							data.at(i).val.~Node();
+				[[nodiscard]] bool isAllocated(usize alloc_idx) const {
+					return data.at(alloc_idx).has_value();
 				}
 
 				template<typename... Args>
 				usize alloc(Args&&... args) {
-					CORE_ASSERT(
-						data.size() == allocated.size(),
-						"sanity check, each cell must have corresponding bit if data is used"
-					);
-
 					if (available.empty()) {
 						available.push_back(data.size());
-						data.emplace_back();
-						allocated.push_back(false);
+						data.emplace_back(std::nullopt);
 					}
 
 					usize alloc_idx = available.back();
 					available.pop_back();
 
 					CORE_ASSERT(
-						allocated.at(alloc_idx) == false,
+						isAllocated(alloc_idx) == false,
 						"trying to allocate space which is already in use"
 					);
-					allocated.at(alloc_idx) = true;
-
-					new (&data.at(alloc_idx).val) Node(std::forward<Args>(args)...);
+					data.at(alloc_idx).emplace(std::forward<Args>(args)...);
 
 					return alloc_idx;
 				}
 
 				void dealloc(usize alloc_idx) {
 					CORE_ASSERT(
-						data.size() == allocated.size(),
-						"sanity check, each cell must have corresponding bit if data is used"
+						isAllocated(alloc_idx) == true, "trying to deallocate already empty space"
 					);
 
-					CORE_ASSERT(
-						allocated.at(alloc_idx) == true, "trying to deallocate already empty space"
-					);
-					allocated.at(alloc_idx) = false;
-
-					data.at(alloc_idx).val.~Node();
+					data.at(alloc_idx).reset();
+					
 					available.push_back(alloc_idx);
 				}
 
 				Node& at(usize alloc_idx) {
-					CORE_ASSERT(
-						data.size() == allocated.size(),
-						"sanity check, each cell must have corresponding bit if data is used"
-					);
-					CORE_ASSERT(allocated.at(alloc_idx) == true, "trying to get uninitialized data");
-					return data.at(alloc_idx).val;
+					CORE_ASSERT(isAllocated(alloc_idx) == true, "trying to get uninitialized data");
+					return data.at(alloc_idx).value();
 				}
 			};
 
