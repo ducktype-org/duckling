@@ -78,14 +78,14 @@ namespace base {
 			private:
 				friend self_t;
 				usize               pos;
-				const self_t* const NODE_FATHER;
+				const self_t*  node_father;
 				Data                content;
 
 			public:
 				template<typename... Args>
 				Node(usize p, const self_t* f, Args&&... args):
 					  pos(p),
-					  NODE_FATHER(f),
+					  node_father(f),
 					  content(std::forward<Args>(args)...) {}
 			};
 
@@ -104,8 +104,15 @@ namespace base {
 			using RefT  = Ref<Data>;
 			using CRefT = CRef<Data>;
 
-			BaseStableVector()                   = default;
-			BaseStableVector(BaseStableVector&&) = default;
+			BaseStableVector() = default;
+
+			BaseStableVector(BaseStableVector&& oth) noexcept:
+				  data(std::move(oth.data)),
+				  memory(std::move(oth.memory))  {
+				for (int i = 0; i < data.size(); i++) {
+					nodeAt(i).node_father = this;
+				}
+			}
 
 			/**
 			 * @note explicit delete here causes much better compiler errors.
@@ -216,7 +223,7 @@ namespace base {
 					);
 
 					const Node&   node        = *inner;
-					const self_t& node_father = *node.NODE_FATHER;
+					const self_t& node_father = *node.node_father;
 					usize         pos         = node.pos;
 					CORE_ASSERT(
 						iter_father == &node_father,
@@ -345,7 +352,7 @@ namespace base {
 
 				Node* node_ptr
 					= reinterpret_cast<Node*>(reinterpret_cast<byte*>(ref.get()) - offset);
-				const self_t* father = node_ptr->NODE_FATHER;
+				const self_t* father = node_ptr->node_father;
 
 				return Iterator::make(node_ptr, father);
 			}
