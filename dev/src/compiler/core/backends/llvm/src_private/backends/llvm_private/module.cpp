@@ -11,10 +11,6 @@
 #include <iostream>
 
 namespace compiler::backend_llvm {
-	void deleteModuleImpl(ModuleImpl* ptr) { delete ptr; }
-}
-
-namespace compiler::backend_llvm {
 	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
 
 	Module Module::fromIRCode(std::string_view llvm_ir_code) {

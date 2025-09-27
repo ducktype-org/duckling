@@ -46,5 +46,3 @@ namespace pst {
 		out << "}";
 	}
 }
-
-DEFAULT_BOX_PTR_DELETER_DEFINITION(pst::Attribute);

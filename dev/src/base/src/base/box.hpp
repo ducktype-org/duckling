@@ -21,14 +21,6 @@ namespace base {
 	 */
 	template<class T>
 	struct DefaultBoxPtrDeleter final {
-		static_assert(
-				IS_COMPLETE_V<T>,
-				"DefaultBoxPtrDeleter can be used only with complete types. If you need to use it "
-			    "with "
-				"incomplete type, please provide a specialization using macros "
-				"DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and DEFAULT_BOX_PTR_DELETER_DEFINITION(T)."
-			);
-
 		DefaultBoxPtrDeleter() = default;
 
 		/**
@@ -38,7 +30,14 @@ namespace base {
 		DefaultBoxPtrDeleter(const DefaultBoxPtrDeleter<U>&) {}
 
 		static void del(T* ptr) {
-			
+			static_assert(
+				IS_COMPLETE_V<T>,
+				"DefaultBoxPtrDeleter can be used only with complete types. If you need to use it "
+			    "with "
+				"incomplete type, please provide a specialization using macros "
+				"DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and DEFAULT_BOX_PTR_DELETER_DEFINITION(T)."
+			);
+
 			delete ptr;
 		}
 	};
@@ -415,12 +414,3 @@ using base::MCBox;
 		delete ptr;                                                          \
 	}
 
-
-// class Bsfsfsdfsdf;
-// class A final {
-// 	Box<Bsfsfsdfsdf> box;
-// 	// void foo() {
-// 	// 	box.~Box<Bsfsfsdfsdf>();
-// 	// }
-// 	~A() = default;
-// };

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <base/box.hpp>
-
 namespace pst {
 	// Meta
 	class Stmt;
@@ -112,13 +110,3 @@ namespace pst {
 	class AssignmentExprHolder;
 	class ForTypeExprHolder;
 }
-
-// find a better place for it?
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::ExprElement)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::Attribute)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::DottedName)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::CommaExprHolder)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::CodeBlockOrStmt)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::CodeBlock)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::RoundGroupExpr)
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::ClassBlock)
