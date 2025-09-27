@@ -412,3 +412,13 @@ using base::MCBox;
 		static_assert(IS_COMPLETE_V<T>, "T must be complete at this point"); \
 		delete ptr;                                                          \
 	}
+
+
+class B;
+class A final {
+	Box<B> box;
+	void foo() {
+		box.~Box();
+	}
+	~A() = default;
+};
