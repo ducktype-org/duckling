@@ -32,4 +32,3 @@ namespace compiler::backend_llvm {
 	};
 }
 
-DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_llvm::ModuleImpl)
