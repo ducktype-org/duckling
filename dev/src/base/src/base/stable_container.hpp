@@ -341,8 +341,8 @@ namespace base {
 			 * @param ref
 			 * @return Iterator
 			 */
-			static Iterator fromRef(Ref<Data> ref) {
-				// not sure if this is legal...
+			static Iterator fromRef(Ref<Data> ref) requires std::is_standard_layout_v<Node> {
+				// @TODO, there might be a better way to do it with C++26 reflections
 				static constexpr auto offset = offsetof(Node, content);
 
 				Node* node_ptr
