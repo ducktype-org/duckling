@@ -498,7 +498,6 @@ private:
 	void testDeleters() {
 		struct StatefulDeleter final {
 			int state = 0;
-
 		};
 	}
 };

@@ -31,7 +31,7 @@ namespace base {
 			static_assert(
 				IS_COMPLETE_V<T>,
 				"DefaultBoxPtrDeleter can be used only with complete types. If you need to use it "
-			    "with "
+				"with "
 				"incomplete type, please provide a specialization using macros "
 				"DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and DEFAULT_BOX_PTR_DELETER_DEFINITION(T)."
 			);
@@ -368,7 +368,7 @@ namespace base {
 	MBox(Box<U, UDeleter>&&) noexcept -> MBox<U, UDeleter>;
 
 	/**
- 	 * @brief Constructs a Box by forwarding the arguments to T constructor 
+	 * @brief Constructs a Box by forwarding the arguments to T constructor
 	 * and allocating memory with new operator.
 	 * @note default initialization of Deleter is used.
 	 */
@@ -428,4 +428,3 @@ using base::MCBox;
 		static_assert(IS_COMPLETE_V<T>, "T must be complete at this point"); \
 		delete ptr;                                                          \
 	}
-

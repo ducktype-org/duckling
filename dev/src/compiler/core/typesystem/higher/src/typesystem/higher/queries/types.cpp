@@ -203,7 +203,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			auto pointer_pimpl = makeBox<internal::PointerAbstractTypeImpl>(key);
-			auto ref = pointer_pimpl.refMut().get();
+			auto ref           = pointer_pimpl.refMut().get();
 			pushType(std::move(pointer_pimpl));
 			return ref;
 		}
@@ -227,7 +227,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			auto dynamic_array_pimpl = makeBox<internal::DynamicArrayAbstractTypeImpl>(key);
-			auto ref = dynamic_array_pimpl.refMut().get();
+			auto ref                 = dynamic_array_pimpl.refMut().get();
 			pushType(std::move(dynamic_array_pimpl));
 			return ref;
 		}
@@ -240,7 +240,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			auto tuple_pimpl = makeBox<internal::TupleAbstractTypeImpl>(key.components);
-			auto ref = tuple_pimpl.refMut().get();
+			auto ref         = tuple_pimpl.refMut().get();
 			pushType(std::move(tuple_pimpl));
 			return ref;
 		}
@@ -253,7 +253,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			auto variant_pimpl = makeBox<internal::VariantAbstractTypeImpl>(key.underlying_types);
-			auto ref = variant_pimpl.refMut().get();
+			auto ref           = variant_pimpl.refMut().get();
 			pushType(std::move(variant_pimpl));
 			return ref;
 		}
@@ -266,7 +266,8 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
-			auto function_pimpl = makeBox<internal::FunctionAbstractTypeImpl>(params, result, pure, free);
+			auto function_pimpl
+				= makeBox<internal::FunctionAbstractTypeImpl>(params, result, pure, free);
 			auto ref = function_pimpl.refMut().get();
 			pushType(std::move(function_pimpl));
 			return ref;
@@ -280,7 +281,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			auto class_pimpl = makeBox<internal::ClassAbstractTypeImpl>(key);
-			auto ref = class_pimpl.refMut().get();
+			auto ref         = class_pimpl.refMut().get();
 			pushType(std::move(class_pimpl));
 			return ref;
 		}

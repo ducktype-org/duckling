@@ -31,4 +31,3 @@ namespace compiler::backend_llvm {
 		friend struct Module;
 	};
 }
-

@@ -52,8 +52,8 @@ namespace compiler::backend_llvm {
 				auto features = "";
 
 				llvm::TargetOptions opt;
-				this->target_machine
-					= Box<llvm::TargetMachine>::fromPointerWithDefaultDeleter(target->createTargetMachine(
+				this->target_machine = Box<llvm::TargetMachine>::fromPointerWithDefaultDeleter(
+					target->createTargetMachine(
 						target_triple,
 						cpu,
 						features,
@@ -61,7 +61,8 @@ namespace compiler::backend_llvm {
 						llvm::Reloc::PIC_,
 						std::nullopt,
 						llvm::CodeGenOptLevel::None
-					));
+					)
+				);
 				return this->target_machine.refMut().toOpt().value();
 			}
 		}
