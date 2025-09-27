@@ -16,6 +16,54 @@
 
 namespace base {
 	namespace internal {
+
+		template<typename ObjT>
+		class StableAlocator {
+		private:
+
+			std::vector<usize> available;
+			std::deque<std::optional<ObjT>>   data;
+
+		public:
+			[[nodiscard]] bool isAllocated(usize alloc_idx) const {
+				return data.at(alloc_idx).has_value();
+			}
+
+			template<typename... Args>
+			usize alloc(Args&&... args) {
+				if (available.empty()) {
+					available.push_back(data.size());
+					data.emplace_back(std::nullopt);
+				}
+
+				usize alloc_idx = available.back();
+				available.pop_back();
+
+				CORE_ASSERT(
+					isAllocated(alloc_idx) == false,
+					"trying to allocate space which is already in use"
+				);
+				data.at(alloc_idx).emplace(std::forward<Args>(args)...);
+
+				return alloc_idx;
+			}
+
+			void dealloc(usize alloc_idx) {
+				CORE_ASSERT(
+					isAllocated(alloc_idx) == true, "trying to deallocate already empty space"
+				);
+
+				data.at(alloc_idx).reset();
+				
+				available.push_back(alloc_idx);
+			}
+
+			ObjT& at(usize alloc_idx) {
+				CORE_ASSERT(isAllocated(alloc_idx) == true, "trying to get uninitialized data");
+				return data.at(alloc_idx).value();
+			}
+		};
+		
 		/**
 		 * @class BaseStableVector
 		 * @brief Wrapper class over a container (std::vector<Box>) which returns Ref/CRef on access.
@@ -27,7 +75,6 @@ namespace base {
 		private:
 			using self_t = BaseStableVector;
 
-			// for any pointer tricks, the Node has to be of standard layout
 			class Node final {
 			private:
 				friend self_t;
@@ -43,52 +90,6 @@ namespace base {
 					  content(std::forward<Args>(args)...) {}
 			};
 
-			class StableAlocator {
-			private:
-
-				std::vector<usize> available;
-				std::deque<std::optional<Node>>   data;
-
-			public:
-				[[nodiscard]] bool isAllocated(usize alloc_idx) const {
-					return data.at(alloc_idx).has_value();
-				}
-
-				template<typename... Args>
-				usize alloc(Args&&... args) {
-					if (available.empty()) {
-						available.push_back(data.size());
-						data.emplace_back(std::nullopt);
-					}
-
-					usize alloc_idx = available.back();
-					available.pop_back();
-
-					CORE_ASSERT(
-						isAllocated(alloc_idx) == false,
-						"trying to allocate space which is already in use"
-					);
-					data.at(alloc_idx).emplace(std::forward<Args>(args)...);
-
-					return alloc_idx;
-				}
-
-				void dealloc(usize alloc_idx) {
-					CORE_ASSERT(
-						isAllocated(alloc_idx) == true, "trying to deallocate already empty space"
-					);
-
-					data.at(alloc_idx).reset();
-					
-					available.push_back(alloc_idx);
-				}
-
-				Node& at(usize alloc_idx) {
-					CORE_ASSERT(isAllocated(alloc_idx) == true, "trying to get uninitialized data");
-					return data.at(alloc_idx).value();
-				}
-			};
-
 			using ContainerT = std::vector<usize>;
 			ContainerT data;
 			static_assert(
@@ -96,9 +97,11 @@ namespace base {
 				"When this fail, figure out what to do."
 			);
 
-			mutable StableAlocator memory;
+			mutable StableAlocator<Node> memory;
 
-			inline Node& nodeAt(usize vec_idx) const { return memory.at(data.at(vec_idx)); }
+			inline Node& nodeAt(usize vec_idx) const {
+				return memory.at(data.at(vec_idx));
+			}
 
 		public:
 			using RefT  = Ref<Data>;
