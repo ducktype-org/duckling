@@ -597,7 +597,7 @@ namespace compiler::backend_llvm {
 			CORE_PANIC(error_message);
 		}
 
-		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
+		auto llvm_module = Box<llvm::Module>::fromPointerWithDefaultDeleter(m.release());
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 

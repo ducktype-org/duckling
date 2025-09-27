@@ -53,7 +53,7 @@ namespace compiler::backend_llvm {
 
 				llvm::TargetOptions opt;
 				this->target_machine
-					= Box<llvm::TargetMachine>::fromPointer(target->createTargetMachine(
+					= Box<llvm::TargetMachine>::fromPointerWithDefaultDeleter(target->createTargetMachine(
 						target_triple,
 						cpu,
 						features,

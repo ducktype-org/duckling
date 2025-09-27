@@ -284,23 +284,23 @@ namespace vm {
 	}
 
 	Ref<VmValue> VMProcess::createVmValue(TypeCRef type) {
-		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type));
+		auto value = makeBox<VmValue>(*this, type);
 		owned_vm_values.push_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
 	Ref<VmValue> VMProcess::createVmValue(TypeCRef type, Pointer src) {
-		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+		auto value = makeBox<VmValue>(*this, type, src);
 		owned_vm_values.push_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
 	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type) {
-		return Box<VmValue>::fromPointer(new VmValue(*this, type));
+		return makeBox<VmValue>(*this, type);
 	}
 
 	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
-		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+		return makeBox<VmValue>(*this, type, src);
 	}
 
 	PID VMProcess::getPID() const { return my_pid; }

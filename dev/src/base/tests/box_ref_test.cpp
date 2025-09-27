@@ -80,6 +80,7 @@ public:
 		TESTER_ADD_TEST(testBoxFromPtr);
 		TESTER_ADD_TEST(defaultMembersTest);
 		TESTER_ADD_TEST(testMBoxMRef);
+		TESTER_ADD_TEST(testDeleters);
 	}
 
 private:
@@ -248,7 +249,7 @@ private:
 
 		int* ptr = new int(42);
 		ASSERT_EQUAL(42, *ptr);
-		auto b = Box<int>::fromPointer(ptr);
+		auto b = Box<int>::fromPointerWithDefaultDeleter(ptr);
 		ASSERT_EQUAL(42, *b);
 	}
 
@@ -492,6 +493,13 @@ private:
 			assertThrows<base::Panic>([&]() { *a; }, "Use after move did not throw!");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
+	}
+
+	void testDeleters() {
+		struct StatefulDeleter final {
+			int state = 0;
+
+		};
 	}
 };
 

@@ -4,8 +4,6 @@
 #include "ref.hpp"
 #include "type_traits.hpp"
 
-// TODO THIS PR: remove default construction from fromPointer,
-
 namespace base {
 
 	/**
@@ -94,8 +92,19 @@ namespace base {
 		 * For a regular construction use `makeBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
-		static Box fromPointer(T* ptr, Deleter deleter = Deleter{}) noexcept {
+		static Box fromPointer(T* ptr, Deleter deleter) noexcept {
 			return Box(ptr, std::move(deleter));
+		}
+
+		/**
+		 * @brief Constructs a Box from a raw pointer.
+		 * It takes ownership of the pointer.
+		 *
+		 * For a regular construction use `makeBox` instead.
+		 * It is not a constructor in order to make this call more explicit.
+		 */
+		static Box fromPointerWithDefaultDeleter(T* ptr) noexcept {
+			return fromPointer(ptr, Deleter{});
 		}
 
 		Box(const Box& other) = delete;
@@ -358,9 +367,15 @@ namespace base {
 	template<class U, class UDeleter>
 	MBox(Box<U, UDeleter>&&) noexcept -> MBox<U, UDeleter>;
 
+	/**
+ 	 * @brief Constructs a Box by forwarding the arguments to T constructor 
+	 * and allocating memory with new operator.
+	 * @note default initialization of Deleter is used.
+	 */
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>, class... Args>
+	requires std::is_default_constructible_v<Deleter>
 	inline Box<T, Deleter> makeBox(Args&&... args) {
-		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...));
+		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...), Deleter{});
 	}
 
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>

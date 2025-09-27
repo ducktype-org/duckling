@@ -135,7 +135,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 	auto new_path = PATH / collection_name.strView();
 	if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
 	sub_collections.put(
-		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
+		collection_name, makeBox<ArtifactCollection>(new_path, this)
 	);
 	return subCollectionAt(collection_name);
 }
