@@ -3,9 +3,14 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
+#include <iostream>
+
 namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {
-		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
+		CORE_ASSERT(
+			state == TypeMetadataState::AddingTypes,
+			"Tried to add types to type metadata when it was not in the adding types state"
+		);
 
 		base::StrID name = type.name;
 		TypeID      id   = types.insert(std::move(type), name);
@@ -16,10 +21,17 @@ namespace vm {
 	}
 
 	void TypeMetadata::finalize() {
-		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
+		CORE_ASSERT(
+			state == TypeMetadataState::AddingTypes,
+			"Tried to finalize type metadata when it was not in the AddingTypes state"
+		);
 		state = TypeMetadataState::Finalized;
 
 		for (auto& tp: types) tp.finalize();
+	}
+
+	void TypeMetadata::unfinalize() {
+		if (state == TypeMetadataState::Finalized) state = TypeMetadataState::AddingTypes;
 	}
 
 	TypeCRef TypeMetadata::at(TypeID id) const { return types.at(id); }

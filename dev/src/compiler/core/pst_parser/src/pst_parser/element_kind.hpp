@@ -79,6 +79,7 @@ namespace pst {
 		ParamList,
 		FlowPatternList,
 		DottedName,
+		CallArgument,
 
 		// patterns:
 		FlowPattern,
