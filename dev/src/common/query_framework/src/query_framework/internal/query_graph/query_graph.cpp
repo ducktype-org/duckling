@@ -58,10 +58,12 @@ namespace query::internal {
 	std::vector<NodeID> QueryGraph::getNodeDepsFiltered(
 		internal::NodeID node_id, QueryID dependency_id
 	) const {
-		return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
-				   return id.q_id == dependency_id;
-			   })
-		     | std::ranges::to<std::vector<NodeID>>();
+		std::vector<NodeID> out;
+		
+		auto pre_filtered = getNodeDeps(node_id);
+		for (const auto& n: pre_filtered)
+			if (n.q_id == dependency_id) out.push_back(n);
+		return out;
 	}
 
 	void QueryGraph::debugPrint(std::ostream& out) const {

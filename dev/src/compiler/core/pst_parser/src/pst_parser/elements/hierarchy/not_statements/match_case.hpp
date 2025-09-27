@@ -49,7 +49,7 @@ namespace pst {
 					     .result    = internal.result.give() };
 			};
 			return branches | std::views::transform(to_branch_view)
-			     | std::ranges::to<std::vector>();
+			     | std::ranges::to<std::vector<CaseBranchView>>();
 		}
 
 		[[nodiscard]]

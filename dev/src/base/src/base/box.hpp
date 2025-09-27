@@ -15,7 +15,7 @@ namespace base {
 		 */
 		template<class T>
 		struct BoxPtrDeleter {
-			static_assert(IS_COMPLETE_V<T>);
+			static_assert(IS_COMPLETE_V<T>, "...");
 
 			static void del(T* ptr) { delete ptr; }
 		};
@@ -302,3 +302,4 @@ using base::CBox;
 using base::makeBox;
 using base::MBox;
 using base::MCBox;
+

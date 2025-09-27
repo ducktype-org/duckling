@@ -7,13 +7,14 @@
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
-#include <ranges>
-
 namespace pst {
 	std::string ElementPath::str() const {
-		using namespace std::ranges;
-		using namespace std::views;
-		return elements | join_with('.') | to<std::string>();
+		std::string out;
+		for (const auto& element: elements) {
+			if (not out.empty()) out += '.';
+			out += element;
+		}
+		return out;
 	}
 
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
