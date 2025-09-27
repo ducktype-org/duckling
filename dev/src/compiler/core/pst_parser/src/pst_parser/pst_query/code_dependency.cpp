@@ -31,29 +31,34 @@ namespace pst {
 
 			// We can retrieve the LangElement ID from the NodeId hash, because
 			// LangElement ID is used as the first element of the unstable hash value.
-			static auto get_pst_node = [](query::internal::NodeID lid) {
+			constexpr auto get_pst_node = [](query::internal::NodeID lid) {
 				return LangElement::getByID(lid.hash.val.data.at(0));
 			};
-			static auto get_tokens = [](AccessLocked<LangElement> locked) {
+			constexpr auto get_tokens = [](AccessLocked<LangElement> locked) {
 				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
 			};
-			static auto file_location = [](CRef<lexer::Token> tok) -> bool {
+			constexpr auto file_location = [](CRef<lexer::Token> tok) -> bool {
 				return tok->getPosition().getLocationType() == dia::LocationType::FileLocationType;
 			};
 
-			return nodes | transform(get_pst_node) | transform(get_tokens)
+			// @note #1323 change it to std::ranges::to
+			auto view_output =  nodes | transform(get_pst_node) | transform(get_tokens)
 			     | filter([](auto opt) { return opt.has_value(); })
 			     | transform([](auto opt) { return opt.value(); }) | std::views::join
-			     | filter(file_location) | std::ranges::to<std::vector<CRef<lexer::Token>>>();
+			     | filter(file_location);
+
+			std::vector<CRef<lexer::Token>> output;
+			for (auto tok: view_output) output.emplace_back(tok);
+
+			return output;
 		}
 	}
 
 	std::vector<dia::SourcePosition> queryPositionDependencies(query::internal::NodeID id) {
-		using namespace std::views;
 
-		static auto get_token_pos = [](CRef<lexer::Token> tok) { return tok->getPosition(); };
+		constexpr auto get_token_pos = [](CRef<lexer::Token> tok) { return tok->getPosition(); };
 
-		auto x = viewDependentTokens(id) | transform(get_token_pos);
+		auto x = viewDependentTokens(id) | std::views::transform(get_token_pos);
 
 		// Merge the overlapping/adjacent positions
 		// Might be made into a separate function in the future.
@@ -64,7 +69,7 @@ namespace pst {
 		if (positions.size() == 0) return {};
 		dia::SourcePosition              cur = *positions.begin();
 		std::vector<dia::SourcePosition> merged_positions;
-		for (auto pos: positions | drop(1)) {
+		for (auto pos: positions | std::views::drop(1)) {
 			if (cur.getLocation()->getSourceFile() != pos.getLocation()->getSourceFile()
 			    || cur.getEnd() + 1 < pos.getStart()) {
 				merged_positions.push_back(cur);

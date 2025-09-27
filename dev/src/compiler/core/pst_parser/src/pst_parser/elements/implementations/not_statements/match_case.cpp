@@ -100,14 +100,14 @@ namespace pst {
 									: base::Optional<AccessLocked<UniversalExprHolder>>{},
 						.result    = internal.result.give() };
 		};
-		// std::vector<MatchCase::CaseBranchView> output;
-		// output.reserve(branches.size());
-		// for (const auto& branch: branches) {
-		// 	output.push_back(to_branch_view(branch));
-		// }
-		// return output;
-		return branches | std::views::transform(to_branch_view)
-				| std::ranges::to<std::vector<CaseBranchView>>();
+		// @note: #1323 change it to std::ranges::to.
+		auto view = branches | std::views::transform(to_branch_view);
+		std::vector<CaseBranchView> output;
+		output.reserve(view.size());
+		for (const auto& branch: view) {
+			output.emplace_back(branch);
+		}
+		return output;
 	}
 
 	void MatchCase::dprint(std::ostream& out) const {

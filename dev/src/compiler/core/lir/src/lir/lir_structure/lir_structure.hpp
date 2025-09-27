@@ -155,8 +155,6 @@ namespace compiler::lir {
 
 		LIRValue(LirGlobal value): value(value) {}
 
-		bool operator==(const LIRValue& other) const = default;
-
 		[[nodiscard]]
 		const ValueType& getVariant() const {
 			return value;
