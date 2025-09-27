@@ -20,7 +20,6 @@ namespace base {
 		template<typename ObjT>
 		class StableAlocator {
 		private:
-
 			std::vector<usize> available;
 			std::deque<std::optional<ObjT>>   data;
 
@@ -78,15 +77,15 @@ namespace base {
 			class Node final {
 			private:
 				friend self_t;
-				usize               idx;
-				self_t const* const node_father;
+				usize               pos;
+				self_t const* const NODE_FATHER;
 				Data                content;
 
 			public:
 				template<typename... Args>
 				Node(usize p, self_t const* f, Args&&... args):
-					  idx(p),
-					  node_father(f),
+					  pos(p),
+					  NODE_FATHER(f),
 					  content(std::forward<Args>(args)...) {}
 			};
 
@@ -99,8 +98,8 @@ namespace base {
 
 			mutable StableAlocator<Node> memory;
 
-			inline Node& nodeAt(usize vec_idx) const {
-				return memory.at(data.at(vec_idx));
+			inline Node& nodeAt(usize vec_pos) const {
+				return memory.at(data.at(vec_pos));
 			}
 
 		public:
@@ -193,7 +192,7 @@ namespace base {
 				friend self_t;
 
 				[[nodiscard]] inline usize getPos() const {
-					return inner == nullptr ? iter_father->size() : inner->idx;
+					return inner == nullptr ? iter_father->size() : inner->pos;
 				}
 
 				BaseIterator incThisRetOld(difference_type diff) {
@@ -219,8 +218,8 @@ namespace base {
 					);
 
 					const Node&   node        = *inner;
-					self_t const& node_father = *node.node_father;
-					usize         pos         = node.idx;
+					self_t const& node_father = *node.NODE_FATHER;
+					usize         pos         = node.pos;
 					CORE_ASSERT(
 						iter_father == &node_father,
 						"value belongs to different container than iterator"
@@ -307,17 +306,17 @@ namespace base {
 				del.assertValid();
 				CORE_ASSERT(del.iter_father == this, "was given iterator of other container");
 
-				usize vec_uidx  = del.getPos();
-				usize alloc_idx = data.at(vec_uidx);
+				usize u_vpos  = del.getPos();
+				usize alloc_idx = data.at(u_vpos);
 
-				for (usize i = vec_uidx; i < size(); ++i) nodeAt(i).idx--;
+				for (usize i = u_vpos; i < size(); ++i) nodeAt(i).pos--;
 
-				i64 vec_sidx = static_cast<i64>(vec_uidx);
-				data.erase(data.begin() + vec_sidx);
+				i64 s_vpos = static_cast<i64>(u_vpos);
+				data.erase(data.begin() + s_vpos);
 
 				memory.dealloc(alloc_idx);
 
-				return begin() + vec_sidx;
+				return begin() + s_vpos;
 			}
 
 			Iterator erase(Iterator del) {
@@ -348,7 +347,7 @@ namespace base {
 
 				Node* node_ptr
 					= reinterpret_cast<Node*>(reinterpret_cast<byte*>(ref.get()) - offset);
-				self_t const* father = node_ptr->node_father;
+				self_t const* father = node_ptr->NODE_FATHER;
 
 				return Iterator::make(node_ptr, father);
 			}
