@@ -500,6 +500,15 @@ private:
 		const auto f16box_type = st(f16_type).withReferenceKind(tsh::ReferenceKind::Box);
 		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f16box_type, vbox_type->valueOrThrow());
+
+		auto              sym_vconst  = getChain("VCONST", root_scope).back();
+		auto              tree_vconst = getExprOfConst(sym_vconst);
+		std::stringstream out_vconst;
+		tree_vconst->debugPrint(out_vconst);
+		const auto bool_type       = query::entryPoint<tsh::QueryBoolType>(query::EmptyKey{});
+		const auto const_bool_type = st(bool_type).withMutability(Immutable);
+		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
+		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 	}
 
 	void testError() {
