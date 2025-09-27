@@ -1,4 +1,4 @@
-const x: i32 = 2137;
+const x: i32 = 1235;
 alias a = x;
 namespace N2 {
   alias b = a;

@@ -23,7 +23,7 @@ private:
 
 	void lea() { runTestOnVm("lea.dbc", "", "4", {}); }
 
-	void twoDim() { runTestOnVm("two_dim.dbc", "", "2137", {}); }
+	void twoDim() { runTestOnVm("two_dim.dbc", "", "1235", {}); }
 
 	void nonInstantiableDynTable() {
 		loadInvalidDbc("non_instantiable.dbc", { vm::code::UninstantiableValueError::ERR_MSG });

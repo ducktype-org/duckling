@@ -25,7 +25,9 @@ namespace pst {
 		 * @note Optional of MRef here is intentional
 		 */
 		base::Optional<AccessLocked<ExprHolder>> getValue() const {
-			return expr.map([](const auto& e) -> AccessLocked<ExprHolder> { return e.give(); });
+			return expr.map([](const auto& e) {
+				return static_cast<AccessLocked<ExprHolder>>(e.give());
+			});
 		}
 	};
 }
