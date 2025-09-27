@@ -1,17 +1,13 @@
 #include "type.hpp"
 
-#include <bits/ranges_algo.h>
-
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
-#include <utility>
 
 namespace vm {
 	void Type::isInstantiableImpl(kind::Data& data) {

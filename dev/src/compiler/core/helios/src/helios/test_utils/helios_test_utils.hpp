@@ -4,6 +4,7 @@
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
+#include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>
 

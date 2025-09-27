@@ -9,7 +9,6 @@
 
 #include <unicode/uchar.h>
 
-#include <algorithm>
 #include <utility>
 
 namespace lexer {

@@ -5,14 +5,12 @@
  */
 #pragma once
 
+
 #include "hout/hout.hpp"
-#include "scope_symbol_id.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 
 #include <query_framework/query_int.hpp>
-
-#include <vector>
 
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient

@@ -1,7 +1,6 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios/ctv/ctv.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
@@ -9,7 +8,6 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
@@ -19,7 +17,6 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 

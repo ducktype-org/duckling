@@ -46,8 +46,9 @@
 
 #include <base/box.hpp>
 
-#include <diagnostic/source_position.hpp>
 #include <printer/stream_printer.hpp>
+
+#include <iostream>
 
 namespace dia {
 	/**

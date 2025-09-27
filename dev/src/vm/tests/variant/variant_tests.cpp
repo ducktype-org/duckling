@@ -1,11 +1,7 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/variant.hpp>
-
 #include <tester/tester.hpp>
 
-#include <vm/api/data/status.hpp>
-#include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/exceptions.hpp>
 

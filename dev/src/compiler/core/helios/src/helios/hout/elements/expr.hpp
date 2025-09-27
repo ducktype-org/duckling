@@ -2,7 +2,6 @@
 
 #include "../../scope_symbol_id.hpp"
 
-#include <helios/utils/symbol_list.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/box.hpp>

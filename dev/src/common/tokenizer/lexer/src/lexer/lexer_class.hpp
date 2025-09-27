@@ -4,11 +4,8 @@
 #include "token.hpp"
 
 #include <diagnostic/logger.hpp>
-#include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
-
-#include <vector>
 
 namespace lexer {
 

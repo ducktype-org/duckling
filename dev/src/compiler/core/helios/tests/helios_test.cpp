@@ -1,8 +1,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
-#include <helios/hout/elements.hpp>
-#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -18,8 +16,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
-#include <typesystem/higher/all.hpp>
-#include <typesystem/higher/internal/queries.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -28,7 +25,6 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>

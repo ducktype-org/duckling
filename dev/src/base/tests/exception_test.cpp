@@ -1,9 +1,7 @@
-#include <base/str_utils.hpp>
 
 #include <tester/tester.hpp>
 
 #include <cstring>
-#include <version>
 
 bool compareCstr(const char* const c1, const char* const c2) {
 	return std::string_view(c1) == std::string_view(c2);

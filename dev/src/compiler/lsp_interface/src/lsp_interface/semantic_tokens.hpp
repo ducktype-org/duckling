@@ -12,8 +12,6 @@
 #include <base/ref.hpp>
 #include <base/stringifyable_enum.hpp>
 
-#include <lexer/lexer.hpp>
-
 #include <string>
 
 MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
@@ -44,7 +42,6 @@ MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 )
 
 namespace lsp {
-	class SemanticToken;
 
 	class SemanticToken {
 	public:

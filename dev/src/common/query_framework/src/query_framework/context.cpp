@@ -1,7 +1,5 @@
 #include "context.hpp"
 
-#include "internal/query_graph/query_state.hpp"
-
 namespace query {
 	dia::Logger Context::logger{};
 

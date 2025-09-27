@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "token.hpp"
 
 #include <base/box.hpp>
 

@@ -3,7 +3,8 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include <clah/clah.hpp>
+
+#include <base/macros/diagnostics.hpp>
 
 #include <base64.hpp>
 
@@ -21,17 +22,15 @@ POP_DIAGNOSTIC;
 #include "utils.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/macros/diagnostics.hpp>
 
+#include <clah/clah.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 /**
  * @brief Starts the LSP server on the specified port.

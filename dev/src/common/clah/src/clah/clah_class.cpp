@@ -7,7 +7,6 @@
 
 #include <base/box.hpp>
 #include <base/optional.hpp>
-#include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
 #include <printer/stream_printer.hpp>

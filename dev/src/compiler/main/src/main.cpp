@@ -9,7 +9,6 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst.hpp>
 
@@ -20,8 +19,6 @@
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
-#include <lexer/lexer_class.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>

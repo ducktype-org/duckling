@@ -4,9 +4,9 @@
 #include <base/macros/diagnostics.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
 
 #include <json/json.hpp>
+
 
 PUSH_DIAGNOSTIC
 #pragma GCC diagnostic ignored "-Wuninitialized"

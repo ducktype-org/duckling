@@ -19,9 +19,7 @@
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
-#include <base/stable_hashmap.hpp>
 
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {

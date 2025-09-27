@@ -1,16 +1,11 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <global_state/options.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
-#include <linker/link.hpp>
 
 #include <base/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 

@@ -9,8 +9,6 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <helios/hout/elements.hpp>
-#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>

@@ -2,10 +2,7 @@
 
 #include "file_path.hpp"
 
-#include <base/maps.hpp>
-#include <base/optional.hpp>
 #include <base/raw_view.hpp>
-#include <base/ref.hpp>
 
 #include <expected>
 #include <filesystem>
@@ -13,7 +10,6 @@
 
 namespace fs {
 
-	class FileManager;
 
 	/**
 	 * @brief Represents the type of a file.

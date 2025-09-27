@@ -2,21 +2,11 @@
 
 #include "../instructions.hpp"
 
-#include <base/maps.hpp>
-#include <base/ref.hpp>
-#include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
-#include <base/strongly_typed_id.hpp>
 
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 

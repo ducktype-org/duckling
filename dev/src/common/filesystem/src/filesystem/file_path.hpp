@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <string>
-#include <type_traits>
 
 /**
  * @brief Represents the type of a file path.

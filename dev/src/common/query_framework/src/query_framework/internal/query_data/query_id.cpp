@@ -6,8 +6,6 @@
 
 #include "query_id.hpp"
 
-#include "query_data.hpp"
-
 #include <base/maps.hpp>
 
 template<>

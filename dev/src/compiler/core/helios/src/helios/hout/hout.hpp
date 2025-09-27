@@ -10,12 +10,8 @@
 #include "elements/expr.hpp"  // IWYU pragma: export
 
 #include <helios/ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
 
-#include <base/box.hpp>
 #include <base/string_id.hpp>
-
-#include <query_framework/query_int.hpp>
 
 #include <memory>
 #include <variant>

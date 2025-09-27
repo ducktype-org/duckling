@@ -4,7 +4,6 @@
 #include <base/optional.hpp>
 
 #include <algorithm>
-#include <cstddef>
 #include <unordered_set>
 #include <variant>
 

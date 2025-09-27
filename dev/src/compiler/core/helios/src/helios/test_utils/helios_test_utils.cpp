@@ -1,7 +1,6 @@
 #include "helios_test_utils.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -10,9 +9,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/param.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <pst_parser/pst_visitor.hpp>
 

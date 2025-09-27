@@ -5,12 +5,10 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/element_kind.hpp>
-#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_impl.hpp>
 

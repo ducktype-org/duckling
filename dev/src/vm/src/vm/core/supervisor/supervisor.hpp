@@ -1,13 +1,11 @@
 #pragma once
 
-#include <base/optional.hpp>
+#include <vm/core/process/vmprocess.hpp>
 
-#include <filesystem/file.hpp>
-
-#include <vm/api/api.hpp>
+#include <shared_mutex>
+#include <unordered_map>
 
 namespace vm {
-	class VMProcess;
 
 	class Supervisor final {
 	private:

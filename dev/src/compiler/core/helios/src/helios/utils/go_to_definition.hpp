@@ -6,8 +6,6 @@
 
 #include <base/optional.hpp>
 
-#include <query_framework/query_int.hpp>
-
 namespace compiler::helios {
 	/**
 	 * Perform go-to definition on the given HOUT expression.

@@ -7,8 +7,6 @@
 
 #include "parsing_result.hpp"
 
-#include <base/str_utils.hpp>
-
 #include <utility>
 
 namespace {

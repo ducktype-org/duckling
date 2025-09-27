@@ -6,7 +6,6 @@
 #include "abstract_type.hpp"
 
 #include "internal/abstract_type_impl.hpp"
-#include "internal/queries.hpp"
 
 namespace tsh {
 	[[nodiscard]]

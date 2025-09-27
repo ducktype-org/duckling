@@ -4,7 +4,6 @@
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/vmvalue.hpp>
 
 namespace vm::api {
 	void ignoreResponse([[maybe_unused]] const Response& response) {}

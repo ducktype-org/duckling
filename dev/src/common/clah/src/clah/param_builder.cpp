@@ -7,8 +7,6 @@
 
 #include "exceptions.hpp"
 
-#include <base/variant.hpp>
-
 namespace clah {
 
 	ParamBuilder ParamBuilder::ofValue(Box<ValueParser> value_parser) {

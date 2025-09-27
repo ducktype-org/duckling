@@ -1,9 +1,6 @@
 #pragma once
 
-#include "file_id.hpp"
 #include "source_file.hpp"
-
-#include <pst_parser/pst.hpp>
 
 #include <base/ints.hpp>
 #include <base/maps.hpp>
@@ -32,9 +29,6 @@ namespace compiler::frontend {
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
-
-	class ModuleTreeBuilder;
-	class ModuleTreeModifier;
 
 	/**
 	 * @brief Represents a single module in the Duckling project tree.

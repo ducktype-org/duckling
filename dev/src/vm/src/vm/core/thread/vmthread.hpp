@@ -1,25 +1,21 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include "low_program/instruction.hpp"
 #include "vmvalue.hpp"
 
-#include <base/box.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 
 #include <vm/api/data/api_error.hpp>
-#include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
 #include <atomic>
 #include <condition_variable>
+#include <expected>
 #include <mutex>
 
 /**
@@ -32,7 +28,6 @@ namespace vm {
 		class FunctionHandlers;
 	}
 
-	struct Frame;
 
 	class VMProcess;
 

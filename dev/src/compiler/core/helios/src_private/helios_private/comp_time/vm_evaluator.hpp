@@ -1,7 +1,6 @@
 #pragma once
 
 #include <helios/ctv/ctv.hpp>
-#include <helios/helios_errors.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 

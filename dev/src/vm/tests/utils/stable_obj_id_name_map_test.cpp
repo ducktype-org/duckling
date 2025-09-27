@@ -1,5 +1,4 @@
 #include <base/int_conv.hpp>
-#include <base/str_utils.hpp>
 
 #include <tester/tester.hpp>
 

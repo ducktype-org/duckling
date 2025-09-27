@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include "node_id.hpp"
 
 #include <base/maps.hpp>
@@ -9,7 +10,6 @@
 
 namespace query::internal {
 
-	class QueryState;
 
 	class QueryGraph {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;

@@ -2,6 +2,7 @@
 
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
@@ -9,7 +10,6 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/type_builder.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -17,10 +17,6 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
-#include <vm/loader/errors.hpp>
-#include <vm/loader/loader.hpp>
-#include <vm/loader/parser/elements.hpp>
-#include <vm/loader/parser/errors.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 

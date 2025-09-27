@@ -1,7 +1,6 @@
 #include "../exceptions.hpp"
 
 #include <ostream>
-#include <version>
 
 #ifdef __cpp_lib_stacktrace
 	#include "../pretty_stacktrace.hpp"

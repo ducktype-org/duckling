@@ -1,7 +1,5 @@
 #include "pst_test_utils.hpp"
 
-#include <base/variant.hpp>
-
 #include <set>
 
 namespace pst {

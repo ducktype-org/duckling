@@ -2,8 +2,6 @@
 
 #include "lir_module_data.hpp"
 
-#include <helios/hout/hout.hpp>
-
 namespace compiler::driver {
 	/**
 	 * @brief Converts a HOUTUnit to LIRModuleData (lowers content to MIR and then LIR
