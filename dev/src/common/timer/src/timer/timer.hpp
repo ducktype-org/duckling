@@ -56,9 +56,9 @@ namespace timer {
 	 * Measures time from construction to destruction and adds it to the given Duration reference.
 	 */
 	struct AddToTime final {
-		AddToTime(Ref<Duration> to_add): to_add(to_add), start(now()) {}
+		AddToTime(Ref<Duration> to_add): to_add(to_add), start(timer::now()) {}
 
-		~AddToTime() { to_add->value += timer::duration(start, now()).value; }
+		~AddToTime() { to_add->value += timer::duration(start, timer::now()).value; }
 
 	private:
 		/**
