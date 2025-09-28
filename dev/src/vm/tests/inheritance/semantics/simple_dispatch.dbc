@@ -3,7 +3,7 @@ type fun: method_foo_void_A {pointer_A} void
 
 function method_foo_void_impl_A {pointer_A} -> void {
     init_lany_type x, i64;
-    mov_l64_imm x, 420;
+    mov_l64_imm x, 421;
     output_l64 x;
     deinit; # x
     deinit; # arg0

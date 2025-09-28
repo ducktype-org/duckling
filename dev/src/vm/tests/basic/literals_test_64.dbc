@@ -27,7 +27,7 @@ function foo {} -> i64 {
 
 	label fail;
 	init_lany_type		tmp, i64;
-	mov_l64_imm 		tmp, 2137;
+	mov_l64_imm 		tmp, 1235;
 	output_l64  		tmp;
 	mov_l64_l64 		ret_val, a;
 

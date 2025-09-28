@@ -6,15 +6,7 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-
 using namespace vm::code;
-
-Box<vm::TypeMetadata> TypeContext::validateAndProduceTypeMetadata(
-	const base::HashMap<base::StrID, FuncSignature>& available_functions
-) const {
-	detail::validateTypes(*this, available_functions);
-	return detail::buildTypes(*this);
-}
 
 const vm::ObjIdNameMap<TypeOfData>& TypeContext::getCurrentTypes() const { return types; }
 

@@ -1,5 +1,6 @@
 option(USE_MARCH_NATIVE "Use -march=native. This should be disabled for portable builds" OFF)
 option(STRIP_SYMBOL_INFORMATION "Strip symbol information from binaries" OFF)
+option(DISABLE_UNITY_COMPILATION "Disable unity builds" OFF)
 
 # disable compiler-specific extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
