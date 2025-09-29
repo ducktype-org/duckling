@@ -23,7 +23,7 @@ namespace dia_app {
 		/**
 		 * @brief Identifier of a highlight group assigned to code pieces.
 		 */
-		using hl_id_t    = u32;
+		using hl_id_t = u32;
 		/**
 		 * @brief Priority used for ordering pointer messages. Lower is stronger.
 		 */
@@ -32,7 +32,7 @@ namespace dia_app {
 		/**
 		 * @brief Source line number alias.
 		 */
-		using line_no_t   = u32;
+		using line_no_t = u32;
 		/**
 		 * @brief Source column number alias.
 		 */
