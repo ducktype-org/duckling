@@ -26,6 +26,7 @@ namespace pst {
 		Class,
 		Variable,
 		Fun,
+		FunDecl,
 		Pattern,
 		Block,
 
@@ -78,6 +79,7 @@ namespace pst {
 		ParamList,
 		FlowPatternList,
 		DottedName,
+		CallArgument,
 
 		// patterns:
 		FlowPattern,

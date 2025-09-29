@@ -5,6 +5,8 @@
 #include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
+#include <ranges>
+
 namespace {
 	using namespace vm::code::detail;
 
@@ -104,75 +106,114 @@ namespace {
 			tp, kind, std::move(implements), std::move(virtual_methods), std::move(vtable),
 		};
 	}
-}
 
-Box<vm::TypeMetadata> vm::code::detail::buildTypes(const TypeContext& ctx) {
-	Box<vm::TypeMetadata> metadata = makeBox<vm::TypeMetadata>();
+	/**
+	 * @brief Declare types from a list in the given type_metadata.
+	 */
+	void declareTypes(Ref<vm::TypeMetadata> type_metadata, const std::vector<TypeOfData>& types) {
+		for (const auto& type: types) type_metadata->addType(vm::Type::declareType(typeName(type)));
+	}
 
-	auto types = ctx.getCurrentTypes();
-
-	// Declare all types first.
-	for (const auto& type: types) metadata->addType(vm::Type::declareType(typeName(type)));
-
-	// Well-define every type.
-	for (const auto& type: types) {
-		variant_match(type) {
-			variant_case(PrimitiveType, data) {
-				metadata->at(data.name)->definePrimitive(data.size);
-			}
-			variant_case(PointerType, data) {
-				metadata->at(data.name)->definePointer(metadata->at(data.inner));
-			}
-			variant_case(FixedSizeTableType, data) {
-				metadata->at(data.name)->defineFixedSizeTable(
-					metadata->at(data.inner), data.table_size
-				);
-			}
-			variant_case(DynamicTableType, data) {
-				metadata->at(data.name)->defineDynamicTable(metadata->at(data.inner));
-			}
-			variant_case(DataType, data) {
-				FieldVector fields;
-				fields.reserve(data.fields.size());
-				for (auto& field: data.fields)
-					fields.emplace_back(field.name, metadata->at(field.type));
-				metadata->at(data.name)->defineData(fields, {});
-			}
-			variant_case(VariantType, data) {
-				std::vector<vm::TypeRef> variants;
-				variants.reserve(data.variant_alternatives.size());
-				for (auto& variant: data.variant_alternatives)
-					variants.emplace_back(metadata->at(variant));
-				metadata->at(data.name)->defineVariant(variants);
-			}
-			variant_case(FunctionType, data) {
-				std::vector<vm::TypeCRef> parameters;
-				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
-				metadata->at(data.name)->defineFunction(parameters, metadata->at(data.result));
-			}
-			variant_case(OpaqueType, opaque) {
-				metadata->at(opaque.name)->defineOpaque(opaque.size);
-			}
-			variant_case(ClassType, clazz) {
-				vm::TypeRef             tp     = metadata->at(clazz.name);
-				FieldVector             fields = buildFieldVector(clazz, *metadata, ctx);
-				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(clazz, *metadata, ctx);
-				tp->defineData(fields, std::move(inh_metadata));
-			}
-			variant_case(InterfaceType, interface) {
-				vm::TypeRef             tp     = metadata->at(interface.name);
-				FieldVector             fields = buildFieldVector(interface, *metadata, ctx);
-				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(interface, *metadata, ctx);
-				tp->defineData(fields, std::move(inh_metadata));
-			}
-			variant_default {
-				CORE_PANIC("Unhandled type during type building: ", typeToString(type));
+	/**
+	 * @brief Define types from the list in the given type_metadata.
+	 */
+	void defineTypes(
+		Ref<vm::TypeMetadata>          type_metadata,
+		const TypeContext&             ctx,
+		const std::vector<TypeOfData>& types
+	) {
+		for (const auto& type: types) {
+			variant_match(type) {
+				variant_case(PrimitiveType, data) {
+					type_metadata->at(data.name)->definePrimitive(data.size);
+				}
+				variant_case(PointerType, data) {
+					type_metadata->at(data.name)->definePointer(type_metadata->at(data.inner));
+				}
+				variant_case(FixedSizeTableType, data) {
+					type_metadata->at(data.name)->defineFixedSizeTable(
+						type_metadata->at(data.inner), data.table_size
+					);
+				}
+				variant_case(DynamicTableType, data) {
+					type_metadata->at(data.name)->defineDynamicTable(type_metadata->at(data.inner));
+				}
+				variant_case(DataType, data) {
+					FieldVector fields;
+					fields.reserve(data.fields.size());
+					for (auto& field: data.fields)
+						fields.emplace_back(field.name, type_metadata->at(field.type));
+					type_metadata->at(data.name)->defineData(fields, {});
+				}
+				variant_case(VariantType, data) {
+					std::vector<vm::TypeRef> variants;
+					variants.reserve(data.variant_alternatives.size());
+					for (auto& variant: data.variant_alternatives)
+						variants.emplace_back(type_metadata->at(variant));
+					type_metadata->at(data.name)->defineVariant(variants);
+				}
+				variant_case(FunctionType, data) {
+					std::vector<vm::TypeCRef> parameters;
+					parameters.reserve(data.parameters.size());
+					for (auto& param: data.parameters)
+						parameters.emplace_back(type_metadata->at(param));
+					type_metadata->at(data.name)->defineFunction(
+						parameters, type_metadata->at(data.result)
+					);
+				}
+				variant_case(OpaqueType, opaque) {
+					type_metadata->at(opaque.name)->defineOpaque(opaque.size);
+				}
+				variant_case(ClassType, clazz) {
+					vm::TypeRef             tp     = type_metadata->at(clazz.name);
+					FieldVector             fields = buildFieldVector(clazz, *type_metadata, ctx);
+					vm::InheritanceMetadata inh_metadata
+						= buildInheritanceMetadata(clazz, *type_metadata, ctx);
+					tp->defineData(fields, std::move(inh_metadata));
+				}
+				variant_case(InterfaceType, interface) {
+					vm::TypeRef tp     = type_metadata->at(interface.name);
+					FieldVector fields = buildFieldVector(interface, *type_metadata, ctx);
+					vm::InheritanceMetadata inh_metadata
+						= buildInheritanceMetadata(interface, *type_metadata, ctx);
+					tp->defineData(fields, std::move(inh_metadata));
+				}
+				variant_default {
+					CORE_PANIC("Unhandled type during type building: ", typeToString(type));
+				}
 			}
 		}
 	}
-	metadata->finalize();
-	return metadata;
+}
+
+Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& ctx) {
+	Box<vm::TypeMetadata> type_metadata = makeBox<vm::TypeMetadata>();
+
+	auto types = ctx.getCurrentTypes() | std::ranges::to<std::vector<TypeOfData>>();
+
+	// Declare all types first.
+	declareTypes(type_metadata.refMut(), types);
+
+	// Well-define every type.
+	defineTypes(type_metadata.refMut(), ctx, types);
+
+	type_metadata->finalize();
+	return type_metadata;
+}
+
+void vm::code::detail::rebuildTypeMetadata(
+	Ref<vm::TypeMetadata> type_metadata, const TypeContext& new_ctx
+) {
+	auto new_types = new_ctx.getCurrentTypes() | std::views::drop(type_metadata->size())
+	               | std::ranges::to<std::vector<TypeOfData>>();
+
+	// Reopen type metadata for addition.
+	type_metadata->unfinalize();
+
+	// Declare new types.
+	declareTypes(type_metadata, new_types);
+	// Well define new types.
+	defineTypes(type_metadata, new_ctx, new_types);
+
+	type_metadata->finalize();
 }

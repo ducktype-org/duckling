@@ -1,3 +1,4 @@
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
@@ -54,16 +55,17 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = frontend::createModuleTree(path_to_compile);
 
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 	for (auto& i: top_level->functions) {
-		if (i.original_name == base::StrID("main")) {
-			auto positions
-				= pst::queryPositionDependencies<helios::QueryCodeOfFun>(i.original_symbol);
+		if (i.declaration.original_name == base::StrID("main")) {
+			auto positions = pst::queryPositionDependencies<helios::QueryCodeOfFun>(
+				i.declaration.original_symbol
+			);
 
 			printer::PrinterOStream str;
 			dia::printHighlightedPositions(str, positions);

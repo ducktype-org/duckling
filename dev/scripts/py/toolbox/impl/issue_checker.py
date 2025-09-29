@@ -2,15 +2,18 @@ import re
 import json
 from .helpers import (
     BashCommandError,
-    log_info, 
-    log_warning, 
-    log_new_line, 
+    log_info,
+    log_warning,
+    log_new_line,
     bash_command_get_output,
 )
 import os
 
-def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool = False):
-    if(not issues):
+
+def issue_checker_impl(
+    issues, branch: str = "origin/main", no_merge_base: bool = False
+):
+    if not issues:
         issues = get_issues_from_github()
         if not issues:
             return True
@@ -21,7 +24,9 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
         if not num_str:
             continue
         if not num_str.isdigit() or int(num_str) <= 0:
-            log_warning(f"Issue number '{num_str}' is not a positive integer. Skipping.")
+            log_warning(
+                f"Issue number '{num_str}' is not a positive integer. Skipping."
+            )
             continue
         valid_issue_numbers.append(num_str)
     if not valid_issue_numbers:
@@ -29,11 +34,13 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
         return True
 
     # Match #number followed by a non-digit (whitespace, punctuation, or end of line)
-    patterns = [re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers]
+    patterns = [
+        re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers
+    ]
 
     try:
         files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-        files = [f for f in files_str.strip().split('\n') if f]
+        files = [f for f in files_str.strip().split("\n") if f]
     except Exception as e:
         log_warning(f"Could not get file list from git: {e}")
         return True
@@ -54,30 +61,35 @@ def issue_checker_impl(issues, branch: str = "origin/main", no_merge_base: bool 
                             found_any = True
         except Exception:
             continue
-    
+
     log_new_line()
     log_info("Summary:")
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
     return not found_any
 
+
 def get_issues_from_github():
     import shutil
 
     # Check if 'gh' is available
-    if shutil.which('gh') is None:
-        log_warning("'gh' CLI not found. Cannot run issue-checker without 'gh' or issue numbers.")
+    if shutil.which("gh") is None:
+        log_warning(
+            "'gh' CLI not found. Cannot run issue-checker without 'gh' or issue numbers."
+        )
         return []
 
     # Get OWNER and REPO from git remote (support both SSH and HTTPS URLs)
     try:
-        remote_url, _ = bash_command_get_output('git remote get-url origin')
+        remote_url, _ = bash_command_get_output("git remote get-url origin")
         remote_url = remote_url.strip()
     except BashCommandError as e:
         log_warning(f"Could not get git remote url: {e}")
         return []
-    
-    m = re.match(r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url)
+
+    m = re.match(
+        r"(?:git@|https://)([^/:]+)[:/]+([^/]+)/([^/.]+)(?:\.git)?", remote_url
+    )
     if not m:
         log_warning("Could not parse OWNER/REPO from git remote.")
         return []
@@ -85,7 +97,7 @@ def get_issues_from_github():
 
     # Get current branch
     try:
-        branch_name, _ = bash_command_get_output('git rev-parse --abbrev-ref HEAD')
+        branch_name, _ = bash_command_get_output("git rev-parse --abbrev-ref HEAD")
         branch_name = branch_name.strip()
     except BashCommandError as e:
         log_warning(f"Could not get current branch: {e}")
@@ -97,12 +109,14 @@ def get_issues_from_github():
         # If not set, try to get PR number associated with this branch using gh
         try:
             pr_number, _ = bash_command_get_output(
-                f'gh pr view {branch_name} --json number -q .number'
+                f"gh pr view {branch_name} --json number -q .number"
             )
             pr_number = pr_number.strip()
             log_info(f"Found associated Pull Request number: {pr_number}")
         except BashCommandError as e:
-            log_warning(f"No associated Pull Request found for branch: {branch_name}: {e}")
+            log_warning(
+                f"No associated Pull Request found for branch: {branch_name}: {e}"
+            )
             return []
 
     if not pr_number:
@@ -126,10 +140,10 @@ def get_issues_from_github():
         data = json.loads(gh_output)
         nodes = (
             data.get("data", {})
-                .get("repository", {})
-                .get("pullRequest", {})
-                .get("closingIssuesReferences", {})
-                .get("nodes", [])
+            .get("repository", {})
+            .get("pullRequest", {})
+            .get("closingIssuesReferences", {})
+            .get("nodes", [])
         )
         return [str(node["number"]) for node in nodes if "number" in node]
     except BashCommandError as e:

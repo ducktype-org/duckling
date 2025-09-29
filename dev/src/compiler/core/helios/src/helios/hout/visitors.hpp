@@ -23,6 +23,7 @@ namespace compiler::helios::code {
 		BinaryOperatorExpr,
 		UnaryOperatorExpr,
 		TernaryOperatorExpr,
+		ChainComparisonExpr,
 		ParenthesisExpr,
 		TupleTypeConstructorExpr,
 		VariantTypeConstructorExpr,

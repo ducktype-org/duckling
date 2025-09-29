@@ -11,6 +11,7 @@
 namespace compiler::helios {
 	namespace houtgen {
 		struct GeneratedSymbolData;
+		struct ImplementationOf_QueryGeneratedSymbol;
 	}
 
 	// Forward:
@@ -42,6 +43,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;
 		friend houtgen::GeneratedSymbolData;
+		friend houtgen::ImplementationOf_QueryGeneratedSymbol;
 	};
 
 	/**
