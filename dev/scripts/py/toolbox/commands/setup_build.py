@@ -104,8 +104,8 @@ from click import Choice, option, command
 )
 @option(
     "--enable-link-time-optimization",
-    prompt="Enable link time optimization (LTO)",
-    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult.",
+    prompt="Enable link time optimization (LTO), requires a lot of resources",
+    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires a lot of resources.",
     type=bool,
     default=False,
     is_flag=True,
