@@ -1,7 +1,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
-#include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -28,7 +27,6 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>

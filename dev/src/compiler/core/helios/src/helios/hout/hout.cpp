@@ -22,7 +22,7 @@ namespace compiler::helios {
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& const_: glob_data) out += const_.debugPrint();
+		for (auto& const_GD: glob_data) out += const_GD.debugPrint();
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
@@ -34,8 +34,8 @@ namespace compiler::helios {
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
-		SymID                                                symbol,
-		tsh::SymbolType<>                                    ret_type,
+		const SymID                                          symbol,
+		const tsh::SymbolType<>                              ret_type,
 		const std::shared_ptr<std::vector<code::Parameter>>& parameters
 	):
 		  original_symbol(symbol),
@@ -103,7 +103,9 @@ namespace compiler::helios {
 		return out.str();
 	}
 
-	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type):
+	HOUTGlobalData::HOUTGlobalData(
+		const SymID symbol, query::Context& ctx, const HOUTGlobalDataType data_type
+	):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
 		  data_type(data_type),

@@ -10,7 +10,7 @@ class FirstClassEver {
     }
 
     private {
-        FirstClassEver.copy(FirstClassEver other) = {
+        FirstClassEver.copy(other: FirstClassEver) = {
             a = other.a;
             b = other.b;
         }
@@ -20,3 +20,6 @@ class FirstClassEver {
 }
 
 class SecondClass extends FirstClassEver {}
+
+let a: FirstClassEver = FirstClassEver(1, 2.0);
+let b = a;

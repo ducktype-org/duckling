@@ -155,6 +155,7 @@ namespace compiler::helios {
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprStmt:

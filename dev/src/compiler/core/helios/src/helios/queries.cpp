@@ -1,5 +1,8 @@
 #include "queries.hpp"
 
+#include "symbols/query_class_symbol_data.hpp"
+#include "symbols/query_type_from_definition.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -7,6 +10,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/actions/return.hpp>
@@ -17,12 +21,15 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
+
+#include <iostream>
 
 namespace compiler::helios {
 
@@ -43,9 +50,32 @@ namespace compiler::helios {
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
 						out.functions.push_back(ctx.query<QueryCodeOfFun>(sym));
+					if (kind(sym) == SymbolKind::Class)
+						appendClassConstructors(out.functions, sym, ctx);
 				}
 			}
 			return out;
+		}
+
+		static void appendClassConstructors(
+			std::vector<HOUTFunction>& out_functions, const SymID class_sym, Context& ctx
+		) {
+			CORE_ASSERT(
+				kind(class_sym) == SymbolKind::Class,
+				"Invalid argument exception: expected class symbol"
+			);
+
+			// For now, we handle only the class's primary constructor.
+			// @TODO: #1290 Handle auxiliary constructors.
+
+			const auto class_type
+				= ctx.query<QueryTypeFromDefinition>(class_sym)
+			          ->expect("Not handling errors here yet... (generating class constructor)")
+			          .getType()
+			          .as<tsh::ClassAbstractType>();
+			const auto implicit_ctor
+				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type);
+			out_functions.push_back(*implicit_ctor);
 		}
 
 		QUERY_AUTO_CACHE_COPY

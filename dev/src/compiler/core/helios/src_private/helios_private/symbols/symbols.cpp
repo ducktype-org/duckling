@@ -92,6 +92,7 @@ namespace compiler::helios {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
+			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();

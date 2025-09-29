@@ -25,6 +25,9 @@ namespace compiler::helios {
 
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
+	namespace houtgen {
+		struct ImplementationOf_QueryImplicitClassConstructor;
+	}
 
 	namespace code {
 		// Forward declaration:
@@ -37,7 +40,6 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunctionDeclaration final {
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
-		// @TODO:
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunctionDeclaration() = delete;
@@ -47,7 +49,7 @@ namespace compiler::helios {
 
 		/**
 		 * @note it is used for hashes
-		 * @note For now it works,
+		 * @note For now, it works,
 		 * but in the future with generics, and templates it might not
 		 * We might want to add actual hash?
 		 */
@@ -58,7 +60,7 @@ namespace compiler::helios {
 		tsh::SymbolType<> return_type;
 
 		/**
-		 * @note use of shared_ptr's is intentional, as they
+		 * @note use of shared_ptrs is intentional, as they
 		 * work well for incomplete types, and fit the use case.
 		 * In the future we might optimize it to single (or zero) shared_ptr, but
 		 * that will require some boilerplate. Stored vector can't be const, because
@@ -80,6 +82,7 @@ namespace compiler::helios {
 			const std::shared_ptr<std::vector<code::Parameter>>& parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 	};
 
 	/**
@@ -90,6 +93,7 @@ namespace compiler::helios {
 	private:
 		HOUTFunction(HOUTFunctionDeclaration, const std::shared_ptr<const code::CodeBlock>& body);
 		friend struct ImplementationOf_QueryCodeOfFun;
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 
 	public:
 		HOUTFunction() = delete;
@@ -109,6 +113,14 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		std::string debugPrint() const;
+
+	private:
+		/**
+		 * Construct a HOUT Function object from a SymID which appears in the PST.
+		 * @param symbol The symbol of the function.
+		 * @param ctx The query context to resolve the function's properties.
+		 */
+		HOUTFunction(SymID symbol, query::Context& ctx);
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };

@@ -1,17 +1,24 @@
 #pragma once
 
 #include <helios/scope_symbol_id.hpp>
+// #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <hashing/hash.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
+	struct QueryTypeOfSymbol;
+	struct QueryTypeFromDefinition;
+
 	/**
 	 * Symbol data shared by all symbols.
 	 */
@@ -101,10 +108,15 @@ namespace compiler::helios {
 
 			std::variant<ImplicitConstructor, Variable> data;
 
+			GeneratedSymbolData(std::variant<ImplicitConstructor, Variable> data):
+				  data(std::move(data)) {}
+
 			[[nodiscard]]
 			u64 queryUnstablePerfectHash() const {
 				return VISIT(data, d, return d.queryUnstablePerfectHash(););
 			}
+
+			tsh::SymbolType<> getType(query::Context& ctx) const;
 		};
 	}
 
@@ -142,10 +154,20 @@ namespace compiler::helios {
 		static auto makeGeneratedSymbol(
 			const base::StrID name, houtgen::GeneratedSymbolData generated_data
 		) {
+			SymbolKind kind{};
+			variant_match(generated_data.data) {
+				variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
+					kind = SymbolKind::Function;
+				}
+				variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
+					kind = SymbolKind::Variable;
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
 			return SymbolData{
 				.common = {
 					.name = name,
-					.kind = SymbolKind::Generated,
+					.kind = kind,
 				},
 				.other  = generated_data,
 			};

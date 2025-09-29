@@ -143,7 +143,7 @@ namespace tsh {
 		 */
 		template<std::derived_from<AbstractType> ABSTRACT_TYPE>
 		ABSTRACT_TYPE as() const {
-			return ABSTRACT_TYPE(pimpl);
+			return ABSTRACT_TYPE(*this);
 		}
 
 		/**
