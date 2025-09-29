@@ -46,7 +46,7 @@ namespace term_ui {
 	class Line {
 		// The list of non-overlapping line pieces mapped by their starting
 		// position in the line.
-		base::HashMap<u32, LinePiece> pieces;
+		base::Map<u32, LinePiece> pieces;
 
 	public:
 		// Check if the line is empty on interval [beg, beg + len - 1].
