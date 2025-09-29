@@ -1,10 +1,11 @@
 #pragma once
 
+#include <helios/scope_symbol_id.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+
 #include "base/optional.hpp"
 #include "base/stringifyable_enum.hpp"
 #include <base/box.hpp>
-#include <helios/scope_symbol_id.hpp>
-#include <typesystem/higher/abstract_type.hpp>
 
 #include <json/json.hpp>
 

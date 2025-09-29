@@ -1,4 +1,5 @@
 #include "view_manager.hpp"
+
 #include "fetcher.hpp"
 
 namespace dia_app {
@@ -10,7 +11,7 @@ namespace dia_app {
 
 		ViewManager ViewManager::createFromJson(json input) {
 			fetcher::initialize(std::move(input));
-			
+
 			hl_id_t              next_component_id = 0;
 			std::function<u32()> get_next_id
 				= [&next_component_id]() { return next_component_id++; };
@@ -38,14 +39,18 @@ namespace dia_app {
 				  };
 
 			std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics;
-			for (uint info_group_id = 0; info_group_id < fetcher::getInfoGroupCount(); ++info_group_id) {
+			for (uint info_group_id = 0; info_group_id < fetcher::getInfoGroupCount();
+			     ++info_group_id) {
 				auto vc = fetcher::generateViewConstructor(info_group_id);
 
-				diagnostics.emplace_back(Diagnostic::createFromViewConstructor(vc, hl_name_to_id, get_next_id, group_to_id), vc);
+				diagnostics.emplace_back(
+					Diagnostic::createFromViewConstructor(
+						vc, hl_name_to_id, get_next_id, group_to_id
+					),
+					vc
+				);
 			}
-			return ViewManager(
-				std::move(diagnostics)
-			);
+			return ViewManager(std::move(diagnostics));
 		}
 
 		void ViewManager::getView(::view::ViewResponse* response) {

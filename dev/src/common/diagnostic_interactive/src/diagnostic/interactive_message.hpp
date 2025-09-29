@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "interactive_content.hpp"
 
+#include <helios/scope_symbol_id.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include "base/string_id.hpp"
@@ -10,7 +11,6 @@
 
 #include "diagnostic/interactive_code.hpp"
 #include "query_framework/query_int.hpp"
-#include <helios/scope_symbol_id.hpp>
 
 #include <json/json.hpp>
 
@@ -19,11 +19,13 @@
 
 namespace dia {
 	using nlohmann::json;
-	/* This is the main error class. If you want to create a new error, you need to inherit from this class.
-	 * It composes of the main content and side notes providing additional information.
+
+	/* This is the main error class. If you want to create a new error, you need to inherit from
+	 * this class. It composes of the main content and side notes providing additional information.
 	 *
-	 * Check out compiler/code/helios/errors/operator_not_found to see how to create a custom error from scrach.
-	*/
+	 * Check out compiler/code/helios/errors/operator_not_found to see how to create a custom error
+	 * from scrach.
+	 */
 	class InteractiveMessage {
 	private:
 		Box<dia::InteractiveContent>                     content;
@@ -74,8 +76,8 @@ namespace dia {
 	/*
 	 * Placeholder class. You can use it to report errors while developing some functionality,
 	 * with the intention to replace it with something custom later.
-	 * 
-	*/ 
+	 *
+	 */
 	class TODOError: public InteractiveMessage {
 		class Params: public ContentParams {
 			const std::string message;
@@ -83,7 +85,7 @@ namespace dia {
 		public:
 			Params(const std::string& message): message(message) {}
 
-			json tojson() override { return json::object_t{{ "message", message }}; }
+			json tojson() override { return json::object_t{ { "message", message } }; }
 		};
 
 	public:

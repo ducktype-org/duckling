@@ -28,7 +28,7 @@ namespace dia_app {
 		 */
 		class ViewManager {
 		private:
-			std::vector<std::pair<Diagnostic, ViewConstructor>>                            diagnostics;
+			std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics;
 
 		public:
 			ViewManager(std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics);

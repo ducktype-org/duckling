@@ -54,15 +54,11 @@ namespace dia_app {
 		std::vector<line_data_t<T>> filterEmptyLines(component_get_view_data_t<T> data) {
 			std::vector<line_data_t<T>> result;
 			// Prefix content (before the first explicit line start)
-			if (data.first.has_value()) {
+			if (data.first.has_value())
 				result.emplace_back(line_metadata_t{}, std::move(data.first.value()));
-			}
 			// Mid lines: keep only non-empty components
-			for (auto& [meta, comp]: data.second) {
-				if (comp.has_value()) {
-					result.emplace_back(meta, std::move(comp.value()));
-				}
-			}
+			for (auto& [meta, comp]: data.second)
+				if (comp.has_value()) result.emplace_back(meta, std::move(comp.value()));
 			return result;
 		}
 
@@ -100,9 +96,9 @@ namespace dia_app {
 			std::vector<line_data_t<::view::NoHlComponent>> lines
 		) {
 			// Build a single NoHl concat component with newlines between lines
-			auto result = base::makeBox<::view::NoHlComponent>();
+			auto  result   = base::makeBox<::view::NoHlComponent>();
 			auto* repeated = result->mutable_concat_component()->mutable_components();
-			bool first = true;
+			bool  first    = true;
 			for (auto& [ignored_meta, component_opt]: lines) {
 				if (!component_opt.has_value()) continue;
 				if (!first) {

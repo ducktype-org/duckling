@@ -17,7 +17,7 @@ namespace term_ui {
 		u32 res = 1;
 		if (line_no.has_value()) {
 			u32 number = line_no.value();
-			res       = std::to_string(number).size() + 1;
+			res        = std::to_string(number).size() + 1;
 		}
 		return res;
 	}

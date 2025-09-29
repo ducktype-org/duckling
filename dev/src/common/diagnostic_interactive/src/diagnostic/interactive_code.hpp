@@ -2,7 +2,6 @@
 
 #include "common.hpp"
 #include "pst_parser/lang_parser_element.hpp"
-#include <diagnostic/source_position.hpp>
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -14,6 +13,8 @@
 
 #include <base/ref.hpp>
 
+#include <diagnostic/source_position.hpp>
+
 #include <json/json.hpp>
 
 #include <set>
@@ -23,14 +24,14 @@
 namespace dia {
 	using pointer_message = dia::pointer_message;
 	using nlohmann::json;
-	
+
 	/*
-	 * Responsible for creating a code sample. 
+	 * Responsible for creating a code sample.
 	 * Available child classes:
-	 * 	- InteractiveCode, which creates a code sample semanticly structured and enriched with compiler symbols.
-	 * 	 Needed for all of view manager features to be available.
+	 * 	- InteractiveCode, which creates a code sample semanticly structured and enriched with
+	 * compiler symbols. Needed for all of view manager features to be available.
 	 * 	- SimpleCode, which just outputs the code as a block of text.
-	*/ 
+	 */
 	class AbstractCode {
 	protected:
 		dia::SourcePosition                       position;

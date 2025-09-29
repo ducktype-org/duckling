@@ -1,9 +1,10 @@
 #include "interactive_message.hpp"
 
-#include "base/string_id.hpp"
 #include "interactive_logger.hpp"
 
 #include <typesystem/higher/abstract_type.hpp>
+
+#include "base/string_id.hpp"
 
 using nlohmann::json;
 
@@ -39,5 +40,3 @@ json dia::InteractiveMessage::tojson() const {
 	}
 	return res;
 }
-
-
