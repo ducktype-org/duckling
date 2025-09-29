@@ -31,28 +31,58 @@ namespace dia_app {
 			std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics;
 
 		public:
+			/**
+			 * @brief Construct a ViewManager with a list of diagnostics and their constructors.
+			 */
 			ViewManager(std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics);
 
+			/**
+			 * @brief Build a ViewManager from the full diagnostic file in JSON.
+			 *
+			 * Parses the diagnostic groups, initializes ViewConstructors and the
+			 * corresponding Diagnostic structures.
+			 */
 			static ViewManager createFromJson(json input);
 
+			/**
+			 * @brief Serialize the current view (all diagnostics) to gRPC response.
+			 */
 			void getView(::view::ViewResponse* response);
 
+			/**
+			 * @brief Apply a click interaction on a component and return updated view.
+			 */
 			void click(const ::view::ClickRequest* request, ::view::ClickResponse* response);
 
+			/**
+			 * @brief Attempt to close a side info from the current side path.
+			 */
 			void closeSideInfo(
 				const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response
 			);
 
+			/**
+			 * @brief Resolve and follow an explore edge in the side panel.
+			 */
 			void getEdge(const ::view::EdgeRequest* request, ::view::EdgeResponse* response);
 		};
 
+		/**
+		 * @brief gRPC service implementation delegating to ViewManager.
+		 */
 		class ViewServiceImpl: public ::view::ViewService::Service {
 		private:
 			ViewManager vm;
 
 		public:
+			/**
+			 * @brief Construct the service with a ready ViewManager.
+			 */
 			ViewServiceImpl(ViewManager vm);
 
+			/**
+			 * @brief Build the service from diagnostic JSON.
+			 */
 			static ViewServiceImpl createFromJson(const json& input);
 
 			::grpc::Status GetView(
@@ -80,6 +110,12 @@ namespace dia_app {
 			) override;
 		};
 
+		/**
+		 * @brief Run a gRPC server exposing the ViewService over RPC.
+		 *
+		 * Creates a service from the provided diagnostic JSON and starts the
+		 * server loop on an available port.
+		 */
 		void runViewManagerRPCServer(const json& input);
 	}  // namespace view_manager
 }  // namespace dia_app

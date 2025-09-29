@@ -66,11 +66,5 @@ namespace dia_app {
 
 			void tryGetEdge(side_info_id_t side_info_id, edge_id_t edge_id);
 		};
-
-		void openSideEntries(
-			const std::vector<side_entry_id_t>&   side_entries,
-			const std::weak_ptr<ViewConstructor>& view_constructor,
-			InteractionContext&                   interaction_context
-		);
 	}  // namespace view_manager
 }  // namespace dia_app
