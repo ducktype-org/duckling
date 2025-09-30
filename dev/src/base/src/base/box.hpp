@@ -177,7 +177,10 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
-		~Box() { deleter.del(ptr); }
+		~Box() {
+			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
+							   // https://github.com/ducktype-org/duckling/issues/402
+		}
 	};
 
 	/**
@@ -369,7 +372,10 @@ namespace base {
 			return Box<T, Deleter>::fromPointer(output, std::move(deleter));
 		}
 
-		~MBox() { deleter.del(ptr); }
+		~MBox() {
+			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
+							   // https://github.com/ducktype-org/duckling/issues/402
+		}
 	};
 
 	// Deduction guide for constructing a MBox from a Box:
