@@ -59,11 +59,11 @@ namespace base {
 		static_assert(
 			IsPlainType<Deleter>,
 			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
-		    "expressed as a requires clause/concept "
+			"expressed as a requires clause/concept "
 			"usage, to prevent the need to write it in friend declarations."
 			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
-		    "is especially important as some conflicting declaration errors are "
-		    "no-diagnostic-required cases on non matching requirement friend "
+			"is especially important as some conflicting declaration errors are "
+			"no-diagnostic-required cases on non matching requirement friend "
 			"redefinition."
 		);
 
@@ -201,11 +201,11 @@ namespace base {
 		static_assert(
 			IsPlainType<Deleter>,
 			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
-		    "expressed as a requires clause/concept "
+			"expressed as a requires clause/concept "
 			"usage, to prevent the need to write it in friend declarations."
 			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
-		    "is especially important as some conflicting declaration errors are "
-		    "no-diagnostic-required cases on non matching requirement friend "
+			"is especially important as some conflicting declaration errors are "
+			"no-diagnostic-required cases on non matching requirement friend "
 			"redefinition."
 		);
 
@@ -387,13 +387,13 @@ namespace base {
 			std::is_default_constructible_v<Deleter>,
 			"Deleter must be default constructible."
 			"This requirement is not "
-		    "expressed as a requires clause/concept "
+			"expressed as a requires clause/concept "
 			"usage, to prevent the need to write it in friend declarations."
 			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
-		    "is especially important as some conflicting declaration errors are "
-		    "no-diagnostic-required cases on non matching requirement friend "
+			"is especially important as some conflicting declaration errors are "
+			"no-diagnostic-required cases on non matching requirement friend "
 			"redefinition."
-			
+
 		);
 		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...), Deleter{});
 	}
