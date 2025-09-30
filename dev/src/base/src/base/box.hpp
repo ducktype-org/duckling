@@ -360,7 +360,7 @@ namespace base {
 		 * @brief Method that converts MBox to Optional<Box>.
 		 * It leaves MBox in null state.
 		 *
-		 * @return Optional<SDBox<T>>
+		 * @return Optional<Box<T>>
 		 */
 		Optional<Box<T, Deleter>> toOptBox() && {
 			T* output = ptr;
