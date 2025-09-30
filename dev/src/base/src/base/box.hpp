@@ -116,6 +116,7 @@ namespace base {
 		}
 
 		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
 		Box(Box<U, UDeleter>&& other) noexcept:
 			  ptr{ std::move(other).ptr },
 			  deleter{ std::move(other).deleter } {
@@ -132,6 +133,7 @@ namespace base {
 		 * @return Box&
 		 */
 		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
 		Box& operator=(Box<U, UDeleter>&& oth) noexcept {
 			deleter.del(ptr);
 
@@ -240,6 +242,7 @@ namespace base {
 		}
 
 		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
 		MBox(Box<U, UDeleter>&& other) noexcept:
 			  ptr{ std::move(other).ptr },
 			  deleter{ std::move(other).deleter } {
@@ -247,6 +250,7 @@ namespace base {
 		}
 
 		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
 		MBox(MBox<U, UDeleter>&& other) noexcept:
 			  ptr{ std::move(other).ptr },
 			  deleter{ std::move(other).deleter } {
@@ -263,6 +267,7 @@ namespace base {
 		 * @return MBox&
 		 */
 		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
 		MBox& operator=(MBox<U, UDeleter>&& oth) noexcept {
 			deleter.del(ptr);
 
@@ -281,6 +286,7 @@ namespace base {
 		 * @return MBox&
 		 */
 		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
 		MBox& operator=(Box<U, UDeleter>&& oth) noexcept {
 			deleter.del(ptr);
 

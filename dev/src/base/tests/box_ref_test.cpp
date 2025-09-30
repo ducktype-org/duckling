@@ -511,8 +511,6 @@ private:
 			auto ib = Box<int, StatefulDeleter<int>>::fromPointer(new int(42), StatefulDeleter<int>{ 7 });
 			ASSERT_EQUAL(*ib, 42);
 			ASSERT_EQUAL(StatefulDeleter<int>::s_state, 0);
-
-			Box<int> jb = std::move(ib);
 		}
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
 
