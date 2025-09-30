@@ -502,8 +502,10 @@ private:
 
 		void del(T* ptr) {
 			delete ptr;
-			state++;
-			s_state++;
+			if (ptr != nullptr) {
+				state++;
+				s_state++;
+			}
 		}
 	};
 
