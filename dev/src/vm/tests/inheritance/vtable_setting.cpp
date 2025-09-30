@@ -15,9 +15,9 @@ public:
 
 private:
 	void settingVtableCorrectness() {
-		runTestOnVm("setting_vtable/table_of_virtual.dbc", {}, {"0\n"}, {}, 0);
-		runTestOnVm("setting_vtable/resetting_vtable.dbc", {}, {"1\n0\n"}, {}, 0);
-		runTestOnVm("setting_vtable/variant_of_virtual.dbc", {}, {"0\n"}, {}, 0);
+		runTestOnVm("setting_vtable/table_of_virtual.dbc", {}, { "0\n" }, {}, 0);
+		runTestOnVm("setting_vtable/resetting_vtable.dbc", {}, { "1\n0\n" }, {}, 0);
+		runTestOnVm("setting_vtable/variant_of_virtual.dbc", {}, { "0\n" }, {}, 0);
 
 		using namespace vm::exceptions;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
@@ -35,12 +35,8 @@ private:
 			},
 		});
 
-		for (auto& [filename, error]: invalid_filename_and_error) {
-			assertExecutionPanickedWith(
-				runTestOnVmGetResult(filename, "", ""),
-				error
-			);
-		}
+		for (auto& [filename, error]: invalid_filename_and_error)
+			assertExecutionPanickedWith(runTestOnVmGetResult(filename, "", ""), error);
 	}
 };
 

@@ -449,9 +449,9 @@ namespace vm {
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
 			if (*inh_meta_pointer == nullptr) throw exceptions::VMVtableUnset();
-			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			const auto  method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
-			const auto  implementation_name = inh_metadata->vtable[method_name];
+			const auto inh_metadata = (*inh_meta_pointer)->getInheritanceMetadata().value();
+			const auto method_name  = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
 				= *thread.executing_program->getFunctions().idOf(implementation_name);
