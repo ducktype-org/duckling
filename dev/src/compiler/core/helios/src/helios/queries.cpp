@@ -320,6 +320,21 @@ namespace compiler::helios {
 				auto location_type  = location_expr->expression_type.getSymbolType();
 				auto new_value_type = new_value_expr->expression_type.getSymbolType();
 
+				// When this code was being written, this check could not be tested.
+				// The optional result of this visitor is getting unwrapped without
+				// checking for emptiness, which causes a panic.
+				// @todo write a test for this once helios error handling is more robust
+				auto location_mutability = location_type.getMutability();
+				if (location_mutability == tsh::Mutability::Immutable) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							assignment->getSourcePosition(),
+							"Left side of assignment can't be immutable."
+						)
+					);
+					return;  // fail
+				}
+
 				auto new_value_coerced = coerceExpression(std::move(new_value_expr), location_type);
 
 				if (new_value_coerced.hasError()) {
@@ -397,8 +412,6 @@ namespace compiler::helios {
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				// @TODO: do something with mut/immut
-
 				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
@@ -407,6 +420,20 @@ namespace compiler::helios {
 
 				if (stmt->getValue().empty()) {
 					// no initial value case
+
+					// When this code was being written, this check could not be tested.
+					// The optional result of this visitor is getting unwrapped without
+					// checking for emptiness, which causes a panic.
+					// @todo write a test for this once helios error handling is more robust
+					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(),
+							base::strConcat("Immutable variables must have an initial value")
+						));
+						return;  // fail
+					}
+
 					output(code::VariableStmt({}, symbol_type, symbol));
 					return;
 				} else {
