@@ -121,6 +121,6 @@ namespace tokenizer {
 
 	template<class... Ts>
 	Box<TokenSource> makeTokenSource(Ts&&... args) {
-		return makeBox<TokenSource>(std::forward<Ts>(args)...);
+		return Box<TokenSource>::fromPointerWithDefaultDeleter(new TokenSource(std::forward<Ts>(args)...));
 	}
 }

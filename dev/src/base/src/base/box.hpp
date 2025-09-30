@@ -379,8 +379,8 @@ namespace base {
 	 * @note default initialization of Deleter is used.
 	 */
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>, class... Args>
-	requires std::is_default_constructible_v<Deleter>
 	inline Box<T, Deleter> makeBox(Args&&... args) {
+		static_assert(std::is_default_constructible_v<Deleter>, "Deleter must be default constructible. This is not present as a requires clause/concept usage, to prevent no-diagnostic-required cases on non matching requirement friend redefinition.");
 		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...), Deleter{});
 	}
 
