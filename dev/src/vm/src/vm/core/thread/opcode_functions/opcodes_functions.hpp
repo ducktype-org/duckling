@@ -105,7 +105,7 @@ namespace vm {
 			usize                    function_id
 		) {
 			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.executing_program->functions[function_id];
+			auto& called_func  = thread.executing_program->getFunctions()[function_id];
 			const bool called_rets_void = called_func.result_type->getName() == "void";
 			std::cerr << "Calling: " << called_func.name.strView() << "\n";
 
@@ -178,7 +178,7 @@ namespace vm {
 			VMThread&                                 thread,
 			TypeID                                    type_id
 		) {
-			auto type     = thread.executing_program->types->at(type_id);
+			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 

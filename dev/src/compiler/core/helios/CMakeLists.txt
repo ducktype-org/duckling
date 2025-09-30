@@ -5,6 +5,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
+	src_private/helios_private/expressions/call_processing.cpp
 	src_private/helios_private/expressions/chain_expr.cpp
 	src_private/helios_private/expressions/query_hout_of_expr.cpp
 	src_private/helios_private/expressions/builtin_operations.cpp

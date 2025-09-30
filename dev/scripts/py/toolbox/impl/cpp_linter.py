@@ -3,7 +3,7 @@ from os import cpu_count
 from pathlib import Path
 import sys
 import tempfile
-from typing import List
+from typing import List, Dict, Tuple
 
 from .helpers import (
     BashCommandError,
@@ -16,6 +16,7 @@ from .helpers import (
     log_warning,
 )
 from .list_files import list_files_impl
+
 
 def cpp_linter_impl(
     clang_tidy_path: str,
@@ -58,35 +59,38 @@ def cpp_linter_impl(
     return clang_tidy_failed, clang_format_failed
 
 
-def get_unstaged_new_files() -> List[str]:
-    # Use the shared implementation from list_files module
-    from .list_files import _get_unstaged_new_files
-    return _get_unstaged_new_files()
-
-
-def get_repo_cpp_files():
+def get_repo_cpp_files() -> Dict[str, List[Tuple[int, int]]]:
     # Use the new standardized file listing for C++ files
     return list_files_impl(
-        extensions=['.cpp', '.hpp', '.cc', '.cxx', '.h'], 
-        only_modified=False, 
-        lines=True
+        extensions=[".cpp", ".hpp", ".cc", ".cxx", ".h"],
+        only_modified=False,
+        lines=True,
     )
 
 
-def get_modified_files_and_lines(branch: str, no_merge_base: bool = False):
+def get_modified_files_and_lines(
+    branch: str, no_merge_base: bool = False
+) -> Dict[str, List[Tuple[int, int]]]:
     # Use the shared implementation from list_files module
     return list_files_impl(
-        branch=branch,
-        no_merge_base=no_merge_base,
-        only_modified=True,
-        lines=True
+        branch=branch, no_merge_base=no_merge_base, only_modified=True, lines=True
     )
 
 
-def get_files_for_linter(all, branch, no_merge_base):
+def get_files_for_linter(
+    all: bool, branch: str, no_merge_base: bool
+) -> Dict[str, List[List[int]]]:
     if all:
-        return get_repo_cpp_files()
-    return get_modified_files_and_lines(branch, no_merge_base)
+        files_to_lint = get_repo_cpp_files()
+    else:
+        files_to_lint = get_modified_files_and_lines(branch, no_merge_base)
+
+    # Transform the list of line ranges from a list of tuples to a list of lists.
+    # So it prints out nicely and fits the JSON like format accepted by clang.
+    return {
+        filename: [list(line_range) for line_range in line_ranges]
+        for filename, line_ranges in files_to_lint.items()
+    }
 
 
 def clang_tidy_on(

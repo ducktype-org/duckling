@@ -1,5 +1,6 @@
 #include "compile_llvm.hpp"
 
+#include "../statistics_private/statistics.hpp"
 #include "llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
@@ -14,6 +15,8 @@ namespace compiler::driver {
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, const LIRModuleData& lir_module
 	) {
+		timer::AddToTime _(&backend_compilation_time);
+
 		backend_llvm::Module mod(lir_module.module_id);
 
 		std::vector<CRef<lir::Function>> ctors;

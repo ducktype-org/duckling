@@ -42,16 +42,12 @@ namespace vm {
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
 	 */
-	constexpr u64 FRAME_COUNT = 16'384;
+	constexpr u64 FRAME_COUNT = ThreadStack::FRAMES_LENGTH;
 
 	/**
 	 * @brief Number of fixed and preallocated stack bytes.
-	 * 256 - a magic number - it means if frames take on average 256 bytes
-	 * of stack space, then there can be at most FRAME_COUNT frames
-	 * on the stack, but if functions on average take more than 256 bytes of space
-	 * then fewer frames will be able to fit.
 	 */
-	constexpr u64 STACK_LENGTH = FRAME_COUNT * 256;
+	constexpr u64 STACK_LENGTH = ThreadStack::STACK_LENGTH;
 
 	/**
 	 * @brief This structure holds pointers to `frame_stack` and `local_stack_reserved`
@@ -122,6 +118,13 @@ namespace vm {
 		std::atomic<bool> execution_request_break = false;
 
 		/**
+		 * @brief The program being executed by this thread.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
+		 * nullptr if no code was loaded.
+		 */
+		MCRef<low::LowVMProgram> executing_program = nullptr;
+
+		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
 		 * store a reference to this object.
 		 */
@@ -148,8 +151,8 @@ namespace vm {
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		[[nodiscard]] low::FuncData createProgramStartFunction(
-			const low::FuncData& func, const ProgramRunArguments& args
+		[[nodiscard]] low::LowFuncData createProgramStartFunction(
+			const low::LowFuncData& func, const ProgramRunArguments& args
 		) const;
 
 		/**
@@ -158,14 +161,9 @@ namespace vm {
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
 		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
 		 */
-		[[nodiscard]] low::FuncData createStartFunctionFor(
-			const low::FuncData& func, const FunctionRunArguments& func_args
+		[[nodiscard]] low::LowFuncData createStartFunctionFor(
+			const low::LowFuncData& func, const FunctionRunArguments& func_args
 		) const;
-
-		/**
-		 * @brief Holds the currently executed program
-		 */
-		MCRef<low::LowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @brief This is the primary function to call to start execution on the VM.
@@ -176,7 +174,9 @@ namespace vm {
 		 * @param func - the function to execute.
 		 * @return Mutable reference to a value returned by the program
 		 */
-		Ref<VmValue> executeFunction(const low::FuncData& start_function, const low::FuncData& func);
+		Ref<VmValue> executeFunction(
+			const low::LowFuncData& start_function, const low::LowFuncData& func
+		);
 
 		void setProcessStatus(const vm::api::ProcStatus& status);
 
@@ -191,8 +191,8 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
-		 * @brief Creates a new thread that runs the code in the Executor service.
-		 * Blocks until the thread is running.
+		 * @brief Creates a new thread that runs the code.
+		 * Blocks until the thread is not running.
 		 *
 		 * @param program - program for the thread to run,
 		 * @param func_name - name of the function to run,

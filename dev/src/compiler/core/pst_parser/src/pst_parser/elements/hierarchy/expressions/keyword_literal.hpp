@@ -7,8 +7,8 @@ namespace pst::expr {
 	 * @brief Element that represents an keyword literal in an expression
 	 */
 	class KeywordLiteral final: public ExprElement {
-		Keyword                                     keyword = Keyword::NotAKeyword;
-		base::Optional<AccessInternal<ExprElement>> template_specifier;
+		Keyword keyword = Keyword::NotAKeyword;
+		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
 		KeywordLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}

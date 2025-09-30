@@ -7,6 +7,7 @@ from .helpers import (
 )
 from click import command, option, Choice
 
+
 @command()
 @build_system(
     help="Build system to use",

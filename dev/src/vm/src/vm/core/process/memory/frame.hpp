@@ -19,7 +19,7 @@
 
 namespace vm {
 	namespace low {
-		struct FuncData;
+		struct LowFuncData;
 	}
 
 	struct FlagData {
@@ -79,7 +79,7 @@ namespace vm {
 		 * If frame doesn't change, but a function does (e.g. tailcall), this pointer should be
 		 * updated accordingly, so that it's always valid.
 		 */
-		MCRef<low::FuncData> current_function;
+		MCRef<low::LowFuncData> current_function;
 
 		void resetFrameData() { *this = Frame(); }
 	};

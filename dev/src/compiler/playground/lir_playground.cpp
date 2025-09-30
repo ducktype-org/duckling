@@ -1,3 +1,4 @@
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -41,7 +42,7 @@ int main(int argc, const char* argv[]) {
 
 	using namespace compiler;
 
-	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = frontend::createModuleTree(path_to_compile);
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
