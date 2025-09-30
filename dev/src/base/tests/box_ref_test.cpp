@@ -495,10 +495,32 @@ private:
 		ASSERT_EQUAL(LiveCounter::count, 0);
 	}
 
+	template<class T>
+	struct StatefulDeleter final {
+		int state = 0;
+		static inline int s_state = 0;
+		void del(T* ptr) {
+			delete ptr;
+			state++;
+			s_state++;
+		}
+	};
+
 	void testDeleters() {
-		struct StatefulDeleter final {
-			int state = 0;
-		};
+		{
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointer(new int(42), StatefulDeleter<int>{ 7 });
+			ASSERT_EQUAL(*ib, 42);
+			ASSERT_EQUAL(StatefulDeleter<int>::s_state, 0);
+
+			Box<int> jb = std::move(ib);
+		}
+		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
+
+
+		static_assert(
+			not std::is_constructible_v<Box<int, StatefulDeleter<int>>, Box<int>>,
+			"Box with custom deleter should not be constructible from Box with default deleter"
+		);
 	}
 };
 
