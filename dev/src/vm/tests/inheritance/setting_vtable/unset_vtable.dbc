@@ -8,7 +8,7 @@ type fun: method_toHumanYears {pointer_Animal} void
 type class: Animal {
     abstract: true;
     virtual_methods: {
-        toHumanYears: method_toHumanYears, 
+        toHumanYears: method_toHumanYears,
     };
 }
 
