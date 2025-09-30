@@ -47,8 +47,8 @@ namespace base {
 	 * Attempt to use it after that will result in a panic. In the future we might consider
 	 * removing this check in release build for performance.
 	 *
-	 * @note Currently deleters are supported if a simple, copy-based way. If the need for
-	 * stranger behavior arises, we can add it as needed.
+	 * @note Currently deleters are supported in a simple, copy-based way. If the need for
+	 * more complex behavior arises, we can add it as needed.
 	 *
 	 * @tparam T pointed type
 	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has
