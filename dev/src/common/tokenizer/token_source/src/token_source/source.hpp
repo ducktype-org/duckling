@@ -21,7 +21,7 @@ namespace tokenizer {
 	 *
 	 * @note For now it's very minimal and doesn't check proper usage.
 	 */
-	class TokenSource {
+	class TokenSource final {
 	private:
 		dia::Logger                            log;
 		base::Box<dia::Location>               location;
@@ -51,8 +51,11 @@ namespace tokenizer {
 		 */
 		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
 
-		template<class T, class Deleter, class... Ts>
-		friend base::Box<T, Deleter> base::makeBox(Ts&&... args);
+		// template<class T, class Deleter, class... Ts>
+		// friend base::Box<T, Deleter> base::makeBox(Ts&&... args);
+
+		template<class... Ts>
+		friend Box<TokenSource> makeTokenSource(Ts&&... args);
 
 	public:
 		TokenSource(const TokenSource&) = delete;
