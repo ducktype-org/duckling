@@ -284,7 +284,7 @@ namespace vm {
 	}
 
 	Ref<VmValue> VMProcess::createVmValue(TypeCRef type) {
-		auto value = Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type));	
+		auto value = Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type));
 		owned_vm_values.push_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
@@ -297,11 +297,12 @@ namespace vm {
 	}
 
 	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type) {
-		return Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type));	
+		return Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type));
 	}
 
 	Box<VmValue> VMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
-		return Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type, src));	}
+		return Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type, src));
+	}
 
 	PID VMProcess::getPID() const { return my_pid; }
 

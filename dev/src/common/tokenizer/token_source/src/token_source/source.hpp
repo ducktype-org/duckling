@@ -51,9 +51,6 @@ namespace tokenizer {
 		 */
 		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
 
-		// template<class T, class Deleter, class... Ts>
-		// friend base::Box<T, Deleter> base::makeBox(Ts&&... args);
-
 		template<class... Ts>
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);
 
@@ -124,6 +121,7 @@ namespace tokenizer {
 
 	template<class... Ts>
 	Box<TokenSource> makeTokenSource(Ts&&... args) {
-		return Box<TokenSource>::fromPointerWithDefaultDeleter(new TokenSource(std::forward<Ts>(args)...));
+		return Box<TokenSource>::fromPointerWithDefaultDeleter(new TokenSource(std::forward<Ts>(args
+		)...));
 	}
 }
