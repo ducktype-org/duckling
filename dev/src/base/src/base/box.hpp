@@ -44,8 +44,7 @@ namespace base {
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
 	 * scope. It is not nullable, and it is not copyable.
 	 * @note: When performing a move operation, the source pointer is set to nullptr.
-	 * Attempt to use it after that will result in a panic. In the future we might consider
-	 * removing this check in release build for performance.
+	 * Attempt to use it after that will result in a panic.
 	 *
 	 * @note Currently deleters are supported in a simple, copy-based way. If the need for
 	 * more complex behavior arises, we can add it as needed.
@@ -59,8 +58,12 @@ namespace base {
 	private:
 		static_assert(
 			DirectType<Deleter>,
-			"Deleter must be a direct type. This is not present as a requires clause/concept "
-			"usage, to prevent no-diagnostic-required cases on non matching requirement friend "
+			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
+		    "expressed as a requires clause/concept "
+			"usage, to prevent the need to write it in friend declarations."
+			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
+		    "is especially important as some conflicting declaration errors are "
+		    "no-diagnostic-required cases on non matching requirement friend "
 			"redefinition."
 		);
 
@@ -201,8 +204,12 @@ namespace base {
 	private:
 		static_assert(
 			DirectType<Deleter>,
-			"Deleter must be a direct type. This is not present as a requires clause/concept "
-			"usage, to prevent no-diagnostic-required cases on non matching requirement friend "
+			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
+		    "expressed as a requires clause/concept "
+			"usage, to prevent the need to write it in friend declarations."
+			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
+		    "is especially important as some conflicting declaration errors are "
+		    "no-diagnostic-required cases on non matching requirement friend "
 			"redefinition."
 		);
 
@@ -382,9 +389,15 @@ namespace base {
 	inline Box<T, Deleter> makeBox(Args&&... args) {
 		static_assert(
 			std::is_default_constructible_v<Deleter>,
-			"Deleter must be default constructible. This is not present as a requires "
-			"clause/concept usage, to prevent no-diagnostic-required cases on non matching "
-			"requirement friend redefinition."
+			"Deleter must be default constructible."
+			"This requirement is not "
+		    "expressed as a requires clause/concept "
+			"usage, to prevent the need to write it in friend declarations."
+			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
+		    "is especially important as some conflicting declaration errors are "
+		    "no-diagnostic-required cases on non matching requirement friend "
+			"redefinition."
+			
 		);
 		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...), Deleter{});
 	}
