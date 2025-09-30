@@ -25,6 +25,14 @@ private:
 				"setting_vtable/unset_vtable.dbc",
 				VMVtableUnset::ERR_MSG,
 			},
+			{
+				"setting_vtable/unset_variant_of_virtual.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
+			{
+				"setting_vtable/unset_table_of_virtual.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
 		});
 
 		for (auto& [filename, error]: invalid_filename_and_error) {
