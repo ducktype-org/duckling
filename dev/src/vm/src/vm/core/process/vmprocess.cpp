@@ -292,7 +292,6 @@ namespace vm {
 	Ref<VmValue> VMProcess::createVmValue(TypeCRef type, Pointer src) {
 		auto value = Box<VmValue>::fromPointerWithDefaultDeleter(new VmValue(*this, type, src));
 		owned_vm_values.push_back(std::move(value));
-		owned_vm_values.push_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
