@@ -383,8 +383,8 @@ namespace base {
 		static_assert(
 			std::is_default_constructible_v<Deleter>,
 			"Deleter must be default constructible. This is not present as a requires "
-		    "clause/concept usage, to prevent no-diagnostic-required cases on non matching "
-		    "requirement friend redefinition."
+			"clause/concept usage, to prevent no-diagnostic-required cases on non matching "
+			"requirement friend redefinition."
 		);
 		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...), Deleter{});
 	}
