@@ -57,7 +57,7 @@ namespace base {
 	class Box final {
 	private:
 		static_assert(
-			DirectType<Deleter>,
+			IsPlainType<Deleter>,
 			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
 		    "expressed as a requires clause/concept "
 			"usage, to prevent the need to write it in friend declarations."
@@ -100,11 +100,7 @@ namespace base {
 		}
 
 		/**
-		 * @brief Constructs a Box from a raw pointer.
-		 * It takes ownership of the pointer.
-		 *
-		 * For a regular construction use `makeBox` instead.
-		 * It is not a constructor in order to make this call more explicit.
+		 * @brief Same as fromPointer, but uses default constructed Deleter.
 		 */
 		static Box fromPointerWithDefaultDeleter(T* ptr) noexcept {
 			return fromPointer(ptr, Deleter{});
@@ -203,7 +199,7 @@ namespace base {
 	class MBox final {
 	private:
 		static_assert(
-			DirectType<Deleter>,
+			IsPlainType<Deleter>,
 			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
 		    "expressed as a requires clause/concept "
 			"usage, to prevent the need to write it in friend declarations."

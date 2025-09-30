@@ -83,7 +83,7 @@ namespace base {
 	concept IsNumber = std::is_floating_point_v<T> || std::is_integral_v<T>;
 
 	template<typename T>
-	concept DirectType = (not std::is_reference_v<T>) and (not std::is_pointer_v<T>);
+	concept IsPlainType = (not std::is_reference_v<T>) and (not std::is_pointer_v<T>);
 
 
 	/**
