@@ -448,7 +448,16 @@ namespace vm {
 
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
+
+			// Surfacing an important assumption, which may not be true on some architectures.
+			// @TODO #1331 Statically verify that vtables are set, to remove this.
+			/* static_assert */ CORE_ASSERT(
+				nullptr == std::bit_cast<std::byte*>(intptr_t{ 0 }),
+				"For now we assumed nullptr is bitwise zero"
+			);
+			// std::bit_cast is not constexpr, even though it is guaranteed by stdc++20
 			if (*inh_meta_pointer == nullptr) throw exceptions::VMVtableUnset();
+
 			const auto inh_metadata = (*inh_meta_pointer)->getInheritanceMetadata().value();
 			const auto method_name  = thread.executing_program->getMethodNamePool()[instr->arg1];
 			const auto implementation_name = inh_metadata->vtable[method_name];
