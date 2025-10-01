@@ -121,15 +121,15 @@ namespace vm {
 	}
 
 	void Memory::deinitGlobals() {
-		// We are first freeing all the data and then decreasing the refcounts.
-		// This is very important, because there might be links between the global variables,
-		// and if we were to free them and decrease the refcount in the wrong order we might
-		// throw a false-positive exception. This solution avoids this problem.
-
-		for (const auto& block: global_blocks | std::views::values) freeBlock(block);
-
-		for (const auto& block: global_blocks | std::views::values) decreaseBlockRefcount(block);
 		try {
+			// We are first freeing all the data and then decreasing the refcounts.
+			// This is very important, because there might be links between the global variables,
+			// and if we were to free them and decrease the refcount in the wrong order we might
+			// throw a false-positive exception. This solution avoids this problem.
+
+			for (const auto& block: global_blocks | std::views::values) freeBlock(block);
+
+			for (const auto& block: global_blocks | std::views::values) decreaseBlockRefcount(block);
 		} catch (exceptions::VMFoundMemoryLeakException&) {
 			std::cerr
 				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
