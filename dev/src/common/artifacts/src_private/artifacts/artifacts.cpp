@@ -136,7 +136,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 	if (!std::filesystem::exists(new_path)) std::filesystem::create_directory(new_path);
 	sub_collections.put(
 		collection_name,
-		Box<ArtifactCollection>::fromPointerWithDefaultDeleter(new ArtifactCollection(new_path, this)
+		Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this)
 	    )
 	);
 	return subCollectionAt(collection_name);

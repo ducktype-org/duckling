@@ -95,15 +95,15 @@ namespace base {
 		 * For a regular construction use `makeBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
-		static Box fromPointer(T* ptr, Deleter deleter) noexcept {
+		static Box fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
 			return Box(ptr, std::move(deleter));
 		}
 
 		/**
-		 * @brief Same as fromPointer, but uses default constructed Deleter.
+		 * @brief Same as fromPointerWithCustomDeleter, but uses default constructed Deleter.
 		 */
-		static Box fromPointerWithDefaultDeleter(T* ptr) noexcept {
-			return fromPointer(ptr, Deleter{});
+		static Box fromPointer(T* ptr) noexcept {
+			return fromPointerWithCustomDeleter(ptr, Deleter{});
 		}
 
 		Box(const Box& other) = delete;
@@ -369,7 +369,7 @@ namespace base {
 			T* output = ptr;
 			ptr       = nullptr;
 			if (output == nullptr) return {};
-			return Box<T, Deleter>::fromPointer(output, std::move(deleter));
+			return Box<T, Deleter>::fromPointerWithCustomDeleter(output, std::move(deleter));
 		}
 
 		~MBox() {
@@ -401,7 +401,7 @@ namespace base {
 			"redefinition."
 
 		);
-		return Box<T, Deleter>::fromPointer(new T(std::forward<Args>(args)...), Deleter{});
+		return Box<T, Deleter>::fromPointerWithCustomDeleter(new T(std::forward<Args>(args)...), Deleter{});
 	}
 
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>

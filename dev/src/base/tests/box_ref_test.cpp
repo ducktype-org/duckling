@@ -249,7 +249,7 @@ private:
 
 		int* ptr = new int(42);
 		ASSERT_EQUAL(42, *ptr);
-		auto b = Box<int>::fromPointerWithDefaultDeleter(ptr);
+		auto b = Box<int>::fromPointer(ptr);
 		ASSERT_EQUAL(42, *b);
 	}
 
@@ -538,7 +538,7 @@ private:
 
 	void testDeleters() {
 		{
-			auto ib = Box<int, StatefulDeleter<int>>::fromPointer(
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
 				new int(42), StatefulDeleter<int>{ 7 }
 			);
 			ASSERT_EQUAL(*ib, 42);
@@ -552,19 +552,19 @@ private:
 		);
 
 		{
-			auto ib = Box<int, StatefulDeleter<int>>::fromPointer(
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
 				new int(42), StatefulDeleter<int>{ 7 }
 			);
 			Box<int, FromStatefulDeleterByValue<int>> jb = std::move(ib);
 		}
 		{
-			auto ib = Box<int, StatefulDeleter<int>>::fromPointer(
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
 				new int(42), StatefulDeleter<int>{ 7 }
 			);
 			Box<int, FromStatefulDeleterByCopy<int>> jb = std::move(ib);
 		}
 		{
-			auto ib = Box<int, StatefulDeleter<int>>::fromPointer(
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
 				new int(42), StatefulDeleter<int>{ 7 }
 			);
 			Box<int, FromStatefulDeleterByMove<int>> jb = std::move(ib);
@@ -572,7 +572,7 @@ private:
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
 
 		{
-			MBox ib = Box<int, StatefulDeleter<int>>::fromPointer(
+			MBox ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
 				new int(42), StatefulDeleter<int>{ 7 }
 			);
 			Box b = std::move(ib).toOptBox().value();

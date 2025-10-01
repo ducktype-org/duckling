@@ -52,7 +52,7 @@ namespace compiler::backend_llvm {
 				auto features = "";
 
 				llvm::TargetOptions opt;
-				this->target_machine = Box<llvm::TargetMachine>::fromPointerWithDefaultDeleter(
+				this->target_machine = Box<llvm::TargetMachine>::fromPointer(
 					target->createTargetMachine(
 						target_triple,
 						cpu,
