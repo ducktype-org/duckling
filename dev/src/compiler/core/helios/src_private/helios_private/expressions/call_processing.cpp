@@ -4,9 +4,11 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -77,7 +79,7 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
+	 * @brief Attempts to use given normal and named arguments as arguments for given builtin function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
 	 * invalidated. Requires #1300.
@@ -117,11 +119,15 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-
+		auto ctor_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+			base::StrID("new"),
+			{houtgen::GeneratedSymbolData::ImplicitConstructor{class_symbol}},
+		});
+		return attemptFittingFun(ctx, ctor_symbol, normal_arguments, named_arguments);
 	}
 
 	/**
-	 * @brief Attemps to use given normal and named arguments as arguments for given function.
+	 * @brief Attempts to use given normal and named arguments as arguments for given function.
 	 */
 	base::Optional<Box<CallExpr>> attemptFitting(
 		query::Context&                        ctx,

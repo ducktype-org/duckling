@@ -219,15 +219,68 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			CORE_ASSERT(
-				kind(key) == SymbolKind::Function,
-				"Function declaration processing called on non-function symbol"
-			);
-
-			DeclarationVisitor func_maker(ctx, key);
-			stmt(ctx, key).value()->acceptVisitor(func_maker);
-
-			return func_maker.out.value();
+			switch (kind(key)) {
+			case SymbolKind::Function:
+				variant_match(getSymRef(key)->other) {
+					variant_case_novalue(PstSymbolData) {
+						DeclarationVisitor func_maker(ctx, key);
+						stmt(ctx, key).value()->acceptVisitor(func_maker);
+						return func_maker.out.value();
+					}
+					variant_case(houtgen::GeneratedSymbolData, generated_data) {
+						variant_match(generated_data.data) {
+							variant_case(
+								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
+							) {
+								auto class_type
+									= ctx.query<QueryTypeFromDefinition>({ ctor_data.classSymbol })
+								          ->expect(
+											  "Not handling errors here yet... (getting "
+											  "declaration of generated constructor symbol)"
+										  )
+								          .getType()
+								          .as<tsh::ClassAbstractType>();
+								return ctx
+								    .query<houtgen::QueryImplicitClassConstructor>({ class_type })
+								    ->declaration;
+							}
+							variant_default { CORE_UNREACHABLE(); }
+						}
+					}
+					variant_default {
+						// Builtin symbols are handled below.
+						CORE_UNREACHABLE();
+					}
+				}
+				CORE_UNREACHABLE();
+			case SymbolKind::BuiltinFunction: {
+				const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
+				                              ->expect(
+												  "Not handling errors here yet... (getting "
+												  "declaration of builtin function)"
+											  )
+				                              .getType()
+				                              .as<tsh::FunctionAbstractType>();
+				const auto return_type = builtin_type.getResultType();
+				auto       parameters  = std::vector<code::Parameter>{};
+				for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
+					const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+						base::StrID(base::strConcat("_", i).c_str()),
+						{ houtgen::GeneratedSymbolData::Variable{ key, i } },
+					});
+					parameters.emplace_back(
+						name(param_symbol), param_type, std::nullopt, param_symbol
+					);
+				}
+				return HOUTFunctionDeclaration{
+					key,
+					return_type,
+					std::make_shared<std::vector<code::Parameter>>(std::move(parameters)),
+				};
+			}
+			default:
+				CORE_UNREACHABLE();
+			}
 		}
 
 		QUERY_AUTO_NO_CACHE  // @TODO: #1300
