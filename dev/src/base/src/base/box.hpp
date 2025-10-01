@@ -179,7 +179,7 @@ namespace base {
 
 		~Box() {
 			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
-							   // https://github.com/ducktype-org/duckling/issues/402
+			                   // https://github.com/ducktype-org/duckling/issues/402
 		}
 	};
 
@@ -374,7 +374,7 @@ namespace base {
 
 		~MBox() {
 			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
-							   // https://github.com/ducktype-org/duckling/issues/402
+			                   // https://github.com/ducktype-org/duckling/issues/402
 		}
 	};
 
@@ -401,7 +401,9 @@ namespace base {
 			"redefinition."
 
 		);
-		return Box<T, Deleter>::fromPointerWithCustomDeleter(new T(std::forward<Args>(args)...), Deleter{});
+		return Box<T, Deleter>::fromPointerWithCustomDeleter(
+			new T(std::forward<Args>(args)...), Deleter{}
+		);
 	}
 
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
