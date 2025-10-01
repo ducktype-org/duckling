@@ -375,7 +375,7 @@ namespace compiler::helios {
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
 					} else {
 						// Currently only "using stmt" has transparent decl kind, but>>F declares a
-						// symbol.
+						// symbol #1319
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
 					}

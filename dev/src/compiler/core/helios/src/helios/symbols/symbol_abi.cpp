@@ -24,6 +24,7 @@ namespace compiler::helios {
 	query::QResult<base::StrID, errors::Failed> getStrFromExternCallArg(
 		query::Context& ctx, pst::AccessLocked<pst::LangElement> arg
 	) {
+		// Add proper helios error handling once we have new error logging system
 		auto call_arg_opt = arg.unlock(ctx).dynamicCast<pst::CallArgument>();
 		if (!call_arg_opt) return query::QError(errors::Failed());
 
