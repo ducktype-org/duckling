@@ -213,6 +213,11 @@ namespace compiler::helios {
 								type_val.withReferenceKind(tsh::ReferenceKind::Box)
 							};
 							break;
+						case code::BuiltinUnary::Const:
+							result = CompileTimeValue{
+								type_val.withMutability(tsh::Mutability::Immutable)
+							};
+							break;
 						default:
 							CORE_PANIC(
 								"TreeEvalVisitor encountered unsupported unary operation: ",
