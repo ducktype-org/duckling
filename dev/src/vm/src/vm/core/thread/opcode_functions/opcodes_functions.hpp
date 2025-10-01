@@ -94,7 +94,7 @@ namespace vm {
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
 		static
-#if !defined(BUILD_TYPE_DEV)
+#ifdef BUILD_TYPE_DEV_OPT
 			__attribute__((always_inline))
 #endif
 			void
@@ -170,7 +170,7 @@ namespace vm {
 		}
 
 		static
-#if !defined(BUILD_TYPE_DEV)
+#ifdef BUILD_TYPE_DEV_OPT
 			__attribute__((always_inline))
 #endif
 			void
@@ -203,7 +203,7 @@ namespace vm {
 		}
 
 		static
-#if !defined(BUILD_TYPE_DEV)
+#ifdef BUILD_TYPE_DEV_OPT
 			__attribute__((always_inline))
 #endif
 			void
