@@ -93,9 +93,19 @@ namespace vm::loader::compiler {
 		bc.reserve(ctx.instructions_without_labels.size());
 
 		for (usize op_idx = 0; op_idx < ctx.instructions_without_labels.size(); ++op_idx) {
-			const auto& op    = ctx.instructions_without_labels[op_idx];
-			u64         arg_0 = 0;
-			u64         arg_1 = 0;
+			const code::Instruction& op    = ctx.instructions_without_labels[op_idx];
+			u64                      arg_0 = 0;
+			u64                      arg_1 = 0;
+
+			base::Optional<std::string> repr
+				= VISIT(op, instr, return instr.bytecode_pos.map([](const dia::SourcePosition& pos) {
+					  const auto& chars = pos.getSource()->getChars();
+					  std::string result;
+					  for (usize i = pos.getStart(); i < pos.getEnd(); i++)
+						  result += chars.at(i).rawStr();
+					  return result;
+				  }));
+
 			variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
@@ -103,6 +113,7 @@ namespace vm::loader::compiler {
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {   \
 		arg_0 = lowerArgument(ctx, op_idx, instr.arg0); \
 	}
+
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {     \
 		arg_0 = lowerArgument(ctx, op_idx, instr.arg0);   \
@@ -111,9 +122,12 @@ namespace vm::loader::compiler {
 #include <vm/bytecode/opcode_definitions.hpp>
 			}
 
-			bc.emplace_back(makeLowInstruction(
-				low::fix8FromInstr(op), vm::safeReadBytes<u64>(arg_0), vm::safeReadBytes<u64>(arg_1)
-			));
+			auto opcode_id = low::fix8FromInstr(op);
+			bc.emplace_back(makeLowInstruction(opcode_id, arg_0, arg_1));
+#if defined(BUILD_TYPE_DEV)
+			bc.back().repr      = repr;
+			bc.back().opcode_id = opcode_id;
+#endif
 		}
 		return bc;
 	}

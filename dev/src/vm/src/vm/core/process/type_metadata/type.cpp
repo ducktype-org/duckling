@@ -218,9 +218,7 @@ namespace vm {
 	}
 
 	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
-		return get<kind::Data>().map([](CRef<kind::Data> data) {
-			return CRef(&data->fields);
-		});
+		return get<kind::Data>().map([](CRef<kind::Data> data) { return CRef(&data->fields); });
 	}
 
 	// inheritance

@@ -1,10 +1,11 @@
 #pragma once
 
-#include <base/optional.hpp>
 
 #include <filesystem/file.hpp>
 
 #include <vm/api/api.hpp>
+
+#include <shared_mutex>
 
 namespace vm {
 	class VMProcess;
@@ -27,7 +28,7 @@ namespace vm {
 		// Each of the following methods should synchronize access to the processTable, but should
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
-		std::expected<PID, api::ApiError> newProcess();
+		std::expected<PID, api::ApiError>                    newProcess();
 		std::expected<api::response::Boolean, api::ApiError> deinitAndValidate(PID pid);
 		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
 		std::expected<void, api::ApiError> killProcess(PID pid);

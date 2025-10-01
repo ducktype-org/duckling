@@ -2,47 +2,15 @@
 
 #include <base/ints.hpp>
 #include <base/maps.hpp>
-#include <base/raw_view.hpp>
 #include <base/strongly_typed_id.hpp>
 
 #include <vm/core/process/memory/allocator/block_data.hpp>
 
 #include <mutex>
-#include <shared_mutex>
-#include <utility>
 
 namespace vm {
 
-	class BlockID final {
-	private:
-		constexpr static u64 BAD_ID = u64(-1);
-		u64                  id     = BAD_ID;
-
-	public:
-		inline constexpr explicit BlockID(u64 id): id{ id } {}
-
-		constexpr BlockID()                                  = default;
-		inline constexpr BlockID(const BlockID& mX)                 = default;
-		inline constexpr BlockID(BlockID&& mX) noexcept             = default;
-		inline constexpr BlockID& operator=(const BlockID& rhs)     = default;
-		inline constexpr BlockID& operator=(BlockID&& rhs) noexcept = default;
-
-		static BlockID bad() { return BlockID{ BAD_ID }; }
-
-		static BlockID fromU64(u64 v) { return BlockID{ v }; }
-
-		[[nodiscard]] inline constexpr explicit operator u64() const noexcept { return id; }
-
-		[[nodiscard]] inline constexpr u64 asInt() const noexcept { return id; }
-
-		auto operator<=>(const BlockID&) const = default;
-
-		inline bool isBad() const { return id == BAD_ID; }
-
-		inline bool isGood() const { return id != BAD_ID; }
-	};
-
-	;
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);
 
 	/**
 	 * @brief Main block data structure.

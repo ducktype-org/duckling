@@ -2,6 +2,10 @@ type pointer: pointer_A A
 type fun: method_foo_int_int_A {pointer_A, i64, i64} i64
 
 function method_foo_int_int_impl_A {pointer_A, i64, i64} -> i64 {
+    # [0  - 16] - ret_val
+    # [16 - 48] - arg0 - pointer_A
+    # [48 - 64] - arg1 - i64
+    # [64 - 80] - arg2 - i64
     mov_l64_l64 ret_val, arg1;
     add_l64_l64 ret_val, arg2;
     deinit; # arg2
@@ -39,6 +43,8 @@ function main { i64, ptr_argv } -> i64 {
     virtual_call_lptr_method a_obj, foo;
 
     output_l64 ret;
+
+    free_lptr a_obj;
 
     deinit; # ret
     deinit; # a_obj

@@ -44,6 +44,7 @@ namespace {
 #define HANDLE_OPCODE(opcode) count++;
 #include <vm/bytecode/opcode_definitions.hpp>
 
+
 #undef HANDLE_OPCODE
 		return count;
 	}
@@ -84,9 +85,12 @@ namespace vm {
 
 		u64 arg0;
 		u64 arg1;
-	};
 
-	static_assert(sizeof(MicroInstruction) == 24, "MicroInstruction size is not 24 bytes");
+#if defined(BUILD_TYPE_DEV)
+		u64                         opcode_id = std::numeric_limits<u64>::max();
+		base::Optional<std::string> repr{};
+#endif
+	};
 
 	/**
 	 * @brief Creates a low-level instruction with correct "union" type depending on the config.

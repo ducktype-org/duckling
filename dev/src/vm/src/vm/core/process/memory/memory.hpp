@@ -239,7 +239,7 @@ namespace vm {
 		// ======================== Pointers ========================
 
 		static void increaseBlockRefcount(Ref<Block> block);
-		void decreaseBlockRefcount(Ref<Block> block);
+		void        decreaseBlockRefcount(Ref<Block> block);
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer;
@@ -270,9 +270,6 @@ namespace vm {
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer;
 
 		// ======================== Requests ========================
-
-		[[nodiscard]]
-		auto requestBlockIDs() -> std::vector<BlockID>;
 
 		[[nodiscard]]
 		auto requestBlockID(Ref<Block> block) -> BlockID;

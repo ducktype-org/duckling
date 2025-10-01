@@ -232,7 +232,6 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}
 
-
 	// @TODO: Check for over/under flows. This should be done in #1216.
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
 	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
@@ -386,7 +385,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0)); }
+		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -447,14 +446,19 @@ namespace vm {
 		{
 			const auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 
-			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
+			// Objects are guaranteed to hold inheritance metadata pointers as their first field.
 			// This is verified by static verification.
 
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
-			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			const auto  method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
-			const auto  implementation_name = inh_metadata->vtable[method_name];
+			const auto  inh_metadata     = (*inh_meta_pointer)
+			                              ->getInheritanceMetadata()
+			                              .expect(
+											  "setVTable_lptr_type no called on the object, hence "
+											  "no inheritance metadata."
+										  );
+			const auto method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
 				= *thread.executing_program->getFunctions().idOf(implementation_name);
@@ -654,7 +658,8 @@ namespace vm {
 			auto variant_block_index = frame->local_offset_to_block_idx[instr->arg0];
 			auto variant_block       = frame->block_stack[variant_block_index];
 			thread.process_memory.setNestedViewBlock(
-				Pointer(variant_block, 0), thread.executing_program->getTypes().at(TypeID(instr->arg1))
+				Pointer(variant_block, 0),
+				thread.executing_program->getTypes().at(TypeID(instr->arg1))
 			);
 		}
 		FUNCTION_CONT(1);
@@ -665,9 +670,7 @@ namespace vm {
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
 			auto       parent_block        = frame->block_stack[variant_block_index];
-			auto       wanted_type         = thread.executing_program->getTypes().at(
-                TypeID(instr[1].arg0)
-            );
+			auto       wanted_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
 
 			auto view_block_ref
 				= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
@@ -703,9 +706,7 @@ namespace vm {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       wanted_type     = thread.executing_program->getTypes().at(
-                TypeID(instr[1].arg0)
-            );
+			auto       wanted_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
 
 			auto view_block_ref
 				= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
@@ -743,9 +744,7 @@ namespace vm {
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
 
-			auto dst_type = thread.executing_program->getTypes().at(
-				TypeID(instr[1].arg0)
-			);
+			auto dst_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));

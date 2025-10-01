@@ -29,9 +29,9 @@ namespace vm {
 	) {
 		variant_match(request.request) {
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				auto res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
-					return process->doRequest(api::request::DeinitAndValidate{});
-				});
+				auto             res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
+                    return process->doRequest(api::request::DeinitAndValidate{});
+                });
 				std::unique_lock lock(rw_process_table);
 				process_table.erase(request.pid);
 				return res;
@@ -56,7 +56,6 @@ namespace vm {
 	}
 
 	Supervisor::~Supervisor() {
-		for (auto& [pid, proc]: process_table)
-			proc->doRequest(api::request::DeinitAndValidate{});
+		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }
