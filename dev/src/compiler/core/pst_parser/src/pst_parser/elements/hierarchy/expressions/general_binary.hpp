@@ -17,7 +17,7 @@ namespace pst::expr {
 
 		using BuilderExpr = std::variant<i64, Box<OperatorBuilder>>;
 
-		struct OperatorBuilder {
+		struct OperatorBuilder final {
 			BuilderExpr lhs;
 			Operator    type;
 			BuilderExpr rhs;
