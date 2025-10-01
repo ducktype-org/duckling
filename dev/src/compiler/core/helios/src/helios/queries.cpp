@@ -230,7 +230,7 @@ namespace compiler::helios {
 			return func_maker.out.value();
 		}
 
-		QUERY_AUTO_NO_CACHE  // @TODO #1300
+		QUERY_AUTO_NO_CACHE  // @TODO: #1300
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);

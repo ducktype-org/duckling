@@ -111,6 +111,15 @@ namespace compiler::helios::code {
 		return makeBox<CallExpr>(ctx, std::move(identifier_expr), std::move(coerced_arguments));
 	}
 
+	base::Optional<Box<CallExpr>> attemptFittingClass(
+		query::Context&                        ctx,
+		SymID                                  class_symbol,
+		std::vector<Box<Expr>>&                normal_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
+	) {
+
+	}
+
 	/**
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
 	 */
@@ -125,8 +134,14 @@ namespace compiler::helios::code {
 			return attemptFittingFun(ctx, fun, normal_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
 			return attemptFittingBuiltin(ctx, fun, normal_arguments, named_arguments);
+		case SymbolKind::Class:
+			return attemptFittingClass(ctx, fun, normal_arguments, named_arguments);
 		default:
-			CORE_PANIC("Function candidate is neither a function nor a builtin function");
+			CORE_PANIC(base::strConcat(
+				"Function candidate \"",
+				name(fun),
+				"\" is not a function, builtin function, or class"
+			));
 		}
 	}
 

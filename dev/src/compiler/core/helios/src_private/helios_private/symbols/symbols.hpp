@@ -86,7 +86,7 @@ namespace compiler::helios {
 
 	namespace houtgen {
 		struct KeyFor_QueryGeneratedSymbol {
-			base::StrID                    name;
+			base::StrID         name;
 			GeneratedSymbolData generated_symbol_data;
 
 			[[nodiscard]]

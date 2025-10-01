@@ -88,9 +88,7 @@ namespace compiler::helios::houtgen {
 			// - One assignment per field + return.
 			body.reserve(num_fields + 1);
 
-			std::cerr << "Doing...\n";
 			for (usize i = 0; i < num_fields; i++) {
-				std::cerr << "Doing " << i << "\n";
 				body.emplace_back(makeBox<code::AssignmentStmt>(
 					makeBox<code::AccessExpr>(
 						ctx,
@@ -100,7 +98,6 @@ namespace compiler::helios::houtgen {
 					makeBox<code::IdentifierExpr>(ctx, parameters.at(i + 1).helios_symbol)
 				));
 			}
-			std::cerr << "Done\n";
 
 			body.emplace_back(makeBox<code::VoidReturnStmt>());
 
