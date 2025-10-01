@@ -49,6 +49,7 @@ void VmTestSuite::assertExecutionPanickedWith(
 			ASSERT_TRUE(panicked.error_message.contains(err_piece));
 		}
 		variant_default {
+			ASSERT_TRUE(!test_result.run_result.has_value());
 			fail(base::strConcat(
 				"Expected ",
 				TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
