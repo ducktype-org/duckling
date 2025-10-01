@@ -1,6 +1,7 @@
 option(USE_MARCH_NATIVE "Use -march=native. This should be disabled for portable builds" OFF)
 option(STRIP_SYMBOL_INFORMATION "Strip symbol information from binaries" OFF)
 option(DISABLE_UNITY_COMPILATION "Disable unity builds" OFF)
+option(ENABLE_LINK_TIME_OPTIMIZATION "Enable link time optimization" OFF)
 
 # disable compiler-specific extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -78,4 +79,11 @@ if(STRIP_SYMBOL_INFORMATION)
 		message(FATAL_ERROR "Error: STRIP_SYMBOL_INFORMATION will likely fail (as is) compilers other then GCC and Clang. Fix or validate it first.")
 	endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
+endif()
+
+if (ENABLE_LINK_TIME_OPTIMIZATION)
+	include(CheckIPOSupported)
+	check_ipo_supported() 
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+	message("-- Link time optimization enabled")
 endif()
