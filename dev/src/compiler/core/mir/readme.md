@@ -28,12 +28,12 @@ In the most high level words, MIR can be described as:
 
 Since a lot of lifetime analysis happens in MIR, MIR introduces its own so-called lifetime scopes.
 Lifetime scopes, are similar in nature to standard program scopes and form a tree like structure (distinct structure per each MIR function).
-This structure is created during the mir-lowering, and:
+However, lifetime scopes are not directly tied to HELIOS scopes. The two structures will be similar in most scenarios, but in general MIR lifetime scopes are created during mir-lowering phase based on the HOUT structure.
+During this creation three things happen simultaneously:
 
-* each local variable is assigned a scope -- a scope within which it as alive.
-* each instruction is assigned a scope.
-
-Note that local variables include variables from Duckling source code, but also all variables associated with temporary values of expression. Such temporary-value variables are created during the MIR lowering phase.
+* MIR lifetime scope tree is generated based on the HOUT tree like representation (it is created within the logic of lowering).
+* Each local variable is assigned a scope -- a scope within which it as alive. Note that local variables include variables from Duckling source code, but also all variables associated with temporary values of expression. Such temporary-value variables are created during the MIR lowering phase.
+* Each instruction is assigned a scope -- conceptually a scope, that this instruction "happens within".
 
 A variable cannot be used outside its scope.
 Destructors are inserted in a following way.
@@ -115,7 +115,7 @@ In particular passing MIR Local to an operation argument or assigning operation 
 
 ### Lifetime flags and move semantics
 
-Each local variable in MIR has an implicit, hidden "lifetime flag" associated with the variable. It is a boolean flag that dictates whether this local variable is still "alive". An operation with a move flag sets the lifetime variable's flag to false. This will be used to dynamically decide if a given object has to be destroyed when its lifetime scope ends. 
+Each local variable in MIR has an implicit, hidden "lifetime flag" associated with the variable. It is a boolean flag that dictates whether this local variable is still "alive". An operation with a move flag for variable `v` sets the lifetime flag of variable `v` to false. This flag is used to decide (in general) at run-time if a given object has to be destroyed when its lifetime scope ends. 
 Lifetime flags become real variables in LIR representation (representation that MIR is lowered into). 
 
 Details of how exactly this will be implemented are not yet decided, since classes are still in progress.
