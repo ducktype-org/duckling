@@ -42,7 +42,7 @@ Then when in initial code a instruction `A` is followed by instruction `B`, then
 
 
 Note that the lifetime analysis of MIR is performed on the variable level, which is consistent with semantics of Duckling.
-For example, while a class member its a distinct object, its lifetime is tied directly to lifetime of encapsulating object and cannot be manipulated independently.
+For example, while a class member is a distinct object, its lifetime is tied directly to lifetime of encapsulating object and cannot be manipulated independently.
 
 ### MIR operation
 
