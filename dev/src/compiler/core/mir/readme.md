@@ -124,6 +124,9 @@ Potential ideas:
 * `call_if` operation that calls any function only if lifetime flag is set.
 * `branch_if_live` operation branch based of lifetime flag.
 
+The need for lifetime flags comes directly from the need to express the move semantics.
+
+
 ### Problems and future work
 
 * Getting access to local object's members or global values is problematic.
