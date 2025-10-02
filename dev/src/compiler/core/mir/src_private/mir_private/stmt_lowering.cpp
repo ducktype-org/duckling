@@ -1,6 +1,6 @@
 #include "stmt_lowering.hpp"
 
-#include "mir_lowering.hpp"
+#include "expr_lowering.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
@@ -292,5 +292,19 @@ namespace compiler::mir {
 		StmtBlockVisitor visitor{ continuation, function, parent_scope };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
+	}
+
+	StmtLowerRes lowerCodeBlock(
+		const hc::CodeBlock& code_block,
+		BlockBuilderRef      continuation,
+		FunctionBuilder&     function,
+		ScopeRef             parent_scope
+	) {
+		StmtLowerRes last_result{ continuation };
+		for (auto& stmt: code_block.statements | std::views::reverse) {
+			last_result  = lowerStmt(*stmt, continuation, function, parent_scope);
+			continuation = last_result.begin;
+		}
+		return last_result;
 	}
 }

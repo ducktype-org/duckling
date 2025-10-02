@@ -32,5 +32,20 @@ namespace compiler::mir {
 		ScopeRef         parent_scope
 	);
 
+	/**
+	 * @brief Lowers code-block, by lowering all statements in the block.
+	 *
+	 * @param code_block
+	 * @param continuation Block that should be executed after this code block.
+	 * @param function Function that we are lowering this code block in.
+	 * @return StmtLowerRes
+	 */
+	StmtLowerRes lowerCodeBlock(
+		const hc::CodeBlock& code_block,
+		BlockBuilderRef      continuation,
+		FunctionBuilder&     function,
+		ScopeRef             parent_scope
+	);
+
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 }

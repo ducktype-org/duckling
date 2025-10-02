@@ -7,7 +7,9 @@
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
-#include <mir_private/mir_lowering.hpp>
+#include <mir_private/expr_lowering.hpp>
+#include <mir_private/mir_builders.hpp>
+#include <mir_private/stmt_lowering.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/query_impl.hpp>
@@ -18,6 +20,8 @@
 #include <unordered_set>
 
 namespace compiler::mir {
+	namespace hc = helios::code;
+
 	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
 		return function.queryUnstablePerfectHash();
 	}
