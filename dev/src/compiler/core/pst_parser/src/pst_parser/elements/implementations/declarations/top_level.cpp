@@ -12,6 +12,10 @@ namespace pst {
 				out->statements.emplace_back(nullptr);
 				state.parse(out).assign(&out->statements.back(), std::move(stmt));
 			}
+			while (state[0].is(Special::Semicolon)) {
+				state.log(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				state.tokens().skip();
+			}
 		}
 		out->fillSymbols();
 
