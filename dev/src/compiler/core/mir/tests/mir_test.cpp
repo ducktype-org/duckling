@@ -95,7 +95,7 @@ private:
 
 			auto& c_ctor
 				= ctx.query<compiler::mir::LowerGlobalDataToMirCtor>({ globals.at(0) })->value();
-			ASSERT_TRUE(c_ctor.name.strView() == "_Q_M12mir_var_testG1c");
+			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
 
 			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));

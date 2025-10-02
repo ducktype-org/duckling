@@ -543,7 +543,7 @@ namespace compiler::lir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
 
-	Function fromLIRFunctions(
+	Function createFunctionInvoker(
 		query::Context&                    ctx,
 		const std::vector<CRef<Function>>& functions,
 		const base::StrID&                 mangled_name

@@ -14,11 +14,12 @@
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 
+#include <base/exceptions.hpp>
+
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
 #include <string_view>
-#include "base/exceptions.hpp"
 
 /**
  * This is the implementation of the mangling scheme according to mangling-scheme.md
@@ -288,7 +289,9 @@ namespace compiler::helios::mangler {
 			} else {
 				// @future: implement mangling for other special members
 				ret = "Mangling_of_this_special_member_is_not_implemented_yet";
-				throw base::NotYetImplemented("Mangling of this special member is not implemented yet");
+				throw base::NotYetImplemented(
+					"Mangling of this special member is not implemented yet"
+				);
 			}
 
 			return ret;

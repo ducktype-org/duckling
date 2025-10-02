@@ -1077,45 +1077,37 @@ private:
 
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_special_mem")));
 
-		// std::cerr << "testManglerSpecialMembers(): HOUT:\n";
-		// auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
-		// std::cerr << hout_unit.debugPrint() << '\n';
+		auto variable_a       = getChain("A", root_scope);
+		auto variable_b       = getChain("M.B", root_scope);
+		auto mangled_a_constr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key = variable_a.back(),
+		      .kind = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = std::nullopt }
+		);
+		auto mangled_a_destr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key = variable_a.back(),
+		      .kind       = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = std::nullopt }
+		);
+		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agc", mangled_a_constr.str());
+		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agd", mangled_a_destr.str());
 
-		auto test_class = getChain("N.TestClass", root_scope).back();
-		auto test_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(test_class)->valueOrThrow();
-		// auto test_class_abstract_type
-		// 	=
-		// query::entryPoint<compiler::helios::QueryTypeFromDefinition>(test_class)->valueOrThrow().getType();
+		// Using the "getSpecialMangledName" aliases:
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto mangled_b_constr = compiler::helios::mangler::getSpecialMangledName<
+				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+				ctx, variable_b.back()
+			);
+			auto mangled_b_destr = compiler::helios::mangler::getSpecialMangledName<
+				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
+				ctx, variable_b.back()
+			);
 
-		std::cerr << "TestClass constructors:\n";
-		for (auto&& ctor: test_class_info.constructors) {
-			std::cerr << compiler::helios::name(ctor).strView() << '\n';
-			// auto mangled_ctor = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			// 	{ ctor, 0, "" }
-			// );
-			// std::cerr << "  " << mangled_ctor.strView() << '\n';
-		}
-
-
-		// auto [_, root_scope] = getModule(fs::File(path("test_modules/classes")));
-
-		// const auto first_class = getChain("FirstClassEver", root_scope).back();
-		// const auto first_class_info
-		// 	= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
-		// const auto first_class_abstract_type
-		// 	= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		//           ->valueOrThrow()
-		//           .getType();
-
-		// std::cerr << "FirstClassEver constructors:\n";
-		// for(auto&& ctor : first_class_info.constructors) {
-		// 	auto mangled_ctor = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-		// 		{ ctor, 0, "" }
-		// 	);
-		// 	std::cerr << "  " << mangled_ctor.strView() << '\n';
-		// }
-		// std::cerr << "FirstClassEver end\n";
+			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgc", mangled_b_constr.str());
+			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgd", mangled_b_destr.str());
+		});
 	}
 
 	void testGlobalVariableExpressions() {

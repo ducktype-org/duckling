@@ -91,7 +91,7 @@ int main(int argc, const char* argv[]) {
 	// Add module ctors and dtors to module CTOR and DTOR functions
 	if (!ctors.empty()) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module_ctor = lir::fromLIRFunctions(
+			auto module_ctor = lir::createFunctionInvoker(
 				ctx,
 				ctors,
 				compiler::helios::mangler::getSpecialMangledName<
@@ -113,7 +113,7 @@ int main(int argc, const char* argv[]) {
 				std::cerr << "LLVM verification failed\n\n";
 
 			// @TODO: add legit dtors
-			auto module_dtor = lir::fromLIRFunctions(
+			auto module_dtor = lir::createFunctionInvoker(
 				ctx,
 				{},
 				compiler::helios::mangler::getSpecialMangledName<

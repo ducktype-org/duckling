@@ -442,6 +442,10 @@ namespace compiler::mir {
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
+		/**
+		 * This name is only used for debugging and error logging and is not mangled (and is not
+		 * used for mangling in LIR)
+		 */
 		base::StrID name;
 
 		tsh::SymbolType<>              return_type;

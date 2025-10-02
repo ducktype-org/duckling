@@ -38,7 +38,7 @@ namespace compiler::driver {
 		}
 
 		if (not ctors.empty()) {
-			auto module_ctor = lir::fromLIRFunctions(
+			auto module_ctor = lir::createFunctionInvoker(
 				ctx,
 				ctors,
 				helios::mangler::getSpecialMangledName<
@@ -52,7 +52,7 @@ namespace compiler::driver {
 		if (not dtors.empty()) {
 			// Dtors should be called in reverse order
 			std::vector<CRef<lir::Function>> reversed_dtors(dtors.rbegin(), dtors.rend());
-			auto                             module_dtor = lir::fromLIRFunctions(
+			auto                             module_dtor = lir::createFunctionInvoker(
                 ctx,
                 reversed_dtors,
                 helios::mangler::getSpecialMangledName<

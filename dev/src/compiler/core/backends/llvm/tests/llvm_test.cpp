@@ -75,7 +75,7 @@ private:
 
 			if (!ctors.empty()) {
 				// Add module ctors
-				auto module_ctor = lir::fromLIRFunctions(
+				auto module_ctor = lir::createFunctionInvoker(
 					ctx,
 					ctors,
 					compiler::helios::mangler::getSpecialMangledName<
@@ -89,7 +89,7 @@ private:
 
 				// Add module dtors (for now empty)
 				// @TODO: add a legit dtors
-				auto module_dtor = lir::fromLIRFunctions(
+				auto module_dtor = lir::createFunctionInvoker(
 					ctx,
 					{},
 					compiler::helios::mangler::getSpecialMangledName<

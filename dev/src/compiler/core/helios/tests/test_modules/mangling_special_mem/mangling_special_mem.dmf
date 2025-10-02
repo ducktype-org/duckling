@@ -3,29 +3,3 @@ const A: i64 = 1;
 namespace M {
     var B: i64 = 4 + 4;
 }
-
-fun foo(a: i32) -> i32 = {
-    return a;
-}
-
-namespace N {
-    class TestClass {
-        a: i32 = 0;
-
-        # TestClass.create() = {
-        #     a = 0;
-        # }
-
-        TestClass.create(x: i32, y: f32) = {
-            a = x;
-        }
-
-        # TestClass.copy(TestClass: other) = {
-        #     a = other.a;
-        # }
-
-        # TestClass.destroy() = {}
-    }
-}
-
-const C: N.TestClass = 42;
