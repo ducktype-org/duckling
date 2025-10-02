@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <string_view>
+#include "base/exceptions.hpp"
 
 /**
  * This is the implementation of the mangling scheme according to mangling-scheme.md
@@ -287,6 +288,7 @@ namespace compiler::helios::mangler {
 			} else {
 				// @future: implement mangling for other special members
 				ret = "Mangling_of_this_special_member_is_not_implemented_yet";
+				throw base::NotYetImplemented("Mangling of this special member is not implemented yet");
 			}
 
 			return ret;
