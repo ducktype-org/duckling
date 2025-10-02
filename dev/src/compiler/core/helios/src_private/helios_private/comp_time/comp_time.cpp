@@ -9,7 +9,7 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_querries.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 

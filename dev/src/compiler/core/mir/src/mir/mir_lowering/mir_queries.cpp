@@ -1,4 +1,4 @@
-#include "mir_querries.hpp"
+#include "mir_queries.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
