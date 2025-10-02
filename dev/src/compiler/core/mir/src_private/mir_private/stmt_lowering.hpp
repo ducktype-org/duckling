@@ -47,5 +47,5 @@ namespace compiler::mir {
 		ScopeRef             parent_scope
 	);
 
-	// @TODO: StmtExprBoolJmpVisitor for jumping code
+	// @TODO: #1333 StmtExprBoolJmpVisitor for jumping code
 }

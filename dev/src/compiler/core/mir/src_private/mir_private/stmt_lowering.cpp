@@ -246,7 +246,7 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
-			// TODO: #448 Search for location in global scope as well.
+			// @TODO: #448 Search for location in global scope as well.
 			auto assignment_scope = function.newScope(parent_scope);
 
 			auto target_construction_hole = continuation->addHole();

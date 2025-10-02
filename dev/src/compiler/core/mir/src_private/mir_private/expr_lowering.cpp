@@ -86,7 +86,7 @@ namespace compiler::mir {
 			if (optional_local.has_value()) {
 				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-				//@TODO: chack if the symbol is a real global variable.
+				//@TODO: #1334 Check if the symbol is a real global variable.
 				valueOutput(
 					continuation,
 					MIRValue{ MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
