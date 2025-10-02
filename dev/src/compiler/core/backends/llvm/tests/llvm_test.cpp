@@ -1,9 +1,10 @@
 #include <backends/llvm/llvm_backend.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
@@ -39,7 +40,7 @@ private:
 		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
+			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {

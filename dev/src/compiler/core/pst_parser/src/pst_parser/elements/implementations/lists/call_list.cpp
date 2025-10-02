@@ -5,7 +5,7 @@
 namespace pst {
 	MBox<CallList> CallList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
-			UniversalExprHolderLowerLevel,
+			CallArgument,
 			CallList,
 			false,
 			lexer::Token::BracketType::None,
@@ -13,4 +13,5 @@ namespace pst {
 			internal::Conditions::isSentinel,
 			internal::NameGetters::callList>(state);
 	}
+
 }

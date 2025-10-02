@@ -27,6 +27,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
 	EXPR_VISITOR(TernaryOperatorExpr)
+	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
@@ -132,6 +133,11 @@ namespace compiler::helios::code {
 		case IntegerPow:
 			return argument_type;
 		case IntegerLt:
+		case IntegerGt:
+		case IntegerLteq:
+		case IntegerGteq:
+		case IntegerEq:
+		case IntegerNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -164,34 +170,35 @@ namespace compiler::helios::code {
 		// note: this might get more complex in the future
 
 		lhs->debugPrint(out);
+
+		using enum BuiltinBinary;
 		switch (operation) {
-		case BuiltinBinary::IntegerAdd:
+		case IntegerAdd:
 			out << "+";
 			break;
-		case BuiltinBinary::IntegerSub:
+		case IntegerSub:
 			out << "-";
 			break;
-		case BuiltinBinary::IntegerMul:
+		case IntegerMul:
 			out << "*";
 			break;
-		case BuiltinBinary::IntegerDiv:
+		case IntegerDiv:
 			out << "/";
 			break;
-		case BuiltinBinary::IntegerMod:
+		case IntegerMod:
 			out << "%";
 			break;
-		case BuiltinBinary::IntegerPow:
+		case IntegerPow:
 			out << "**";
 			break;
-		case BuiltinBinary::IntegerLt:
-			out << "<";
-			break;
-		case BuiltinBinary::BooleanAnd:
+		case BooleanAnd:
 			out << " and ";
 			break;
-		case BuiltinBinary::BooleanOr:
+		case BooleanOr:
 			out << " or ";
 			break;
+		default:
+			CORE_UNREACHABLE();
 		}
 		rhs->debugPrint(out);
 	}
@@ -298,6 +305,10 @@ namespace compiler::helios::code {
 			out << "box ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::Const:
+			out << "const ";
+			expr->debugPrint(out);
+			break;
 		default:
 			CORE_PANIC("unsupported unary operation");
 		}
@@ -359,4 +370,46 @@ namespace compiler::helios::code {
 		}
 	}
 
+	ChainComparisonExpr::ChainComparisonExpr(
+		query::Context& ctx, std::vector<Box<Expr>> expressions, std::vector<BuiltinBinary> operators
+	):
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Immutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  expressions{ std::move(expressions) },
+		  operators{ std::move(operators) } {}
+
+	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
+		using namespace std::views;
+		auto comparison_to_string = [](BuiltinBinary comp) {
+			using enum BuiltinBinary;
+			switch (comp) {
+			case IntegerLt:
+				return "<";
+			case IntegerLteq:
+				return "<=";
+			case IntegerGt:
+				return ">";
+			case IntegerGteq:
+				return ">=";
+			case IntegerEq:
+				return "==";
+			case IntegerNeq:
+				return "!=";
+			default:
+				CORE_UNREACHABLE();
+			}
+		};
+
+		expressions.front()->debugPrint(out);
+		for (auto [expr, comp]: zip(expressions | drop(1), operators)) {
+			out << comparison_to_string(comp);
+			expr->debugPrint(out);
+		}
+	}
 }

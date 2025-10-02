@@ -110,7 +110,7 @@ namespace compiler::backend_llvm {
 	 * @return llvm::LLVMContext&
 	 */
 	llvm::LLVMContext& getLLVMContext() {
-		static llvm::LLVMContext context;
+		thread_local llvm::LLVMContext context;
 		return context;
 	}
 
@@ -372,14 +372,14 @@ namespace compiler::backend_llvm {
 					// We need to load them before using them.
 					const auto local_ptr = local_register_map[lir_local].get();
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), lir_local->layout), local_ptr
+						typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
 					);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_case(lir::LirGlobal, lir_global) {
 					auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), *lir_global.layout), global_ptr.get()
+						typeFromLayout(builder.getContext(), *lir_global.layout), global_ptr.get()
 					);
 				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
@@ -479,6 +479,22 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
 			case IntegerSLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
+			case IntegerULteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULE)
+			case IntegerSLteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLE)
+			case IntegerUGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGT)
+			case IntegerSGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGT)
+			case IntegerUGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGE)
+			case IntegerSGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGE)
+			case IntegerEq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpEQ)
+			case IntegerNeq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);

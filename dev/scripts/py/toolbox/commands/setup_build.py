@@ -12,9 +12,7 @@ from click import Choice, option, command
 
 
 @command()
-@build_dir(
-    help="The name of the directory."
-)
+@build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
 )
@@ -76,7 +74,8 @@ from click import Choice, option, command
     help="The build type.",
     default="Debug",
     type=Choice(
-        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"], case_sensitive=False
+        ["Dev", "DevDebug", "DevOpt", "Release", "ReleaseOpt", "Debug"],
+        case_sensitive=False,
     ),
 )
 @option(
@@ -91,6 +90,22 @@ from click import Choice, option, command
     "--strip-symbol-information",
     prompt="Strip all symbol information from binaries:",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--disable-unity-compilation",
+    prompt="Disable unity compilation",
+    help="Unity compilation (used only in parser) speeds up the build time significantly, but makes debugging harder (related linker errors lack information).",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--enable-link-time-optimization",
+    prompt="Enable link time optimization (LTO), requires a lot of resources",
+    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires a lot of resources.",
     type=bool,
     default=False,
     is_flag=True,

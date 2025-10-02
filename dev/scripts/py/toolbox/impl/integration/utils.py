@@ -9,11 +9,13 @@ from ..helpers import (
     log_info,
 )
 
+
 def assert_good_var_name(name: str):
     if any(c.isupper() for c in name):
         exit_with_error(
             f"Invalid variable name `{name}`. Variables should be in snake_case or kebab-case."
         )
+
 
 def check_resembles_builtin(name: str, builtin_set: set[str]):
     """
@@ -29,6 +31,7 @@ def check_resembles_builtin(name: str, builtin_set: set[str]):
                 f"Incorrect spelling of '{name}' in config file. Consider: '{key}'"
             )
     assert_good_var_name(name)
+
 
 class VariableNotFound(Exception):
     def __init__(self, variable_name, expr):
@@ -51,6 +54,7 @@ def print_success(msg, file=sys.stdout):
 
 def print_failure(msg, file=sys.stdout):
     click_log("FAIL", msg, fg="red", file=file)
+
 
 def print_neutral(msg, file=sys.stdout):
     click_log("INFO", msg, fg="white", file=file)
@@ -84,6 +88,7 @@ def write_log(msg, log_file):
     with open(log_file, "a") as f:
         print(">>>" + msg + f"{'-' * 50}", file=f)
 
+
 def log_info_if_needed(msg: str, dry: bool, verbose: bool):
     if dry or verbose:
         log_info(msg)
@@ -109,13 +114,17 @@ class TestStatistics:
     """
     Describes the number of ran and succeeded, failed, disabled test cases.
     """
+
     succeeded: list[str]
     failed: list[str]
     disabled: list[str]
 
     def __add__(self, other):
-        return TestStatistics(self.succeeded + other.succeeded, self.failed + other.failed,
-                              self.disabled + other.disabled)
+        return TestStatistics(
+            self.succeeded + other.succeeded,
+            self.failed + other.failed,
+            self.disabled + other.disabled,
+        )
 
     def iadd(self, other):
         self.failed += other.failed
