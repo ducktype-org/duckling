@@ -4,6 +4,7 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
+#include <helios/mangler/mangler.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -223,12 +224,7 @@ namespace compiler::mir {
 				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
 				                              function_type };
 			function_builder.setName(
-				base::StrID(base::strConcat(
-								"_GLOBAL_",
-								key.global_data.original_name,
-								key.global_data.helios_symbol.queryUnstablePerfectHash()
-				)
-			                    .c_str())
+				compiler::helios::mangler::getSimpleMangledName(ctx, key.global_data.helios_symbol)
 			);
 
 			auto last_block = function_builder.newBlock();
