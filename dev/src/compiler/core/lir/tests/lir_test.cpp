@@ -309,7 +309,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream foo_str;
-			lir::fromLIRFunctions(
+			lir::createFunctionInvoker(
 				ctx, { g_ctor, some_global_ctor }, base::StrID("_MODULE_CTOR_globals")
 			)
 				.debugPrint(ctx, foo_str);

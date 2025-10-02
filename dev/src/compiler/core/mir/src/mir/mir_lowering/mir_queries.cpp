@@ -7,6 +7,7 @@
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
@@ -222,14 +223,9 @@ namespace compiler::mir {
 			FunctionBuilder function_builder{ ctx,
 				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
 				                              function_type };
-			function_builder.setName(
-				base::StrID(base::strConcat(
-								"_GLOBAL_",
-								key.global_data.original_name,
-								key.global_data.helios_symbol.queryUnstablePerfectHash()
-				)
-			                    .c_str())
-			);
+			function_builder.setName(base::StrID(
+				base::strConcat("constructor_of_", key.global_data.original_name.strView()).c_str()
+			));
 
 			auto last_block = function_builder.newBlock();
 			last_block->setTerminator(
