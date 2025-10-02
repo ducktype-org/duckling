@@ -13,7 +13,7 @@ namespace pst {
 		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
 
 	protected:
-		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {

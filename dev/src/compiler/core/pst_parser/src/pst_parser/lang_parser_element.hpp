@@ -69,7 +69,17 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	protected:
-		using HashAlg = hashing::Fnv1a_64;
+		/**
+		 * @brief Hash algorithm used for PST stable hashing
+		 * @todo Swap to CRC256 (Suggestion by Aleksy)
+		 */
+		using HashAlg = hashing::SHA256;
+
+	public:
+		/**
+		 * @brief Hash type for PST stable hashing
+		 */
+		using HashType = HashAlg::result_type;
 
 	public:
 		using SubToken = base::CRef<lexer::Token>;
@@ -212,14 +222,16 @@ namespace pst {
 		 * element type. Can be overriden for specific parent elements that add common information.
 		 */
 		[[nodiscard]]
-		virtual HashAlg calcStableHashMeta() const;
+		virtual HashAlg calcStableHash() const;
 
 		/**
-		 * @brief Adds the element specific information to the hash. Should be overriden for each
-		 * element.
+		 * @brief Adds the element specific information to the hash (Not generic ones such as number
+		 * of attributes or path). Should be overriden for each element.
+		 * @important Each implementation has to return the same reference it received (similar to
+		 * `<<` operator).
 		 */
 		[[nodiscard]]
-		virtual HashAlg& calcStableHash(HashAlg& partial_hash) const
+		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const
 			= 0;
 
 	public:
@@ -280,7 +292,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		u64 getHash() const {
+		HashType getHash() const {
 			CORE_ASSERT(hash.has_value(), "Hash not calculated for this" + elementType());
 			return hash.value();
 		}
@@ -351,11 +363,18 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition                       source_position;
-		std::vector<InternalSubElement>           sub_elements;
-		base::Optional<AccessLocked<LangElement>> parent;
-		base::Optional<ElementPath>               element_path;
-		base::Optional<u64>                       hash;
+		dia::SourcePosition source_position;
+		std::vector<InternalSubElement>
+			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
+		base::Optional<AccessLocked<LangElement>>
+									parent;  ///< Parent element in PST if element is not root.
+		base::Optional<ElementPath> element_path;  ///< The Path that uniquely identifies the
+		                                           ///< element and allows to conserve some
+		                                           ///< information between compilations. Has no
+		                                           ///< value if it's incalculable.
+		base::Optional<HashType>
+			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
+		           ///< information between compilations. Has no value if it's incalculable.
 
 		/**
 		 * @brief Kind of the element.

@@ -29,7 +29,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& NonClassStmt::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& NonClassStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

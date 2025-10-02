@@ -28,7 +28,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& While::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, optional_name);
 		return partial_hash;
 	}

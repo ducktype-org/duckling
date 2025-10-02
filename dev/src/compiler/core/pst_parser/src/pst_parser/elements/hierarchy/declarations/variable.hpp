@@ -16,7 +16,7 @@ namespace pst {
 		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);
 
 	protected:
-		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);

@@ -19,7 +19,7 @@ namespace pst {
 		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
 		NAMED_CHILD(block, ClassBlock);
 
-		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);

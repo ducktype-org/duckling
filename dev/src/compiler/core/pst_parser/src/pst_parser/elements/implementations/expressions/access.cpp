@@ -55,7 +55,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Access::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Access::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.str());
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());

@@ -41,7 +41,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Variable::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Variable::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, type.has_value());
 		addToHash(partial_hash, value.has_value());

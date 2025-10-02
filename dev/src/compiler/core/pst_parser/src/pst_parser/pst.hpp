@@ -94,10 +94,16 @@ namespace pst {
 			parse(std::forward<Args>(args)...);
 		}
 
+		/**
+		 * @brief Starts the element path calculation for all of the elements of the tree.
+		 */
 		void calcElementPaths() {
 			if (auto ref = element.internalMut()) ref->calcElementPaths({});
 		}
 
+		/**
+		 * @brief Starts the hash calculation for all of the elements of the tree.
+		 */
 		void calcHashes() {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();
 		}

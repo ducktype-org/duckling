@@ -397,10 +397,7 @@ class PSTErrorTests: public tester::TestSuite {
 	};
 
 	void exampleTests() {
-		for (auto e: examples) {
-			std::cerr << e->code << "\n";
-			assertTrue((*e)(), e->message());
-		}
+		for (auto e: examples) assertTrue((*e)(), e->message());
 	}
 
 public:

@@ -11,7 +11,7 @@ namespace pst {
 		NAMED_CHILD(arguments, FlowPatternList);
 
 	protected:
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit DeconstructorPattern(const dia::SourcePosition& position):

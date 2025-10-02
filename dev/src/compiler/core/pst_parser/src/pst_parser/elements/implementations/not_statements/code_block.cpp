@@ -73,7 +73,7 @@ namespace pst {
 		out << "]";
 	}
 
-	LangElement::HashAlg& CodeBlock::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& CodeBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, statements.size());
 		addToHash(partial_hash, type);
 		if (type == CodeBlockType::Unordered) {

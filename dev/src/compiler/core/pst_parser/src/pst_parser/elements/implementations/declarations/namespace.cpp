@@ -30,7 +30,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Namespace::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Namespace::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
 	}

@@ -48,7 +48,8 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& TemplateSpecifier::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& TemplateSpecifier::addElementDataToStableHash(HashAlg& partial_hash
+	) const {
 		return partial_hash;
 	}
 

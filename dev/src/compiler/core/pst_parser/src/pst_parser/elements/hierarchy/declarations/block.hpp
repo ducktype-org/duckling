@@ -11,7 +11,7 @@ namespace pst {
 		NAMED_CHILD(code_block, CodeBlock);
 
 	protected:
-		HashAlg& calcStableHash(HashAlg& partial_hash) const override;
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {

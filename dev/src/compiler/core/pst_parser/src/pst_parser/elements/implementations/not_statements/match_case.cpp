@@ -117,7 +117,7 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& MatchCase::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& MatchCase::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, branches);
 		return partial_hash;
 	}

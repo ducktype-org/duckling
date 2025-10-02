@@ -19,7 +19,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BindingPattern::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& BindingPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
 	}

@@ -18,7 +18,7 @@ namespace pst {
 
 		~ExprStmt() override = default;
 		void     dprint(std::ostream& out) const override;
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

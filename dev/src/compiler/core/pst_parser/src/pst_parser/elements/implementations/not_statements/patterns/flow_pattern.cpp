@@ -39,7 +39,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& FlowPattern::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, as_identifier.has_value());
 		if (as_identifier.has_value()) addToHash(partial_hash, as_identifier.value());
 		addToHash(partial_hash, type_constraint.has_value());

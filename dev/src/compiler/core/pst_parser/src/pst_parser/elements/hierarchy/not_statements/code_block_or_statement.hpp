@@ -27,7 +27,7 @@ namespace pst {
 		);
 		~CodeBlockOrStmt() final = default;
 		void     dprint(std::ostream& out) const final;
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		using const_iterator = CodeBlockOrStmtIterator;
 		[[nodiscard]]

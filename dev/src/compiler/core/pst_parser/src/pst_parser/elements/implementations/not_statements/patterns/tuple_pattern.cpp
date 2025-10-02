@@ -19,7 +19,7 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& TuplePattern::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& TuplePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

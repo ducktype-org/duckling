@@ -70,7 +70,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprValue::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& ExprValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, number);
 		return partial_hash;
 	}

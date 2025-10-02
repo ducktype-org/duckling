@@ -65,7 +65,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Assignment::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type.str());
 		return partial_hash;
 	}

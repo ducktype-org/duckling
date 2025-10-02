@@ -35,7 +35,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& StmtSpecifier::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& StmtSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, lang_def::keywordToStr(specifier));
 		return partial_hash;
 	}

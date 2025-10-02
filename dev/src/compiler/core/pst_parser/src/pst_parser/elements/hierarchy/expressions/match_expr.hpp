@@ -19,7 +19,7 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<MatchCase>> cases;
 
 	protected:
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 810) {

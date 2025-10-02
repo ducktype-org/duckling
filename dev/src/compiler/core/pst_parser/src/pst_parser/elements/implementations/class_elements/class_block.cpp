@@ -98,7 +98,7 @@ namespace pst {
 		out << "]";
 	}
 
-	LangElement::HashAlg& ClassBlock::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& ClassBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, statements.size());
 		std::vector<std::pair<std::string, usize>> symbols_available_data;
 		for (auto& [name, vec]: by_symbol)

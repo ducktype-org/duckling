@@ -20,7 +20,7 @@ namespace pst {
 		}
 	};
 
-	LangElement::HashAlg& AccessBlock::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& AccessBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, specifier);
 		return partial_hash;
 	}

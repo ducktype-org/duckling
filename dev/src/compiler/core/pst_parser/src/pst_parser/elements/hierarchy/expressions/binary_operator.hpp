@@ -20,7 +20,7 @@ namespace pst::expr {
 		~BinaryOperator() override = default;
 		void     dprint(std::ostream& out) const final;
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		AccessLocked<ExprElement> getLeftOperand() const;

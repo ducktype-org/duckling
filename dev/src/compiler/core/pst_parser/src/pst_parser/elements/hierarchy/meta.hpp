@@ -118,7 +118,7 @@ namespace pst {
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 
 		[[nodiscard]]
-		HashAlg calcStableHashMeta() const override;
+		HashAlg calcStableHash() const override;
 
 		/**
 		 * @note This might need to return a vector of borrow pointers instead
@@ -216,7 +216,7 @@ namespace pst {
 
 	protected:
 		[[nodiscard]]
-		HashAlg calcStableHashMeta() const override;
+		HashAlg calcStableHash() const override;
 
 	public:
 		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);

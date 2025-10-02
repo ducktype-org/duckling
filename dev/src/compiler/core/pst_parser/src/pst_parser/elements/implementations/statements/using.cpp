@@ -16,7 +16,7 @@ namespace pst {
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
 
-	LangElement::HashAlg& Using::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Using::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

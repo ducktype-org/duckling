@@ -46,7 +46,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BlockExpr::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}
 

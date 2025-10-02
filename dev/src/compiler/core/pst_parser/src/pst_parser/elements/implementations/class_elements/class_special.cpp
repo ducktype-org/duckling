@@ -19,7 +19,7 @@ namespace pst {
 		return Constructor::parse(state, ctx);
 	}
 
-	LangElement::HashAlg& ClassSpecial::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& ClassSpecial::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, kind.index());
 		std::visit([&](auto val) { addToHash(partial_hash, val); }, kind);
 		return partial_hash;

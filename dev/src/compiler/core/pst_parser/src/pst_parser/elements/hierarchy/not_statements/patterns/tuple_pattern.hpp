@@ -10,7 +10,7 @@ namespace pst {
 		NAMED_CHILD(elements, FlowPatternList);
 
 	protected:
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		// explicit TuplePattern(const dia::SourcePosition& position);

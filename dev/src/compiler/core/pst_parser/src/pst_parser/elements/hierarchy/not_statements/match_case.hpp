@@ -36,7 +36,7 @@ namespace pst {
 		std::vector<CaseBranch> branches;
 
 	protected:
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit MatchCase(dia::SourcePosition& pos): NotStmt(pos) {

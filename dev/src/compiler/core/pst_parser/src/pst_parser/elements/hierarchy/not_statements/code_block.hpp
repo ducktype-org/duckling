@@ -54,7 +54,7 @@ namespace pst {
 		static MBox<CodeBlock> parse(LangParserState& state, CodeBlockType order_type);
 		~CodeBlock() final = default;
 		void     dprint(std::ostream& out) const final;
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

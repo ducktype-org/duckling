@@ -25,7 +25,8 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& DeconstructorPattern::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& DeconstructorPattern::addElementDataToStableHash(HashAlg& partial_hash
+	) const {
 		addToHash(partial_hash, deconstructor_name);
 		return partial_hash;
 	}

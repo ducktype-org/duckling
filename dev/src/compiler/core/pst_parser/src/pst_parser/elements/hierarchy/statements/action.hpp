@@ -15,7 +15,7 @@ namespace pst {
 		static MBox<Action> parse(LangParserState& state);
 		~Action() override = default;
 		[[nodiscard]]
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

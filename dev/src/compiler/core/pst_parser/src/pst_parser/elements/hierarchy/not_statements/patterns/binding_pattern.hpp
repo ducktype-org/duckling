@@ -9,7 +9,7 @@ namespace pst {
 		tpc::Identifier name;
 
 	protected:
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit BindingPattern(const dia::SourcePosition& position): AnalysisPattern(position) {

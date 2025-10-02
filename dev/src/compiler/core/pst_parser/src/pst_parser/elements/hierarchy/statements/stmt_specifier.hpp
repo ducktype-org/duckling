@@ -30,7 +30,7 @@ namespace pst {
 		void     dprint(std::ostream& out) const final;
 		bool     trailingSemicolon() override;
 		void     acceptVisitor(PstVisitor& visitor) const override;
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

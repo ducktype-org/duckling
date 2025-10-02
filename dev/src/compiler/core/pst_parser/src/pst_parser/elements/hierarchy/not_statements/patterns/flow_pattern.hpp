@@ -12,7 +12,7 @@ namespace pst {
 		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
 
 	protected:
-		HashAlg& calcStableHash(HashAlg&) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {

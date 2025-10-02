@@ -33,7 +33,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Import::calcStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& Import::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, alias);
 		return partial_hash;
 	}

@@ -20,7 +20,7 @@ namespace tpc {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const Identifier& t
 		) noexcept {
-			addToHash(h, t.value.str());
+			addToHash(h, t.value.strView());
 		}
 
 		operator base::StrID() { return value; }
@@ -39,7 +39,7 @@ namespace tpc {
 			hashing::hash_algorithm auto& h, const OptionalIdentifier& t
 		) noexcept {
 			addToHash(h, t.value.has_value());
-			if (t.value) addToHash(h, t.value->str());
+			if (t.value) addToHash(h, t.value->strView());
 		}
 	};
 
@@ -119,7 +119,7 @@ namespace tpc {
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const CharValue& t
 		) noexcept {
-			addToHash(h, t.value.str());
+			addToHash(h, t.value.strView());
 		}
 	};
 }

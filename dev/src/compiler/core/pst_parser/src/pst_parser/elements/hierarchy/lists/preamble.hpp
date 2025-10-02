@@ -45,7 +45,7 @@ namespace pst {
 			out << "]";
 		}
 
-		HashAlg& calcStableHash(HashAlg& partial_hash) const override {
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override {
 			addToHash(partial_hash, elements.size());
 			return partial_hash;
 		}
