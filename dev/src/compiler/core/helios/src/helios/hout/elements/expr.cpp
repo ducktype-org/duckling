@@ -109,7 +109,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-					  "Handling errors in HOUT is not supported yet"
+					  "Handling errors in HOUT is not supported yet 1 — " + name(symbol).str()
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )

@@ -120,17 +120,17 @@ namespace compiler::helios {
 				                                               .value()
 				                                               .unlock(ctx)
 				                                               ->getExpr())
-				                    .expect("Handling errors in HOUT is not supported yet"))
+				                    .expect("Handling errors in HOUT is not supported yet 2 — " + name(symbol).str()))
 				  ) };
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
-					  "Handling errors in HOUT is not supported yet"
+					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-			  "Handling errors in HOUT is not supported yet"
-		  )) {}
+			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str(
+		  ))) {}
 }
