@@ -20,6 +20,7 @@ namespace pst {
 
 		state.parse(out).goDown();
 
+		// @TODO: this may not work in case of compilation error
 		while (state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
