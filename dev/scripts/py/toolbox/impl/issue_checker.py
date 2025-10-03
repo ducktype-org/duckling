@@ -5,14 +5,14 @@ from .helpers import (
     log_info,
     log_warning,
     log_new_line,
-    bash_command_get_output,
+    bash_command_get_output, exit_with_error,
 )
 import os
 
+from .list_files import list_files_impl
 
-def issue_checker_impl(
-    issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False
-) -> bool:
+
+def issue_checker_impl(issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False) -> bool:
     """
     Checks if specified GitHub issue numbers appear in the codebase.
 
@@ -49,12 +49,7 @@ def issue_checker_impl(
         re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers
     ]
 
-    try:
-        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-        files = [f for f in files_str.strip().split("\n") if f]
-    except Exception as e:
-        log_warning(f"Could not get file list from git: {e}")
-        return True
+    files = list_files_impl(branch=branch, no_merge_base=no_merge_base)
 
     found_any = False
     summary = {num: 0 for num in valid_issue_numbers}
@@ -78,7 +73,6 @@ def issue_checker_impl(
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
     return not found_any
-
 
 def get_issues_from_github() -> list[str]:
     """
