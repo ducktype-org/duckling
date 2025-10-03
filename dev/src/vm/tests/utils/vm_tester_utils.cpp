@@ -51,7 +51,7 @@ void VmTestSuite::assertExecutionPanickedWith(
 		variant_default {
 			fail(base::strConcat(
 				"Expected ",
-				TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
+				TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
 				", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
 			));
 		}

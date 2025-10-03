@@ -22,7 +22,7 @@ namespace compiler::helios {
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& const_: glob_data) out += const_.debugPrint();
+		for (auto& constt: glob_data) out += constt.debugPrint();
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {

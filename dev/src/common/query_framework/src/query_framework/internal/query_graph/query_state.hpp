@@ -28,6 +28,8 @@ namespace query::internal {
 			 * Used for cycle recovery.
 			 */
 			NodeID parent;
+
+			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
 
 		/**

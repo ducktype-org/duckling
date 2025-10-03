@@ -51,7 +51,7 @@ namespace base {
 
 		DATA_T& operator[](const KEY_T& key) { return ContainerType::at(key); }
 
-		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
+		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(std::move(key)); }
 
 		template<class K = KEY_T>
 		Optional<Ref<DATA_T>> atMaybe(K&& key) {

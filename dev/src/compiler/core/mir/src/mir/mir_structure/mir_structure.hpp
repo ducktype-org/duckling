@@ -43,7 +43,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerMul,
 	IntegerDiv,
 	IntegerMod,
-	
+
 	IntegerLt,    // Less then
 	IntegerGt,    // Greater then
 	IntegerLteq,  // Less then or equal to
@@ -494,7 +494,7 @@ namespace compiler::mir {
 
 		Function()                = delete;
 		Function(const Function&) = delete;
-		Function(Function&&)      = default;
+		Function(Function&&)       noexcept = default;
 
 		Function& operator=(const Function&) = delete;
 

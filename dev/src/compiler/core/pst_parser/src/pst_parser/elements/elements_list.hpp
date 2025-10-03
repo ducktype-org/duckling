@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/box.hpp>
+
 namespace pst {
 	// Meta
 	class Stmt;
@@ -111,3 +113,6 @@ namespace pst {
 	class AssignmentExprHolder;
 	class ForTypeExprHolder;
 }
+
+
+DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::Attribute);

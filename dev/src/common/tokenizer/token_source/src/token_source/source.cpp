@@ -66,8 +66,8 @@ namespace tokenizer {
 
 	base::RawView TokenSource::getCharRange(usize begin_char, usize end_char) {
 		//@TODO: add checks
-		base::RawArray begin = content->view().getBegin() + decoded->at(begin_char).index;
-		usize          size  = decoded->at(end_char).index - decoded->at(begin_char).index;
+		base::RawArray begin = content->view().getBegin() + decoded->at(begin_char).INDEX;
+		usize          size  = decoded->at(end_char).INDEX - decoded->at(begin_char).INDEX;
 		return { begin, size };
 	}
 

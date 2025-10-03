@@ -18,6 +18,9 @@
 
 #include <cstddef>
 
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(pst::Attribute);
+
 namespace vm::loader::parser {
 	/**
 	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type

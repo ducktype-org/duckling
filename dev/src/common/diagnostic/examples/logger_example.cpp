@@ -40,6 +40,6 @@ int main() {
 	if (logger.bad()) {
 		bool detailed = false;
 		logger.dumpLog(detailed);  // prints errors with file, position, part of code, etc.
-		exit(1);
+		return 1;
 	}
 }

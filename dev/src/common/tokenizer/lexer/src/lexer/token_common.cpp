@@ -12,7 +12,7 @@ namespace lexer {
 		return comparisons.contains(asNamed());
 	}
 
-	bool Operator::isAssignment() const { return !isComparison() && value.strView().back() == '='; }
+	bool Operator::isAssignment() const { return !isComparison() && VALUE.strView().back() == '='; }
 
 	bool Operator::isSpecialOp() const {
 		using namespace lang_def;

@@ -61,14 +61,14 @@ private:
 		assertTrue(map3.erase(5), "Map element not erased 2");
 	}
 
-	static base::RawView make_view(std::string_view view) {
+	static base::RawView makeView(std::string_view view) {
 		return base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() });
 	}
 
 	void strIDTest() {
-		base::StrID id1(make_view("abc"));
-		base::StrID id2(make_view("abc"));
-		base::StrID id3(make_view("ab"));
+		base::StrID id1(makeView("abc"));
+		base::StrID id2(makeView("abc"));
+		base::StrID id3(makeView("ab"));
 
 		assertTrue(id1 == id2, "== error");
 		assertTrue(id2 != id3, "!= error");

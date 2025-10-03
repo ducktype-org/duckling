@@ -414,16 +414,16 @@ namespace lexer {
 	void Lexer::hexLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
+		auto  source_start = currentPosition();
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
 		end = where - 1;
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 
 		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
@@ -431,7 +431,7 @@ namespace lexer {
 	void Lexer::decLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
+		auto  source_start = currentPosition();
 
 		bool was_dot = false;
 		bool was_e   = false;
@@ -453,7 +453,7 @@ namespace lexer {
 
 		end = where - 1;
 
-		dia::SourcePosition source_position(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
@@ -567,7 +567,7 @@ namespace lexer {
 		usize end{};
 		auto  source_start = currentPosition();
 
-		Token::BracketType bracket_type{ peek().value };
+		Token::BracketType bracket_type{ peek().VALUE };
 		auto               group_end           = peek().bracketPair();
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
@@ -613,7 +613,7 @@ namespace lexer {
 		if (token_messages) printer::StreamPrinter::printNL("group end");
 	}
 
-	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }
+	bool Lexer::isEOF() const { return peek().is(Class::END_OF_FILE_VALUE); }
 
 	bool Lexer::isEOL() const { return peek().is(Class::newline); }
 
