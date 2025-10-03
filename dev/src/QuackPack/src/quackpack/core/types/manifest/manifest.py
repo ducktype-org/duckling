@@ -8,11 +8,7 @@ from .summary import Summary
 
 class Manifest:
     def __init__(
-        self,
-        original_content: str,
-        original_schema: ManifestSchema,
-        summary: Summary,
-        warnings: list[str],
+        self, original_content: str, original_schema: ManifestSchema, summary: Summary, warnings: list[str]
     ):
         self._original_content = original_content
         # self._original_document = original_document

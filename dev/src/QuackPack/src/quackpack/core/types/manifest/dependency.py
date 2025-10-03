@@ -39,11 +39,7 @@ class Conditions:
         _check_non_empty(self._system)
 
     def is_enabled(self, enabled_features: Iterable[Identifier] | Identifier) -> bool:
-        return (
-            self._is_system_ok()
-            and self._is_cpu_ok()
-            and self._are_features_ok(enabled_features)
-        )
+        return self._is_system_ok() and self._is_cpu_ok() and self._are_features_ok(enabled_features)
 
     def _is_system_ok(self) -> bool:
         # NOTE: This uses Python's classification of the systems, were DuckType to introduce a new one, this should be adapted accordingly.
@@ -57,25 +53,17 @@ class Conditions:
             return True
         return platform.machine().lower() in (cpu.lower() for cpu in self._cpu)
 
-    def _are_features_ok(
-        self, enabled_features: Iterable[Identifier] | Identifier
-    ) -> bool:
+    def _are_features_ok(self, enabled_features: Iterable[Identifier] | Identifier) -> bool:
         if self._features is None:
             return True
-        to_iter = (
-            (enabled_features,)
-            if isinstance(enabled_features, Identifier)
-            else enabled_features
-        )
+        to_iter = (enabled_features,) if isinstance(enabled_features, Identifier) else enabled_features
         return any(feature in self._features for feature in to_iter)
 
     def into_schema(self) -> RegistryDependencyConditionSchema:
         return RegistryDependencyConditionSchema(
             system=self._system,
             arch=self._cpu,
-            package_features=(
-                [str(x) for x in self._features] if self._features is not None else None
-            ),
+            package_features=[str(x) for x in self._features] if self._features is not None else None,
         )
 
     @classmethod
@@ -83,11 +71,7 @@ class Conditions:
         return Conditions(
             schema.system,
             schema.arch,
-            (
-                [Identifier(x) for x in schema.package_features]
-                if schema.package_features is not None
-                else None
-            ),
+            [Identifier(x) for x in schema.package_features] if schema.package_features is not None else None,
         )
 
 
@@ -111,9 +95,7 @@ class DependencyFeature:
         return RootModel({str(self.name): self._conditions.into_schema()})
 
     @classmethod
-    def from_schema(
-        cls, schema: str | RegistryDetailedFeatureSchema
-    ) -> DependencyFeature:
+    def from_schema(cls, schema: str | RegistryDetailedFeatureSchema) -> DependencyFeature:
         if isinstance(schema, str):
             return DependencyFeature(Identifier(schema), None)
         root = schema.root
@@ -171,17 +153,9 @@ class Dependency:
     def features(self) -> list[DependencyFeature]:
         return self._features
 
-    def enabled_features(
-        self, enabled_features: Iterable[Identifier] | Identifier
-    ) -> Iterable[Identifier]:
-        to_iter = (
-            (enabled_features,)
-            if isinstance(enabled_features, Identifier)
-            else enabled_features
-        )
-        return (
-            feature.name for feature in self._features if feature.is_enabled(to_iter)
-        )
+    def enabled_features(self, enabled_features: Iterable[Identifier] | Identifier) -> Iterable[Identifier]:
+        to_iter = (enabled_features,) if isinstance(enabled_features, Identifier) else enabled_features
+        return (feature.name for feature in self._features if feature.is_enabled(to_iter))
 
     def into_schema(self) -> RegistryDependencySchema:
         return RegistryDependencySchema(
@@ -189,24 +163,16 @@ class Dependency:
             source=self.source.into_schema(),
             features=[x.into_schema() for x in self.features],
             pinned=self.is_pinned,
-            conditions=(
-                self._conditions.into_schema()
-                if self._conditions is not None
-                else RegistryDependencyConditionSchema(
-                    system=None, arch=None, package_features=None
-                )
-            ),
+            conditions=self._conditions.into_schema()
+            if self._conditions is not None
+            else RegistryDependencyConditionSchema(system=None, arch=None, package_features=None),
             is_alias_for=str(self._real_name) if self._real_name is not None else None,
         )
 
     @classmethod
-    def from_schema(
-        cls, schema: RegistryDependencySchema, spec: DependencySpec
-    ) -> Dependency:
+    def from_schema(cls, schema: RegistryDependencySchema, spec: DependencySpec) -> Dependency:
         features = [DependencyFeature.from_schema(x) for x in schema.features]
         is_pinned = schema.pinned
         conditions = Conditions.from_schema(schema.conditions)
-        real_name = (
-            Identifier(schema.is_alias_for) if schema.is_alias_for is not None else None
-        )
+        real_name = Identifier(schema.is_alias_for) if schema.is_alias_for is not None else None
         return Dependency(spec, features, is_pinned, conditions, real_name)

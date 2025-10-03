@@ -17,9 +17,7 @@ def clean(opts: CleanOptions):
         opts.ctx.console.info(
             f"States of the following ephemeral virtual environments have been removed from the storage: {display_removed_venvs}"
         )
-        display_removed_packages = sorted(
-            path.name for path in clean_output.removed_packages
-        )
+        display_removed_packages = sorted(path.name for path in clean_output.removed_packages)
         opts.ctx.console.info(
             f"Packages from the following localizations have been removed from the storage: {display_removed_packages}"
         )

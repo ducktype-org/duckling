@@ -32,9 +32,7 @@ def remove(options: RemoveOptions) -> None:
     removed_count = 0
     ctx = options.ctx
     package = options.package
-    logger.debug(
-        f"Removing packages `{options.to_remove}` from package at `{package.manifest_path}`"
-    )
+    logger.debug(f"Removing packages `{options.to_remove}` from package at `{package.manifest_path}`")
     manifest = package.manifest
     editable = EditableManifest.load(manifest.original_content)
     table = editable.get_table(options.section)

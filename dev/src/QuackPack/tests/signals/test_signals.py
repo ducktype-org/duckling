@@ -20,14 +20,7 @@ from quackpack.core.signals import (
 
 
 def spawn_killer(test_case: str):
-    Popen(
-        [
-            sys.executable,
-            Path(__file__).parent / "killer.py",
-            str(os.getpid()),
-            test_case,
-        ]
-    )
+    Popen([sys.executable, Path(__file__).parent / "killer.py", str(os.getpid()), test_case])
 
 
 # TODO signals work completely differently on windows, needs fixing

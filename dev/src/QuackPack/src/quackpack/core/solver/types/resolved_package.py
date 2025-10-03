@@ -11,12 +11,7 @@ from quackpack.core.solver.types.resolved_id import (
     ResolvedIdLocal,
     ResolvedIdRegistry,
 )
-from quackpack.util.types.pkgid import (
-    GitPackageId,
-    LocalPackageId,
-    PackageId,
-    RegistryPackageId,
-)
+from quackpack.util.types.pkgid import GitPackageId, LocalPackageId, PackageId, RegistryPackageId
 from quackpack.util.types.version import Version
 
 
@@ -106,11 +101,7 @@ class ResolvedPackageGit(ResolvedPackage):
 
     @override
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, ResolvedPackageGit)
-            and self.id == other.id
-            and self.version == other.version
-        )
+        return isinstance(other, ResolvedPackageGit) and self.id == other.id and self.version == other.version
 
     @override
     def __hash__(self) -> int:

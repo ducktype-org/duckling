@@ -13,9 +13,7 @@ class Continuation(ABC):
 
 class CodeSinkConnection(ABC):
     @abstractmethod
-    def load_dependencies(
-        self, freeze: VenvFreeze, path_mapping: dict[PackageId, Path]
-    ) -> None:
+    def load_dependencies(self, freeze: VenvFreeze, path_mapping: dict[PackageId, Path]) -> None:
         """
         Asks the sink to load the dependencies. Blocks until the operation is completed.
         """

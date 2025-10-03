@@ -77,7 +77,8 @@ def check_issue_exists_and_open(issue_number: str) -> bool:
 def todo_validate_impl(
     branch: str = "origin/main",
     no_merge_base: bool = False,
-    exclude_files: list[str] = list(),
+    exclude_files: list[str] = None,  # None here is on purpose
+    all: bool = False,
 ) -> bool:
     """
     Validates that all TODO/FIXME comments follow the required format with issue numbers.
@@ -86,6 +87,7 @@ def todo_validate_impl(
         branch: Git branch to check against (default: origin/main)
         no_merge_base: If True, skip merge base calculation
         exclude_files: List of file path suffixes, that should be excluded
+        all: If True, scan entire project, otherwise just the difference
 
     Returns:
         bool: True if all TODOs are properly formatted, False if any violations are found.
@@ -113,8 +115,9 @@ def todo_validate_impl(
     ]
 
     files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
-        only_modified=True, lines=True, branch=branch, no_merge_base=no_merge_base
-    )
+        only_modified=not all, lines=True, branch=branch, no_merge_base=no_merge_base
+    ) # type: ignore
+    print(files_and_lines)
 
     # Pop the current file, so that the verification can pass
     for file in list(files_and_lines.keys()):

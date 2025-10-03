@@ -46,9 +46,7 @@ def get_file_fragment(path: Path, start: tuple[int, int], end: tuple[int, int]) 
     for i, line in enumerate(lines):
         if i + 1 < start_line or i - 1 > end_line:
             continue
-        line_number_indentation_length = (
-            max_line_number_indentation_length - digits_in_int(i + 1)
-        )
+        line_number_indentation_length = max_line_number_indentation_length - digits_in_int(i + 1)
         buffer.write("[blue]")
         for _ in range(line_number_indentation_length):
             buffer.write(" ")
@@ -84,9 +82,7 @@ def get_file_fragment(path: Path, start: tuple[int, int], end: tuple[int, int]) 
     return buffer.getvalue()
 
 
-def verbose_error_message(
-    path: Path, msg: str, file_fragment: str | None = None
-) -> str:
+def verbose_error_message(path: Path, msg: str, file_fragment: str | None = None) -> str:
     """
     Creates a pretty error message, compliant with rich.console.
 
@@ -189,24 +185,18 @@ def deserialize_and_tokenise(path: Path) -> tuple[Any, list[yaml.Token]]:
                     verbose_error_message(
                         path,
                         "Failed to deserialize the file",
-                        get_file_fragment(
-                            path, (start_line, start_column), (end_line, end_column)
-                        ),
+                        get_file_fragment(path, (start_line, start_column), (end_line, end_column)),
                     )
                 ) from None
             else:
-                raise ConfigFileLoadError(
-                    verbose_error_message(path, str(exp))
-                ) from None
+                raise ConfigFileLoadError(verbose_error_message(path, str(exp))) from None
         except yaml.YAMLError as exp:
             raise ConfigFileLoadError(verbose_error_message(path, str(exp))) from None
 
     with open(path) as config_file:
         try:
             tokens: list[yaml.Token] = list(
-                cast(
-                    Iterator[yaml.Token], yaml.scan(config_file, Loader=yaml.BaseLoader)
-                )  # pyright: ignore[reportUnknownMemberType]
+                cast(Iterator[yaml.Token], yaml.scan(config_file, Loader=yaml.BaseLoader))  # pyright: ignore[reportUnknownMemberType]
             )
         except yaml.MarkedYAMLError as exp:
             if exp.problem_mark is not None:
@@ -219,24 +209,18 @@ def deserialize_and_tokenise(path: Path) -> tuple[Any, list[yaml.Token]]:
                 raise ConfigFileLoadError(
                     verbose_error_message(
                         path,
-                        get_file_fragment(
-                            path, (start_line, start_column), (end_line, end_column)
-                        ),
+                        get_file_fragment(path, (start_line, start_column), (end_line, end_column)),
                         "Invalid YAML syntax",
                     )
                 ) from None
             else:
-                raise ConfigFileLoadError(
-                    verbose_error_message(path, str(exp))
-                ) from None
+                raise ConfigFileLoadError(verbose_error_message(path, str(exp))) from None
         except yaml.YAMLError as exp:
             raise ConfigFileLoadError(verbose_error_message(path, str(exp))) from None
     return deserialized_object, tokens
 
 
-def strict_safe_load(
-    path: Path,
-) -> tuple[dict[tuple[int | str, ...], tuple[yaml.Mark, yaml.Mark]], Any]:
+def strict_safe_load(path: Path) -> tuple[dict[tuple[int | str, ...], tuple[yaml.Mark, yaml.Mark]], Any]:
     """
     Helper function for load_and_validate.
     Deserializes a yaml file, returns the deserialized object with a
@@ -275,16 +259,12 @@ def strict_safe_load(
                 expected = ExpectedToken.ANY
             case yaml.FlowSequenceStartToken:
                 # Beginning of a list enclosed in [].
-                locations_stack.append(
-                    LocationSpecifier(LocationInitializer.NEW_FLOW_OR_UNMARKED_LIST)
-                )
+                locations_stack.append(LocationSpecifier(LocationInitializer.NEW_FLOW_OR_UNMARKED_LIST))
                 structures_stack.append(YamlStructureType.MARKED_LIST)
                 expected = ExpectedToken.ANY
             case yaml.BlockSequenceStartToken:
                 # Beginning of a not enclosed list.
-                locations_stack.append(
-                    LocationSpecifier(LocationInitializer.NEW_MARKED_BLOCK_LIST)
-                )
+                locations_stack.append(LocationSpecifier(LocationInitializer.NEW_MARKED_BLOCK_LIST))
                 structures_stack.append(YamlStructureType.MARKED_LIST)
                 expected = ExpectedToken.ANY
             case yaml.FlowEntryToken:
@@ -296,17 +276,12 @@ def strict_safe_load(
             case yaml.BlockEntryToken:
                 # This can mean a new not enclosed list or a continuation of the current one
                 # Beginning of a not enclosed list can only happen as a value of a key.
-                if (
-                    structures_stack
-                    and structures_stack[-1] is not YamlStructureType.DICTIONARY
-                ):
+                if structures_stack and structures_stack[-1] is not YamlStructureType.DICTIONARY:
                     # Continuation of a list.
                     locations_stack[-1].increment_index()
                 else:
                     # Beginning of a new list
-                    locations_stack.append(
-                        LocationSpecifier(LocationInitializer.NEW_FLOW_OR_UNMARKED_LIST)
-                    )
+                    locations_stack.append(LocationSpecifier(LocationInitializer.NEW_FLOW_OR_UNMARKED_LIST))
                     structures_stack.append(YamlStructureType.IMPLICIT_LIST)
                     # We add the position of the '-' to the dictionary.
                     # Thus, it can be detected as a part of the problem-causing file fragment,
@@ -315,9 +290,7 @@ def strict_safe_load(
                         location.downgrade()
                         for location in (
                             *locations_stack,
-                            LocationSpecifier.create_with_key(
-                                f"!{parentheses_counter}"
-                            ),
+                            LocationSpecifier.create_with_key(f"!{parentheses_counter}"),
                         )
                     )
                     positions[precise_location] = (token.start_mark, token.end_mark)
@@ -338,10 +311,7 @@ def strict_safe_load(
                     # Only one level of pops is needed, because implicit lists cannot be directly nested.
                     locations_stack.pop()
                     structures_stack.pop()
-                elif (
-                    structures_stack
-                    and structures_stack[-1] is YamlStructureType.IMPLICIT_DICTIONARY
-                ):
+                elif structures_stack and structures_stack[-1] is YamlStructureType.IMPLICIT_DICTIONARY:
                     # If we were inside an implicit dictionary, we pop twice
                     locations_stack.pop()
                     structures_stack.pop()
@@ -351,10 +321,7 @@ def strict_safe_load(
                 locations_stack.pop()
                 structures_stack.pop()
                 expected = ExpectedToken.ANY
-                if (
-                    structures_stack
-                    and structures_stack[-1] is YamlStructureType.IMPLICIT_DICTIONARY
-                ):
+                if structures_stack and structures_stack[-1] is YamlStructureType.IMPLICIT_DICTIONARY:
                     # If we were inside an implicit dictionary, we pop twice.
                     locations_stack.pop()
                     structures_stack.pop()
@@ -362,14 +329,9 @@ def strict_safe_load(
                 # A key is coming.
                 expected = ExpectedToken.KEY
                 # If we are inside a marked list, this means a start of an implicit dictionary.
-                if (
-                    locations_stack
-                    and structures_stack[-1] is YamlStructureType.MARKED_LIST
-                ):
+                if locations_stack and structures_stack[-1] is YamlStructureType.MARKED_LIST:
                     structures_stack.append(YamlStructureType.IMPLICIT_DICTIONARY)
-                    locations_stack.append(
-                        LocationSpecifier(LocationInitializer.NEW_KEY)
-                    )
+                    locations_stack.append(LocationSpecifier(LocationInitializer.NEW_KEY))
             case yaml.ValueToken | yaml.BlockEntryToken | yaml.FlowEntryToken:
                 # A value to the previous key is coming.
                 expected = ExpectedToken.VALUE
@@ -382,34 +344,22 @@ def strict_safe_load(
                         locations_stack[-1].set_key(token.value)
                         precise_location = tuple(
                             location.downgrade()
-                            for location in (
-                                *locations_stack,
-                                LocationSpecifier.create_with_key("[key]"),
-                            )
+                            for location in (*locations_stack, LocationSpecifier.create_with_key("[key]"))
                         )
                         positions[precise_location] = (token.start_mark, token.end_mark)
                     case ExpectedToken.VALUE:
-                        precise_location = tuple(
-                            location.downgrade() for location in locations_stack
-                        )
+                        precise_location = tuple(location.downgrade() for location in locations_stack)
                         positions[precise_location] = (token.start_mark, token.end_mark)
                         # Were we in an implicit dictionary, it would end with the current token, thus we pop.
                         # Otherwise, we anticipate the next key.
-                        if (
-                            structures_stack[-1]
-                            is YamlStructureType.IMPLICIT_DICTIONARY
-                        ):
+                        if structures_stack[-1] is YamlStructureType.IMPLICIT_DICTIONARY:
                             locations_stack.pop()
                             structures_stack.pop()
                         else:
-                            locations_stack[-1] = LocationSpecifier(
-                                LocationInitializer.NEW_KEY
-                            )
+                            locations_stack[-1] = LocationSpecifier(LocationInitializer.NEW_KEY)
                     case ExpectedToken.ANY:
                         # We are a list element.
-                        precise_location = tuple(
-                            location.downgrade() for location in locations_stack
-                        )
+                        precise_location = tuple(location.downgrade() for location in locations_stack)
                         positions[precise_location] = (token.start_mark, token.end_mark)
                         if (
                             structures_stack
@@ -460,9 +410,7 @@ def strict_safe_load(
     return positions, deserialized_object
 
 
-def proper_prefix_and_not_key(
-    models: tuple[int | str, ...], candidates: tuple[int | str, ...]
-) -> bool:
+def proper_prefix_and_not_key(models: tuple[int | str, ...], candidates: tuple[int | str, ...]) -> bool:
     """
     Helper function for load_and_validate.
     Checks if model is a proper prefix of candidate and if candidate is not model concatenated with '[key]'.
@@ -505,15 +453,11 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
         return expected_type(**parsed_data)
     except TypeError:
         raise ConfigFileLoadError(
-            verbose_error_message(
-                path, "Your configuration file should deserialize to a dictionary"
-            )
+            verbose_error_message(path, "Your configuration file should deserialize to a dictionary")
         ) from None
     except ValidationError as e:
         error = e.errors()[0]
-        non_union_error_keys = filter(
-            lambda x: not isinstance(x, str) or x[0] != "!", error["loc"]
-        )
+        non_union_error_keys = filter(lambda x: not isinstance(x, str) or x[0] != "!", error["loc"])
         non_union_error_keys = tuple(non_union_error_keys)
 
         error_msg = str(error.get("ctx", {}).get("error", error["msg"]))
@@ -527,9 +471,7 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
                     path,
                     error_msg,
                     get_file_fragment(
-                        path,
-                        (start_mark.line, start_mark.column),
-                        (end_mark.line, end_mark.column),
+                        path, (start_mark.line, start_mark.column), (end_mark.line, end_mark.column)
                     ),
                 )
             ) from None
@@ -542,9 +484,7 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
                     path,
                     error_msg,
                     get_file_fragment(
-                        path,
-                        (start_mark.line, start_mark.column),
-                        (end_mark.line, end_mark.column),
+                        path, (start_mark.line, start_mark.column), (end_mark.line, end_mark.column)
                     ),
                 )
             ) from None
@@ -568,22 +508,14 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
             if (
                 min_line is None
                 or start_line < min_line
-                or (
-                    start_line == min_line
-                    and min_column is not None
-                    and start_column < min_column
-                )
+                or (start_line == min_line and min_column is not None and start_column < min_column)
             ):
                 min_line = start_line
                 min_column = start_column
             if (
                 max_line is None
                 or end_line > max_line
-                or (
-                    end_line == max_line
-                    and max_column is not None
-                    and end_column > max_column
-                )
+                or (end_line == max_line and max_column is not None and end_column > max_column)
             ):
                 max_line = end_line
                 max_column = end_column
@@ -595,11 +527,7 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
         ):
             raise ConfigFileLoadError(
                 verbose_error_message(
-                    path,
-                    error_msg,
-                    get_file_fragment(
-                        path, (min_line, min_column), (max_line, max_column)
-                    ),
+                    path, error_msg, get_file_fragment(path, (min_line, min_column), (max_line, max_column))
                 )
             ) from None
 
@@ -612,25 +540,22 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
                     path,
                     "Key should have a value assigned",
                     get_file_fragment(
-                        path,
-                        (start_mark.line, start_mark.column),
-                        (end_mark.line, end_mark.column),
+                        path, (start_mark.line, start_mark.column), (end_mark.line, end_mark.column)
                     ),
                 )
             ) from None
 
         # The only possibility left is a 'key_missing' error
-        assert isinstance(
-            non_union_error_keys[-1], str
-        ), "we got out of sync with Pydantic ValidationError.loc"
+        assert isinstance(non_union_error_keys[-1], str), (
+            "we got out of sync with Pydantic ValidationError.loc"
+        )
         missing_key = non_union_error_keys[-1]
         non_union_error_keys = non_union_error_keys[:-1]
         if not non_union_error_keys:
             # A top level section (like 'metadata') is missing
             raise ConfigFileLoadError(
                 verbose_error_message(
-                    path,
-                    f"Obligatory top level section <{missing_key}> absent in the file",
+                    path, f"Obligatory top level section <{missing_key}> absent in the file"
                 )
             ) from None
         non_union_error_keys = (*non_union_error_keys, "[key]")
@@ -640,9 +565,7 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
                 path,
                 f"Obligatory field <{missing_key}> absent from this section",
                 file_fragment=get_file_fragment(
-                    path,
-                    (start_mark.line, start_mark.column),
-                    (end_mark.line, end_mark.column),
+                    path, (start_mark.line, start_mark.column), (end_mark.line, end_mark.column)
                 ),
             )
         ) from None

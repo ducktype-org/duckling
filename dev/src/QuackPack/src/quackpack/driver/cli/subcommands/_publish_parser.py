@@ -14,9 +14,7 @@ def get_parser() -> CliParser:
     :rtype: quackpack.cli._parser.CliParser
     """
 
-    return CliParser.subcommand(
-        name="publish", description="Publish package to the registry"
-    )
+    return CliParser.subcommand(name="publish", description="Publish package to the registry")
 
 
 def execute(ctx: GlobalContext, _args: Arguments) -> None:

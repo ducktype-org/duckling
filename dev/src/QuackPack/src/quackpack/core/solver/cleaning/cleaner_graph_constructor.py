@@ -2,10 +2,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from itertools import product
 
-from quackpack.core.solver.cleaning.package_with_flags import (
-    PackageWithFlags,
-    PackageWithFlagsDependency,
-)
+from quackpack.core.solver.cleaning.package_with_flags import PackageWithFlags, PackageWithFlagsDependency
 from quackpack.core.solver.gathering import GatheredInfo
 from quackpack.core.solver.types.flag_type import FeatureId, FlagType, NoFlag
 from quackpack.core.solver.types.packages_by_id import PackagesById
@@ -26,9 +23,7 @@ class CleanerGraph:
     List of packages that can depend on a given package (edges of the graph).
     """
 
-    possible_realization_counts: dict[
-        PackageWithFlagsDependency, dict[tuple[FlagType, FlagType], int]
-    ]
+    possible_realization_counts: dict[PackageWithFlagsDependency, dict[tuple[FlagType, FlagType], int]]
     """
     For a given parent node (package with two flags) and id of its dependency,
     counts number of dependency realizations grouped by their carried flags (pairs of flags forced by the parent).
@@ -51,22 +46,15 @@ class _DependencyExplorer:
         self.id_resolvents = id_resolvents
 
     def _explore_single_dependency(
-        self,
-        output: CleanerGraph,
-        dependency: PackageWithFlagsDependency,
-        dependency_spec: Dependency,
+        self, output: CleanerGraph, dependency: PackageWithFlagsDependency, dependency_spec: Dependency
     ) -> None:
         if not dependency_spec.is_enabled(dependency.parent_flags()):
             return
 
-        forced_flags: set[FeatureId] = set(
-            dependency_spec.enabled_features(dependency.parent_flags())
-        )
+        forced_flags: set[FeatureId] = set(dependency_spec.enabled_features(dependency.parent_flags()))
 
         for flag1, flag2 in _flag_pairs(forced_flags):
-            output.possible_realization_counts.setdefault(dependency, {})[
-                flag1, flag2
-            ] = 0
+            output.possible_realization_counts.setdefault(dependency, {})[flag1, flag2] = 0
 
         for realization in get_possible_realizations(
             dependency_spec, self.packages_by_id, self.id_resolvents
@@ -78,27 +66,23 @@ class _DependencyExplorer:
                 ):
                     continue
                 output.possible_realization_counts[dependency][flag1, flag2] += 1
-                output.parents.setdefault(
-                    PackageWithFlags(realization, (flag1, flag2)), []
-                ).append(dependency.parent_package)
+                output.parents.setdefault(PackageWithFlags(realization, (flag1, flag2)), []).append(
+                    dependency.parent_package
+                )
 
     def _explore_single_package(self, output: CleanerGraph, package: PackageWithFlags):
         summary = self.summaries[package.package]
         for _, dependency_spec in summary.deps.items():
             self._explore_single_dependency(
                 output,
-                PackageWithFlagsDependency.from_dependency(
-                    package, dependency_spec, self.id_resolvents
-                ),
+                PackageWithFlagsDependency.from_dependency(package, dependency_spec, self.id_resolvents),
                 dependency_spec,
             )
 
     def explore_dependencies(self, output: CleanerGraph):
         for package, flags in self.possible_flags.items():
             for flag1, flag2 in _flag_pairs(flags):
-                self._explore_single_package(
-                    output, PackageWithFlags(package, (flag1, flag2))
-                )
+                self._explore_single_package(output, PackageWithFlags(package, (flag1, flag2)))
         return output
 
 

@@ -83,9 +83,7 @@ def run(ctx: GlobalContext) -> int | None:
 # NOTE: Idealnie zamiast na `list[str]`, operowalibyśmy na `argparse.Namespace` i wywoływali parser, żeby doparsować matche z aliasów.
 # Tylko wtedy trzeba ręcznie handlować `--help` i bawić się z unknown_commands.
 # Chociaż i tak w Pythonie się nie da, bo argparse jest ułomny.
-def fix_user_typos(
-    ctx: GlobalContext, qp_args: list[str], cli_commands: list[str]
-) -> None:
+def fix_user_typos(ctx: GlobalContext, qp_args: list[str], cli_commands: list[str]) -> None:
     """
     Try to fix first positional command with Levenshtein distance.
 
@@ -124,17 +122,13 @@ def fix_user_typos(
         return
     if should_error_on_any_match or len(matched) > 1:
         formatted = "".join(f"   `{x}`\n" for x in matched)
-        raise QuackPackError(
-            f"""No such command as `{match_against}`. Did you mean:
-{formatted}?"""
-        )
+        raise QuackPackError(f"""No such command as `{match_against}`. Did you mean:
+{formatted}?""")
     logger.debug(f"Levenshtein changed `{match_against}` to `{matched[0]}`")
     qp_args[match_idx] = matched[0]
 
 
-def expand_user_aliases(
-    ctx: GlobalContext, qp_args: list[str], already_expanded_aliases: list[str]
-) -> None:
+def expand_user_aliases(ctx: GlobalContext, qp_args: list[str], already_expanded_aliases: list[str]) -> None:
     """
     Expand user aliases.
     ----
@@ -161,9 +155,7 @@ def expand_user_aliases(
             # Ensure current alias appears in trace.
             already_expanded_aliases.append(arg)
             backtrace = " -> ".join(already_expanded_aliases)
-            raise QuackPackError(
-                f"Alias `{arg}` was already expanded. Found cycle: '{backtrace}'"
-            )
+            raise QuackPackError(f"Alias `{arg}` was already expanded. Found cycle: '{backtrace}'")
         already_expanded_aliases.append(arg)
         alias = maybe_alias
         logger.debug(f"Expanding user alias `{arg}` to `{alias}`")

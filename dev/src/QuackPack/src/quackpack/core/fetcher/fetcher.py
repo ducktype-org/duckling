@@ -25,11 +25,7 @@ from quackpack.core.fetcher.api_types import (
     URLType,
 )
 from quackpack.core.fetcher.cache import MetadataCache, MetadataCacheContext
-from quackpack.core.fetcher.client import (
-    DucknestClient,
-    DucknestClientContext,
-    GitClient,
-)
+from quackpack.core.fetcher.client import DucknestClient, DucknestClientContext, GitClient
 from quackpack.core.fetcher.util.compression import pack_to_file
 from quackpack.core.fetcher.util.curl_progress import CurlProgress
 from quackpack.core.fetcher.util.git_progress import GitRemoteProgress
@@ -85,9 +81,7 @@ class Fetcher:
         self.git_progress = progresses.git
         self.bundled_progress = progresses.bundled
 
-        self.curl_client_progress = CurlProgress(
-            self.blob_progress, self.total_progress
-        )
+        self.curl_client_progress = CurlProgress(self.blob_progress, self.total_progress)
 
         self.ctx = ctx
 
@@ -113,9 +107,7 @@ class Fetcher:
         result = None
 
         with suppress(QuackPackError):
-            result = await self.ducknest_client.get_package_metadata(
-                str(instance_url), package
-            )
+            result = await self.ducknest_client.get_package_metadata(str(instance_url), package)
             self.cache.add_metadata(package, result)
 
         return SingleMetadataResult(package, instance_url, result)
@@ -137,9 +129,7 @@ class Fetcher:
         result = None
 
         with suppress(QuackPackError):
-            result = await self.ducknest_client.get_package_all_metadata(
-                str(instance_url), package_name
-            )
+            result = await self.ducknest_client.get_package_all_metadata(str(instance_url), package_name)
             self.cache.add_multi_metadata(package_name, result)
 
         return MultiMetadataResult(package_name, instance_url, result)
@@ -157,29 +147,21 @@ class Fetcher:
         """
 
         metadata = source.manifest
-        package = FetcherPackage(
-            id=metadata.summary.name, version=str(metadata.summary.version)
-        )
+        package = FetcherPackage(id=metadata.summary.name, version=str(metadata.summary.version))
 
         source_files = source.files_for_publish()
 
         prefix = f"{package.id}-{package.version}"
-        compressed_source_path = Path(
-            mktemp(dir=self.artifacts_cache_path, prefix=prefix, suffix=".tar.gz")
-        )
+        compressed_source_path = Path(mktemp(dir=self.artifacts_cache_path, prefix=prefix, suffix=".tar.gz"))
 
         pack_to_file(source=source_files, destination=compressed_source_path)
 
         with suppress(QuackPackError):
             _ = await self.ducknest_client.publish_package(
-                str(instance_url),
-                metadata.summary.into_schema(),
-                compressed_source_path,
+                str(instance_url), metadata.summary.into_schema(), compressed_source_path
             )
 
-    async def get_package_blob(
-        self, instance_url: URLType, package: FetcherPackage
-    ) -> Path | None:
+    async def get_package_blob(self, instance_url: URLType, package: FetcherPackage) -> Path | None:
         """
         Download and cache the source blob (tarball) for a given package.
 
@@ -192,10 +174,7 @@ class Fetcher:
         """
 
         destination = (
-            self.download_cache_path
-            / str(package.id)
-            / package.version
-            / self.DEFAULT_BLOB_FILENAME
+            self.download_cache_path / str(package.id) / package.version / self.DEFAULT_BLOB_FILENAME
         )
 
         if destination.exists():
@@ -279,9 +258,7 @@ class FetcherContext(AbstractContextManager[Fetcher]):
     @override
     def __enter__(self) -> Fetcher:
         ducknest_client = self._stack.enter_context(DucknestClientContext())
-        cache = self._stack.enter_context(
-            MetadataCacheContext(self.ctx.ensure_metadata_db())
-        )
+        cache = self._stack.enter_context(MetadataCacheContext(self.ctx.ensure_metadata_db()))
         git_client = GitClient()
         blobs_progress = CurlProgress.make_blob_progress(self.ctx.console)
         total_progress = CurlProgress.make_completed_progress(self.ctx.console)
@@ -294,10 +271,7 @@ class FetcherContext(AbstractContextManager[Fetcher]):
             cache,
             git_client,
             Progresses(
-                blobs=blobs_progress,
-                total=total_progress,
-                bundled=bundled_progress,
-                git=git_progress,
+                blobs=blobs_progress, total=total_progress, bundled=bundled_progress, git=git_progress
             ),
         )
 

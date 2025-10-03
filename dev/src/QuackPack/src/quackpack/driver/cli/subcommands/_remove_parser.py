@@ -16,19 +16,9 @@ def get_parser() -> CliParser:
     """
 
     return (
-        CliParser.subcommand(
-            name="remove", description="Remove packages from the current venv"
-        )
-        .add_str(
-            long_name="packages",
-            argument_count=ArgumentCount.OneOrMore,
-            help="Packages to remove",
-        )
-        .add_flag(
-            long_name="--global",
-            short_name="-g",
-            help="Add packages to the global venv instead",
-        )
+        CliParser.subcommand(name="remove", description="Remove packages from the current venv")
+        .add_str(long_name="packages", argument_count=ArgumentCount.OneOrMore, help="Packages to remove")
+        .add_flag(long_name="--global", short_name="-g", help="Add packages to the global venv instead")
         .add_flag(long_name="--dev", help="Remove dev dependencies")
     )
 
@@ -46,10 +36,5 @@ def execute(ctx: GlobalContext, args: Arguments) -> None:
         if getattr(args.matched, "global")
         else PackageLoader.find_from_cwd(ctx)
     )
-    options = RemoveOptions(
-        ctx=ctx,
-        to_remove=args.matched.packages,
-        package=package,
-        section=Section.DEV_DEPS if args.matched.dev else Section.DEPS,
-    )
+    options = RemoveOptions(ctx=ctx, to_remove=args.matched.packages, package=package, section=Section.DEV_DEPS if args.matched.dev else Section.DEPS)
     remove(options)

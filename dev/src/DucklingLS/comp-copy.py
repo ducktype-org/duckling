@@ -2,7 +2,6 @@ import os
 import shutil
 import subprocess
 
-
 def compile_and_copy_binary():
     # Define paths
     build_dir = os.path.abspath("../../build")
@@ -30,7 +29,6 @@ def compile_and_copy_binary():
     shutil.copy2(source_binary_path, destination_binary_path)
 
     print("Binary successfully compiled and copied.")
-
 
 if __name__ == "__main__":
     compile_and_copy_binary()

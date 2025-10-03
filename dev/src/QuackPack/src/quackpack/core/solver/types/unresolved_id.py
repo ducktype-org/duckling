@@ -134,15 +134,11 @@ class UnresolvedIdLocal(UnresolvedId):
     @override
     def from_dependency(dependency: Dependency) -> UnresolvedIdLocal:
         assert dependency.spec.source.is_local()
-        return UnresolvedIdLocal(
-            local_path=dependency.spec.source.as_local().absolute_dir_root
-        )
+        return UnresolvedIdLocal(local_path=dependency.spec.source.as_local().absolute_dir_root)
 
     @override
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, UnresolvedIdLocal) and self.local_path == other.local_path
-        )
+        return isinstance(other, UnresolvedIdLocal) and self.local_path == other.local_path
 
     @override
     def __hash__(self) -> int:
@@ -166,13 +162,9 @@ class IdResolvents:
             raise ValueError("cannot resolve id to different kind")
         match unresolved.kind():
             case SourceKind.Local:
-                self.local_resolvents[cast(UnresolvedIdLocal, unresolved)] = cast(
-                    ResolvedIdLocal, resolved
-                )
+                self.local_resolvents[cast(UnresolvedIdLocal, unresolved)] = cast(ResolvedIdLocal, resolved)
             case SourceKind.Git:
-                self.git_resolvents[cast(UnresolvedIdGit, unresolved)] = cast(
-                    ResolvedIdGit, resolved
-                )
+                self.git_resolvents[cast(UnresolvedIdGit, unresolved)] = cast(ResolvedIdGit, resolved)
             case SourceKind.Registry:
                 self.registry_resolvents[cast(UnresolvedIdRegistry, unresolved)] = cast(
                     ResolvedIdRegistry, resolved

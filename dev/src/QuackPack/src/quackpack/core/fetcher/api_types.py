@@ -11,13 +11,7 @@ from pydantic import BaseModel
 from quackpack.core.types.manifest.schemas.registry import RegistryManifestSchema
 from quackpack.util.types.pkgid import Identifier
 
-__all__ = [
-    "MultiMetadata",
-    "MultiMetadataResult",
-    "Package",
-    "SingleMetadata",
-    "SingleMetadataResult",
-]
+__all__ = ["MultiMetadata", "MultiMetadataResult", "Package", "SingleMetadata", "SingleMetadataResult"]
 
 SingleMetadata = RegistryManifestSchema
 

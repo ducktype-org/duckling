@@ -39,17 +39,11 @@ ERROR_LOCK_VIOLATION: Literal[0x21] = 0x21
 class WindowsFileLock(BaseFileLock):
     @override
     def __init__(
-        self,
-        path: Path,
-        lock_type: LockType = LockType.EXCLUSIVE,
-        *,
-        blocking: bool = True
+        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
     ) -> None:
         self.path: Path = path
         self.flags: int = (
-            LOCKFILE_EXCLUSIVE_LOCK
-            if lock_type is LockType.EXCLUSIVE
-            else LOCKFILE_SHARED_LOCK
+            LOCKFILE_EXCLUSIVE_LOCK if lock_type is LockType.EXCLUSIVE else LOCKFILE_SHARED_LOCK
         ) | (LOCKFILE_FAIL_IMMEDIATELY if not blocking else 0)
         self.fd: PyHANDLE | None = None
         self.ov: PyOVERLAPPED | None = None
@@ -99,11 +93,7 @@ class WindowsFileLock(BaseFileLock):
             # the file (we probably do not need that, but it is good practise
             # if the code will be reused somewhere else).
             self.ov = pywintypes.OVERLAPPED()
-            with (
-                EnableInterrupt()
-                if (self.flags & LOCKFILE_FAIL_IMMEDIATELY) == 0
-                else nullcontext()
-            ):
+            with EnableInterrupt() if (self.flags & LOCKFILE_FAIL_IMMEDIATELY) == 0 else nullcontext():
                 LockFileEx(self.fd.handle, self.flags, 0, 0xFFFF0000, self.ov)
         except Exception as err:
             if self.fd is not None:

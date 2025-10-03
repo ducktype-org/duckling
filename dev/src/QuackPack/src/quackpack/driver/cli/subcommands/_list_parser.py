@@ -21,10 +21,7 @@ def get_parser() -> CliParser:
             default="name",
             help='Properties to sort the output by. Can be any of "name", "last_access", "last_modification".',
         )
-        .add_flag(
-            long_name="--sort-reverse",
-            help="Controls if the sort should be done in reverse order",
-        )
+        .add_flag(long_name="--sort-reverse", help="Controls if the sort should be done in reverse order")
     )
 
 

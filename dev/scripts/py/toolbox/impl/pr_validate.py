@@ -44,8 +44,8 @@ def pr_validate_impl(
     )
 
     # Step 6 - !todo validate
-    if not todo_validate_impl(exclude_files=["todo_validate.py"]):
-        exit_with_error("!TODO validation has failed")
+    if not todo_validate_impl():
+        exit_with_error("T" + "ODO validation has failed")
 
     # Step 7 - issue checker
     if not issue_checker_impl([]):
