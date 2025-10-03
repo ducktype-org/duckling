@@ -22,7 +22,10 @@ key6: e"""
 
         positions, deserialized_object = strict_safe_load(tmp_path)
         assert "key1" in deserialized_object
-        assert isinstance(deserialized_object["key1"], list) and len(deserialized_object["key1"]) == 3
+        assert (
+            isinstance(deserialized_object["key1"], list)
+            and len(deserialized_object["key1"]) == 3
+        )
         assert "key2" in deserialized_object["key1"][0]
         assert "key5" in deserialized_object["key1"][0]["key2"]
         assert deserialized_object["key1"][0]["key2"]["key5"][0] == "b"
@@ -34,8 +37,14 @@ key6: e"""
         assert "key6" in deserialized_object
         assert deserialized_object["key6"] == "e"
 
-        assert positions["key1", 0, "!0"][0].line == 1 and positions["key1", 0, "!0"][0].column == 0
-        assert positions["key1", 0, "!0"][1].line == 1 and positions["key1", 0, "!0"][1].column == 1
+        assert (
+            positions["key1", 0, "!0"][0].line == 1
+            and positions["key1", 0, "!0"][0].column == 0
+        )
+        assert (
+            positions["key1", 0, "!0"][1].line == 1
+            and positions["key1", 0, "!0"][1].column == 1
+        )
 
         assert (
             positions["key1", 0, "key2", "", "!1"][0].line == 1
@@ -91,7 +100,10 @@ key6: e"""
             positions["key1", 0, "key2", "key5", 1][0].line == 1
             and positions["key1", 0, "key2", "key5", 1][0].column == 19
         )
-        assert positions["key6", "[key]"][1].line == 6 and positions["key6", "[key]"][1].column == 4
+        assert (
+            positions["key6", "[key]"][1].line == 6
+            and positions["key6", "[key]"][1].column == 4
+        )
         assert (
             positions["key1", 1, "key3", 0, "key4"][0].line == 3
             and positions["key1", 1, "key3", 0, "key4"][0].column == 10
@@ -114,20 +126,44 @@ def test_implicit_list(tmp_path: Path):
 
         positions, _ = strict_safe_load(tmp_path)
 
-        assert positions["key1", 0, 0][0].line == 1 and positions["key1", 0, 0][0].column == 3
-        assert positions["key1", 0, 0][1].line == 1 and positions["key1", 0, 0][1].column == 4
+        assert (
+            positions["key1", 0, 0][0].line == 1
+            and positions["key1", 0, 0][0].column == 3
+        )
+        assert (
+            positions["key1", 0, 0][1].line == 1
+            and positions["key1", 0, 0][1].column == 4
+        )
 
         assert positions["key1", 1][0].line == 2 and positions["key1", 1][0].column == 2
         assert positions["key1", 1][1].line == 2 and positions["key1", 1][1].column == 3
 
-        assert positions["key1", 0, "!0"][0].line == 1 and positions["key1", 0, "!0"][0].column == 0
-        assert positions["key1", 0, "!0"][1].line == 1 and positions["key1", 0, "!0"][1].column == 1
+        assert (
+            positions["key1", 0, "!0"][0].line == 1
+            and positions["key1", 0, "!0"][0].column == 0
+        )
+        assert (
+            positions["key1", 0, "!0"][1].line == 1
+            and positions["key1", 0, "!0"][1].column == 1
+        )
 
-        assert positions["key1", 0, 0, "!1"][0].line == 1 and positions["key1", 0, 0, "!1"][0].column == 2
-        assert positions["key1", 0, 0, "!1"][1].line == 1 and positions["key1", 0, 0, "!1"][1].column == 3
+        assert (
+            positions["key1", 0, 0, "!1"][0].line == 1
+            and positions["key1", 0, 0, "!1"][0].column == 2
+        )
+        assert (
+            positions["key1", 0, 0, "!1"][1].line == 1
+            and positions["key1", 0, 0, "!1"][1].column == 3
+        )
 
-        assert positions["key1", 0, "!2"][0].line == 1 and positions["key1", 0, "!2"][0].column == 7
-        assert positions["key1", 0, "!2"][1].line == 1 and positions["key1", 0, "!2"][1].column == 8
+        assert (
+            positions["key1", 0, "!2"][0].line == 1
+            and positions["key1", 0, "!2"][0].column == 7
+        )
+        assert (
+            positions["key1", 0, "!2"][1].line == 1
+            and positions["key1", 0, "!2"][1].column == 8
+        )
 
 
 def test_implicit_dict(tmp_path: Path):
@@ -143,8 +179,14 @@ def test_implicit_dict(tmp_path: Path):
         assert positions[0,][0].line == 0 and positions[0,][0].column == 1
         assert positions[0,][1].line == 0 and positions[0,][1].column == 2
 
-        assert positions[1, "key1", 0][0].line == 0 and positions[1, "key1", 0][0].column == 11
-        assert positions[1, "key1", 0][1].line == 0 and positions[1, "key1", 0][1].column == 12
+        assert (
+            positions[1, "key1", 0][0].line == 0
+            and positions[1, "key1", 0][0].column == 11
+        )
+        assert (
+            positions[1, "key1", 0][1].line == 0
+            and positions[1, "key1", 0][1].column == 12
+        )
 
         assert (
             positions[2, "key2", "key3", "[key]"][0].line == 0

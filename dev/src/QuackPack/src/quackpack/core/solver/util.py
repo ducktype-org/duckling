@@ -5,7 +5,10 @@ from quackpack.core.solver.gathering import GatheredInfo
 from quackpack.core.solver.types.packages_by_id import PackagesById
 from quackpack.core.solver.types.resolved_id import ResolvedIdGit
 from quackpack.core.solver.types.unresolved_id import IdResolvents, UnresolvedId
-from quackpack.core.solver.types.unresolved_package import ResolvedPackage, UnresolvedPackage
+from quackpack.core.solver.types.unresolved_package import (
+    ResolvedPackage,
+    UnresolvedPackage,
+)
 from quackpack.core.types.manifest.dependency import Dependency
 from quackpack.core.types.manifest.source import GitSource
 from quackpack.util.types.pkgid import GitPackageId
@@ -35,7 +38,8 @@ def get_possible_realizations(
             # similarily to system and arch selectors.
             # However the amount of changes to schemas required for that
             # is not worth the effort.
-            if dependency.versions == [] or package.is_compatible_with_any(baseline_packages)
+            if dependency.versions == []
+            or package.is_compatible_with_any(baseline_packages)
         ]
 
 
@@ -43,7 +47,9 @@ def create_git_fetch_cache(
     data: GatheredInfo, used_packages: Iterable[ResolvedPackage]
 ) -> dict[GitSource, GitPackageId]:
     result = dict[GitSource, GitPackageId]()
-    used_gits = {cast(ResolvedIdGit, pkg.id) for pkg in used_packages if pkg.id.is_git()}
+    used_gits = {
+        cast(ResolvedIdGit, pkg.id) for pkg in used_packages if pkg.id.is_git()
+    }
     for unresolved, resolved in data.id_resolvents.git_resolvents.items():
         if resolved not in used_gits:
             continue

@@ -9,7 +9,10 @@ from .helpers import (
 )
 import os
 
-def issue_checker_impl(issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False) -> bool:
+
+def issue_checker_impl(
+    issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False
+) -> bool:
     """
     Checks if specified GitHub issue numbers appear in the codebase.
 
@@ -75,6 +78,7 @@ def issue_checker_impl(issues: list[str] | None, branch: str = "origin/main", no
     for num in valid_issue_numbers:
         log_info(f"#{num}: {summary[num]} occurrence(s)")
     return not found_any
+
 
 def get_issues_from_github() -> list[str]:
     """

@@ -101,7 +101,9 @@ class CleanLock:
 
     def __init__(self, storage: StoragePaths) -> None:
         self.storage: StoragePaths = storage
-        self.lock = FileLock(self.storage.clean_lock(), lock_type=LockType.EXCLUSIVE, blocking=True)
+        self.lock = FileLock(
+            self.storage.clean_lock(), lock_type=LockType.EXCLUSIVE, blocking=True
+        )
 
     def __enter__(self) -> None:
         self.lock.__enter__()
@@ -146,9 +148,13 @@ class TrySyncLock:
     def __init__(self, storage: StoragePaths, venv_id: Identifier) -> None:
         self.storage: StoragePaths = storage
         self.venv_id: Identifier = venv_id
-        self.clean_lock = FileLock(self.storage.clean_lock(), lock_type=LockType.SHARED, blocking=False)
+        self.clean_lock = FileLock(
+            self.storage.clean_lock(), lock_type=LockType.SHARED, blocking=False
+        )
         self.sync_lock = FileLock(
-            self.storage.venv_sync_lock(self.venv_id), lock_type=LockType.EXCLUSIVE, blocking=False
+            self.storage.venv_sync_lock(self.venv_id),
+            lock_type=LockType.EXCLUSIVE,
+            blocking=False,
         )
 
     def __enter__(self) -> None:
@@ -179,7 +185,9 @@ class TrySyncLock:
                 self.clean_lock.__exit__(None, None, None)
             except Exception as close_err:
                 if err is not None:
-                    raise ExceptionGroup("multiple cleanup close errors occured", [err, close_err]) from None
+                    raise ExceptionGroup(
+                        "multiple cleanup close errors occured", [err, close_err]
+                    ) from None
                 else:
                     raise
         if err is not None:
@@ -201,7 +209,9 @@ class RunLock:
     """
 
     def __init__(self, storage: StoragePaths, venv_id: Identifier) -> None:
-        self.lock = FileLock(storage.venv_sync_lock(venv_id), lock_type=LockType.SHARED, blocking=True)
+        self.lock = FileLock(
+            storage.venv_sync_lock(venv_id), lock_type=LockType.SHARED, blocking=True
+        )
 
     def __enter__(self) -> None:
         self.lock.__enter__()

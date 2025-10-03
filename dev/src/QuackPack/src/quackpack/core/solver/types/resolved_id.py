@@ -75,7 +75,9 @@ class ResolvedIdLocal(ResolvedId):
 
     @override
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, ResolvedIdLocal) and self.local_path == other.local_path
+        return (
+            isinstance(other, ResolvedIdLocal) and self.local_path == other.local_path
+        )
 
     @override
     def __hash__(self) -> int:

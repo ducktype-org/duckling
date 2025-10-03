@@ -12,7 +12,9 @@ def get_parser() -> CliParser:
     :rtype: quackpack.cli._parser.CliParser
     """
 
-    return CliParser.subcommand(name="logout", description="Logout from the registry [NOT IMPLEMENTED]")
+    return CliParser.subcommand(
+        name="logout", description="Logout from the registry [NOT IMPLEMENTED]"
+    )
 
 
 def execute(ctx: GlobalContext, _args: Arguments) -> None:

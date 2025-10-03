@@ -63,7 +63,9 @@ def _show_one_package(
     visits[node] += 1
 
     # String shown to the user.
-    node_output = _node_output(alias, node, not opts.expand_visited and visits[node] > 1)
+    node_output = _node_output(
+        alias, node, not opts.expand_visited and visits[node] > 1
+    )
 
     # Id in a tree to set parent atribute in create_node.
     node_tree_id = str(node) + f" {visits[node]}"
@@ -74,7 +76,16 @@ def _show_one_package(
     ):
         return
     for child_alias, child_id in freeze.dependencies[node].dependencies.items():
-        _show_one_package(tree, depth + 1, node_tree_id, child_alias.root, child_id, visits, opts, freeze)
+        _show_one_package(
+            tree,
+            depth + 1,
+            node_tree_id,
+            child_alias.root,
+            child_id,
+            visits,
+            opts,
+            freeze,
+        )
 
 
 def tree(opts: TreeOptions) -> None:
@@ -93,6 +104,8 @@ def tree(opts: TreeOptions) -> None:
 
     tree.create_node(str(opts.source.manifest.summary.name), str(main_project_id))
     for alias, package in freeze.direct_dependencies.items():
-        _show_one_package(tree, 1, str(main_project_id), alias.root, package, visits, opts, freeze)
+        _show_one_package(
+            tree, 1, str(main_project_id), alias.root, package, visits, opts, freeze
+        )
 
     opts.ctx.console.print(tree.show(stdout=False))

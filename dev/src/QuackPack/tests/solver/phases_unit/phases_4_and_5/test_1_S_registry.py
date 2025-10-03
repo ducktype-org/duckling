@@ -10,7 +10,11 @@ from quackpack.core.solver.solving.build_rules_constructor import construct_buil
 from quackpack.core.solver.solving.solver_engine import run_engine
 from quackpack.core.solver.types.flag_type import FeatureId
 from quackpack.core.solver.types.packages_by_id import PackagesById
-from quackpack.core.solver.types.resolved_id import ResolvedIdGit, ResolvedIdLocal, ResolvedIdRegistry
+from quackpack.core.solver.types.resolved_id import (
+    ResolvedIdGit,
+    ResolvedIdLocal,
+    ResolvedIdRegistry,
+)
 from quackpack.core.solver.types.resolved_package import (
     ResolvedPackage,
     ResolvedPackageLocal,
@@ -43,11 +47,21 @@ class FakeGlobalContext(GlobalContext):
 
 def test_1_small_with_flags(tmp_path: Path):
     main_id = ResolvedIdLocal(local_path=Path.cwd())
-    pack1_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack1"))
-    pack2_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack2"))
-    pack3_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack3"))
-    pack4_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack4"))
-    pack5_id = ResolvedIdRegistry(registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack5"))
+    pack1_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack1")
+    )
+    pack2_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack2")
+    )
+    pack3_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack3")
+    )
+    pack4_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack4")
+    )
+    pack5_id = ResolvedIdRegistry(
+        registry_url=DEFAULT_SERVER_URL, package_name=Identifier("pack5")
+    )
 
     main_v1 = ResolvedPackageLocal(_id=main_id)
     pack1_v1 = ResolvedPackageRegistry(_id=pack1_id, _version=Version(1))
@@ -98,7 +112,9 @@ dependencies:
     tmp_file.touch()
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[main_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[main_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack1_v1 = """
 metadata:
@@ -111,7 +127,9 @@ dependencies:
     m = mock_open(read_data=manifest_pack1_v1)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack1_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack1_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack1_v2 = """
 metadata:
@@ -124,7 +142,9 @@ dependencies:
     m = mock_open(read_data=manifest_pack1_v2)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack1_v2] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack1_v2] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack2_v1 = """
 metadata:
@@ -140,7 +160,9 @@ dependencies:
     m = mock_open(read_data=manifest_pack2_v1)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack2_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack2_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack3_v1 = """
 metadata:
@@ -150,7 +172,9 @@ metadata:
     m = mock_open(read_data=manifest_pack3_v1)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack3_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack3_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack3_v2 = """
 metadata:
@@ -160,7 +184,9 @@ metadata:
     m = mock_open(read_data=manifest_pack3_v2)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack3_v2] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack3_v2] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack4_v1 = """
 metadata:
@@ -170,7 +196,9 @@ metadata:
     m = mock_open(read_data=manifest_pack4_v1)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack4_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack4_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack4_v2 = """
 metadata:
@@ -180,7 +208,9 @@ metadata:
     m = mock_open(read_data=manifest_pack4_v2)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack4_v2] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack4_v2] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     manifest_pack5_v1 = """
 metadata:
@@ -190,7 +220,9 @@ metadata:
     m = mock_open(read_data=manifest_pack5_v1)
     with pytest.MonkeyPatch.context() as mpatch:
         mpatch.setattr("builtins.open", m)
-        summaries[pack5_v1] = parse_manifest(tmp_file, FakeGlobalContext.default()).summary
+        summaries[pack5_v1] = parse_manifest(
+            tmp_file, FakeGlobalContext.default()
+        ).summary
 
     packages_by_id: PackagesById = PackagesById()
     packages_by_id[main_id].add(main_v1)
@@ -223,12 +255,16 @@ metadata:
 
     solution = run_engine(data=gathered, root_projects=[(main_v1, {Identifier("C")})])
 
-    build_rules = construct_build_rules(summaries=summaries, solution=solution, id_resolvents=id_resolvents)
+    build_rules = construct_build_rules(
+        summaries=summaries, solution=solution, id_resolvents=id_resolvents
+    )
     assert build_rules.flags_to_install[main_v1] == [Identifier("C")]
     assert build_rules.flags_to_install[pack5_v1] == []
     assert build_rules.instructions[pack5_v1] == {}
     assert build_rules.flags_to_install[pack2_v1] == [Identifier("B")]
-    assert (pack1_v1 in build_rules.flags_to_install) ^ (pack1_v2 in build_rules.flags_to_install)
+    assert (pack1_v1 in build_rules.flags_to_install) ^ (
+        pack1_v2 in build_rules.flags_to_install
+    )
     if pack1_v1 in build_rules.flags_to_install:
         assert build_rules.instructions[main_v1] == {
             Identifier("pack1"): pack1_v1,
@@ -255,7 +291,9 @@ metadata:
         assert build_rules.flags_to_install[pack1_v2] == [Identifier("A")]
         assert build_rules.flags_to_install[pack3_v2] == []
         assert pack3_v1 not in build_rules.flags_to_install
-    assert (pack4_v1 in build_rules.flags_to_install) ^ (pack4_v2 in build_rules.flags_to_install)
+    assert (pack4_v1 in build_rules.flags_to_install) ^ (
+        pack4_v2 in build_rules.flags_to_install
+    )
     if pack4_v1 in build_rules.flags_to_install:
         assert build_rules.instructions[pack2_v1] == {Identifier("pack4"): pack4_v1}
         assert build_rules.instructions[pack4_v1] == {}

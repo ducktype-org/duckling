@@ -63,7 +63,9 @@ def setup_and_run() -> int | None:
         _handle_arbitrary_exception(error_console, e, env.get("QP_EXCEPTION_DEBUG"))
 
 
-def _handle_argparse_exception(console: Console, e: argparse.ArgumentError, code: int = 1) -> Never:
+def _handle_argparse_exception(
+    console: Console, e: argparse.ArgumentError, code: int = 1
+) -> Never:
     """
     Print nicely formatted `argparse.ArgumentError` and exit.
     ----
@@ -115,7 +117,9 @@ def _handle_eexist(console: Console, e: FileNotFoundError, code: int = 1) -> Nev
     sys.exit(code)
 
 
-def _handle_quackpack_error(console: Console, e: QuackPackError, code: int = 1) -> Never:
+def _handle_quackpack_error(
+    console: Console, e: QuackPackError, code: int = 1
+) -> Never:
     """
     Print nicely formatted `QuackPackError` and exit.
     ----
@@ -150,7 +154,9 @@ def _handle_forced_signal(console: Console, _e: ForcedSignal, code: int = 1) -> 
     sys.exit(code)
 
 
-def _handle_pydantic_error(console: Console, e: ValidationError, code: int = 1) -> Never:
+def _handle_pydantic_error(
+    console: Console, e: ValidationError, code: int = 1
+) -> Never:
     """
     Print nicely formatted `ValidationError` and exit.
     ----
@@ -194,7 +200,9 @@ def _handle_arbitrary_exception(
     for note in getattr(e, "__notes__", []):
         console.print(note)
     error_message = f"with message [bold yellow]{e!s}" if str(e) != "" else ""
-    console.critical(f"Unexpected error of type [bold yellow]'{type(e).__name__}'[/] {error_message}")
+    console.critical(
+        f"Unexpected error of type [bold yellow]'{type(e).__name__}'[/] {error_message}"
+    )
     if debug_level in ("1", "2"):
         console.print_exception(show_locals=debug_level == "2")
     sys.exit(code)

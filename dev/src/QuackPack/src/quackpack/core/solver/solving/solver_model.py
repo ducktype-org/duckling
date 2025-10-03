@@ -22,7 +22,9 @@ def _package_with_flag_var_name(package: ResolvedPackage, flag: Identifier) -> s
     return f"{_package_var_name(package)}@{flag!s}"
 
 
-def _dependency_flag_realization_var_name(dependency: PackageAndDependencyId, flag: Identifier) -> str:
+def _dependency_flag_realization_var_name(
+    dependency: PackageAndDependencyId, flag: Identifier
+) -> str:
     return f"{_package_var_name(dependency.parent_package)}->{dependency.dependency_id!s}@_@{flag!s}"
 
 
@@ -44,15 +46,15 @@ class SolverModel:
         self.model = Model()  # type: ignore reportUnknownVariableType
         self.model.hideOutput()  # type: ignore reportUnknownMemberType
         self.packages: dict[ResolvedPackage, SCIPVariableType] = {}
-        self.package_flags: defaultdict[ResolvedPackage, dict[Identifier, SCIPVariableType]] = defaultdict(
-            dict
-        )
-        self.dep_versions: defaultdict[PackageAndDependencyId, dict[ResolvedPackage, SCIPVariableType]] = (
-            defaultdict(dict)
-        )
-        self.dep_flags: defaultdict[PackageAndDependencyId, dict[Identifier, SCIPVariableType]] = defaultdict(
-            dict
-        )
+        self.package_flags: defaultdict[
+            ResolvedPackage, dict[Identifier, SCIPVariableType]
+        ] = defaultdict(dict)
+        self.dep_versions: defaultdict[
+            PackageAndDependencyId, dict[ResolvedPackage, SCIPVariableType]
+        ] = defaultdict(dict)
+        self.dep_flags: defaultdict[
+            PackageAndDependencyId, dict[Identifier, SCIPVariableType]
+        ] = defaultdict(dict)
 
     # Adding vars
     # -----------
@@ -72,12 +74,17 @@ class SolverModel:
     def add_dependency_version_realization_var(
         self, dependency: PackageAndDependencyId, realization: ResolvedPackage
     ):
-        if dependency in self.dep_versions and realization in self.dep_versions[dependency]:
+        if (
+            dependency in self.dep_versions
+            and realization in self.dep_versions[dependency]
+        ):
             return
         var_name = _dependency_version_realization_var_name(dependency, realization)
         self.dep_versions[dependency][realization] = self.model.addVar(var_name, vtype="BINARY")  # type: ignore reportUnknownMemberType
 
-    def add_dependency_flag_realization_var(self, dependency: PackageAndDependencyId, flag: Identifier):
+    def add_dependency_flag_realization_var(
+        self, dependency: PackageAndDependencyId, flag: Identifier
+    ):
         if dependency in self.dep_flags and flag in self.dep_flags[dependency]:
             return
         var_name = _dependency_flag_realization_var_name(dependency, flag)
@@ -91,7 +98,9 @@ class SolverModel:
     ) -> None:
         self.model.addCons(sum(when_all) <= sum(then_any) - 1 + len(when_all))  # type: ignore reportUnknownMemberType
 
-    def _implies_one_all(self, when_one: SCIPVariableType, then_all: Iterable[SCIPVariableType]) -> None:
+    def _implies_one_all(
+        self, when_one: SCIPVariableType, then_all: Iterable[SCIPVariableType]
+    ) -> None:
         self.model.addCons(when_one * len(then_all) <= sum(then_all))  # type: ignore reportUnknownMemberType
 
     def _implies(self, when: SCIPVariableType, then: SCIPVariableType) -> None:
@@ -103,17 +112,23 @@ class SolverModel:
         parent_flag: Identifier | NoFlag,
         child_flags: set[Identifier],
     ):
-        parent_var = self._get_package_var(package=dependency.parent_package, flag=parent_flag)
+        parent_var = self._get_package_var(
+            package=dependency.parent_package, flag=parent_flag
+        )
         self._implies_one_all(
-            when_one=parent_var, then_all=[self.dep_flags[dependency][flag] for flag in child_flags]
+            when_one=parent_var,
+            then_all=[self.dep_flags[dependency][flag] for flag in child_flags],
         )
 
     def require_satisfy_dep_version(
         self, dependency: PackageAndDependencyId, parent_flag: Identifier | NoFlag
     ):
-        parent_var = self._get_package_var(package=dependency.parent_package, flag=parent_flag)
+        parent_var = self._get_package_var(
+            package=dependency.parent_package, flag=parent_flag
+        )
         self._implies_all_any(
-            when_all=(parent_var,), then_any=[v for _, v in self.dep_versions[dependency].items()]
+            when_all=(parent_var,),
+            then_any=[v for _, v in self.dep_versions[dependency].items()],
         )
 
     def require_substantiate_dep(self, dependency: PackageAndDependencyId):
@@ -134,7 +149,8 @@ class SolverModel:
                 if flag not in possible_flags[package]:
                     # It is impossible to install package with flag (due to info cleaning, its dependencies failed to fetch).
                     self._implies_all_any(
-                        when_all=(version_realization_var, flag_realization_var), then_any=()
+                        when_all=(version_realization_var, flag_realization_var),
+                        then_any=(),
                     )
                 else:
                     self._implies_all_any(
@@ -151,7 +167,9 @@ class SolverModel:
     # Getters
     # -------
 
-    def _get_package_var(self, package: ResolvedPackage, flag: NoFlag | Identifier) -> SCIPVariableType:
+    def _get_package_var(
+        self, package: ResolvedPackage, flag: NoFlag | Identifier
+    ) -> SCIPVariableType:
         if flag is NoFlag.NoFlag:
             return self.packages[package]
         else:
@@ -169,7 +187,9 @@ class SolverModel:
         )
         self.model.optimize()  # type: ignore reportUnknownMemberType
         return SolverModelOutput(
-            packages={package for package, var in self.packages.items() if self._is_one(var)},
+            packages={
+                package for package, var in self.packages.items() if self._is_one(var)
+            },
             package_flags=defaultdict(
                 set,
                 {

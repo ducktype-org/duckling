@@ -91,7 +91,9 @@ def validate_basic_schema(schema: ManifestSchema) -> None:
         )
 
 
-def summary_from_schema(schema: ManifestSchema, package_root: Path, ctx: GlobalContext) -> Summary:
+def summary_from_schema(
+    schema: ManifestSchema, package_root: Path, ctx: GlobalContext
+) -> Summary:
     validate_basic_schema(schema)
     assert schema.metadata is not None, "by validate_basic_schema"
 
@@ -103,7 +105,9 @@ def summary_from_schema(schema: ManifestSchema, package_root: Path, ctx: GlobalC
     context_stack.pop()
 
     context_stack.push("dev_dependencies")
-    dev_deps = parse_dependencies(schema.dev_dependencies, package_root, context_stack, ctx)
+    dev_deps = parse_dependencies(
+        schema.dev_dependencies, package_root, context_stack, ctx
+    )
     context_stack.pop()
 
     context_stack.push("features")
@@ -145,7 +149,10 @@ def parse_version(source: VersionSchema | OredSemverSchema) -> list[Version]:
 
 
 def parse_dependencies(
-    schema: dict[str, DependencySchema] | None, package_root: Path, context_stack: Scope, ctx: GlobalContext
+    schema: dict[str, DependencySchema] | None,
+    package_root: Path,
+    context_stack: Scope,
+    ctx: GlobalContext,
 ) -> Dependencies:
     if schema is None:
         logger.debug("empty deps or dev_deps")
@@ -154,7 +161,9 @@ def parse_dependencies(
     for name, dep_schema in schema.items():
         context_stack.push(name)
         if not is_valid_identifier(name):
-            raise QuackPackError(f"dependency `{context_stack.format()}` is not a valid identifier")
+            raise QuackPackError(
+                f"dependency `{context_stack.format()}` is not a valid identifier"
+            )
         manifest_name = Identifier(name)
         result[manifest_name] = parse_single_dependency(
             manifest_name, dep_schema, package_root, context_stack, ctx
@@ -197,7 +206,11 @@ def parse_single_dependency(
         )
 
     context_stack.push("conditions")
-    conds = parse_conditions(schema.conditions, context_stack) if schema.conditions is not None else None
+    conds = (
+        parse_conditions(schema.conditions, context_stack)
+        if schema.conditions is not None
+        else None
+    )
     context_stack.pop()
 
     real_name = parse_real_name(schema.source, context_stack)
@@ -206,7 +219,10 @@ def parse_single_dependency(
 
 
 def parse_source_from_schema(
-    schema: DependencySchema, package_root: Path, context_stack: Scope, ctx: GlobalContext
+    schema: DependencySchema,
+    package_root: Path,
+    context_stack: Scope,
+    ctx: GlobalContext,
 ) -> Source:
     if schema.source is None:
         logger.debug("missing source, falling back to default registry?")
@@ -222,7 +238,11 @@ def parse_source_from_schema(
         raise QuackPackError(
             f"can't determine type of dependency `{context_stack.format()}`, please remove one of fields `{context_stack.format()}.version` or `{context_stack.format()}.source.path`"
         )
-    match (has_registry_source(source), has_local_source(source), has_git_source(source)):
+    match (
+        has_registry_source(source),
+        has_local_source(source),
+        has_git_source(source),
+    ):
         case (False, False, False):
             logger.debug("didn't find any source")
             check_no_git(source, context_stack)
@@ -241,9 +261,15 @@ def parse_source_from_schema(
             check_no_local(source, context_stack)
             # str means another registry
             if isinstance(source, str):
-                logger.debug("source is a string, assuming different registry url=`{source}`")
+                logger.debug(
+                    "source is a string, assuming different registry url=`{source}`"
+                )
                 return RegistrySource(registry_url=source)
-            url = source.registry_url if source.registry_url is not None else ctx.registry_url()
+            url = (
+                source.registry_url
+                if source.registry_url is not None
+                else ctx.registry_url()
+            )
             return RegistrySource(registry_url=url)
         case (False, True, False):
             logger.debug("found local path source")
@@ -261,7 +287,9 @@ def parse_source_from_schema(
                 dir_root = package_root / provided_path
                 dir_root = dir_root.resolve()
                 logger.debug(f"it was not absolute, guessed `{dir_root!s}`")
-            return LocalSource(absolute_dir_root=dir_root, dir_entry_in_manifest=source.path)
+            return LocalSource(
+                absolute_dir_root=dir_root, dir_entry_in_manifest=source.path
+            )
         case (False, False, True):
             logger.debug("found git source")
             check_no_local(source, context_stack)
@@ -273,7 +301,10 @@ def parse_source_from_schema(
                 f"url=`{source.git_url}`, branch=`{source.branch}`, commit=`{source.commit}`, tag=`{source.tag}`"
             )
             return GitSource(
-                git_url=source.git_url, branch=source.branch, commit=source.commit, tag=source.tag
+                git_url=source.git_url,
+                branch=source.branch,
+                commit=source.commit,
+                tag=source.tag,
             )
         case (True, False, True):
             context_stack.pop()
@@ -347,7 +378,9 @@ def check_no_git(source: SourceSchema | SimpleSourceSchema, context_stack: Scope
             )
 
 
-def check_exclusive_git_fields(source: SourceSchema | SimpleSourceSchema, context_stack: Scope):
+def check_exclusive_git_fields(
+    source: SourceSchema | SimpleSourceSchema, context_stack: Scope
+):
     if isinstance(source, str):
         return
     exclusive_fields = ((source.tag, "tag"), (source.branch, "branch"))
@@ -394,7 +427,9 @@ def has_registry_source(source: SourceSchema | SimpleSourceSchema) -> bool:
     assert isinstance(source, SourceSchema), "by pydantic"
     return source.registry_url is not None or (
         # Mamy pole `name`, ale bez `git_url` czy `path`.
-        source.name is not None and not has_git_source(source) and not has_local_source(source)
+        source.name is not None
+        and not has_git_source(source)
+        and not has_local_source(source)
     )
 
 
@@ -422,7 +457,9 @@ def parse_dep_features(
         if isinstance(feature, str):
             context_stack.push(feature)
             if not is_valid_identifier(feature):
-                raise QuackPackError(f"feature `{context_stack.format()}` is not a valid identifier")
+                raise QuackPackError(
+                    f"feature `{context_stack.format()}` is not a valid identifier"
+                )
             result.append(DependencyFeature(Identifier(feature), None))
             context_stack.pop()
             continue
@@ -430,18 +467,24 @@ def parse_dep_features(
         for name, conds in feature.root.items():
             context_stack.push(name)
             if not is_valid_identifier(name):
-                raise QuackPackError(f"feature `{context_stack.format()}` is not a valid identifier")
+                raise QuackPackError(
+                    f"feature `{context_stack.format()}` is not a valid identifier"
+                )
             name_as_ident = Identifier(name)
 
             context_stack.push("conditions")
-            result.append(DependencyFeature(name_as_ident, parse_conditions(conds, context_stack)))
+            result.append(
+                DependencyFeature(name_as_ident, parse_conditions(conds, context_stack))
+            )
             context_stack.pop()
 
             context_stack.pop()
     return result
 
 
-def parse_conditions(conds: DependencyConditionSchema, context_stack: Scope) -> Conditions:
+def parse_conditions(
+    conds: DependencyConditionSchema, context_stack: Scope
+) -> Conditions:
     context_stack.push("system")
     system = conds.system
     if system is not None and not system:
@@ -455,7 +498,9 @@ def parse_conditions(conds: DependencyConditionSchema, context_stack: Scope) -> 
     context_stack.pop()
 
     context_stack.push("package_features")
-    features = parse_list_of_idents_or_none(conds.package_features, context_stack, allow_empty=False)
+    features = parse_list_of_idents_or_none(
+        conds.package_features, context_stack, allow_empty=False
+    )
     context_stack.pop()
 
     return Conditions(system, cpu, features)
@@ -468,7 +513,9 @@ def parse_list_of_idents(
     for f in source:
         context_stack.push(f)
         if not is_valid_identifier(f):
-            raise QuackPackError(f"`{context_stack.format()}` is not a valid identifier")
+            raise QuackPackError(
+                f"`{context_stack.format()}` is not a valid identifier"
+            )
         result.append(Identifier(f))
         context_stack.pop()
     if not result and not allow_empty:
@@ -484,9 +531,13 @@ def parse_list_of_idents_or_none(
     return parse_list_of_idents(source, context_stack, allow_empty=allow_empty)
 
 
-def parse_is_pinned(schema: DependencySchema, source: Source, context_stack: Scope) -> bool:
+def parse_is_pinned(
+    schema: DependencySchema, source: Source, context_stack: Scope
+) -> bool:
     if schema.pinned is not None and not source.is_registry():
-        raise QuackPackError(f"field `{context_stack.format()}` is only allowed for registry dependencies")
+        raise QuackPackError(
+            f"field `{context_stack.format()}` is only allowed for registry dependencies"
+        )
     if schema.pinned is None:
         return False
     return schema.pinned
@@ -499,7 +550,9 @@ def parse_features(features: FeaturesSchema | None, context_stack: Scope) -> Fea
     for feature, pointers in features.root.items():
         context_stack.push(feature)
         if not is_valid_identifier(feature):
-            raise QuackPackError(f"feature `{context_stack.format()}` is not a valid identifier")
+            raise QuackPackError(
+                f"feature `{context_stack.format()}` is not a valid identifier"
+            )
         impl[Identifier(feature)] = parse_list_of_idents(pointers, context_stack)
         context_stack.pop()
     return Features(impl)
@@ -531,7 +584,9 @@ def create_warnings(schema: ManifestSchema) -> list[str]:
     return result
 
 
-def populate_unused_key_warnings(schema: BaseModel, context_stack: Scope, result: list[str]) -> None:
+def populate_unused_key_warnings(
+    schema: BaseModel, context_stack: Scope, result: list[str]
+) -> None:
     to_iter = schema.__pydantic_extra__ or {}
     for key in to_iter:
         context_stack.push(key)

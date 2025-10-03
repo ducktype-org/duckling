@@ -68,9 +68,14 @@ class GitRemoteProgress(RemoteProgress):
 
         assert self.active_task is not None, "update() called without BEGIN"
         self.progress.update(
-            task_id=self.active_task, completed=float(cur_count), message=message, refresh=True
+            task_id=self.active_task,
+            completed=float(cur_count),
+            message=message,
+            refresh=True,
         )
 
         # End progress monitoring on each END-flag
         if op_code & self.END:
-            self.progress.update(task_id=self.active_task, message=f"[bright_black]{message}")
+            self.progress.update(
+                task_id=self.active_task, message=f"[bright_black]{message}"
+            )

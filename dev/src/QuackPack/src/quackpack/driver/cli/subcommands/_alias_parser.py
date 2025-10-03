@@ -28,8 +28,12 @@ def get_parser(prog: str) -> CliParser:
         CliParser.subcommand(name="add", description="Add alias to the package")
         .add_str(long_name="package", help="Package to change")
         .add_str(long_name="alias", help="Alias to add"),
-        CliParser.subcommand(name="remove", description="Remove packages aliases").add_str(
-            long_name="alias", argument_count=ArgumentCount.OneOrMore, help="Aliases to remove"
+        CliParser.subcommand(
+            name="remove", description="Remove packages aliases"
+        ).add_str(
+            long_name="alias",
+            argument_count=ArgumentCount.OneOrMore,
+            help="Aliases to remove",
         ),
         CliParser.subcommand(name="list", description="List aliases of all packages"),
         title="Alias Commands",

@@ -26,12 +26,26 @@ def get_parser(prog: str) -> CliParser:
     ).add_subcommands(
         CliParser.subcommand(name="add", description="Add features of the package")
         .add_str(long_name="package", help="Package to change")
-        .add_str(long_name="feature", argument_count=ArgumentCount.OneOrMore, help="Features to add"),
-        CliParser.subcommand(name="remove", description="Remove features from a package")
+        .add_str(
+            long_name="feature",
+            argument_count=ArgumentCount.OneOrMore,
+            help="Features to add",
+        ),
+        CliParser.subcommand(
+            name="remove", description="Remove features from a package"
+        )
         .add_str(long_name="package", help="Package to change")
-        .add_str(long_name="feature", argument_count=ArgumentCount.OneOrMore, help="Features to remove"),
-        CliParser.subcommand(name="list", description="List features of specified packages").add_str(
-            long_name="packages", argument_count=ArgumentCount.OneOrMore, help="Packages to list"
+        .add_str(
+            long_name="feature",
+            argument_count=ArgumentCount.OneOrMore,
+            help="Features to remove",
+        ),
+        CliParser.subcommand(
+            name="list", description="List features of specified packages"
+        ).add_str(
+            long_name="packages",
+            argument_count=ArgumentCount.OneOrMore,
+            help="Packages to list",
         ),
         title="Feature Commands",
         destination="action",

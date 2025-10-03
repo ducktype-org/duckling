@@ -217,7 +217,8 @@ class SignalHandler(AbstractContextManager[None]):
         # `signal` function returns old one, so we install new handlers
         # and stash old ones in one operation.
         self.stashed_handlers = {
-            signum: signal(signum, handler) for signum, handler in self.handlers_to_install.items()
+            signum: signal(signum, handler)
+            for signum, handler in self.handlers_to_install.items()
         }
 
     @override
@@ -252,7 +253,9 @@ class RobustSignalHandler(SignalHandler):
     """
 
     def __init__(self) -> None:
-        super().__init__(dict.fromkeys(default_handled_signals(), _robust_signal_handler))
+        super().__init__(
+            dict.fromkeys(default_handled_signals(), _robust_signal_handler)
+        )
 
     @override
     def __enter__(self) -> None:

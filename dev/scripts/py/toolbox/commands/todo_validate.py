@@ -8,6 +8,7 @@ from ..impl.helpers import (
 )
 from click import command, option
 
+
 @command()
 @branch(
     help="The branch relative to which the diff is created.",
@@ -21,7 +22,7 @@ from click import command, option
     "--exclude-files",
     multiple=True,
     help="Files to exclude from checking (e.g., --exclude-files todo_validate.py). "
-         "All file paths that end with any given value will be excluded.",
+    "All file paths that end with any given value will be excluded.",
 )
 def todo_validate(*args, **kwargs):
     """Validates that all TODO comments follow the required format: @TODO: #issue_number description.

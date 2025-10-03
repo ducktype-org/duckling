@@ -30,9 +30,16 @@ class _SolverEngine:
         is_forced_default = dependency_description.is_enabled([])
         if is_forced_default:
             self.model.require_satisfy_dep_version(dependency, NoFlag.NoFlag)
-        for dependency_forcing_flag in self.data.possible_features[dependency.parent_package]:
-            if dependency_description.is_enabled(dependency_forcing_flag) and not is_forced_default:
-                self.model.require_satisfy_dep_version(dependency, dependency_forcing_flag)
+        for dependency_forcing_flag in self.data.possible_features[
+            dependency.parent_package
+        ]:
+            if (
+                dependency_description.is_enabled(dependency_forcing_flag)
+                and not is_forced_default
+            ):
+                self.model.require_satisfy_dep_version(
+                    dependency, dependency_forcing_flag
+                )
 
     def _create_dependency_flag_realization_conditions(
         self, dependency: PackageAndDependencyId, dependency_description: Dependency
@@ -44,7 +51,9 @@ class _SolverEngine:
             if origin_flag is NoFlag.NoFlag:
                 forced = set(enabled_always)
             else:
-                forced = set(dependency_description.enabled_features(origin_flag)).difference(enabled_always)
+                forced = set(
+                    dependency_description.enabled_features(origin_flag)
+                ).difference(enabled_always)
 
             if not forced:
                 continue
@@ -66,7 +75,9 @@ class _SolverEngine:
         self._create_dependency_version_realization_conditions(
             dependency, dependency_description, possible_realizations
         )
-        self._create_dependency_flag_realization_conditions(dependency, dependency_description)
+        self._create_dependency_flag_realization_conditions(
+            dependency, dependency_description
+        )
 
         self.model.require_substantiate_dep(dependency)
         self.model.require_substantiate_dep_flags(
@@ -79,7 +90,9 @@ class _SolverEngine:
             for flag in self.data.possible_features[package]:
                 self.model.add_package_with_flag_var(package, flag)
 
-    def run(self, root_projects: list[tuple[ResolvedPackage, set[FeatureId]]]) -> SolverModelOutput:
+    def run(
+        self, root_projects: list[tuple[ResolvedPackage, set[FeatureId]]]
+    ) -> SolverModelOutput:
         self._create_package_variables()
 
         for package, summary in self.data.summaries.items():

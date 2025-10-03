@@ -5,7 +5,14 @@ from pathlib import Path
 from typing import Any, Final, Literal, override
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    field_serializer,
+    field_validator,
+)
 from pydantic.config import ExtraValues
 
 from quackpack.core.types.manifest.source import SourceKind
@@ -53,7 +60,9 @@ class Identifier(RootModel[str]):
 
 
 class PackageId(BaseModel):
-    inner: RegistryPackageId | GitPackageId | LocalPackageId = Field(..., discriminator="type")
+    inner: RegistryPackageId | GitPackageId | LocalPackageId = Field(
+        ..., discriminator="type"
+    )
     model_config = ConfigDict(frozen=True)
 
     def kind(self) -> SourceKind:

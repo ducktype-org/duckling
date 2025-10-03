@@ -16,9 +16,15 @@ def get_parser() -> CliParser:
     """
 
     return (
-        CliParser.subcommand(name="tree", description="Print the dependency tree of a package")
-        .add_flag(long_name="--no-dedup", help="Show the subtree of a package everytime")
-        .add_int(long_name="--max-depth", help="Set the maximal displayed depth of the tree")
+        CliParser.subcommand(
+            name="tree", description="Print the dependency tree of a package"
+        )
+        .add_flag(
+            long_name="--no-dedup", help="Show the subtree of a package everytime"
+        )
+        .add_int(
+            long_name="--max-depth", help="Set the maximal displayed depth of the tree"
+        )
     )
 
 
@@ -28,6 +34,9 @@ def execute(ctx: GlobalContext, args: Arguments) -> None:
     project = PackageLoader.find_from_cwd(ctx)
     tree(
         TreeOptions(
-            ctx=ctx, source=project, max_depth=args.matched.max_depth, expand_visited=args.matched.no_dedup
+            ctx=ctx,
+            source=project,
+            max_depth=args.matched.max_depth,
+            expand_visited=args.matched.no_dedup,
         )
     )

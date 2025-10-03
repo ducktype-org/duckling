@@ -226,7 +226,9 @@ class HTTPRequestProxy:
         :rtype: Any
         """
 
-        request_attr = getattr(self.request, name) if hasattr(self.request, name) else None
+        request_attr = (
+            getattr(self.request, name) if hasattr(self.request, name) else None
+        )
         if request_attr is not None:
             return request_attr
         elif self.defaults is not None:

@@ -13,11 +13,13 @@ from quackpack.util.types.version import Version
 def test_parse_metadata(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
-""")
+"""
+    )
     manifest = parse_manifest(x, GlobalContext.default())
     summary = manifest.summary
     assert str(summary.name) == "xd"
@@ -29,11 +31,13 @@ metadata:
 def test_invalid_version_manifest(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.0.1
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert (
@@ -50,7 +54,8 @@ versions of format `0.0.X` are not supported"""
 def test_parse_with_deps(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -58,7 +63,8 @@ metadata:
 dependencies:
   a:
     version: 0.1
-""")
+"""
+    )
     manifest = parse_manifest(x, GlobalContext.default())
     summary = manifest.summary
     assert len(summary.deps) == 1
@@ -74,7 +80,8 @@ dependencies:
 def test_parse_with_dep_or_versions(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -82,7 +89,8 @@ metadata:
 dependencies:
   a:
     version: 0.1 or 2
-""")
+"""
+    )
     manifest = parse_manifest(x, GlobalContext.default())
     summary = manifest.summary
     assert len(summary.deps) == 1
@@ -99,7 +107,8 @@ dependencies:
 def test_parse_with_git_dep(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -109,7 +118,8 @@ dependencies:
     version: 0.1 or 2
     source:
       git_url: git
-""")
+"""
+    )
     manifest = parse_manifest(x, GlobalContext.default())
     summary = manifest.summary
     assert len(summary.deps) == 1
@@ -126,7 +136,8 @@ dependencies:
 def test_parse_with_extra_fields_fail(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -136,7 +147,8 @@ dependencies:
     version: 0.1 or 2
     source:
       tag: xd
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert (
@@ -148,7 +160,8 @@ dependencies:
 def test_fail_registry_without_version(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -157,7 +170,8 @@ dependencies:
   a:
     source:
       registry_url: xd
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert (
@@ -169,7 +183,8 @@ dependencies:
 def test_parse_local_dep_with_versions(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -179,7 +194,8 @@ dependencies:
     version: 0.1
     source:
       path: xd
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert (
@@ -191,12 +207,14 @@ dependencies:
 def test_fail_no_metadata(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 dependencies:
   a:
     source:
       path: xd
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert str(excinfo.value) == "missing obligatory section `metadata`"
@@ -205,7 +223,8 @@ dependencies:
 def test_fail_no_metadata_name(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   version: 0.1
 
@@ -213,7 +232,8 @@ dependencies:
   a:
     source:
       path: xd
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert str(excinfo.value) == "missing obligatory key `metadata.name`"
@@ -222,7 +242,8 @@ dependencies:
 def test_fail_no_metadata_version(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
 
@@ -230,7 +251,8 @@ dependencies:
   a:
     source:
       path: xd
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert str(excinfo.value) == "missing obligatory key `metadata.version`"
@@ -239,7 +261,8 @@ dependencies:
 def test_parse_deps_sources(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -273,7 +296,8 @@ dependencies:
       git_url: git
       branch: branch
       commit: commit
-""")
+"""
+    )
     m = parse_manifest(x, GlobalContext.default())
     summary = m.summary
     assert len(summary.deps) == 8
@@ -336,7 +360,8 @@ dependencies:
 def test_fail_exclusive_git_fields(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -348,7 +373,8 @@ dependencies:
       git_url: git
       tag: tag
       branch: branch
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert (
@@ -360,14 +386,16 @@ dependencies:
 def test_features(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
 
 features:
   a: []
-""")
+"""
+    )
     m = parse_manifest(x, GlobalContext.default())
     summary = m.summary
     assert len(summary.features) == 1
@@ -377,7 +405,8 @@ features:
 def test_features_expansion(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -387,7 +416,8 @@ features:
   b: [c, d]
   c: []
   d: []
-""")
+"""
+    )
     m = parse_manifest(x, GlobalContext.default())
     summary = m.summary
     assert len(summary.features) == 4
@@ -406,7 +436,8 @@ features:
 def test_dep_features(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -415,7 +446,8 @@ dependencies:
   a:
     version: 0.1
     features: [a, b]
-""")
+"""
+    )
 
     m = parse_manifest(x, GlobalContext.default())
     summary = m.summary
@@ -429,7 +461,8 @@ dependencies:
 def test_dep_features_with_conds(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -446,7 +479,8 @@ dependencies:
         c:
           system:
             - windows
-""")
+"""
+    )
 
     m = parse_manifest(x, GlobalContext.default())
     summary = m.summary
@@ -466,7 +500,8 @@ dependencies:
 def test_empty_conditions_arch(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -476,7 +511,8 @@ dependencies:
     version: 0.1
     conditions:
       arch: []
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert str(excinfo.value) == "`dependencies.a.conditions.arch` is an empty list"
@@ -485,7 +521,8 @@ dependencies:
 def test_empty_conditions_system(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -495,7 +532,8 @@ dependencies:
     version: 0.1
     conditions:
       system: []
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
     assert str(excinfo.value) == "`dependencies.a.conditions.system` is an empty list"
@@ -504,7 +542,8 @@ dependencies:
 def test_empty_conditions_features(tmp_path: Path):
     x = tmp_path / "x"
     x.touch()
-    x.write_text("""
+    x.write_text(
+        """
 metadata:
   name: xd
   version: 0.1
@@ -514,7 +553,11 @@ dependencies:
     version: 0.1
     conditions:
       package_features: []
-""")
+"""
+    )
     with pytest.raises(QuackPackError) as excinfo:
         parse_manifest(x, GlobalContext.default())
-    assert str(excinfo.value) == "`dependencies.a.conditions.package_features` is an empty list"
+    assert (
+        str(excinfo.value)
+        == "`dependencies.a.conditions.package_features` is an empty list"
+    )

@@ -76,7 +76,11 @@ def _posix_acquire(path: Path, lock_type: int) -> int:
 class PosixFileLock(BaseFileLock):
     @override
     def __init__(
-        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
+        self,
+        path: Path,
+        lock_type: LockType = LockType.EXCLUSIVE,
+        *,
+        blocking: bool = True
     ) -> None:
         self.path: Path = path
         self.flags: int = (LOCK_EX if lock_type is LockType.EXCLUSIVE else LOCK_SH) | (

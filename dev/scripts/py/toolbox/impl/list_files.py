@@ -64,7 +64,7 @@ def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
 def _get_modified_files(
     extensions: list[str] | None = None,
     branch: str = "origin/main",
-    no_merge_base: bool = False
+    no_merge_base: bool = False,
 ) -> list[str]:
     """Get modified files compared to the specified branch."""
     # Check for unstaged new files and warn about them
@@ -96,7 +96,7 @@ def _get_unstaged_new_files() -> list[str]:
 def _get_modified_files_and_lines(
     extensions: list[str] | None = None,
     branch: str = "origin/main",
-    no_merge_base: bool = False
+    no_merge_base: bool = False,
 ) -> dict[str, list[tuple[int, int]]]:
     """Get modified files and their line ranges compared to the specified branch."""
     # Check for unstaged new files and warn about them

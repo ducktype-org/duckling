@@ -25,4 +25,6 @@ def sync(opts: SyncOptions):
         overwrite = True
     else:
         package = PackageLoader.find_from_cwd(opts.ctx)
-    venv_sync(opts.ctx, package, overwrite=overwrite, frozen=opts.frozen, offline=opts.offline)
+    venv_sync(
+        opts.ctx, package, overwrite=overwrite, frozen=opts.frozen, offline=opts.offline
+    )

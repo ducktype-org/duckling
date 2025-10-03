@@ -32,6 +32,12 @@ class StorageGitAccess(GitAccess):
 
     @override
     def get_cached_git(
-        self, url: str, commit: str | None = None, tag: str | None = None, branch: str | None = None
+        self,
+        url: str,
+        commit: str | None = None,
+        tag: str | None = None,
+        branch: str | None = None,
     ) -> GitPackageId | None:
-        return self._cached.get(GitSource(git_url=url, commit=commit, tag=tag, branch=branch))
+        return self._cached.get(
+            GitSource(git_url=url, commit=commit, tag=tag, branch=branch)
+        )

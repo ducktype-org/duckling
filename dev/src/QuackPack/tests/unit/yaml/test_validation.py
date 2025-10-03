@@ -80,7 +80,10 @@ def test_chosen_model_should_fail_with_invalid_data(tmp_path: Path):
 
     class UnionChosenOptionFailModel(BaseModel):
         key1: Annotated[
-            (Annotated[int, Tag("!int")] | Annotated[UnionChosenOptionFailHelperModel, Tag("!helper")]),
+            (
+                Annotated[int, Tag("!int")]
+                | Annotated[UnionChosenOptionFailHelperModel, Tag("!helper")]
+            ),
             Discriminator(discriminate_choose_helper),
         ]
 
@@ -210,7 +213,9 @@ Extra inputs are not permitted"""
 def test_key_validation_fail(tmp_path: Path):
     KEY_VALIDATION_FAIL_FILE = """key1: {key2: a}"""
 
-    type KeyValidationFailHelperModel = RootModel[dict[int, str]]  # pyright: ignore [reportGeneralTypeIssues]
+    type KeyValidationFailHelperModel = RootModel[
+        dict[int, str]
+    ]  # pyright: ignore [reportGeneralTypeIssues]
 
     class KeyValidationFailModel(BaseModel):
         key1: KeyValidationFailHelperModel
