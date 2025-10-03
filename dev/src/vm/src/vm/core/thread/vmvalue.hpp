@@ -27,7 +27,7 @@ namespace vm {
 	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue
 	 * by calling freeData().
 	 */
-	class VmValue {
+	class VmValue final {
 	private:
 		friend class VMProcess;
 
@@ -58,6 +58,10 @@ namespace vm {
 		 * @brief Frees the data of the VmValue (deinitializes the blocks in the memory module).
 		 * This function has to be called when using VmValues created with the
 		 * `VMProcess::createOwnedVmValue()` function.
+		 *
+		 * @note At first glance, one could wonder why do you have to manually call freeData()
+		 * instead of putting the free'ing logic into the vmvalue destructor. The answer is -
+		 * freeing blocks in the memory module isn't exception free.
 		 */
 		void freeData();
 

@@ -16,7 +16,7 @@ def list_files_impl(
 ) -> list[str] | dict[str, list[tuple[int, int]]]:
     """
     List files in the repository based on the specified criteria.
-    
+
     Args:
         extensions: List of file extensions to include (e.g., ['.cpp', '.hpp', '.py'])
                    If None, all files are included.
@@ -24,7 +24,7 @@ def list_files_impl(
         only_modified: If True, list only modified files; if False, list all tracked files
         no_merge_base: If True, compare against latest commit on branch instead of merge base
         lines: If True and only_modified=True, return dict with file->line_ranges mapping
-        
+
     Returns:
         List of file paths relative to the current working directory when lines=False,
         or Dict mapping file paths to list of (start_line, end_line) tuples when lines=True
@@ -38,7 +38,9 @@ def list_files_impl(
                 # Skip directories (e.g., git submodules)
                 if os.path.isdir(file):
                     continue
-                line_count_str, _ = bash_command_get_output(f"wc -l < {shlex.quote(file)}")
+                line_count_str, _ = bash_command_get_output(
+                    f"wc -l < {shlex.quote(file)}"
+                )
                 line_count = int(line_count_str.strip())
                 result[file] = [(1, line_count)]
             return result
@@ -54,14 +56,14 @@ def list_files_impl(
 def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
     """Get all tracked files in the repository."""
     files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-    files = [f.strip() for f in files_str.strip().split('\n') if f.strip()]
+    files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
 
     return _filter_by_extensions(files, extensions)
 
 
 def _get_modified_files(
     extensions: list[str] | None = None,
-    branch: str = "origin/main", 
+    branch: str = "origin/main",
     no_merge_base: bool = False
 ) -> list[str]:
     """Get modified files compared to the specified branch."""
@@ -76,7 +78,7 @@ def _get_modified_files(
     diff_out, _ = bash_command_get_output(
         f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative"
     )
-    files = [f.strip() for f in diff_out.strip().split('\n') if f.strip()]
+    files = [f.strip() for f in diff_out.strip().split("\n") if f.strip()]
 
     return _filter_by_extensions(files, extensions)
 
@@ -93,7 +95,7 @@ def _get_unstaged_new_files() -> list[str]:
 
 def _get_modified_files_and_lines(
     extensions: list[str] | None = None,
-    branch: str = "origin/main", 
+    branch: str = "origin/main",
     no_merge_base: bool = False
 ) -> dict[str, list[tuple[int, int]]]:
     """Get modified files and their line ranges compared to the specified branch."""
@@ -113,7 +115,7 @@ def _get_modified_files_and_lines(
     changes = {}
     prev_line = None
     filename = None
-    
+
     for line in diff_lines:
         file_deleted = prev_line == "+++ /dev/null"
 
@@ -168,7 +170,7 @@ def _get_modified_files_and_lines(
             if _file_matches_extensions(file, extensions):
                 filtered_changes[file] = line_ranges
         return filtered_changes
-    
+
     return changes
 
 
@@ -177,10 +179,10 @@ def _file_matches_extensions(file: str, extensions: list[str]) -> bool:
     # Normalize extensions to ensure they start with a dot
     normalized_extensions = []
     for ext in extensions:
-        if not ext.startswith('.'):
-            ext = '.' + ext
+        if not ext.startswith("."):
+            ext = "." + ext
         normalized_extensions.append(ext.lower())
-    
+
     # Check if file has one of the desired extensions
     file_ext = os.path.splitext(file)[1].lower()
     return file_ext in normalized_extensions
@@ -190,15 +192,15 @@ def _filter_by_extensions(files: list[str], extensions: list[str] | None) -> lis
     """Filter files by the specified extensions."""
     if not extensions:
         return files
-    
+
     filtered_files = []
     for file in files:
         # Skip directories
         if os.path.isdir(file):
             continue
-            
+
         # Check if file has one of the desired extensions
         if _file_matches_extensions(file, extensions):
             filtered_files.append(file)
-    
+
     return filtered_files

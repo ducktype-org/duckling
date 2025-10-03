@@ -141,6 +141,7 @@ namespace compiler::helios {
 		case pst::ElementKind::Action:
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
+		case pst::ElementKind::CallArgument:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
@@ -173,7 +174,7 @@ namespace compiler::helios {
 				return ElementScopeKind::Transparent;
 		}
 
-		case pst::ElementKind::FunParam:
+		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 

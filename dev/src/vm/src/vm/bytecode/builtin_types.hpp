@@ -4,7 +4,7 @@
 #include <base/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/bytecode/validator/type_context.hpp>
 
 namespace vm::code {
 	/*

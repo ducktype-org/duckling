@@ -14,9 +14,6 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
-#include <vm/services/profiler/profiler.hpp>
-#include <vm/services/reference_counter/reference_counter.hpp>
-#include <vm/services/service_manager.hpp>
 
 #include <condition_variable>
 #include <deque>
@@ -34,9 +31,9 @@ namespace vm {
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
-	 * It manages process'es data and services.
+	 * It manages process's data, loader and threads.
 	 *
-	 * VMProcess is an abstract concepts that represents the program's execution environment.
+	 * VMProcess is an abstract concept that represents the program's execution environment.
 	 *
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
@@ -63,10 +60,21 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::low::LowVMProgram> loaded_program = {};
+		/**
+		 * @brief The program being executed by this process.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
+		 * is empty if no code was loaded.
+		 */
+		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
 
 		Memory memory;
 
+
+		/**
+		 * @brief A loader instance for this VMProcess. Stores the high level and low level
+		 * representation of the currently executed program. `loaded_program` references the low
+		 * representation which exists in this class.
+		 */
 		loader::Loader loader{};
 
 		/**
@@ -84,11 +92,11 @@ namespace vm {
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
+			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
 
 		/**
-		 * @brief Creates new thread that runs a function in the Executor service.
+		 * @brief Creates new thread that runs a function.
 		 */
 		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
@@ -135,11 +143,6 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::StateError> getExitCode();
 
-		/**
-		 * @brief Holds all services. When it's constructed, it initializes all services.
-		 */
-		ServiceManager service_manager = ServiceManager();
-
 		ProcIO                           io;
 		base::Optional<ProcIORedirecter> io_redirecter;
 
@@ -157,14 +160,9 @@ namespace vm {
 
 
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept;
+		void setStatus(const api::ProcStatus& new_status) noexcept;
 
 		Memory& getMemory();
-
-		/**
-		 * Can be safely called from Execution Thread only
-		 */
-		ServiceManager& getServices();
 
 		ProcIO& getIO();
 

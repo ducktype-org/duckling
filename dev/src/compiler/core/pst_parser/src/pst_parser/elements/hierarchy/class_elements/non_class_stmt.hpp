@@ -7,7 +7,7 @@ namespace pst {
 	/**
 	 * @brief Allows for limited non-class statements to be in a class.
 	 *
-	 * Currently allows: using, alias
+	 * Currently allows: using, alias.
 	 */
 	class NonClassStmt: public ClassStmt {
 		NAMED_CHILD(inner_stmt, Stmt);

@@ -39,11 +39,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	*/
 	IntegerAdd,
 	IntegerSub,
+	IntegerNeg,
 	IntegerMul,
 	IntegerDiv,
 	IntegerMod,
-	IntegerLt,
-	IntegerNeg,
+	
+	IntegerLt,    // Less then
+	IntegerGt,    // Greater then
+	IntegerLteq,  // Less then or equal to
+	IntegerGteq,  // Greater then or equal to
+	IntegerEq,    // Equal to
+	IntegerNeq,   // Not equal to
+
 
 	BooleanAnd,
 	BooleanOr,
@@ -315,12 +322,35 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Creates construct flag for given local.
+	 */
+	constexpr OperationFlag flagConstruct(LocalRef local) {
+		return { .flag = OperationFlag::Flag::Construct, .local = local };
+	}
+
+	/**
+	 * @brief Creates destruct flag for given local.
+	 */
+	constexpr OperationFlag flagDestruct(LocalRef local) {
+		return { .flag = OperationFlag::Flag::Destruct, .local = local };
+	}
+
+	/**
+	 * @brief Creates move flag for given local.
+	 */
+	constexpr OperationFlag flagMove(LocalRef local) {
+		return { .flag = OperationFlag::Flag::Move, .local = local };
+	}
+
+	/**
 	 * @brief Single instruction of MIR code.
 	 */
 	struct Instruction final {
+		using Output = std::variant<LocalRef, MirGlobal>;
+
 		Operation operation = Operation::Uninitialized;
 
-		base::Optional<std::variant<LocalRef, MirGlobal>> output;
+		base::Optional<Output> output;
 
 		std::vector<MIRValue> arguments;
 
@@ -344,11 +374,11 @@ namespace compiler::mir {
 		Instruction(Instruction&&) = default;
 
 		Instruction(
-			Operation                                         operation,
-			base::Optional<std::variant<LocalRef, MirGlobal>> output,
-			std::vector<MIRValue>                             arguments,
-			std::vector<OperationFlag>                        flags,
-			ScopeRef                                          scope
+			Operation                  operation,
+			base::Optional<Output>     output,
+			std::vector<MIRValue>      arguments,
+			std::vector<OperationFlag> flags,
+			ScopeRef                   scope
 		):
 			  operation(operation),
 			  output(output),

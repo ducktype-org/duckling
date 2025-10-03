@@ -183,6 +183,11 @@ namespace tsh {
 			return SymbolType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
 		}
 
+		[[nodiscard]]
+		SymbolType withMutability(const Mutability new_mutability) const {
+			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
+		}
+
 		/**
 		 * @brief Three-way comparison with another SymbolType.
 		 *

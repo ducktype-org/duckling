@@ -7,6 +7,7 @@ from .helpers import (
 )
 from click import command
 
+
 @command()
 @build_dir(
     help="Path to build folder with compile_commands.json",

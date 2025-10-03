@@ -26,6 +26,8 @@ namespace pst {
 		Class,
 		Variable,
 		Fun,
+		FunDecl,
+		Pattern,
 		Block,
 
 		Using,
@@ -47,6 +49,8 @@ namespace pst {
 
 		// Expressions:
 		ExprStmt,
+		Match,
+		MatchCase,
 
 		// Expression wrappers:
 		RoundGroupExpr,
@@ -71,9 +75,21 @@ namespace pst {
 		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
 
 		// others:
-		FunParam,
+		Param,
 		ParamList,
+		FlowPatternList,
 		DottedName,
+		CallArgument,
+
+		// patterns:
+		FlowPattern,
+		AnalysisPattern,
+		DeconstructorPattern,
+		TuplePattern,
+		WildcardPattern,
+		BindingPattern,
+		ValuePattern,
+
 
 		// for detecting when kind was not set:
 		KindNotSet,
