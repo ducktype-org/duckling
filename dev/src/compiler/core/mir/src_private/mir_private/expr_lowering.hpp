@@ -1,0 +1,95 @@
+#pragma once
+
+#include "mir_builders.hpp"
+
+#include <helios/hout/elements/expr.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
+
+#include <variant>
+
+namespace compiler::mir {
+	namespace hc = helios::code;
+
+	/**
+	 * @brief Represents a partial result of expression lowering.
+	 *
+	 * This consists of a BlockBuilderRef marking the beginning of the lowered
+	 * expression and either:
+	 *  - a MIRValue holding the result of the expression, OR
+	 *  - a Finalizer representing the last instruction that saves the result
+	 *    without specifying its target.
+	 *
+	 * For complete lowering, call the dedicated function that stores the result
+	 * in the desired location while (if possible) avoiding the creation of unnecessary temporaries.
+	 *
+	 * In most cases, use getResult() or storeResultInGivenVariable().
+	 */
+	struct ExprLowerRes final {
+		BlockBuilderRef begin;
+
+		/**
+		 * @brief Represents a finalizer instruction that saves the result of an expression.
+		 * Stores hole where instruction will be saved, instruction without output and type of
+		 * result. This instruction can be performed on provided varaible
+		 * (storeResultInGivenVariable) or generated temporary (getResult).
+		 */
+		struct Finalizer final {
+			BlockBuilder::InstructionHole hole;
+			Instruction                   instr;
+			tsh::SymbolType<>             type;
+		};
+
+		std::variant<MIRValue, Finalizer> value;
+
+		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value);
+
+		/**
+		 * @brief helper function returing type of result. Can be used if MIRValue is not stored.
+		 */
+		[[nodiscard]]
+		tsh::SymbolType<> getResultType();
+
+		/**
+		 * @brief Helper function that returns MIRvalue if it is already stored in structure.
+		 */
+		[[nodiscard]]
+		base::Optional<MIRValue> getResultIfStored();
+
+		/**
+		 * @brief If result of expr is value already returns it,
+		 * Otherwise creates temporary, makes last instruction save res there and returns it.
+		 * @note may use InstructionHole stored in structure, probably use only once.
+		 */
+		[[nodiscard]]
+		MIRValue getResult(FunctionBuilder& function);
+
+		/**
+		 * @brief If result of expr is value it creates
+		 * instruction that will assign result to it. Otherwise it makes the last instruction of the
+		 * expression save result directly to the target.
+		 * @note may use InstructionHole stored in stucture, probably use only once.
+		 */
+		void storeResultInGivenVariable(
+			const Instruction::Output&        target,
+			BlockBuilder::InstructionHole&    hole,
+			const std::vector<OperationFlag>& flags,
+			ScopeRef                          scope
+		);
+	};
+
+	/**
+	 * @brief Lowers expression.
+	 *
+	 * @param expr
+	 * @param continuation Block that should be executed after this expression.
+	 * @param function Function that we are lowering this expression in.
+	 * @param expr_scope Lifetime Scope this expression should be in.
+	 * @return ExprLowerRes
+	 */
+	ExprLowerRes lowerExpr(
+		const hc::Expr&  expr,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         expr_scope
+	);
+}

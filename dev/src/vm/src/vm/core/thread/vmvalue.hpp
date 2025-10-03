@@ -27,7 +27,7 @@ namespace vm {
 	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue
 	 * by calling freeData().
 	 */
-	class VmValue {
+	class VmValue final {
 	private:
 		friend class VMProcess;
 
