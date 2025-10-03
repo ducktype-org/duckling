@@ -5,7 +5,7 @@ const SimpleBool: bool = true;
 
 const SimpleString: str = "Hello World!";
 
-alias TII = (i32, i32);
+# alias TII = (i32, i32); @future
 
 const TupleII: (i32, i32) = (1, 2);
 const TupleIIFF: ((i16, i32), (f16, f32)) = (1, 2);

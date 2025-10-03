@@ -184,7 +184,6 @@ namespace compiler::backend_llvm {
 		if (auto func = module->getFunction(lir_function.mangled_name.strView())) return func;
 
 		auto& context = module->getContext();
-
 		return module->getOrInsertFunction(
 			lir_function.mangled_name.strView(),
 			getFunType(context, lir_function.parameter_layouts, lir_function.return_type_layout)
@@ -560,7 +559,6 @@ namespace compiler::backend_llvm {
 			Ref fun = llvm::cast<llvm::Function>(
 				getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
-
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
 
 			generateMainBlocksAndLocals(fun.get());
