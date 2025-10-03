@@ -1,0 +1,9 @@
+let a: () = ();
+
+fun foo(u: ()) -> () = {
+    return u;
+}
+
+fun main() = {
+    foo(a);
+}
