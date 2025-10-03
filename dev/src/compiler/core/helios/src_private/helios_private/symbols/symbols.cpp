@@ -421,19 +421,26 @@ namespace compiler::helios {
 							tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
-						= {
-							  {
-								  {
-									  base::StrID("builtin_input_i64"),
-									  ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
-								  },
-								  {
-									  base::StrID("builtin_output_i64"),
-									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
-								  },
+					auto function_data
+						= std::to_array<std::pair<base::StrID, tsh::FunctionAbstractType>>(
+							{ {
+								  base::StrID("builtin_input_i64"),
+								  ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                                  .result_type = i64_type }),
 							  },
-						  };
+					          {
+								  base::StrID("builtin_output_i64"),
+								  ctx.query<tsh::QueryFunctionType>(
+									  { .parameter_types = { i64_type }, .result_type = i64_type }
+								  ),
+							  },
+					          {
+								  base::StrID("builtin_pow_i64_i64"),
+								  ctx.query<tsh::QueryFunctionType>({ .parameter_types
+					                                                  = { i64_type, i64_type },
+					                                                  .result_type = i64_type }),
+							  } }
+						);
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data_ref = putInSymtable(

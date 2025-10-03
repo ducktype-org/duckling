@@ -1,0 +1,15 @@
+fun main() -> i64 = {
+    if ((2 ** 5) != 32) {
+        builtin_output_i64(1);
+    } else {
+
+    }
+
+    if (((-5) ** 0) != 1) {
+        builtin_output_i64(2);
+    } else {
+        
+    }
+
+    return 0;
+}

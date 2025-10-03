@@ -106,6 +106,10 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
+	i64 FunctionHandlers::builtinPowI64I64(VMThread& process, i64 base, i64 exp) {
+		return static_cast<i64>(std::pow(base, exp));
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
@@ -121,7 +125,7 @@ namespace vm::builtins {
 		);                                                                              \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi, PowI64I64)
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -131,28 +135,35 @@ namespace vm::builtins {
 	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
 		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
-			map{ {
-					 BuiltinFunctionID::InputI64,
-					 { base::StrID("builtin_input_i64"),
-			           code::FuncSignature(base::StrID("i64"), {}) },
-				 },
-			     {
-					 BuiltinFunctionID::OutputI64,
-					 { base::StrID("builtin_output_i64"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
-				 },
-			     {
-					 BuiltinFunctionID::OutputString,
-					 { base::StrID("builtin_strOutput_lptr"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }) },
-				 },
-			     {
-					 BuiltinFunctionID::Stoi,
-					 {
-						 base::StrID("builtin_stoi_lptr"),
-						 code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
-					 },
-				 } };
+			map{
+				{
+					BuiltinFunctionID::InputI64,
+					{ base::StrID("builtin_input_i64"),
+			          code::FuncSignature(base::StrID("i64"), {}) },
+				},
+				{
+					BuiltinFunctionID::OutputI64,
+					{ base::StrID("builtin_output_i64"),
+			          code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
+				},
+				{
+					BuiltinFunctionID::OutputString,
+					{ base::StrID("builtin_strOutput_lptr"),
+			          code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }) },
+				},
+				{
+					BuiltinFunctionID::Stoi,
+					{
+						base::StrID("builtin_stoi_lptr"),
+						code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
+					},
+				},
+				{ BuiltinFunctionID::PowI64I64,
+			      { base::StrID("builtin_pow_i64_i64"),
+			        code::FuncSignature(
+						base::StrID("i64"), { base::StrID("i64"), base::StrID("i64") }
+					) } },
+			};
 
 		return &map;
 	}

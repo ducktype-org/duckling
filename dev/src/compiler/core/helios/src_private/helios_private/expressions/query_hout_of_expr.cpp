@@ -117,7 +117,8 @@ namespace compiler::helios::code {
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt->getOperator().str() == "|") {
+				auto stmt_operator = stmt->getOperator();
+				if (stmt_operator.str() == "|") {
 					// @todo HOUT 2.0:
 					// Here we assume that "|" always produces a variant (likely valid).
 					// If it does not, and "|" will remain a binary operator,
@@ -149,14 +150,44 @@ namespace compiler::helios::code {
 				// @todo: make failure more explicit...
 				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
 
-				auto lhs = std::move(lhs_res).value();
-				auto rhs = std::move(rhs_res).value();
+				base::Box<Expr> lhs = std::move(lhs_res).value();
+				base::Box<Expr> rhs = std::move(rhs_res).value();
 
 				// @todo here we should:
 				// * lookup for user defined operators
 				// * type check
 				// * make function call
 				// For now we support just builtins
+
+
+				if (stmt_operator.str() == "**") {
+					auto lookup_result
+						= builtin::lookupGlobalBuiltins(ctx, base::StrID{ "builtin_pow_i64_i64" })
+					          .getAsSingle();
+					if (lookup_result.hasError()) return;
+					auto pow_id          = lookup_result.value().back();
+					auto pow_type_result = ctx.query<QueryTypeOfSymbol>({ pow_id });
+					if (pow_type_result->hasError()) return;
+
+					tsh::SymbolType<tsh::FunctionAbstractType> pow_type = pow_type_result->value();
+
+					auto coerced_lhs = coerceExpression(
+						std::move(lhs), pow_type.getType().getParameterTypes()[0]
+					);
+					auto coerced_rhs = coerceExpression(
+						std::move(rhs), pow_type.getType().getParameterTypes()[1]
+					);
+
+					if (coerced_lhs.hasError() || coerced_rhs.hasError()) return;
+
+					std::vector<base::Box<Expr>> args;
+					args.push_back(std::move(coerced_lhs.value()));
+					args.push_back(std::move(coerced_rhs.value()));
+
+					base::Box<Expr> pow_expr = makeBox<IdentifierExpr>(ctx, pow_id);
+					node = makeBox<CallExpr>(ctx, std::move(pow_expr), std::move(args));
+					return;
+				}
 
 				// if no function call is found, we try to use builtin operators:
 
