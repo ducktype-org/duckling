@@ -5,12 +5,13 @@ add_library(HELIOS STATIC
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
+	src_private/helios_private/expressions/call_processing.cpp
 	src_private/helios_private/expressions/chain_expr.cpp
 	src_private/helios_private/expressions/query_hout_of_expr.cpp
 	src_private/helios_private/expressions/builtin_operations.cpp
 	src_private/helios_private/expressions/coercions.cpp
-	src_private/helios_private/comp_time/type_eval.cpp
-	src_private/helios_private/comp_time/int_eval.cpp
+	src_private/helios_private/comp_time/comp_time.cpp
+	src_private/helios_private/comp_time/vm_evaluator.cpp
 	
 	src/helios/queries.cpp
 	src/helios/hout/hout.cpp
@@ -25,9 +26,10 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
+	src/helios/ctv/ctv.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp 
 	USES Base TypeSystemHigher PstParser HELIOS

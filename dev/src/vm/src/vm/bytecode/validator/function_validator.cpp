@@ -5,6 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
+#include <base/type_traits.hpp>
 #include <base/variant.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
@@ -13,7 +14,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -27,44 +28,19 @@ namespace {
 	// Helpers for validation, mainly `ext_*` instructions
 	using namespace instructions;
 
-	template<typename T, typename Tup>
-	struct IsIn;
-
-	template<typename T, typename... Ts>
-	struct IsIn<T, std::tuple<Ts...>> {
-		static constexpr bool VALUE = (std::same_as<T, Ts> || ...);
-	};
-
-	template<typename... Tups>
-	using Cat = decltype(std::tuple_cat(std::declval<Tups>()...));
-
-	template<typename Tup>
-	struct HoldsOneOfImpl;
-
-	template<typename... Ts>
-	struct HoldsOneOfImpl<std::tuple<Ts...>> {
-		constexpr bool operator()(const Instruction& instr) {
-			return (std::holds_alternative<Ts>(instr) || ...);
-		}
-	};
-
-	template<typename Tup>
-	constexpr bool holdsOneOf(const Instruction& instr) {
-		return HoldsOneOfImpl<Tup>{}(instr);
-	}
-
 	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
 	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
 	using DeinitializingInstructions
 		= std::tuple<Op_deinit, Op_call_func, Op_call_builtin_func, Op_virtual_call_lptr_method>;
 	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtin_func>;
-	template<typename T>
-	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
-	template<typename T>
-	concept DeinitializingInstruction = IsIn<T, DeinitializingInstructions>::VALUE;
 
 	template<typename T>
-	concept CallingInstruction = IsIn<T, CallingInstructions>::VALUE;
+	concept Extension = base::IsTupleMember<T, ExtensionTypes>;
+	template<typename T>
+	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
+
+	template<typename T>
+	concept CallingInstruction = base::IsTupleMember<T, CallingInstructions>;
 
 	template<Extension E>
 	struct ExtensionMetadata;
@@ -103,18 +79,18 @@ namespace {
 
 	template<typename... Ts>
 	struct CatRequired<std::tuple<Ts...>> {
-		using Value = Cat<typename ExtensionMetadata<Ts>::RequiredAfter...>;
+		using Value = base::tuple_cat_t<typename ExtensionMetadata<Ts>::RequiredAfter...>;
 	};
 
 	template<Extension E>
 	bool acceptsExtension(CRef<Instruction> instr) {
-		return holdsOneOf<
-			Cat<typename ExtensionMetadata<E>::RequiredAfter,
-		        typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
+		return base::variantHoldsOneOf<base::tuple_cat_t<
+			typename ExtensionMetadata<E>::RequiredAfter,
+			typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
 	}
 
 	bool requiresSomeExtension(CRef<Instruction> instr) {
-		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
+		return base::variantHoldsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
 	}
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
@@ -281,7 +257,7 @@ class FunctionValidator {
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
-		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+		// https://github.com/ducktype-org/duckling/issues/962
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
@@ -1004,7 +980,7 @@ class FunctionValidator {
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
-		        && !holdsOneOf<ValidLastInstructions>(function.body.back()))) {
+		        && !base::variantHoldsOneOf<ValidLastInstructions>(function.body.back()))) {
 			throw PathWithoutEndError(function.name);
 		}
 	}
@@ -1131,6 +1107,8 @@ class FunctionValidator {
 			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
+		if (!tod_map.contains(function.signature.result_type.str))
+			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
 	}
 
 public:
@@ -1160,7 +1138,7 @@ public:
 	}
 };
 
-vm::code::Function vm::code::validateAndExtractReachableCode(
+vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const ObjIdNameMap<TypeOfData>&                  tod_map,
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,

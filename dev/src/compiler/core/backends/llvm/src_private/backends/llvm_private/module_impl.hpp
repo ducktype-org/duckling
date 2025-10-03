@@ -8,6 +8,8 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Target/TargetMachine.h>
 LLVM_INCLUDE_END()
 
+#include <backends/llvm/module_impl_fd.hpp>
+
 #include <base/box.hpp>
 
 namespace compiler::backend_llvm {

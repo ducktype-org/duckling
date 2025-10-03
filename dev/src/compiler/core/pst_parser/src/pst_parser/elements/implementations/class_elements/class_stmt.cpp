@@ -51,6 +51,7 @@ namespace pst {
 			return internal::parseStmt<Method>(state, ctx);
 		case Keyword::Const:
 			return internal::parseStmt<Field>(state, ctx);
+		case Keyword::Pattern:
 		case Keyword::Alias:
 		case Keyword::Using:
 			return internal::parseStmt<NonClassStmt>(state, ctx);
@@ -73,7 +74,7 @@ namespace pst {
 		MBox<ClassStmt> out = chooseStmt(state, ctx);
 
 		// Add Attributes
-		if (out) out->addAttributes(std::move(attributes));
+		if (out) out->addAttributes(state, std::move(attributes));
 
 		return out;
 	}

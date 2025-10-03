@@ -18,8 +18,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isDeclaration() const override {
-			return true;
+		DeclKind isDeclaration() const override {
+			return DeclKind::Symbol;
 		}
 	};
 }

@@ -5,10 +5,9 @@ from .helpers import (
     no_merge_base,
     verbose,
 )
-from ..impl.helpers import (
-    exit_with_error
-)
+from ..impl.helpers import exit_with_error
 from click import command
+
 
 @command()
 @all_flag(
@@ -19,12 +18,10 @@ from click import command
 )
 @no_merge_base(
     help="On no-merge-base: compare against the latest commit on `branch` "
-        "instead of the commit which is the LCA of `branch` and current branch. "
-        "This feature allows to run the checker on a shallow clone.",
+    "instead of the commit which is the LCA of `branch` and current branch. "
+    "This feature allows to run the checker on a shallow clone.",
 )
-@verbose(
-    help="Also shows checked files that didn't have any errors."
-)
+@verbose(help="Also shows checked files that didn't have any errors.")
 def duck_linter(*args, **kwargs):
     """Check for violations of
     some of the C++ coding guidelines for Duckling project.

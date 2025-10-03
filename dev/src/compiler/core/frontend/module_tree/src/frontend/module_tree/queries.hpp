@@ -17,12 +17,6 @@ namespace compiler::frontend {
 	std::string printModuleTree(ModuleID);
 
 	/**
-	 * @brief Query entire module tree build from given path.
-	 * @return module id of root-module.
-	 */
-	DECLARE_QUERY(QueryModuleTree, fs::File, ModuleID)
-
-	/**
 	 * @brief Query parent of a module.
 	 * @return parent module, none for root-module.
 	 */
@@ -51,13 +45,6 @@ namespace compiler::frontend {
 	 * @brief Query PST of given file.
 	 */
 	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>)
-
-	/**
-	 * @brief Gets module-tree PST of given file, performing some guess about what FileID is given
-	 * path pointing to. It was added for go-to definition and simillar features.
-	 * @TODO: make it better during frontend queryfication #731.
-	 */
-	CRef<pst::PST<>> queryPSTFromFilePath(query::Context&, const fs::File& file_path);
 
 	/**
 	 * @brief Returns ModuleID

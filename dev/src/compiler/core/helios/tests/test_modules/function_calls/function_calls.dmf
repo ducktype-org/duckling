@@ -4,6 +4,22 @@ fun square(a: i32) -> i32 = {
 
 fun foo(a: i32, b: i32) -> i32 = {
     let a_squared: i32 = square(a);
+ 
+    const V1: i64 = 1;
+    let bb: i64 = 1 + V1;
 
     return square(a_squared + b);
+}
+
+fun foo1(a: i64, b:i64 = 5) -> i64 ={
+    builtin_output_i64(1234);
+    return 0;
+}
+
+fun main() ->i64 = {
+    foo1(a = 3);
+    foo1(8);
+    foo1(8, 3);
+    foo1(b = 4, a = 3);
+    return 0;
 }

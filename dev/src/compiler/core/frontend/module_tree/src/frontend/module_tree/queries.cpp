@@ -1,27 +1,10 @@
 #include "queries.hpp"
 
-#include "module_tree.hpp"
-
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::frontend {
-
-	/*******************
-	 * QueryModuleTree *
-	 *******************/
-	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleID) {
-		static auto provide(Context&, const QKey& key) -> PResult {
-			Ref<ModuleTree> module_tree = ModuleTreeBuilder::create(key);
-
-			return module_tree->getID();
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
@@ -67,5 +50,4 @@ namespace compiler::frontend {
 
 		return current_module;
 	}
-
 }

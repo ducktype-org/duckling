@@ -26,6 +26,8 @@ namespace pst {
 		Class,
 		Variable,
 		Fun,
+		FunDecl,
+		Pattern,
 		Block,
 
 		Using,
@@ -35,6 +37,7 @@ namespace pst {
 
 		Expand,
 
+		Attribute,
 
 		// Duckling statements:
 		If,
@@ -46,6 +49,8 @@ namespace pst {
 
 		// Expressions:
 		ExprStmt,
+		Match,
+		MatchCase,
 
 		// Expression wrappers:
 		RoundGroupExpr,
@@ -64,15 +69,27 @@ namespace pst {
 		NonClassStmt,
 
 		// use it, once its docs are more stable:
-		// ClassConstructor,
-		// ClassDestructor,
+		ClassConstructor,
+		ClassDestructor,
 
 		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
 
 		// others:
-		FunParam,
+		Param,
 		ParamList,
+		FlowPatternList,
 		DottedName,
+		CallArgument,
+
+		// patterns:
+		FlowPattern,
+		AnalysisPattern,
+		DeconstructorPattern,
+		TuplePattern,
+		WildcardPattern,
+		BindingPattern,
+		ValuePattern,
+
 
 		// for detecting when kind was not set:
 		KindNotSet,

@@ -174,8 +174,8 @@
 												"sourceStart": 87,
 												"sourceEnd": 92
 											},
-											"Function Parameter": {
-												"Function Parameter": {
+											"Parameter": {
+												"Parameter": {
 													"name": {
 														"Name": "a"
 													},
@@ -204,8 +204,8 @@
 												"sourceStart": 95,
 												"sourceEnd": 100
 											},
-											"Function Parameter": {
-												"Function Parameter": {
+											"Parameter": {
+												"Parameter": {
 													"name": {
 														"Name": "c"
 													},
@@ -287,15 +287,21 @@
 																						"sourceStart": 113,
 																						"sourceEnd": 113
 																					},
-																					"Top Level Expression": {
-																						"expr": {
-																							"position": {
-																								"sourceStart": 113,
-																								"sourceEnd": 113
-																							},
-																							"Identifier Expression": {
-																								"name": {
-																									"Name": "a"
+																					"Call argument": {
+																						"position": {
+																							"sourceStart": 113,
+																							"sourceEnd": 113
+																						},
+																						"Top Level Expression": {
+																							"expr": {
+																								"position": {
+																									"sourceStart": 113,
+																									"sourceEnd": 113
+																								},
+																								"Identifier Expression": {
+																									"name": {
+																										"Name": "a"
+																									}
 																								}
 																							}
 																						}
@@ -338,8 +344,8 @@
 												"sourceStart": 137,
 												"sourceEnd": 142
 											},
-											"Function Parameter": {
-												"Function Parameter": {
+											"Parameter": {
+												"Parameter": {
 													"name": {
 														"Name": "z"
 													},
@@ -573,8 +579,8 @@
 																"sourceStart": 251,
 																"sourceEnd": 255
 															},
-															"Function Parameter": {
-																"Function Parameter": {
+															"Parameter": {
+																"Parameter": {
 																	"name": {
 																		"Name": "c"
 																	},
@@ -648,15 +654,21 @@
 																									"sourceStart": 263,
 																									"sourceEnd": 263
 																								},
-																								"Top Level Expression": {
-																									"expr": {
-																										"position": {
-																											"sourceStart": 263,
-																											"sourceEnd": 263
-																										},
-																										"Identifier Expression": {
-																											"name": {
-																												"Name": "c"
+																								"Call argument": {
+																									"position": {
+																										"sourceStart": 263,
+																										"sourceEnd": 263
+																									},
+																									"Top Level Expression": {
+																										"expr": {
+																											"position": {
+																												"sourceStart": 263,
+																												"sourceEnd": 263
+																											},
+																											"Identifier Expression": {
+																												"name": {
+																													"Name": "c"
+																												}
 																											}
 																										}
 																									}

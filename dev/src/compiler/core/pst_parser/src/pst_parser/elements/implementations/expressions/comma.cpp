@@ -1,6 +1,6 @@
 #include "../../hierarchy/expressions/comma.hpp"
 
-#include "../../hierarchy/expressions/ternary.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/expressions/match_expr.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
@@ -48,4 +48,8 @@ namespace pst::expr {
 	}
 
 	void Comma::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitComma(*this); }
+
+	void Comma::calcElementPathsRecursive() {
+		calcIndexedListChildPath<ExprElement>({ expressions }, getElementPath());
+	}
 }

@@ -96,9 +96,17 @@ connection.onInitialized(() => {
 		connection.client.register(DidChangeConfigurationNotification.type, undefined);
 	}
 	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log("Workspace folder change event received.");
+		compilerDaemonClient.putWorkspace(connection).then(() => {
+			console.log("Workspace files sent to daemon.");
+			compilerDaemonClient.makeModuleTrees(connection).then(() => {
+				console.log("Module trees created.");
+			});
 		});
+		connection.workspace.onDidChangeWorkspaceFolders(_event => {
+			console.log("Workspace folder change event received.");
+		});
+	} else {
+		console.log("NO WORKSPACE CAPABILITY");
 	}
 });
 
@@ -175,7 +183,7 @@ documents.onDidChangeContent(change => {
 });
 
 connection.onDidChangeWatchedFiles(_change => {
-	connection.console.log("We received an file change event");
+	console.log("We received an file change event");
 });
 
 // This handler provides the initial list of the completion items.

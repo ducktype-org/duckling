@@ -7,7 +7,7 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <iostream>
+#include <ostream>
 
 namespace vm {
 	class VMProcess;
@@ -24,9 +24,10 @@ namespace vm {
 	 * lifetime is guarded by VMProcess. All VmValues created by this function are deinitialized
 	 * when VmProcess is destroyed.
 	 * 2) with `VMProcess::createOwnedVmValue()` function - creates a
-	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue.
+	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue
+	 * by calling freeData().
 	 */
-	class VmValue {
+	class VmValue final {
 	private:
 		friend class VMProcess;
 
@@ -57,13 +58,16 @@ namespace vm {
 		 * @brief Frees the data of the VmValue (deinitializes the blocks in the memory module).
 		 * This function has to be called when using VmValues created with the
 		 * `VMProcess::createOwnedVmValue()` function.
+		 *
+		 * @note At first glance, one could wonder why do you have to manually call freeData()
+		 * instead of putting the free'ing logic into the vmvalue destructor. The answer is -
+		 * freeing blocks in the memory module isn't exception free.
 		 */
 		void freeData();
 
 		void exportData(Pointer dst) const;
 
 		void importData(Pointer src);
-
 
 		[[nodiscard]] PID getPID() const;
 
@@ -97,6 +101,15 @@ namespace vm {
 		[[nodiscard]] byte* getBytes();
 
 		[[nodiscard]] const byte* getBytes() const;
+
+		/**
+		 * @brief Prints a detailed, human-readable representation of the VmValue.
+		 * Attempts to interpret the value's bytes based on its type and additionally prints the hex
+		 * dump.
+		 * @param out The output stream to print to.
+		 * @param indent A prefix string for indentation.
+		 */
+		void dprint(std::ostream& out, const std::string& indent = "") const;
 	};
 }
 

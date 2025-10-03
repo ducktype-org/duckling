@@ -20,6 +20,11 @@
  * ----------
  * - base::Implication
  *
+ * Type Traits:
+ * ------------
+ * - base::is_variant_member
+ * - base::IS_VARIANT_MEMBER_V
+ *
  * ### Usage
  * @include type_traits_example.cpp
  *
@@ -28,7 +33,9 @@
 #pragma once
 
 #include <string_view>
+#include <tuple>
 #include <type_traits>
+#include <variant>
 
 namespace base {
 	namespace internal {
@@ -37,6 +44,17 @@ namespace base {
 
 		template<class T1, class T2, template<class> class U>
 		struct IsOfSameClassImpl<U<T1>, U<T2>>: public std::true_type {};
+
+		template<typename Tup>
+		struct VariantHoldsOneOfImpl;
+
+		template<typename... Ts>
+		struct VariantHoldsOneOfImpl<std::tuple<Ts...>> {
+			template<typename... VariantArgs>
+			constexpr bool operator()(const std::variant<VariantArgs...>& v) const {
+				return (std::holds_alternative<Ts>(v) || ...);
+			}
+		};
 	}
 
 	/**
@@ -64,6 +82,9 @@ namespace base {
 	template<typename T>
 	concept IsNumber = std::is_floating_point_v<T> || std::is_integral_v<T>;
 
+	template<typename T>
+	concept IsPlainType = (not std::is_reference_v<T>) and (not std::is_pointer_v<T>);
+
 
 	/**
 	 * This concept is used to statically determine if two types are instances of the same templated
@@ -81,6 +102,67 @@ namespace base {
 	 */
 	template<class TypeA, class TypeB>
 	concept IsOfSameClass = internal::IsOfSameClassImpl<TypeA, TypeB>::value;
+
+	/**
+	 * @brief Type trait to check if a type `T` is a member of a `std::variant`.
+	 * @tparam T The type to check.
+	 * @tparam VariantT The `std::variant` type.
+	 */
+	template<typename T, typename VariantT>
+	struct is_variant_member;
+
+	template<typename T, typename... Types>
+	struct is_variant_member<T, std::variant<Types...>>:
+		  std::disjunction<std::is_same<T, Types>...> {};
+
+	/**
+	 * @brief Helper variable template for `is_variant_member`.
+	 * @tparam T The type to check.
+	 * @tparam VariantT The `std::variant` type.
+	 */
+	template<typename T, typename VariantT>
+	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
+
+	/**
+	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.
+	 * @tparam T The type to check for.
+	 * @tparam Tup The tuple type.
+	 */
+	template<typename T, typename Tup>
+	struct is_tuple_member;
+
+	template<typename T, typename... Ts>
+	struct is_tuple_member<T, std::tuple<Ts...>>: std::disjunction<std::is_same<T, Ts>...> {};
+
+	/**
+	 * @brief Helper variable template for `is_in_tuple`.
+	 */
+	template<typename T, typename Tup>
+	inline constexpr bool IS_TUPLE_MEMBER_V = is_tuple_member<T, Tup>::value;
+
+	/**
+	 * @brief Concept that checks if a type `T` is present in a tuple `Tup`.
+	 */
+	template<typename T, typename Tup>
+	concept IsTupleMember = IS_TUPLE_MEMBER_V<T, Tup>;
+
+	/**
+	 * @brief A convenient type alias for concatenating multiple tuples.
+	 */
+	template<typename... Tups>
+	using tuple_cat_t = decltype(std::tuple_cat(std::declval<Tups>()...));
+
+	/**
+	 * @brief Checks if a variant holds one of the types specified in a tuple.
+	 * @tparam TupleOfTypes A std::tuple containing the types to check for.
+	 * @param v The variant to check.
+	 * @return True if the variant currently holds one of the types from TupleOfTypes, false
+	 * otherwise.
+	 */
+	template<typename TupleOfTypes, typename... VariantArgs>
+	constexpr bool variantHoldsOneOf(const std::variant<VariantArgs...>& v) {
+		return internal::VariantHoldsOneOfImpl<TupleOfTypes>{}(v);
+	}
 
 	/**
 	 * @brief Checks if A implies B.

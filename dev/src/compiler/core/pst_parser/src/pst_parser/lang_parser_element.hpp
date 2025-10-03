@@ -2,10 +2,12 @@
 
 #include "access.hpp"
 #include "element_kind.hpp"
+#include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
+#include <base/variant.hpp>
 
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -23,18 +25,79 @@ namespace pst {
 	class PstVisitor;
 
 	/**
+	 * @brief This is a simple text implementation of element path that might still have some
+	 * conflicts
+	 *
+	 * It's supposed to uniquely identify elements in a parsed tree while ignoring some
+	 * changes(mostly symbols with different names changing).
+	 *
+	 * The path is constructed from words periods and brackets:
+	 *  - Capitalized words signify element type
+	 *  - lowercase words signify accessors such as left, right, block
+	 *  - numbers in brackets signify which element it signifies
+	 *
+	 * @note The current implementation is non-optimal but for now it should suffice. Currently it
+	 * does a lot of copying strings that might get better with some references or something similar.
+	 *
+	 * @todo Add source file/path information
+	 */
+	struct ElementPath final {
+		ElementPath() = default;
+
+		ElementPath(const ElementPath& parent, std::string_view ext):
+			  elements(parent.elements.begin(), parent.elements.end()) {
+			elements.emplace_back(ext);
+		}
+
+		/**
+		 * @brief Return the path as a string by joining with '.'
+		 */
+		[[nodiscard]]
+		std::string str() const;
+
+	private:
+		std::vector<std::string> elements;
+	};
+
+	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
-	private:
+	public:
+		using SubToken = base::CRef<lexer::Token>;
+
+		/**
+		 * @brief Needed for access to element path methods.
+		 */
+		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		friend class PST;
+
+		/**
+		 * @brief Needed for access to element path methods.
+		 */
+		friend class Stmt;
+
+	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
+
+		using InternalChild = Ref<LangElement>;
+
+		struct InternalNamedChild final {
+			std::string      name;
+			Ref<LangElement> element;
+		};
+
+		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
 	public:
 		using Child = AccessLocked<LangElement>;
 
-		using SubToken = base::CRef<lexer::Token>;
+		struct NamedChild final {
+			std::string               name;
+			AccessLocked<LangElement> element;
+		};
 
-		using SubElement = std::variant<SubToken, Child>;
+		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
@@ -65,22 +128,59 @@ namespace pst {
 			out << ", ";
 		}
 
-	private:
 		/**
-		 * @brief Helper function for filtering variants
+		 * @brief Calculates the Element paths for children of this element, has to be overriden for
+		 * elements that have unnamed children.
 		 */
-		template<typename T, typename U>
-		static bool holds(const U& el) {
-			return std::holds_alternative<T>(el);
+		virtual void calcElementPathsRecursive();
+
+		/**
+		 * @brief Calculates Element paths for this Element and children.
+		 */
+		void calcElementPaths(const ElementPath& path) {
+			element_path = { path, elementType() };
+			calcElementPathsRecursive();
 		}
 
 		/**
-		 * @brief Helper function for extracting from variants
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
-		template<typename T, typename U>
-		static T choose(const U& el) {
-			return std::get<T>(el);
+		template<typename Element>
+		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path)
+			const {
+			if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
 		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements (otherwise it would need each element would need to be a friend)
+		 */
+		template<typename Element, base::TemplateStringLiteral name>
+		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path)
+			const {
+			if (auto ref = access_ref.internalMut())
+				ref->calcElementPaths({ path, std::string(name.value) });
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements (otherwise it would need each element would need to be a friend)
+		 */
+		template<typename Element>
+		void calcIndexedListChildPath(
+			std::span<AccessInternalAnonymous<Element>> vec, const ElementPath& path
+		) const {
+			for (usize i = 0; i < vec.size(); i++) {
+				ElementPath child_path(path, std::format("[{}]", i));
+				calcChildPath(vec[i], child_path);
+			}
+		}
+
+		/**
+		 * @brief Calculates Element paths for a completely ordered list of statements.
+		 */
+		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
 
 	public:
 		/**
@@ -89,7 +189,19 @@ namespace pst {
 		[[nodiscard]]
 		auto viewSubElements() const {
 			using namespace std::views;
-			return std::ranges::ref_view(sub_elements);
+
+			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
+				if (base::holds<InternalChild>(t)) {
+					return Child(std::get<InternalChild>(t));
+				} else if (base::holds<InternalNamedChild>(t)) {
+					auto& [name, inter] = std::get<InternalNamedChild>(t);
+					return NamedChild{ .name = name, .element = { inter } };
+				} else {
+					return SubToken(std::get<SubToken>(t));
+				}
+			};
+
+			return std::ranges::ref_view(sub_elements) | transform(get_locked);
 		}
 
 		/**
@@ -98,8 +210,18 @@ namespace pst {
 		[[nodiscard]]
 		auto viewChildren() const {
 			using namespace std::views;
-			return viewSubElements() | filter(holds<Child, SubElement>)
-			     | transform(choose<Child, SubElement>);
+
+			constexpr auto is_child = [](const SubElement& t) -> bool {
+				return base::holds<Child>(t) || base::holds<NamedChild>(t);
+			};
+			constexpr auto strip_name = [](const SubElement& t) -> const Child {
+				if (base::holds<NamedChild>(t))
+					return std::get<NamedChild>(t).element;
+				else
+					return std::get<Child>(t);
+			};
+
+			return viewSubElements() | filter(is_child) | transform(strip_name);
 		}
 
 		/**
@@ -108,8 +230,8 @@ namespace pst {
 		[[nodiscard]]
 		auto viewTokens() const {
 			using namespace std::views;
-			return sub_elements | filter(holds<SubToken, SubElement>)
-			     | transform(choose<SubToken, SubElement>);
+			return viewSubElements() | filter(base::holds<SubToken, SubElement>)
+			     | transform(base::choose<SubToken, SubElement>);
 		}
 
 		[[nodiscard]]
@@ -169,6 +291,12 @@ namespace pst {
 			return element_kind;
 		}
 
+		[[nodiscard]]
+		const ElementPath& getElementPath() const {
+			CORE_ASSERT(element_path.has_value(), "element path not calculated");
+			return element_path.value();
+		}
+
 		virtual void acceptVisitor(PstVisitor& visitor) const;
 
 		template<typename X>
@@ -176,8 +304,9 @@ namespace pst {
 
 	protected:
 		dia::SourcePosition                       source_position;
-		std::vector<SubElement>                   sub_elements;
+		std::vector<InternalSubElement>           sub_elements;
 		base::Optional<AccessLocked<LangElement>> parent;
+		base::Optional<ElementPath>               element_path;
 
 		/**
 		 * @brief Kind of the element.
@@ -190,16 +319,29 @@ namespace pst {
 		void addToken(CRef<lexer::Token> token);
 
 		template<std::derived_from<LangElement> El>
-		void addChild(MCRef<El> el) {
+		void addChild(MRef<El> el) {
 			auto opt = el.toOpt();
 			if (opt) addChild(opt.value());
 		}
 
-		void addChild(MCRef<LangElement> child);
+		void addChild(MRef<LangElement> child);
 
 		template<typename T>
 		void addChild(MBox<T>& child) {
 			addChild(child.refMut());
+		}
+
+		template<std::derived_from<LangElement> El>
+		void addNamedChild(const std::string& name, MRef<El> el) {
+			auto opt = el.toOpt();
+			if (opt) addNamedChild(name, opt.value());
+		}
+
+		void addNamedChild(const std::string& name, MRef<LangElement> child);
+
+		template<typename T>
+		void addNamedChild(const std::string& name, MBox<T>& child) {
+			addNamedChild(name, child.refMut());
 		}
 
 		/**

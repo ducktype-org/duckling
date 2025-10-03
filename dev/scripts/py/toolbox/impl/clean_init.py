@@ -3,6 +3,7 @@ from .helpers import (
     log_info,
 )
 
+
 def clean_init_impl():
     log_info("Removing .venv and downloaded binaries...")
     bash_command("rm -rf .venv")

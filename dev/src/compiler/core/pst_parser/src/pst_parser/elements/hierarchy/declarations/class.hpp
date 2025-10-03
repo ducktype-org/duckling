@@ -9,10 +9,10 @@ namespace pst {
 	 */
 	class Class final: public Decl {
 	private:
-		tpc::Identifier                name;
-		AccessInternal<ExprElement>    base;
-		AccessInternal<ImplementsList> implements;
-		AccessInternal<ClassBlock>     body;
+		tpc::Identifier name;
+		NAMED_CHILD(base, ExprElement);
+		NAMED_CHILD(implements, ImplementsList);
+		NAMED_CHILD(body, ClassBlock);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class, ElementKind::Class);
@@ -35,6 +35,11 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<ImplementsList> getImplements() const {
 			return implements.give();
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getDeclSymbolName() const final {
+			return getName();
 		}
 
 		static MBox<Class> parse(LangParserState& state);

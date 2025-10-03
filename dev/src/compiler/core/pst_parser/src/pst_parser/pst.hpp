@@ -7,18 +7,6 @@
 
 #include <token_source/source.hpp>
 
-namespace pst::internal {
-	void deleteState(pst::LangParserState* ptr);
-}
-
-namespace base::extend {
-	// Custom deleter to not include full state definition
-	template<>
-	struct BoxPtrDeleter<pst::LangParserState> {
-		static void del(pst::LangParserState* ptr) { pst::internal::deleteState(ptr); }
-	};
-}
-
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
@@ -47,9 +35,9 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		Box<tokenizer::TokenSource> file;
-		AccessInternal<Element>     element;
-		std::vector<ImportType>     imports;
+		Box<tokenizer::TokenSource>      file;
+		AccessInternalAnonymous<Element> element;
+		std::vector<ImportType>          imports;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -69,6 +57,7 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
+			calcElementPaths();
 		}
 
 		/**
@@ -90,6 +79,10 @@ namespace pst {
 			  : file(tokenizer::makeTokenSource(pos, content)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
+		}
+
+		void calcElementPaths() {
+			if (auto ref = element.internalMut()) ref->calcElementPaths({});
 		}
 
 	public:

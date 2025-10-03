@@ -80,6 +80,7 @@ public:
 		TESTER_ADD_TEST(testBoxFromPtr);
 		TESTER_ADD_TEST(defaultMembersTest);
 		TESTER_ADD_TEST(testMBoxMRef);
+		TESTER_ADD_TEST(testDeleters);
 	}
 
 private:
@@ -492,6 +493,91 @@ private:
 			assertThrows<base::Panic>([&]() { *a; }, "Use after move did not throw!");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
+	}
+
+	template<class T>
+	struct StatefulDeleter final {
+		int               state   = 0;
+		static inline int s_state = 0;
+
+		void del(T* ptr) {
+			delete ptr;
+			if (ptr != nullptr) {
+				state++;
+				s_state++;
+			}
+		}
+	};
+
+	template<class T>
+	struct FromStatefulDeleterByValue final {
+		FromStatefulDeleterByValue() = default;
+
+		FromStatefulDeleterByValue(StatefulDeleter<T>) {}
+
+		void del(T* ptr) { delete ptr; }
+	};
+
+	template<class T>
+	struct FromStatefulDeleterByCopy final {
+		FromStatefulDeleterByCopy() = default;
+
+		FromStatefulDeleterByCopy(const StatefulDeleter<T>&) {}
+
+		void del(T* ptr) { delete ptr; }
+	};
+
+	template<class T>
+	struct FromStatefulDeleterByMove final {
+		FromStatefulDeleterByMove() = default;
+
+		FromStatefulDeleterByMove(StatefulDeleter<T>&& a) { (void) std::move(a); }
+
+		void del(T* ptr) { delete ptr; }
+	};
+
+	void testDeleters() {
+		{
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			ASSERT_EQUAL(*ib, 42);
+			ASSERT_EQUAL(StatefulDeleter<int>::s_state, 0);
+		}
+		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
+
+		static_assert(
+			not std::is_constructible_v<Box<int, StatefulDeleter<int>>, Box<int>>,
+			"Box with custom deleter should not be constructible from Box with default deleter"
+		);
+
+		{
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			Box<int, FromStatefulDeleterByValue<int>> jb = std::move(ib);
+		}
+		{
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			Box<int, FromStatefulDeleterByCopy<int>> jb = std::move(ib);
+		}
+		{
+			auto ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			Box<int, FromStatefulDeleterByMove<int>> jb = std::move(ib);
+		}
+		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
+
+		{
+			MBox ib = Box<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			Box b = std::move(ib).toOptBox().value();
+		}
+		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 2);
 	}
 };
 

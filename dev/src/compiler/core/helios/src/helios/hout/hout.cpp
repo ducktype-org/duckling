@@ -33,14 +33,31 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::string HOUTFunction::debugPrint() const {
+	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
+		SymID                                                symbol,
+		tsh::SymbolType<>                                    ret_type,
+		const std::shared_ptr<std::vector<code::Parameter>>& parameters
+	):
+		  original_symbol(symbol),
+		  original_name(name(original_symbol)),
+		  return_type(ret_type),
+		  parameters(parameters) {
+		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	}
+
+	u64 HOUTFunctionDeclaration::queryUnstablePerfectHash() const {
+		return original_symbol.queryUnstablePerfectHash();
+	}
+
+	std::string HOUTFunctionDeclaration::debugPrint() const {
 		std::stringstream out;
 		out << "fun ";
 		out << original_name.strView() << " : ";
-		out << this->type.toString() << "\n";
+		out << "Return type: ";
+		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
-		if (content.parameters->empty()) out << "  none\n";
-		for (auto& param: *content.parameters) {
+		if (parameters->empty()) out << "  none\n";
+		for (auto& param: *parameters) {
 			out << "  " << param.name.strView() << " : ";
 			out << param.type.toString();
 			if (param.initial_value.has_value()) {
@@ -49,37 +66,39 @@ namespace compiler::helios {
 			}
 			out << "\n";
 		}
-		out << "{\n";
-		for (auto& stmt: content.body->statements) stmt->debugPrint(out, 1);
-		out << "}\n";
 		return out.str();
 	}
 
 	u64 HOUTFunction::queryUnstablePerfectHash() const {
-		// @note: see
-		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
-		return original_symbol.queryUnstablePerfectHash();
+		// @note for now it doesn't depend on body
+		return declaration.queryUnstablePerfectHash();
 	}
 
-	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
-		  original_symbol(symbol),
-		  original_name(name(original_symbol)),
-		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               ->expect("Handling errors in HOUT is not supported yet")
-	               .getType()),
-		  top_lifetime_scope(parent(scope(symbol)).value()) {
-		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	std::string HOUTFunction::debugPrint() const {
+		std::stringstream out;
+		out << "{\n";
+		for (auto& stmt: body->statements) stmt->debugPrint(out, 1);
+		out << "}\n";
+		return declaration.debugPrint() + out.str();
 	}
+
+	HOUTFunction::HOUTFunction(
+		HOUTFunctionDeclaration other, const std::shared_ptr<const code::CodeBlock>& body
+	):
+		  declaration(std::move(other)),
+		  body(body) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		std::stringstream out;
-		if (std::holds_alternative<HOUTGlobalConst>(value)) {
-			auto const_value = std::get<HOUTGlobalConst>(value).value;
-			out << "const " << original_name.strView() << " = " << const_value << "\n";
-		} else if (std::holds_alternative<HOUTGlobalVariable>(value)) {
-			out << "var " << original_name.strView() << " = ";
-			std::get<HOUTGlobalVariable>(value).initial_value.get()->ref()->debugPrint(out);
-			out << "\n";
+		variant_match(value) {
+			variant_case(HOUTGlobalConst, const_value) {
+				out << "const " << original_name.strView() << " = " << const_value.value.toString()
+					<< '\n';
+			}
+			variant_case(HOUTGlobalVariable, val) {
+				val.initial_value.get()->ref()->debugPrint(out);
+				out << '\n';
+			}
 		}
 		return out.str();
 	}

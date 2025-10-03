@@ -141,6 +141,7 @@ namespace compiler::helios {
 		case pst::ElementKind::Action:
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
+		case pst::ElementKind::CallArgument:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
@@ -154,6 +155,10 @@ namespace compiler::helios {
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ClassConstructor:
+		case pst::ElementKind::ClassDestructor:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprStmt:
@@ -173,7 +178,7 @@ namespace compiler::helios {
 				return ElementScopeKind::Transparent;
 		}
 
-		case pst::ElementKind::FunParam:
+		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 
@@ -351,7 +356,7 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt.unlock(ctx)->isDeclaration()) {
+				if (stmt.unlock(ctx)->isDeclaration() != pst::DeclKind::None) {
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 					symbols.emplace_back(sym_id);
 				}

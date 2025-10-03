@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<AccessInternal<CommaExprHolder>> expr;
+		NAMED_CHILD_OPT(expr, CommaExprHolder);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
@@ -25,7 +25,9 @@ namespace pst {
 		 * @note Optional of MRef here is intentional
 		 */
 		base::Optional<AccessLocked<ExprHolder>> getValue() const {
-			return expr.map([](const auto& e) -> AccessLocked<ExprHolder> { return e.give(); });
+			return expr.map([](const auto& e) {
+				return static_cast<AccessLocked<ExprHolder>>(e.give());
+			});
 		}
 	};
 }

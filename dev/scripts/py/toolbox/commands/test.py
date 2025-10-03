@@ -4,10 +4,11 @@ from .helpers import (
 )
 from click import command, option, BOOL
 
+
 @command()
 @build_dir(
-    prompt="build directory with docs enabled", 
-    help="The name of the build directory with enabled docs."
+    prompt="build directory with docs enabled",
+    help="The name of the build directory with enabled docs.",
 )
 @option(
     "-m",

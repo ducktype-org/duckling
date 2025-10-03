@@ -63,7 +63,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code) {
+	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);
@@ -120,12 +120,6 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::TypeMetadata{ type_name }))
 		    .and_then(mapOrWrongResponse<response::Type>);
-	}
-
-	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
-		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Block{ BlockID(block_id) }))
-		    .and_then(mapOrWrongResponse<response::Block>);
 	}
 
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {
