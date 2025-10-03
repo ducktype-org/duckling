@@ -488,13 +488,9 @@ namespace compiler::lir {
 							return helios::mangler::getSimpleMangledName(ctx, name.id);
 						}
 						variant_case(mir::GlobalVariableCTOR, name) {
-							// @TODO: Add suport to mangling ctors of globals to helios mangler #906
-							return base::StrID(
-								base::strConcat(
-									"_ctor_GLOBAL_",
-									helios::mangler::getSimpleMangledName(ctx, name.global_var_id)
-								)
-									.c_str()
+							return helios::mangler::getSpecialMangledName<
+								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+								ctx, name.global_var_id
 							);
 						}
 					}
@@ -547,7 +543,7 @@ namespace compiler::lir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
 
-	Function fromLIRFunctions(
+	Function createFunctionInvoker(
 		query::Context&                    ctx,
 		const std::vector<CRef<Function>>& functions,
 		const base::StrID&                 mangled_name

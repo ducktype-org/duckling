@@ -1,5 +1,7 @@
 #pragma once
 
+#include "module_impl_fd.hpp"
+
 #include <lir/lir_structure/function_forward.hpp>
 
 #include <base/box.hpp>
@@ -9,21 +11,6 @@
 #include <query_framework/context_fd.hpp>
 
 #include <filesystem>
-
-namespace compiler::backend_llvm {
-	struct ModuleImpl;
-}
-
-namespace base::extend {
-	/**
-	 * @brief Custom Box/MBox deleter for ModuleImpl.
-	 * It is needed to avoid UB with delete on incomplete type.
-	 */
-	template<>
-	struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
-		static void del(compiler::backend_llvm::ModuleImpl* ptr);
-	};
-}
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };

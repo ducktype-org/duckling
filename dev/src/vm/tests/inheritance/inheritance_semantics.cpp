@@ -31,7 +31,7 @@ private:
 
 	void dynamicDispatch() {
 		runTestOnVm("semantics/method_call_with_args.dbc", "12 13", "25", {}, 0);
-		runTestOnVm("semantics/simple_dispatch.dbc", "", "420", {}, 0);
+		runTestOnVm("semantics/simple_dispatch.dbc", "", "421", {}, 0);
 		runTestOnVm("semantics/dynamic_dispatch.dbc", "", "44542321", {}, 0);
 		runTestOnVm("semantics/interface_dispatch.dbc", "", "11224455", {}, 0);
 

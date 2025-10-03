@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../lists/call_list.hpp"
 #include "../meta.hpp"
 
 namespace pst {
@@ -10,18 +11,24 @@ namespace pst {
 	 * Examples:
 	 *  - public fun ...
 	 *  - public { stmt1; stmt2; }
-	 */
+	 *  - extern ("C") {...}
+..	 */
 	class StmtSpecifier final: public Stmt {
 		Keyword specifier = Keyword::NotAKeyword;
 		NAMED_CHILD(code_block_or_stmt, CodeBlockOrStmt);
+		NAMED_CHILD_OPT(call_list, CallList);
 
 	public:
-		static constexpr std::array<Keyword, 3> SPECIFIERS_ARRAY = {
-			Keyword::Public,
-			Keyword::Private,
-			Keyword::Protected,
+		static constexpr std::array SPECIFIERS_ARRAY
+			= { Keyword::Public, Keyword::Private, Keyword::Protected,
+			    Keyword::Extern, Keyword::Test,    Keyword::Debug };
+
+		static constexpr std::array SPECIFIEIRS_CALL_LIST_REQUIRED_ARRAY = {
+			Keyword::Extern,
 		};
+
 		static const std::set<Keyword> SPECIFIERS;
+		static const std::set<Keyword> SPECIFIEIRS_CALL_LIST_REQUIRED;
 
 		STMT_CHILD_CONSTRUCTOR(StmtSpecifier, ElementKind::StmtSpecifier);
 		static MBox<StmtSpecifier> parse(LangParserState& state);

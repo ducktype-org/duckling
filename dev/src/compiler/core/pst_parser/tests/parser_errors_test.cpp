@@ -180,9 +180,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  block_expr{ "x + {return 2 * x;}" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
-	Example<pst::Fun, true>  simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
-	Example<pst::Fun, true>  simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
-	Example<pst::Fun, false> bad_function{ "fun foo(x: i32, y) = {}" };
+	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
+	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
+	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
+	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32);" };
+	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo();" };
+	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a);" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
 	Example<pst::Pattern, true> simple_pattern2{
@@ -215,8 +218,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::StmtSpecifier, true>  private_specifier{ "private fun foo() = {}" };
 	Example<pst::StmtSpecifier, true>  protected_specifier{ "protected class x{}" };
 	Example<pst::StmtSpecifier, true>  public_block{ "public {class x{}}" };
+	Example<pst::StmtSpecifier, true>  extern_block{ "extern (\"C\") {class x{}}" };
+	Example<pst::StmtSpecifier, true>  complex_block{ "public extern (\"C\") debug {class x{}}" };
+	Example<pst::StmtSpecifier, true>  extern_block_two{ R"(extern ("C", "obj.o") {class x{}})" };
 	Example<pst::StmtSpecifier, false> bad_specifier{ "def class x{}" };
 	Example<pst::StmtSpecifier, false> empty_specifier{ "public" };
+	Example<pst::StmtSpecifier, false> bad_extern_block{ "extern {class x{}}" };
+
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };

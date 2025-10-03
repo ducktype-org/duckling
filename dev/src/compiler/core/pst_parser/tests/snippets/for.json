@@ -108,33 +108,42 @@
 															"sourceStart": 19,
 															"sourceEnd": 23
 														},
-														"Top Level Expression": {
-															"expr": {
+														"Call argument": {
+															"name": "<ANONYMOUS>",
+															"value": {
 																"position": {
 																	"sourceStart": 19,
 																	"sourceEnd": 23
 																},
-																"Binary Operator": {
-																	"left_expr": {
+																"Top Level Expression": {
+																	"expr": {
 																		"position": {
 																			"sourceStart": 19,
-																			"sourceEnd": 19
-																		},
-																		"Identifier Expression": {
-																			"name": {
-																				"Name": "c"
-																			}
-																		}
-																	},
-																	"operator": "+",
-																	"right_expr": {
-																		"position": {
-																			"sourceStart": 23,
 																			"sourceEnd": 23
 																		},
-																		"Identifier Expression": {
-																			"name": {
-																				"Name": "d"
+																		"Binary Operator": {
+																			"left_expr": {
+																				"position": {
+																					"sourceStart": 19,
+																					"sourceEnd": 19
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "c"
+																					}
+																				}
+																			},
+																			"operator": "+",
+																			"right_expr": {
+																				"position": {
+																					"sourceStart": 23,
+																					"sourceEnd": 23
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "d"
+																					}
+																				}
 																			}
 																		}
 																	}
@@ -147,15 +156,24 @@
 															"sourceStart": 26,
 															"sourceEnd": 26
 														},
-														"Top Level Expression": {
-															"expr": {
+														"Call argument": {
+															"name": "<ANONYMOUS>",
+															"value": {
 																"position": {
 																	"sourceStart": 26,
 																	"sourceEnd": 26
 																},
-																"Identifier Expression": {
-																	"name": {
-																		"Name": "w"
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 26,
+																			"sourceEnd": 26
+																		},
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "w"
+																			}
+																		}
 																	}
 																}
 															}
@@ -228,15 +246,24 @@
 																			"sourceStart": 41,
 																			"sourceEnd": 41
 																		},
-																		"Top Level Expression": {
-																			"expr": {
+																		"Call argument": {
+																			"name": "<ANONYMOUS>",
+																			"value": {
 																				"position": {
 																					"sourceStart": 41,
 																					"sourceEnd": 41
 																				},
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "a"
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 41,
+																							"sourceEnd": 41
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "a"
+																							}
+																						}
 																					}
 																				}
 																			}

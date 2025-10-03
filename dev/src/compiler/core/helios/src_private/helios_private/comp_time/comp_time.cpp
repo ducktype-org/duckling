@@ -9,7 +9,7 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -211,6 +211,11 @@ namespace compiler::helios {
 						case code::BuiltinUnary::Box:
 							result = CompileTimeValue{
 								type_val.withReferenceKind(tsh::ReferenceKind::Box)
+							};
+							break;
+						case code::BuiltinUnary::Const:
+							result = CompileTimeValue{
+								type_val.withMutability(tsh::Mutability::Immutable)
 							};
 							break;
 						default:

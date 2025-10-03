@@ -26,6 +26,7 @@ namespace pst {
 		Class,
 		Variable,
 		Fun,
+		FunDecl,
 		Pattern,
 		Block,
 
@@ -68,8 +69,8 @@ namespace pst {
 		NonClassStmt,
 
 		// use it, once its docs are more stable:
-		// ClassConstructor,
-		// ClassDestructor,
+		ClassConstructor,
+		ClassDestructor,
 
 		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
 
@@ -78,6 +79,7 @@ namespace pst {
 		ParamList,
 		FlowPatternList,
 		DottedName,
+		CallArgument,
 
 		// patterns:
 		FlowPattern,
