@@ -62,6 +62,7 @@ namespace compiler::helios {
 			}
 			return CAbi{};
 		} else {
+			// @TODO add proper diagnostic here for invalid ABI
 			return query::QError(errors::Failed());
 		}
 	}

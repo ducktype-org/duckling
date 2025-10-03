@@ -30,8 +30,9 @@ namespace compiler::helios {
 	using SymbolABI = std::variant<DefaultAbi, CAbi>;
 
 	using QuerySymbolABI_Result = query::QResult<SymbolABI, errors::Failed>;
+
 	/**
-	 * @brief Query symbols associated with given element in PST
+	 * @brief Get the ABI of the HELIOS symbol ID.
 	 */
 	DECLARE_QUERY(QuerySymbolABI, SymID, CRef<QuerySymbolABI_Result>);
 }
