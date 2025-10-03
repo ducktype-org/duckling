@@ -276,7 +276,9 @@ namespace vm {
 
 			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
 
-			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
+			variant_case_novalue(api::request::DeinitAndValidate) {
+					return deinitAndValidate();
+			}
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
@@ -354,11 +356,18 @@ namespace vm {
 			if (t.exec_thread)
 				if (auto res = stop(); !res.has_value()) return res;
 		}
-		if (loaded_program.has_value()) getMainVMThread().execGlobalDestructors(*loaded_program);
+		try {
+			// There might be numerous runtime exceptions during the deinitialization,
+			// any of those means there was an issue during the validation.
+			if (loaded_program.has_value()) getMainVMThread().execGlobalDestructors(*loaded_program);
 
-		for (const auto& vm_value: owned_vm_values) vm_value->freeData();
+			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
-		memory.deinitGlobals();
+			memory.deinitGlobals();
+		} catch (exceptions::VMRuntimeException& e) {
+			std::cerr << " - VM has detected issues during program\'s deinitialization: " << e.what() << '\n';
+			return false;
+		}
 		return memory.validateMemoryState();
 	}
 }

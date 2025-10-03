@@ -26,7 +26,7 @@ private:
 		const auto result = runTestOnVmGetResult("global_leak.dbc", "", "");
 		ASSERT_TRUE(result.run_result.has_value());
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_TRUE(validation_result);
+		ASSERT_TRUE(validation_result.has_value());
 		ASSERT_TRUE(validation_result.value() == false);
 
 	}

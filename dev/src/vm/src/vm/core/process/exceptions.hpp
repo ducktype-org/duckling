@@ -29,7 +29,7 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMNegativeOffsetException, "Moving offset to negative value");
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
 	VM_RUNTIME_EXCEPTION(
-		VMFoundMemoryLeakException, "The last executed instruction has caused a memory leak"
+		VMFoundMemoryLeakException, "Memory leak detected"
 	);
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
 }
