@@ -22,6 +22,7 @@ namespace pst::expr {
 		Call,
 		ChainExpr,
 		RoundExpr,
+		UnitExpr,
 		BlockExpr,
 		MatchExpr,
 		ComparisonChain,
