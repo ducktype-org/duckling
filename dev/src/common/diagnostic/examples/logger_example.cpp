@@ -17,6 +17,13 @@ protected:
 		// provide brief description of the error:
 		return "some example message";
 	}
+
+public:
+	MessageRelevantToThisSituation(
+		const dia::SourcePosition& source_position
+	): dia::Error(source_position) {
+		// possibly store more info here
+	}
 };
 
 // ...

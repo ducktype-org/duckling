@@ -10,12 +10,15 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
@@ -180,6 +183,93 @@ namespace compiler::helios::code {
 			return elem.value().dynamicCast<T>().has_value();
 		}
 
+		class AmbiguousCallableCandidates final: public dia::Error {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "The expression could refer to multiple callable symbols, at least one of "
+					   "which is not a function.";
+			}
+
+			[[nodiscard]]
+			std::string toStringDetailed() const override {
+				return "The expression could refer to multiple callable symbols, at least one of "
+					   "which is not a function. It must either refer to a set of overloaded "
+					   "functions, or a single symbol with a defined (possibly overloaded) call "
+					   "operator.";
+			}
+
+		public:
+			[[nodiscard]] Domain getDomain() const override { return Domain::Lookup; }
+
+			explicit AmbiguousCallableCandidates(const dia::SourcePosition& source_position):
+				  Error(source_position) {}
+
+			class Candidate final: public dia::NoteWithPosition {
+			protected:
+				[[nodiscard]] std::string toStringBrief() const override {
+					return "Candidate defined here.";
+				}
+
+			public:
+				explicit Candidate(const dia::SourcePosition& source_position):
+					  NoteWithPosition(source_position) {}
+			};
+		};
+
+		/**
+		 * Resolves a set of symbols act as callees into a set of function symbols.
+		 *
+		 * The resolution follows the following steps:
+		 * 1. If the set consists of only function symbols, return them as is.
+		 * 2. If the set consists of multiple symbols, but one of them is not a function symbol,
+		 *    log an error and return an empty set.
+		 * 3. Otherwise, the set consists of a single non-function symbol. Then, look up
+		 *    its call operators (like `operator()`, or constructors of a class).
+		 *
+		 * @param looked_up_callees The result of the lookup for the function being called.
+		 * @return Candidates after resolution of functions vs call operators.
+		 */
+		[[nodiscard]]
+		std::vector<SymID> getCallableCandidates(const std::vector<SymID>& looked_up_callees) const {
+			// If all candidates are functions, return them as is.
+			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+					return kind(symbol) == SymbolKind::Function;
+				}))
+				return looked_up_callees;
+
+			// Check error condition and report error.
+			if (looked_up_callees.size() > 1) {
+				auto error = makeBox<AmbiguousCallableCandidates>(
+					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
+				);
+				for (const auto& candidate: looked_up_callees) {
+					error->addNote(makeBox<AmbiguousCallableCandidates::Candidate>(
+						stmt(query_ctx, candidate).value()->getSourcePosition()
+					));
+				}
+				query_ctx.log(std::move(error));
+				return {};
+			}
+
+			// We have a single non-function candidate. Perform lookup for its call operators.
+			// @TODO: #520 Perform proper lookup in type for different cases.
+			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
+			case SymbolKind::Class:
+				// Retrieve constructors of the class.
+				// @TODO: #1290 Handle auxiliary constructors.
+				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
+				                      ->expect("Class symbol did not yield a class type")
+				                      .getType()
+				                      .as<tsh::ClassAbstractType>();
+				const auto ctor
+					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
+				return { ctor->declaration.original_symbol };
+			default:
+				CORE_PANIC("Not implemented yet");
+			}
+		}
+
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
 		/**
@@ -199,8 +289,9 @@ namespace compiler::helios::code {
 			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+			auto callees = getCallableCandidates(lookup_result->leaves);
 
-			auto res = processFunctionCall(query_ctx, lookup_result->leaves, call_expr);
+			auto res = processFunctionCall(query_ctx, callees, call_expr);
 
 			if (res.hasError()) {
 				query_ctx.log(
@@ -299,8 +390,8 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState, errors::Failed> {
-			// @TODO for now it is a mock as we don't have lookup in type instance and proper helios
-			// access expr #520.
+			// @TODO: #520 for now it is a mock as we don't have lookup in type instance and proper
+			// helios access expr.
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
@@ -349,7 +440,7 @@ namespace compiler::helios::code {
 
 		/**
 		 * Case when we have an access expression followed by a call expression,
-		 * and current state is an expression, for example "my_expr[20].foo()".
+		 * and current state is an expression, for example "my_expr.foo()".
 		   This may result in a method. Method
 		 * parameter overload is possible.
 		 */
@@ -375,10 +466,9 @@ namespace compiler::helios::code {
 			                         .lookup(query_ctx, expr_access->getName().value);
 
 			// @TODO #981: make it better:
-			// @TODO: #1029 handle overloads:
-			auto callee = lookup_result->getAsSingle().value().back();
+			auto callees = getCallableCandidates(lookup_result->leaves);
 
-			auto res = processFunctionCall(query_ctx, { callee }, call_expr);
+			auto res = processFunctionCall(query_ctx, callees, call_expr);
 			if (res.hasError()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(

@@ -114,19 +114,6 @@ namespace compiler::helios::code {
 		return makeBox<CallExpr>(ctx, std::move(identifier_expr), std::move(coerced_arguments));
 	}
 
-	base::Optional<Box<CallExpr>> attemptFittingClass(
-		query::Context&                        ctx,
-		SymID                                  class_symbol,
-		std::vector<Box<Expr>>&                positional_arguments,
-		base::HashMap<base::StrID, Box<Expr>>& named_arguments
-	) {
-		auto ctor_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
-			base::StrID("new"),
-			{ houtgen::GeneratedSymbolData::ImplicitConstructor{ class_symbol } },
-		});
-		return attemptFittingFun(ctx, ctor_symbol, positional_arguments, named_arguments);
-	}
-
 	/**
 	 * @brief Attempts to use given normal and named arguments as arguments for given function.
 	 */
@@ -141,8 +128,6 @@ namespace compiler::helios::code {
 			return attemptFittingFun(ctx, fun, positional_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
 			return attemptFittingBuiltin(ctx, fun, positional_arguments, named_arguments);
-		case SymbolKind::Class:
-			return attemptFittingClass(ctx, fun, positional_arguments, named_arguments);
 		default:
 			CORE_PANIC(base::strConcat(
 				"Function candidate \"",
@@ -157,6 +142,7 @@ namespace compiler::helios::code {
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	) {
+		// @TODO: #1029 handle overloads
 		if (candidates.size() != 1)
 			throw base::NotYetImplemented("Overloading is not implemented yet");
 
