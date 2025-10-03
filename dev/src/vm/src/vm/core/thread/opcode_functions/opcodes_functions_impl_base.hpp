@@ -640,11 +640,12 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_lptr)(FUNCTION_ARGS) {
-			{
-				const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-				const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-			}
+		{
+			const auto    dst = readFromStack<Pointer>(local_stack, instr->arg0);
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
 		FUNCTION_CONT(1);
 	}
 

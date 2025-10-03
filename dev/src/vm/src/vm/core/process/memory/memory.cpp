@@ -129,7 +129,8 @@ namespace vm {
 
 			for (const auto& block: global_blocks | std::views::values) freeBlock(block);
 
-			for (const auto& block: global_blocks | std::views::values) decreaseBlockRefcount(block);
+			for (const auto& block: global_blocks | std::views::values)
+				decreaseBlockRefcount(block);
 		} catch (exceptions::VMFoundMemoryLeakException&) {
 			std::cerr
 				<< "Leak during global data deinitialization - e.g. there was a global pointer to "

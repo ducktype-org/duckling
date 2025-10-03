@@ -15,20 +15,19 @@ public:
 	}
 
 private:
-
 	void localLeakTest() {
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult("local_leak.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
 	}
+
 	void globalLeakTest() {
 		const auto result = runTestOnVmGetResult("global_leak.dbc", "", "");
 		ASSERT_TRUE(result.run_result.has_value());
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_TRUE(validation_result.has_value());
 		ASSERT_TRUE(validation_result.value() == false);
-
 	}
 };
 
