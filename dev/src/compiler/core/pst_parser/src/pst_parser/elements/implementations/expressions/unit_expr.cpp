@@ -1,4 +1,5 @@
 #include "../../hierarchy/expressions/unit_expr.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {
@@ -21,7 +22,8 @@ namespace pst::expr {
 	MBox<ExprElement> UnitExpr::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round)) || !state[0].getRecursive().empty()) {
+		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))
+		    || !state[0].getRecursive().empty()) {
 			// This should (probably) never happen with how it's called by the parser
 			state.log(makeBox<BadUnitExprError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
