@@ -2,8 +2,6 @@
 
 #include "preamble.hpp"
 
-#include "diagnostic/message.hpp"
-
 namespace pst {
 
 
