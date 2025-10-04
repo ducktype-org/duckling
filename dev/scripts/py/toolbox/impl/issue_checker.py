@@ -9,10 +9,23 @@ from .helpers import (
 )
 import os
 
+from .list_files import list_files_impl
+
 
 def issue_checker_impl(
-    issues, branch: str = "origin/main", no_merge_base: bool = False
-):
+    issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False
+) -> bool:
+    """
+    Checks if specified GitHub issue numbers appear in the codebase.
+
+    Args:
+        issues: List of issue numbers to search for in the code
+        branch: Git branch to check against (default: origin/main)
+        no_merge_base: If True, skip merge base calculation
+
+    Returns:
+        bool: True if no issue references found, False if issues were found in code
+    """
     if not issues:
         issues = get_issues_from_github()
         if not issues:
@@ -38,12 +51,7 @@ def issue_checker_impl(
         re.compile(rf"#\b({re.escape(num)})(?!\d)") for num in valid_issue_numbers
     ]
 
-    try:
-        files_str, _ = bash_command_get_output("git ls-tree -r --name-only HEAD")
-        files = [f for f in files_str.strip().split("\n") if f]
-    except Exception as e:
-        log_warning(f"Could not get file list from git: {e}")
-        return True
+    files = list_files_impl(branch=branch, no_merge_base=no_merge_base)
 
     found_any = False
     summary = {num: 0 for num in valid_issue_numbers}
@@ -69,7 +77,20 @@ def issue_checker_impl(
     return not found_any
 
 
-def get_issues_from_github():
+def get_issues_from_github() -> list[str]:
+    """
+    Retrieves open issue numbers from GitHub for the current repository and PR.
+
+    This function:
+    1. Checks if 'gh' CLI is available
+    2. Extracts repository owner/name from git remote
+    3. Gets current branch name
+    4. Finds associated Pull Request number (from PR_NUMBER env var or gh CLI)
+    5. Queries GitHub GraphQL API for issues that would be closed by the PR
+
+    Returns:
+        list[str]: List of open issue numbers as strings, empty list if none found or on error
+    """
     import shutil
 
     # Check if 'gh' is available
