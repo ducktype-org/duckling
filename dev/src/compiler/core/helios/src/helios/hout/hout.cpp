@@ -36,12 +36,12 @@ namespace compiler::helios {
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
 		SymID                                                symbol,
 		tsh::SymbolType<>                                    ret_type,
-		const std::shared_ptr<std::vector<code::Parameter>>& parameters
+		std::vector<code::Parameter> parameters
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
-		  parameters(parameters) {
+		  parameters(std::move(parameters)) {
 		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
 	}
 
@@ -56,8 +56,8 @@ namespace compiler::helios {
 		out << "Return type: ";
 		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
-		if (parameters->empty()) out << "  none\n";
-		for (auto& param: *parameters) {
+		if (parameters.empty()) out << "  none\n";
+		for (auto& param: parameters) {
 			out << "  " << param.name.strView() << " : ";
 			out << param.type.toString();
 			if (param.initial_value.has_value()) {
@@ -71,7 +71,7 @@ namespace compiler::helios {
 
 	u64 HOUTFunction::queryUnstablePerfectHash() const {
 		// @note for now it doesn't depend on body
-		return declaration.queryUnstablePerfectHash();
+		return declaration->queryUnstablePerfectHash();
 	}
 
 	std::string HOUTFunction::debugPrint() const {
@@ -79,13 +79,13 @@ namespace compiler::helios {
 		out << "{\n";
 		for (auto& stmt: body->statements) stmt->debugPrint(out, 1);
 		out << "}\n";
-		return declaration.debugPrint() + out.str();
+		return declaration->debugPrint() + out.str();
 	}
 
 	HOUTFunction::HOUTFunction(
-		HOUTFunctionDeclaration other, const std::shared_ptr<const code::CodeBlock>& body
+		CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
 	):
-		  declaration(std::move(other)),
+		  declaration(other),
 		  body(body) {}
 
 	std::string HOUTGlobalData::debugPrint() const {

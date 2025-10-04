@@ -28,10 +28,13 @@ namespace compiler::helios::code {
 
 		Expr(tsh::ExpressionType<> expression_type): expression_type(expression_type) {}
 
-		virtual ~Expr()                                  = default;
+		virtual ~Expr() = default;
+
 		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
+
+		[[nodiscard]] virtual Box<Expr> clone() const = 0;
 	};
 
 	/***********************\
@@ -47,9 +50,13 @@ namespace compiler::helios::code {
 		i64 value;
 
 		LiteralIntExpr(query::Context& ctx, i64 value);
+		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
+		
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -59,9 +66,12 @@ namespace compiler::helios::code {
 		bool value;
 
 		LiteralBoolExpr(query::Context& ctx, bool value);
+		LiteralBoolExpr(tsh::ExpressionType<> expression_type, bool value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -76,9 +86,12 @@ namespace compiler::helios::code {
 		tpc::StringValue value;
 
 		LiteralStringExpr(query::Context& ctx, tpc::StringValue value);
+		LiteralStringExpr(tsh::ExpressionType<> expression_type, tpc::StringValue value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -88,9 +101,12 @@ namespace compiler::helios::code {
 		tsh::SymbolType<> value_type;
 
 		LiteralTypeExpr(query::Context& ctx, tsh::AbstractType type);
+		LiteralTypeExpr(tsh::ExpressionType<> expression_type, tsh::SymbolType<> value_type);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -104,9 +120,12 @@ namespace compiler::helios::code {
 		SymID symbol;
 
 		IdentifierExpr(query::Context& ctx, SymID symbol);
+		IdentifierExpr(tsh::ExpressionType<> expression_type, SymID symbol);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -125,9 +144,12 @@ namespace compiler::helios::code {
 		base::Box<Expr> inner;
 
 		ParenthesisExpr(query::Context& ctx, base::Box<Expr> inner);
+		ParenthesisExpr(tsh::ExpressionType<> expression_type, base::Box<Expr> inner);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -168,9 +190,17 @@ namespace compiler::helios::code {
 		BinaryOperatorExpr(
 			query::Context& ctx, BuiltinBinary operation, base::Box<Expr> lhs, base::Box<Expr> rhs
 		);
+		BinaryOperatorExpr(
+			tsh::ExpressionType<> expression_type,
+			BuiltinBinary         operation,
+			base::Box<Expr>       lhs,
+			base::Box<Expr>       rhs
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -196,9 +226,14 @@ namespace compiler::helios::code {
 		base::Box<Expr> expr;
 
 		UnaryOperatorExpr(BuiltinUnary operation, base::Box<Expr> expr);
+		UnaryOperatorExpr(
+			tsh::ExpressionType<> expression_type, BuiltinUnary operation, base::Box<Expr> expr
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -212,33 +247,51 @@ namespace compiler::helios::code {
 		TernaryOperatorExpr(
 			query::Context& ctx, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
 		);
+		TernaryOperatorExpr(
+			tsh::ExpressionType<> expression_type,
+			Box<Expr>             condition,
+			Box<Expr>             if_true,
+			Box<Expr>             if_false
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
 	 * @brief Tuple constructor inside an expression.
 	 */
 	struct TupleTypeConstructorExpr: public Expr {
-		std::vector<base::Box<Expr>> elements;
+			std::vector<base::Box<Expr>> elements;
 
-		TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
+			TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
+			TupleTypeConstructorExpr(
+				tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
+			);
 
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
+			void debugPrint(std::ostream& out) const final;
+			void acceptVisitor(HoutExprVisitor&) const final;
+
+			[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
 	 * @brief Variant constructor inside an expression.
 	 */
 	struct VariantTypeConstructorExpr: public Expr {
-		std::vector<base::Box<Expr>> subtypes;
+			std::vector<base::Box<Expr>> subtypes;
 
-		VariantTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> subtypes);
+			VariantTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> subtypes);
+			VariantTypeConstructorExpr(
+				tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> subtypes
+			);
 
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
+			void debugPrint(std::ostream& out) const final;
+			void acceptVisitor(HoutExprVisitor&) const final;
+
+			[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -246,25 +299,39 @@ namespace compiler::helios::code {
 	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
-		base::Box<Expr> base;
-		base::StrID     field;
+			base::Box<Expr> base;
+			base::StrID     field;
 
-		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
+			AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+			AccessExpr(
+				tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field
+			);
+			void debugPrint(std::ostream& out) const final;
+			void acceptVisitor(HoutExprVisitor&) const final;
+
+			[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
-		base::Box<Expr>              callee;
-		std::vector<base::Box<Expr>> arguments;
+			base::Box<Expr>              callee;
+			std::vector<base::Box<Expr>> arguments;
 
-		CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments);
+			CallExpr(
+				query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments
+			);
+			CallExpr(
+				tsh::ExpressionType<>        expression_type,
+				base::Box<Expr>              callee,
+				std::vector<base::Box<Expr>> arguments
+			);
 
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
+			void debugPrint(std::ostream& out) const final;
+			void acceptVisitor(HoutExprVisitor&) const final;
+
+			[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -273,16 +340,21 @@ namespace compiler::helios::code {
 	 * The last one is also the result of the whole sequence.
 	 *
 	 * Acts like a comma operator in C/C++:
-	 * > the comma operator is a binary operator that evaluates its first operand and discards the
-	 * result, and then evaluates the second operand and returns this value
+	 * > the comma operator is a binary operator that evaluates its first operand and discards
+	 * the result, and then evaluates the second operand and returns this value
 	 */
 	struct SequenceExpr final: public Expr {
-		std::vector<base::Box<Expr>> expressions;
+			std::vector<base::Box<Expr>> expressions;
 
-		SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
+			SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
+			SequenceExpr(
+				tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> expressions
+			);
 
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
+			void debugPrint(std::ostream& out) const final;
+			void acceptVisitor(HoutExprVisitor&) const final;
+
+			[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -299,8 +371,15 @@ namespace compiler::helios::code {
 			std::vector<base::Box<Expr>> expressions,
 			std::vector<BuiltinBinary>   operators
 		);
+		ChainComparisonExpr(
+			tsh::ExpressionType<>        expression_type,
+			std::vector<base::Box<Expr>> expressions,
+			std::vector<BuiltinBinary>   operators
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 }
