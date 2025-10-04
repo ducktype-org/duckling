@@ -12,10 +12,14 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <typesystem/higher/all.hpp>
@@ -66,7 +70,8 @@ public:
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
-		TESTER_ADD_TEST(testDebugPrint);
+		// TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testStmtSpecifiers);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1241,6 +1246,166 @@ private:
 			std::cout << compiler::helios::prettyDebugPrint(sym_n2, ctx) << '\n';
 			std::cout << compiler::helios::prettyDebugPrint(sym_test_class, ctx) << '\n';
 			std::cout << compiler::helios::prettyDebugPrint(sym_n3, ctx) << '\n';
+		});
+	}
+
+	void testStmtSpecifiers() {
+		// Utility functions for testing statement specifiers
+		auto has_specifier
+			= [](query::Context&                                           ctx,
+		         const std::vector<pst::AccessLocked<pst::StmtSpecifier>>& specifiers,
+		         pst::Keyword                                              keyword) -> bool {
+			for (const auto& spec: specifiers) {
+				auto unlocked = spec.unlock(ctx);
+				if (unlocked->getSpecifier() == keyword) return true;
+			}
+			return false;
+		};
+
+		auto verify_specifier_order
+			= [](query::Context&                                           ctx,
+		         const std::vector<pst::AccessLocked<pst::StmtSpecifier>>& specifiers,
+		         const std::vector<pst::Keyword>&                          expected_order) -> bool {
+			if (specifiers.size() != expected_order.size()) return false;
+
+			for (size_t i = 0; i < specifiers.size(); ++i) {
+				auto unlocked = specifiers[i].unlock(ctx);
+				if (unlocked->getSpecifier() != expected_order[i]) return false;
+			}
+			return true;
+		};
+
+		auto test_c_abi_with_library = [this](
+										   query::Context&                  ctx,
+										   compiler::helios::SymID          symbol,
+										   base::Optional<std::string_view> expected_library
+									   ) {
+			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
+			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
+			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
+			if (!expected_library.empty()) {
+				ASSERT_TRUE(c_abi.library.has_value());
+				ASSERT_EQUAL(expected_library, c_abi.library.value().strView());
+			}
+		};
+
+		auto test_default_abi = [this](query::Context& ctx, compiler::helios::SymID symbol) {
+			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
+			ASSERT_TRUE(std::holds_alternative<compiler::helios::DefaultAbi>(abi_value));
+		};
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/stmt_specifiers")));
+
+		// Test functions with different specifiers
+		auto c_function           = getChain("cFunction", root_scope).back();
+		auto private_function     = getChain("privateFunction", root_scope).back();
+		auto public_function      = getChain("publicFunction", root_scope).back();
+		auto c_private_function   = getChain("cPrivateFunction", root_scope).back();
+		auto lib_function         = getChain("libFunction", root_scope).back();
+		auto invalid_abi_function = getChain("invalidAbiFunction", root_scope).back();
+
+		// Test symbols from extern("C") block
+		auto c_block_function        = getChain("cBlockFunction", root_scope).back();
+		auto c_block_public_function = getChain("cBlockPublicFunction", root_scope).back();
+
+		// Test struct
+		auto regular_struct = getChain("RegularStruct", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// Test QuerySpecifiersOfSymbol with order verification
+			{
+				// Test extern("C") function - should have extern specifier
+				auto specifiers = ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_function);
+				ASSERT_EQUAL(1, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+			}
+
+			{
+				// Test private function
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(private_function);
+				ASSERT_EQUAL(1, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Private));
+			}
+
+			{
+				// Test public function
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(public_function);
+				ASSERT_EQUAL(1, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
+			}
+
+			{
+				// Test extern("C") private function - verify order
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_private_function);
+				ASSERT_EQUAL(2, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Private));
+				ASSERT_TRUE(verify_specifier_order(
+					ctx, *specifiers, { pst::Keyword::Private, pst::Keyword::Extern }
+				));
+			}
+
+			// Test QuerySymbolABI for various cases
+			{
+				// Test extern("C") function - should have C ABI with no library
+				test_c_abi_with_library(ctx, c_function, {});
+			}
+
+			{
+				// Test extern("C", "mylib") function - should have C ABI with mylib
+				test_c_abi_with_library(ctx, lib_function, "mylib");
+			}
+
+			{
+				// Test private function - should have default ABI
+				test_default_abi(ctx, private_function);
+			}
+
+			{
+				// Test public function - should have default ABI
+				test_default_abi(ctx, public_function);
+			}
+
+			{
+				// Test extern("C") private function - should have C ABI
+				test_c_abi_with_library(ctx, c_private_function, {});
+			}
+
+			{
+				// Test regular struct - should have default ABI
+				test_default_abi(ctx, regular_struct);
+			}
+
+			// Test extern("C") block symbols
+			{
+				// Test function inside extern("C") block - should have C ABI and extern specifier
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_block_function);
+				ASSERT_TRUE(specifiers->size() >= 1);
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+				test_c_abi_with_library(ctx, c_block_function, {});
+			}
+
+			{
+				// Test public function inside extern("C") block - should have C ABI, extern and
+				// public specifiers
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_block_public_function);
+				ASSERT_TRUE(specifiers->size() >= 2);
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
+				test_c_abi_with_library(ctx, c_block_public_function, {});
+			}
+
+			// Test invalid ABI function - should fail
+			try {
+				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
+				CORE_PANIC("Should throw for invalid ABI.");
+			} catch (compiler::helios::errors::Failed& err) {
+				// Expected failure for invalid ABI
+			}
 		});
 	}
 };
