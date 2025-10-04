@@ -1,0 +1,8 @@
+fun goo() = {
+    return;
+}
+
+fun foo() = {
+    goo();
+    return;
+}

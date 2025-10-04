@@ -1,0 +1,8 @@
+fun goo() -> i64 = {
+    return;
+}
+
+fun foo() -> i64 = {
+    goo();
+    return;
+}

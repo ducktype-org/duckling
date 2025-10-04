@@ -1,0 +1,4 @@
+fun foo() = {
+    builtin_input_i64();
+    return;
+}
