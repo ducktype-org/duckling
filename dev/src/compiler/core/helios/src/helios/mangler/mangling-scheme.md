@@ -15,7 +15,6 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <encoding> ::= <path>                                       // variables and constants
              | <path> <function-type>                       // functions
-             | <special-symbol-encoding>
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
@@ -122,9 +121,10 @@ either in the scheme or it's implementation, they should be reflected here.
               | <back-reference>
 
 <unscoped-name> ::= <identifier>                            // actual name of a (typical) symbol
-                  | <special-member-name>
+                  | <special-member-name>                   // ctors, dtors, etc.
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
+                  | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
 
 // more special methods could be added in the future
@@ -140,8 +140,12 @@ either in the scheme or it's implementation, they should be reflected here.
 <chain-operator> ::= "ch" <type> (<binary-operator-name> <type>)* "E"
 
 // special symbols like virtual tables, RTTI, guard variables, structures for generics, etc.
-<special-symbol-encoding> ::= <path-prefix> <special-symbol-name>
-<special-symbol-name> ::= (todo: virtual tables, generic structures, named parameter tables, guard variables, ...)
+<special-symbol-encoding> ::= "H" <special-symbol-name> "E"
+<special-symbol-name> ::= "mc"                              // module constructor
+                        | "md"                              // module destructor
+                        | "gc"                              // global variable constructor
+                        | "gd"                              // global variable destructor
+//                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
 
@@ -151,13 +155,13 @@ either in the scheme or it's implementation, they should be reflected here.
 // e.g.: 0 -> "_", 1 -> "0_", 11 -> "a_", 62 -> "Z_"
 <compact-number> ::= "0-9a-zA-Z"* "_"
 
-// more operators could be added in the future
+// more operators can be added in the future
 <unary-operator-name> ::= "ps"                              // +
                         | "ng"	                            // -
                         | "ad"	                            // &
                         | "de"	                            // *
 
-// more operators could be added in the future
+// more operators can be added in the future
 <binary-operator-name> ::= "co"	                            // ~
                          | "pl"	                            // +
                          | "mi"	                            // -
@@ -195,6 +199,9 @@ either in the scheme or it's implementation, they should be reflected here.
                          | "cl"	                            // ()
                          | "ix"	                            // []
                          | "cv" <type>	                    // (cast)
+                         | "nm" <identifier> <type> <type>  // (named binary operator)
+                         | "nu" <identifier> <type>         // (named unary prefix operator)
+                         | "nU" <identifier> <type>         // (named unary postfix operator)
 
 <opt-metadata> ::= "" | <metadata>
 // there are no restrictions on <vendor-metadata>, any characters are allowed

@@ -29,7 +29,7 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
-	 * @brief Query symbols associated with given element in PST
+	 * @brief Query symbol associated with given element in PST
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID);
 
@@ -83,6 +83,13 @@ namespace compiler::helios {
 		 */
 		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
 	}
+
+	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
+
+	/**
+	 * @brief Query stmt specifiers associated with given symbol in HELIOS
+	 */
+	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>);
 
 	namespace houtgen {
 		struct KeyFor_QueryGeneratedSymbol {

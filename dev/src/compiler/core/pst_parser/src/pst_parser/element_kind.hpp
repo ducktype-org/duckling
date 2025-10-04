@@ -70,8 +70,8 @@ namespace pst {
 		ClassSpecial,
 
 		// use it, once its docs are more stable:
-		// ClassConstructor,
-		// ClassDestructor,
+		ClassConstructor,
+		ClassDestructor,
 
 		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
 

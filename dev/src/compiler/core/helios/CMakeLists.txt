@@ -24,6 +24,7 @@ add_library(HELIOS STATIC
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_class_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
+	src/helios/symbols/symbol_abi.cpp
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp

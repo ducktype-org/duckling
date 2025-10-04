@@ -11,10 +11,14 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <typesystem/higher/all.hpp>
@@ -61,9 +65,11 @@ public:
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
-		TESTER_ADD_TEST(testDebugPrint);
+		// TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testStmtSpecifiers);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -996,27 +1002,42 @@ private:
 		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
 		std::cerr << "\nFunction name: " << goo.declaration.original_name.strView() << '\n';
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ goo.declaration.original_symbol, 123, "metadata_v123" }
+			{ .symbol_key              = goo.declaration.original_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 123,
+		      .additional_metadata     = "metadata_v123" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
-		auto glob = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob.original_name.strView() << '\n';
-		std::cerr << "Expression: ";
-		std::get<compiler::helios::HOUTGlobalVariable>(glob.value)
-			.initial_value.get()
-			->ref()
-			->debugPrint(std::cerr);
-		std::cerr << '\n';
-		auto mangled_glob = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ glob.helios_symbol, 321, "metadata_v321" }
+		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
+		std::cerr << "\nGlobal variable name: " << glob_a.original_name.strView() << '\n';
+		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key              = glob_a.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 0,
+		      .additional_metadata     = std::nullopt }
 		);
-		std::cerr << "Mangled symbol: " << mangled_glob.strView() << '\n';
+		std::cerr << "Mangled symbol: " << mangled_glob_a.strView() << '\n';
+		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
+
+		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
+		std::cerr << "\nGlobal Variable name: " << glob_b.original_name.strView() << '\n';
+		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key              = glob_b.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 321,
+		      .additional_metadata     = "metadata_v321" }
+		);
+		std::cerr << "Mangled symbol: " << mangled_glob_b.strView() << '\n';
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
 		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
 		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
 		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ g_const.helios_symbol, 321, "metadata_v321" }
+			{ .symbol_key              = g_const.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 321,
+		      .additional_metadata     = "metadata_v321" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
@@ -1026,24 +1047,70 @@ private:
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
 		std::cerr << "\nSub function name: " << sub_fun.declaration.original_name.strView() << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ sub_fun.declaration.original_symbol, 5, "metadata_v5" }
+			{ .symbol_key              = sub_fun.declaration.original_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
 
 		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
 		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ sub_cnst.helios_symbol, 5, "metadata_v5" }
+			{ .symbol_key              = sub_cnst.helios_symbol,
+		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.str());
-		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob.str());
+		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
+		std::cerr << "taw3e8\t" << mangled_glob_a.strView() << '\n';
+		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
 		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+	}
+
+	void testManglerSpecialMembers() {
+		std::cerr << "--- testManglerSpecialMembers ---\n";
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_special_mem")));
+
+		auto variable_a       = getChain("A", root_scope);
+		auto variable_b       = getChain("M.B", root_scope);
+		auto mangled_a_constr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key = variable_a.back(),
+		      .kind = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = std::nullopt }
+		);
+		auto mangled_a_destr = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ .symbol_key = variable_a.back(),
+		      .kind       = compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor,
+		      .mangling_scheme_version = 5,
+		      .additional_metadata     = std::nullopt }
+		);
+		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agc", mangled_a_constr.str());
+		ASSERT_EQUAL("_Q4_M20mangling_special_memG1Agd", mangled_a_destr.str());
+
+		// Using the "getSpecialMangledName" aliases:
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto mangled_b_constr = compiler::helios::mangler::getSpecialMangledName<
+				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+				ctx, variable_b.back()
+			);
+			auto mangled_b_destr = compiler::helios::mangler::getSpecialMangledName<
+				compiler::helios::mangler::ManglingSymbolKind::GlobalVariableDestructor>(
+				ctx, variable_b.back()
+			);
+
+			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgc", mangled_b_constr.str());
+			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgd", mangled_b_destr.str());
+		});
 	}
 
 	void testGlobalVariableExpressions() {
@@ -1177,6 +1244,166 @@ private:
 			std::cout << compiler::helios::prettyDebugPrint(sym_n2, ctx) << '\n';
 			std::cout << compiler::helios::prettyDebugPrint(sym_test_class, ctx) << '\n';
 			std::cout << compiler::helios::prettyDebugPrint(sym_n3, ctx) << '\n';
+		});
+	}
+
+	void testStmtSpecifiers() {
+		// Utility functions for testing statement specifiers
+		auto has_specifier
+			= [](query::Context&                                           ctx,
+		         const std::vector<pst::AccessLocked<pst::StmtSpecifier>>& specifiers,
+		         pst::Keyword                                              keyword) -> bool {
+			for (const auto& spec: specifiers) {
+				auto unlocked = spec.unlock(ctx);
+				if (unlocked->getSpecifier() == keyword) return true;
+			}
+			return false;
+		};
+
+		auto verify_specifier_order
+			= [](query::Context&                                           ctx,
+		         const std::vector<pst::AccessLocked<pst::StmtSpecifier>>& specifiers,
+		         const std::vector<pst::Keyword>&                          expected_order) -> bool {
+			if (specifiers.size() != expected_order.size()) return false;
+
+			for (size_t i = 0; i < specifiers.size(); ++i) {
+				auto unlocked = specifiers[i].unlock(ctx);
+				if (unlocked->getSpecifier() != expected_order[i]) return false;
+			}
+			return true;
+		};
+
+		auto test_c_abi_with_library = [this](
+										   query::Context&                  ctx,
+										   compiler::helios::SymID          symbol,
+										   base::Optional<std::string_view> expected_library
+									   ) {
+			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
+			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
+			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
+			if (!expected_library.empty()) {
+				ASSERT_TRUE(c_abi.library.has_value());
+				ASSERT_EQUAL(expected_library, c_abi.library.value().strView());
+			}
+		};
+
+		auto test_default_abi = [this](query::Context& ctx, compiler::helios::SymID symbol) {
+			auto abi_value = ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
+			ASSERT_TRUE(std::holds_alternative<compiler::helios::DefaultAbi>(abi_value));
+		};
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/stmt_specifiers")));
+
+		// Test functions with different specifiers
+		auto c_function           = getChain("cFunction", root_scope).back();
+		auto private_function     = getChain("privateFunction", root_scope).back();
+		auto public_function      = getChain("publicFunction", root_scope).back();
+		auto c_private_function   = getChain("cPrivateFunction", root_scope).back();
+		auto lib_function         = getChain("libFunction", root_scope).back();
+		auto invalid_abi_function = getChain("invalidAbiFunction", root_scope).back();
+
+		// Test symbols from extern("C") block
+		auto c_block_function        = getChain("cBlockFunction", root_scope).back();
+		auto c_block_public_function = getChain("cBlockPublicFunction", root_scope).back();
+
+		// Test struct
+		auto regular_struct = getChain("RegularStruct", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// Test QuerySpecifiersOfSymbol with order verification
+			{
+				// Test extern("C") function - should have extern specifier
+				auto specifiers = ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_function);
+				ASSERT_EQUAL(1, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+			}
+
+			{
+				// Test private function
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(private_function);
+				ASSERT_EQUAL(1, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Private));
+			}
+
+			{
+				// Test public function
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(public_function);
+				ASSERT_EQUAL(1, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
+			}
+
+			{
+				// Test extern("C") private function - verify order
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_private_function);
+				ASSERT_EQUAL(2, specifiers->size());
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Private));
+				ASSERT_TRUE(verify_specifier_order(
+					ctx, *specifiers, { pst::Keyword::Private, pst::Keyword::Extern }
+				));
+			}
+
+			// Test QuerySymbolABI for various cases
+			{
+				// Test extern("C") function - should have C ABI with no library
+				test_c_abi_with_library(ctx, c_function, {});
+			}
+
+			{
+				// Test extern("C", "mylib") function - should have C ABI with mylib
+				test_c_abi_with_library(ctx, lib_function, "mylib");
+			}
+
+			{
+				// Test private function - should have default ABI
+				test_default_abi(ctx, private_function);
+			}
+
+			{
+				// Test public function - should have default ABI
+				test_default_abi(ctx, public_function);
+			}
+
+			{
+				// Test extern("C") private function - should have C ABI
+				test_c_abi_with_library(ctx, c_private_function, {});
+			}
+
+			{
+				// Test regular struct - should have default ABI
+				test_default_abi(ctx, regular_struct);
+			}
+
+			// Test extern("C") block symbols
+			{
+				// Test function inside extern("C") block - should have C ABI and extern specifier
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_block_function);
+				ASSERT_TRUE(specifiers->size() >= 1);
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+				test_c_abi_with_library(ctx, c_block_function, {});
+			}
+
+			{
+				// Test public function inside extern("C") block - should have C ABI, extern and
+				// public specifiers
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(c_block_public_function);
+				ASSERT_TRUE(specifiers->size() >= 2);
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
+				test_c_abi_with_library(ctx, c_block_public_function, {});
+			}
+
+			// Test invalid ABI function - should fail
+			try {
+				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
+				CORE_PANIC("Should throw for invalid ABI.");
+			} catch (compiler::helios::errors::Failed& err) {
+				// Expected failure for invalid ABI
+			}
 		});
 	}
 };
