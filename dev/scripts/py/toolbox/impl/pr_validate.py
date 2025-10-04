@@ -43,7 +43,7 @@ def pr_validate_impl(
         thread_count=thread_count,
     )
 
-    # Step 6 - !todo validate
+    # Step 6 - validate to-dos and fix-mes
     if not todo_validate_impl():
         exit_with_error("T" + "ODO validation has failed")
 
