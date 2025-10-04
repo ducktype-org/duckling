@@ -49,8 +49,7 @@ namespace compiler::helios::code {
 					return std::move(normal_arguments.at(normal_args_position++));
 				else if (param.initial_value.has_value()) {
 					return param.initial_value->ref()->clone();
-				}
-				else
+				} else
 					return std::nullopt;
 			};
 

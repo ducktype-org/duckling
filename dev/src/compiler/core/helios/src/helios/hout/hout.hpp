@@ -67,9 +67,7 @@ namespace compiler::helios {
 
 	private:
 		HOUTFunctionDeclaration(
-			SymID                                                symbol,
-			tsh::SymbolType<>                                    ret_type,
-			std::vector<code::Parameter> parameters
+			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
 	};
@@ -80,7 +78,9 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunction final {
 	private:
-		HOUTFunction(CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body);
+		HOUTFunction(
+			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
+		);
 		friend struct ImplementationOf_QueryCodeOFFun;
 
 	public:

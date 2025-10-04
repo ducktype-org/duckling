@@ -51,7 +51,7 @@ namespace compiler::helios::code {
 
 		LiteralIntExpr(query::Context& ctx, i64 value);
 		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
-		
+
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -264,34 +264,34 @@ namespace compiler::helios::code {
 	 * @brief Tuple constructor inside an expression.
 	 */
 	struct TupleTypeConstructorExpr: public Expr {
-			std::vector<base::Box<Expr>> elements;
+		std::vector<base::Box<Expr>> elements;
 
-			TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
-			TupleTypeConstructorExpr(
-				tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
-			);
+		TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
+		TupleTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
+		);
 
-			void debugPrint(std::ostream& out) const final;
-			void acceptVisitor(HoutExprVisitor&) const final;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 
-			[[nodiscard]] Box<Expr> clone() const final;
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
 	 * @brief Variant constructor inside an expression.
 	 */
 	struct VariantTypeConstructorExpr: public Expr {
-			std::vector<base::Box<Expr>> subtypes;
+		std::vector<base::Box<Expr>> subtypes;
 
-			VariantTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> subtypes);
-			VariantTypeConstructorExpr(
-				tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> subtypes
-			);
+		VariantTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> subtypes);
+		VariantTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> subtypes
+		);
 
-			void debugPrint(std::ostream& out) const final;
-			void acceptVisitor(HoutExprVisitor&) const final;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 
-			[[nodiscard]] Box<Expr> clone() const final;
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -299,39 +299,35 @@ namespace compiler::helios::code {
 	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
-			base::Box<Expr> base;
-			base::StrID     field;
+		base::Box<Expr> base;
+		base::StrID     field;
 
-			AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
-			AccessExpr(
-				tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field
-			);
-			void debugPrint(std::ostream& out) const final;
-			void acceptVisitor(HoutExprVisitor&) const final;
+		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+		AccessExpr(tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 
-			[[nodiscard]] Box<Expr> clone() const final;
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
-			base::Box<Expr>              callee;
-			std::vector<base::Box<Expr>> arguments;
+		base::Box<Expr>              callee;
+		std::vector<base::Box<Expr>> arguments;
 
-			CallExpr(
-				query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments
-			);
-			CallExpr(
-				tsh::ExpressionType<>        expression_type,
-				base::Box<Expr>              callee,
-				std::vector<base::Box<Expr>> arguments
-			);
+		CallExpr(query::Context& ctx, base::Box<Expr> callee, std::vector<base::Box<Expr>> arguments);
+		CallExpr(
+			tsh::ExpressionType<>        expression_type,
+			base::Box<Expr>              callee,
+			std::vector<base::Box<Expr>> arguments
+		);
 
-			void debugPrint(std::ostream& out) const final;
-			void acceptVisitor(HoutExprVisitor&) const final;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 
-			[[nodiscard]] Box<Expr> clone() const final;
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**
@@ -344,17 +340,15 @@ namespace compiler::helios::code {
 	 * the result, and then evaluates the second operand and returns this value
 	 */
 	struct SequenceExpr final: public Expr {
-			std::vector<base::Box<Expr>> expressions;
+		std::vector<base::Box<Expr>> expressions;
 
-			SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
-			SequenceExpr(
-				tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> expressions
-			);
+		SequenceExpr(query::Context& ctx, std::vector<base::Box<Expr>> expressions);
+		SequenceExpr(tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> expressions);
 
-			void debugPrint(std::ostream& out) const final;
-			void acceptVisitor(HoutExprVisitor&) const final;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 
-			[[nodiscard]] Box<Expr> clone() const final;
+		[[nodiscard]] Box<Expr> clone() const final;
 	};
 
 	/**

@@ -1042,7 +1042,8 @@ private:
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
-		std::cerr << "\nSub function name: " << sub_fun.declaration->original_name.strView() << '\n';
+		std::cerr << "\nSub function name: " << sub_fun.declaration->original_name.strView()
+				  << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ .symbol_key              = sub_fun.declaration->original_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,

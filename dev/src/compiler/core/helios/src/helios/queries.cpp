@@ -178,11 +178,7 @@ namespace compiler::helios {
 					}
 				}
 
-				HOUTFunctionDeclaration output(
-					original_symbol,
-					ret_type,
-					std::move(parameters)
-				);
+				HOUTFunctionDeclaration output(original_symbol, ret_type, std::move(parameters));
 
 				this->out.emplace(std::move(output));
 			}

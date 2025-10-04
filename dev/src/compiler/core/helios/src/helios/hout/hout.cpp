@@ -34,9 +34,7 @@ namespace compiler::helios {
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
-		SymID                                                symbol,
-		tsh::SymbolType<>                                    ret_type,
-		std::vector<code::Parameter> parameters
+		SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
