@@ -18,9 +18,4 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-  exponentiation:
-    Cases:
-      default:
-        Output:
-          String: ""
-        ExitCode: 0
+

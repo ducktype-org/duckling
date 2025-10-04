@@ -1,9 +1,18 @@
 # Compilation tests
 
-clean_cmd: "rm -rf build"
+clean_cmd: "rm -rf duck_build"
+
+backend: "llvm"
+
+compile_dvm_backend_cmd: "@{duck_path} compile_package --dvm-backend duck_modules/@{Name}"
+compile_llvm_backend_cmd: "@{duck_path} compile_package duck_modules/@{Name}"
+
+compiled_to_llvm: "./duck_build/package_llvm.exe"
+compiled_to_dvm: "./duck_build/query/query28/*" # ??
+
 Clean: "@{clean_cmd}"
-PreTest: "@{clean_cmd} && mkdir build && @{duck_path} compile_package -a build duck_modules/@{Name}"
-Run: "./build/package_llvm.exe"
+PreTest: "@{clean_cmd} && if [ '@{backend}' = 'dvm' ]; then @{compile_dvm_backend_cmd}; else @{compile_llvm_backend_cmd}; fi"
+Run: "if [ '@{backend}' = 'dvm' ]; then @{dvm_path} run @{compiled_to_dvm}; else @{compiled_to_llvm}; fi"
 
 Tests:
   base:
