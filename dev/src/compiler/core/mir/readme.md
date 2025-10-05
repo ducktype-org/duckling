@@ -3,15 +3,17 @@
 # What is MIR
 
 MIR is a module responsible for creation and definition of Middle Intermediate Representation.
+It is the representation created from HOUT, and the first non-tree representation.
 
 ## MIR representation
 
-MIR is a representation where the code of functions is represented as a set of "basic blocks". Each basic block is a list of operations, and each operation is of the form `[ variable := ] operation(value, value, ..., value)`. In particular, MIR in NOT in any way a tree like structure.
+MIR is a representation where the code of functions is represented as a set of "basic blocks". Each basic block is a list of operations, and each operation is of the form `[ variable := ] operation(value, value, ..., value)`. In particular, MIR is NOT in any way a tree like structure.
 
 We use this representation for the following purposes:
 
-* Destructor code insertion (lifetime analysis).
-* Static verification of move semantics.
+* Lifetime analysis
+  * Destructor code insertion.
+  * Static verification of move semantics.
 * Static analysis of code reachability.
 * (potentially some more static analyses).
 * As an intermediate step in the process of compilation to LLVM IR.
@@ -20,7 +22,27 @@ We use this representation for the following purposes:
 
 MIR still operates on high level types while having a very low level "feel" which can pose some challenges. As of right now, MIR semantics are not yet fully designed, but the general ideas are described.
 In the most high level words, MIR can be described as: 
-> non-SSA (single static assignment) CFG (control flow graph) representation enriched with scope data.
+> non-SSA (single static assignment) CFG (control flow graph) representation enriched with lifetime scope data.
+
+## Lifetime scopes
+
+Since a lot of lifetime analysis happens in MIR, MIR introduces its own so-called lifetime scopes.
+Lifetime scopes, are similar in nature to standard program scopes and form a tree like structure (distinct structure per each MIR function).
+However, lifetime scopes are not directly tied to HELIOS scopes. The two structures will be similar in most scenarios, but in general MIR lifetime scopes are created during mir-lowering phase based on the HOUT structure.
+During this creation three things happen simultaneously:
+
+* MIR lifetime scope tree is generated based on the HOUT tree like representation (it is created within the logic of lowering).
+* Each local variable is assigned a scope -- a scope within which it as alive. Note that local variables include variables from Duckling source code, but also all variables associated with temporary values of expression. Such temporary-value variables are created during the MIR lowering phase.
+* Each instruction is assigned a scope -- conceptually a scope, that this instruction "happens within".
+
+A variable cannot be used outside its scope.
+Destructors are inserted in a following way.
+MIR function code is initially created without destructor calls.
+Then when in initial code a instruction `A` is followed by instruction `B`, then for all variables that ware live in scope of `A`, but not in scope of `B`, destructors of such variables are inserted between `A` and `B`.
+
+
+Note that the lifetime analysis of MIR is performed on the variable level, which is consistent with semantics of Duckling.
+For example, while a class member is a distinct object, its lifetime is tied directly to lifetime of encapsulating object and cannot be manipulated independently.
 
 ### MIR operation
 
@@ -31,16 +53,16 @@ Each operation is composed of the following components:
 * "Operation" that describes what this operation actually does.
 * Arguments -- a list of MIR Values.
 * Flags that describe what Local Variables this operation constructs/destructs/moves.
-* Helios Scope this operation originates from (used for lifetime analysis)
+* MIR lifetime scope this operation "happens within" (used for lifetime analysis)
 
 Example:
 
 ```cpp
 // operation calling a constructor on local variable v:
-v := call(F)   [construct v] [scope of ...] // call takes the function as first argument
+v := call(F)   [construct v] [scope ...] // call takes the function as first argument
 
 // operations calling foo, and moving variable v
-call(foo, v)   [move v] [scope of ...]
+call(foo, v)   [move v] [scope  ...]
 ```
 
 Possible subset of operations:
@@ -68,6 +90,7 @@ They are made from the following components:
 * parameters
 * return type
 * code, composed of set of basic blocks with marked entry block
+* lifetime scope structure
 
 ### MIR basic blocks
 
@@ -92,12 +115,17 @@ In particular passing MIR Local to an operation argument or assigning operation 
 
 ### Lifetime flags and move semantics
 
-Each local variable in MIR has an implicit, hidden "lifetime flag". It is a boolean flag that dictates whether this local variable is still "alive". An operation with a move flag sets the lifetime variable's flag to false. This will be used to decide if a given object has to be destroyed at the end of the scope. Details of how exactly this will be implemented are not yet known.
+Each local variable in MIR has an implicit, hidden "lifetime flag" associated with the variable. It is a boolean flag that dictates whether this local variable is still "alive". An operation with a move flag for variable `v` sets the lifetime flag of variable `v` to false. This flag is used to decide (in general) at run-time if a given object has to be destroyed when its lifetime scope ends. 
+Lifetime flags become real variables in LIR representation (representation that MIR is lowered into). 
 
+Details of how exactly this will be implemented are not yet decided, since classes are still in progress.
 Potential ideas:
 * `destruct_if` operation that calls destructor only if lifetime flag is set.
 * `call_if` operation that calls any function only if lifetime flag is set.
 * `branch_if_live` operation branch based of lifetime flag.
+
+The need for lifetime flags comes directly from the need to express the move semantics.
+
 
 ### Problems and future work
 
