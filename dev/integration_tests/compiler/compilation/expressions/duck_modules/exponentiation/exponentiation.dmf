@@ -1,15 +1,12 @@
 fun main() -> i64 = {
-    if ((2 ** 5) != 32) {
-        builtin_output_i64(1);
-    } else {
+    builtin_output_i64(2 ** 5);
+    builtin_output_i64(-5 ** 0);
 
-    }
+    let x: i64 = 0;
+    builtin_output_i64(x ** 1);
 
-    if (((-5) ** 0) != 1) {
-        builtin_output_i64(2);
-    } else {
-        
-    }
-
+    let y: i64 = 10;
+    builtin_output_i64(2 ** y);
+    builtin_output_i64(x ** y);
     return 0;
 }
