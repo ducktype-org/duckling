@@ -3,14 +3,26 @@
 Tests:
   simple:
     Cases: 
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: "5 \n7 \n"
         ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "5\n7\n"
+        ExitCode: 0
   single_stmt_body:
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: "5 \n7 \n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "5\n7\n"
         ExitCode: 0
 

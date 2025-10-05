@@ -3,19 +3,35 @@
 Tests:
   ternary:
     Cases:
-      default:
+      dvm:
+        backend: dvm
+        Output:
+          String: "9\n9\n9\n18\n4\n"
+      llvm:
+        backend: llvm
         Output:
           String: "9 \n9 \n9 \n18 \n4 \n"
+
   single-comparison: # Any type of comparison between two values.
     Cases:
-      default:
-        Output:
-          String: ""
-        ExitCode: 0
-  comparison-chain:
-    Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: ""
         ExitCode: 0
 
+  comparison-chain:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+        
+  exponentiation:
+    backend: dvm
+    Cases:
+      default:
+        Output:
+          String: "32\n1\n0\n1024\n0\n"
+        ExitCode: 0
