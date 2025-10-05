@@ -330,6 +330,10 @@ namespace base {
 				return erase(del2);
 			}
 
+			void popBack() {
+				erase(begin() + lastIndex());
+			}
+
 			Iterator begin() { return Iterator::make(size() ? &nodeAt(0) : nullptr, this); }
 
 			ConstIterator begin() const {
@@ -398,7 +402,7 @@ namespace base {
 		StableVector<const Data> toConstData() && { return std::move(*this); }
 
 		using Base::size, Base::empty, Base::notEmpty, Base::pushBack, Base::lastIndex,
-			Base::emplaceBack, Base::erase;
+			Base::emplaceBack, Base::erase, Base::popBack;
 		using RefT          = Base::CRefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::ConstIterator;
@@ -443,7 +447,7 @@ namespace base {
 		StableVector(const StableVector&) = delete;
 
 		using Base::size, Base::empty, Base::notEmpty, Base::operator[], Base::pushBack, Base::last,
-			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end, Base::erase;
+			Base::lastIndex, Base::emplaceBack, Base::begin, Base::end, Base::erase, Base::popBack;
 		using RefT          = Base::RefT;
 		using CRefT         = Base::CRefT;
 		using Iterator      = Base::Iterator;
