@@ -50,6 +50,7 @@ public:
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
+		TESTER_ADD_TEST(testExprClone);
 		TESTER_ADD_TEST(testSimpleHOUT);
 		TESTER_ADD_TEST(testSingleFileModuleHOUT);
 		TESTER_ADD_TEST(testModuleHOUT);
@@ -225,6 +226,105 @@ private:
 		// These do not work anymore.
 		// ASSERT_EQUAL(7, getValue("O3", root_scope));
 		// ASSERT_EQUAL(7, getValue("O4", root_scope));
+	}
+
+	/**
+	 * Test clone functionality by creating one big nested expression
+	 * that contains every expression type at least once
+	 */
+	void testExprClone() {
+		auto [_, root_scope]           = getModule(fs::File(path("test_modules/expressions")));
+		auto [func_module, func_scope] = getModule(fs::File(path("test_modules/function_calls")));
+		auto sym_v1                    = getChain("V1", root_scope).back();
+		auto square_sym                = getChain("square", func_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto int_type = ctx.query<tsh::QueryIntegralType>({ 64 });
+
+
+			// Build chain comparison expressions vector
+			std::vector<base::Box<compiler::helios::code::Expr>> chain_exprs;
+			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 1));
+			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 2));
+			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 3));
+
+			std::vector<compiler::helios::code::BuiltinBinary> chain_ops{
+				compiler::helios::code::BuiltinBinary::IntegerLt,
+				compiler::helios::code::BuiltinBinary::IntegerLteq
+			};
+
+			// Build tuple elements
+			std::vector<base::Box<compiler::helios::code::Expr>> tuple_elements;
+			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 1));
+			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 2));
+
+			// Build call arguments for square function
+			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
+			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
+				ctx,
+				makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1),
+				base::StrID("field")
+			));
+
+			// Build sequence expressions
+			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
+			sequence_exprs.emplace_back(makeBox<compiler::helios::code::TupleTypeConstructorExpr>(
+				ctx, std::move(tuple_elements)
+			));
+			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+				ctx,
+				compiler::helios::code::BuiltinBinary::IntegerAdd,
+				makeBox<compiler::helios::code::ParenthesisExpr>(
+					ctx,
+					makeBox<compiler::helios::code::UnaryOperatorExpr>(
+						compiler::helios::code::BuiltinUnary::IntegerNegation,
+						makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 10)
+					)
+				),
+				makeBox<compiler::helios::code::CallExpr>(
+					ctx,
+					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					std::move(call_args)
+				)
+			));
+
+			// Build variant subtypes
+			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
+			variant_subtypes.emplace_back(
+				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
+			);
+			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
+			);
+			variant_subtypes.emplace_back(
+				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, tpc::StringValue("hello"))
+			);
+
+			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
+				ctx,
+				// Condition: ChainComparisonExpr (1 < 2 <= 3)
+				makeBox<compiler::helios::code::ChainComparisonExpr>(
+					ctx, std::move(chain_exprs), std::move(chain_ops)
+				),
+				// If true: SequenceExpr with nested expressions including CallExpr
+				makeBox<compiler::helios::code::SequenceExpr>(ctx, std::move(sequence_exprs)),
+				// If false: VariantTypeConstructorExpr(i64 | bool | string)
+				makeBox<compiler::helios::code::VariantTypeConstructorExpr>(
+					ctx, std::move(variant_subtypes)
+				)
+			);
+
+			// Test the clone
+			auto cloned = mega_expr->clone();
+
+			std::stringstream orig_out, clone_out;
+			mega_expr->debugPrint(orig_out);
+			cloned->debugPrint(clone_out);
+
+			// Verify they produce same debug output
+			ASSERT_EQUAL(orig_out.str(), clone_out.str());
+			// Verify they are different objects
+			assertTrue(&(*mega_expr) != &(*cloned), "Clone should be a different object");
+		});
 	}
 
 	void testSimpleHOUT() {

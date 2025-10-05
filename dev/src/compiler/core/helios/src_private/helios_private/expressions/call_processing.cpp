@@ -26,7 +26,7 @@ namespace compiler::helios::code {
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated. Requires #1300.
+	 * invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
@@ -55,7 +55,7 @@ namespace compiler::helios::code {
 
 			match_optional(get_arg()) {
 				opt_some(arg) {
-					// @TODO: #1300 (for consideration)
+					// @TODO: #1029
 					auto coerced = coerceExpression(std::move(arg), param.type);
 					if (coerced.hasError())
 						return std::nullopt;
@@ -78,7 +78,7 @@ namespace compiler::helios::code {
 	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated. Requires #1300.
+	 * invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingBuiltin(
 		query::Context&                        ctx,
@@ -97,7 +97,7 @@ namespace compiler::helios::code {
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-			// @TODO: #1300 (for consideration)
+			// @TODO: #1029 (for consideration)
 			auto coerced = coerceExpression(
 				std::move(normal_arguments[i]), call_type.getType().getParameterTypes()[i]
 			);
