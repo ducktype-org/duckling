@@ -1,4 +1,6 @@
 compile_duck: "cmake --build @{build_dir} -- duck"
+compile_dvm: "cmake --build @{build_dir} -- VM"
+
 duck_path: "@{build_dir}/bin/duck"
 dvm_path: "@{build_dir}/bin/VM"
 
