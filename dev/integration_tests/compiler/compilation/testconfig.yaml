@@ -1,14 +1,14 @@
 # Compilation tests
 
-clean_cmd: "rm -rf duck_build"
+clean_cmd: "rm -rf build"
 
 backend: "nobackend"
 
-compile_dvm_backend_cmd: "@{duck_path} compile_package --dvm-backend duck_modules/@{Name}"
-compile_llvm_backend_cmd: "@{duck_path} compile_package duck_modules/@{Name}"
+compile_dvm_backend_cmd: "@{duck_path} compile_package -a build --dvm-backend duck_modules/@{Name}"
+compile_llvm_backend_cmd: "@{duck_path} compile_package  -a build duck_modules/@{Name}"
 
-compiled_to_llvm: "./duck_build/package_llvm.exe"
-compiled_to_dvm: "./duck_build/query/query*/*.dbc" # ??
+compiled_to_llvm: "./build/package_llvm.exe"
+compiled_to_dvm: "./build/query/query*/*.dbc" # ??
 
 Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} &&
