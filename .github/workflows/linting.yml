@@ -111,6 +111,8 @@ jobs:
         shell: bash
 
       - name: Run TODO validation
+        env:
+          GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
          cd dev
          python3 toolbox.py todo-validate --branch origin/main --no-merge-base
