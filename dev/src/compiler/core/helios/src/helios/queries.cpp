@@ -4,6 +4,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -14,6 +15,8 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
@@ -98,6 +101,109 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
+
+	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
+		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
+			query::Context& ctx;
+			SymID           original_symbol;
+
+			base::Optional<HOUTFunctionDeclaration> out;
+
+			DeclarationVisitor(query::Context& ctx, SymID symbol):
+				  ctx(ctx),
+				  original_symbol(symbol) {}
+
+			// @TODO: make failure more explicit
+			void visitFun(pst::Access<pst::Fun> stmt) final {
+				// @TODO: rest, flags, attributes, etc
+
+
+				// Return type:
+				auto ret = stmt->getRet();
+
+				// Default return type is a direct unit.
+				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				if (ret.has_value()) {
+					if (auto ctv
+					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
+						if (auto maybe_type = ctv.value().asType())
+							ret_type = maybe_type.value();
+						else
+							return;
+					} else {
+						// We just fail here, because we can't continue without type.
+						return;
+					}
+				}
+
+				// Parameters:
+				std::vector<code::Parameter> parameters;
+				for (auto param: *stmt->getParams().unlock(ctx)) {
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto param_name   = name(param_symbol);
+					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+
+					auto value = param.unlock(ctx)->getValue();
+
+					if (param_type->hasError()) {
+						// we just fail here, because we can't continue without type
+						return;
+					}
+
+					if (value.empty()) {
+						parameters.emplace_back(
+							param_name, param_type->value(), std::nullopt, param_symbol
+						);
+					} else {
+						auto initial_value
+							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
+
+						if (initial_value.hasError()) {
+							// we just fail here, because we can't continue without correct
+							// initial expression
+							return;
+						}
+
+						parameters.emplace_back(
+							param_name,
+							param_type->value(),
+							std::move(initial_value.value()),
+							param_symbol
+						);
+					}
+				}
+
+				HOUTFunctionDeclaration output(
+					original_symbol,
+					ret_type,
+					std::make_shared<std::vector<code::Parameter>>(std::move(parameters))
+				);
+
+				this->out.emplace(std::move(output));
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function,
+				"Function declaration processing called on non-function symbol"
+			);
+
+			DeclarationVisitor func_maker(ctx, key);
+			stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+			return func_maker.out.value();
+		}
+
+		QUERY_AUTO_NO_CACHE  // @TODO #1300
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 		/**
@@ -214,6 +320,21 @@ namespace compiler::helios {
 				auto location_type  = location_expr->expression_type.getSymbolType();
 				auto new_value_type = new_value_expr->expression_type.getSymbolType();
 
+				// When this code was being written, this check could not be tested.
+				// The optional result of this visitor is getting unwrapped without
+				// checking for emptiness, which causes a panic.
+				// @todo write a test for this once helios error handling is more robust
+				auto location_mutability = location_type.getMutability();
+				if (location_mutability == tsh::Mutability::Immutable) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							assignment->getSourcePosition(),
+							"Left side of assignment can't be immutable."
+						)
+					);
+					return;  // fail
+				}
+
 				auto new_value_coerced = coerceExpression(std::move(new_value_expr), location_type);
 
 				if (new_value_coerced.hasError()) {
@@ -291,8 +412,6 @@ namespace compiler::helios {
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				// @TODO: do something with mut/immut
-
 				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
@@ -301,6 +420,20 @@ namespace compiler::helios {
 
 				if (stmt->getValue().empty()) {
 					// no initial value case
+
+					// When this code was being written, this check could not be tested.
+					// The optional result of this visitor is getting unwrapped without
+					// checking for emptiness, which causes a panic.
+					// @todo write a test for this once helios error handling is more robust
+					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(),
+							base::strConcat("Immutable variables must have an initial value")
+						));
+						return;  // fail
+					}
+
 					output(code::VariableStmt({}, symbol_type, symbol));
 					return;
 				} else {
@@ -352,77 +485,30 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
-				// @TODO: create function here...
-				// - create types, attributes, flags, ...
-				// @TODO: rest, flags, attributes, etc
-
-				HOUTFunction output(original_symbol, ctx);
+				// declaration:
+				auto decl = ctx.query<QueryDeclOfFun>(original_symbol);
 
 				// body:
-
-				auto fun_body = stmt->getBody();
+				std::shared_ptr<const code::CodeBlock> output_body = nullptr;
+				auto                                   fun_body    = stmt->getBody();
 
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					// The `fun abc() = expr;` case.
 
 					code::CodeBlock function_body
 						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
-					output.content.body
-						= std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				} else {
 					CORE_ASSERT(
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-					output.content.body
-						= std::make_shared<const code::CodeBlock>(std::move(function_body));
+					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
+				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
-
-				// parameters:
-
-				std::vector<code::Parameter> parameters;
-
-				for (auto param: *stmt->getParams().unlock(ctx)) {
-					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_name   = name(param_symbol);
-					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
-
-					auto value = param.unlock(ctx)->getValue();
-
-					if (param_type->hasError()) {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-
-					if (value.empty()) {
-						parameters.emplace_back(
-							param_name, param_type->value(), std::nullopt, param_symbol
-						);
-					} else {
-						auto initial_value
-							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
-
-						if (initial_value.hasError()) {
-							// we just fail here, because we can't continue without correct
-							// initial expression
-							return;
-						}
-
-						parameters.emplace_back(
-							param_name,
-							param_type->value(),
-							std::move(initial_value.value()),
-							param_symbol
-						);
-					}
-				}
-
-				output.content.parameters
-					= std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
-
-				this->out.emplace(std::move(output));
+				this->out.emplace(HOUTFunction{ decl, output_body });
 			}
 		};
 

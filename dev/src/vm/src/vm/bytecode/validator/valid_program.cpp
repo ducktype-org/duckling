@@ -5,9 +5,9 @@
 #include <base/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/bytecode/validator/type_builder.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
@@ -17,32 +17,47 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	return program;
 }
 
-Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return type_context.validateAndProduceTypeMetadata(available_functions);
+vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
+	return { .functions   = std::ranges::to<std::vector>(function_map),
+		     .types       = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
+		     .global_data = std::ranges::to<std::vector>(globals_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
+	// @TODO: #1306
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;
 }
 
+const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+	return type_context.getCurrentTypes();
+}
+
+const vm::code::TypeContext& vm::code::ValidProgram::getTypeContext() const { return type_context; }
+
+const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
+	return globals_map;
+}
+
+const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+	return function_map;
+}
+
 void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
-	valid = false;
-
 	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
-
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertFunctions(collection.functions);
-
-	valid = true;
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
 	for (const auto& type: new_types) type_context.insertType(type);
+	// Check if no cycles in hierarchy appeared after injection.
+	detail::validateTypesIntegrity(type_context);
+	// Validate only the newly added types.
+	for (const auto& type: new_types) detail::validateType(type, type_context, available_functions);
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
@@ -58,38 +73,17 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
-	auto type_metadata = type_context.validateAndProduceTypeMetadata(available_functions);
+	// @note: This is a temporary built type metadata for the sake of function verification.
+	// @TODO: #1306
+	auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
-		auto validated_function = validateAndExtractReachableCode(
+		auto validated_function = detail::validateAndExtractReachableCode(
 			type_context.getCurrentTypes(), *type_metadata, globals_map, available_functions, func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
-}
-
-const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return type_context.getCurrentTypes();
-}
-
-const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return globals_map;
-}
-
-const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return function_map;
-}
-
-vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
-	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
-	return { .functions = { function_map.begin(), function_map.end() },
-		     .types
-		     = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
-		     .global_data = { globals_map.begin(), globals_map.end() } };
 }

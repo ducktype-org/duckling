@@ -24,5 +24,16 @@ Tests:
         backend: dvm
         Output:
           String: "5\n7\n"
+  named_default_args:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1 \n2 \n1 \n2 \n3 \n2 \n4 \n5 \n1 \n3 \n1 \n2 \n2 \n3 \n4 \n5 \n1 \n5 \n4 \n2 \n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n2\n1\n2\n3\n2\n4\n5\n1\n3\n1\n2\n2\n3\n4\n5\n1\n5\n4\n2\n"
         ExitCode: 0
 

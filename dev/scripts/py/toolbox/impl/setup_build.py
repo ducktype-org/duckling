@@ -24,6 +24,8 @@ def setup_build_impl(
     linker,
     shared_libs,
     strip_symbol_information,
+    disable_unity_compilation,
+    enable_link_time_optimization,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -49,6 +51,8 @@ def setup_build_impl(
         f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
         f"-D BUILD_SHARED_LIBS={'ON' if shared_libs else 'OFF'}",
         f"-D STRIP_SYMBOL_INFORMATION={'ON' if strip_symbol_information else 'OFF'}",
+        f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
+        f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
     ]
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():

@@ -17,6 +17,7 @@ namespace pst {
 	class Param;
 	class DottedName;
 	class Attribute;
+	class CallArgument;
 	class CodeBlock;
 	class CodeBlockOrStmt;
 	class ClassBlock;
@@ -86,6 +87,7 @@ namespace pst {
 		class Atom;
 		class ChainExpr;
 		class RoundExpr;
+		class UnitExpr;
 		class BlockExpr;
 		class MatchExpr;
 		class GeneralPrefix;

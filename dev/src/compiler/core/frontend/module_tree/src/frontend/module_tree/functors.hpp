@@ -14,7 +14,7 @@ namespace compiler::frontend {
 	struct GetFileID_Functor final {
 		static auto get(FileID id) { return base::CRef<SourceFile>{ id.ref }; }
 
-		static auto getFileRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(FileID id) {
+		static auto getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(FileID id) {
 			return id.ref;
 		}
 	};
@@ -28,7 +28,7 @@ namespace compiler::frontend {
 	struct GetModuleID_Functor final {
 		static auto get(ModuleID id) { return base::CRef<ModuleTree>{ id.ref }; }
 
-		static auto getModRefUseOnlyWhenYouKnowWhatAreYouDoingThisCanModifyInput(ModuleID id) {
+		static auto getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(ModuleID id) {
 			return id.ref;
 		}
 	};

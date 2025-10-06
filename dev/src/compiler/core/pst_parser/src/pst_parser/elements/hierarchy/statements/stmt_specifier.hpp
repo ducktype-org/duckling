@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../lists/call_list.hpp"
 #include "../meta.hpp"
 
 namespace pst {
@@ -46,6 +45,24 @@ namespace pst {
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
 			return DeclKind::Transparent;
+		}
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getContent() const {
+			return code_block_or_stmt.give();
+		}
+
+		[[nodiscard]]
+		Keyword getSpecifier() const {
+			return specifier;
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<CallList>> getArgs() const {
+			if (call_list.has_value())
+				return call_list->give();
+			else
+				return {};
 		}
 	};
 }

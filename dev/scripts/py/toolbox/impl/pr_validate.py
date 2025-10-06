@@ -5,6 +5,7 @@ from .helpers import (
 from .duck_linter import duck_linter_impl
 from .cpp_linter import cpp_linter_impl
 from .issue_checker import issue_checker_impl
+from .todo_validate import todo_validate_impl
 from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 
 
@@ -42,7 +43,11 @@ def pr_validate_impl(
         thread_count=thread_count,
     )
 
-    # Step 6 - issue checker
+    # Step 6 - validate to-dos and fix-mes
+    if not todo_validate_impl():
+        exit_with_error("T" + "ODO validation has failed")
+
+    # Step 7 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
 
