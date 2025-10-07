@@ -83,7 +83,7 @@ compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClap(
 	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
 		linking_options.external_static_libraries.push_back(lib_path.value());
 
-	linking_options.link_c_standard_library = parsing_result.isFlag("link-c-standard-library");
+	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
 	return linking_options;
 }
@@ -265,8 +265,8 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("link-c-standard-library")
-	                     .addShortDesc("Links the C standard library into the final executable.")
+	                     .addLongName("no-c-standard-library")
+	                     .addShortDesc("Doesn't link the C standard library into the final executable.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
