@@ -26,6 +26,7 @@ from scripts.py.toolbox.commands.setup_build import setup_build
 from scripts.py.toolbox.commands.setup_venv import setup_venv
 from scripts.py.toolbox.commands.test import test
 from scripts.py.toolbox.commands.todo_counter import todo_counter
+from scripts.py.toolbox.commands.todo_validate import todo_validate
 
 
 DATA_USER = "dev"
@@ -57,6 +58,7 @@ cli.add_command(setup_build)
 cli.add_command(setup_venv)
 cli.add_command(test)
 cli.add_command(todo_counter)
+cli.add_command(todo_validate)
 
 
 if __name__ == "__main__":
