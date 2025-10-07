@@ -305,7 +305,6 @@ namespace vm::loader::parser {
 						logged = true;
 						continue;
 					}
-					// out->position = { out->position, state.getPosition().getStart() - 1 };
 
 					// Update end to contains args
 					if (!out->args.empty()) {
