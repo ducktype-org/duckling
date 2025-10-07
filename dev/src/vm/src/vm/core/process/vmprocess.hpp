@@ -144,7 +144,7 @@ namespace vm {
 		std::expected<api::Response, api::StateError> getExitCode();
 
 		/**
-		 * @brief Stops the process and asks memory module if the memory is valid.
+		 * @brief Expects the process to be stopped and asks memory module if the memory is valid.
 		 * For more information about execution's validation,
 		 * see Memory::validateMemoryState's description.
 		 */

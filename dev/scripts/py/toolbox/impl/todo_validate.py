@@ -118,7 +118,6 @@ def todo_validate_impl(
     files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
         only_modified=not all, lines=True, branch=branch, no_merge_base=no_merge_base
     ) # type: ignore
-    print(files_and_lines)
 
     # Pop the current file, so that the verification can pass
     for file in list(files_and_lines.keys()):
@@ -199,7 +198,7 @@ def todo_validate_impl(
             log_warning(
                 f"Found {invalid_issue_count} TODO/FIXME comment(s) with invalid or closed issue numbers"
             )
-        log_info(
+        log_success(
             "All TODO/FIXME comments must follow the format: @TODO: #issue_number description"
         )
         log_info("Example: // @TODO: #0123 Implement this feature")

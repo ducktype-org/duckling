@@ -259,6 +259,10 @@ namespace vm {
 
 		std::expected<api::Response, api::ApiError> getCurrentPosition();
 
+		[[nodiscard]] bool isStopped() const {
+			return status == api::ExecutionStopped;
+		}
+
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
 		template<class Condition>

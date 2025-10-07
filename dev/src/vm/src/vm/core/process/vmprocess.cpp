@@ -17,6 +17,7 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <expected>
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>

@@ -21,7 +21,10 @@ namespace vm::api {
 	std::expected<ProcessInfo, ApiError> spawn();
 
 	/**
-	 * @brief Deinit and validate a process
+	 * @brief Deinitializes and validates process'es memory state.
+	 * It also removes the process from the internal structures.
+	 * @TODO: #1354 After 1354 it should be required that the process is stopped/finished
+	 * when this endpoint is called.
 	 */
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
 
