@@ -116,7 +116,8 @@ namespace vm::loader::compiler {
 			auto opcode_id = low::fix8FromInstr(op);
 			bc.emplace_back(makeLowInstruction(opcode_id, arg_0, arg_1));
 #if defined(BUILD_TYPE_DEV_DEBUG)
-			bc.back().repr = instructionToString(op), bc.back().opcode_id = opcode_id;
+			bc.back().repr      = instructionToString(op);
+			bc.back().opcode_id = opcode_id;
 #endif
 		}
 		return bc;
