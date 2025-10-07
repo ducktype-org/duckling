@@ -155,6 +155,7 @@ public:
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(uniqueCodeTest);
 		TESTER_ADD_TEST(sha256Test);
+		TESTER_ADD_TEST(stringLengthHashTest);
 	}
 
 private:
@@ -278,6 +279,19 @@ private:
 			"SHA256 hash does not match expected value.\nExpected: " + expected_hash
 				+ "\nComputed: " + computed_hash
 		);
+	}
+
+	void stringLengthHashTest() {
+		auto hash_algo_1 = hashing::StatefulHash<hashing::SHA256, void>{};
+		auto hash_algo_2 = hashing::StatefulHash<hashing::SHA256, void>{};
+		
+		hash_algo_1(std::string("ab"));
+		hash_algo_1(std::string("c"));
+
+		hash_algo_2(std::string("a"));
+		hash_algo_2(std::string("bc"));
+
+		ASSERT_TRUE(hash_algo_1.finalize() != hash_algo_2.finalize());
 	}
 };
 

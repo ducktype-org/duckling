@@ -95,6 +95,7 @@ namespace hashing {
 		// Other overloads for ranges
 		// Overload if range is contiguous
 		else if constexpr (std::ranges::contiguous_range<T>) {
+			addToHash(hash_alg, std::ranges::size(t));
 			for (const auto& elem: t) addToHash(hash_alg, elem);
 		}
 		// Some ranges will compare equal but keep their elements in unspecified order
