@@ -47,7 +47,7 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralUnitExpr(const code::LiteralUnitExpr&) final {
-				result = CompileTimeValue{};
+				result = CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 			}
 
 			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
