@@ -13,6 +13,7 @@
 #include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
+#include <base/variant.hpp>
 
 #include <variant>
 #include <vector>
@@ -95,6 +96,10 @@ namespace compiler::mir {
 	 * the last operation in the block (i.e. be a terminator).
 	 */
 	bool isTerminating(Operation);
+
+	struct MirUnitConst final {
+		bool operator==(const MirUnitConst& other) const = default;
+	};
 
 	struct MirIntegerConst final {
 		i64 value;
@@ -207,6 +212,12 @@ namespace compiler::mir {
 		base::StrID getName() const;
 
 		bool operator==(const MirLocal& other) const { return id == other.id; }
+
+		/**
+		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const { return type.getType().carriesInformation(); }
 	};
 
 	/**
@@ -242,6 +253,12 @@ namespace compiler::mir {
 		bool operator==(const MirGlobal& other) const = default;
 
 		void debugPrint(std::ostream& output, bool detailed = false) const;
+
+		/**
+		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const { return type.getType().carriesInformation(); }
 	};
 
 	/**
@@ -253,11 +270,13 @@ namespace compiler::mir {
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
 		using ValueType
-			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
+			= std::variant<MirUnitConst, MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
 
 		ValueType value;
 
 	public:
+		MIRValue(MirUnitConst value): value(value) {}
+
 		MIRValue(MirIntegerConst value): value(value) {}
 
 		MIRValue(MirBoolConst value): value(value) {}
@@ -301,6 +320,22 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool isGlobal() const {
 			return std::holds_alternative<MirGlobal>(value);
+		}
+
+		/**
+		 * @brief Returns true if this value contains valuable information.
+		 * Valuable information is either a reference to a block or function,
+		 * or contains a value (local, global, or literal) that is not of
+		 * unit or void type, or any other information-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const {
+			variant_match(value) {
+				variant_case_novalue(MirUnitConst) { return false; }
+				variant_case(MirGlobal, global) { return global.carriesInformation(); }
+				variant_case(LocalRef, local) { return local->carriesInformation(); }
+			}
+			return true;
 		}
 	};
 

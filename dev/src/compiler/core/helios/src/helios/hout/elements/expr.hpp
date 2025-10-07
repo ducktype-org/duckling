@@ -39,6 +39,20 @@ namespace compiler::helios::code {
 	\***********************/
 
 	/**
+	 * @brief Represents a unit literal value: `()`.
+	 *
+	 * It acts as both a value and a type. By default, it is interpreted
+	 * as a value, but it is lazily lifted to a type if necessary.
+	 */
+	struct LiteralUnitExpr final: public Expr {
+
+		LiteralUnitExpr(query::Context& ctx);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
 	 * @brief Represents an integer literal value written in the expression.
 	 */
 	struct LiteralIntExpr final: public Expr {

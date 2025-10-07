@@ -51,10 +51,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerSGteq,
 	IntegerEq,
 	IntegerNeq,
-	
+
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
+
 	Call,
 
 	ReturnVoid,

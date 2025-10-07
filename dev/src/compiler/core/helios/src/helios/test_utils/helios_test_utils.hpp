@@ -41,19 +41,22 @@ namespace compiler::helios::test_utils {
 	 * @tparam T The expected type of the value.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
+	 * @param ctx The query context.
 	 * @return The value of the last symbol in the chain.
 	 */
 	template<typename T>
-	T getConstValueAs(const std::string_view chain, ScopeID scope) {
+	T getConstValueAs(const std::string_view chain, ScopeID scope, query::Context& ctx) {
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
-		if constexpr (std::is_same_v<T, i64>)
+		if constexpr (std::is_same_v<T, CompileTimeValue::UnitCTV>)
+			maybe_value = ctv_result.asUnit();
+		else if constexpr (std::is_same_v<T, i64>)
 			maybe_value = ctv_result.asI64();
 		else if constexpr (std::is_same_v<T, bool>)
 			maybe_value = ctv_result.asBool();
 		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
-			maybe_value = ctv_result.asType();
+			maybe_value = ctv_result.asType(ctx);
 		else
 			static_assert(false, "Unsupported type for getConstValueAs");
 

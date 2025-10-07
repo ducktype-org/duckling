@@ -46,7 +46,7 @@ namespace compiler::helios {
 				if (auto ctv
 				    = ctx.query<QueryEvaluateExpression>(pst::AccessLocked<pst::ExprElement>(expr)
 				    )) {
-					if (auto maybe_type = ctv.value().asType())
+					if (auto maybe_type = ctv.value().asType(ctx))
 						setTypeOfSymbol(maybe_type.value());
 					else
 						CORE_PANIC("QueryEvaluateExpressionCT returned not a type");

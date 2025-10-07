@@ -131,7 +131,7 @@ namespace compiler::helios {
 				if (ret.has_value()) {
 					if (auto ctv
 					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType())
+						if (auto maybe_type = ctv.value().asType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;

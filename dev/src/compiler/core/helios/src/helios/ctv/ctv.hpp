@@ -12,8 +12,11 @@ namespace compiler::helios {
 	 * @brief Represents a value known at compile time.
 	 */
 	class CompileTimeValue {
+	public:
+		class UnitCTV {};
+
 	private:
-		using Storage = std::variant<i64, bool, tsh::SymbolType<>>;
+		using Storage = std::variant<UnitCTV, i64, bool, tsh::SymbolType<>>;
 		Storage value;
 
 	public:
@@ -39,8 +42,14 @@ namespace compiler::helios {
 		[[nodiscard]] std::string toString() const;
 
 		/**
+		 * @brief Retrieves the value of type UnitCTV from the CTV.
+		 * @return A UnitCTV or an empty optional if the CTV didn't store a value of type UnitCTV.
+		 */
+		[[nodiscard]] base::Optional<UnitCTV> asUnit() const;
+
+		/**
 		 * @brief Retrieves the value of type i64 from the CTV.
-		 * @return A i64 value or an empty optional if the CTV didn't store a value of type i64.
+		 * @return An i64 value or an empty optional if the CTV didn't store a value of type i64.
 		 */
 		[[nodiscard]] base::Optional<i64> asI64() const;
 
@@ -52,9 +61,10 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Retrieves the value of type from the CTV.
+		 * @param ctx The query context for lifting unit value to unit type.
 		 * @return A type value or an empty optional if the CTV didn't store a type.
 		 */
-		[[nodiscard]] base::Optional<tsh::SymbolType<>> asType() const;
+		[[nodiscard]] base::Optional<tsh::SymbolType<>> asType(query::Context& ctx) const;
 	};
 
 
