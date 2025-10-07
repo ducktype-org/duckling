@@ -606,14 +606,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			if (const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0); !ptr.isNull()) {
+			if (const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0))
 				thread.process_memory.freeBlock(ptr.getBlock());
-				// thread.process_memory.destroyBlockReference(ptr);
-
-				// We are writing nullptr to the stack, because otherwise we would still reference a
-				// block, that was just freed and on deinit instruction we would decrease refcount
-				// of a block writeToStack<Pointer>(local_stack, instr->arg0, Pointer::null());
-			}
 		}
 		FUNCTION_CONT(1);
 	}

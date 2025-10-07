@@ -56,6 +56,8 @@ namespace vm {
 	}
 
 	Supervisor::~Supervisor() {
+		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
+		// warnings about it.
 		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }

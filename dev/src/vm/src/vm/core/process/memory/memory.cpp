@@ -35,9 +35,10 @@ namespace vm {
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		if (static_cast<u64>(id) >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
-		if (blocks[static_cast<usize>(id)].deallocated) throw exceptions::VMUseAfterFreeException();
-		return &blocks[static_cast<u64>(id)];
+		const auto block_index = static_cast<usize>(id);
+		if (block_index >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
+		if (blocks[block_index].deallocated) throw exceptions::VMUseAfterFreeException();
+		return &blocks[block_index];
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
@@ -262,8 +263,10 @@ namespace vm {
 
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		// Decrease the dst block's refcount before assigning the new block
-		destroyBlockReference(dst);
-		if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
+		if (dst != src) { // @TODO: Does it work?
+			destroyBlockReference(dst);
+			if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
+		}
 		return src;
 	}
 
@@ -408,10 +411,10 @@ namespace vm {
 	}
 
 	bool Memory::validateMemoryState() const {
-#define TEST_HERE(test)             \
-	if (test) {                     \
-		std::cerr << #test << "\n"; \
-		return false;               \
+#define TEST_HERE(test)                                              \
+	if (test) {                                                      \
+		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
+		return false;                                                \
 	}
 		for (const auto& block: blocks) {
 			TEST_HERE(block.refcount != 0)

@@ -54,6 +54,8 @@ namespace vm {
 			return block == nullptr;
 		}
 
+		operator bool() const { return !isNull(); }
+
 		static Pointer null() { return {}; }
 	};
 
