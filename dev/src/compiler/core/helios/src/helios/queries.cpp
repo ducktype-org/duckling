@@ -185,9 +185,9 @@ namespace compiler::helios {
 				this->out.emplace(std::move(output));
 			}
 
-			// @TODO: make failure more explicit
+			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
-				// @TODO: rest, flags, attributes, etc
+				// @TODO: #1029 rest, flags, attributes, etc
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 			}
 
