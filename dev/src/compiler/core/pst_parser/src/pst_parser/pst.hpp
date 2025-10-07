@@ -83,14 +83,14 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Starts the element path calculation for all of the elements of the tree.
+		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
 		void calcElementPaths() {
 			if (auto ref = element.internalMut()) ref->calcElementPaths({});
 		}
 
 		/**
-		 * @brief Starts the hash calculation for all of the elements of the tree.
+		 * @brief Performs the hash calculation for all of the elements of the tree.
 		 */
 		void calcHashes() {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();

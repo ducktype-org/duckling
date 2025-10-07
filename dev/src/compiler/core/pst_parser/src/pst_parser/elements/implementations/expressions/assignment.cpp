@@ -58,7 +58,7 @@ namespace pst::expr {
 
 		out << R"("assigned variables": )";
 		nullAwareDprint(variables, out);
-		out << R"(, "assignment type": ")" << type.str() << "\"";
+		out << R"(, "assignment type": ")" << type.strView() << "\"";
 		out << R"(, "assigned value": )";
 		nullAwareDprint(value, out);
 
@@ -66,7 +66,7 @@ namespace pst::expr {
 	}
 
 	LangElement::HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, type.str());
+		addToHash(partial_hash, type.strView());
 		return partial_hash;
 	}
 

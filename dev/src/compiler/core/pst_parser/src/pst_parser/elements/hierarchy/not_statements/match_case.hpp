@@ -14,6 +14,10 @@ namespace pst {
 			NAMED_CHILD_OPT(condition, UniversalExprHolder);
 			NAMED_CHILD(result, UniversalExprHolder);
 
+			/**
+			 * @note This method doesn't add all the data from CaseBranch, just the readable data
+			 * without accessing.
+			 */
 			friend constexpr void addToHash(
 				hashing::hash_algorithm auto& h, const CaseBranch& t
 			) noexcept {

@@ -44,7 +44,7 @@ namespace pst::expr {
 	void Access::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("type": ")" << type.str() << "\"";
+		out << R"("type": ")" << type.strView() << "\"";
 		out << R"(, "name": )";
 		nullAwareDprint(name, out);
 		if (template_specifier) {
@@ -56,7 +56,7 @@ namespace pst::expr {
 	}
 
 	LangElement::HashAlg& Access::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, type.str());
+		addToHash(partial_hash, type.strView());
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;

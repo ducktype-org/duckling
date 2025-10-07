@@ -102,7 +102,7 @@ namespace pst {
 		addToHash(partial_hash, statements.size());
 		std::vector<std::pair<std::string, usize>> symbols_available_data;
 		for (auto& [name, vec]: by_symbol)
-			symbols_available_data.emplace_back(name.str(), vec.size());
+			symbols_available_data.emplace_back(name.strView(), vec.size());
 		std::ranges::sort(symbols_available_data);
 		addToHash(partial_hash, symbols_available_data);
 		return partial_hash;
