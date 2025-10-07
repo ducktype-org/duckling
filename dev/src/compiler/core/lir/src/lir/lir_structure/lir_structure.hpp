@@ -4,6 +4,7 @@
 
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -66,6 +67,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 namespace compiler::lir {
 	struct LirLocal;
 	struct Block;
+	struct Function;
 
 	/**
 	 * @brief Reference to local variable in LIR.
@@ -82,9 +84,14 @@ namespace compiler::lir {
 	 */
 	struct FunctionLiteral {
 		base::StrID                                   mangled_name;
+		helios::SymbolABI                             abi;
 		std::shared_ptr<std::vector<tsl::TypeLayout>> parameter_layouts;
 		std::shared_ptr<tsl::TypeLayout>              return_type_layout;
+
+		
+		static FunctionLiteral fromFunction(const Function&);
 	};
+
 
 	enum class LirGlobalType { Variable, Constant };
 
@@ -264,7 +271,8 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		base::StrID mangled_name;
+		base::StrID       mangled_name;
+		helios::SymbolABI abi;
 
 		tsl::TypeLayout              return_type_layout;
 		std::vector<tsl::TypeLayout> parameter_layouts;

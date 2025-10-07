@@ -173,6 +173,8 @@ private:
 	}
 
 	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+
+	void externTest() { runTestForModule("modules/extern", 1, 2); }
 };
 
 

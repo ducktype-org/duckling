@@ -201,7 +201,7 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
 					.name = function->getName(),
-					.kind = SymbolKind::Function,
+					.kind = SymbolKind::FunctionDeclaration,
 				},
 				pst_data
 			));
@@ -674,6 +674,11 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
 
+			if (kind(key) == SymbolKind::BuiltinFunction) {
+				// Builtin functions have no specifiers
+				return {};
+			}
+			
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
 			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child

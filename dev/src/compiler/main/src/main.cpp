@@ -18,6 +18,7 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
+#include "clah/value_parser.hpp"
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -69,6 +70,22 @@ clah::Clah getStandardDucklingOptions() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
+}
+
+/**
+ * Helper function to extract linking options from clah parsing result.
+ */
+compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClap(
+	const clah::ParsingResult& parsing_result
+) {
+	compiler::driver::options_types::LinkingOptions linking_options;
+
+	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
+		linking_options.external_static_libraries.push_back(lib_path.value());
+
+	linking_options.link_c_standard_library = parsing_result.isFlag("link-c-standard-library");
+
+	return linking_options;
 }
 
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
@@ -200,6 +217,7 @@ clah::Clah getClahForMain() {
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
+							.linking_options = {},  // No linking options for module compilation
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
@@ -241,6 +259,15 @@ clah::Clah getClahForMain() {
 	                     .addLongName("print-graph")
 	                     .addShortDesc("Print the query graph after the compilation.")
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("library"))
+	                     .addLongName("external-static-library")
+	                     .addShortDesc("Path to a static library to link against.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("link-c-standard-library")
+	                     .addShortDesc("Links the C standard library into the final executable.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -248,7 +275,8 @@ clah::Clah getClahForMain() {
 								.artifacts_path = 
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.debug_options = getDebugOptionsFromClap(options),
+							.linking_options = getLinkingOptionsFromClap(options),
+							.debug_options = getDebugOptionsFromClap(options)
 						}
 					);
 
@@ -313,6 +341,7 @@ clah::Clah getClahForMain() {
 				.compilation_artifacts = {
 					.artifacts_path = fs::FilePath("./duck_build/"),
 				},
+				.linking_options = {},  // No linking options for DVM run
 				.debug_options = getDebugOptionsFromClap(options),
 			}
 		);

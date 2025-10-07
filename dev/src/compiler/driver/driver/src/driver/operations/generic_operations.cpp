@@ -126,7 +126,8 @@ namespace compiler::driver {
 			);
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
-			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
+			
+			linker::link(output_file, objects);
 		}
 	}
 

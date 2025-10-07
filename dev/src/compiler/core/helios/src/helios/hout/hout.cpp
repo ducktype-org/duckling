@@ -2,6 +2,7 @@
 
 #include "../symbols/simple.hpp"
 #include "elements.hpp"
+#include "helios/symbols/symbol_kind.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -42,7 +43,10 @@ namespace compiler::helios {
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
 		  parameters(parameters) {
-		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+		CORE_ASSERT(
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
+			"Symbol is not a function"
+		);
 	}
 
 	u64 HOUTFunctionDeclaration::queryUnstablePerfectHash() const {

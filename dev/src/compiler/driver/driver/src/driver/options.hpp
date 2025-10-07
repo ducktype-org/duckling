@@ -1,5 +1,8 @@
 #pragma once
 
+#include "global_state/options.hpp"
+#include "linker/link.hpp"
+
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 
@@ -56,6 +59,8 @@ namespace compiler::driver {
 			bool dump_llvm_ir  = false;
 			bool dump_llvm_asm = false;
 		};
+
+		using LinkingOptions = linker::LinkingOptions;
 
 		struct ArtifactsOptions final {
 			fs::FilePath artifacts_path;
@@ -114,6 +119,7 @@ namespace compiler::driver {
 		struct PackageCompilationMode final {
 			// options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
+			options_types::LinkingOptions   linking_options;
 			// std::vector<options_types::DependencyInfo> dependencies;
 			// options_types::CompilationOptions compilation_options;
 			options_types::DebugOptions debug_options;

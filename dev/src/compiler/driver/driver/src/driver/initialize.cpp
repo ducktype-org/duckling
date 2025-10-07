@@ -7,6 +7,7 @@
 
 #include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>
+#include "linker/link.hpp"
 
 namespace compiler::driver {
 
@@ -44,6 +45,11 @@ namespace compiler::driver {
 				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
 			);
 		}
+
+		void handleLinkingOptions(const linker::LinkingOptions& linking_options) {
+			// Convert driver linking options to global state linking options
+			linker::setLinkingOptions(linking_options);
+		}
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
@@ -62,6 +68,7 @@ namespace compiler::driver {
 			variant_case(CompilerModeOfOperationAndOptions::PackageCompilationMode, options) {
 				handleDebugOptions(options.debug_options);
 				handleArtifactsOptions(options.compilation_artifacts);
+				handleLinkingOptions(options.linking_options);
 			}
 
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }

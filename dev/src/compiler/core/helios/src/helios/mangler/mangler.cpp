@@ -201,7 +201,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string funcType(query::Context& ctx, SymID symbol_id) {
 			std::string ret;
-			if (kind(symbol_id) == SymbolKind::Function) {
+			if (kind(symbol_id) == SymbolKind::Function or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
 				ret       = "F";
 				auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
 				auto fun_type = tsh::FunctionAbstractType(type);
@@ -311,6 +311,7 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
+			case SymbolKind::FunctionDeclaration:
 				return path(ctx, symbol_id) + funcType(ctx, symbol_id);
 				break;
 
