@@ -39,7 +39,7 @@ namespace compiler::helios::code {
 		 * It was needed for the function default argument functionality,
 		 * to copy the default argument into every call site.
 		 * Use with caution.
-		 * @return Box<Expr> ownership of the copy of the expression. 
+		 * @return Box<Expr> ownership of the copy of the expression.
 		 */
 		[[nodiscard]] virtual Box<Expr> clone() const = 0;
 	};
