@@ -2,6 +2,7 @@
 
 #include "symbol_abi.hpp"
 
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/access.hpp>
@@ -17,7 +18,6 @@
 #include <base/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
-#include "helios/symbols/symbol_kind.hpp"
 
 namespace compiler::helios {
 

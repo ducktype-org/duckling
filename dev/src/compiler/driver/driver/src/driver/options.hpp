@@ -1,7 +1,6 @@
 #pragma once
 
-#include "global_state/options.hpp"
-#include "linker/link.hpp"
+#include <linker/link.hpp>
 
 #include <base/ints.hpp>
 #include <base/optional.hpp>

@@ -20,14 +20,14 @@ namespace compiler::linker {
 		 */
 		bool link_c_standard_library;
 	};
+
 	/**
 	 * Links given files (assumed to be object files) into a single executable file.
 	 * In the future it will be changed to a query, to automatically support caching.
 	 * @note: we can add additional object/library files here when needed.
 	 */
 	void link(
-		const artifacts::FileArtifact&              output,
-		const std::vector<artifacts::FileArtifact>& inputs
+		const artifacts::FileArtifact& output, const std::vector<artifacts::FileArtifact>& inputs
 	);
 
 	/**
@@ -36,5 +36,5 @@ namespace compiler::linker {
 	const LinkingOptions& getLinkingOptions();
 
 	void setLinkingOptions(const LinkingOptions& options);
-	
+
 }

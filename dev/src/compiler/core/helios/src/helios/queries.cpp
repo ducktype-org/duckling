@@ -1,5 +1,4 @@
 #include "queries.hpp"
-#include <iostream>
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -24,6 +23,8 @@
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
+
+#include <iostream>
 
 namespace compiler::helios {
 
@@ -141,10 +142,6 @@ namespace compiler::helios {
 				// Parameters:
 				std::vector<code::Parameter> parameters;
 				for (auto param: *param_list.unlock(ctx)) {
-					param.unlock(ctx)->debugPrint(std::cout);
-					std::cout << "\n\n";
-					param.unlock(ctx)->getParent()->unlock(ctx)->debugPrint(std::cout);
-					std::cout << "\n\n\n";
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
 					auto param_name   = name(param_symbol);
 					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });

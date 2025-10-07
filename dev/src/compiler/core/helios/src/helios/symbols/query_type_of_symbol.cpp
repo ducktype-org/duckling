@@ -1,10 +1,9 @@
 #include "query_type_of_symbol.hpp"
 
-#include "helios/symbols/symbol_kind.hpp"
-
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>

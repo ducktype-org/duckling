@@ -88,7 +88,7 @@ namespace compiler::lir {
 		std::shared_ptr<std::vector<tsl::TypeLayout>> parameter_layouts;
 		std::shared_ptr<tsl::TypeLayout>              return_type_layout;
 
-		
+
 		static FunctionLiteral fromFunction(const Function&);
 	};
 

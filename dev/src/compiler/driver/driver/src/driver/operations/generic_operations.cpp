@@ -126,7 +126,7 @@ namespace compiler::driver {
 			);
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
-			
+
 			linker::link(output_file, objects);
 		}
 	}

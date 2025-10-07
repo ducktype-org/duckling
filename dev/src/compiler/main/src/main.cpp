@@ -18,7 +18,6 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
-#include "clah/value_parser.hpp"
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -266,7 +265,9 @@ clah::Clah getClahForMain() {
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-c-standard-library")
-	                     .addShortDesc("Doesn't link the C standard library into the final executable.")
+	                     .addShortDesc(
+							 "Doesn't link the C standard library into the final executable."
+						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
