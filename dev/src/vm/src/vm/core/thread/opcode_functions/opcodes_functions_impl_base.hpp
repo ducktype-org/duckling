@@ -432,7 +432,7 @@ namespace vm {
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
 				frame->block_stack.pop_back();
-				thread.process_memory.freeBlock(block);
+				thread.process_memory.freeBlockData(block);
 				thread.process_memory.decreaseBlockRefcount(block);
 			}
 			if (arg_count > 0)
@@ -501,7 +501,7 @@ namespace vm {
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
 				if (void_func || callee_frame->block_stack.size() != 1) {
-					thread.process_memory.freeBlock(block);
+					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
 
@@ -606,8 +606,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			if (const auto ptr = readFromStack<Pointer>(local_stack, instr->arg0))
-				thread.process_memory.freeBlock(ptr.getBlock());
+			if (auto ptr = readFromStack<Pointer>(local_stack, instr->arg0))
+				thread.process_memory.freeBlockData(ptr.getBlock());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -959,7 +959,7 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					thread.process_memory.freeBlock(tbl_pointer.getBlock());
+					thread.process_memory.freeBlockData(tbl_pointer.getBlock());
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);

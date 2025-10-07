@@ -38,7 +38,8 @@ namespace vm {
 		 * @brief The reference count of the block.
 		 * If anybody is looking at a block (function stack, pointer, parent block, etc.), then
 		 * refcount should stay positive. If refcount is dropped to 0, then nobody needs the
-		 * block anymore. If at that point the block is still marked as deallocated=false, it means we have a memory leak.
+		 * block anymore. If at that point the block is still marked as deallocated=false, it means
+		 * we have a memory leak.
 		 */
 		u64 refcount = 0;
 

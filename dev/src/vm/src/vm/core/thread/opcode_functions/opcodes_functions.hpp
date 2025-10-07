@@ -219,7 +219,7 @@ namespace vm {
 			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
 			// will overwrite the old mappings
 
-			thread.process_memory.freeBlock(block);
+			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
 			frame->local_stack_head -= type->getSize();
 		}

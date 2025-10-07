@@ -79,9 +79,9 @@ namespace vm {
 		block->data = mock_block.data;
 	}
 
-	void Memory::freeBlock(Ref<Block> block) {
+	void Memory::freeBlockData(Ref<Block> block) {
 		std::lock_guard lock(mutex);
-		for (const auto child: block->children_blocks | std::views::values) freeBlock(child);
+		for (const auto child: block->children_blocks | std::views::values) freeBlockData(child);
 
 		runDataDestructors(block);
 
@@ -127,7 +127,7 @@ namespace vm {
 			// and if we were to free them and decrease the refcount in the wrong order we might
 			// throw a false-positive exception. This solution avoids this problem.
 
-			for (const auto& block: global_blocks | std::views::values) freeBlock(block);
+			for (const auto& block: global_blocks | std::views::values) freeBlockData(block);
 
 			for (const auto& block: global_blocks | std::views::values)
 				decreaseBlockRefcount(block);
@@ -153,7 +153,7 @@ namespace vm {
 		std::lock_guard lock(mutex);
 		auto&           children = parent_pointer.block->children_blocks;
 		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
-			freeBlock(*nested);
+			freeBlockData(*nested);
 			children.erase(parent_pointer.offset);
 		}
 
@@ -168,7 +168,7 @@ namespace vm {
 	}
 
 	void Memory::copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
-		runDataCopyConstructors(block_dst); 
+		runDataCopyConstructors(block_dst);
 		for (auto nested: block_src->children_blocks) {
 			Pointer new_pointer{ block_dst, nested.first };
 			setNestedViewBlock(new_pointer, nested.second->data.element_type);
@@ -196,7 +196,7 @@ namespace vm {
 		auto& dst_child_blocks = dst->children_blocks;
 		for (auto iter = dst_child_blocks.lower_bound(0); iter != dst_child_blocks.end();
 		     iter      = dst_child_blocks.erase(iter)) {
-			freeBlock(iter->second);
+			freeBlockData(iter->second);
 		}
 
 		// Copy the child blocks.
@@ -230,7 +230,7 @@ namespace vm {
 		for (auto iter = dst_child_blocks.lower_bound(dst.offset);
 		     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize();
 		     iter = dst_child_blocks.erase(iter)) {
-			freeBlock(iter->second);
+			freeBlockData(iter->second);
 		}
 
 		const auto dst_view = getPointerData(dst, type->getSize());
@@ -262,7 +262,7 @@ namespace vm {
 
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
 		// Decrease the dst block's refcount before assigning the new block
-		if (dst != src) { // @TODO: Does it work?
+		if (dst != src) {
 			destroyBlockReference(dst);
 			if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
 		}
@@ -379,8 +379,9 @@ namespace vm {
 		case Type::Kind::FixedSizeTable:
 		case Type::Kind::Data:
 		case Type::Kind::Variant:
-			// There is nothing to do with variant, data and tables, because the data should be already deleted thanks to
-			// the nested blocks structure, that deletes the nested block's data first.
+			// There is nothing to do with variant, data and tables, because the data should be
+			// already deleted thanks to the nested blocks structure, that deletes the nested
+			// block's data first.
 			break;
 		default:
 			CORE_PANIC("Handling default");
@@ -401,8 +402,9 @@ namespace vm {
 		case Type::Kind::FixedSizeTable:
 		case Type::Kind::Data:
 		case Type::Kind::Variant:
-			// There is nothing to do with variant, data and tables, because the data should be already copied thanks to
-			// the nested blocks structure, that deletes the nested block's data first.
+			// There is nothing to do with variant, data and tables, because the data should be
+			// already copied thanks to the nested blocks structure, that deletes the nested block's
+			// data first.
 			break;
 		default:
 			CORE_PANIC("Handling default");

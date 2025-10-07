@@ -49,7 +49,7 @@ void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, p
 void vm::VmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
 void vm::VmValue::freeData() {
-	memory->freeBlock(pointer.getBlock());
+	memory->freeBlockData(pointer.getBlock());
 	memory->decreaseBlockRefcount(pointer.getBlock());
 	pointer = Pointer::null();
 }

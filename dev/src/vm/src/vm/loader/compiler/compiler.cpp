@@ -97,17 +97,6 @@ namespace vm::loader::compiler {
 			u64                      arg_0 = 0;
 			u64                      arg_1 = 0;
 
-#if defined(BUILD_TYPE_DEV_DEBUG)
-			base::Optional<std::string> repr
-				= VISIT(op, instr, return instr.bytecode_pos.map([](const dia::SourcePosition& pos) {
-					  const auto& chars = pos.getSource()->getChars();
-					  std::string result;
-					  for (usize i = pos.getStart(); i < pos.getEnd(); i++)
-						  result += chars.at(i).rawStr();
-					  return result;
-				  }));
-#endif
-
 			variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
@@ -127,8 +116,7 @@ namespace vm::loader::compiler {
 			auto opcode_id = low::fix8FromInstr(op);
 			bc.emplace_back(makeLowInstruction(opcode_id, arg_0, arg_1));
 #if defined(BUILD_TYPE_DEV_DEBUG)
-			bc.back().repr      = repr;
-			bc.back().opcode_id = opcode_id;
+			bc.back().repr = instructionToString(op), bc.back().opcode_id = opcode_id;
 #endif
 		}
 		return bc;

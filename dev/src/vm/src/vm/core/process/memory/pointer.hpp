@@ -57,6 +57,8 @@ namespace vm {
 		operator bool() const { return !isNull(); }
 
 		static Pointer null() { return {}; }
+
+		constexpr bool operator==(const Pointer&) const = default;
 	};
 
 	static_assert(sizeof(Pointer) == 16);

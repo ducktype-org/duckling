@@ -50,6 +50,9 @@ namespace vm {
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);
 
+		/**
+		 * @brief Erases the block object from the memory.
+		 */
 		void deleteBlock(Ref<Block> block);
 
 		[[nodiscard]]
@@ -178,7 +181,11 @@ namespace vm {
 		 */
 		auto dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void;
 
-		void freeBlock(Ref<Block> block);
+		/**
+		 * @brief Frees block's data, but not the block structure itself.
+		 * For the block to be freed, use deleteBlock.
+		 */
+		void freeBlockData(Ref<Block> block);
 
 		/**
 		 * @brief Attempts to insert global data associated with the given ID.
@@ -244,8 +251,6 @@ namespace vm {
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer;
 
-		// @todo panics slows down the execution of the code in executor
-		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
