@@ -178,6 +178,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_expr{ "x + y" };
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  block_expr{ "x + {return 2 * x;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  unit_expr{ "()" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };

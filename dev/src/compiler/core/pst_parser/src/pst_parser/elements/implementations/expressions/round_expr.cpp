@@ -1,6 +1,7 @@
 #include "../../hierarchy/expressions/round_expr.hpp"
 
 #include "../../hierarchy/expressions/comma.hpp"
+#include "../../hierarchy/expressions/unit_expr.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {
@@ -8,7 +9,7 @@ namespace pst::expr {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected single block expression";
+			return "Expected single round group expression";
 		}
 
 	public:
@@ -29,6 +30,8 @@ namespace pst::expr {
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}
+
+		if (state[0].getRecursive().size() == 0) return UnitExpr::parse(state, length);
 
 		auto out = makeBox<RoundExpr>(state.getPosition());
 
