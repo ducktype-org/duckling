@@ -34,6 +34,13 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
+		/**
+		 * @brief Deep copy of the expression tree.
+		 * It was needed for the function default argument functionality,
+		 * to copy the default argument into every call site.
+		 * Use with caution.
+		 * @return Box<Expr> ownership of the copy of the expression. 
+		 */
 		[[nodiscard]] virtual Box<Expr> clone() const = 0;
 	};
 
