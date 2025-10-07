@@ -14,7 +14,6 @@
 #include <utility>
 
 namespace vm {
-	using std::vector;
 
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {

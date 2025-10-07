@@ -454,7 +454,7 @@ namespace vm {
 			const auto  inh_metadata     = (*inh_meta_pointer)
 			                              ->getInheritanceMetadata()
 			                              .expect(
-											  "setVTable_lptr_type no called on the object, hence "
+											  "setVTable_lptr_type not called on the object, hence "
 											  "no inheritance metadata."
 										  );
 			const auto method_name = thread.executing_program->getMethodNamePool()[instr->arg1];

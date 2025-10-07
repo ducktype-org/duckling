@@ -2,7 +2,7 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/exceptions.hpp>
 
 class VmMemoryTest: public VmTestSuite {
 #undef TESTER_CLASS

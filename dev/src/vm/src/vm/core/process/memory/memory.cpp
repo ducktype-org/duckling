@@ -10,7 +10,6 @@
 
 #include <iostream>
 #include <mutex>
-#include <unordered_set>
 
 namespace vm {
 
@@ -168,7 +167,7 @@ namespace vm {
 	}
 
 	void Memory::copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src) {
-		runDataCopyConstructors(block_dst);  // Should this be here or at the end?
+		runDataCopyConstructors(block_dst); 
 		for (auto nested: block_src->children_blocks) {
 			Pointer new_pointer{ block_dst, nested.first };
 			setNestedViewBlock(new_pointer, nested.second->data.element_type);
@@ -353,7 +352,7 @@ namespace vm {
 		if (type->getKind() != Type::Kind::DynamicTable) {
 			// In case we were given a slice of a table with multiple objects of the same type laying
 			// next to each other, then iterate over those as well.
-			// Here we start from the second
+			// Here we start from the second since the first one was handled above
 			for (usize next_item = type->getSize(); next_item < data.size();
 			     next_item += type->getSize()) {
 				iterateOverDataAndExecute(
@@ -377,7 +376,7 @@ namespace vm {
 		case Type::Kind::FixedSizeTable:
 		case Type::Kind::Data:
 		case Type::Kind::Variant:
-			// There is nothing to do with variant, because its should be already deleted thanks to
+			// There is nothing to do with variant, data and tables, because the data should be already deleted thanks to
 			// the nested blocks structure, that deletes the nested block's data first.
 			break;
 		default:
@@ -399,7 +398,7 @@ namespace vm {
 		case Type::Kind::FixedSizeTable:
 		case Type::Kind::Data:
 		case Type::Kind::Variant:
-			// There is nothing to do with variant, because its should be already deleted thanks to
+			// There is nothing to do with variant, data and tables, because the data should be already copied thanks to
 			// the nested blocks structure, that deletes the nested block's data first.
 			break;
 		default:

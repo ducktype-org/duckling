@@ -39,7 +39,7 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		auto getBlock() const -> Ref<Block> {
+		auto getBlock() -> Ref<Block> {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
 			return &*block;
 		}
