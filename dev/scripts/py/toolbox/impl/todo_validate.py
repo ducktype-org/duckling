@@ -198,7 +198,7 @@ def todo_validate_impl(
             log_warning(
                 f"Found {invalid_issue_count} TODO/FIXME comment(s) with invalid or closed issue numbers"
             )
-        log_success(
+        log_info(
             "All TODO/FIXME comments must follow the format: @TODO: #issue_number description"
         )
         log_info("Example: // @TODO: #0123 Implement this feature")
