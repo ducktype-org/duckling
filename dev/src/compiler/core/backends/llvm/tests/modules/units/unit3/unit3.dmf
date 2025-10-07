@@ -1,8 +1,8 @@
 fun goo() -> i64 = {
-    return;
+    return 0;
 }
 
 fun foo() -> i64 = {
     goo();
-    return;
+    return 0;
 }

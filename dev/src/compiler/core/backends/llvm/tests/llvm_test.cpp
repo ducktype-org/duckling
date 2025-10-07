@@ -30,6 +30,7 @@ public:
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
+		TESTER_ADD_TEST(unitsTest);
 	}
 
 private:
@@ -44,6 +45,7 @@ private:
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
+				if (!hout_glob.type.getType().carriesInformation()) continue;
 				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
@@ -173,6 +175,18 @@ private:
 	}
 
 	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+
+	void unitsTest() {
+		runTestForModule("modules/units/unit1", 2, 2);
+		runTestForModule("modules/units/unit2", 2, 2);
+		runTestForModule("modules/units/unit3", 2, 2);
+		runTestForModule("modules/units/unit4", 1, 1);
+		runTestForModule("modules/units/unit5", 1, 2);
+		runTestForModule("modules/units/unit6", 1, 2);
+		std::cerr << "Done?\n";
+		runTestForModule("modules/units/unit-simple", 2, 2);
+		std::cerr << "Done!\n";
+	}
 };
 
 
