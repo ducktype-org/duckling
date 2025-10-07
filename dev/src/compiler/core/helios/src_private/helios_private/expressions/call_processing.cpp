@@ -97,7 +97,7 @@ namespace compiler::helios::code {
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-			// @TODO: #1029 (for consideration)
+			// @TODO: #1300 (for consideration)
 			auto coerced = coerceExpression(
 				std::move(normal_arguments[i]), call_type.getType().getParameterTypes()[i]
 			);
