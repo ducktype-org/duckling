@@ -176,7 +176,7 @@ namespace compiler::mir {
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
 	query::QResult<Function, helios::errors::Failed> finalizeFunctionEnd(
-		query::Context& ctx, Function function
+		query::Context&, Function function
 	) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
