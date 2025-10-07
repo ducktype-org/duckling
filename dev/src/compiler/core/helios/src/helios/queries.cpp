@@ -178,11 +178,7 @@ namespace compiler::helios {
 					}
 				}
 
-				HOUTFunctionDeclaration output(
-					original_symbol,
-					ret_type,
-					std::make_shared<std::vector<code::Parameter>>(std::move(parameters))
-				);
+				HOUTFunctionDeclaration output(original_symbol, ret_type, std::move(parameters));
 
 				this->out.emplace(std::move(output));
 			}
@@ -197,10 +193,10 @@ namespace compiler::helios {
 			DeclarationVisitor func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);
 
-			return func_maker.out.value();
+			return std::move(func_maker.out).value();
 		}
 
-		QUERY_AUTO_NO_CACHE  // @TODO #1300
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
