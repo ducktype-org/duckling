@@ -26,7 +26,7 @@ namespace compiler::helios::code {
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated.
+	 * invalidated. Requires #1309.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
