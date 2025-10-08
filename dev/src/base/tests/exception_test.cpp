@@ -1,6 +1,7 @@
 
-#include <tester/tester.hpp>
 #include <base/exceptions.hpp>
+
+#include <tester/tester.hpp>
 
 #include <cstring>
 #include <version>
