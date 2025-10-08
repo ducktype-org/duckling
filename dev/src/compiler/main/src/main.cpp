@@ -8,9 +8,11 @@
 
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst.hpp>
+#include <timer/timer.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -20,6 +22,7 @@
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -227,6 +230,14 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-statistics")
+	                     .addShortDesc("Print execution time statistics.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-graph")
+	                     .addShortDesc("Print the query graph after the compilation.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -238,6 +249,12 @@ clah::Clah getClahForMain() {
 						}
 					);
 
+					// @TODO #1058: make graph/statistics printing configuration better.
+
+					timer::TimeMeasurement total_compilation_time;
+					total_compilation_time.startMeasurement();
+
+
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
@@ -246,6 +263,34 @@ clah::Clah getClahForMain() {
 					defer(printContextErrors());
 
 					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
+
+					total_compilation_time.endMeasurement();
+
+					if (options.isFlag("print-statistics")) {
+						if (not query::USE_STATS) {
+							std::cerr << "Warning: Query statistics are disabled at compile time. "
+										 "No query statistics will be printed.\n";
+						}
+						query::printStats();
+
+						std::cerr << "\nTotal compilation time: ";
+						timer::printAs(
+							std::cerr,
+							total_compilation_time.duration(),
+							timer::TimeUnit::Milliseconds
+						);
+						std::cerr << "\n";
+						std::cerr << " - Backend compilation time: ";
+						timer::printAs(
+							std::cerr,
+							compiler::driver::getBackendCompilationTime(),
+							timer::TimeUnit::Milliseconds
+						);
+						std::cerr << "\n\n";
+					}
+
+					if (options.isFlag("print-graph"))
+						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
 					return 0;
 				})

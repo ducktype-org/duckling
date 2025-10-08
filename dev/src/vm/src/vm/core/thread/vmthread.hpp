@@ -247,7 +247,7 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Function to be called when the VMProcess is destroyed. Call GlobalData's
+		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
 		 * destructor functions.
 		 */
 		void execGlobalDestructors(CRef<low::LowVMProgram> program);

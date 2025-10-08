@@ -1,6 +1,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>

@@ -12,6 +12,8 @@
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <pst_parser/elements/hierarchy/statements/using.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
@@ -114,9 +116,13 @@ namespace compiler::helios {
 			else
 				return ElementScopeKind::Standard;
 		}
-		case pst::ElementKind::CodeBlockOrStmt:
-			return ElementScopeKind::Standard;
-
+		case pst::ElementKind::CodeBlockOrStmt: {
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
+			if (parent_kind == pst::ElementKind::StmtSpecifier)
+				return ElementScopeKind::Transparent;
+			else
+				return ElementScopeKind::Standard;
+		}
 		case pst::ElementKind::ClassBlock: {
 			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
@@ -138,6 +144,7 @@ namespace compiler::helios {
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
+		case pst::ElementKind::StmtSpecifier:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
@@ -151,6 +158,10 @@ namespace compiler::helios {
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ClassConstructor:
+		case pst::ElementKind::ClassDestructor:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprStmt:
@@ -348,9 +359,33 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt.unlock(ctx)->isDeclaration() != pst::DeclKind::None) {
+				switch (stmt.unlock(ctx)->isDeclaration()) {
+				case pst::DeclKind::Symbol: {
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 					symbols.emplace_back(sym_id);
+					break;
+				}
+				case pst::DeclKind::Transparent: {
+					if (auto stmt_specifier_opt
+					    = stmt.unlock(ctx).template dynamicCast<pst::StmtSpecifier>()) {
+						auto stmt_specifier = stmt_specifier_opt.value();
+						auto inner_symbols  = filterSymbolsFromStmtList(
+                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
+                        );
+						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
+					} else {
+						// Currently only "using stmt" has transparent decl kind, but>>F declares a
+						// symbol #1319
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						symbols.emplace_back(sym_id);
+					}
+					break;
+				}
+				case pst::DeclKind::None:
+					// do nothing
+					break;
+				default:
+					CORE_PANIC("Not handled PST element in filterSymbolsFromStmtList");
 				}
 			}
 			return symbols;

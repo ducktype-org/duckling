@@ -3,6 +3,7 @@
 #include <vm/core/process/vmprocess.hpp>
 
 #include <mutex>
+#include <ranges>
 
 namespace vm {
 	Supervisor& Supervisor::get() {
@@ -26,11 +27,24 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> Supervisor::doRequest(
 		const api::SupervisorRequest& request
 	) {
-		return getProcess(request.pid).and_then([&request](Ref<VMProcess> process) {
-			return process->doRequest(request.request).transform_error([](const auto& x) {
-				return api::ApiError{ x };
-			});
-		});
+		variant_match(request.request) {
+			variant_case_novalue(api::request::DeinitAndValidate) {
+				auto             res = getProcess(request.pid).and_then([](Ref<VMProcess> process) {
+                    return process->doRequest(api::request::DeinitAndValidate{});
+                });
+				std::unique_lock lock(rw_process_table);
+				process_table.erase(request.pid);
+				return res;
+			}
+			variant_default {
+				return getProcess(request.pid).and_then([&request](Ref<VMProcess> process) {
+					return process->doRequest(request.request).transform_error([](const auto& x) {
+						return api::ApiError{ x };
+					});
+				});
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::expected<void, api::ApiError> Supervisor::killProcess(PID pid) {
@@ -39,5 +53,11 @@ namespace vm {
 
 		process_table.erase(pid);
 		return {};
+	}
+
+	Supervisor::~Supervisor() {
+		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
+		// warnings about it.
+		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }

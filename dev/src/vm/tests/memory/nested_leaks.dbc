@@ -1,0 +1,53 @@
+# struct MyStruct {
+#     field: ptr_i64 | i64
+# }
+# table = MyStruct[3];
+# table[0].field = &ret_val;
+
+type variant: MyVariant { ptr_i64, i64 }
+
+type data: MyStruct {
+    field: MyVariant
+}
+
+type fixed_size_table: MyTable MyStruct 3
+type pointer: MyTablePtr MyTable
+type pointer: MyStructPtr MyStruct
+type pointer: MyVariantPtr MyVariant
+type pointer: ptr_ptr_i64 ptr_i64
+
+function main { i64, ptr_argv } -> i64 {
+
+    init_lany_type int_ptr_ptr, ptr_ptr_i64;
+    init_lany_type table, MyTable;
+    # table = MyStruct[3];
+
+    init_lany_type table_ptr, MyTablePtr;
+    ref_lptr_lany table_ptr, table;
+    # table_ptr = &MyStruct[0];
+
+    init_lany_type struct_ptr, MyStructPtr;
+    fixedSizeTableLea_lptr_lptr struct_ptr, table_ptr;
+    ext_l64 ret_val;  # ret_val == 0
+    # struct_ptr = &MyStruct[0];
+
+    init_lany_type variant_ptr, MyVariantPtr;
+    structLea_lptr_lptr variant_ptr, struct_ptr;
+    ext_field MyStruct.field;
+    # variant_ptr = &struct_ptr->field;
+
+    variantSetInner_lptr_type variant_ptr, ptr_i64;
+    # (*variant_ptr).setType<ptr_i64>();
+
+    variantGetInner_lptr_lptr int_ptr_ptr, variant_ptr;
+    ext_type ptr_i64;
+    # int_ptr_ptr = variant_ptr->asPtr<ptr_i64>();
+
+    init_lany_type int_ptr, ptr_i64;
+    alloc_lptr_type int_ptr, i64;
+
+    store_lptr_lany int_ptr_ptr, int_ptr;
+    # *int_ptr_ptr = int_ptr;
+
+	ret;
+}

@@ -20,6 +20,8 @@ function main { i64, ptr_argv } -> i64 {
 	alloc_lptr_type dog, Dog;
 	setVTable_lptr_type dog, Dog;
 	upcast_lptr_lptr animal, dog;  # animal := static_cast<AnimalPtr>(dog)
+
+	free_lptr dog;
 	
 	ret;
 }

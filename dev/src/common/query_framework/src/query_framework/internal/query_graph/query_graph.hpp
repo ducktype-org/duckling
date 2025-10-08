@@ -11,7 +11,7 @@
 namespace query::internal {
 
 
-	class QueryGraph {
+	class QueryGraph final {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 		/*
 		 * for direct acces to node_deps

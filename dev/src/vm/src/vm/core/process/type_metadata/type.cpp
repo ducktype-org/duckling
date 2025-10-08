@@ -10,6 +10,7 @@
 #include <algorithm>
 
 namespace vm {
+
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
 			variant_match(imd.kind) {
@@ -211,6 +212,10 @@ namespace vm {
 		);
 	}
 
+	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
+		return get<kind::Data>().map([](CRef<kind::Data> data) { return CRef(&data->fields); });
+	}
+
 	// inheritance
 	base::Optional<base::CRef<InheritanceMetadata>> Type::getInheritanceMetadata() const {
 		variant_match(kind) {
@@ -274,4 +279,5 @@ namespace vm {
 			return base::Optional<TypeCRef>(function->result);
 		});
 	}
+
 }

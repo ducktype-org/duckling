@@ -27,7 +27,7 @@ namespace compiler::helios::code {
 	 * @brief Attemps to use given normal and named arguments as arguments for given function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated. Requires #1300.
+	 * invalidated. Requires #1309.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
@@ -35,30 +35,28 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                normal_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		// note: this has to be a copy, because we move default arguments from it:
-		// @TODO: #1300 just change to clone
 		auto decl = ctx.query<QueryDeclOfFun>(fun);
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0;
 		usize                        used_named_args      = 0;
 
-		for (auto& param: *(decl.parameters)) {
+		for (auto& param: decl->parameters) {
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
 				if (named_arguments.contains(param.name)) {
 					used_named_args++;
 					return std::move(named_arguments.at(param.name));
 				} else if (normal_args_position < normal_arguments.size())
 					return std::move(normal_arguments.at(normal_args_position++));
-				else if (param.initial_value.has_value())
-					return std::move(param.initial_value.value());
-				else
+				else if (param.initial_value.has_value()) {
+					return param.initial_value->ref()->clone();
+				} else
 					return std::nullopt;
 			};
 
 			match_optional(get_arg()) {
 				opt_some(arg) {
-					// @TODO: #1300 (for consideration)
+					// @TODO: #1029 overloads resolution
 					auto coerced = coerceExpression(std::move(arg), param.type);
 					if (coerced.hasError())
 						return std::nullopt;
@@ -81,7 +79,7 @@ namespace compiler::helios::code {
 	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
 	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
 	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated. Requires #1300.
+	 * invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingBuiltin(
 		query::Context&                        ctx,

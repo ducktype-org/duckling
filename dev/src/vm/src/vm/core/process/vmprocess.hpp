@@ -60,7 +60,7 @@ namespace vm {
 		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
 		 * is empty if no code was loaded.
 		 */
-		base::Optional<CRef<vm::low::LowVMProgram>> loaded_program{};
+		base::Optional<CRef<low::LowVMProgram>> loaded_program{};
 
 		Memory memory;
 
@@ -138,6 +138,13 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::StateError> getExitCode();
 
+		/**
+		 * @brief Expects the process to be stopped and asks memory module if the memory is valid.
+		 * For more information about execution's validation,
+		 * see Memory::validateMemoryState's description.
+		 */
+		std::expected<api::Response, api::ApiError> deinitAndValidate();
+
 		ProcIO                           io;
 		base::Optional<ProcIORedirecter> io_redirecter;
 
@@ -194,7 +201,5 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
-
-		~VMProcess();
 	};
 }

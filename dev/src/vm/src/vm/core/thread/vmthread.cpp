@@ -351,7 +351,7 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		frame->called_func_ret_size = func.result_type->getSize();
+		frame->current_function = &start_function;
 
 		const auto* instr = start_function.bc.data();
 
@@ -420,7 +420,8 @@ namespace vm {
 		// @note: The return value is the only block left on the block stack.
 		auto block         = frame->block_stack.back();
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
-		process_memory.freeBlock(block);
+		process_memory.freeBlockData(block);
+		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
 
 		return exit_value_storage.value();
@@ -633,7 +634,7 @@ namespace vm {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.function_id  = index,  // Assuming function_id is int
 							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}

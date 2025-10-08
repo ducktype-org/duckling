@@ -1,5 +1,6 @@
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst.hpp>
@@ -172,6 +173,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_expr{ "x + y" };
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  block_expr{ "x + {return 2 * x;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  unit_expr{ "()" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
