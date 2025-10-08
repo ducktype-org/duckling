@@ -67,8 +67,9 @@ def check_issue_exists_and_open(issue_number: str) -> bool:
 
         return issue.get("state") == "OPEN"
 
-    except BashCommandError:
-        return False
+    except BashCommandError as e:
+        exit_with_error(f"During Github's API query: {e.stderr}")
+
     except json.JSONDecodeError as e:
         log_warning(f"Error parsing GitHub API response: {e}")
         return False
