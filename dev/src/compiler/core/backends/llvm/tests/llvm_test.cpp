@@ -179,13 +179,9 @@ private:
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
 		runTestForModule("modules/units/unit2", 2, 2);
-		runTestForModule("modules/units/unit3", 2, 2);
-		runTestForModule("modules/units/unit4", 1, 1);
-		runTestForModule("modules/units/unit5", 1, 2);
-		runTestForModule("modules/units/unit6", 1, 2);
-		std::cerr << "Done?\n";
-		runTestForModule("modules/units/unit-simple", 2, 2);
-		std::cerr << "Done!\n";
+		runTestForModule("modules/units/unit3", 1, 1);
+		runTestForModule("modules/units/unit4", 1, 2);
+		runTestForModule("modules/units/unit-simple", 2, 3);
 	}
 };
 

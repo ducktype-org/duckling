@@ -6,6 +6,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <filesystem/file.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -41,11 +42,10 @@ namespace compiler::helios::test_utils {
 	 * @tparam T The expected type of the value.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
-	 * @param ctx The query context.
 	 * @return The value of the last symbol in the chain.
 	 */
 	template<typename T>
-	T getConstValueAs(const std::string_view chain, ScopeID scope, query::Context& ctx) {
+	T getConstValueAs(const std::string_view chain, ScopeID scope) {
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
@@ -56,7 +56,9 @@ namespace compiler::helios::test_utils {
 		else if constexpr (std::is_same_v<T, bool>)
 			maybe_value = ctv_result.asBool();
 		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
-			maybe_value = ctv_result.asType(ctx);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				maybe_value = ctv_result.asType(ctx);
+			});
 		else
 			static_assert(false, "Unsupported type for getConstValueAs");
 

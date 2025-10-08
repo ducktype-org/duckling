@@ -1,8 +1,6 @@
-fun goo() -> i64 = {
-    return 0;
-}
+# Recursive call of function returning unit.
 
-fun foo() -> i64 = {
-    goo();
-    return 0;
+fun foo() = {
+    foo();
+    return;
 }

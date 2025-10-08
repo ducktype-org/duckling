@@ -1,8 +1,10 @@
-fun goo() = {
+# Call a function which explicitly returns unit.
+
+fun goo() -> () = {
     return;
 }
 
-fun foo() = {
+fun foo() -> () = {
     goo();
     return;
 }

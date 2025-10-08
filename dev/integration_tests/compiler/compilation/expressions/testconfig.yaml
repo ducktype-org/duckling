@@ -18,3 +18,9 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  units:
+    Cases:
+      default:
+        Output:
+          String: "1 \n"
+        ExitCode: 0
