@@ -120,6 +120,8 @@ function main { i64, ptr_argv } -> i64 {
     mov_lptr_lptr temp_f_2, ptr_f;
     virtual_call_lptr_method ptr_f, hunt;         # Expected output: 5
 
+    free_lptr actual_cat_obj;
+
     # --------------------- Cat object, Animal* pointer --------------------------
     alloc_lptr_type actual_cat_obj, Cat;
     setVTable_lptr_type actual_cat_obj, Cat;        
@@ -128,6 +130,8 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type temp_a_1, pointer_Animal;
     mov_lptr_lptr temp_a_1, ptr_a;
     virtual_call_lptr_method ptr_a, makeSound; # Expected output: 4.
+
+    free_lptr actual_cat_obj;
 
     # ---------------------- Feline object, Feline* pointer ------------------
     alloc_lptr_type actual_feline_obj, Feline;
@@ -149,6 +153,8 @@ function main { i64, ptr_argv } -> i64 {
     mov_lptr_lptr temp_a_2, ptr_a;
     virtual_call_lptr_method ptr_a, makeSound;   # Expected output: 2
 
+    free_lptr actual_feline_obj;
+
     # ---------------------- Animal object, Animal* pointer ------------------
     alloc_lptr_type actual_animal_obj, Animal;
     setVTable_lptr_type actual_animal_obj, Animal;   
@@ -157,6 +163,8 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type temp_a_3, pointer_Animal;
     mov_lptr_lptr temp_a_3, ptr_a;
     virtual_call_lptr_method ptr_a, makeSound; # Expected output: 1
+
+    free_lptr actual_animal_obj;
 
     deinit; # ptr_a
     deinit; # ptr_f

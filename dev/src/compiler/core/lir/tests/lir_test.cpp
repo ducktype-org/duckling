@@ -98,7 +98,7 @@ private:
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
 				);
 				result.funcs.put(
-					hout_func.declaration.original_name,
+					hout_func.declaration->original_name,
 					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
 				);
 			}

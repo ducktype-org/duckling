@@ -32,6 +32,7 @@ function main { i64, ptr_argv } -> i64 {
     output_l64 val;
 
     deinit; # other_ptr
+    free_lptr table_ptr;
     deinit; # table_ptr
     deinit; # val
     deinit; # iter

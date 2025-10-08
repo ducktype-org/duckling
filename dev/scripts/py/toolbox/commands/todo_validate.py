@@ -25,7 +25,7 @@ from click import command, option
     type=str,
     default=["todo_validate.py", "todo_counter.py"],
     help="Files to exclude from checking (e.g., --exclude-files todo_validate.py). "
-    "All file paths that end with any given value will be excluded."
+    "ALL file paths that end with any given value will be excluded."
     "Note that by default [todo_validate.py, todo_counter.py] patterns are excluded.",
 )
 @all_flag(help="Whether to scan the entire project, not just the diff.")
@@ -36,5 +36,5 @@ def todo_validate(*args, **kwargs):
     """
     if not todo_validate_impl(*args, **kwargs):
         exit_with_error(
-            "!TODO validation failed: Found !TODO/!FIXME comments that don't follow the required format"
+            "TODO validation failed: Found TODO/FIXME comments that don't follow the required format"
         )

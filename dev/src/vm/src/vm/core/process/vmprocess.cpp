@@ -17,6 +17,7 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <expected>
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
@@ -103,8 +104,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::output() {
-		auto        lock = io.lock();
-		std::string content;
+		auto lock = io.lock();
 		// Cannot read output from api when IO is being redirected
 		if (io_redirecter)
 			return std::unexpected(api::ApiError{
@@ -113,7 +113,7 @@ namespace vm {
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 
-		content = io.outputStream().str();
+		const std::string content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
@@ -250,7 +250,6 @@ namespace vm {
 				}
 			}
 
-
 			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
@@ -276,7 +275,9 @@ namespace vm {
 				return api::Response(getStatus());
 			}
 
-			variant_case(api::request::ExitCodeRequest, exit_code_request) { return getExitCode(); }
+			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
+
+			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
@@ -307,14 +308,6 @@ namespace vm {
 
 	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {
 		vm_threads.emplace_back(*this);
-	}
-
-	VMProcess::~VMProcess() {
-		for (auto& t: vm_threads)
-			if (t.exec_thread) (void) (stop());
-		if (loaded_program.has_value())
-			getMainVMThread().execGlobalDestructors(loaded_program.value());
-		for (auto& vm_value: owned_vm_values) vm_value->freeData();
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
@@ -355,5 +348,27 @@ namespace vm {
 			));
 		}
 		CORE_UNREACHABLE();
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::deinitAndValidate() {
+		for (auto& t: vm_threads) {
+			if (t.exec_thread)
+				if (auto res = stop(); !res.has_value()) return res;
+		}
+		try {
+			// There might be numerous runtime exceptions during the deinitialization,
+			// any of those means there was an issue during the validation.
+			if (loaded_program.has_value())
+				getMainVMThread().execGlobalDestructors(*loaded_program);
+
+			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
+
+			memory.deinitGlobals();
+		} catch (exceptions::VMRuntimeException& e) {
+			std::cerr << " - VM has detected issues during program\'s deinitialization: "
+					  << e.what() << '\n';
+			return false;
+		}
+		return memory.validateMemoryState();
 	}
 }

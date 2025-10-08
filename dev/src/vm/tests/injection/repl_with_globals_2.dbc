@@ -8,6 +8,8 @@ function globaler_reader {} -> void {
 	load_lany_lptr x, ptr;
 	output_l64      x;
 
+	free_lptr ptr;
+
 	deinit; # ptr
 	deinit; # x
 	ret;
