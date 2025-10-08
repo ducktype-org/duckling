@@ -355,7 +355,7 @@ namespace vm {
 		if (type->getKind() != Type::Kind::DynamicTable) {
 			// In case we were given a slice of a table with multiple objects of the same type laying
 			// next to each other, then iterate over those as well.
-			// Here we start from the second since the first one was handled above
+			// Here we start from the second, since the first one was handled above
 			for (usize next_item = type->getSize(); next_item < data.size();
 			     next_item += type->getSize()) {
 				iterateOverDataAndExecute(

@@ -21,7 +21,7 @@ namespace vm::api {
 	std::expected<ProcessInfo, ApiError> spawn();
 
 	/**
-	 * @brief Deinitializes and validates process'es memory state.
+	 * @brief Deinitializes and validates processes memory state.
 	 * It also removes the process from the internal structures.
 	 * @TODO: #1354 After 1354 it should be required that the process is stopped/finished
 	 * when this endpoint is called.
