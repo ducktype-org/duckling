@@ -54,6 +54,24 @@ label non_empty;
     ret_tailcall_func print_list;
 }
 
+function free_list {LinkedList} -> void {
+    # arg0: LinkedList
+
+    cmpNull_lptr arg0;
+    jmpIfNot_label non_empty;
+    ret;
+label non_empty;
+
+    init_lany_type next, LinkedList;
+    mov_lptr_lptr next, arg0;
+    call_func tail;
+
+    call_func free_list;
+    free_lptr arg0;
+
+    ret;
+}
+
 function main { i64, ptr_argv } -> i64 {
     # INPUT: n - list_length
     #        x1 x2 ... xn - list elements
@@ -83,6 +101,11 @@ label loop_begin;
     jmp_label loop_begin;
 label loop_end;
 
+    init_lany_type list2, LinkedList;
+    mov_lptr_lptr list2, list;
+
     call_func print_list;
+    call_func free_list;
+
     ret;
 }
