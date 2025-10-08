@@ -125,11 +125,17 @@ namespace vm {
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(variants_definitions.size() != 0, "Cannot define variant with no alternatives");
 		state = State::Defined;
 
 		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
+
+		// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
+		variant.type_tag_size_bytes = static_cast<usize>(
+			ceil(log2(static_cast<double>(variants_definitions.size())) / 8.0)
+		);
 		kind = variant;
 	}
 
@@ -181,10 +187,11 @@ namespace vm {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size = 16 + data_size;
+				this->size = variant.type_tag_size_bytes + data_size;
 				isInstantiableImpl(variant);
 			}
 		}
+		CORE_ASSERT(size != -1, "Invalid size");
 	}
 
 	// pointer, fixedSizeTable, dynamicTable
