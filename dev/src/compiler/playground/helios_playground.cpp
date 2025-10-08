@@ -70,10 +70,10 @@ int notMain(int argc, const char* const* argv) {
 	printQueryDeps(deps);
 
 	for (auto& i: top_level->functions) {
-		std::cerr << "\nInputs of function: " << i.declaration.original_name.strView() << "\n";
+		std::cerr << "\nInputs of function: " << i.declaration->original_name.strView() << "\n";
 		auto i_deps
 			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOFFun>(
-				i.declaration.original_symbol, pst_access_id
+				i.declaration->original_symbol, pst_access_id
 			);
 		printQueryDeps(i_deps);
 	}
