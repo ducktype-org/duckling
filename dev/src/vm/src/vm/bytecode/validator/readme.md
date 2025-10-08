@@ -1,6 +1,6 @@
 # Bytecode Validation
 
-Files in this directory implement static verification of bytecode functions
+Files in this directory implement static verification of bytecode functions, globals
 and types, which gives us more assumptions for runtime, which in turn allows
 for faster execution omitting many runtime checks.
 
@@ -12,31 +12,44 @@ class which keeps the current program state of the VM and it's kept by the
 loader class. Its invariant is the guarantee that the state stored in it is
 always correct. The main task of this module is to verify the correctness 
 of the entire program and maintain a consistent state. 
+
 The initial state of `ValidProgram` is initialized with built-in types, such as `i64`,
 `ptr_i64`, `void`, or the type of the `main` function. All builtin types are defined
 in the `bytecode/builtin_types.{hpp, cpp}`.
-Its main method, `insertCode`, performs transactional code addition. In reality, 
+Its main method, `tryInsertCode`, performs transactional code addition. In reality, 
 the operations are performed on a temporary copy of the state. Only when all 
 validation steps are successfully completed is the main state replaced by the 
-working copy. The verification process is as follows:
+working copy. The verification process works as follows:
 
-1.  **Injecting types:** New type definitions are added to the set of types
+
+
+1.  **Forward declare functions:** All functions added to the program state 
+    saved in a map which stores a mapping from function name to the functions signature. These serves as a map of forward declarations which are needed 
+    for type validation. For types like instantiable classes (non-abstract) we want to statically verify that all virtual methods which were declared are implemented which is done by looking up if a function declared as an implementation exist in the forward declaration map.
+2.  **Injecting types:** New type definitions are added to the set of types
     already existing in the program. Potential duplicate type names are detected.
-2.  **Validating types:** All types in the program (both old and newly added)
-    are analyzed by `TypeValidator` (which is described below). This allows for
+3.  **Validating types:** 
+    All types in the program (both old and newly added)
+    are analyzed by [`TypeValidator`](type_validator.hpp) (which is described below). This allows for
     the detection of errors that arise from injecting new types (e.g. introducing
-    a type that closes a cycle **in** the inheritance hierarchy).
-3.  **Validating and injecting global variables:** All new global are inserted
-    into the program state. Duplicate names are checked, and it is verified
-    whether the types of declared global variables exist in the context.
-4.  **Validating and injecting functions:** At the beginning of this stage, it is
-    checked whether the name of the injected function has not been duplicated.
-    Then, each function is individually analyzed by `FunctionValidator` in the full 
+    a type that closes a cycle **in** the inheritance hierarchy or injecting an invalid type).
+4.  **Validating and injecting global variables:** All new global are inserted
+    into the program state and verified for correctness. This involves:
+    - Checking for duplicate names of global variables,
+    - Whether the types of declared global variables exist in the program,
+    <!-- TODOP: This should probably verified better than just for existance -->
+    - If a global variable was declared with a constructor or deconstructor we check if the specified function (which serves as a constructor/deconstructor) exists in the program.
+1.  **Validating and injecting functions:** 
+    At the beginning of this stage a high level set of types `TypeContext` is translated into a **temporary** low level type representation called `TypeMetadata`. This representation is crucial for function verification as it contains the built v-tables for object and interface types which are needed for statically verifying method calls on objects (`virtual_call_lptr_method`). 
+
+    [One important note is that the `TypeMetadata` used for verification is built from scratch and used only for verification purposes. After the verification phase the built `TypeMetadata` is thrown away and rebuilt again in the `Compiler` module. This is a temporary approach which will change in the future. For more info on why its done like this please refer to #1306]
+    
+    The second step is statically verifying functions. Each function is individually analyzed by `FunctionValidator` in the full 
     context of the program's types (including the newly injected ones). If the
     verification is successful, the new function is added to the program state.
     More detailed explanation of `FunctionValidator`'s functionality 
     is described below.
-5.  If all the above steps are successful, the internal state is updated, and
+6.  If all the above steps are successful, the internal state is updated, and
     the operation ends with success. Otherwise, the working copy is discarded,
     and an exception with error information is thrown.
 
@@ -124,11 +137,22 @@ Let `T` be the type of value pointed to by `target`. In this last phase
 of checks, we verify that `src` points to a structure (data) of some type `S'
 such that `S` holds a field named `field` of type `T`.
 
-## Type Validator and Type Builder
+## Type Validator 
 
 The `type_validator.hpp` and its corresponding `.cpp` file implement the validation 
-of the type system, while the construction is handled by `type_builder.hpp` and its 
-`.cpp` file. The main entry point is the `TypeContext` class, which aggregates a 
+of DVM type system.
+
+The validation is handled by the `ValidProgram` class and it's done in two steps. First, we check
+
+while the construction is handled by `type_builder.hpp` and its 
+`.cpp` file. 
+
+
+## Type Builder
+
+
+
+The main entry point is the `TypeContext` class, which aggregates a 
 collection of high-level type definitions (`TypeOfData`) and, upon request, validates 
 them and produces a low-level, runtime-ready representation (`TypeMetadata`). This 
 representation, created using `type_validator.hpp` and `type_builder.hpp`, 

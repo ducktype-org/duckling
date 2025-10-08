@@ -3,8 +3,11 @@ TODOP: Update after refactor changes
 
 This file presents a brief overview of the architecture of the process of loading,
 verifying, and compiling bytecode in the system designed by ZPP 3.2. This file
-contains just the overview of the verification stage. This process is described in
-detail in [Bytecode Validation](../bytecode/validator/readme.md).
+contains just the overview of the verification stage. 
+
+The details of this process are described more throughly in 
+[Bytecode Validation](../bytecode/validator/readme.md).
+[Compiler](compiler/README.md).
 
 ## Design Assumptions
 When designing the architecture, we aimed to meet the assumptions we set, which
@@ -13,7 +16,8 @@ determined the structure and behavior of the individual system components:
     The system must allow for the addition of new code fragments (functions, types,
     global data) to an already running virtual machine process without the need
     for its restart. Every such operation must be transactional — in case of an
-    error, the system reverts to the previous, correct state.
+    error, the system reverts to the previous, correct state and provides the user 
+    with the appropriate error.
 -   **Support for multi-file programs:**
     The architecture must support programs composed of many separate source files
     and ensure the consistency of the entire program.
@@ -66,7 +70,7 @@ The types of arguments passed to instructions are represented in a similar way
 ### Valid Program (`vm::code::ValidProgram`)
 `ValidProgram` is the main, high-level representation of the program maintained
 within the `Loader` module. Its invariant is the guarantee that the state stored
-in it is always correct. It's state can be expanded with the `insertCode` function.
+in it is always correct. It's state can be expanded with the `tryInsertCode` function. 
 For more detailed explanation see [Bytecode Validation](../bytecode/validator/readme.md).
 
 ### Low-level machine program (`vm::code::LowVMProgram`)
