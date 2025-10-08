@@ -64,6 +64,13 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const override;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralUnitExpr(tsh::ExpressionType<> expression_type);
 	};
 
 	/**

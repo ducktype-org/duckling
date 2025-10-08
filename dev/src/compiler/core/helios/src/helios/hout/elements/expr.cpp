@@ -52,6 +52,13 @@ namespace compiler::helios::code {
 
 	void LiteralUnitExpr::debugPrint(std::ostream& out) const { out << "()"; }
 
+	LiteralUnitExpr::LiteralUnitExpr(tsh::ExpressionType<> expression_type):
+	  Expr(expression_type) {}
+
+	Box<Expr> LiteralUnitExpr::clone() const {
+		return makeBox<LiteralUnitExpr>(expression_type);
+	}
+
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
 		  Expr(
 
