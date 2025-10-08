@@ -1,7 +1,3 @@
-# This test asserts we are not calling
-# destructors on nested blocks more than necessary.
-
-
 # struct MyStruct {
 #     field: ptr_i64 | i64
 # }
