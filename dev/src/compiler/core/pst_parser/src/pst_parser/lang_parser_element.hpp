@@ -71,7 +71,7 @@ namespace pst {
 	protected:
 		/**
 		 * @brief Hash algorithm used for PST stable hashing
-		 * @todo #1337 Swap to CRC256
+		 * @TODO: #1337 Swap to CRC256
 		 */
 		using HashAlg = hashing::StatefulHash<hashing::SHA256, void>;
 
