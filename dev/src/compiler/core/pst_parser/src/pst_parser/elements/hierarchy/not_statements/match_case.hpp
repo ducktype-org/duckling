@@ -17,6 +17,8 @@ namespace pst {
 			/**
 			 * @note This method doesn't add all the data from CaseBranch, just the readable data
 			 * without accessing.
+			 * It is not consistent with intended behavior of addToHash, but It is really useful
+			 * because it lets us use the library defined vector hashing
 			 */
 			friend constexpr void addToHash(
 				hashing::hash_algorithm auto& h, const CaseBranch& t

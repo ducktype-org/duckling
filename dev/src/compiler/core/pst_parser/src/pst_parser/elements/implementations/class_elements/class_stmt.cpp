@@ -71,7 +71,7 @@ namespace pst {
 		addToHash(partial_hash, getElementPath());
 		addToHash(partial_hash, elementType());
 		addToHash(partial_hash, attributes.size());
-		addToHash(partial_hash, context.name);
+		addToHash(partial_hash, context.name.str());
 		addToHash(partial_hash, context.specifiers);
 		return addElementDataToStableHash(partial_hash);
 	}

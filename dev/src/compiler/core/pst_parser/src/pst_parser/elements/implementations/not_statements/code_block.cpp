@@ -82,6 +82,7 @@ namespace pst {
 				symbols_available_data.emplace_back(name.strView(), vec.size());
 			std::ranges::sort(symbols_available_data);
 			addToHash(partial_hash, symbols_available_data);
+		} else { /*intentionally empty*/
 		}
 		return partial_hash;
 	}
