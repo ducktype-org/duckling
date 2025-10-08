@@ -104,7 +104,14 @@ namespace pst {
 		HashAlg partial_hash;
 		addToHash(partial_hash, getElementPath());
 		addToHash(partial_hash, elementType());
-		return addElementDataToStableHash(partial_hash);
+		addGenericDataToHash(partial_hash);
+		addElementDataToStableHash(partial_hash);
+		return partial_hash;
+	}
+
+	LangElement::HashAlg& LangElement::addGenericDataToHash(LangElement::HashAlg& partial_hash
+	) const {
+		return partial_hash;
 	}
 
 	void LangElement::addToken(CRef<tpc::Token> t) {

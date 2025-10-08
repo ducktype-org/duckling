@@ -118,8 +118,7 @@ namespace pst {
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 
-		[[nodiscard]]
-		HashAlg calcStableHash() const override;
+		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 		/**
 		 * @note This might need to return a vector of borrow pointers instead
@@ -216,8 +215,7 @@ namespace pst {
 		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
 
 	protected:
-		[[nodiscard]]
-		HashAlg calcStableHash() const override;
+		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:
 		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);

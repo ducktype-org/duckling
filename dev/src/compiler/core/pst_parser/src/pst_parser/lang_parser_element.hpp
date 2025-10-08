@@ -222,7 +222,13 @@ namespace pst {
 		 * element type. Can be overriden for specific parent elements that add common information.
 		 */
 		[[nodiscard]]
-		virtual HashAlg calcStableHash() const;
+		HashAlg calcStableHash() const;
+
+		/**
+		 * @brief Used to add additional data that is generic to multiple elements for example in
+		 * Stmt.
+		 */
+		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Adds the element specific information to the hash (Not generic ones such as number
@@ -230,9 +236,7 @@ namespace pst {
 		 * @important Each implementation has to return the same reference it received (similar to
 		 * `<<` operator).
 		 */
-		[[nodiscard]]
-		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const
-			= 0;
+		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const = 0;
 
 	public:
 		/**

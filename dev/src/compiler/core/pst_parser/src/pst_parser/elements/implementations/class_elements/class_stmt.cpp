@@ -66,14 +66,11 @@ namespace pst {
 		return internal::parseStmt<Field>(state, ctx);
 	}
 
-	LangElement::HashAlg ClassStmt::calcStableHash() const {
-		HashAlg partial_hash;
-		addToHash(partial_hash, getElementPath());
-		addToHash(partial_hash, elementType());
+	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, attributes.size());
 		addToHash(partial_hash, context.name.str());
 		addToHash(partial_hash, context.specifiers);
-		return addElementDataToStableHash(partial_hash);
+		return partial_hash;
 	}
 
 	MBox<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {

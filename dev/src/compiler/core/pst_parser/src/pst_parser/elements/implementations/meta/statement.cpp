@@ -115,12 +115,9 @@ namespace pst {
 		return out;
 	}
 
-	LangElement::HashAlg Stmt::calcStableHash() const {
-		HashAlg partial_hash;
-		addToHash(partial_hash, getElementPath());
-		addToHash(partial_hash, elementType());
+	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, attributes.size());
-		return addElementDataToStableHash(partial_hash);
+		return partial_hash;
 	}
 
 	void Stmt::calcElementPathsRecursive() {
