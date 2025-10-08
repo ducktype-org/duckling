@@ -261,8 +261,8 @@ namespace vm {
 	}
 
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
-		// Decrease the dst block's refcount before assigning the new block
-		if (dst != src) {
+		if (dst.block != src.block) {
+			// Decrease the dst block's refcount before assigning the new block
 			destroyBlockReference(dst);
 			if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
 		}
