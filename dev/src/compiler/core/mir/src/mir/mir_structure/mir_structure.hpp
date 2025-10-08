@@ -217,7 +217,9 @@ namespace compiler::mir {
 		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const { return type.getType().carriesInformation(); }
+		bool carriesInformation() const {
+			return type.getType().carriesInformation();
+		}
 	};
 
 	/**
@@ -258,7 +260,9 @@ namespace compiler::mir {
 		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const { return type.getType().carriesInformation(); }
+		bool carriesInformation() const {
+			return type.getType().carriesInformation();
+		}
 	};
 
 	/**
@@ -269,8 +273,14 @@ namespace compiler::mir {
 		// @TODO: literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType
-			= std::variant<MirUnitConst, MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
+		using ValueType = std::variant<
+			MirUnitConst,
+			MirIntegerConst,
+			MirBoolConst,
+			LocalRef,
+			BlockID,
+			MirFunctionLiteral,
+			MirGlobal>;
 
 		ValueType value;
 

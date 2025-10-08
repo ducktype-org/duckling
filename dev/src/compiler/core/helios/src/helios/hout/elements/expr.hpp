@@ -59,7 +59,6 @@ namespace compiler::helios::code {
 	 * as a value, but it is lazily lifted to a type if necessary.
 	 */
 	struct LiteralUnitExpr final: public Expr {
-
 		LiteralUnitExpr(query::Context& ctx);
 
 		void debugPrint(std::ostream& out) const final;
