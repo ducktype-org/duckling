@@ -91,7 +91,7 @@ private:
 		vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) });
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
-		auto vm_value_max64 = get_int_vm_value(pid, std::numeric_limits<u64>::max());
+		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
 
 		const auto assert_type_tag = [&](usize type_tag_bits, usize wanted_type_tag_value) {
 			std::string function_name = base::strConcat(
