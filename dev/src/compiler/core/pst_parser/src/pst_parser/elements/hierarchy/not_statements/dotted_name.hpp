@@ -44,5 +44,6 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~DottedName() final = default;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 	};
 }

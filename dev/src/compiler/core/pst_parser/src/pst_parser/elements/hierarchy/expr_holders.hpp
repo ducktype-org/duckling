@@ -30,7 +30,8 @@ namespace pst {
 			return "Top Level Expression";
 		}
 
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		AccessLocked<ExprElement> getExpr() const {

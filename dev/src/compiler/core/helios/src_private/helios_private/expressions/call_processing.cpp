@@ -145,7 +145,7 @@ namespace compiler::helios::code {
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
 			if (arg_expr.hasError()) return query::QError(errors::Failed());
 			if (arg.unlock(ctx)->isNamedArg()) {
-				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().value;
+				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				if (named_arguments.contains(arg_name))
 					return query::QError(errors::Failed());  // Not unique names.
 				named_arguments.emplace(arg_name, std::move(arg_expr.value()));

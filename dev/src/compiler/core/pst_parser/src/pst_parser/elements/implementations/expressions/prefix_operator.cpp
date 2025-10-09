@@ -18,6 +18,11 @@ namespace pst::expr {
 		visitor.visitPrefixOperator(*this);
 	}
 
+	LangElement::HashAlg& PrefixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, op);
+		return partial_hash;
+	}
+
 	lexer::Operator PrefixOperator::getOperator() const { return op; }
 
 	AccessLocked<ExprElement> PrefixOperator::getExpr() const { return expr.give(); }

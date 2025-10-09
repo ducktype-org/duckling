@@ -12,6 +12,10 @@ namespace pst {
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 
+
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		DECL_CHILD_CONSTRUCTOR(FunDecl, ElementKind::FunDecl);
 

@@ -12,6 +12,9 @@ namespace pst {
 		NAMED_CHILD(then_body, CodeBlockOrStmt);
 		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
 			element_kind = ElementKind::If;

@@ -11,6 +11,9 @@ namespace pst {
 		NAMED_CHILD(pattern, AnalysisPattern);
 		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		explicit FlowPattern(const dia::SourcePosition& position): NotStmt(position) {
 			this->element_kind = ElementKind::FlowPattern;
