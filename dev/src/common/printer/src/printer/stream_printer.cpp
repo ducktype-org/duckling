@@ -29,7 +29,7 @@ namespace printer {
 		if (foreground_color_id > 0 || background_color_id > 0) out << "\033[0m";
 	}
 
-	void StreamPrinter::newline(size_t times, std::ostream& out) {
+	void StreamPrinter::newline(usize times, std::ostream& out) {
 		print(std::string(times, '\n'), out);
 	}
 }

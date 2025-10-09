@@ -59,7 +59,7 @@ namespace clah {
 		Conditional::Condition&& condition, const std::string& description
 	) {
 		parameter_necessity = ParameterNecessity(Conditional{
-			.condition = std::move(condition), .condition_description = description });
+			.condition = std::move(condition), .condition_description = description, });
 		return *this;
 	}
 
