@@ -4,11 +4,9 @@
  */
 #pragma once
 
-#include "box.hpp"
 #include "ref.hpp"
 
 #include <deque>
-#include <iterator>
 
 namespace base {
 	namespace internal {

@@ -131,6 +131,9 @@ private:
 		assertTrue(
 			pst::checkUniqueElementPaths(pst.getRootElement()).isOk(), "Element paths are not unique"
 		);
+		assertTrue(
+			pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"
+		);
 		std::stringstream ss;
 		pst.dprint(ss);
 

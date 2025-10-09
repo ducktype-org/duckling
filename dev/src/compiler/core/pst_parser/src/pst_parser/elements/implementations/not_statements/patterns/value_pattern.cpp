@@ -25,6 +25,10 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void ValuePattern::acceptVisitor(PstVisitor& visitor) const {
 		visitor.visitValuePattern(*this);
 	}

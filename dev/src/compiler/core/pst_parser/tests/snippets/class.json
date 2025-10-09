@@ -288,19 +288,22 @@
 																						"sourceEnd": 113
 																					},
 																					"Call argument": {
-																						"position": {
-																							"sourceStart": 113,
-																							"sourceEnd": 113
-																						},
-																						"Top Level Expression": {
-																							"expr": {
-																								"position": {
-																									"sourceStart": 113,
-																									"sourceEnd": 113
-																								},
-																								"Identifier Expression": {
-																									"name": {
-																										"Name": "a"
+																						"name": "<ANONYMOUS>",
+																						"value": {
+																							"position": {
+																								"sourceStart": 113,
+																								"sourceEnd": 113
+																							},
+																							"Top Level Expression": {
+																								"expr": {
+																									"position": {
+																										"sourceStart": 113,
+																										"sourceEnd": 113
+																									},
+																									"Identifier Expression": {
+																										"name": {
+																											"Name": "a"
+																										}
 																									}
 																								}
 																							}
@@ -655,19 +658,22 @@
 																									"sourceEnd": 263
 																								},
 																								"Call argument": {
-																									"position": {
-																										"sourceStart": 263,
-																										"sourceEnd": 263
-																									},
-																									"Top Level Expression": {
-																										"expr": {
-																											"position": {
-																												"sourceStart": 263,
-																												"sourceEnd": 263
-																											},
-																											"Identifier Expression": {
-																												"name": {
-																													"Name": "c"
+																									"name": "<ANONYMOUS>",
+																									"value": {
+																										"position": {
+																											"sourceStart": 263,
+																											"sourceEnd": 263
+																										},
+																										"Top Level Expression": {
+																											"expr": {
+																												"position": {
+																													"sourceStart": 263,
+																													"sourceEnd": 263
+																												},
+																												"Identifier Expression": {
+																													"name": {
+																														"Name": "c"
+																													}
 																												}
 																											}
 																										}
