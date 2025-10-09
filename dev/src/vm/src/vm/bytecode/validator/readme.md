@@ -44,8 +44,7 @@ working copy. The verification process works as follows:
 
     [One important note is that the `TypeMetadata` used for verification is built from scratch and used only for verification purposes. After the verification phase the built `TypeMetadata` is thrown away and rebuilt again in the `Compiler` module. This is a temporary approach which will change in the future. For more info on why its done like this please refer to #1306]
     
-    The second step is statically verifying functions. Each function is individually analyzed by `FunctionValidator` in the full 
-    context of the program's types (including the newly injected ones). If the
+    The second step is statically verifying functions. Each function is individually analyzed by `FunctionValidator` in the full context of the program's types (including the newly injected ones). If the
     verification is successful, the new function is added to the program state.
     More detailed explanation of `FunctionValidator`'s functionality 
     is described below.
@@ -134,41 +133,15 @@ Since this is the third step of verification we already know that variables
 referenced in the first two arguments indeed exist and hold pointers.
 We also know that the next instruction is the required extension.
 Let `T` be the type of value pointed to by `target`. In this last phase
-of checks, we verify that `src` points to a structure (data) of some type `S'
+of checks, we verify that `src` points to a structure (data) of some type `S`
 such that `S` holds a field named `field` of type `T`.
 
 ## Type Validator 
 
 The `type_validator.hpp` and its corresponding `.cpp` file implement the validation 
-of DVM type system.
-
-The validation is handled by the `ValidProgram` class and it's done in two steps. First, we check
-
-while the construction is handled by `type_builder.hpp` and its 
-`.cpp` file. 
-
-
-## Type Builder
-
-
-
+of DVM type system. The validation is handled by the `ValidProgram` class 
 The main entry point is the `TypeContext` class, which aggregates a 
-collection of high-level type definitions (`TypeOfData`) and, upon request, validates 
-them and produces a low-level, runtime-ready representation (`TypeMetadata`). This 
-representation, created using `type_validator.hpp` and `type_builder.hpp`, 
-contains execution-specific attributes such as built v-tables for OOP types. Any errors
-found during validation result in a `vm::code::ValidationError` subclass being thrown.
-
-This entire process is split into two main phases, validation and building, which are 
-managed by the `validateAndProduceTypeMetadata` function.
-
-### Validation Phase
-
-Before types can be used by the runtime, their definitions must be checked for
-correctness. This phase ensures the entire type system is sound. The checks are
-comprehensive and can be broadly categorized into hierarchy checks and individual
-type check.
-
+collection of high-level type definitions (`TypeOfData`). Any errors found during validation result in a `vm::code::ValidationError` subclass being thrown. The checks are can be broadly categorized into hierarchy checks and individual type check. 
 #### Hierarchy Checks
 
 These checks validate the relationships between types, primarily focusing on
@@ -181,17 +154,39 @@ inheritance and implementation structures.
     `implements` clause must correspond to an existing type definition within
     the context. The validator ensures there are no references to non-existent
     parent classes or interfaces.
+This is done by `vm::code::detail::validateTypesIntegrity()` function which expects a whole set of VM program types (`TypeContext`).
 
 #### Type-Specific Checks
 
-After confirming the hierarchy is a DAG, each type definition is checked
+After confirming the hierarchy is a DAG, each **newly added** type definition is checked
 individually against a set of rules.
-*   **Classes and Data Structs**:
+*   **Primitive type**:
+    *   **Invalid size**:
+    A primitive can't have a size of zero.
+*   **Pointer**
+    *   **Non-existing subtype**: 
+    A pointer can't reference a type which doesn't exist.
+*   **Fixed size table type**
+    *   **Non-existing subtype**: 
+    A static table can't store a type that don't exist.
+*   **Dynamic size table type**
+    *   **Non-existing subtype**: 
+    A dynamic table can't store a type that don't exist.
+*   **Function Type**
+    *   **Non-existing subtype**: 
+    All parameter types and the return type declared by the function exist in the program.
+*   **Variant Types**:
+    *   **Non-existing subtype**: 
+    All parameter types and the return type declared by the function exist in the program.
+    *   **Emptiness of variant alternatives**: 
+    A variant type must not be empty; it must define at least one possible
+    alternative type.
+*   **Classes and Data types**:
     *   **Duplicate Fields**:
     A class or data struct cannot have more than one field with the same
     name. This check is performed across the entire inheritance hierarchy;
     a subclass cannot redeclare a field that already exists in a superclass.
-*   **Classes and Interfaces**:
+*   **Classes and Interface types**:
     *   **Duplicate `implements`**:
     A class or interface cannot list the same interface more than once in
     its direct `implements` clause.
@@ -215,16 +210,14 @@ individually against a set of rules.
     A non-abstract class must provide an implementation for every virtual method
     inherited from its superclasses and interfaces. Abstract classes are exempt
     from this rule.
-*   **Variant Types**:
-    A variant type must not be empty; it must define at least one possible
-    alternative type.
+*   **Opaque types**:
+    Nothing is verified with opaque types.
+    <!-- TODOP: Maybe add an explanation on opaque types -->
+This step is done by the `vm::code::detail::validateType()` which verifies a single type in the full context of types.
 
-### Building Phase
+### Type builder 
 
-Once all validations pass, the `TypeContext` proceeds to build the `TypeMetadata`
-object. This involves `buildTypes` function which translates the high-level, 
-declarative `TypeOfData` into the low-level, concrete `vm::Type` representation 
-used in the VM's runtime.
+Once the verification step is done the last step before the types reach the execution engine(`VMThread`) is the type building phase. This phase assumes correctness of the type set and  translates the set of high-level types `TypeContext` (which stores `vm::code::TypeOfData` objects) into the low level representation `TypeMetadata` (which stores `vm::Type` objects). This translation has a few important steps:
 *   **Type Resolution**:
     All type names are resolved to direct references (`TypeRef` or `TypeCRef`).
     Previously, component types (e.g. types of fields in a data type) were held
@@ -239,3 +232,9 @@ used in the VM's runtime.
     the inheritance and implementation hierarchy to determine which function
     implementation corresponds to each virtual method. This v-table is then
     attached to the type's metadata, enabling dynamic dispatch at runtime.
+
+Building of the low-level type set can be done in two ways:
+`vm::code::detail::buildTypeMetadata()` builds the whole `TypeMetadata` object from the `TypeContext`. It assumes the `TypeContext` was verified beforehand.
+- `vm::code::detail::rebuildTypeMetadata()` on the other hand acts as an incremental builder
+of the `TypeMetadata`. It provides the functionality of "adding new types" to the existing `TypeMetadata`. This functionality is important, because we don't won't to lose the already used type metadata on every code injection, since the `vm::Block` used in runtime references the types which are stored in `TypeMetadata`. Rebuilding the whole type metadata from scratch on every injection would mean, that all blocks created before the injection would store dangling references and become invalid. Because of that, during code injection we expand the existing context instead of replacing it completely to ensure the valid state of the blocks.
+
