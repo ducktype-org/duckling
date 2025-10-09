@@ -213,7 +213,7 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Returns a view of block's data by the id.
+		 * @brief Returns a view of block's data
 		 */
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getBlockViewUnsafe(
 			Ref<Block> block
