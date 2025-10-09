@@ -19,4 +19,11 @@ Tests:
         Output:
           String: "1 \n2 \n1 \n2 \n3 \n2 \n4 \n5 \n1 \n3 \n1 \n2 \n2 \n3 \n4 \n5 \n1 \n5 \n4 \n2 \n"
         ExitCode: 0
+  default_args_advanced:
+    Cases:
+      default:
+        Output:
+          String: "101 \n105 \n109 \n"
+        ExitCode: 0
+
 

@@ -19,8 +19,8 @@ namespace vm {
 	 * @note VmValues can be used only in the processes which where used when initializing them.
 	 * They can't be transferred in between different processes.
 	 *
-	 * @note There is two ways to create a VmValue:
-	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. It's
+	 * @note There are two ways to create a VmValue:
+	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. Its
 	 * lifetime is guarded by VMProcess. All VmValues created by this function are deinitialized
 	 * when VmProcess is destroyed.
 	 * 2) with `VMProcess::createOwnedVmValue()` function - creates a

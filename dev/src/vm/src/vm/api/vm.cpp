@@ -152,4 +152,10 @@ namespace vm::api {
 		    .doRequest(SupervisorRequest(pid, request::ExitCodeRequest{}))
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
+
+	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DeinitAndValidate{}))
+		    .and_then(mapOrWrongResponse<response::Boolean>);
+	}
 }

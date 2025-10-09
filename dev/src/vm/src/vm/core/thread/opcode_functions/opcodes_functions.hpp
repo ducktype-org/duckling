@@ -93,29 +93,35 @@ namespace vm {
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
-		static __attribute__((always_inline)) void performFunctionCall(
-			const MicroInstruction*& instr,
-			std::byte*&              local_stack,
-			Frame*&                  frame,
-			VMThread&                thread,
-			usize                    function_id
-		) {
-			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.executing_program->getFunctions()[function_id];
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performFunctionCall(
+				const MicroInstruction*& instr,
+				std::byte*&              local_stack,
+				Frame*&                  frame,
+				VMThread&                thread,
+				usize                    function_id
+			) {
+			auto&      runtime_data     = thread.runtime_data;
+			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
+			const bool called_rets_void = called_func.result_type->getName() == "void";
 
 			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
+			auto shared_stack_space_size
+				= called_func.arg_size + !called_rets_void * called_func.ret_size;
 
 			// Save current registers and flow.
-			frame->instr                = instr + 1;
-			frame->local_stack          = local_stack;
-			frame->called_func_arg_size = called_func.arg_size;
-			frame->called_func_ret_size = called_func.ret_size;
+			frame->instr       = instr + 1;
+			frame->local_stack = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
 
 			frame++;
+			frame->current_function = &called_func;
 
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
@@ -134,7 +140,7 @@ namespace vm {
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
 			u64 arg_count              = called_func.parameters.size();
-			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
+			u64 shared_block_count     = !called_rets_void ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
 			frame->local_stack_head = shared_stack_space_size;
@@ -162,16 +168,25 @@ namespace vm {
 			}
 		}
 
-		static __attribute__((always_inline)) void performInit(
-			[[maybe_unused]] const MicroInstruction*& instr,
-			std::byte*&                               local_stack,
-			Frame*&                                   frame,
-			VMThread&                                 thread,
-			TypeID                                    type_id
-		) {
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performInit(
+				[[maybe_unused]] const MicroInstruction*& instr,
+				std::byte*&                               local_stack,
+				Frame*&                                   frame,
+				VMThread&                                 thread,
+				TypeID                                    type_id
+			) {
 			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+
+			thread.process_memory.increaseBlockRefcount(block
+			);  // so that nobody can delete our block
+
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
 			// local_offset mappings from the frame when we call a function. In the call, we just
 			// move the local_stack_head and new inits (which will happen after we return from a
@@ -184,6 +199,29 @@ namespace vm {
 			);
 			frame->block_stack.push_back(block);
 			frame->local_stack_head += type->getSize();
+		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performDeinit(
+				[[maybe_unused]] const MicroInstruction*& instr,
+				[[maybe_unused]] std::byte*&              local_stack,
+				Frame*&                                   frame,
+				VMThread&                                 thread
+			) {
+			auto block = frame->block_stack.back();
+			auto type  = thread.process_memory.getBlockType(block);
+			frame->block_stack.pop_back();
+
+			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
+			// will overwrite the old mappings
+
+			thread.process_memory.freeBlockData(block);
+			thread.process_memory.decreaseBlockRefcount(block);
+			frame->local_stack_head -= type->getSize();
 		}
 	};
 }  // namespace vm
