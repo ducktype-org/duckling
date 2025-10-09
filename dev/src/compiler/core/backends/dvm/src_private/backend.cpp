@@ -421,9 +421,6 @@ namespace compiler::backend_vm {
 			auto  result_name = base::StrID(base::strConcat("call", call_id, "_res").c_str());
 			base::Optional<vm::opargs::OpCodeArg> func_result_argument
 				= output.map([&](const auto o) {
-					  // "Można to w mapie zrobić, to nie ma znaczenia"
-				      // "Ja taki kod piszę regularnie"
-				      // ~ matihope 2025
 					  initType(ctx, result_name, called_func_signature.result_type);
 					  return modifyVarNameOpArg(o, result_name);
 				  });
