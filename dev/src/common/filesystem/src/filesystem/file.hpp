@@ -10,6 +10,7 @@
 
 namespace fs {
 
+	class FileManager;
 
 	/**
 	 * @brief Represents the type of a file.

@@ -43,7 +43,7 @@ MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 
 namespace lsp {
 
-	class SemanticToken {
+	class SemanticToken final {
 	public:
 		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
 

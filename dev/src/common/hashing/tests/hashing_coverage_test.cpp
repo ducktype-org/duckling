@@ -5,6 +5,8 @@
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <hashing/type_code.hpp>
+#include <hashing/type_hash_code.hpp>
+#include <hashing/type_unique_code.hpp>
 #include <tester/tester.hpp>
 
 #include <map>

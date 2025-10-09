@@ -12,7 +12,7 @@
 #include <utility>
 
 namespace lsp {
-	struct Definition {
+	struct Definition final {
 		std::string             uri;
 		std::pair<usize, usize> start;  // line, char
 		std::pair<usize, usize> end;    // line, char
