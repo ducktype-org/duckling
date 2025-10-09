@@ -29,6 +29,8 @@ namespace query::internal {
 			 */
 			NodeID parent;
 
+			NodeData() = delete;
+
 			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
 

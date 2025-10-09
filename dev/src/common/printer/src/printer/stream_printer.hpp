@@ -33,6 +33,8 @@
 
 #include "printer_content.hpp"
 
+#include <base/ints.hpp>
+
 #include <iostream>
 
 namespace printer {

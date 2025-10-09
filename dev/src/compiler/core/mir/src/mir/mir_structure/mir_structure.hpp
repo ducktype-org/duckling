@@ -492,9 +492,9 @@ namespace compiler::mir {
 
 		HSymID helios_id;
 
-		Function()                = delete;
-		Function(const Function&) = delete;
-		Function(Function&&)       noexcept = default;
+		Function()                    = delete;
+		Function(const Function&)     = delete;
+		Function(Function&&) noexcept = default;
 
 		Function& operator=(const Function&) = delete;
 

@@ -27,6 +27,8 @@ namespace query::internal {
 		QueryID q_id;
 		KeyHash hash;
 
+		NodeID() = delete;
+
 		NodeID(QueryID q_id, KeyHash hash): q_id(q_id), hash(hash) {}
 
 		constexpr bool operator==(const NodeID& r) const {

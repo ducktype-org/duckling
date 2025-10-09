@@ -113,6 +113,3 @@ namespace pst {
 	class AssignmentExprHolder;
 	class ForTypeExprHolder;
 }
-
-
-DEFAULT_BOX_PTR_DELETER_DECLARATION(pst::Attribute);

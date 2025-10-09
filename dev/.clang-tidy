@@ -57,7 +57,7 @@ CheckOptions:
   readability-identifier-naming.InlineNamespaceCase: lower_case
 
   # Constant like:
-  readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.ClassConstantCase: lower_case
   readability-identifier-naming.EnumConstantCase: CamelCase
   readability-identifier-naming.ConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantCase: UPPER_CASE
