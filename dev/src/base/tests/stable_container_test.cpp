@@ -4,7 +4,6 @@
 
 #include <tester/tester.hpp>
 
-#include <functional>
 #include <ranges>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(SomeID, usize);
