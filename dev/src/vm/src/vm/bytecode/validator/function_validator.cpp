@@ -592,36 +592,82 @@ class FunctionValidator {
 			variant_case_novalue(Op_div_l32_imm) {}
 			variant_case_novalue(Op_neg_l64) {}
 			variant_case_novalue(Op_neg_l32) {}
+
 			variant_case_novalue(Op_cmpEq_l64_l64) {}
 			variant_case_novalue(Op_cmpEq_l64_imm) {}
+			variant_case_novalue(Op_cmpNeq_l64_l64) {}
+			variant_case_novalue(Op_cmpNeq_l64_imm) {}
+
 			variant_case_novalue(Op_cmpEq_l32_l32) {}
 			variant_case_novalue(Op_cmpEq_l32_imm) {}
+			variant_case_novalue(Op_cmpNeq_l32_l32) {}
+			variant_case_novalue(Op_cmpNeq_l32_imm) {}
+
 			variant_case_novalue(Op_cmpEq_l8_l8) {}
 			variant_case_novalue(Op_cmpEq_l8_imm) {}
+			variant_case_novalue(Op_cmpNeq_l8_l8) {}
+			variant_case_novalue(Op_cmpNeq_l8_imm) {}
+
 			variant_case_novalue(Op_cmpG_l64_l64) {}
 			variant_case_novalue(Op_cmpG_l64_imm) {}
+			variant_case_novalue(Op_cmpGe_l64_l64) {}
+			variant_case_novalue(Op_cmpGe_l64_imm) {}
+
 			variant_case_novalue(Op_cmpG_l32_l32) {}
 			variant_case_novalue(Op_cmpG_l32_imm) {}
+			variant_case_novalue(Op_cmpGe_l32_l32) {}
+			variant_case_novalue(Op_cmpGe_l32_imm) {}
+
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
+			variant_case_novalue(Op_cmpGe_l8_l8) {}
+			variant_case_novalue(Op_cmpGe_l8_imm) {}
+
 			variant_case_novalue(Op_ucmpG_l64_l64) {}
 			variant_case_novalue(Op_ucmpG_l64_imm) {}
+			variant_case_novalue(Op_ucmpGe_l64_l64) {}
+			variant_case_novalue(Op_ucmpGe_l64_imm) {}
+
 			variant_case_novalue(Op_ucmpG_l32_l32) {}
 			variant_case_novalue(Op_ucmpG_l32_imm) {}
+			variant_case_novalue(Op_ucmpGe_l32_l32) {}
+			variant_case_novalue(Op_ucmpGe_l32_imm) {}
+
 			variant_case_novalue(Op_ucmpG_l8_l8) {}
 			variant_case_novalue(Op_ucmpG_l8_imm) {}
+			variant_case_novalue(Op_ucmpGe_l8_l8) {}
+			variant_case_novalue(Op_ucmpGe_l8_imm) {}
+
 			variant_case_novalue(Op_cmpL_l64_l64) {}
 			variant_case_novalue(Op_cmpL_l64_imm) {}
+			variant_case_novalue(Op_cmpLe_l64_l64) {}
+			variant_case_novalue(Op_cmpLe_l64_imm) {}
+
 			variant_case_novalue(Op_cmpL_l32_l32) {}
 			variant_case_novalue(Op_cmpL_l32_imm) {}
+			variant_case_novalue(Op_cmpLe_l32_l32) {}
+			variant_case_novalue(Op_cmpLe_l32_imm) {}
+
 			variant_case_novalue(Op_cmpL_l8_l8) {}
 			variant_case_novalue(Op_cmpL_l8_imm) {}
+			variant_case_novalue(Op_cmpLe_l8_l8) {}
+			variant_case_novalue(Op_cmpLe_l8_imm) {}
+
 			variant_case_novalue(Op_ucmpL_l64_l64) {}
 			variant_case_novalue(Op_ucmpL_l64_imm) {}
+			variant_case_novalue(Op_ucmpLe_l64_l64) {}
+			variant_case_novalue(Op_ucmpLe_l64_imm) {}
+
 			variant_case_novalue(Op_ucmpL_l32_l32) {}
 			variant_case_novalue(Op_ucmpL_l32_imm) {}
+			variant_case_novalue(Op_ucmpLe_l32_l32) {}
+			variant_case_novalue(Op_ucmpLe_l32_imm) {}
+
 			variant_case_novalue(Op_ucmpL_l8_l8) {}
 			variant_case_novalue(Op_ucmpL_l8_imm) {}
+			variant_case_novalue(Op_ucmpLe_l8_l8) {}
+			variant_case_novalue(Op_ucmpLe_l8_imm) {}
+
 			variant_case_novalue(Op_cmpNull_lptr) {}
 
 			variant_case_novalue(Op_fadd_l64_l64) {}
