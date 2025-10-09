@@ -1,0 +1,846 @@
+type primitive: CustomInt0 8
+type primitive: CustomInt1 8
+type primitive: CustomInt2 8
+type primitive: CustomInt3 8
+type primitive: CustomInt4 8
+type primitive: CustomInt5 8
+type primitive: CustomInt6 8
+type primitive: CustomInt7 8
+type primitive: CustomInt8 8
+type primitive: CustomInt9 8
+type primitive: CustomInt10 8
+type primitive: CustomInt11 8
+type primitive: CustomInt12 8
+type primitive: CustomInt13 8
+type primitive: CustomInt14 8
+type primitive: CustomInt15 8
+type primitive: CustomInt16 8
+type primitive: CustomInt17 8
+type primitive: CustomInt18 8
+type primitive: CustomInt19 8
+type primitive: CustomInt20 8
+type primitive: CustomInt21 8
+type primitive: CustomInt22 8
+type primitive: CustomInt23 8
+type primitive: CustomInt24 8
+type primitive: CustomInt25 8
+type primitive: CustomInt26 8
+type primitive: CustomInt27 8
+type primitive: CustomInt28 8
+type primitive: CustomInt29 8
+type primitive: CustomInt30 8
+type primitive: CustomInt31 8
+type primitive: CustomInt32 8
+type primitive: CustomInt33 8
+type primitive: CustomInt34 8
+type primitive: CustomInt35 8
+type primitive: CustomInt36 8
+type primitive: CustomInt37 8
+type primitive: CustomInt38 8
+type primitive: CustomInt39 8
+type primitive: CustomInt40 8
+type primitive: CustomInt41 8
+type primitive: CustomInt42 8
+type primitive: CustomInt43 8
+type primitive: CustomInt44 8
+type primitive: CustomInt45 8
+type primitive: CustomInt46 8
+type primitive: CustomInt47 8
+type primitive: CustomInt48 8
+type primitive: CustomInt49 8
+type primitive: CustomInt50 8
+type primitive: CustomInt51 8
+type primitive: CustomInt52 8
+type primitive: CustomInt53 8
+type primitive: CustomInt54 8
+type primitive: CustomInt55 8
+type primitive: CustomInt56 8
+type primitive: CustomInt57 8
+type primitive: CustomInt58 8
+type primitive: CustomInt59 8
+type primitive: CustomInt60 8
+type primitive: CustomInt61 8
+type primitive: CustomInt62 8
+type primitive: CustomInt63 8
+type primitive: CustomInt64 8
+type primitive: CustomInt65 8
+type primitive: CustomInt66 8
+type primitive: CustomInt67 8
+type primitive: CustomInt68 8
+type primitive: CustomInt69 8
+type primitive: CustomInt70 8
+type primitive: CustomInt71 8
+type primitive: CustomInt72 8
+type primitive: CustomInt73 8
+type primitive: CustomInt74 8
+type primitive: CustomInt75 8
+type primitive: CustomInt76 8
+type primitive: CustomInt77 8
+type primitive: CustomInt78 8
+type primitive: CustomInt79 8
+type primitive: CustomInt80 8
+type primitive: CustomInt81 8
+type primitive: CustomInt82 8
+type primitive: CustomInt83 8
+type primitive: CustomInt84 8
+type primitive: CustomInt85 8
+type primitive: CustomInt86 8
+type primitive: CustomInt87 8
+type primitive: CustomInt88 8
+type primitive: CustomInt89 8
+type primitive: CustomInt90 8
+type primitive: CustomInt91 8
+type primitive: CustomInt92 8
+type primitive: CustomInt93 8
+type primitive: CustomInt94 8
+type primitive: CustomInt95 8
+type primitive: CustomInt96 8
+type primitive: CustomInt97 8
+type primitive: CustomInt98 8
+type primitive: CustomInt99 8
+type primitive: CustomInt100 8
+type primitive: CustomInt101 8
+type primitive: CustomInt102 8
+type primitive: CustomInt103 8
+type primitive: CustomInt104 8
+type primitive: CustomInt105 8
+type primitive: CustomInt106 8
+type primitive: CustomInt107 8
+type primitive: CustomInt108 8
+type primitive: CustomInt109 8
+type primitive: CustomInt110 8
+type primitive: CustomInt111 8
+type primitive: CustomInt112 8
+type primitive: CustomInt113 8
+type primitive: CustomInt114 8
+type primitive: CustomInt115 8
+type primitive: CustomInt116 8
+type primitive: CustomInt117 8
+type primitive: CustomInt118 8
+type primitive: CustomInt119 8
+type primitive: CustomInt120 8
+type primitive: CustomInt121 8
+type primitive: CustomInt122 8
+type primitive: CustomInt123 8
+type primitive: CustomInt124 8
+type primitive: CustomInt125 8
+type primitive: CustomInt126 8
+type primitive: CustomInt127 8
+type primitive: CustomInt128 8
+type primitive: CustomInt129 8
+type primitive: CustomInt130 8
+type primitive: CustomInt131 8
+type primitive: CustomInt132 8
+type primitive: CustomInt133 8
+type primitive: CustomInt134 8
+type primitive: CustomInt135 8
+type primitive: CustomInt136 8
+type primitive: CustomInt137 8
+type primitive: CustomInt138 8
+type primitive: CustomInt139 8
+type primitive: CustomInt140 8
+type primitive: CustomInt141 8
+type primitive: CustomInt142 8
+type primitive: CustomInt143 8
+type primitive: CustomInt144 8
+type primitive: CustomInt145 8
+type primitive: CustomInt146 8
+type primitive: CustomInt147 8
+type primitive: CustomInt148 8
+type primitive: CustomInt149 8
+type primitive: CustomInt150 8
+type primitive: CustomInt151 8
+type primitive: CustomInt152 8
+type primitive: CustomInt153 8
+type primitive: CustomInt154 8
+type primitive: CustomInt155 8
+type primitive: CustomInt156 8
+type primitive: CustomInt157 8
+type primitive: CustomInt158 8
+type primitive: CustomInt159 8
+type primitive: CustomInt160 8
+type primitive: CustomInt161 8
+type primitive: CustomInt162 8
+type primitive: CustomInt163 8
+type primitive: CustomInt164 8
+type primitive: CustomInt165 8
+type primitive: CustomInt166 8
+type primitive: CustomInt167 8
+type primitive: CustomInt168 8
+type primitive: CustomInt169 8
+type primitive: CustomInt170 8
+type primitive: CustomInt171 8
+type primitive: CustomInt172 8
+type primitive: CustomInt173 8
+type primitive: CustomInt174 8
+type primitive: CustomInt175 8
+type primitive: CustomInt176 8
+type primitive: CustomInt177 8
+type primitive: CustomInt178 8
+type primitive: CustomInt179 8
+type primitive: CustomInt180 8
+type primitive: CustomInt181 8
+type primitive: CustomInt182 8
+type primitive: CustomInt183 8
+type primitive: CustomInt184 8
+type primitive: CustomInt185 8
+type primitive: CustomInt186 8
+type primitive: CustomInt187 8
+type primitive: CustomInt188 8
+type primitive: CustomInt189 8
+type primitive: CustomInt190 8
+type primitive: CustomInt191 8
+type primitive: CustomInt192 8
+type primitive: CustomInt193 8
+type primitive: CustomInt194 8
+type primitive: CustomInt195 8
+type primitive: CustomInt196 8
+type primitive: CustomInt197 8
+type primitive: CustomInt198 8
+type primitive: CustomInt199 8
+type primitive: CustomInt200 8
+type primitive: CustomInt201 8
+type primitive: CustomInt202 8
+type primitive: CustomInt203 8
+type primitive: CustomInt204 8
+type primitive: CustomInt205 8
+type primitive: CustomInt206 8
+type primitive: CustomInt207 8
+type primitive: CustomInt208 8
+type primitive: CustomInt209 8
+type primitive: CustomInt210 8
+type primitive: CustomInt211 8
+type primitive: CustomInt212 8
+type primitive: CustomInt213 8
+type primitive: CustomInt214 8
+type primitive: CustomInt215 8
+type primitive: CustomInt216 8
+type primitive: CustomInt217 8
+type primitive: CustomInt218 8
+type primitive: CustomInt219 8
+type primitive: CustomInt220 8
+type primitive: CustomInt221 8
+type primitive: CustomInt222 8
+type primitive: CustomInt223 8
+type primitive: CustomInt224 8
+type primitive: CustomInt225 8
+type primitive: CustomInt226 8
+type primitive: CustomInt227 8
+type primitive: CustomInt228 8
+type primitive: CustomInt229 8
+type primitive: CustomInt230 8
+type primitive: CustomInt231 8
+type primitive: CustomInt232 8
+type primitive: CustomInt233 8
+type primitive: CustomInt234 8
+type primitive: CustomInt235 8
+type primitive: CustomInt236 8
+type primitive: CustomInt237 8
+type primitive: CustomInt238 8
+type primitive: CustomInt239 8
+type primitive: CustomInt240 8
+type primitive: CustomInt241 8
+type primitive: CustomInt242 8
+type primitive: CustomInt243 8
+type primitive: CustomInt244 8
+type primitive: CustomInt245 8
+type primitive: CustomInt246 8
+type primitive: CustomInt247 8
+type primitive: CustomInt248 8
+type primitive: CustomInt249 8
+type primitive: CustomInt250 8
+type primitive: CustomInt251 8
+type primitive: CustomInt252 8
+type primitive: CustomInt253 8
+type primitive: CustomInt254 8
+type primitive: CustomInt255 8
+type primitive: CustomInt256 8
+
+
+type variant: CustomVariant8 {
+    CustomInt0,
+    CustomInt1,
+    CustomInt2,
+    CustomInt3,
+    CustomInt4,
+    CustomInt5,
+    CustomInt6,
+    CustomInt7,
+    CustomInt8,
+    CustomInt9,
+    CustomInt10,
+    CustomInt11,
+    CustomInt12,
+    CustomInt13,
+    CustomInt14,
+    CustomInt15,
+    CustomInt16,
+    CustomInt17,
+    CustomInt18,
+    CustomInt19,
+    CustomInt20,
+    CustomInt21,
+    CustomInt22,
+    CustomInt23,
+    CustomInt24,
+    CustomInt25,
+    CustomInt26,
+    CustomInt27,
+    CustomInt28,
+    CustomInt29,
+    CustomInt30,
+    CustomInt31,
+    CustomInt32,
+    CustomInt33,
+    CustomInt34,
+    CustomInt35,
+    CustomInt36,
+    CustomInt37,
+    CustomInt38,
+    CustomInt39,
+    CustomInt40,
+    CustomInt41,
+    CustomInt42,
+    CustomInt43,
+    CustomInt44,
+    CustomInt45,
+    CustomInt46,
+    CustomInt47,
+    CustomInt48,
+    CustomInt49,
+    CustomInt50,
+    CustomInt51,
+    CustomInt52,
+    CustomInt53,
+    CustomInt54,
+    CustomInt55,
+    CustomInt56,
+    CustomInt57,
+    CustomInt58,
+    CustomInt59,
+    CustomInt60,
+    CustomInt61,
+    CustomInt62,
+    CustomInt63,
+    CustomInt64,
+    CustomInt65,
+    CustomInt66,
+    CustomInt67,
+    CustomInt68,
+    CustomInt69,
+    CustomInt70,
+    CustomInt71,
+    CustomInt72,
+    CustomInt73,
+    CustomInt74,
+    CustomInt75,
+    CustomInt76,
+    CustomInt77,
+    CustomInt78,
+    CustomInt79,
+    CustomInt80,
+    CustomInt81,
+    CustomInt82,
+    CustomInt83,
+    CustomInt84,
+    CustomInt85,
+    CustomInt86,
+    CustomInt87,
+    CustomInt88,
+    CustomInt89,
+    CustomInt90,
+    CustomInt91,
+    CustomInt92,
+    CustomInt93,
+    CustomInt94,
+    CustomInt95,
+    CustomInt96,
+    CustomInt97,
+    CustomInt98,
+    CustomInt99,
+    CustomInt100,
+    CustomInt101,
+    CustomInt102,
+    CustomInt103,
+    CustomInt104,
+    CustomInt105,
+    CustomInt106,
+    CustomInt107,
+    CustomInt108,
+    CustomInt109,
+    CustomInt110,
+    CustomInt111,
+    CustomInt112,
+    CustomInt113,
+    CustomInt114,
+    CustomInt115,
+    CustomInt116,
+    CustomInt117,
+    CustomInt118,
+    CustomInt119,
+    CustomInt120,
+    CustomInt121,
+    CustomInt122,
+    CustomInt123,
+    CustomInt124,
+    CustomInt125,
+    CustomInt126,
+    CustomInt127,
+    CustomInt128,
+    CustomInt129,
+    CustomInt130,
+    CustomInt131,
+    CustomInt132,
+    CustomInt133,
+    CustomInt134,
+    CustomInt135,
+    CustomInt136,
+    CustomInt137,
+    CustomInt138,
+    CustomInt139,
+    CustomInt140,
+    CustomInt141,
+    CustomInt142,
+    CustomInt143,
+    CustomInt144,
+    CustomInt145,
+    CustomInt146,
+    CustomInt147,
+    CustomInt148,
+    CustomInt149,
+    CustomInt150,
+    CustomInt151,
+    CustomInt152,
+    CustomInt153,
+    CustomInt154,
+    CustomInt155,
+    CustomInt156,
+    CustomInt157,
+    CustomInt158,
+    CustomInt159,
+    CustomInt160,
+    CustomInt161,
+    CustomInt162,
+    CustomInt163,
+    CustomInt164,
+    CustomInt165,
+    CustomInt166,
+    CustomInt167,
+    CustomInt168,
+    CustomInt169,
+    CustomInt170,
+    CustomInt171,
+    CustomInt172,
+    CustomInt173,
+    CustomInt174,
+    CustomInt175,
+    CustomInt176,
+    CustomInt177,
+    CustomInt178,
+    CustomInt179,
+    CustomInt180,
+    CustomInt181,
+    CustomInt182,
+    CustomInt183,
+    CustomInt184,
+    CustomInt185,
+    CustomInt186,
+    CustomInt187,
+    CustomInt188,
+    CustomInt189,
+    CustomInt190,
+    CustomInt191,
+    CustomInt192,
+    CustomInt193,
+    CustomInt194,
+    CustomInt195,
+    CustomInt196,
+    CustomInt197,
+    CustomInt198,
+    CustomInt199,
+    CustomInt200,
+    CustomInt201,
+    CustomInt202,
+    CustomInt203,
+    CustomInt204,
+    CustomInt205,
+    CustomInt206,
+    CustomInt207,
+    CustomInt208,
+    CustomInt209,
+    CustomInt210,
+    CustomInt211,
+    CustomInt212,
+    CustomInt213,
+    CustomInt214,
+    CustomInt215,
+    CustomInt216,
+    CustomInt217,
+    CustomInt218,
+    CustomInt219,
+    CustomInt220,
+    CustomInt221,
+    CustomInt222,
+    CustomInt223,
+    CustomInt224,
+    CustomInt225,
+    CustomInt226,
+    CustomInt227,
+    CustomInt228,
+    CustomInt229,
+    CustomInt230,
+    CustomInt231,
+    CustomInt232,
+    CustomInt233,
+    CustomInt234,
+    CustomInt235,
+    CustomInt236,
+    CustomInt237,
+    CustomInt238,
+    CustomInt239,
+    CustomInt240,
+    CustomInt241,
+    CustomInt242,
+    CustomInt243,
+    CustomInt244,
+    CustomInt245,
+    CustomInt246,
+    CustomInt247,
+    CustomInt248,
+    CustomInt249,
+    CustomInt250,
+    CustomInt251,
+    CustomInt252,
+    CustomInt253,
+    CustomInt254,
+    CustomInt255
+}
+
+type variant: CustomVariant16 {
+    CustomInt0,
+    CustomInt1,
+    CustomInt2,
+    CustomInt3,
+    CustomInt4,
+    CustomInt5,
+    CustomInt6,
+    CustomInt7,
+    CustomInt8,
+    CustomInt9,
+    CustomInt10,
+    CustomInt11,
+    CustomInt12,
+    CustomInt13,
+    CustomInt14,
+    CustomInt15,
+    CustomInt16,
+    CustomInt17,
+    CustomInt18,
+    CustomInt19,
+    CustomInt20,
+    CustomInt21,
+    CustomInt22,
+    CustomInt23,
+    CustomInt24,
+    CustomInt25,
+    CustomInt26,
+    CustomInt27,
+    CustomInt28,
+    CustomInt29,
+    CustomInt30,
+    CustomInt31,
+    CustomInt32,
+    CustomInt33,
+    CustomInt34,
+    CustomInt35,
+    CustomInt36,
+    CustomInt37,
+    CustomInt38,
+    CustomInt39,
+    CustomInt40,
+    CustomInt41,
+    CustomInt42,
+    CustomInt43,
+    CustomInt44,
+    CustomInt45,
+    CustomInt46,
+    CustomInt47,
+    CustomInt48,
+    CustomInt49,
+    CustomInt50,
+    CustomInt51,
+    CustomInt52,
+    CustomInt53,
+    CustomInt54,
+    CustomInt55,
+    CustomInt56,
+    CustomInt57,
+    CustomInt58,
+    CustomInt59,
+    CustomInt60,
+    CustomInt61,
+    CustomInt62,
+    CustomInt63,
+    CustomInt64,
+    CustomInt65,
+    CustomInt66,
+    CustomInt67,
+    CustomInt68,
+    CustomInt69,
+    CustomInt70,
+    CustomInt71,
+    CustomInt72,
+    CustomInt73,
+    CustomInt74,
+    CustomInt75,
+    CustomInt76,
+    CustomInt77,
+    CustomInt78,
+    CustomInt79,
+    CustomInt80,
+    CustomInt81,
+    CustomInt82,
+    CustomInt83,
+    CustomInt84,
+    CustomInt85,
+    CustomInt86,
+    CustomInt87,
+    CustomInt88,
+    CustomInt89,
+    CustomInt90,
+    CustomInt91,
+    CustomInt92,
+    CustomInt93,
+    CustomInt94,
+    CustomInt95,
+    CustomInt96,
+    CustomInt97,
+    CustomInt98,
+    CustomInt99,
+    CustomInt100,
+    CustomInt101,
+    CustomInt102,
+    CustomInt103,
+    CustomInt104,
+    CustomInt105,
+    CustomInt106,
+    CustomInt107,
+    CustomInt108,
+    CustomInt109,
+    CustomInt110,
+    CustomInt111,
+    CustomInt112,
+    CustomInt113,
+    CustomInt114,
+    CustomInt115,
+    CustomInt116,
+    CustomInt117,
+    CustomInt118,
+    CustomInt119,
+    CustomInt120,
+    CustomInt121,
+    CustomInt122,
+    CustomInt123,
+    CustomInt124,
+    CustomInt125,
+    CustomInt126,
+    CustomInt127,
+    CustomInt128,
+    CustomInt129,
+    CustomInt130,
+    CustomInt131,
+    CustomInt132,
+    CustomInt133,
+    CustomInt134,
+    CustomInt135,
+    CustomInt136,
+    CustomInt137,
+    CustomInt138,
+    CustomInt139,
+    CustomInt140,
+    CustomInt141,
+    CustomInt142,
+    CustomInt143,
+    CustomInt144,
+    CustomInt145,
+    CustomInt146,
+    CustomInt147,
+    CustomInt148,
+    CustomInt149,
+    CustomInt150,
+    CustomInt151,
+    CustomInt152,
+    CustomInt153,
+    CustomInt154,
+    CustomInt155,
+    CustomInt156,
+    CustomInt157,
+    CustomInt158,
+    CustomInt159,
+    CustomInt160,
+    CustomInt161,
+    CustomInt162,
+    CustomInt163,
+    CustomInt164,
+    CustomInt165,
+    CustomInt166,
+    CustomInt167,
+    CustomInt168,
+    CustomInt169,
+    CustomInt170,
+    CustomInt171,
+    CustomInt172,
+    CustomInt173,
+    CustomInt174,
+    CustomInt175,
+    CustomInt176,
+    CustomInt177,
+    CustomInt178,
+    CustomInt179,
+    CustomInt180,
+    CustomInt181,
+    CustomInt182,
+    CustomInt183,
+    CustomInt184,
+    CustomInt185,
+    CustomInt186,
+    CustomInt187,
+    CustomInt188,
+    CustomInt189,
+    CustomInt190,
+    CustomInt191,
+    CustomInt192,
+    CustomInt193,
+    CustomInt194,
+    CustomInt195,
+    CustomInt196,
+    CustomInt197,
+    CustomInt198,
+    CustomInt199,
+    CustomInt200,
+    CustomInt201,
+    CustomInt202,
+    CustomInt203,
+    CustomInt204,
+    CustomInt205,
+    CustomInt206,
+    CustomInt207,
+    CustomInt208,
+    CustomInt209,
+    CustomInt210,
+    CustomInt211,
+    CustomInt212,
+    CustomInt213,
+    CustomInt214,
+    CustomInt215,
+    CustomInt216,
+    CustomInt217,
+    CustomInt218,
+    CustomInt219,
+    CustomInt220,
+    CustomInt221,
+    CustomInt222,
+    CustomInt223,
+    CustomInt224,
+    CustomInt225,
+    CustomInt226,
+    CustomInt227,
+    CustomInt228,
+    CustomInt229,
+    CustomInt230,
+    CustomInt231,
+    CustomInt232,
+    CustomInt233,
+    CustomInt234,
+    CustomInt235,
+    CustomInt236,
+    CustomInt237,
+    CustomInt238,
+    CustomInt239,
+    CustomInt240,
+    CustomInt241,
+    CustomInt242,
+    CustomInt243,
+    CustomInt244,
+    CustomInt245,
+    CustomInt246,
+    CustomInt247,
+    CustomInt248,
+    CustomInt249,
+    CustomInt250,
+    CustomInt251,
+    CustomInt252,
+    CustomInt253,
+    CustomInt254,
+    CustomInt255,
+    CustomInt256
+}
+
+type pointer: ptr_CustomInt0 CustomInt0
+type pointer: ptr_CustomInt1 CustomInt1
+type pointer: ptr_CustomInt256 CustomInt256
+
+function getCustomVariant8TypeTag0 { i64 } -> CustomVariant8 {
+    variantSetInner_lvnt_type ret_val, CustomInt0;
+
+    init_lany_type ptr, ptr_CustomInt0;
+    variantGetInner_lptr_lvnt ptr, ret_val;
+    ext_type CustomInt0;
+
+    cast_l64_type arg0, CustomInt0;
+    store_lptr_lany ptr, arg0;
+
+    ret;
+}
+
+function getCustomVariant8TypeTag1 { i64 } -> CustomVariant8 {
+    variantSetInner_lvnt_type ret_val, CustomInt1;
+
+    init_lany_type ptr, ptr_CustomInt1;
+    variantGetInner_lptr_lvnt ptr, ret_val;
+    ext_type CustomInt1;
+
+    cast_l64_type arg0, CustomInt1;
+    store_lptr_lany ptr, arg0;
+    ret;
+}
+
+function getCustomVariant16TypeTag0 { i64 } -> CustomVariant16 {
+    variantSetInner_lvnt_type ret_val, CustomInt0;
+
+    init_lany_type ptr, ptr_CustomInt0;
+    variantGetInner_lptr_lvnt ptr, ret_val;
+    ext_type CustomInt0;
+
+    cast_l64_type arg0, CustomInt0;
+    store_lptr_lany ptr, arg0;
+
+    ret;
+}
+
+
+function getCustomVariant16TypeTag1 { i64 } -> CustomVariant16 {
+    variantSetInner_lvnt_type ret_val, CustomInt1;
+
+    init_lany_type ptr, ptr_CustomInt1;
+    variantGetInner_lptr_lvnt ptr, ret_val;
+    ext_type CustomInt1;
+
+    cast_l64_type arg0, CustomInt1;
+    store_lptr_lany ptr, arg0;
+
+    ret;
+}
+
+function getCustomVariant16TypeTag256 { i64 } -> CustomVariant16 {
+    variantSetInner_lvnt_type ret_val, CustomInt256;
+
+    init_lany_type ptr, ptr_CustomInt256;
+    variantGetInner_lptr_lvnt ptr, ret_val;
+    ext_type CustomInt256;
+
+    cast_l64_type arg0, CustomInt256;
+    store_lptr_lany ptr, arg0;
+
+    ret;
+}

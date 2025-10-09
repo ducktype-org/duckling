@@ -1,6 +1,6 @@
 #pragma once
 
-#include <version>
+#include <version>  // IWYU pragma: keep
 
 #ifdef __cpp_lib_stacktrace
 

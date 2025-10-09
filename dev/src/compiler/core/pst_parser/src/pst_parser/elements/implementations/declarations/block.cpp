@@ -28,5 +28,10 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& Block::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, optional_name);
+		return partial_hash;
+	}
+
 	void Block::acceptVisitor(PstVisitor& visitor) const { visitor.visitBlock(*this); }
 }

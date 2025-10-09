@@ -19,6 +19,10 @@ namespace pst {
 		out << "]}";
 	}
 
+	LangElement::HashAlg& TuplePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void TuplePattern::acceptVisitor(PstVisitor& visitor) const {
 		visitor.visitTuplePattern(*this);
 	}

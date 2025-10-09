@@ -49,6 +49,8 @@ namespace vm::api {
 			u64 instr_number;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
 		};
+
+		using Boolean = bool;
 	}
 
 	using Response = std::variant<
@@ -58,5 +60,6 @@ namespace vm::api {
 		response::Empty,
 		response::CodePosition,
 		response::VmValue,
+		response::Boolean,
 		ExitValue>;
 }
