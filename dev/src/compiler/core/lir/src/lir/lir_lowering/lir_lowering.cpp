@@ -227,12 +227,15 @@ namespace compiler::lir {
 			}
 
 			/**
-			 * @brief Converts MIR location to LIR location.
-			 *
-			 * @param loc
-			 * @return LIRValue
+			 * @brief Maps a single MIR location to an optional LIR location.
+			 * @note Discards information-less locations, e.g. variables of unit type.
+			 * @param loc The MIR location.
+			 * @return The optional LIR location, possibly discarded.
 			 */
-			LIRValue getLocation(const mir::MIRValue& loc) {
+			base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) {
+				// Discard information-less location.
+				if (!loc.carriesInformation()) return {};
+
 				variant_match(loc.getVariant()) {
 					variant_case_novalue(mir::MirUnitConst) {
 						CORE_PANIC("Cannot get location of MIR unit.");
@@ -310,16 +313,18 @@ namespace compiler::lir {
 
 			/**
 			 * @brief Maps list of MIR locations to LIR locations.
+			 * @note Discards information-less locations, e.g. variables of unit type.
 			 *
-			 * @param locs
-			 * @return std::vector<LIRValue>
+			 * @param locs The MIR location.
+			 * @return The LIR locations, possibly with some discarded.
 			 */
 			std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs) {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs)
-					// Discard data-less locations.
-					if (loc.carriesInformation()) result.push_back(getLocation(loc));
+					// Discard information-less locations.
+					if (auto lir_loc = getLocation(loc); lir_loc.has_value())
+						result.push_back(lir_loc.value());
 				return result;
 			}
 
@@ -400,12 +405,16 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				case mir::Operation::Assign: {
+					CORE_ASSERT(
+						mir_instruction.arguments.size() == 1, "Assign should have one argument"
+					);
+					auto arg     = mir_instruction.arguments[0];
+					auto lir_arg = getLocation(arg);
 					// The assignment is discarded if it operates on no information.
-					if (mir_instruction.arguments.at(0).carriesInformation()) {
+					if (lir_arg.has_value()) {
 						auto output = getOutput(mir_instruction.output);
-						auto args   = getLocations(mir_instruction.arguments);
 						curr_block->instructions.emplace_back(
-							Operation::Assign, output, std::move(args)
+							Operation::Assign, output, std::vector{ lir_arg.value() }
 						);
 					}
 					return curr_block;
@@ -427,7 +436,6 @@ namespace compiler::lir {
 				case mir::Operation::BooleanNot: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
-
 					auto output = getOutput(mir_instruction.output);
 
 					auto args = getLocations(mir_instruction.arguments);
@@ -645,7 +653,9 @@ namespace compiler::lir {
 		std::vector<tsl::TypeLayout> parameter_types;
 		parameter_types.reserve(type.getParameterTypes().size());
 		for (const auto& param: type.getParameterTypes())
-			parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+			// Discard information-less parameters from LIR function parameter lists.
+			if (param.getType().carriesInformation())
+				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,

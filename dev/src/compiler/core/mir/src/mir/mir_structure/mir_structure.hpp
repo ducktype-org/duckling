@@ -97,20 +97,14 @@ namespace compiler::mir {
 	 */
 	bool isTerminating(Operation);
 
-	struct MirUnitConst final {
-		bool operator==(const MirUnitConst& other) const = default;
-	};
+	struct MirUnitConst final {};
 
 	struct MirIntegerConst final {
 		i64 value;
-
-		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
 	struct MirBoolConst final {
 		bool value;
-
-		bool operator==(const MirBoolConst& other) const = default;
 	};
 
 	/**
@@ -118,8 +112,6 @@ namespace compiler::mir {
 	 */
 	struct MirFunctionLiteral final {
 		helios::SymID helios_id;
-
-		bool operator==(const MirFunctionLiteral& other) const = default;
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
@@ -252,8 +244,6 @@ namespace compiler::mir {
 			  helios_id(helios_id),
 			  type(type) {}
 
-		bool operator==(const MirGlobal& other) const = default;
-
 		void debugPrint(std::ostream& output, bool detailed = false) const;
 
 		/**
@@ -300,8 +290,6 @@ namespace compiler::mir {
 		MIRValue(MirFunctionLiteral value): value(value) {}
 
 		MIRValue(MirGlobal value): value(value) {}
-
-		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -360,8 +348,6 @@ namespace compiler::mir {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
 		LocalRef local;
-
-		bool operator==(const OperationFlag& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
@@ -431,8 +417,6 @@ namespace compiler::mir {
 			  flags(std::move(flags)),
 			  scope(scope) {}
 
-		bool operator==(const Instruction& other) const = default;
-
 		void debugPrint(std::ostream& output) const;
 	};
 
@@ -468,8 +452,6 @@ namespace compiler::mir {
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
-
-		bool operator==(const Block& other) const = default;
 
 		[[nodiscard]]
 		ScopeRef beginScope() const;

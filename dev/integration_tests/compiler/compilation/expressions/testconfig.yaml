@@ -18,7 +18,13 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-  units:
+  unit_simple:
+    Cases:
+      default:
+        Output:
+          String: "1 \n"
+        ExitCode: 0
+  unit_simple_multiple_modules:
     Cases:
       default:
         Output:

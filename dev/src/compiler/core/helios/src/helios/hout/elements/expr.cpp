@@ -42,7 +42,7 @@ namespace compiler::helios::code {
 				  // The unit expression *may* represent the type instead of the unit value,
 				  // but by default we assume it is the value, and lazily convert it to a type,
 				  // when it turns out that we expected a type instead of a value.
-				  // TODO: (this PR), determine whether we need to distinguish between the two.
+				  // @TODO: #1373 reconsider this approach.
 				  ctx.query<tsh::QueryUnitType>({}),
 				  tsh::ReferenceKind::Direct,
 				  tsh::Mutability::Immutable,

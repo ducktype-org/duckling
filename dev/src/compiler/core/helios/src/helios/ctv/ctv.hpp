@@ -61,6 +61,7 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Retrieves the value of type from the CTV.
+		 * @note Possibly converts tuple and unit values to types. @TODO: #1373 reconsider this.
 		 * @param ctx The query context for lifting unit value to unit type.
 		 * @return A type value or an empty optional if the CTV didn't store a type.
 		 */

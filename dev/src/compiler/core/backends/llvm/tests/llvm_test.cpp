@@ -181,7 +181,8 @@ private:
 		runTestForModule("modules/units/unit2", 2, 2);
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
-		runTestForModule("modules/units/unit-simple", 2, 3);
+		runTestForModule("modules/units/unit_simple", 2, 3);
+		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 };
 
