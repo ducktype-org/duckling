@@ -46,6 +46,10 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	LangElement::HashAlg& BlockExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void BlockExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitBlockExpr(*this);
 	}

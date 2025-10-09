@@ -48,6 +48,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	LangElement::HashAlg& TemplateSpecifier::addElementDataToStableHash(HashAlg& partial_hash
+	) const {
+		return partial_hash;
+	}
+
 	void TemplateSpecifier::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitTemplateSpecifier(*this);
 	}

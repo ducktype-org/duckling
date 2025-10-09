@@ -13,6 +13,18 @@ namespace pst {
 		struct CaseBranch {
 			NAMED_CHILD_OPT(condition, UniversalExprHolder);
 			NAMED_CHILD(result, UniversalExprHolder);
+
+			/**
+			 * @note This method doesn't add all the data from CaseBranch, just the readable data
+			 * without accessing.
+			 * It is not consistent with intended behavior of addToHash, but It is really useful
+			 * because it lets us use the library defined vector hashing
+			 */
+			friend constexpr void addToHash(
+				hashing::hash_algorithm auto& h, const CaseBranch& t
+			) noexcept {
+				addToHash(h, t.condition.has_value());
+			}
 		};
 
 		struct CaseBranchView {
@@ -28,6 +40,9 @@ namespace pst {
 		 * optional and the result.
 		 */
 		std::vector<CaseBranch> branches;
+
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit MatchCase(dia::SourcePosition& pos): NotStmt(pos) {

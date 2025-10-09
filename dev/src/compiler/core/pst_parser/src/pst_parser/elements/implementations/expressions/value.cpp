@@ -70,6 +70,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	LangElement::HashAlg& ExprValue::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, number);
+		return partial_hash;
+	}
+
 	void ExprValue::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitExprValue(*this);
 	}

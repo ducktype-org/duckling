@@ -7,9 +7,6 @@ namespace pst::expr {
 	/**
 	 * @brief Element representing template initialization in an expression. For example:
 	 * `list:{i32}`.
-	 *
-	 * @note For now the inner expression is just a comma expression, this should probably have
-	 * it's own parsing in the future
 	 */
 	class TemplateSpecifier final: public ExprElement {
 		NAMED_CHILD(inner, TemplateList);
@@ -20,8 +17,9 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 		~TemplateSpecifier() override = default;
-		void dprint(std::ostream& out) const final;
-		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		void     dprint(std::ostream& out) const final;
+		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
