@@ -77,6 +77,10 @@ namespace compiler::helios::code {
 			 */
 			base::Optional<base::Box<Expr>> node;
 
+			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
+				node = makeBox<LiteralUnitExpr>(ctx);
+			}
+
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
 				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
