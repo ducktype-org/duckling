@@ -204,7 +204,7 @@ function main { i64, ptr_argv } -> i64 {
 	call_func 	integers;
 	output_l64 	test_ret_val;
 	
-	call_func floats;
+	call_func 	floats;
 	output_l64 	test_ret_val;
 
 	deinit;
