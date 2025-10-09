@@ -115,7 +115,7 @@ namespace vm {
 		}
 
 		template<class T>
-		base::Optional<base::CRef<T>> get() const {
+		base::Optional<CRef<T>> get() const {
 			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
 			return {};
 		}
@@ -139,6 +139,8 @@ namespace vm {
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+		[[nodiscard]]
+		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 
 		// inheritance
 		[[nodiscard]]

@@ -32,7 +32,9 @@ vm::VmValue::VmValue(VMProcess& process, TypeCRef type):
 	  my_process(&process),
 	  memory(&process.memory),
 	  type(type),
-	  pointer(memory->allocateDummy(type, data.data()), 0) {}
+	  pointer(memory->allocateDummy(type, data.data()), 0) {
+	memory->increaseBlockRefcount(pointer.getBlock());
+}
 
 vm::VmValue::VmValue(VMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
 	importData(src);
@@ -47,7 +49,8 @@ void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, p
 void vm::VmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
 void vm::VmValue::freeData() {
-	memory->freeBlock(pointer.getBlock());
+	memory->freeBlockData(pointer.getBlock());
+	memory->decreaseBlockRefcount(pointer.getBlock());
 	pointer = Pointer::null();
 }
 

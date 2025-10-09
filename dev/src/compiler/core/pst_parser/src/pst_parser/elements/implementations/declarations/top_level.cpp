@@ -52,4 +52,16 @@ namespace pst {
 		}
 		out << "]";
 	}
+
+	LangElement::HashAlg& TopLevel::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, statements.size());
+		addToHash(partial_hash, no_symbol.size());
+		addToHash(partial_hash, transparent.size());
+		std::vector<std::pair<std::string, usize>> symbols_available_data;
+		for (auto& [name, vec]: by_symbol)
+			symbols_available_data.emplace_back(name.strView(), vec.size());
+		std::ranges::sort(symbols_available_data);
+		addToHash(partial_hash, symbols_available_data);
+		return partial_hash;
+	}
 }

@@ -9,9 +9,9 @@ class DynamicTableVmTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(twoDim);
 		TESTER_ADD_TEST(dynArrSum);
 		TESTER_ADD_TEST(lea);
-		TESTER_ADD_TEST(twoDim);
 		TESTER_ADD_TEST(nonInstantiableDynTable);
 		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);

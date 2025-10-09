@@ -28,7 +28,7 @@ namespace compiler::helios {
 		auto call_arg_opt = arg.unlock(ctx).dynamicCast<pst::CallArgument>();
 		if (!call_arg_opt) return query::QError(errors::Failed());
 
-		if (call_arg_opt.value()->getArgName().has_value())
+		if (call_arg_opt.value()->getArgName().value.has_value())
 			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
 
 		auto expr_holder_opt

@@ -45,16 +45,20 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		auto getOffset() {
+		auto getOffset() const {
 			return offset;
 		}
 
 		[[nodiscard]]
-		auto isNull() -> bool {
+		auto isNull() const -> bool {
 			return block == nullptr;
 		}
 
+		operator bool() const { return !isNull(); }
+
 		static Pointer null() { return {}; }
+
+		constexpr bool operator==(const Pointer&) const = default;
 	};
 
 	static_assert(sizeof(Pointer) == 16);

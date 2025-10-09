@@ -569,6 +569,7 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_g8) {}
 			variant_case_novalue(Op_mov_lptr_gptr) {}
 			variant_case_novalue(Op_mov_lptr_lptr) {}
+			variant_case_novalue(Op_setNull_lptr) {}
 			variant_case_novalue(Op_add_l64_l64) {}
 			variant_case_novalue(Op_add_l64_imm) {}
 			variant_case_novalue(Op_add_l32_l32) {}
