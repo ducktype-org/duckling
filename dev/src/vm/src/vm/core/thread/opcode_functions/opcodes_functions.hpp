@@ -2,11 +2,11 @@
 
 #include "../config.hpp"
 
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
-#include "vm/core/process/type_metadata/type.hpp"
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -232,15 +232,15 @@ namespace vm {
 
 		static TypeCRef getVariantTypeFromPointer(VMThread& thread, Pointer variant_pointer) {
 			// We may be pointing to a table with structs, that contain variants somewhere inside.
-			// This functions is very tricky, but in case of variants we can locate them using the method below.
-			// Thanks to type_tag and
-			// @TODO: Okay, screw this, we are going to use long long always
-			auto block_type   = thread.process_memory.getBlockType(variant_pointer.getBlock());
-			if (block_type->getKind() == Type::Kind::Variant) {
+			// This functions is very tricky, but in case of variants we can locate them using the
+			// method below. Thanks to type_tag and
+		 	// @TODO: #1369 Remove this function
+			auto block_type = thread.process_memory.getBlockType(variant_pointer.getBlock());
+			if (block_type->getKind() == Type::Kind::Variant)
 				return block_type;
-			} else {
-				return block_type->getTypeAtOffsetRecursive(variant_pointer.getOffset()).value();
-			}
+			else
+				return block_type->getNonCompoundTypeAtOffsetRecursive(variant_pointer.getOffset())
+				    .value();
 		}
 
 		static
@@ -252,7 +252,7 @@ namespace vm {
 
 			auto wanted_type = thread.executing_program->getTypes().at(wanted_type_id);
 
-			auto variant_type = getVariantTypeFromPointer(thread, variant_pointer);
+			auto variant_type          = getVariantTypeFromPointer(thread, variant_pointer);
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
 
 			// Set the view block

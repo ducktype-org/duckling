@@ -7,9 +7,6 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/kinds/data.hpp"
-#include "vm/core/process/type_metadata/kinds/fixed_size_table.hpp"
-#include "vm/core/process/type_metadata/kinds/variant.hpp"
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
@@ -315,40 +312,35 @@ namespace vm {
 		});
 	}
 
-	base::Optional<TypeCRef> Type::getTypeAtOffsetRecursive(Offset offset) const {
+	base::Optional<TypeCRef> Type::getNonCompoundTypeAtOffsetRecursive(Offset offset) const {
 		variant_match(kind) {
 			variant_case(kind::Data, data) {
 				for (const auto& field: data.fields)
 					if (field.offset <= offset && offset < field.offset + field.type->size)
-						return field.type->getTypeAtOffsetRecursive(offset - field.offset);
+						return field.type->getNonCompoundTypeAtOffsetRecursive(
+							offset - field.offset
+						);
 				return {};
 			}
 			variant_case(kind::DynamicTable, table) {
-				if (offset == 0 || table.inner_type->size % offset == 0)
-					return table.inner_type->getTypeAtOffsetRecursive(
+				if (offset % table.inner_type->size == 0)
+					return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
 						offset % table.inner_type->size
 					);
 				return {};
 			}
 			variant_case(kind::FixedSizeTable, table) {
-				if (offset == 0
-				    || (table.inner_type->size % offset == 0
-				        && offset < table.element_count * table.inner_type->size))
-					return table.inner_type->getTypeAtOffsetRecursive(
+				if (offset % table.inner_type->size == 0
+				    && offset < table.element_count * table.inner_type->size)
+					return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
 						offset % table.inner_type->size
 					);
 				return {};
 			}
-			variant_case(kind::Variant, variant) {
-				usize idx      = 0;
-				usize size_sum = variant.type_tag_size_bytes;
-				while (size_sum < offset && idx < variant.alternatives.size())
-					size_sum += variant.alternatives[idx++]->size;
-				if (size_sum == offset) return variant.alternatives[idx];
+			variant_default {
+				if (offset == 0) return this;
 				return {};
 			}
-
-			variant_default { return {}; }
 		}
 		CORE_UNREACHABLE();
 	}

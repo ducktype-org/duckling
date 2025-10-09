@@ -673,7 +673,7 @@ namespace vm {
 		{
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
-			auto       variant_block        = frame->block_stack[variant_block_index];
+			auto       variant_block       = frame->block_stack[variant_block_index];
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
 				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), TypeID(instr[1].arg0))

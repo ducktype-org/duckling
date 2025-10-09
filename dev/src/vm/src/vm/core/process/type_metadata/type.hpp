@@ -139,11 +139,13 @@ namespace vm {
 		/**
 		 * @brief Find what type is located at offset.
 		 * Useful when we have a pointer and we want to know what type it points to.
-		 * @note It cannot be used to locate certain types, e.g. fixed_size_table type, as it
-		 * always steps into types recursively.
-		 * @note Offset has to precisely match the nested type's position at the end of the recursion.
+		 * @note It cannot be used to locate certain types, e.g. fixed_size_table, dynamic_table,
+		 * data types, as it always steps into those types recursively.
+		 * @note Offset has to precisely match the nested type's position at the end of the
+		 * recursion.
+		 * @TODO: #1369 Remove this method
 		 */
-		base::Optional<TypeCRef> getTypeAtOffsetRecursive(Offset offset) const;
+		base::Optional<TypeCRef> getNonCompoundTypeAtOffsetRecursive(Offset offset) const;
 
 		// data
 		[[nodiscard]]
