@@ -2,8 +2,13 @@
 
 #include "../config.hpp"
 
+#include <base/exceptions.hpp>
+#include <base/raw_view.hpp>
+
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
 
 #ifdef USE_TAIL_CALLS
@@ -223,5 +228,90 @@ namespace vm {
 			thread.process_memory.decreaseBlockRefcount(block);
 			frame->local_stack_head -= type->getSize();
 		}
+
+		static TypeCRef getVariantTypeFromPointer(VMThread& thread, Pointer variant_pointer) {
+			// We may be pointing to a table with structs, that contain variants somewhere inside.
+			// This functions is very tricky, but in case of variants we can locate them using the
+			// method below. Thanks to type_tag and
+			// @TODO: #1369 Remove this function
+			auto block_type = thread.process_memory.getBlockType(variant_pointer.getBlock());
+			if (block_type->getKind() == Type::Kind::Variant)
+				return block_type;
+			else
+				return block_type->getNonCompoundTypeAtOffsetRecursive(variant_pointer.getOffset())
+				    .value();
+		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			setVariantType(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
+
+			auto wanted_type = thread.executing_program->getTypes().at(wanted_type_id);
+
+			auto variant_type          = getVariantTypeFromPointer(thread, variant_pointer);
+			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
+
+			// Set the view block
+			auto nested_data_ptr = variant_pointer;
+			nested_data_ptr.movePointer(static_cast<i64>(variant_type_tag_size));
+			thread.process_memory.setNestedViewBlock(nested_data_ptr, wanted_type);
+
+			// Find type index
+			auto  alternatives      = variant_type->getVariantAlternatives().value();
+			usize alternative_index = 0;
+			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
+				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+
+			// Write the type tag
+			auto variant_block_data_view
+				= thread.process_memory.getBlockViewUnsafe(variant_pointer.getBlock());
+			auto variant_data_view = base::ModRawView(
+				variant_block_data_view.getBegin() + variant_pointer.getOffset(),
+				variant_type->getSize()
+			);
+
+			switch (variant_type_tag_size) {
+			case 1:
+				// byte, using uint8_t below since byte is not std::integral
+				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
+				break;
+			case 2:
+				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_index));
+				break;
+			case 4:
+				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_index));
+				break;
+			case 8:
+				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
+				break;
+			default:
+				CORE_PANIC("Invalid variant size: ", variant_type_tag_size);
+			}
+		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			Pointer
+			getVariantPtr(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
+			auto variant_type = getVariantTypeFromPointer(thread, variant_pointer);
+			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
+
+			auto view_block_ref = thread.process_memory.getNestedViewBlock(
+				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),
+				wanted_type
+			);
+
+			match_optional(view_block_ref.toOpt()) {
+				opt_some(view_block) { return Pointer{ view_block, 0 }; }
+				opt_none { return Pointer::null(); }
+			}
+			CORE_UNREACHABLE();
+		}
 	};
+
 }  // namespace vm
