@@ -113,7 +113,6 @@ namespace vm::code {
 
 	/**
 	 * @brief Represents a variant of types.
-	 * @note This is a partial feature, as there are no bytecode instructions regarding variants.
 	 */
 	struct VariantType final: ElementBase {
 		VariantType() = default;
