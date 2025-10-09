@@ -67,6 +67,4 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]] base::Optional<tsh::SymbolType<>> asType(query::Context& ctx) const;
 	};
-
-
 }
