@@ -44,9 +44,6 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <algorithm>
-#include <ranges>
-
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS

@@ -7,8 +7,6 @@
 
 #include <vm/core/process/exceptions.hpp>
 
-#include <unicode/uchar.h>
-
 namespace vm {
 
 	class Block;
