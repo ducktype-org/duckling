@@ -16,6 +16,7 @@ public:
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
 		TESTER_ADD_TEST(check32BitsInstructions);
+		TESTER_ADD_TEST(check64BitsInstructions);
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
@@ -38,7 +39,9 @@ private:
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0", {}); }
 
-	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "4", {}); }
+	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "1", {}); }
+
+	void check64BitsInstructions() { runTestOnVm("64bits.dbc", "", "1", {}); }
 
 	void pointerTest() {
 		for (auto filename:

@@ -1,49 +1,88 @@
 function foo {} -> i64 {
-    init_lany_type		a, i64;
-    init_lany_type		b, i64;
+	init_lany_type		a, i64;
+	init_lany_type		b, i64;
+	init_lany_type		c, i64;
 
-    mov_l64_imm 		b, 4602678819172646912;		# b = 0.5 (double)
-    mov_l64_l64 		a, b;				# a = 0.5
+	# ======== Arithmetic =========
+	mov_l64_imm 		b, 4602678819172646912;		# b = 0.5
+	mov_l64_l64 		a, b;				        # a = 0.5
 
-    fadd_l64_l64 		a, b;				# a = 1.0
-    fadd_l64_imm		a, 4607182418800017408;		# a = 2.0 (add 1.0)
+	fadd_l64_l64 		a, b;				        # a = 1.0
+	fadd_l64_imm		a, 4607182418800017408;		# a = 1.0 + 1.0 -> a = 2.0
 
-    cmpEq_l64_imm 		a, 4611686018427387904;		# a == 2.0
-    jmpIfNot_label 	fail;
+	fcmpEq_l64_imm 		a, 4611686018427387904;		# a == 2.0
+	jmpIfNot_label 	fail;
 
-    fsub_l64_l64 		a, b;				# a = 1.5
-    fsub_l64_imm 		a, 4602678819172646912;		# a = 1.0 (subtract 0.5)
+	fsub_l64_l64 		a, b;				        # a = 2.0 - 0.5 -> a = 1.5
+	fsub_l64_imm 		a, 4602678819172646912;		# a = 1.5 - 0.5 -> a = 1.0
 
-    cmpEq_l64_imm 		a, 4607182418800017408;		# a == 1.0
-    jmpIfNot_label 	fail;
+	fcmpEq_l64_imm 		a, 4607182418800017408;		# a == 1.0
+	jmpIfNot_label 	fail;
 
-    fmul_l64_l64 		a, b;				# a = 0.5
-    fmul_l64_imm 		a, 4602678819172646912;		# a = 0.25 (multiply by 0.5)
+	fmul_l64_l64 		a, b;				        # a = 1.0 * 0.5 -> a = 0.5
+	fmul_l64_imm 		a, 4602678819172646912;		# a = 0.5 * 0.5 -> a = 0.25
 
-    cmpEq_l64_imm 		a, 4598175219545276416;		# a == 0.25
-    jmpIfNot_label 	fail;
+	fcmpEq_l64_imm 		a, 4598175219545276416;		# a == 0.25
+	jmpIfNot_label 	fail;
 
-    fdiv_l64_l64 		a, b;				# a = 0.5
-    fdiv_l64_imm 		a, 4607182418800017408;		# a = 0.5 (divide by 1.0)
+	fdiv_l64_l64 		a, b;				        # a = 0.25 / 0.5 -> a = 0.5
+	fdiv_l64_imm 		a, 4607182418800017408;		# a = 0.5 / 1.0 -> a = 0.5
 
-    fneg_l64 			a;					# a = -0.5
-	fneg_l64			b;					# b = -0.5
+	fneg_l64 			a;					        # a = -0.5
+	mov_l64_imm 		b, 4602678819172646912;		# b = 0.5
+	fneg_l64			b;					        # b = -0.5
 
-    cmpEq_l64_l64 		a, b;
-    jmpIfNot_label 		fail;
+	fcmpEq_l64_l64 		a, b;                       # -0.5 == -0.5
+	jmpIfNot_label 		fail;
+	
+	# ======== Comparisons =========
+	mov_l64_imm		a, 4626322717216342016;		    # a = 20.0
+	mov_l64_imm		b, 4621819117588971520;		    # b = 10.0
+	mov_l64_l64		c, b;				            # c = 10.0
 
-    fneg_l64			a;
+	fcmpG_l64_l64		a, b;				        # 20.0 > 10.0
+	jmpIfNot_label	fail;
+	fcmpG_l64_imm		b, 4626322717216342016;		# 10.0 > 20.0
+	jmpIf_label		fail;
 
-    mov_l64_l64 		ret_val, a;
-    ret;
+	fcmpL_l64_l64		b, a;				        # 10.0 < 20.0
+	jmpIfNot_label	fail;
+	fcmpL_l64_imm		a, 4621819117588971520;		# 20.0 < 10.0
+	jmpIf_label		fail;
 
-    label fail;
-    init_lany_type		tmp, i64;
-    mov_l64_imm 		tmp, 1235;
-    output_l64  		tmp;
-    mov_l64_l64 		ret_val, a;
+	fcmpGe_l64_l64		a, b;				        # 20.0 >= 10.0
+	jmpIfNot_label	fail;
+	fcmpGe_l64_l64		b, c;				        # 10.0 >= 10.0
+	jmpIfNot_label	fail;
+	fcmpGe_l64_imm		b, 4626322717216342016;		# 10.0 >= 20.0
+	jmpIf_label		fail;
 
-    ret;
+	fcmpLe_l64_l64		b, a;				        # 10.0 <= 20.0
+	jmpIfNot_label	fail;
+	fcmpLe_l64_l64		b, c;				        # 10.0 <= 10.0
+	jmpIfNot_label	fail;
+	fcmpLe_l64_imm		a, 4621819117588971520;		# 20.0 <= 10.0
+	jmpIf_label		fail;
+
+	fcmpNeq_l64_l64		a, b;				        # 20.0 != 10.0
+	jmpIfNot_label	fail;
+	fcmpNeq_l64_imm		b, 4621819117588971520;		# 10.0 != 10.0
+	jmpIf_label		fail;
+
+	fcmpEq_l64_l64		b, c;				        # 10.0 == 10.0
+	jmpIfNot_label	fail;
+	fcmpEq_l64_imm		a, 4621819117588971520;		# 20.0 == 10.0
+	jmpIf_label		fail;
+
+	mov_l64_imm 		ret_val, 4602678819172646912; # ret_val = 1.0
+	ret;
+
+	label fail;
+	init_lany_type		tmp, i64;
+	mov_l64_imm 		tmp, 1235;
+	output_l64  		tmp;
+	mov_l64_imm 		ret_val, 0; # ret_val = 0.0
+	ret;
 }
 
 function main { i64, ptr_argv } -> i64 {

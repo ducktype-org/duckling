@@ -1,7 +1,9 @@
 function foo {} -> i32 {
 	init_lany_type		a, i32;
 	init_lany_type		b, i32;
+	init_lany_type		c, i32;
 
+	# ======== Arithmetic =========
 	mov_l32_imm 		b, 3;
 	mov_l32_l32 		a, b;
 	# a = 3, b = 3
@@ -27,28 +29,79 @@ function foo {} -> i32 {
 	div_l32_imm 		b, 2;
 	# a = 3, b = 1
 
-	cmpEq_l32_l32 		a, b;
-	jmpIf_label 		fail;
+	# ======== Signed Comparisons =========
+	mov_l32_imm		a, 20; 			# a = 20
+	mov_l32_imm		b, 10; 			# b = 10
+	mov_l32_l32		c, a; 			# c = 20
 
-	cmpEq_l32_imm 		b, 1;
+	cmpEq_l32_l32 		a, b; 		# 20 == 10
+	jmpIf_label 		fail;
+	cmpEq_l32_imm 		b, 10;		# 10 == 10
 	jmpIfNot_label 	fail;
 
-	cmpG_l32_l32 		a, b;
+	cmpNeq_l32_l32		a, b;		# 20 != 10
+	jmpIfNot_label	fail;
+	cmpNeq_l32_imm		a, 20;		# 20 != 20
+	jmpIf_label		fail;
+
+	cmpG_l32_l32 		a, b;		# 20 > 10
 	jmpIfNot_label 	fail;
+	cmpG_l32_imm 		b, 2;		# 10 > 2
+	jmpIfNot_label 		fail;
 
-	cmpG_l32_imm 		b, 2;
-	jmpIf_label 		fail;
+	cmpGe_l32_l32		a, b;		# 20 >= 10
+	jmpIfNot_label	fail;
+	cmpGe_l32_l32		a, c;		# 20 >= 20
+	jmpIfNot_label	fail;
+	cmpGe_l32_imm		b, 20;		# 10 >= 20
+	jmpIf_label		fail;
 
-	add_l32_l32 		b, a;
-	# b = 4
-	mov_l32_l32 		ret_val, b;
+	cmpL_l32_l32		b, a;		# 10 < 20
+	jmpIfNot_label	fail;
+	cmpL_l32_imm		a, 10;		# 20 < 10
+	jmpIf_label		fail;
+
+	cmpLe_l32_l32		b, a;		# 10 <= 20
+	jmpIfNot_label	fail;
+	cmpLe_l32_l32		a, c;		# 20 <= 20
+	jmpIfNot_label	fail;
+	cmpLe_l32_imm		a, 10;		# 20 <= 10
+	jmpIf_label		fail;
+
+	# ======== Unsigned Comparisons =========
+	mov_l32_imm		a, 10; # a = 10
+	mov_l32_imm		b, -1; # b = -1 (MAX_U32) 
+	mov_l32_l32		c, a;
+
+	ucmpG_l32_l32		b, a;		# MAX_U32 > 10
+	jmpIfNot_label	fail;
+	ucmpG_l32_imm		a, -1;		# 10 > MAX_U32
+	jmpIf_label		fail;
+
+	ucmpGe_l32_l32		b, a;		# MAX_U32 >= 10
+	jmpIfNot_label	fail;
+	ucmpGe_l32_l32		a, c;		# 10 >= 10
+	jmpIfNot_label	fail;
+	ucmpGe_l32_imm		a, -1;		# 10 >= MAX_U32
+	jmpIf_label		fail;
+	
+	ucmpL_l32_l32		a, b;		# 10 < MAX_U32
+	jmpIfNot_label	fail;
+	ucmpL_l32_imm		b, 10;		# MAX_U32 < 10
+	jmpIf_label		fail;
+
+	ucmpLe_l32_l32		a, b;		# 10 <= MAX_U32
+	jmpIfNot_label	fail;
+	ucmpLe_l32_l32		a, c;		# 10 <= 10
+	jmpIfNot_label	fail;
+	ucmpLe_l32_imm		b, 10;		# MAX_U32 <= 10
+	jmpIf_label		fail;
+
+	mov_l32_imm 		ret_val, 1;
 	ret;
 
 	label fail;
-	init_lany_type		tmp, i32;
-	mov_l32_imm 		tmp, 1235;
-	output_l32  		tmp;
-	mov_l32_l32 		ret_val, a;
+	mov_l32_imm 		ret_val, 1234;
 
 	ret;
 }

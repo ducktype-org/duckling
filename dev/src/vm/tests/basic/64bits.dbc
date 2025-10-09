@@ -1,0 +1,122 @@
+function foo {} -> i64 {
+	init_lany_type		a, i64;
+	init_lany_type		b, i64;
+	init_lany_type		c, i64;
+
+	# ======== Arithmetic =========
+	mov_l64_imm 		b, 3;
+	mov_l64_l64 		a, b;
+	# a = 3, b = 3
+
+	cmov_l64_l64 		a, a;
+	add_l64_l64 		a, b;
+	add_l64_imm 		b, 1;
+	# a = 6, b = 4
+
+	sub_l64_l64 		a, b;
+	sub_l64_imm 		b, 1;
+	# a = 2, b = 3
+
+	mul_l64_l64 		a, b;
+	mul_l64_imm 		b, 3;
+	# a = 6, b = 9
+
+	mod_l64_l64 		a, b;
+	mod_l64_imm 		b, 7;
+	# a = 6, b = 2;
+
+	div_l64_l64 		a, b;
+	div_l64_imm 		b, 2;
+	# a = 3, b = 1
+
+	# ======== Signed Comparisons =========
+	mov_l64_imm		a, 20; 			# a = 20
+	mov_l64_imm		b, 10; 			# b = 10
+	mov_l64_l64		c, a; 			# c = 20
+
+	cmpEq_l64_l64 		a, b; 		# 20 == 10
+	jmpIf_label 		fail;
+	cmpEq_l64_imm 		b, 10;		# 10 == 10
+	jmpIfNot_label 	fail;
+
+	cmpNeq_l64_l64		a, b;		# 20 != 10
+	jmpIfNot_label	fail;
+	cmpNeq_l64_imm		a, 20;		# 20 != 20
+	jmpIf_label		fail;
+
+	cmpG_l64_l64 		a, b;		# 20 > 10
+	jmpIfNot_label 	fail;
+	cmpG_l64_imm 		b, 2;		# 10 > 2
+	jmpIfNot_label 	fail;
+
+	cmpGe_l64_l64		a, b;		# 20 >= 10
+	jmpIfNot_label	fail;
+	cmpGe_l64_l64		a, c;		# 20 >= 20
+	jmpIfNot_label	fail;
+	cmpGe_l64_imm		b, 20;		# 10 >= 20
+	jmpIf_label		fail;
+
+	cmpL_l64_l64		b, a;		# 10 < 20
+	jmpIfNot_label	fail;
+	cmpL_l64_imm		a, 10;		# 20 < 10
+	jmpIf_label		fail;
+
+	cmpLe_l64_l64		b, a;		# 10 <= 20
+	jmpIfNot_label	fail;
+	cmpLe_l64_l64		a, c;		# 20 <= 20
+	jmpIfNot_label	fail;
+	cmpLe_l64_imm		a, 10;		# 20 <= 10
+	jmpIf_label		fail;
+
+	# ======== Unsigned Comparisons =========
+	mov_l64_imm		a, 10; # a = 10
+	mov_l64_imm		b, -1; # b = -1 (MAX_U64) 
+	mov_l64_l64		c, a;
+
+	ucmpG_l64_l64		b, a;		# MAX_U64 > 10
+	jmpIfNot_label	fail;
+	ucmpG_l64_imm		a, -1;		# 10 > MAX_U64
+	jmpIf_label		fail;
+
+	ucmpGe_l64_l64		b, a;		# MAX_U64 >= 10
+	jmpIfNot_label	fail;
+	ucmpGe_l64_l64		a, c;		# 10 >= 10
+	jmpIfNot_label	fail;
+	ucmpGe_l64_imm		a, -1;		# 10 >= MAX_U64
+	jmpIf_label		fail;
+	
+	ucmpL_l64_l64		a, b;		# 10 < MAX_U64
+	jmpIfNot_label	fail;
+	ucmpL_l64_imm		b, 10;		# MAX_U64 < 10
+	jmpIf_label		fail;
+
+	ucmpLe_l64_l64		a, b;		# 10 <= MAX_U64
+	jmpIfNot_label	fail;
+	ucmpLe_l64_l64		a, c;		# 10 <= 10
+	jmpIfNot_label	fail;
+	ucmpLe_l64_imm		b, 10;		# MAX_U64 <= 10
+	jmpIf_label		fail;
+
+	mov_l64_imm 		ret_val, 1;
+	ret;
+
+	label fail;
+	mov_l64_imm 		ret_val, 1234;
+	ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type 	foo_ret_val, i64;
+
+	call_func 	foo;
+	output_l64 	foo_ret_val;
+
+	deinit;
+    deinit; # *argv
+    deinit; # argc
+	ret;
+}

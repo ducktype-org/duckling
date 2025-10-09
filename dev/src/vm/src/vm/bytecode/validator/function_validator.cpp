@@ -668,6 +668,32 @@ class FunctionValidator {
 			variant_case_novalue(Op_ucmpLe_l8_l8) {}
 			variant_case_novalue(Op_ucmpLe_l8_imm) {}
 
+			variant_case_novalue(Op_fcmpEq_l64_l64) {}
+			variant_case_novalue(Op_fcmpEq_l64_imm) {}
+			variant_case_novalue(Op_fcmpNeq_l64_l64) {}
+			variant_case_novalue(Op_fcmpNeq_l64_imm) {}
+			variant_case_novalue(Op_fcmpG_l64_l64) {}
+			variant_case_novalue(Op_fcmpG_l64_imm) {}
+			variant_case_novalue(Op_fcmpGe_l64_l64) {}
+			variant_case_novalue(Op_fcmpGe_l64_imm) {}
+			variant_case_novalue(Op_fcmpL_l64_l64) {}
+			variant_case_novalue(Op_fcmpL_l64_imm) {}
+			variant_case_novalue(Op_fcmpLe_l64_l64) {}
+			variant_case_novalue(Op_fcmpLe_l64_imm) {}
+
+			variant_case_novalue(Op_fcmpEq_l32_l32) {}
+			variant_case_novalue(Op_fcmpEq_l32_imm) {}
+			variant_case_novalue(Op_fcmpNeq_l32_l32) {}
+			variant_case_novalue(Op_fcmpNeq_l32_imm) {}
+			variant_case_novalue(Op_fcmpG_l32_l32) {}
+			variant_case_novalue(Op_fcmpG_l32_imm) {}
+			variant_case_novalue(Op_fcmpGe_l32_l32) {}
+			variant_case_novalue(Op_fcmpGe_l32_imm) {}
+			variant_case_novalue(Op_fcmpL_l32_l32) {}
+			variant_case_novalue(Op_fcmpL_l32_imm) {}
+			variant_case_novalue(Op_fcmpLe_l32_l32) {}
+			variant_case_novalue(Op_fcmpLe_l32_imm) {}
+
 			variant_case_novalue(Op_cmpNull_lptr) {}
 
 			variant_case_novalue(Op_fadd_l64_l64) {}
