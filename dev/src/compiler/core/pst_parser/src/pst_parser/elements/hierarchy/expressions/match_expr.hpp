@@ -18,6 +18,9 @@ namespace pst::expr {
 		NAMED_CHILD(value_to_match, CommaExprHolder);
 		std::vector<AccessInternalAnonymous<MatchCase>> cases;
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 810) {
 			this->element_kind = ElementKind::Match;

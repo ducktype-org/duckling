@@ -17,8 +17,11 @@ namespace pst {
 		out << R"({ "pattern_type": "wildcard" })";
 	}
 
+	LangElement::HashAlg& WildcardPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void WildcardPattern::acceptVisitor(PstVisitor& visitor) const {
 		visitor.visitWildcardPattern(*this);
 	}
-
 }

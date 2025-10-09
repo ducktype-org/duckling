@@ -45,6 +45,10 @@ namespace pst {
 		return out;
 	}
 
+	base::Optional<AccessLocked<ExprHolder>> Action::getValue() const {
+		return expr.map([](const auto& e) -> AccessLocked<ExprHolder> { return e.give(); });
+	}
+
 	namespace internal {
 		template<base::TemplateStringLiteral name>
 		void simpleActionDprint(
@@ -61,6 +65,11 @@ namespace pst {
 			}
 			out << "}";
 		}
+	}
+
+	LangElement::HashAlg& Action::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, expr.has_value());
+		return partial_hash;
 	}
 
 	void Return::dprint(std::ostream& out) const {

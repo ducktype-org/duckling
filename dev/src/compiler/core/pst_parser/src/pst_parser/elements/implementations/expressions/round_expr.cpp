@@ -51,6 +51,10 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	LangElement::HashAlg& RoundExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void RoundExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitRoundExpr(*this);
 	}

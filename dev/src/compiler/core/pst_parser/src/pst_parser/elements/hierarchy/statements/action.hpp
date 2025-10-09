@@ -14,20 +14,18 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
 		static MBox<Action> parse(LangParserState& state);
 		~Action() override = default;
+		[[nodiscard]]
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Action";
 		}
 
-		[[nodiscard]]
 		/**
 		 * @note Optional of MRef here is intentional
 		 */
-		base::Optional<AccessLocked<ExprHolder>> getValue() const {
-			return expr.map([](const auto& e) {
-				return static_cast<AccessLocked<ExprHolder>>(e.give());
-			});
-		}
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getValue() const;
 	};
 }

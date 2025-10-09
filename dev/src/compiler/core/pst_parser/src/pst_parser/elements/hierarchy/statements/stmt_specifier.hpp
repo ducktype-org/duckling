@@ -33,9 +33,10 @@ namespace pst {
 		static MBox<StmtSpecifier> parse(LangParserState& state);
 
 		~StmtSpecifier() final = default;
-		void dprint(std::ostream& out) const final;
-		bool trailingSemicolon() override;
-		void acceptVisitor(PstVisitor& visitor) const override;
+		void     dprint(std::ostream& out) const final;
+		bool     trailingSemicolon() override;
+		void     acceptVisitor(PstVisitor& visitor) const override;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
