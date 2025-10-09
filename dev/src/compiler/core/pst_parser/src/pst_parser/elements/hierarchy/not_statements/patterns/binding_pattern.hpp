@@ -8,6 +8,9 @@ namespace pst {
 	class BindingPattern final: public AnalysisPattern {
 		tpc::Identifier name;
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		explicit BindingPattern(const dia::SourcePosition& position): AnalysisPattern(position) {
 			this->element_kind = ElementKind::BindingPattern;

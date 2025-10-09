@@ -10,6 +10,9 @@ namespace pst {
 	class ValuePattern final: public AnalysisPattern {
 		NAMED_CHILD(expression, UniversalExprHolder);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		explicit ValuePattern(const dia::SourcePosition& position): AnalysisPattern(position) {
 			this->element_kind = ElementKind::ValuePattern;

@@ -53,7 +53,7 @@ class C : public Base1, public Base2 {
 If your type needs more complicated logic, for example if you want to hash some fields conditionally, you can specify exactly what bytes should be passed to the hashing algorithm by defining a friend function with this signature:
 
 ~~~~~cpp
-friend constexpr void addToHash(hashing_algorithm auto& h, const T& t) noexcept { /*...*/ }
+friend constexpr void addToHash(hash_algorithm auto& h, const T& t) noexcept { /*...*/ }
 ~~~~~
 
 This function besides your type also takes a reference to a hashing algorithm. As you can see, this parameter is constrained by a concept which you can get by including `<hashing/hash_algorithm_utils.hpp>`.
@@ -65,7 +65,7 @@ Inside you have to feed the hashing algorithm with the objects or bytes that you
 class C: public Base1, public Base2 {
     int a, b;
     std::string s;
-    friend constexpr void addToHash(hashing_algorithm auto& h, const T& t) noexcept {
+    friend constexpr void addToHash(hash_algorithm auto& h, const T& t) noexcept {
         // we can hash the subobject just like in hashDecompose()
         addToHash(h, getBase<Base1>(t), t.a, t.b, t.s, getBase<Base2>(t));
         // or add some conditionally
