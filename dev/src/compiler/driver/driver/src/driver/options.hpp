@@ -1,5 +1,7 @@
 #pragma once
 
+#include <linker/link.hpp>
+
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 

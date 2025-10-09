@@ -31,6 +31,7 @@ public:
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(ffiTest);
 	}
 
 private:
@@ -184,6 +185,8 @@ private:
 		runTestForModule("modules/units/unit_simple", 2, 3);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
+
+	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 };
 
 
