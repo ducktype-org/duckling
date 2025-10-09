@@ -1,17 +1,17 @@
 #include <vm_tester_utils.hpp>
 
-#include "base/int_conv.hpp"
+#include <base/int_conv.hpp>
 #include <base/variant.hpp>
 
-#include "filesystem/file_path.hpp"
+#include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
 
-#include "vm/core/thread/vmvalue.hpp"
-#include "vm/utils/interpret.hpp"
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/thread/vmvalue.hpp>
+#include <vm/utils/interpret.hpp>
 
 #include <limits>
 
@@ -87,10 +87,10 @@ private:
 			return vm_value;
 		};
 
-		auto pid       = initProcess();
+		auto pid = initProcess();
 		vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) });
 
-		auto wanted_value =  std::numeric_limits<u64>::max();
+		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, std::numeric_limits<u64>::max());
 
 		const auto assert_type_tag = [&](usize type_tag_bits, usize wanted_type_tag_value) {
@@ -98,25 +98,36 @@ private:
 				"getCustomVariant", type_tag_bits, "TypeTag", wanted_type_tag_value
 			);
 
-			ASSERT_TRUE(vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }).has_value());
+			ASSERT_TRUE(
+				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }).has_value()
+			);
 			ASSERT_TRUE(vm::api::join(pid).has_value());
 			auto value = vm::api::getExitValue(pid);
 			if (!value.has_value()) {
-				fail("Could not load VmValue for: " + function_name + ", reason: " + vm::api::errorToString(value.error()));
+				fail(
+					"Could not load VmValue for: " + function_name
+					+ ", reason: " + vm::api::errorToString(value.error())
+				);
 			}
 			const auto vm_value = value.value();
 			switch (type_tag_bits) {
 			case 8:
 				// Using uint8_t, because u8 is not integral
-				ASSERT_EQUAL_PRINT(vm_value->readBytes<uint8_t>(), base::safeIntConv<uint8_t>(wanted_type_tag_value));
+				ASSERT_EQUAL_PRINT(
+					vm_value->readBytes<uint8_t>(), base::safeIntConv<uint8_t>(wanted_type_tag_value)
+				);
 				break;
 			case 16:
-				ASSERT_EQUAL_PRINT(vm_value->readBytes<u16>(), base::safeIntConv<u16>(wanted_type_tag_value));
+				ASSERT_EQUAL_PRINT(
+					vm_value->readBytes<u16>(), base::safeIntConv<u16>(wanted_type_tag_value)
+				);
 				break;
 			default:
 				CORE_PANIC("Invalid type_tag_bits: ", type_tag_bits);
 			}
-			ASSERT_EQUAL_PRINT(vm::safeReadBytes<u64>(vm_value->getBytes(), type_tag_bits / 8),  wanted_value);
+			ASSERT_EQUAL_PRINT(
+				vm::safeReadBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
+			);
 		};
 
 
