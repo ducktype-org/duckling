@@ -45,7 +45,7 @@ namespace vm::code {
 		}                                                                      \
 	};
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -83,7 +83,7 @@ namespace vm::code {
 
 	using Instruction = std::variant<
 #define HANDLE_OPCODE(opcode) VM_INSTR_FROM_NAME(opcode),
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 #undef HANDLE_OPCODE
 		instructions::Comment>;
 }

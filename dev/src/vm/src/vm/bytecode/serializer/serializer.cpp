@@ -81,7 +81,7 @@ namespace vm::code {
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
 #undef HANDLE_OPCODE_0ARGS

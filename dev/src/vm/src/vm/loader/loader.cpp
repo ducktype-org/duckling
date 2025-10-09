@@ -80,7 +80,7 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
 	}
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -90,7 +90,7 @@ namespace {
 	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 	std::unordered_map instr_to_factory{
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 	};
 
 #undef HANDLE_OPCODE

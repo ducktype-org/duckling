@@ -16,7 +16,7 @@ namespace vm::low {
 		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::opcode; \
 	};
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 #undef HANDLE_OPCODE
 
 	u16 fix8FromInstr(const code::Instruction& instruction) {

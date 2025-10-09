@@ -30,13 +30,13 @@ namespace vm {
 	class OpFuns final {
 	public:
 #define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
 #undef HANDLE_OPCODE
 
 #define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
 #undef HANDLE_OPCODE
@@ -54,7 +54,7 @@ namespace vm {
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
 #define HANDLE_OPCODE(opcode) op_##opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
 #undef HANDLE_OPCODE
@@ -65,7 +65,7 @@ namespace vm {
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_OPCODE(opcode) op_debug_##opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
 #undef HANDLE_OPCODE

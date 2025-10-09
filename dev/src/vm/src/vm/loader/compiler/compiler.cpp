@@ -110,7 +110,7 @@ namespace vm::loader::compiler {
 		arg_0 = lowerArgument(ctx, op_idx, instr.arg0);   \
 		arg_1 = lowerArgument(ctx, op_idx, instr.arg1);   \
 	}
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 			}
 
 			auto opcode_id = low::fix8FromInstr(op);

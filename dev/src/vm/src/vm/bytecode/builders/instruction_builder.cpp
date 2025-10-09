@@ -45,7 +45,7 @@ namespace vm::code::builders {
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map OPCODE_TO_0_ARGS_FACTORY = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -58,7 +58,7 @@ namespace vm::code::builders {
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map OPCODE_TO_1_ARGS_FACTORY = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -71,7 +71,7 @@ namespace vm::code::builders {
 	MAKE_LINK(opcode, makeVmOpcode2Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OPCODE_TO_2_ARGS_FACTORY = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS

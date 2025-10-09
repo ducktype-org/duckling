@@ -42,7 +42,7 @@ namespace {
 	constexpr u16 countOpCases() {
 		u16 count = 0;
 #define HANDLE_OPCODE(opcode) count++;
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
 #undef HANDLE_OPCODE
