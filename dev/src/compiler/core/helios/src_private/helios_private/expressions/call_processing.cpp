@@ -120,6 +120,7 @@ namespace compiler::helios::code {
 	) {
 		switch (kind(fun)) {
 		case SymbolKind::Function:
+		case SymbolKind::FunctionDeclaration:
 			return attemptFittingFun(ctx, fun, normal_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
 			return attemptFittingBuiltin(ctx, fun, normal_arguments, named_arguments);

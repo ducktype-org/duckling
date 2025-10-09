@@ -17,6 +17,7 @@
 
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
@@ -41,7 +42,6 @@ namespace compiler::lir {
 	}
 
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id);
-	FunctionLiteral getFunctionLiteralfromFunction(CRef<Function> function);
 
 	/**
 	 * @brief Creates LIR local data from MIR local data.
@@ -482,10 +482,28 @@ namespace compiler::lir {
 				for (const auto& param: key.function->parameter_types)
 					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
+
+				auto abi = [&]() -> helios::SymbolABI {
+					variant_match(key.function->helios_id) {
+						variant_case(mir::FunctionSymID, name) {
+							return ctx.query<helios::QuerySymbolABI>(name.id)->expect(
+								"Handling errors in MIR is not supported yet"
+							);
+						}
+						variant_case(mir::GlobalVariableCTOR, name) { return helios::DefaultAbi{}; }
+					}
+					CORE_UNREACHABLE();
+				}();
+
 				auto mangled_name = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return helios::mangler::getSimpleMangledName(ctx, name.id);
+							variant_match(abi) {
+								variant_case(helios::DefaultAbi, _) {
+									return helios::mangler::getSimpleMangledName(ctx, name.id);
+								}
+								variant_case(helios::CAbi, _) { return helios::name(name.id); }
+							}
 						}
 						variant_case(mir::GlobalVariableCTOR, name) {
 							return helios::mangler::getSpecialMangledName<
@@ -499,6 +517,7 @@ namespace compiler::lir {
 
 				return Function{
 					.mangled_name       = mangled_name,
+					.abi                = abi,
 					.return_type_layout = return_type,
 					.parameter_layouts  = std::move(parameter_types),
 					.blocks             = std::move(blocks),
@@ -566,7 +585,9 @@ namespace compiler::lir {
 			entry_block.instructions.push_back(Instruction{
 				Operation::Call,
 				{},
-				{ LIRValue{ FunctionLiteral{ getFunctionLiteralfromFunction(function) } } },
+				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
+
+				,
 			});
 		}
 
@@ -577,6 +598,7 @@ namespace compiler::lir {
 
 		return Function{
 			.mangled_name       = mangled_name,
+			.abi                = helios::DefaultAbi{},
 			.return_type_layout = return_type,
 			.parameter_layouts  = {},
 			.blocks             = std::move(blocks),
@@ -585,21 +607,23 @@ namespace compiler::lir {
 		};
 	}
 
-	FunctionLiteral getFunctionLiteralfromFunction(CRef<Function> function) {
-		return FunctionLiteral{
-			.mangled_name = function->mangled_name,
-			.parameter_layouts
-			= std::make_shared<std::vector<tsl::TypeLayout>>(function->parameter_layouts),
-			.return_type_layout = std::make_shared<tsl::TypeLayout>(function->return_type_layout),
-		};
-	}
-
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 		                                     ->expect("Handling errors in MIR is not supported yet")
 		                                     .getType();
 
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->expect(
+			"Handling errors in MIR is not supported yet"
+		);
+		auto mangled_name = [&symbol_abi, &ctx, helios_id] {
+			variant_match(symbol_abi) {
+				variant_case(helios::DefaultAbi, _) {
+					return helios::mangler::getSimpleMangledName(ctx, helios_id);
+				}
+				variant_case(helios::CAbi, _) { return helios::name(helios_id); }
+			}
+			CORE_UNREACHABLE();
+		}();
 
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
 		std::vector<tsl::TypeLayout> parameter_types;
@@ -609,6 +633,7 @@ namespace compiler::lir {
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
+			.abi          = symbol_abi,
 			.parameter_layouts
 			= std::make_shared<std::vector<tsl::TypeLayout>>(std::move(parameter_types)),
 			.return_type_layout = std::make_shared<tsl::TypeLayout>(std::move(return_type)),

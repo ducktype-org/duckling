@@ -5,6 +5,7 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>  // for parent
 #include <helios_private/symbols/symbols.hpp>
@@ -40,7 +41,10 @@ namespace compiler::helios {
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
 		  parameters(std::move(parameters)) {
-		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+		CORE_ASSERT(
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
+			"Symbol is not a function or function declaration"
+		);
 	}
 
 	u64 HOUTFunctionDeclaration::queryUnstablePerfectHash() const {
