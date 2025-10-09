@@ -189,8 +189,7 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(
-				block
+			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
@@ -234,7 +233,7 @@ namespace vm {
 			// We may be pointing to a table with structs, that contain variants somewhere inside.
 			// This functions is very tricky, but in case of variants we can locate them using the
 			// method below. Thanks to type_tag and
-		 	// @TODO: #1369 Remove this function
+			// @TODO: #1369 Remove this function
 			auto block_type = thread.process_memory.getBlockType(variant_pointer.getBlock());
 			if (block_type->getKind() == Type::Kind::Variant)
 				return block_type;
