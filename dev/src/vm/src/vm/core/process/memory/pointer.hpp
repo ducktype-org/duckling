@@ -7,6 +7,8 @@
 
 #include <vm/core/process/exceptions.hpp>
 
+#include <unicode/uchar.h>
+
 namespace vm {
 
 	class Block;
@@ -36,6 +38,12 @@ namespace vm {
 			if (move_by < 0 && base::safeIntConv<u64>(-move_by) > offset)
 				throw exceptions::VMNegativeOffsetException();
 			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
+		}
+
+		Pointer movedPointer(i64 move_by) {
+			Pointer cpy(*this);
+			cpy.movePointer(move_by);
+			return cpy;
 		}
 
 		[[nodiscard]]

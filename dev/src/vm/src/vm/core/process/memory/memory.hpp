@@ -213,6 +213,16 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Returns a view of global data by the id.
+		 */
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getBlockViewUnsafe(
+			Ref<Block> block
+		) -> base::ModRawView {
+			std::lock_guard lock(mutex);
+			return block->data.view;
+		}
+
+		/**
 		 * @brief Returns a reference to the block appropriate for the global data by id.
 		 * @note This should be the preferred method of accessing global data, if applicable.
 		 */

@@ -7,6 +7,9 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/kinds/data.hpp"
+#include "vm/core/process/type_metadata/kinds/fixed_size_table.hpp"
+#include "vm/core/process/type_metadata/kinds/variant.hpp"
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
@@ -89,12 +92,12 @@ namespace vm {
 		kind      = kind::Pointer{ inner };
 	}
 
-	void Type::defineFixedSizeTable(TypeRef inner, u64 table_size) {
+	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::FixedSizeTable;
-		kind      = kind::FixedSizeTable{ .inner_type = inner, .size = table_size };
+		kind      = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -134,10 +137,16 @@ namespace vm {
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
 		// log_256(x) = log_2(x) / log_2(256) = log_2(x) / 8.0
-		variant.type_tag_size_bytes = static_cast<usize>(
-			ceil(log2(static_cast<double>(variants_definitions.size())) / 8.0)
-		);
-		kind = variant;
+		const auto needed_bytes
+			= ceil(log2(static_cast<double>(variants_definitions.size())) / 8.0);
+
+		// Need to get a power of 2 - 1, 2, 4, 8, 16 etc
+		// 2 ** (ceil(log2(needed_bytes)))
+		const auto rounded_to_power_of_2
+			= static_cast<usize>(std::pow(2, ceil(log2(needed_bytes))));
+
+		variant.type_tag_size_bytes = rounded_to_power_of_2;
+		kind                        = variant;
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
@@ -167,7 +176,8 @@ namespace vm {
 		variant_match(kind) {
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
-				this->size = fixed_size_table.inner_type->getSize() * fixed_size_table.size;
+				this->size
+					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
@@ -192,7 +202,6 @@ namespace vm {
 				isInstantiableImpl(variant);
 			}
 		}
-		CORE_ASSERT(size != -1, "Invalid size");
 	}
 
 	// pointer, fixedSizeTable, dynamicTable
@@ -286,9 +295,61 @@ namespace vm {
 	}
 
 	base::Optional<TypeCRef> Type::getResultType() const {
-		return get<kind::Function>().flatMap([](CRef<kind::Function> function) {
-			return base::Optional<TypeCRef>(function->result);
+		return get<kind::Function>().map([](CRef<kind::Function> function) {
+			return function->result;
 		});
 	}
 
+	base::Optional<usize> Type::getTypeTagSizeBytes() const {
+		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
+			return variant->type_tag_size_bytes;
+		});
+	}
+
+	base::Optional<std::vector<TypeCRef>> Type::getVariantAlternatives() const {
+		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
+			std::vector<TypeCRef> alternatives;
+			alternatives.reserve(variant->alternatives.size());
+			for (const auto& alt: variant->alternatives) alternatives.emplace_back(alt);
+			return alternatives;
+		});
+	}
+
+	base::Optional<TypeCRef> Type::getTypeAtOffsetRecursive(Offset offset) const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				for (const auto& field: data.fields)
+					if (field.offset <= offset && offset < field.offset + field.type->size)
+						return field.type->getTypeAtOffsetRecursive(offset - field.offset);
+				return {};
+			}
+			variant_case(kind::DynamicTable, table) {
+				if (offset == 0 || table.inner_type->size % offset == 0)
+					return table.inner_type->getTypeAtOffsetRecursive(
+						offset % table.inner_type->size
+					);
+				return {};
+			}
+			variant_case(kind::FixedSizeTable, table) {
+				if (offset == 0
+				    || (table.inner_type->size % offset == 0
+				        && offset < table.element_count * table.inner_type->size))
+					return table.inner_type->getTypeAtOffsetRecursive(
+						offset % table.inner_type->size
+					);
+				return {};
+			}
+			variant_case(kind::Variant, variant) {
+				usize idx      = 0;
+				usize size_sum = variant.type_tag_size_bytes;
+				while (size_sum < offset && idx < variant.alternatives.size())
+					size_sum += variant.alternatives[idx++]->size;
+				if (size_sum == offset) return variant.alternatives[idx];
+				return {};
+			}
+
+			variant_default { return {}; }
+		}
+		CORE_UNREACHABLE();
+	}
 }

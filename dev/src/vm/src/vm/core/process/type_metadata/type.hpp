@@ -136,11 +136,24 @@ namespace vm {
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
+		/**
+		 * @brief Find what type is located at offset.
+		 * Useful when we have a pointer and we want to know what type it points to.
+		 * @note It cannot be used to locate certain types, e.g. fixed_size_table type, as it
+		 * always steps into types recursively.
+		 * @note Offset has to precisely match the nested type's position at the end of the recursion.
+		 */
+		base::Optional<TypeCRef> getTypeAtOffsetRecursive(Offset offset) const;
+
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
+
+		// variant
+		base::Optional<usize>                 getTypeTagSizeBytes() const;
+		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
 
 		// inheritance
 		[[nodiscard]]
