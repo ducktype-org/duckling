@@ -117,6 +117,8 @@ namespace pst {
 
 	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, attributes.size());
+		// note: Value of Kind should be strictly implied by elementType, that is added to hash for
+		// each element
 		return partial_hash;
 	}
 

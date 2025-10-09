@@ -212,8 +212,8 @@ namespace pst {
 		void calcHashRecursive();
 
 		/**
-		 * @brief Calculates the hash for this element, can be modified to change between stable and
-		 * unstable hashes.
+		 * @brief Calculates and sets the hash for this element, can be modified to change between
+		 * stable and unstable hashes.
 		 */
 		void calcHash();
 
