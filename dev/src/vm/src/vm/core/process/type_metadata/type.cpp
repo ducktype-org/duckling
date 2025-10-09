@@ -323,15 +323,12 @@ namespace vm {
 				return {};
 			}
 			variant_case(kind::DynamicTable, table) {
-				if (offset % table.inner_type->size == 0)
-					return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
-						offset % table.inner_type->size
-					);
-				return {};
+				return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
+					offset % table.inner_type->size
+				);
 			}
 			variant_case(kind::FixedSizeTable, table) {
-				if (offset % table.inner_type->size == 0
-				    && offset < table.element_count * table.inner_type->size)
+				if (offset < table.element_count * table.inner_type->size)
 					return table.inner_type->getNonCompoundTypeAtOffsetRecursive(
 						offset % table.inner_type->size
 					);
