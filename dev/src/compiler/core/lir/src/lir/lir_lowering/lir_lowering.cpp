@@ -482,26 +482,6 @@ namespace compiler::lir {
 				for (const auto& param: key.function->parameter_types)
 					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
-				auto mangled_name = [&]() {
-					variant_match(key.function->helios_id) {
-						variant_case(mir::FunctionSymID, name) {
-							auto function_abi = ctx.query<helios::QuerySymbolABI>(name.id)->expect(
-								"Handling errors in MIR is not supported yet"
-							);
-							if (std::holds_alternative<helios::DefaultAbi>(function_abi))
-								return helios::mangler::getSimpleMangledName(ctx, name.id);
-							else
-								return helios::name(name.id);
-						}
-						variant_case(mir::GlobalVariableCTOR, name) {
-							return helios::mangler::getSpecialMangledName<
-								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
-								ctx, name.global_var_id
-							);
-						}
-					}
-					CORE_UNREACHABLE();
-				}();
 
 				auto abi = [&]() -> helios::SymbolABI {
 					variant_match(key.function->helios_id) {
@@ -511,6 +491,26 @@ namespace compiler::lir {
 							);
 						}
 						variant_case(mir::GlobalVariableCTOR, name) { return helios::DefaultAbi{}; }
+					}
+					CORE_UNREACHABLE();
+				}();
+
+				auto mangled_name = [&]() {
+					variant_match(key.function->helios_id) {
+						variant_case(mir::FunctionSymID, name) {
+							variant_match(abi) {
+								variant_case(helios::DefaultAbi, _) {
+									return helios::mangler::getSimpleMangledName(ctx, name.id);
+								}
+								variant_case(helios::CAbi, _) { return helios::name(name.id); }
+							}
+						}
+						variant_case(mir::GlobalVariableCTOR, name) {
+							return helios::mangler::getSpecialMangledName<
+								helios::mangler::ManglingSymbolKind::GlobalVariableConstructor>(
+								ctx, name.global_var_id
+							);
+						}
 					}
 					CORE_UNREACHABLE();
 				}();
@@ -616,10 +616,13 @@ namespace compiler::lir {
 			"Handling errors in MIR is not supported yet"
 		);
 		auto mangled_name = [&symbol_abi, &ctx, helios_id] {
-			if (std::holds_alternative<helios::DefaultAbi>(symbol_abi))
-				return helios::mangler::getSimpleMangledName(ctx, helios_id);
-			else
-				return helios::name(helios_id);
+			variant_match(symbol_abi) {
+				variant_case(helios::DefaultAbi, _) {
+					return helios::mangler::getSimpleMangledName(ctx, helios_id);
+				}
+				variant_case(helios::CAbi, _) { return helios::name(helios_id); }
+			}
+			CORE_UNREACHABLE();
 		}();
 
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());

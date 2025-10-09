@@ -12,6 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
+#include <linker/link.hpp>
 #include <pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
@@ -74,10 +75,9 @@ clah::Clah getStandardDucklingOptions() {
 /**
  * Helper function to extract linking options from clah parsing result.
  */
-compiler::driver::options_types::LinkingOptions getLinkingOptionsFromClap(
-	const clah::ParsingResult& parsing_result
+compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingResult& parsing_result
 ) {
-	compiler::driver::options_types::LinkingOptions linking_options;
+	compiler::linker::LinkingOptions linking_options;
 
 	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
 		linking_options.external_static_libraries.push_back(lib_path.value());
@@ -216,7 +216,6 @@ clah::Clah getClahForMain() {
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
-							.linking_options = {},  // No linking options for module compilation
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
@@ -276,10 +275,10 @@ clah::Clah getClahForMain() {
 								.artifacts_path = 
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.linking_options = getLinkingOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options)
 						}
 					);
+					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 					// @TODO #1058: make graph/statistics printing configuration better.
 
@@ -294,7 +293,9 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
+					compiler::driver::compilerEntirePackage(
+						path_to_compile, backend_type, linking_options
+					);
 
 					total_compilation_time.endMeasurement();
 
@@ -342,7 +343,6 @@ clah::Clah getClahForMain() {
 				.compilation_artifacts = {
 					.artifacts_path = fs::FilePath("./duck_build/"),
 				},
-				.linking_options = {},  // No linking options for DVM run
 				.debug_options = getDebugOptionsFromClap(options),
 			}
 		);

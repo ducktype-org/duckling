@@ -27,14 +27,9 @@ namespace compiler::linker {
 	 * @note: we can add additional object/library files here when needed.
 	 */
 	void link(
-		const artifacts::FileArtifact& output, const std::vector<artifacts::FileArtifact>& inputs
+		const artifacts::FileArtifact&              output,
+		const std::vector<artifacts::FileArtifact>& inputs,
+		const LinkingOptions&                       options
 	);
-
-	/**
-	 * @note This returns a const reference to prevent modification after initialization
-	 */
-	const LinkingOptions& getLinkingOptions();
-
-	void setLinkingOptions(const LinkingOptions& options);
 
 }

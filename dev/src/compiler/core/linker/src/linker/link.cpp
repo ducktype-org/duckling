@@ -6,10 +6,10 @@
 namespace compiler::linker {
 
 	void link(
-		const artifacts::FileArtifact& output, const std::vector<artifacts::FileArtifact>& inputs
+		const artifacts::FileArtifact&              output,
+		const std::vector<artifacts::FileArtifact>& inputs,
+		const LinkingOptions&                       options
 	) {
-		auto& options = getLinkingOptions();
-
 		// Link the object file.
 		// Use the default system linker - for Ubuntu it is advised to use gcc.
 		// Related research links:
@@ -26,26 +26,8 @@ namespace compiler::linker {
 
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
-
 		command.addArg("-o");
 		command.addArg(output.FILE.getFilePath().native());
 		command.execute();
-	}
-
-	static LinkingOptions linking_options{};
-	static bool           linking_options_initialized = false;
-
-	const LinkingOptions& getLinkingOptions() {
-		CORE_ASSERT(
-			linking_options_initialized,
-			"Linking options not initialized! Call setLinkingOptions during compiler "
-			"initialization."
-		);
-		return linking_options;
-	}
-
-	void setLinkingOptions(const LinkingOptions& options) {
-		linking_options             = options;
-		linking_options_initialized = true;
 	}
 }

@@ -45,7 +45,7 @@ namespace compiler::helios {
 		  parameters(parameters) {
 		CORE_ASSERT(
 			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
-			"Symbol is not a function"
+			"Symbol is not a function or function declaration"
 		);
 	}
 

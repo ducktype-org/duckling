@@ -24,8 +24,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include <iostream>
-
 namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {

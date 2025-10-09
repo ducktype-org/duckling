@@ -175,7 +175,7 @@ namespace compiler::backend_llvm {
 	}
 
 	/**
-	 * Gets a function from a module by mangled name.
+	 * Gets a function from a module by the function literal (using a mangle_name field).
 	 *
 	 * If the function doesn't exits it adds a function prototype with
 	 * external linkage to the module based on provided lir_functions.
@@ -188,18 +188,17 @@ namespace compiler::backend_llvm {
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
 		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
-		auto& context      = module->getContext();
-		auto  mangled_name = function_literal.mangled_name;
-
+		auto mangled_name = function_literal.mangled_name;
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(mangled_name.strView())) return func;
 
-		llvm::FunctionCallee callee = module->getOrInsertFunction(
-			mangled_name.strView(),
-			getFunType(
-				context, *function_literal.parameter_layouts, *function_literal.return_type_layout
-			)
-		);
+		auto&                context = module->getContext();
+		llvm::FunctionCallee callee  = module->getOrInsertFunction(
+            mangled_name.strView(),
+            getFunType(
+                context, *function_literal.parameter_layouts, *function_literal.return_type_layout
+            )
+        );
 
 		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee()))
 			function->setCallingConv(getCallingConvFromABI(function_literal.abi));

@@ -2,7 +2,6 @@
 
 #include "symbol_abi.hpp"
 
-#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/access.hpp>
