@@ -24,6 +24,7 @@ from ..helpers import (
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
+
 def tester_impl(
     clean: bool,
     dry: bool,
@@ -79,6 +80,7 @@ def tester_impl(
     elif not clean:
         print_success(f"All tests have run successfully!")
 
+
 def run_test(
     test: Test,
     path: str,
@@ -110,8 +112,8 @@ def run_test(
         case_path = path + "/" + case.name
         try:
             match run_case(test, case, dry, verbose, log_file):
-                case Failure(f):
-                    print_failure(f"Case `{case.name}` has failed because: {f.error}")
+                case Failure(error):
+                    print_failure(f"Case `{case.name}` has failed because: {error}")
                     stats.failed.append(case_path)
                 case Success():
                     if not dry:

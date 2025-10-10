@@ -8,7 +8,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/variant.hpp>
@@ -98,7 +98,8 @@ private:
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
 				);
 				result.funcs.put(
-					hout_func.original_name, std::make_tuple(CRef(&hout_func), mir_func, lir_func)
+					hout_func.declaration->original_name,
+					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
 				);
 			}
 			for (const auto& hout_glob: unit->glob_data) {
@@ -308,7 +309,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream foo_str;
-			lir::fromLIRFunctions(
+			lir::createFunctionInvoker(
 				ctx, { g_ctor, some_global_ctor }, base::StrID("_MODULE_CTOR_globals")
 			)
 				.debugPrint(ctx, foo_str);

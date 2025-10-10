@@ -110,7 +110,7 @@ namespace compiler::backend_llvm {
 	 * @return llvm::LLVMContext&
 	 */
 	llvm::LLVMContext& getLLVMContext() {
-		static llvm::LLVMContext context;
+		thread_local llvm::LLVMContext context;
 		return context;
 	}
 
@@ -166,8 +166,16 @@ namespace compiler::backend_llvm {
 		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
 	}
 
+	llvm::CallingConv::ID getCallingConvFromABI(const helios::SymbolABI& abi) {
+		variant_match(abi) {
+			variant_case(helios::DefaultAbi, name) { return llvm::CallingConv::C; }
+			variant_case(helios::CAbi, name) { return llvm::CallingConv::C; }
+		}
+		CORE_UNREACHABLE();
+	}
+
 	/**
-	 * Gets a function from a module by mangled name.
+	 * Gets a function from a module by the function literal (using a mangle_name field).
 	 *
 	 * If the function doesn't exits it adds a function prototype with
 	 * external linkage to the module based on provided lir_functions.
@@ -177,37 +185,32 @@ namespace compiler::backend_llvm {
 	 * of how we are creating llvm modules, as we need to know what function in local to which
 	 * module.
 	 */
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
-		Ref<llvm::Module> module, const lir::Function& lir_function
-	) {
-		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(lir_function.mangled_name.strView())) return func;
-
-		auto& context = module->getContext();
-
-		return module->getOrInsertFunction(
-			lir_function.mangled_name.strView(),
-			getFunType(context, lir_function.parameter_layouts, lir_function.return_type_layout)
-		);
-	}
-
-	/**
-	 * Same as getOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
-	 */
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
 		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
-		auto& context      = module->getContext();
-		auto  mangled_name = function_literal.mangled_name;
-
+		auto mangled_name = function_literal.mangled_name;
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(mangled_name.strView())) return func;
 
-		return module->getOrInsertFunction(
-			mangled_name.strView(),
-			getFunType(
-				context, *function_literal.parameter_layouts, *function_literal.return_type_layout
-			)
+		auto&                context = module->getContext();
+		llvm::FunctionCallee callee  = module->getOrInsertFunction(
+            mangled_name.strView(),
+            getFunType(
+                context, *function_literal.parameter_layouts, *function_literal.return_type_layout
+            )
+        );
+
+		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee()))
+			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
+
+		return callee;
+	}
+
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
+		Ref<llvm::Module> module, const lir::Function& lir_function
+	) {
+		return getOrInsertFunctionPrototypeFromLiteral(
+			module, lir::FunctionLiteral::fromFunction(lir_function)
 		);
 	}
 
@@ -373,14 +376,14 @@ namespace compiler::backend_llvm {
 					// We need to load them before using them.
 					const auto local_ptr = local_register_map[lir_local].get();
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), lir_local->layout), local_ptr
+						typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
 					);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_case(lir::LirGlobal, lir_global) {
 					auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 					return builder.CreateLoad(
-						typeFromLayout(getLLVMContext(), *lir_global.layout), global_ptr.get()
+						typeFromLayout(builder.getContext(), *lir_global.layout), global_ptr.get()
 					);
 				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
@@ -480,6 +483,22 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
 			case IntegerSLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
+			case IntegerULteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULE)
+			case IntegerSLteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLE)
+			case IntegerUGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGT)
+			case IntegerSGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGT)
+			case IntegerUGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGE)
+			case IntegerSGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGE)
+			case IntegerEq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpEQ)
+			case IntegerNeq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
@@ -544,7 +563,6 @@ namespace compiler::backend_llvm {
 			Ref fun = llvm::cast<llvm::Function>(
 				getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
-
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
 
 			generateMainBlocksAndLocals(fun.get());

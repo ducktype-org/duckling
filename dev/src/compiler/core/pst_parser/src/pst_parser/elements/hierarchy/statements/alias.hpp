@@ -25,7 +25,8 @@ namespace pst {
 
 		static MBox<Alias> parse(LangParserState& state);
 		~Alias() final = default;
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 

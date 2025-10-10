@@ -196,6 +196,16 @@ namespace compiler::helios {
 				pst_data
 			));
 		}
+		case pst::StmtKind::FunDecl: {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = function->getName(),
+					.kind = SymbolKind::FunctionDeclaration,
+				},
+				pst_data
+			));
+		}
 		case pst::StmtKind::Namespace: {
 			auto namespace_stmt = stmt.dynamicCast<pst::Namespace>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
@@ -345,7 +355,7 @@ namespace compiler::helios {
 	 * and should be merged with makeSymbolFromStatement.
 	 */
 	CRef<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
-		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
+		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 			auto parameter = parameter_opt.value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
@@ -623,4 +633,87 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
+
+	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
+		// @TODO do not unlock whole elements, checking the type of the parent would be enough #1321
+
+		/**
+		 * @brief Check if the ancestors of PST element `el` match the provided kinds in order,
+		 * and return the ancestor if they do.
+		 */
+		template<typename... Kinds>
+		static base::Optional<pst::Access<pst::LangElement>> getAncestor(
+			query::Context& ctx, pst::Access<pst::LangElement> el, Kinds... kinds
+		) {
+			return getAncestorImpl(ctx, el, kinds...);
+		}
+
+		// Base case: no more kinds to check → success
+		static base::Optional<pst::Access<pst::LangElement>> getAncestorImpl(
+			query::Context&, pst::Access<pst::LangElement> el
+		) {
+			return el;
+		}
+
+		// Recursive case: check current kind, then move up
+		template<typename... Rest>
+		static base::Optional<pst::Access<pst::LangElement>> getAncestorImpl(
+			query::Context&               ctx,
+			pst::Access<pst::LangElement> el,
+			pst::ElementKind              expected,
+			Rest... rest
+		) {
+			if (auto parent = el->getParent()) {
+				auto parent_el = parent.value().unlock(ctx);
+				if (parent_el->getElementKind() == expected)
+					return getAncestorImpl(ctx, parent_el, rest...);
+			}
+			return {};
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
+
+			if (kind(key) == SymbolKind::BuiltinFunction) {
+				// Builtin functions have no specifiers
+				return {};
+			}
+
+			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
+
+			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
+			// or "Stmt" child.
+			//
+			// So single statement can have a specifier when it is wrapped in
+			// "CodeBlockOrStmt" and "StmtSpecifier" or in the "CodeBlock", "CodeBlockOrStmt" and
+			// "StmtSpecifier".
+			while (true) {
+				if (auto result_stmt = getAncestor(
+						ctx,
+						pst_element,
+						pst::ElementKind::CodeBlockOrStmt,
+						pst::ElementKind::StmtSpecifier
+					)) {
+					pst_element = *std::move(result_stmt);
+				} else if (auto result_block = getAncestor(
+							   ctx,
+							   pst_element,
+							   pst::ElementKind::CodeBlock,
+							   pst::ElementKind::CodeBlockOrStmt,
+							   pst::ElementKind::StmtSpecifier
+						   )) {
+					pst_element = *std::move(result_block);
+				} else {
+					break;
+				}
+				specifiers.emplace_back(pst_element.dynamicCast<pst::StmtSpecifier>().value());
+			}
+
+			return specifiers;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
 }

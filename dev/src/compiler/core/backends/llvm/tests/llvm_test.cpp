@@ -1,8 +1,10 @@
 #include <backends/llvm/llvm_backend.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
@@ -28,6 +30,8 @@ public:
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
+		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(ffiTest);
 	}
 
 private:
@@ -38,27 +42,23 @@ private:
 		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
+			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
+				if (!hout_glob.type.getType().carriesInformation()) continue;
 				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
 							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-
 						mir_func->debugPrint(std::cerr);
 						std::cerr << "\n\n\n";
-
 						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
-
 						lir_func->debugPrint(ctx, std::cerr);
 						std::cerr << "\n\n\n";
-
 						ctors.push_back(lir_func);
-
 						llvm_module.addFunctionToModule(ctx, lir_func);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
@@ -78,24 +78,28 @@ private:
 
 			if (!ctors.empty()) {
 				// Add module ctors
-				// @TODO: fix this: add proper module global ctor mangling
-				auto module_ctor = lir::fromLIRFunctions(
+				auto module_ctor = lir::createFunctionInvoker(
 					ctx,
 					ctors,
-					base::StrID(
-						base::strConcat("_MODULE_CTOR_", frontend::moduleName(module).str()).c_str()
+					compiler::helios::mangler::getSpecialMangledName<
+						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+						ctx,
+						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+							frontend::moduleName(module) }
 					)
 				);
 				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 
 				// Add module dtors (for now empty)
-				// @TODO: fix this: add proper module global dtor mangling
 				// @TODO: add a legit dtors
-				auto module_dtor = lir::fromLIRFunctions(
+				auto module_dtor = lir::createFunctionInvoker(
 					ctx,
 					{},
-					base::StrID(
-						base::strConcat("_MODULE_DTOR_", frontend::moduleName(module).str()).c_str()
+					compiler::helios::mangler::getSpecialMangledName<
+						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+						ctx,
+						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+							frontend::moduleName(module) }
 					)
 				);
 				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
@@ -172,6 +176,17 @@ private:
 	}
 
 	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+
+	void unitsTest() {
+		runTestForModule("modules/units/unit1", 2, 2);
+		runTestForModule("modules/units/unit2", 2, 2);
+		runTestForModule("modules/units/unit3", 1, 1);
+		runTestForModule("modules/units/unit4", 1, 2);
+		runTestForModule("modules/units/unit_simple", 2, 3);
+		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
+	}
+
+	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 };
 
 

@@ -1,9 +1,11 @@
 #include "compile_llvm.hpp"
 
+#include "../statistics_private/statistics.hpp"
 #include "llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -14,6 +16,8 @@ namespace compiler::driver {
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, const LIRModuleData& lir_module
 	) {
+		timer::AddToTime _(&backend_compilation_time);
+
 		backend_llvm::Module mod(lir_module.module_id);
 
 		std::vector<CRef<lir::Function>> ctors;
@@ -34,11 +38,13 @@ namespace compiler::driver {
 		}
 
 		if (not ctors.empty()) {
-			auto module_ctor = lir::fromLIRFunctions(
+			auto module_ctor = lir::createFunctionInvoker(
 				ctx,
 				ctors,
-				// @TODO: Add suport to mangling ctors of globals to helios mangler #906
-				base::StrID(base::strConcat("_CTOR_MODULE_", lir_module.module_id.str()).c_str())
+				helios::mangler::getSpecialMangledName<
+					helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+					ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id }
+				)
 			);
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
 		}
@@ -46,11 +52,13 @@ namespace compiler::driver {
 		if (not dtors.empty()) {
 			// Dtors should be called in reverse order
 			std::vector<CRef<lir::Function>> reversed_dtors(dtors.rbegin(), dtors.rend());
-			auto                             module_dtor = lir::fromLIRFunctions(
+			auto                             module_dtor = lir::createFunctionInvoker(
                 ctx,
                 reversed_dtors,
-                // @TODO: Add suport to mangling dtors of globals to helios mangler #906
-                base::StrID(base::strConcat("_DTOR_MODULE_", lir_module.module_id.str()).c_str())
+                helios::mangler::getSpecialMangledName<
+												helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+                    ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id }
+                )
             );
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}

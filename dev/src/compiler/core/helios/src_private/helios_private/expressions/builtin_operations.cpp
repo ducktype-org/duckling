@@ -42,16 +42,22 @@ namespace compiler::helios::code {
 		}
 
 		// @TODO: change to base::map when possible
+		using enum BuiltinBinary;
 		const static std::map<base::StrID, BuiltinBinary> operators = {
-			{ base::StrID("+"), BuiltinBinary::IntegerAdd },
-			{ base::StrID("-"), BuiltinBinary::IntegerSub },
-			{ base::StrID("*"), BuiltinBinary::IntegerMul },
-			{ base::StrID("/"), BuiltinBinary::IntegerDiv },
-			{ base::StrID("%"), BuiltinBinary::IntegerMod },
-			{ base::StrID("**"), BuiltinBinary::IntegerPow },
-			{ base::StrID("<"), BuiltinBinary::IntegerLt },
-			{ keywordToStr(lang_def::Keyword::And), BuiltinBinary::BooleanAnd },
-			{ keywordToStr(lang_def::Keyword::Or), BuiltinBinary::BooleanOr },
+			{ base::StrID("+"), IntegerAdd },
+			{ base::StrID("-"), IntegerSub },
+			{ base::StrID("*"), IntegerMul },
+			{ base::StrID("/"), IntegerDiv },
+			{ base::StrID("%"), IntegerMod },
+			{ base::StrID("**"), IntegerPow },
+			{ base::StrID("<"), IntegerLt },
+			{ base::StrID(">"), IntegerGt },
+			{ base::StrID("<="), IntegerLteq },
+			{ base::StrID(">="), IntegerGteq },
+			{ base::StrID("=="), IntegerEq },
+			{ base::StrID("!="), IntegerNeq },
+			{ keywordToStr(lang_def::Keyword::And), BooleanAnd },
+			{ keywordToStr(lang_def::Keyword::Or), BooleanOr },
 		};
 
 		if (operators.contains(op)) return operators.at(op);
@@ -74,6 +80,7 @@ namespace compiler::helios::code {
 			// Meta
 			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
 			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
+			{ { keywordToStr(lang_def::Keyword::Const), tsh::Kind::Meta }, BuiltinUnary::Const },
 		};
 
 		// Single lookup

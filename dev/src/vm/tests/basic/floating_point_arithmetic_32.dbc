@@ -39,7 +39,7 @@ function foo {} -> i32 {
 
 	label fail;
 	init_lany_type		tmp, i32;
-	mov_l32_imm 		tmp, 2137;
+	mov_l32_imm 		tmp, 1235;
 	output_l32  		tmp;
 	mov_l32_l32 		ret_val, a;
 

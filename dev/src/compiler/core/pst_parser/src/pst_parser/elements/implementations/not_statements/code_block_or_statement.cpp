@@ -29,6 +29,12 @@ namespace pst {
 			nullAwareDprint(stmt.value(), out);
 	}
 
+	LangElement::HashAlg& CodeBlockOrStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, code_block.has_value());
+		addToHash(partial_hash, stmt.has_value());
+		return partial_hash;
+	}
+
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		if (code_block)
 			return code_block.value().internal()->begin();
@@ -43,5 +49,18 @@ namespace pst {
 		else if (stmt)
 			return { stmt->give(), 1 };
 		CORE_UNREACHABLE();
+	}
+
+	CodeBlockOrStmt::Type CodeBlockOrStmt::getType() const {
+		if (stmt.has_value())
+			return Type::SingleStmt;
+		else if (code_block.has_value())
+			return Type::CodeBlock;
+		CORE_UNREACHABLE();
+	}
+
+	AccessLocked<Stmt> CodeBlockOrStmt::getStmt() const {
+		CORE_ASSERT(stmt.has_value(), "No stmt present when getting single statement");
+		return stmt.value().give();
 	}
 }

@@ -10,7 +10,7 @@ namespace pst::expr {
 	 * expression doesn't cause problems with other parsing.
 	 */
 	class Comma final: public ExprElement {
-		using Lower = Ternary;
+		using Lower = MatchExpr;
 
 		std::vector<AccessInternalAnonymous<ExprElement>> expressions;
 
@@ -25,8 +25,9 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 		~Comma() override = default;
-		void dprint(std::ostream& out) const final;
-		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		void     dprint(std::ostream& out) const final;
+		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		auto getExpressions() const {

@@ -1,8 +1,15 @@
 #pragma once
 
+#include "../config.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/raw_view.hpp>
+
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
 
 #ifdef USE_TAIL_CALLS
@@ -92,31 +99,37 @@ namespace vm {
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
-		static __attribute__((always_inline)) void performFunctionCall(
-			const MicroInstruction*& instr,
-			std::byte*&              local_stack,
-			Frame*&                  frame,
-			VMThread&                thread,
-			usize                    function_id
-		) {
-			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.executing_program->functions[function_id];
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performFunctionCall(
+				const MicroInstruction*& instr,
+				std::byte*&              local_stack,
+				Frame*&                  frame,
+				VMThread&                thread,
+				usize                    function_id
+			) {
+			auto&      runtime_data     = thread.runtime_data;
+			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
+			const bool called_rets_void = called_func.result_type->getName() == "void";
 
 			DEBUG_LOG("Calling function: " << called_func.name.str());
 
 			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
+			auto shared_stack_space_size
+				= called_func.arg_size + !called_rets_void * called_func.ret_size;
 
 			// Save current registers and flow.
-			frame->instr                = instr + 1;
-			frame->local_stack          = local_stack;
-			frame->called_func_arg_size = called_func.arg_size;
-			frame->called_func_ret_size = called_func.ret_size;
+			frame->instr       = instr + 1;
+			frame->local_stack = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
 
 			frame++;
+			frame->current_function = &called_func;
 
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
@@ -135,7 +148,7 @@ namespace vm {
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
 			u64 arg_count              = called_func.parameters.size();
-			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
+			u64 shared_block_count     = !called_rets_void ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
 			frame->local_stack_head = shared_stack_space_size;
@@ -163,16 +176,25 @@ namespace vm {
 			}
 		}
 
-		static __attribute__((always_inline)) void performInit(
-			[[maybe_unused]] const MicroInstruction*& instr,
-			std::byte*&                               local_stack,
-			Frame*&                                   frame,
-			VMThread&                                 thread,
-			TypeID                                    type_id
-		) {
-			auto type     = thread.executing_program->types->at(type_id);
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performInit(
+				[[maybe_unused]] const MicroInstruction*& instr,
+				std::byte*&                               local_stack,
+				Frame*&                                   frame,
+				VMThread&                                 thread,
+				TypeID                                    type_id
+			) {
+			auto type     = thread.executing_program->getTypes().at(type_id);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+
+			thread.process_memory.increaseBlockRefcount(block
+			);  // so that nobody can delete our block
+
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
 			// local_offset mappings from the frame when we call a function. In the call, we just
 			// move the local_stack_head and new inits (which will happen after we return from a
@@ -186,5 +208,113 @@ namespace vm {
 			frame->block_stack.push_back(block);
 			frame->local_stack_head += type->getSize();
 		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performDeinit(
+				[[maybe_unused]] const MicroInstruction*& instr,
+				[[maybe_unused]] std::byte*&              local_stack,
+				Frame*&                                   frame,
+				VMThread&                                 thread
+			) {
+			auto block = frame->block_stack.back();
+			auto type  = thread.process_memory.getBlockType(block);
+			frame->block_stack.pop_back();
+
+			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
+			// will overwrite the old mappings
+
+			thread.process_memory.freeBlockData(block);
+			thread.process_memory.decreaseBlockRefcount(block);
+			frame->local_stack_head -= type->getSize();
+		}
+
+		static TypeCRef getVariantTypeFromPointer(VMThread& thread, Pointer variant_pointer) {
+			// We may be pointing to a table with structs, that contain variants somewhere inside.
+			// This functions is very tricky, but in case of variants we can locate them using the
+			// method below. Thanks to type_tag and
+			// @TODO: #1369 Remove this function
+			auto block_type = thread.process_memory.getBlockType(variant_pointer.getBlock());
+			if (block_type->getKind() == Type::Kind::Variant)
+				return block_type;
+			else
+				return block_type->getNonCompoundTypeAtOffsetRecursive(variant_pointer.getOffset())
+				    .value();
+		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			setVariantType(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
+
+			auto wanted_type = thread.executing_program->getTypes().at(wanted_type_id);
+
+			auto variant_type          = getVariantTypeFromPointer(thread, variant_pointer);
+			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
+
+			// Set the view block
+			auto nested_data_ptr = variant_pointer;
+			nested_data_ptr.movePointer(static_cast<i64>(variant_type_tag_size));
+			thread.process_memory.setNestedViewBlock(nested_data_ptr, wanted_type);
+
+			// Find type index
+			auto  alternatives      = variant_type->getVariantAlternatives().value();
+			usize alternative_index = 0;
+			for (const auto& [idx, alt]: std::views::enumerate(alternatives))
+				if (alt->getID() == wanted_type_id) alternative_index = static_cast<usize>(idx);
+
+			// Write the type tag
+			auto variant_block_data_view
+				= thread.process_memory.getBlockViewUnsafe(variant_pointer.getBlock());
+			auto variant_data_view = base::ModRawView(
+				variant_block_data_view.getBegin() + variant_pointer.getOffset(),
+				variant_type->getSize()
+			);
+
+			switch (variant_type_tag_size) {
+			case 1:
+				// byte, using uint8_t below since byte is not std::integral
+				writeToView(variant_data_view, base::safeIntConv<uint8_t>(alternative_index));
+				break;
+			case 2:
+				writeToView(variant_data_view, base::safeIntConv<u16>(alternative_index));
+				break;
+			case 4:
+				writeToView(variant_data_view, base::safeIntConv<u32>(alternative_index));
+				break;
+			case 8:
+				writeToView(variant_data_view, base::safeIntConv<u64>(alternative_index));
+				break;
+			default:
+				CORE_PANIC("Invalid variant size: ", variant_type_tag_size);
+			}
+		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			Pointer
+			getVariantPtr(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id) {
+			auto variant_type = getVariantTypeFromPointer(thread, variant_pointer);
+			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
+
+			auto view_block_ref = thread.process_memory.getNestedViewBlock(
+				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),
+				wanted_type
+			);
+
+			match_optional(view_block_ref.toOpt()) {
+				opt_some(view_block) { return Pointer{ view_block, 0 }; }
+				opt_none { return Pointer::null(); }
+			}
+			CORE_UNREACHABLE();
+		}
 	};
+
 }  // namespace vm

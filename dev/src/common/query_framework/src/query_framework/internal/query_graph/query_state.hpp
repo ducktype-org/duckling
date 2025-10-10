@@ -7,7 +7,7 @@
 #include <base/ref.hpp>
 
 namespace query::internal {
-	class QueryState {
+	class QueryState final {
 		/**
 		 * @brief Color of a node in the graph that is used for cycle detection.
 		 */

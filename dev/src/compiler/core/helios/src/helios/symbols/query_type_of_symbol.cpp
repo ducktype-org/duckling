@@ -1,5 +1,9 @@
 #include "query_type_of_symbol.hpp"
 
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -43,7 +47,7 @@ namespace compiler::helios {
 				if (auto ctv
 				    = ctx.query<QueryEvaluateExpression>(pst::AccessLocked<pst::ExprElement>(expr)
 				    )) {
-					if (auto maybe_type = ctv.value().asType())
+					if (auto maybe_type = ctv.value().asType(ctx))
 						setTypeOfSymbol(maybe_type.value());
 					else
 						CORE_PANIC("QueryEvaluateExpressionCT returned not a type");
@@ -109,49 +113,6 @@ namespace compiler::helios {
 				setTypeOfSymbol(field->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitFun(pst::Access<pst::Fun> fun) final {
-				auto locked_params = fun->getParams();
-				auto params        = locked_params.unlock(ctx);
-				auto ret           = fun->getRet();
-
-				std::vector<tsh::SymbolType<>> param_types{};
-				param_types.reserve(params->size());
-
-				for (auto param: *params) {
-					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
-
-					if (param_type->hasValue()) {
-						param_types.emplace_back(param_type->value());
-					} else {
-						// we just fail here, because we can't continue without type
-						return;
-					}
-				}
-
-				// Default return type is a direct unit.
-				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
-				if (ret.has_value()) {
-					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType())
-							ret_type = maybe_type.value();
-						else
-							return;
-					} else {
-						// We just fail here, because we can't continue without type.
-						return;
-					}
-				}
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryFunctionType>({ param_types,
-				                                                                  ret_type }));
-			}
-
 			void visitClass(pst::Access<pst::Class>) final {
 				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryMetaType>({}));
 			}
@@ -164,16 +125,35 @@ namespace compiler::helios {
 				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
 			}
 
-			void visitFunParam(pst::Access<pst::FunParam> param) final {
+			void visitParam(pst::Access<pst::Param> param) final {
 				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 		};
+
+		static auto handleFunction(Context& ctx, SymID sym) {
+			// @note: this crates false dependency of default parameter expressions
+			auto                           declaration = ctx.query<QueryDeclOfFun>(sym);
+			std::vector<tsh::SymbolType<>> param_types{};
+			param_types.reserve(declaration->parameters.size());
+			for (auto& param: declaration->parameters) param_types.emplace_back(param.type);
+
+			return tsh::SymbolType{
+				ctx.query<tsh::QueryFunctionType>({ param_types, declaration->return_type }),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			};
+		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_ref = getSymRef(key);
 
 			variant_match(symbol_ref->other) {
 				variant_case(PstSymbolData, pst_data) {
+					// @note: function are handled in a special way, using QueryDeclOfFun.
+					if (kind(key) == SymbolKind::Function
+					    or kind(key) == SymbolKind::FunctionDeclaration)
+						return handleFunction(ctx, key);
+
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
 					if_opt_some(visitor.symbol_type, type) { return type; }

@@ -1,9 +1,10 @@
 #include <backends/dvm/backend.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/exceptions.hpp>
@@ -30,6 +31,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(unitsTest);
 	}
 
 protected:
@@ -45,7 +47,7 @@ private:
 		vm::code::CodeCollection                  code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
+			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
@@ -117,6 +119,8 @@ private:
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };
 
 

@@ -17,5 +17,7 @@ Tests:
 
 SubDirs:
   - expressions
+  - ffi
   - samples
   - statements
+  - functions

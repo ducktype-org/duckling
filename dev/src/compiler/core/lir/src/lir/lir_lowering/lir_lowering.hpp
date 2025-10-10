@@ -23,7 +23,7 @@ namespace compiler::lir {
 	 * This was useful to create one module ctor, that calls all ctors of globals
 	 * In the provided order. Same for dtors.
 	 */
-	Function fromLIRFunctions(
+	Function createFunctionInvoker(
 		query::Context&                    ctx,
 		const std::vector<CRef<Function>>& functions,
 		const base::StrID&                 mangled_name

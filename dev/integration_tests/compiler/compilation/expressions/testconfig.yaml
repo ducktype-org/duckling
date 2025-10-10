@@ -6,3 +6,27 @@ Tests:
       default:
         Output:
           String: "9 \n9 \n9 \n18 \n4 \n"
+  single-comparison: # Any type of comparison between two values.
+    Cases:
+      default:
+        Output:
+          String: ""
+        ExitCode: 0
+  comparison-chain:
+    Cases:
+      default:
+        Output:
+          String: ""
+        ExitCode: 0
+  unit_simple:
+    Cases:
+      default:
+        Output:
+          String: "1 \n"
+        ExitCode: 0
+  unit_simple_multiple_modules:
+    Cases:
+      default:
+        Output:
+          String: "1 \n"
+        ExitCode: 0

@@ -17,6 +17,7 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <expected>
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
@@ -25,29 +26,25 @@
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
 
-	ServiceManager& VMProcess::getServices() { return service_manager; }
-
 	api::ProcStatus VMProcess::getStatus() {
 		std::shared_lock lock(rw_status);
 		return status;
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
+		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
-		std::unique_lock                                       lock(rw_global);
-		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
+		std::unique_lock                                             lock(rw_global);
+		std::expected<CRef<low::LowVMProgram>, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.getProgram(files); }
-				variant_case(std::vector<code::CodeCollection>, code) {
-					return loader.getProgram(code);
-				}
+				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
+				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (code_result.has_value()) {
-			loaded_program.emplace(*std::move(code_result));
+			loaded_program = *code_result;
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -64,7 +61,7 @@ namespace vm {
 		if (!loaded_program.has_value()) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		bool response
-			= getMainVMThread().spawnThreadAndRun(&*loaded_program, func_name, run_arguments);
+			= getMainVMThread().spawnThreadAndRun(*loaded_program, func_name, run_arguments);
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -107,8 +104,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::output() {
-		auto        lock = io.lock();
-		std::string content;
+		auto lock = io.lock();
 		// Cannot read output from api when IO is being redirected
 		if (io_redirecter)
 			return std::unexpected(api::ApiError{
@@ -117,7 +113,7 @@ namespace vm {
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 
-		content = io.outputStream().str();
+		const std::string content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
@@ -239,9 +235,9 @@ namespace vm {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto res = loaded_program->types->atMaybe(
-							base::StrID(type_request.type_name.c_str())
-						);
+						auto res = (*loaded_program)
+						               ->getTypes()
+						               .atMaybe(base::StrID(type_request.type_name.c_str()));
 						match_optional(res) {
 							opt_some(value) { return api::response::Type{ value }; }
 
@@ -254,22 +250,29 @@ namespace vm {
 				}
 			}
 
-
 			variant_case(api::request::VmValue, vmvalue_request) {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto maybe_type = loaded_program->types->atMaybe(
-							base::StrID(vmvalue_request.type_name.c_str())
-						);
-						match_optional(maybe_type) {
-							opt_some(type) {
-								auto vm_value = createOwnedVmValue(type);
-								return api::response::VmValue{ std::move(vm_value) };
+						match_optional(loaded_program) {
+							opt_some(program) {
+								auto maybe_type = program->getTypes().atMaybe(
+									base::StrID(vmvalue_request.type_name.c_str())
+								);
+								match_optional(maybe_type) {
+									opt_some(type) {
+										auto vm_value = createOwnedVmValue(type);
+										return api::response::VmValue{ std::move(vm_value) };
+									}
+									opt_none {
+										return std::unexpected(api::ApiError{
+											api::OtherError{ "Type not found" } });
+									}
+								}
 							}
 							opt_none {
 								return std::unexpected(api::ApiError{
-									api::OtherError{ "Type not found" } });
+									api::OtherError{ "Program non loaded hence type not found" } });
 							}
 						}
 					}
@@ -279,7 +282,9 @@ namespace vm {
 				return api::Response(getStatus());
 			}
 
-			variant_case(api::request::ExitCodeRequest, exit_code_request) { return getExitCode(); }
+			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
+
+			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
@@ -312,14 +317,6 @@ namespace vm {
 		vm_threads.emplace_back(*this);
 	}
 
-	VMProcess::~VMProcess() {
-		for (auto& t: vm_threads)
-			if (t.exec_thread) (void) (stop());
-		if (loaded_program.has_value())
-			getMainVMThread().execGlobalDestructors(&loaded_program.value());
-		for (auto& vm_value: owned_vm_values) vm_value->freeData();
-	}
-
 	ProcIO& VMProcess::getIO() { return io; }
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
@@ -341,10 +338,10 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
+	void VMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = event;
+			status = new_status;
 		}
 		status_cv.notify_all();
 	}
@@ -358,5 +355,27 @@ namespace vm {
 			));
 		}
 		CORE_UNREACHABLE();
+	}
+
+	std::expected<api::Response, api::ApiError> VMProcess::deinitAndValidate() {
+		for (auto& t: vm_threads) {
+			if (t.exec_thread)
+				if (auto res = stop(); !res.has_value()) return res;
+		}
+		try {
+			// There might be numerous runtime exceptions during the deinitialization,
+			// any of those means there was an issue during the validation.
+			if (loaded_program.has_value())
+				getMainVMThread().execGlobalDestructors(*loaded_program);
+
+			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
+
+			memory.deinitGlobals();
+		} catch (exceptions::VMRuntimeException& e) {
+			std::cerr << " - VM has detected issues during program\'s deinitialization: "
+					  << e.what() << '\n';
+			return false;
+		}
+		return memory.validateMemoryState();
 	}
 }

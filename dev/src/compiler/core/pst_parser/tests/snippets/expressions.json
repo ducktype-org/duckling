@@ -8,8 +8,8 @@
 				"parameters": {
 					"function parameter list": [
 						{
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "x"
 									},
@@ -22,8 +22,8 @@
 							}
 						},
 						{
-							"Function Parameter": {
-								"Function Parameter": {
+							"Parameter": {
+								"Parameter": {
 									"name": {
 										"Name": "y"
 									},

@@ -9,9 +9,9 @@ class DynamicTableVmTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(twoDim);
 		TESTER_ADD_TEST(dynArrSum);
 		TESTER_ADD_TEST(lea);
-		TESTER_ADD_TEST(twoDim);
 		TESTER_ADD_TEST(nonInstantiableDynTable);
 		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);
@@ -23,7 +23,7 @@ private:
 
 	void lea() { runTestOnVm("lea.dbc", "", "4", {}); }
 
-	void twoDim() { runTestOnVm("two_dim.dbc", "", "2137", {}); }
+	void twoDim() { runTestOnVm("two_dim.dbc", "", "1235", {}); }
 
 	void nonInstantiableDynTable() {
 		loadInvalidDbc("non_instantiable.dbc", { vm::code::UninstantiableValueError::ERR_MSG });

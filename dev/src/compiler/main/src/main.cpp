@@ -8,9 +8,13 @@
 
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/statistics/statistics.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
+#include <linker/link.hpp>
 #include <pst_parser/pst.hpp>
+#include <timer/timer.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -22,6 +26,7 @@
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
 #include <printer/stream_printer.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -65,6 +70,21 @@ clah::Clah getStandardDucklingOptions() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
+}
+
+/**
+ * Helper function to extract linking options from clah parsing result.
+ */
+compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingResult& parsing_result
+) {
+	compiler::linker::LinkingOptions linking_options;
+
+	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
+		linking_options.external_static_libraries.push_back(lib_path.value());
+
+	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
+
+	return linking_options;
 }
 
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
@@ -166,8 +186,7 @@ clah::Clah getClahForMain() {
 
 							   // @TODO: error handling
 							   using namespace compiler;
-							   auto root
-								   = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+							   auto root = frontend::createModuleTree(path_to_compile);
 							   auto top_level
 								   = query::entryPoint<helios::QueryTopLevelEntities>(root);
 							   std::cout << top_level->debugPrint();
@@ -209,7 +228,7 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+					auto root = frontend::createModuleTree(path_to_compile);
 
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
@@ -230,6 +249,25 @@ clah::Clah getClahForMain() {
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode instead of exe.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-statistics")
+	                     .addShortDesc("Print execution time statistics.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-graph")
+	                     .addShortDesc("Print the query graph after the compilation.")
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("library"))
+	                     .addLongName("external-static-library")
+	                     .addShortDesc("Path to a static library to link against.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-c-standard-library")
+	                     .addShortDesc(
+							 "Doesn't link the C standard library into the final executable."
+						 )
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -237,9 +275,16 @@ clah::Clah getClahForMain() {
 								.artifacts_path = 
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.debug_options = getDebugOptionsFromClap(options),
+							.debug_options = getDebugOptionsFromClap(options)
 						}
 					);
+					const auto& linking_options = getLinkingOptionsFromClap(options);
+
+					// @TODO #1058: make graph/statistics printing configuration better.
+
+					timer::TimeMeasurement total_compilation_time;
+					total_compilation_time.startMeasurement();
+
 
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto backend_type    = options.isFlag("dvm-backend")
@@ -248,7 +293,37 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
+					compiler::driver::compilerEntirePackage(
+						path_to_compile, backend_type, linking_options
+					);
+
+					total_compilation_time.endMeasurement();
+
+					if (options.isFlag("print-statistics")) {
+						if (not query::USE_STATS) {
+							std::cerr << "Warning: Query statistics are disabled at compile time. "
+										 "No query statistics will be printed.\n";
+						}
+						query::printStats();
+
+						std::cerr << "\nTotal compilation time: ";
+						timer::printAs(
+							std::cerr,
+							total_compilation_time.duration(),
+							timer::TimeUnit::Milliseconds
+						);
+						std::cerr << "\n";
+						std::cerr << " - Backend compilation time: ";
+						timer::printAs(
+							std::cerr,
+							compiler::driver::getBackendCompilationTime(),
+							timer::TimeUnit::Milliseconds
+						);
+						std::cerr << "\n\n";
+					}
+
+					if (options.isFlag("print-graph"))
+						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
 					return 0;
 				})
@@ -272,8 +347,7 @@ clah::Clah getClahForMain() {
 			}
 		);
 
-							   auto root
-								   = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+							   auto root = frontend::createModuleTree(path_to_compile);
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {

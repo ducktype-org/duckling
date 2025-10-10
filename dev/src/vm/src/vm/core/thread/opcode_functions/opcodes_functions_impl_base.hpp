@@ -81,7 +81,10 @@ namespace vm {
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
-	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
+		{ CORE_ASSERT(frame->block_stack.size() == 1, "Invalid start function."); }
+		IF_TC(return;)
+	}
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                            \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
@@ -228,7 +231,6 @@ namespace vm {
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
-
 
 	// @TODO: Check for over/under flows. This should be done in #1216.
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
@@ -383,7 +385,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0)); }
+		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -405,14 +407,14 @@ namespace vm {
 			// Create VmValue objects from local arguments.
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_signature->parameters[i];
-				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
+				TypeCRef          real_type = thread.executing_program->getTypes().at(arg_type);
 				auto              block     = frame->block_stack[first_arg_idx + i];
 				args.push_back(thread.process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id,
-				thread.executing_program->types->at(function_signature->result_type),
+				thread.executing_program->getTypes().at(function_signature->result_type),
 				thread.process,
 				thread,
 				args
@@ -430,7 +432,8 @@ namespace vm {
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
 				frame->block_stack.pop_back();
-				thread.process_memory.freeBlock(block);
+				thread.process_memory.freeBlockData(block);
+				thread.process_memory.decreaseBlockRefcount(block);
 			}
 			if (arg_count > 0)
 				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
@@ -443,17 +446,22 @@ namespace vm {
 		{
 			const auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
 
-			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
+			// Objects are guaranteed to hold inheritance metadata pointers as their first field.
 			// This is verified by static verification.
 
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
-			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
-			const auto  method_name      = thread.executing_program->method_name_pool[instr->arg1];
-			const auto  implementation_name = inh_metadata->vtable[method_name];
+			const auto  inh_metadata     = (*inh_meta_pointer)
+			                              ->getInheritanceMetadata()
+			                              .expect(
+											  "setVTable_lptr_type not called on the object, hence "
+											  "no inheritance metadata."
+										  );
+			const auto method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
-				= *thread.executing_program->functions.idOf(implementation_name);
+				= *thread.executing_program->getFunctions().idOf(implementation_name);
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
@@ -462,9 +470,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto  function_id = static_cast<usize>(instr->arg0);
-			auto& function    = thread.executing_program->functions[function_id];
-			instr             = function.bc.data();
+			auto  function_id       = static_cast<usize>(instr->arg0);
+			auto& function          = thread.executing_program->getFunctions()[function_id];
+			instr                   = function.bc.data();
+			frame->current_function = &function;
 
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
@@ -475,7 +484,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
-			auto* callee_frame = frame;
+			auto*      callee_frame = frame;
+			const bool void_func    = frame->current_function->result_type->getName() == "void";
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -485,24 +495,23 @@ namespace vm {
 			// call stack frame.
 			frame--;  // This is now the caller's frame.
 
-			bool non_void = frame->called_func_ret_size > 0;
 			while (!callee_frame->block_stack.empty()) {
 				auto block = callee_frame->block_stack.back();
 
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
-				if (!non_void || callee_frame->block_stack.size() != 1)
-					thread.process_memory.freeBlock(block);
+				if (void_func || callee_frame->block_stack.size() != 1) {
+					thread.process_memory.freeBlockData(block);
+					thread.process_memory.decreaseBlockRefcount(block);
+				}
 
 				callee_frame->block_stack.pop_back();
 			}
 			callee_frame->resetFrameData();
 
 			// Load previous frame.
-			instr                       = frame->instr;  // This is already a pointer to next instr.
-			local_stack                 = frame->local_stack;
-			frame->called_func_arg_size = 0;
-			frame->called_func_ret_size = 0;
+			instr       = frame->instr;  // This is already a pointer to next instr.
+			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
@@ -514,17 +523,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
-		{
-			auto block = frame->block_stack.back();
-			auto type  = thread.process_memory.getBlockType(block);
-			frame->block_stack.pop_back();
-
-			// @note: Removing block_id fo local_offset mappings is not needed here, since new inits
-			// will overwrite the old mappings
-
-			thread.process_memory.freeBlock(block);
-			frame->local_stack_head -= type->getSize();
-		}
+		{ performDeinit(instr, local_stack, frame, thread); }
 		FUNCTION_CONT(1);
 	}
 
@@ -597,7 +596,7 @@ namespace vm {
 		{
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
+				= thread.executing_program->getTypes().at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto       block   = thread.process_memory.allocateHeap(type);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
@@ -607,8 +606,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
-			auto ptr = readFromStack<Pointer>(local_stack, instr->arg0);
-			if (!ptr.isNull()) thread.process_memory.freeBlock(ptr.getBlock());
+			if (auto ptr = readFromStack<Pointer>(local_stack, instr->arg0))
+				thread.process_memory.freeBlockData(ptr.getBlock());
 		}
 		FUNCTION_CONT(1);
 	}
@@ -634,11 +633,22 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_lptr)(FUNCTION_ARGS) {
+		{
+			const auto    dst = readFromStack<Pointer>(local_stack, instr->arg0);
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto type
-				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+			auto type    = thread.executing_program->getTypes().at(
+                TypeID(base::safeIntConv<usize>(instr->arg1))
+            );
 
 			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
@@ -649,12 +659,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lvnt_type)(FUNCTION_ARGS) {
 		{
-			auto variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg0)];
+			auto variant_block_index = frame->local_offset_to_block_idx[instr->arg0];
 			auto variant_block       = frame->block_stack[variant_block_index];
-			thread.process_memory.setNestedViewBlock(
-				Pointer(variant_block, 0),
-				thread.executing_program->types->at(TypeID(u64(instr->arg1)))
-			);
+			OpFuns::setVariantType(thread, Pointer(variant_block, 0), TypeID(instr->arg1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -663,26 +670,12 @@ namespace vm {
 		{
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
-			auto       parent_block        = frame->block_stack[variant_block_index];
-			auto       wanted_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+			auto       variant_block       = frame->block_stack[variant_block_index];
 
-			auto view_block_ref
-				= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
-
-			match_optional(view_block_ref.toOpt()) {
-				opt_some(view_block) {
-					const auto new_dst = thread.process_memory.updatePointerAssignment(
-						dst, thread.process_memory.newBlockReference(view_block, 0)
-					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-				opt_none {
-					const auto new_dst
-						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-			}
+			const auto new_dst = thread.process_memory.updatePointerAssignment(
+				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), TypeID(instr[1].arg0))
+			);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -690,9 +683,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			thread.process_memory.setNestedViewBlock(
-				variant_pointer, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
-			);
+			OpFuns::setVariantType(thread, variant_pointer, TypeID(instr->arg1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -701,26 +692,13 @@ namespace vm {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       wanted_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
-			auto view_block_ref
-				= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
-
-			match_optional(view_block_ref.toOpt()) {
-				opt_some(view_block) {
-					const auto new_dst = thread.process_memory.updatePointerAssignment(
-						dst, thread.process_memory.newBlockReference(view_block, 0)
-					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-				opt_none {
-					const auto new_dst
-						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-			}
+			const auto new_dst = thread.process_memory.updatePointerAssignment(
+				dst, OpFuns::getVariantPtr(thread, variant_pointer, TypeID(instr[1].arg0))
+			);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
+
 		FUNCTION_CONT(2);
 	}
 
@@ -740,8 +718,7 @@ namespace vm {
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
 			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
 
-			auto dst_type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+			auto dst_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
@@ -936,14 +913,14 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto pointed_type   = thread.executing_program->types->at(TypeID(instr->arg1));
+			auto pointed_type   = thread.executing_program->getTypes().at(TypeID(instr->arg1));
 			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
 
 			if (new_elem_count == 0) {
 				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
 				// null. This is one of two possible approaches:
 				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to
-				// null-poiner (what we do here)
+				// null-pointer (what we do here)
 				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
 				// C-nullptr as their data, but on DVM level we would still allow pointer
 				// [0-sized-block, nullptr] to exist. Any access to such block would simply
@@ -951,9 +928,13 @@ namespace vm {
 				//
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
-				const Pointer new_dst
-					= thread.process_memory.updatePointerAssignment(tbl_pointer, Pointer::null());
-				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+				if (!tbl_pointer.isNull()) {
+					thread.process_memory.freeBlockData(tbl_pointer.getBlock());
+					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+						tbl_pointer, Pointer::null()
+					);
+					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+				}
 			} else if (tbl_pointer.isNull()) {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);

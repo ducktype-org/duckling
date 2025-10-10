@@ -7,18 +7,6 @@
 
 #include <token_source/source.hpp>
 
-namespace pst::internal {
-	void deleteState(pst::LangParserState* ptr);
-}
-
-namespace base::extend {
-	// Custom deleter to not include full state definition
-	template<>
-	struct BoxPtrDeleter<pst::LangParserState> {
-		static void del(pst::LangParserState* ptr) { pst::internal::deleteState(ptr); }
-	};
-}
-
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
@@ -70,6 +58,7 @@ namespace pst {
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
 			calcElementPaths();
+			calcHashes();
 		}
 
 		/**
@@ -93,8 +82,18 @@ namespace pst {
 			parse(std::forward<Args>(args)...);
 		}
 
+		/**
+		 * @brief Performs the element path calculation for all of the elements of the tree.
+		 */
 		void calcElementPaths() {
 			if (auto ref = element.internalMut()) ref->calcElementPaths({});
+		}
+
+		/**
+		 * @brief Performs the hash calculation for all of the elements of the tree.
+		 */
+		void calcHashes() {
+			if (auto ref = element.internalMut()) ref->calcHashRecursive();
 		}
 
 	public:

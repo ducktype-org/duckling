@@ -16,6 +16,8 @@ namespace pst {
 		NAMED_CHILD_OPT(code_block, CodeBlock);
 
 	public:
+		enum class Type { SingleStmt, CodeBlock };
+
 		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
@@ -24,13 +26,23 @@ namespace pst {
 			LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
 		);
 		~CodeBlockOrStmt() final = default;
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		using const_iterator = CodeBlockOrStmtIterator;
 		[[nodiscard]]
 		const_iterator begin() const;
 		[[nodiscard]]
 		const_iterator end() const;
+
+		[[nodiscard]]
+		Type getType() const;
+
+		/**
+		 * @brief Get the stored statement. Panics if is in code block state.
+		 */
+		[[nodiscard]]
+		AccessLocked<Stmt> getStmt() const;
 
 		[[nodiscard]]
 		std::string elementType() const override {

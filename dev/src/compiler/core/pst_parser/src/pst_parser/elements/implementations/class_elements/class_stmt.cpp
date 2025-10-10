@@ -51,6 +51,7 @@ namespace pst {
 			return internal::parseStmt<Method>(state, ctx);
 		case Keyword::Const:
 			return internal::parseStmt<Field>(state, ctx);
+		case Keyword::Pattern:
 		case Keyword::Alias:
 		case Keyword::Using:
 			return internal::parseStmt<NonClassStmt>(state, ctx);
@@ -63,6 +64,13 @@ namespace pst {
 			return internal::parseStmt<AccessBlock>(state, ctx);
 
 		return internal::parseStmt<Field>(state, ctx);
+	}
+
+	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, attributes.size());
+		addToHash(partial_hash, context.name.str());
+		addToHash(partial_hash, context.specifiers);
+		return partial_hash;
 	}
 
 	MBox<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
