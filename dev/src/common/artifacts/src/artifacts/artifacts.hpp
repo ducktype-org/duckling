@@ -6,7 +6,6 @@
 #include <base/string_id.hpp>
 
 #include <filesystem/file.hpp>
-#include <hashing/hash.hpp>
 
 #include <cstring>
 #include <type_traits>
