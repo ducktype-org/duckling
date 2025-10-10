@@ -188,6 +188,14 @@ namespace tsh {
 		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
 
 		/**
+		 * @brief Whether the type carries any information, in an information-theoretic sense. For
+		 * example, the unit and void types does not carry any information, while other types do.
+		 * @return Whether the type carries information.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const;
+
+		/**
 		 * @brief Get the text representation of this type.
 		 * @return The text representation of this type.
 		 */

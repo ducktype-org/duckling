@@ -8,6 +8,7 @@ namespace compiler::helios {
 	enum class SymbolKind {
 		Namespace,
 		Function,
+		FunctionDeclaration,
 		Const,
 		Class,
 		Alias,

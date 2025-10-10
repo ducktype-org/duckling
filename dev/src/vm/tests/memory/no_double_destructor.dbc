@@ -3,15 +3,17 @@
 
 
 # struct MyStruct {
-#     field: ptr_i64 | i64
+#     field0: i64
+#     field1: ptr_i64 | i64
 # }
 # table = MyStruct[3];
-# table[0].field = &ret_val;
+# table[0].field1 = &ret_val;
 
 type variant: MyVariant { ptr_i64, i64 }
 
 type data: MyStruct {
-    field: MyVariant
+    field0: i64,
+    field1: MyVariant
 }
 
 type fixed_size_table: MyTable MyStruct 3
@@ -40,8 +42,8 @@ function main { i64, ptr_argv } -> i64 {
 
     init_lany_type variant_ptr, MyVariantPtr;
     structLea_lptr_lptr variant_ptr, struct_ptr;
-    ext_field MyStruct.field;
-    # variant_ptr = &struct_ptr->field;
+    ext_field MyStruct.field1;
+    # variant_ptr = &struct_ptr->field1;
 
     variantSetInner_lptr_type variant_ptr, ptr_i64;
     # (*variant_ptr).setType<ptr_i64>();

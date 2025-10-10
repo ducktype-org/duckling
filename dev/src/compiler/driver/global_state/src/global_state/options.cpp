@@ -1,6 +1,8 @@
 
 #include "options.hpp"
 
+#include <base/exceptions.hpp>
+
 namespace global_state {
 
 	Ref<DynamicDebugOptions> getDynamicDebugOptions() {
@@ -10,5 +12,4 @@ namespace global_state {
 		};
 		return &options;
 	}
-
 }

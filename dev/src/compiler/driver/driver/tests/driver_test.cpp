@@ -107,7 +107,9 @@ private:
 
 		// this also checks if llvm IR lib compile and link into the executable:
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::LLVM
+			fs::File(path("modules/functions_4")),
+			driver::BackendType::LLVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -117,7 +119,9 @@ private:
 		);
 
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::DVM
+			fs::File(path("modules/functions_4")),
+			driver::BackendType::DVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 	}
 
