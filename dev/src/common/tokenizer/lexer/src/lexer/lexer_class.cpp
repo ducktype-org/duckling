@@ -244,13 +244,15 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (token_messages) {
-			printer::StreamPrinter::printNL({
-				"Add token: ",
-				std::string(token_type),
-				"(",
-				std::string(file->getCharRange(begin, end + 1).stringView()),
-				")",
-			});
+			printer::StreamPrinter::printNL(
+				{
+					"Add token: ",
+					std::string(token_type),
+					"(",
+					std::string(file->getCharRange(begin, end + 1).stringView()),
+					")",
+				}
+			);
 		}
 	}
 
@@ -270,6 +272,18 @@ namespace lexer {
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
+		// Look for numeric literals first since they may start with a '.'
+		else if (peek().isDigit() || (peek().is('.') && peek(1).isDigit())) {
+			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
+				binLiteralHandler(output);
+			else if (peek().is('0') && (peek(1).is('o') || peek(1).is('O')))
+				octLiteralHandler(output);
+			else if (peek().is('0') && (peek(1).is('x') || peek(1).is('X')))
+				hexLiteralHandler(output);
+			else
+				decLiteralHandler(output);
+
+		}
 		// @TODO: for now comments aren't saved as tokens
 		else if (isBlockCommentBegin()) {
 			blockCommentHandler(output);
@@ -287,13 +301,6 @@ namespace lexer {
 			bracketHandler(output);
 		} else if (peek().is(Class::special)) {
 			specialHandler(output);
-		} else if (peek().isDigit()) {
-			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
-				binLiteralHandler(output);
-			else if (peek().is('0') && peek(1).is('x'))
-				hexLiteralHandler(output);
-			else
-				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
 				logger->log(makeBox<TokenStartError>(source_start));
@@ -394,6 +401,28 @@ namespace lexer {
 		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), source_position));
 	}
 
+	void Lexer::parseNumericLiteralTypeSuffix(bool is_float_literal) {
+		if (is_float_literal && (peek().is('i') || peek().is('u'))) return;
+		if (!peek().is('i') && !peek().is('f') && !peek().is('u')) return;
+
+		const auto next1 = peek(1);
+		const auto next2 = peek(2);
+		const auto next3 = peek(3);
+
+		if (next1.is('1') && next2.is('2') && next3.is('8'))
+			skip(4);
+		else if (next1.is('6') && next2.is('4'))
+			skip(3);
+		else if (next1.is('3') && next2.is('2'))
+			skip(3);
+		else if (next1.is('1') && next2.is('6'))
+			skip(3);
+		else if (peek().is('f') && next1.is('8') && next2.is('0'))
+			skip(3);
+		else if (next1.is('8'))
+			skip(2);
+	}
+
 	void Lexer::binLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
@@ -401,14 +430,28 @@ namespace lexer {
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
-		end = where - 1;
+		parseNumericLiteralTypeSuffix(false);
 
+		end = where - 1;
+		dia::SourcePosition source_position(source_start, end);
+		addTokenMsg(begin, end, "numLiteral");
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+	}
+
+	void Lexer::octLiteralHandler(Tokens& output) {
+		usize begin = where;
+		usize end{};
+		auto  source_start = currentPosition();
+
+		skip(2);  // 0o
+		while (peek().isOctDigit()) next();
+		parseNumericLiteralTypeSuffix(false);
+
+		end = where - 1;
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
-
-		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -418,14 +461,13 @@ namespace lexer {
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
-		end = where - 1;
+		parseNumericLiteralTypeSuffix(false);
 
+		end = where - 1;
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
-
-		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
@@ -438,27 +480,28 @@ namespace lexer {
 		next();  // first char - digit
 		while (!isEOF()) {
 			if (!peek().isDigit()) {
-				if (!was_dot && peek().is('.')) {
+				if (!was_dot && peek().is('.')) {  // Only one dot can appear.
 					was_dot = true;
-				} else if (!was_e && peek().is('e')) {
+				} else if (!was_e
+				           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
 					was_e   = true;
 					was_dot = true;
-					if (peek(1).is('+') or peek(1).is('-')) next();
+					next();
+					// '+'/'-' an appear only straight after 'e'/'E'
+					if (peek().is('+') or peek().is('-')) next();
 				} else {
 					break;
 				}
 			}
 			next();
 		}
+		parseNumericLiteralTypeSuffix(was_dot || was_e);
 
 		end = where - 1;
-
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
-
-		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
 	}
 
 	void Lexer::typeSpecifierHandler(Tokens& output) {
@@ -511,9 +554,11 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
-		));
+		output.push_back(
+			Token::makeString(
+				file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
+			)
+		);
 	}
 
 	void Lexer::charHandler(Tokens& output) {
@@ -572,7 +617,8 @@ namespace lexer {
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
 		if (token_messages)
-			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
+			printer::StreamPrinter::printNL(
+				base::strConcat("group begin", generateLineColumnInfo())
 			);
 
 
@@ -603,13 +649,15 @@ namespace lexer {
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
 		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
-		output.push_back(Token::makeBracketGroup(
-			bracket_type,
-			std::move(inner_tokens),
-			std::move(sentinel_begin),
-			std::move(sentinel_end),
-			source_position
-		));
+		output.push_back(
+			Token::makeBracketGroup(
+				bracket_type,
+				std::move(inner_tokens),
+				std::move(sentinel_begin),
+				std::move(sentinel_end),
+				source_position
+			)
+		);
 		if (token_messages) printer::StreamPrinter::printNL("group end");
 	}
 

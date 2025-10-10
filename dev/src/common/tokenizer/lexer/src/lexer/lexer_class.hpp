@@ -79,8 +79,17 @@ namespace lexer {
 		void typeSpecifierHandler(Tokens& output);
 		void decLiteralHandler(Tokens& output);
 		void binLiteralHandler(Tokens& output);
+		void octLiteralHandler(Tokens& output);
 		void hexLiteralHandler(Tokens& output);
 		/**@}*/
+
+		/**
+		 * @brief Consumes a numeric literal type suffix (e.g., i32, f64).
+		 * @param is_float_literal Indicates if the preceding numeric part is a floating-point
+		 * literal. If 'true' we disallow 'iXX', 'uXX' suffixes (they will be parsed as separate
+		 * tokens).
+		 */
+		void parseNumericLiteralTypeSuffix(bool is_float_literal);
 
 		/**
 		 * @name helper functions checking for patterns ahead

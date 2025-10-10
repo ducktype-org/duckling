@@ -32,6 +32,8 @@ namespace lexer {
 
 	bool Char::isBinDigit() const { return is('0') or is('1'); }
 
+	bool Char::isOctDigit() const { return isInRange('0', '7'); }
+
 	bool Char::isDigit() const { return isInRange('0', '9'); }
 
 	bool Char::isHexDigit() const {
@@ -46,3 +48,4 @@ namespace lexer {
 		return res;
 	}
 }
+

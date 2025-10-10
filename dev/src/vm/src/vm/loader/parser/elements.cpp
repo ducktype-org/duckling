@@ -2,6 +2,7 @@
 
 #include "errors.hpp"
 
+#include "base/int_conv.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
@@ -16,7 +17,12 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/memory/memory.hpp>
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
+#include <ranges>
+#include <string>
+#include <string_view>
 
 namespace vm::loader::parser {
 	/**
@@ -26,88 +32,151 @@ namespace vm::loader::parser {
 	 * be type of size 64bits.
 	 */
 	namespace opargs_parsers {
+		std::pair<std::string_view, std::string_view> splitNumberAndSuffix(std::string_view literal) {
+			if (literal.empty()) return { "", "" };
+			auto it = std::ranges::find_if(std::ranges::reverse_view(literal), [](char c) {
+				return std::isalpha(static_cast<unsigned char>(c));
+			});
+
+			if (it == literal.rend())  // No suffix.
+				return { literal, "" };
+
+			auto suffix_start_index
+				= base::safeIntConv<usize>(std::ranges::distance(it, literal.rend()) - 1);
+			char first_suffix_char = literal[suffix_start_index];
+
+			// No suffix
+			if (first_suffix_char == 'e' || first_suffix_char == 'E' || first_suffix_char == 'x'
+			    || first_suffix_char == 'X' || first_suffix_char == 'b' || first_suffix_char == 'B'
+			    || first_suffix_char == 'o' || first_suffix_char == 'O') {
+				return { literal, "" };
+			}
+
+			// f32/f64 suffix is interpreted as part of a number.
+			if (literal.starts_with("0x") || literal.starts_with("0X")) {
+				bool is_part_of_hex = true;
+				for (size_t i = suffix_start_index; i < literal.length(); ++i) {
+					if (!std::isxdigit(static_cast<unsigned char>(literal[i]))) {
+						is_part_of_hex = false;
+						break;
+					}
+				}
+				if (is_part_of_hex) return { literal, "" };
+			}
+
+			return { literal.substr(0, suffix_start_index), literal.substr(suffix_start_index) };
+		}
+
 		template<class T>
 		std::pair<T, size_t> parseLiteral(F8ParserState& state) {
-			size_t literal_length = 0;
-			auto   previous_token = state.tokens().peek();
-			i32    sign           = 1;
-			if (previous_token.isOperatorSymbol()) {
-				if (previous_token.getValue().str() == "-") {
+			std::cout << "Literal: " << state.tokens().peek().getStrValue() << '\n';
+
+			size_t literal_length   = 0;
+			auto   maybe_sign_token = state.tokens().peek();
+			i32    sign             = 1;
+			// TODOP: This may be bugged?
+			if (maybe_sign_token.isOperatorSymbol()) {
+				if (maybe_sign_token.getValue().str() == "-") {
 					sign = -1;
 					state.tokens().next();
 					literal_length++;
-				} else if (previous_token.getValue().str() == "+") {
+				} else if (maybe_sign_token.getValue().str() == "+") {
 					sign = 1;
 					state.tokens().next();
 					literal_length++;
 				}
 			}
-			auto token      = state.tokens().next();
-			auto next_token = state.tokens().peek();
-			// Consume the type specifier
-			auto&& str = token.getValue().str();
-			if constexpr (sizeof(T) != 8) {
-				state.log(makeBox<InvalidLiteral>(
-					token.getPosition(),
-					base::strConcat(
-						"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
-					)
-				));
+
+			auto token = state.tokens().peek();
+			std::cout << "Number token: " << token.getStrValue() << '\n';
+			if (!token.isNumLiteral()) {
+				state.log(
+					makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
+				);
 				return { T{ 0 }, 0 };
 			}
 
-			if (token.isNumLiteral())
-				literal_length += str.length() + next_token.getValue().str().length();
-			else
-				literal_length += str.length();
+			if constexpr (sizeof(T) != 8) {
+				state.log(
+					makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
+						)
+					)
+				);
+				return { T{ 0 }, 0 };
+			}
+
+			auto&& str_view = token.getValue().strView();
+			literal_length += str_view.length();
 
 			try {
-				T     result;
-				usize pos = 0;
-				if (next_token.isTypeSpecifier()) {
-					if (token.isNumLiteral()) state.tokens().next();
-					auto&& str_type = next_token.getValue().str();
-					if (str_type == "f" || str_type == "F") {
+				auto [number, suffix] = splitNumberAndSuffix(str_view);
+
+				std::cout << "===============\n";
+				std::cout << "Number: " << number << '\n';
+				std::cout << "Suffix: " << suffix << '\n';
+				std::cout << "===============\n";
+
+				T           result;
+				usize       pos = 0;
+				std::string str(number);
+				if (!suffix.empty()) {  // Type specifier exists
+					if (suffix == "f64" || suffix == "F64") {
 						float value      = std::stof(str, &pos) * static_cast<float>(sign);
 						u32   float_bits = std::bit_cast<u32>(value);
 						result           = std::bit_cast<T>(static_cast<u64>(float_bits));
-					} else if (str_type == "d" || str_type == "D") {
+					} else if (suffix == "f32" || suffix == "f32") {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
-					} else if (str_type == "i32" || str_type == "I32") {
+					} else if (suffix == "i32" || suffix == "I32") {
 						u32 bits = std::bit_cast<u32>(std::stoi(str, &pos) * sign);
 						result   = std::bit_cast<T>(static_cast<u64>(bits));
-					} else if (str_type == "i64" || str_type == "I64") {
+					} else if (suffix == "i64" || suffix == "I64") {
 						u64 bits
 							= std::bit_cast<u64>(std::stoll(str, &pos) * static_cast<i64>(sign));
 						result = std::bit_cast<T>(bits);
-					} else if (str_type == "u32" || str_type == "U32") {
+					} else if (suffix == "u32" || suffix == "U32") {
 						u32 bits = static_cast<u32>(std::stoul(str, &pos));
 						result   = std::bit_cast<T>(static_cast<u64>(bits));
-					} else if (str_type == "u64" || str_type == "U64") {
+					} else if (suffix == "u64" || suffix == "U64") {
 						u64 bits = std::stoull(str, &pos);
 						result   = std::bit_cast<T>(bits);
 					} else {
-						state.log(makeBox<InvalidLiteral>(
-							token.getPosition(),
-							base::strConcat(
-								"Unknown type specifier `",
-								str_type,
-								"` for `",
-								base::typeName<vm::opargs::Immediate>(),
-								"`."
+						state.log(
+							makeBox<InvalidLiteral>(
+								token.getPosition(),
+								base::strConcat(
+									"Unknown type specifier `",
+									suffix,
+									"` for `",
+									base::typeName<vm::opargs::Immediate>(),
+									"`."
+								)
 							)
-						));
+						);
 						return { T{ 0 }, 0 };
 					}
 				} else {
 					// By default, we assume 64-bit integer or double if it has a dot
-					if (str.find('.') != std::string::npos) {
+					if (str.find('.') != std::string::npos || str.find('e') != std::string::npos
+					    || str.find('E') != std::string::npos) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
 					} else if (str.starts_with("0b") || str.starts_with("0B")) {
 						// For binary numbers, we parse them as 64-bit integers
 						u64 value = std::stoull(str.substr(2), &pos, 2);
+						result    = std::bit_cast<T>(value);
+						pos += 2;
+					} else if (str.starts_with("0o") || str.starts_with("0O")) {
+						// For octal numbers, we parse them as 64-bit integers
+						u64 value = std::stoull(str.substr(2), &pos, 8);
+						result    = std::bit_cast<T>(value);
+						pos += 2;
+					} else if (str.starts_with("0x") || str.starts_with("0X")) {
+						// For hex numbers, we parse them as 64-bit integers
+						u64 value = std::stoull(str.substr(2), &pos, 16);
 						result    = std::bit_cast<T>(value);
 						pos += 2;
 					} else {
@@ -119,24 +188,28 @@ namespace vm::loader::parser {
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
-					state.log(makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat(
-							"Number not read fully for `",
-							base::typeName<vm::opargs::Immediate>(),
-							"`."
+					state.log(
+						makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Number not read fully for `",
+								base::typeName<vm::opargs::Immediate>(),
+								"`."
+							)
 						)
-					));
+					);
 					return { T{ 0 }, 0 };
 				}
 			} catch (std::logic_error&) {}
 
-			state.log(makeBox<InvalidLiteral>(
-				token.getPosition(),
-				base::strConcat(
-					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+			state.log(
+				makeBox<InvalidLiteral>(
+					token.getPosition(),
+					base::strConcat(
+						"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+					)
 				)
-			));
+			);
 			return { T{ 0 }, 0 };
 		}
 

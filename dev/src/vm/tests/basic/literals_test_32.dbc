@@ -2,6 +2,7 @@ function foo {} -> i32 {
 	init_lany_type		a, i32;
 
 	mov_l32_imm 		a, 0.5f;		# b = 0.5    
+	mov_l32_imm 		a, -0.5f;		# b = 0.5    
     cmpEq_l32_imm       a, 1056964608i32; # 1056964608 as int has same bits as 0.5f 
 	jmpIfNot_label 	fail;
 
