@@ -18,16 +18,6 @@
 #include <variant>
 
 namespace pst {
-
-	// Context information passed from PST to element path creation.
-	// Keeps a vector of strings that will be used as initial ElementPath elements.
-	struct ContextInfo {
-		std::vector<std::string> elements;
-		constexpr ContextInfo() = default;
-
-		constexpr ContextInfo(const std::vector<std::string>& v) noexcept: elements(v) {}
-	};
-
 	class Import;
 
 	template<typename State>
@@ -60,8 +50,8 @@ namespace pst {
 			elements.emplace_back(ext);
 		}
 
-		// Construct ElementPath from ContextInfo (move contents)
-		ElementPath(const ContextInfo& ctx): elements(ctx.elements.begin(), ctx.elements.end()) {}
+		// Construct ElementPath from elements
+		ElementPath(const std::vector<std::string>& elements): elements(elements) {}
 
 		friend constexpr auto hashDecompose(const ElementPath& t) noexcept {
 			return std::tie(t.elements);

@@ -16,6 +16,20 @@ namespace pst {
 	}
 
 	/**
+	 * @brief Context information for single PST element
+	 * The purpose of this structure is to provide context to the PST that will be used in element
+	 * path calculations. For now it is used to add a Module-File logic path to the element paths.
+	 * In future we might want to add more information here. for example if we want to support
+	 * template/generic parameters.
+	 */
+	struct ContextInfo {
+		std::vector<std::string> elements;
+		constexpr ContextInfo() = default;
+
+		constexpr ContextInfo(const std::vector<std::string>& v) noexcept: elements(v) {}
+	};
+
+	/**
 	 * @brief PST generation class. Parses on construction if possible.
 	 *
 	 * @note The Element is only required to be derived from LangElement and not necessarily
@@ -94,7 +108,8 @@ namespace pst {
 		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
 		void calcElementPaths() {
-			if (auto ref = element.internalMut()) ref->calcElementPaths(ElementPath(context_info));
+			if (auto ref = element.internalMut())
+				ref->calcElementPaths(ElementPath(context_info.elements));
 		}
 
 		/**
