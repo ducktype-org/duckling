@@ -8,7 +8,7 @@ namespace base {
 	StrID::ToDataType StrID::to_data_map;
 	StrID::ToIDType   StrID::to_id_map;
 
-	constexpr usize default_buffer_size = 32'768;
+	constexpr usize DEFAULT_BUFFER_SIZE = 32'768;
 	using BufferList                    = std::vector<base::OwningView>;
 
 	namespace {
@@ -24,9 +24,9 @@ namespace base {
 	}
 
 	void newBuffer() {
-		auto new_buffer = new byte[default_buffer_size];
-		buffer_list.emplace_back(new_buffer, default_buffer_size);
-		size_left = default_buffer_size;
+		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
+		buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
+		size_left = DEFAULT_BUFFER_SIZE;
 		next_pos  = 0;
 	}
 
@@ -55,7 +55,7 @@ namespace base {
 		base::RawView actual_data;
 
 		// @TODO: add test to this:
-		if (data.size() > default_buffer_size) {
+		if (data.size() > DEFAULT_BUFFER_SIZE) {
 			// Data is too big to fit into any buffer
 			buffer_list.emplace_back(base::OwningView::copy(data));
 			actual_data      = RawView(lastBuffer().getBegin(), data.size());

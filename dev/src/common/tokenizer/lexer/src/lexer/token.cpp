@@ -102,21 +102,21 @@ namespace lexer {
 	}
 
 	Token Token::makeBracketGroup(
-		BracketType                groupType,
+		BracketType                group_type,
 		Tokens&&                   tokens,
 		Token&&                    sentinel_begin,
 		Token&&                    sentinel_end,
 		const dia::SourcePosition& position
 	) {
 		return { Type::BracketGroup,      std::move(tokens), std::move(sentinel_begin),
-			     std::move(sentinel_end), position,          groupType };
+			     std::move(sentinel_end), position,          group_type };
 	}
 
 	Token Token::makeError(const dia::SourcePosition& position) {
 		return { Type::Error, base::RawView("<error>"), position };
 	}
 
-	void swap(Token& first, Token& second) {
+	void swap(Token& first, Token& second) noexcept {
 		using std::swap;
 
 		swap(first.recursive, second.recursive);

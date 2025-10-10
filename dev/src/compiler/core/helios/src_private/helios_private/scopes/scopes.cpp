@@ -149,6 +149,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
 		case pst::ElementKind::StmtSpecifier:
+		case pst::ElementKind::FunDecl:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 

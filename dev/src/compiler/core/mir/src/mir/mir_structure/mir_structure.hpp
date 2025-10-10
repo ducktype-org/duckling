@@ -13,6 +13,7 @@
 #include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
+#include <base/variant.hpp>
 
 #include <variant>
 #include <vector>
@@ -43,7 +44,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerMul,
 	IntegerDiv,
 	IntegerMod,
-	
+
 	IntegerLt,    // Less then
 	IntegerGt,    // Greater then
 	IntegerLteq,  // Less then or equal to
@@ -96,16 +97,14 @@ namespace compiler::mir {
 	 */
 	bool isTerminating(Operation);
 
+	struct MirUnitConst final {};
+
 	struct MirIntegerConst final {
 		i64 value;
-
-		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
 	struct MirBoolConst final {
 		bool value;
-
-		bool operator==(const MirBoolConst& other) const = default;
 	};
 
 	/**
@@ -113,8 +112,6 @@ namespace compiler::mir {
 	 */
 	struct MirFunctionLiteral final {
 		helios::SymID helios_id;
-
-		bool operator==(const MirFunctionLiteral& other) const = default;
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
@@ -207,6 +204,14 @@ namespace compiler::mir {
 		base::StrID getName() const;
 
 		bool operator==(const MirLocal& other) const { return id == other.id; }
+
+		/**
+		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const {
+			return type.getType().carriesInformation();
+		}
 	};
 
 	/**
@@ -239,9 +244,15 @@ namespace compiler::mir {
 			  helios_id(helios_id),
 			  type(type) {}
 
-		bool operator==(const MirGlobal& other) const = default;
-
 		void debugPrint(std::ostream& output, bool detailed = false) const;
+
+		/**
+		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const {
+			return type.getType().carriesInformation();
+		}
 	};
 
 	/**
@@ -252,12 +263,20 @@ namespace compiler::mir {
 		// @TODO: literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType
-			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral, MirGlobal>;
+		using ValueType = std::variant<
+			MirUnitConst,
+			MirIntegerConst,
+			MirBoolConst,
+			LocalRef,
+			BlockID,
+			MirFunctionLiteral,
+			MirGlobal>;
 
 		ValueType value;
 
 	public:
+		MIRValue(MirUnitConst value): value(value) {}
+
 		MIRValue(MirIntegerConst value): value(value) {}
 
 		MIRValue(MirBoolConst value): value(value) {}
@@ -271,8 +290,6 @@ namespace compiler::mir {
 		MIRValue(MirFunctionLiteral value): value(value) {}
 
 		MIRValue(MirGlobal value): value(value) {}
-
-		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -302,6 +319,22 @@ namespace compiler::mir {
 		bool isGlobal() const {
 			return std::holds_alternative<MirGlobal>(value);
 		}
+
+		/**
+		 * @brief Returns true if this value contains valuable information.
+		 * Valuable information is either a reference to a block or function,
+		 * or contains a value (local, global, or literal) that is not of
+		 * unit or void type, or any other information-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const {
+			variant_match(value) {
+				variant_case_novalue(MirUnitConst) { return false; }
+				variant_case(MirGlobal, global) { return global.carriesInformation(); }
+				variant_case(LocalRef, local) { return local->carriesInformation(); }
+			}
+			return true;
+		}
 	};
 
 	/**
@@ -315,8 +348,6 @@ namespace compiler::mir {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
 		LocalRef local;
-
-		bool operator==(const OperationFlag& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
@@ -386,8 +417,6 @@ namespace compiler::mir {
 			  flags(std::move(flags)),
 			  scope(scope) {}
 
-		bool operator==(const Instruction& other) const = default;
-
 		void debugPrint(std::ostream& output) const;
 	};
 
@@ -423,8 +452,6 @@ namespace compiler::mir {
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
-
-		bool operator==(const Block& other) const = default;
 
 		[[nodiscard]]
 		ScopeRef beginScope() const;
@@ -492,9 +519,9 @@ namespace compiler::mir {
 
 		HSymID helios_id;
 
-		Function()                = delete;
-		Function(const Function&) = delete;
-		Function(Function&&)      = default;
+		Function()                    = delete;
+		Function(const Function&)     = delete;
+		Function(Function&&) noexcept = default;
 
 		Function& operator=(const Function&) = delete;
 

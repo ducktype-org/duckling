@@ -48,7 +48,7 @@ namespace dia {
 		auto after  = source->viewSplitRange(fixed_end + 1, end_char);
 
 		usize          prev_line = -1ULL;
-		printer::Color line_col  = printer::Color::BRIGHT_BLUE;
+		printer::Color line_col  = printer::Color::BrightBlue;
 
 		for (auto [line, view]: before) {
 			if (line != prev_line) {
@@ -64,7 +64,7 @@ namespace dia {
 				out << "\n";
 				printLineNumber(out, length, line, line_col);
 			}
-			out.add({ view.stdString(), printer::Color::BRIGHT_RED });
+			out.add({ view.stdString(), printer::Color::BrightRed });
 		}
 		for (auto [line, view]: after) {
 			if (line != prev_line) {

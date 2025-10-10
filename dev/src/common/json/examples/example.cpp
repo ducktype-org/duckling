@@ -33,8 +33,8 @@ JSON_REGISTER_TYPE(Empty)
 int main() {
 	using MyVar = std::variant<Foo, Bar, Empty, std::string>;
 
-	Foo   foo{ 5, 'a', "abc" };
-	Bar   bar{ "abc", { 3, 4 }, 'b', 4.1f };
+	Foo   foo{ .a = 5, .b = 'a', .s = "abc" };
+	Bar   bar{ .a = "abc", .g = { 3, 4 }, .b = 'b', .s = 4.1f };
 	MyVar x{ Empty{} };
 	MyVar y{ foo };
 	MyVar z{ bar };

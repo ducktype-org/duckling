@@ -254,18 +254,25 @@ namespace vm {
 				match_optional(validateMemoryRequest()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto maybe_type
-							= (*loaded_program)
-						          ->getTypes()
-						          .atMaybe(base::StrID(vmvalue_request.type_name.c_str()));
-						match_optional(maybe_type) {
-							opt_some(type) {
-								auto vm_value = createOwnedVmValue(type);
-								return api::response::VmValue{ std::move(vm_value) };
+						match_optional(loaded_program) {
+							opt_some(program) {
+								auto maybe_type = program->getTypes().atMaybe(
+									base::StrID(vmvalue_request.type_name.c_str())
+								);
+								match_optional(maybe_type) {
+									opt_some(type) {
+										auto vm_value = createOwnedVmValue(type);
+										return api::response::VmValue{ std::move(vm_value) };
+									}
+									opt_none {
+										return std::unexpected(api::ApiError{
+											api::OtherError{ "Type not found" } });
+									}
+								}
 							}
 							opt_none {
 								return std::unexpected(api::ApiError{
-									api::OtherError{ "Type not found" } });
+									api::OtherError{ "Program non loaded hence type not found" } });
 							}
 						}
 					}

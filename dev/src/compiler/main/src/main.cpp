@@ -12,6 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
+#include <linker/link.hpp>
 #include <pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
@@ -69,6 +70,21 @@ clah::Clah getStandardDucklingOptions() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
+}
+
+/**
+ * Helper function to extract linking options from clah parsing result.
+ */
+compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingResult& parsing_result
+) {
+	compiler::linker::LinkingOptions linking_options;
+
+	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
+		linking_options.external_static_libraries.push_back(lib_path.value());
+
+	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
+
+	return linking_options;
 }
 
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
@@ -241,16 +257,28 @@ clah::Clah getClahForMain() {
 	                     .addLongName("print-graph")
 	                     .addShortDesc("Print the query graph after the compilation.")
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("library"))
+	                     .addLongName("external-static-library")
+	                     .addShortDesc("Path to a static library to link against.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-c-standard-library")
+	                     .addShortDesc(
+							 "Doesn't link the C standard library into the final executable."
+						 )
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.compilation_artifacts = {
-								.artifacts_path = 
+								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.debug_options = getDebugOptionsFromClap(options),
+							.debug_options = getDebugOptionsFromClap(options)
 						}
 					);
+					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 					// @TODO #1058: make graph/statistics printing configuration better.
 
@@ -265,7 +293,9 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compilerEntirePackage(path_to_compile, backend_type);
+					compiler::driver::compilerEntirePackage(
+						path_to_compile, backend_type, linking_options
+					);
 
 					total_compilation_time.endMeasurement();
 
@@ -346,25 +376,25 @@ int main(int argc, const char* argv[]) {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Compiler Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Compiler Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (...) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
+			{ "[ERROR] ", printer::Color::Red },
 			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
-		      printer::Color::DEFAULT },
+		      printer::Color::Default },
 		});
 		return 1;
 	}

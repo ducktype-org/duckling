@@ -105,7 +105,11 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackage(const fs::File& package_location, BackendType backend) {
+	void compilerEntirePackage(
+		const fs::File&               package_location,
+		BackendType                   backend,
+		const linker::LinkingOptions& linking_options
+	) {
 		auto root = frontend::createModuleTree(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
@@ -126,7 +130,8 @@ namespace compiler::driver {
 			);
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
-			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
+
+			linker::link(output_file, objects, linking_options);
 		}
 	}
 

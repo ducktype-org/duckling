@@ -8,6 +8,7 @@
 #include <vector>
 
 namespace lexer {
+
 	/**
 	 * @brief Class representing a Unicode code point and allowing to check it's classifications
 	 */

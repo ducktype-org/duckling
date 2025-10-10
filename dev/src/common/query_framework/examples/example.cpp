@@ -64,7 +64,7 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 		// Log something, with example file path.
 		context.log(makeBox<InfoInQuery1>(dia::SourcePosition::fakePosition()));
 		context.log(makeBox<ErrorInQuery1>(dia::SourcePosition::fakePosition()));
-		return SquareValue(context, key);
+		return squareValue(context, key);
 	}
 
 	static auto load(UKHash key) -> LoadResult {
@@ -135,7 +135,7 @@ struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
 
 // implement extension:
-uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
+uint64_t squareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
 	init::InitObject _;

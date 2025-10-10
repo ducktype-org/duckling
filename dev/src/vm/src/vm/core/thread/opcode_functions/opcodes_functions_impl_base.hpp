@@ -692,10 +692,7 @@ namespace vm {
 		{
 			auto variant_block_index = frame->local_offset_to_block_idx[instr->arg0];
 			auto variant_block       = frame->block_stack[variant_block_index];
-			thread.process_memory.setNestedViewBlock(
-				Pointer(variant_block, 0),
-				thread.executing_program->getTypes().at(TypeID(instr->arg1))
-			);
+			OpFuns::setVariantType(thread, Pointer(variant_block, 0), TypeID(instr->arg1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -704,25 +701,12 @@ namespace vm {
 		{
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
-			auto       parent_block        = frame->block_stack[variant_block_index];
-			auto       wanted_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
+			auto       variant_block       = frame->block_stack[variant_block_index];
 
-			auto view_block_ref
-				= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
-
-			match_optional(view_block_ref.toOpt()) {
-				opt_some(view_block) {
-					const auto new_dst = thread.process_memory.updatePointerAssignment(
-						dst, Pointer{ view_block, 0 }
-					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-				opt_none {
-					const auto new_dst
-						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-			}
+			const auto new_dst = thread.process_memory.updatePointerAssignment(
+				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), TypeID(instr[1].arg0))
+			);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -730,9 +714,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			thread.process_memory.setNestedViewBlock(
-				variant_pointer, thread.executing_program->getTypes().at(TypeID(instr->arg1))
-			);
+			OpFuns::setVariantType(thread, variant_pointer, TypeID(instr->arg1));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -741,25 +723,13 @@ namespace vm {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto       wanted_type = thread.executing_program->getTypes().at(TypeID(instr[1].arg0));
 
-			auto view_block_ref
-				= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
-
-			match_optional(view_block_ref.toOpt()) {
-				opt_some(view_block) {
-					const auto new_dst = thread.process_memory.updatePointerAssignment(
-						dst, Pointer{ view_block, 0 }
-					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-				opt_none {
-					const auto new_dst
-						= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-				}
-			}
+			const auto new_dst = thread.process_memory.updatePointerAssignment(
+				dst, OpFuns::getVariantPtr(thread, variant_pointer, TypeID(instr[1].arg0))
+			);
+			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
+
 		FUNCTION_CONT(2);
 	}
 
