@@ -31,7 +31,7 @@ clah::Clah getVmClah() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
-#if !defined(NDEBUG)
+#ifdef BUILD_TYPE_DEV_DEBUG
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('d')
 	             .addLongName("debug-mode")
