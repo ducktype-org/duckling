@@ -32,7 +32,7 @@ namespace lexer {
 	public:
 		DecodingError(Ref<tokenizer::TokenSource> file, usize byte):
 			  dia::Error(dia::SourcePosition::fakePosition()),
-			  file(std::move(file)),
+			  file(file),
 			  byte(byte) {}
 
 		[[nodiscard]]
@@ -160,7 +160,7 @@ namespace lexer {
 	};
 
 	template<>
-	CharArray decode<fs::US_ASCII>(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log) {
+	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log) {
 		auto      bytes = file->getContent().view();
 		CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
@@ -172,7 +172,7 @@ namespace lexer {
 			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
 		}
 		// Add eof value
-		out.emplace_back(unicode::Classifications::end_of_file_value, u8{ 0 }, bytes.size());
+		out.emplace_back(unicode::Classifications::END_OF_FILE_VALUE, u8{ 0 }, bytes.size());
 		return out;
 	}
 
@@ -250,7 +250,7 @@ namespace lexer {
 			pos += size;
 		}
 		// Add eof value
-		out.emplace_back(unicode::Classifications::end_of_file_value, u8{ 0 }, bytes.size());
+		out.emplace_back(unicode::Classifications::END_OF_FILE_VALUE, u8{ 0 }, bytes.size());
 
 		return out;
 	}

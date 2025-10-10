@@ -272,7 +272,7 @@ clah::Clah getClahForMain() {
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.compilation_artifacts = {
-								.artifacts_path = 
+								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
 							.debug_options = getDebugOptionsFromClap(options)
@@ -376,25 +376,25 @@ int main(int argc, const char* argv[]) {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Compiler Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Compiler Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (...) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
+			{ "[ERROR] ", printer::Color::Red },
 			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
-		      printer::Color::DEFAULT },
+		      printer::Color::Default },
 		});
 		return 1;
 	}

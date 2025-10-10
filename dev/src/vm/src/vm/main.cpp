@@ -86,25 +86,25 @@ int main(int argc, const char** argv) {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "DVM Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "DVM Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (...) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
+			{ "[ERROR] ", printer::Color::Red },
 			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
-		      printer::Color::DEFAULT },
+		      printer::Color::Default },
 		});
 		return 1;
 	}

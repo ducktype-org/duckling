@@ -44,7 +44,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerMul,
 	IntegerDiv,
 	IntegerMod,
-	
+
 	IntegerLt,    // Less then
 	IntegerGt,    // Greater then
 	IntegerLteq,  // Less then or equal to
@@ -519,9 +519,9 @@ namespace compiler::mir {
 
 		HSymID helios_id;
 
-		Function()                = delete;
-		Function(const Function&) = delete;
-		Function(Function&&)      = default;
+		Function()                    = delete;
+		Function(const Function&)     = delete;
+		Function(Function&&) noexcept = default;
 
 		Function& operator=(const Function&) = delete;
 
