@@ -12,7 +12,7 @@ namespace pst {
 	 * @todo this is a perfect template for explicit instantiations, to speed up compilation
 	 */
 	template<typename /*std::derived_from<LangElement>*/ T = LangElement>
-	struct GenericPSTQueryKey {
+	struct GenericPSTQueryKey final {
 		template<typename E>
 		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element){};
 		template<typename E>
