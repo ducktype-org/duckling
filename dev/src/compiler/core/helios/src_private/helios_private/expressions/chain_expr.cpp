@@ -255,7 +255,7 @@ namespace compiler::helios::code {
 			// We have a single non-function candidate. Perform lookup for its call operators.
 			// @TODO: #520 Perform proper lookup in type for different cases.
 			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
-			case SymbolKind::Class:
+			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
 				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
@@ -265,9 +265,11 @@ namespace compiler::helios::code {
 				const auto ctor
 					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
 				return { ctor->declaration.original_symbol };
+			}
 			default:
 				CORE_PANIC("Not implemented yet");
 			}
+			CORE_UNREACHABLE();
 		}
 
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================

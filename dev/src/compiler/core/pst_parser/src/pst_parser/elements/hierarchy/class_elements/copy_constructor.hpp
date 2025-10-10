@@ -12,7 +12,7 @@ namespace pst {
 	class CopyConstructor final: public ClassSpecial {
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD(inits, InitList);
-		NAMED_CHILD(body, CodeBlock);
+		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
@@ -20,6 +20,16 @@ namespace pst {
 
 		~CopyConstructor() override = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		AccessLocked<ParamList> getParams() const {
+			return params.give();
+		}
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getBody() const {
+			return body.give();
+		}
 
 		[[nodiscard]]
 		std::string elementType() const override {

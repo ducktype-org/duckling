@@ -52,8 +52,8 @@ namespace compiler::helios {
 	std::string HOUTFunctionDeclaration::debugPrint() const {
 		std::stringstream out;
 		out << "fun ";
-		out << original_name.strView() << " : ";
-		out << "Return type: ";
+		out << original_name.strView() << " (" << original_symbol.queryUnstablePerfectHash() << ")";
+		out << " : " << "Return type: ";
 		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
 		if (parameters->empty()) out << "  none\n";
@@ -96,6 +96,8 @@ namespace compiler::helios {
 					<< '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
+				out << "var " << original_name.strView() << " : "
+					<< type.toString() << " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}

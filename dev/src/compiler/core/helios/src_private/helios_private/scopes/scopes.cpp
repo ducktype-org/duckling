@@ -8,6 +8,7 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
+#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
@@ -424,6 +425,30 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
+			void visitMethod(pst::Access<pst::Method> meth) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *meth->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
+			void visitDestructor(pst::Access<pst::Destructor>) override {
+				output(std::vector<SymID>{});
+			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *cctor->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
 			void visitIf(pst::Access<pst::If>) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
@@ -439,7 +464,7 @@ namespace compiler::helios {
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
-				output(std::vector<SymID>());
+				output(std::vector<SymID>{});
 			}
 		};
 

@@ -20,6 +20,7 @@ namespace compiler::helios::houtgen {
 			const tsh::TypeInterface& class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
+			using Parameter           = GeneratedSymbolData::Parameter;
 			using Variable            = GeneratedSymbolData::Variable;
 			using std::ranges::to;
 			using std::views::transform;
@@ -30,86 +31,74 @@ namespace compiler::helios::houtgen {
 				= class_interface.getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
-			const tsh::SymbolType<> self_type{
-				class_type,
-				tsh::ReferenceKind::Ref,
-				tsh::Mutability::Mutable,
-			};
-
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = name(class_type.getSymbol()),
-				.generated_symbol_data = { ImplicitConstructor{ class_symbol } },
+				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
 			});
 
-			// - The self parameter symbol.
-			u64             argument_index = 0;
-			const SymID     self_symbol    = ctx.query<QueryGeneratedSymbol>({
-					   .name                  = base::StrID("self"),
-					   .generated_symbol_data = { Variable{ ctor_symbol, argument_index } },
-            });
-			code::Parameter first_parameter{
-				.name          = base::StrID(""),
-				.type          = self_type,
-				.initial_value = std::nullopt,
-				.helios_symbol = self_symbol,
+			// - The parameter symbols.
+			u64                          argument_index = 0;
+			std::vector<code::Parameter> parameters;
+			parameters.reserve(num_fields);
+
+			for (auto field: fields) {
+				const SymID argument_symbol = ctx.query<QueryGeneratedSymbol>(
+					{ .name = base::StrID(name(field.getSymbol())),
+				      .generated_symbol_data
+				      = GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } } }
+				);
+				// @TODO: #1328 Properly handle value categories in class constructors.
+				parameters.emplace_back(
+					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
+				);
+				argument_index++;
+			}
+
+			// - The result variable symbol
+			const auto result_symbol_type = tsh::SymbolType<>{
+				class_type,
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
 			};
-
-			// - The other parameter symbols.
-			auto field_parameters
-				= fields | transform([&](const tsh::InterfaceElement& field) {
-					  argument_index++;
-					  const SymID argument_symbol = ctx.query<QueryGeneratedSymbol>(
-						  { .name                  = base::StrID(name(field.getSymbol())),
-				            .generated_symbol_data = { Variable{ ctor_symbol, argument_index } } }
-					  );
-					  // @TODO: #1328 Properly handle value categories in class constructors.
-					  return code::Parameter{
-						  .name          = name(argument_symbol),
-						  .type          = field.getType(ctx),
-						  .initial_value = std::nullopt,
-						  .helios_symbol = argument_symbol,
-					  };
-				  });
-
-			// - All parameter symbols in one vector.
-			std::vector<code::Parameter> parameters{};
-			parameters.emplace_back(
-				first_parameter.name,
-				first_parameter.type,
-				std::nullopt,
-				first_parameter.helios_symbol
-			);
-			for (const code::Parameter& param: field_parameters)
-				parameters.emplace_back(param.name, param.type, std::nullopt, param.helios_symbol);
+			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
+				.name = base::StrID("result"),
+				.generated_symbol_data
+				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+			});
 
 			// Prepare the body of the constructor.
 			std::vector<Box<code::Stmt>> body{};
-			// - One assignment per field + return.
-			body.reserve(num_fields + 1);
 
+			// - One declarations, one assignment per field, one return.
+			body.reserve(1 + num_fields + 1);
+
+			// - Declare result variable.
+			body.emplace_back(
+				makeBox<code::VariableStmt>(std::nullopt, result_symbol_type, result_symbol)
+			);
+
+			// - Assign each field from the corresponding parameter.
 			for (usize i = 0; i < num_fields; i++) {
 				body.emplace_back(makeBox<code::AssignmentStmt>(
 					makeBox<code::AccessExpr>(
 						ctx,
-						makeBox<code::IdentifierExpr>(ctx, self_symbol),
+						makeBox<code::IdentifierExpr>(ctx, result_symbol),
 						name(fields.at(i).getSymbol())
 					),
-					makeBox<code::IdentifierExpr>(ctx, parameters.at(i + 1).helios_symbol)
+					makeBox<code::IdentifierExpr>(ctx, parameters.at(i).helios_symbol)
 				));
 			}
 
-			body.emplace_back(makeBox<code::VoidReturnStmt>());
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(makeBox<code::IdentifierExpr>(ctx, result_symbol))
+			);
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction{
 				HOUTFunctionDeclaration{
 					ctor_symbol,
-					tsh::SymbolType<>(
-						ctx.query<tsh::QueryUnitType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable
-					),
+					result_symbol_type,
 					std::make_shared<std::vector<code::Parameter>>(std::move(parameters)),
 				},
 				std::make_shared<const code::CodeBlock>(code::CodeBlock{ .statements

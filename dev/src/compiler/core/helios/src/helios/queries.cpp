@@ -233,7 +233,7 @@ namespace compiler::helios {
 								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
 							) {
 								auto class_type
-									= ctx.query<QueryTypeFromDefinition>({ ctor_data.classSymbol })
+									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
 								          ->expect(
 											  "Not handling errors here yet... (getting "
 											  "declaration of generated constructor symbol)"
@@ -266,7 +266,9 @@ namespace compiler::helios {
 				for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
 					const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 						base::StrID(base::strConcat("_", i).c_str()),
-						{ houtgen::GeneratedSymbolData::Variable{ key, i } },
+						houtgen::GeneratedSymbolData{
+							houtgen::GeneratedSymbolData::Parameter{ key, i },
+						},
 					});
 					parameters.emplace_back(
 						name(param_symbol), param_type, std::nullopt, param_symbol

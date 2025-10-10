@@ -79,7 +79,7 @@ namespace compiler::helios {
 		struct BuiltinFunctionData final {
 			tsh::FunctionAbstractType type;
 
-			BuiltinFunctionData(tsh::FunctionAbstractType type): type(type) {}
+			explicit BuiltinFunctionData(const tsh::FunctionAbstractType type): type(type) {}
 		};
 	}
 
@@ -87,33 +87,48 @@ namespace compiler::helios {
 		struct GeneratedSymbolData final {
 			// Data for a compiler-generated implicit constructor.
 			struct ImplicitConstructor final {
-				SymID classSymbol;  // The symbol of the class this constructor belongs to.
+				SymID class_symbol;  // The symbol of the class this constructor belongs to.
 
 				[[nodiscard]]
 				u64 queryUnstablePerfectHash() const {
-					return hashing::justHash(classSymbol.ref.get());
+					return hashing::justHash(class_symbol.ref.get());
 				}
 			};
 
-			// Data for a compiler-generated variable within a function.
+			// Data for a compiler-generated parameter of a function.
+			struct Parameter final {
+				SymID function_symbol;  // The symbol of the function this parameter belongs to.
+				u64   parameter_index;  // The index of the parameter in the function's signature.
+
+				[[nodiscard]]
+				u64 queryUnstablePerfectHash() const {
+					return hashing::justHash(function_symbol.ref.get(), parameter_index);
+				}
+			};
+
+			// Data for a compiler-generated variable (not parameter) in a function.
 			struct Variable final {
-				SymID functionSymbol;  // The symbol of the function this variable belongs to.
-				u64   argumentIndex;   // The index of the argument this variable represents.
+				SymID function_symbol;   // The symbol of the function this variable belongs to.
+				u64   variable_index;    // The index of the variable in the function's body.
+				tsh::SymbolType<> type;  // The type of the variable.
 
 				[[nodiscard]]
 				u64 queryUnstablePerfectHash() const {
-					return hashing::justHash(functionSymbol.ref.get(), argumentIndex);
+					return hashing::justHash(function_symbol.ref.get(), variable_index);
 				}
 			};
 
-			std::variant<ImplicitConstructor, Variable> data;
+			std::variant<ImplicitConstructor, Parameter, Variable> data;
 
-			GeneratedSymbolData(std::variant<ImplicitConstructor, Variable> data):
+			explicit GeneratedSymbolData(std::variant<ImplicitConstructor, Parameter, Variable> data
+			):
 				  data(std::move(data)) {}
 
 			[[nodiscard]]
 			u64 queryUnstablePerfectHash() const {
-				return VISIT(data, d, return d.queryUnstablePerfectHash(););
+				return hashing::justHash(
+					data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
+				);
 			}
 
 			tsh::SymbolType<> getType(query::Context& ctx) const;
@@ -159,6 +174,9 @@ namespace compiler::helios {
 				variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
 					kind = SymbolKind::Function;
 				}
+				variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {
+					kind = SymbolKind::Parameter;
+				}
 				variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
 					kind = SymbolKind::Variable;
 				}
@@ -199,11 +217,11 @@ namespace compiler::helios {
 	 * It is used by HELIOS only. It is a struct so SymID can friend it.
 	 */
 	struct GetSymRef_Functor final {
-		static auto get(SymID id) { return id.ref; }
+		static auto get(const SymID id) { return id.ref; }
 
-		static SymID make(CRef<SymbolData> ref) { return SymID{ ref }; }
+		static SymID make(const CRef<SymbolData> ref) { return SymID{ ref }; }
 	};
 
-	inline auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
+	inline auto getSymRef(const SymID id) { return GetSymRef_Functor::get(id); }
 
 }
