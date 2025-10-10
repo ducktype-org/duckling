@@ -108,7 +108,7 @@ namespace base {
 	#define CORE_PANIC(what, ...) \
 		DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
 #else
-	#define CORE_PANIC(what, ...) std::unreachable();
+	#define CORE_PANIC(what, ...) std::unreachable()
 #endif
 
 
@@ -127,5 +127,5 @@ namespace base {
      */
 	#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");
 #else
-	#define CORE_UNREACHABLE() std::unreachable();
+	#define CORE_UNREACHABLE() std::unreachable()
 #endif
