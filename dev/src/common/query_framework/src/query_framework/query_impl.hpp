@@ -120,15 +120,11 @@ namespace query::internal {
 		 */
 
 		/**
-		 * Whether query is cached on disk/
-		 */
-		static constexpr bool CACHE_ON_DISK = false;
-
-		/**
-		 * Whether this query uses stable hashing for keys
+		 * Whether query is cached on disk.
+		 * Queries cached on disk must use stable hashing.
 		 * @note not used yet
 		 */
-		static constexpr bool USE_STABLE_HASH = false;
+		static constexpr bool CACHE_ON_DISK = false;
 	};
 
 }
