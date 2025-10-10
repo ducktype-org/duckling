@@ -31,7 +31,7 @@ private:
 	// @TODO: add more tests.
 
 	void test() {
-		auto              mc1 = PrinterContent("ms1", Color::DEFAULT, Color::RED);
+		auto              mc1 = PrinterContent("ms1", Color::Default, Color::Red);
 		std::stringstream ss1;
 		printer::StreamPrinter::print(mc1, ss1);
 		std::string expected1 = "\033[41mms1\033[0m";
@@ -41,7 +41,7 @@ private:
 			false
 		);
 
-		auto              mc2 = PrinterContent("ms2", Color::RED, Color::DEFAULT);
+		auto              mc2 = PrinterContent("ms2", Color::Red, Color::Default);
 		std::stringstream ss2;
 		printer::StreamPrinter::print({ mc1, mc2 }, ss2);
 		std::string expected2 = "\033[41mms1\033[0m\033[31mms2\033[0m";

@@ -19,6 +19,7 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 
 #include <iostream>
@@ -401,6 +402,7 @@ namespace vm {
 	#define HANDLE_OPCODE(opcode_name)                                                              \
 	case low::OpcodeFix8::opcode_name: {                                                            \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		DEBUG_LOG("Executed opcode: " << #opcode_name);                                             \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \

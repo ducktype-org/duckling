@@ -18,6 +18,7 @@ namespace compiler::helios::code {
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
+	EXPR_VISITOR(LiteralUnitExpr)
 	EXPR_VISITOR(LiteralIntExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
@@ -33,6 +34,27 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
+
+	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx):
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  // The unit expression *may* represent the type instead of the unit value,
+				  // but by default we assume it is the value, and lazily convert it to a type,
+				  // when it turns out that we expected a type instead of a value.
+				  // @TODO: #1373 reconsider this approach.
+				  ctx.query<tsh::QueryUnitType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Immutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )) {}
+
+	void LiteralUnitExpr::debugPrint(std::ostream& out) const { out << "()"; }
+
+	LiteralUnitExpr::LiteralUnitExpr(tsh::ExpressionType<> expression_type):
+		  Expr(expression_type) {}
+
+	Box<Expr> LiteralUnitExpr::clone() const { return makeBox<LiteralUnitExpr>(expression_type); }
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
 		  Expr(

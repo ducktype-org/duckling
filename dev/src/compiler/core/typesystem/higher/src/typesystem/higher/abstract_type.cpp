@@ -28,6 +28,8 @@ namespace tsh {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
 
+	bool AbstractType::carriesInformation() const { return pimpl->carriesInformation(); }
+
 	[[nodiscard]]
 	const std::string& AbstractType::toString() const {
 		return pimpl->toString();

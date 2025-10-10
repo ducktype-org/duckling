@@ -111,14 +111,10 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
-			// @TODO: make failure more explicit
-			void visitFun(pst::Access<pst::Fun> stmt) final {
-				// @TODO: rest, flags, attributes, etc
-
-
-				// Return type:
-				auto ret = stmt->getRet();
-
+			void emplaceDeclaration(
+				pst::AccessLocked<pst::ParamList>                  param_list,
+				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
+			) {
 				// Default return type is a direct unit.
 				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
@@ -129,7 +125,7 @@ namespace compiler::helios {
 				if (ret.has_value()) {
 					if (auto ctv
 					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType())
+						if (auto maybe_type = ctv.value().asType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;
@@ -141,7 +137,7 @@ namespace compiler::helios {
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *stmt->getParams().unlock(ctx)) {
+				for (auto param: *param_list.unlock(ctx)) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
 					auto param_name   = name(param_symbol);
 					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
@@ -180,11 +176,21 @@ namespace compiler::helios {
 
 				this->out.emplace(std::move(output));
 			}
+
+			// @TODO: #1029 make failure more explicit
+			void visitFun(pst::Access<pst::Fun> stmt) final {
+				// @TODO: #1029 rest, flags, attributes, etc
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+			}
+
+			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function,
+				kind(key) == SymbolKind::Function or kind(key) == SymbolKind::FunctionDeclaration,
 				"Function declaration processing called on non-function symbol"
 			);
 
@@ -201,8 +207,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 		/**
-		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or pst::CodeBlockOrStmt
-		 * Might be changed into query in the future
+		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or
+		 * pst::CodeBlockOrStmt Might be changed into query in the future
 		 */
 		template<class Container>
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {

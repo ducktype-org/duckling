@@ -16,13 +16,13 @@ namespace dia {
 		using enum Message::Severity;
 		switch (s) {
 		case Error:
-			return { " ERR", printer::Color::BRIGHT_RED };
+			return { " ERR", printer::Color::BrightRed };
 		case Warning:
-			return { "WARN", printer::Color::BRIGHT_MAGENTA };
+			return { "WARN", printer::Color::BrightMagenta };
 		case Info:
-			return { "INFO", printer::Color::BRIGHT_BLUE };
+			return { "INFO", printer::Color::BrightBlue };
 		case Hint:
-			return { "HINT", printer::Color::BRIGHT_CYAN };
+			return { "HINT", printer::Color::BrightCyan };
 		default:
 			CORE_PANIC("Unknown message severity.");
 		}
@@ -92,7 +92,7 @@ namespace dia {
 	printer::PrinterContentsSeq DiagnosticToUserConverter::toPrinterContents(
 		CRef<Note> note_ptr, CRef<Message>, bool detailed
 	) {
-		const printer::PrinterContent severity_tag = { "NOTE", printer::Color::BRIGHT_GREEN };
+		const printer::PrinterContent severity_tag = { "NOTE", printer::Color::BrightGreen };
 
 		auto result_contents
 			= note_ptr->getSourcePosition()

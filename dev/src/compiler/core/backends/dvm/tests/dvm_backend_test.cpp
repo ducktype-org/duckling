@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(unitsTest);
 	}
 
 protected:
@@ -116,6 +117,8 @@ private:
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };
 
 

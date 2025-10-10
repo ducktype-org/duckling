@@ -73,7 +73,7 @@ namespace query {
 		struct IsIn: std::bool_constant<(std::is_same_v<ToCheck, Types> || ...)> {};
 
 		template<class... Types>
-		inline constexpr bool IsIn_v = IsIn<Types...>::value;
+		concept IsIn_v = IsIn<Types...>::value;
 
 		/**
 		 * @brief Transform a list of types into a list of unique types in O(n^2).

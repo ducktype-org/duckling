@@ -3,6 +3,7 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -44,7 +45,7 @@ namespace compiler::helios {
 				if (auto ctv
 				    = ctx.query<QueryEvaluateExpression>(pst::AccessLocked<pst::ExprElement>(expr)
 				    )) {
-					if (auto maybe_type = ctv.value().asType())
+					if (auto maybe_type = ctv.value().asType(ctx))
 						setTypeOfSymbol(maybe_type.value());
 					else
 						CORE_PANIC("QueryEvaluateExpressionCT returned not a type");
@@ -147,7 +148,9 @@ namespace compiler::helios {
 			variant_match(symbol_ref->other) {
 				variant_case(PstSymbolData, pst_data) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
-					if (kind(key) == SymbolKind::Function) return handleFunction(ctx, key);
+					if (kind(key) == SymbolKind::Function
+					    or kind(key) == SymbolKind::FunctionDeclaration)
+						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);

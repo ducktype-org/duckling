@@ -228,7 +228,11 @@ namespace base {
 		 * @return True if holds, false otherwise
 		 */
 		[[nodiscard]]
+		// NOLINTBEGIN(readability-identifier-naming)
+		// Leaving matching name of the method so it matches std::expected's
+		// and our monadic macros work for both.
 		constexpr bool has_value() const noexcept {
+			// NOLINTEND(readability-identifier-naming)
 			return private_optional.has_value();
 		}
 

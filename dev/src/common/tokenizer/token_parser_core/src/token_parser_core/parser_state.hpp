@@ -27,7 +27,7 @@ namespace tpc {
 
 		// clang-format off
 		[[nodiscard]]
-		inline const Token& operator[](i64 fwd) const {
+		const Token& operator[](i64 fwd) const {
 			return ctokens().peek(fwd);
 		}
 

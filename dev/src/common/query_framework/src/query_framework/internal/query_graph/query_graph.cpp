@@ -196,7 +196,7 @@ namespace query::internal {
 			HVType hash;
 			read(hash);
 
-			return NodeID{ .q_id = QueryID(q_id), .hash = { HType(hash) } };
+			return NodeID(QueryID(q_id), { HType(hash) });
 		};
 
 		// Deserialize the size of the node_deps map

@@ -56,6 +56,7 @@ jobs:
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
           database: 'dev'
+          ignore: '**/*.c'
 
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.

@@ -99,7 +99,7 @@ namespace lexer {
 			const dia::SourcePosition& position,
 			BracketType                bracket
 		);
-		friend void swap(Token& first, Token& second);
+		friend void swap(Token& first, Token& second) noexcept;
 		Token&      operator=(Token&& other) noexcept;
 
 		[[nodiscard]]
