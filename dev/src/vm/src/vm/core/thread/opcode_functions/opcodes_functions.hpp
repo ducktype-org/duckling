@@ -7,6 +7,7 @@
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -113,6 +114,8 @@ namespace vm {
 			auto&      runtime_data     = thread.runtime_data;
 			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
 			const bool called_rets_void = called_func.result_type->getName() == "void";
+
+			DEBUG_LOG("Calling function: " << called_func.name.str());
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size

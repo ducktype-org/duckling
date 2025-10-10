@@ -7,6 +7,7 @@
 #include <printer/stream_printer.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
@@ -30,6 +31,19 @@ clah::Clah getVmClah() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
+#ifdef BUILD_TYPE_DEV_DEBUG
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addShortName('d')
+	             .addLongName("debug-mode")
+	             .addShortDesc("Enables debug mode.")
+	             .build())
+	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("debug-mode")) {
+				std::cerr << "Debug mode enabled.\n";
+				config::debug_mode = true;
+			}
+		})
+#endif
 	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 	                                .addShortName('p')
