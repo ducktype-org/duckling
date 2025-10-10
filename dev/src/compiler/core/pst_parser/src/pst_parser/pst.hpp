@@ -109,6 +109,7 @@ namespace pst {
 		 * @brief Construct a new Pst from tokenized file
 		 */
 		PST(Box<tokenizer::TokenSource>&& file, ContextInfo context = {})
+
 		requires ParseAble<>: file(std::move(file)), context_info(std::move(context)) {
 			if (getLogger()->bad()) return;
 			parse();
@@ -118,8 +119,10 @@ namespace pst {
 		 * @brief Construct a new Pst from file path
 		 */
 		PST(const fs::File& path, ContextInfo context = {})
-		requires ParseAble<>
-			  : file(tokenizer::makeTokenSource(path)), context_info(std::move(context)) {
+
+		requires ParseAble<>:
+			  file(tokenizer::makeTokenSource(path)),
+			  context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse();
 		}
