@@ -1,3 +1,5 @@
+use anyhow::Result;
+pub type QuackResult<T> = Result<T>;
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
