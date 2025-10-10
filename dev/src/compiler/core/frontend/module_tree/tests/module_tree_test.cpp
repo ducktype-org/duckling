@@ -13,7 +13,7 @@ class ModuleTreeTest: public tester::TestSuite {
 #define TESTER_CLASS ModuleTreeTest
 
 	// This regex catches anything, that starts with '.' or '$'.
-	const std::regex TEST_REGEX = std::regex(R"(\..*|\$.*)");
+	const std::regex test_regex = std::regex(R"(\..*|\$.*)");
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -62,7 +62,7 @@ private:
 
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
-		auto mt  = ModuleTreeBuilder::create(pth, TEST_REGEX, TEST_REGEX);
+		auto mt  = ModuleTreeBuilder::create(pth, test_regex, test_regex);
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().size());
@@ -176,7 +176,7 @@ private:
 	void testParseDirectoryLikeFsTree() {
 		// This test is adapted from the old FsTree parseDirectory test.
 		const auto root = fs::File(path("test_directory_tree"));
-		auto       mt   = ModuleTreeBuilder::create(root, TEST_REGEX, TEST_REGEX);
+		auto       mt   = ModuleTreeBuilder::create(root, test_regex, test_regex);
 
 		// Only files with valid names/extensions are included as source or other files.
 		// Check that only the correct files and directories are present as submodules or files.

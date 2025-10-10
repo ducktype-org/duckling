@@ -9,17 +9,17 @@ namespace lexer {
 	 * @brief Simple wrapper for an operator
 	 */
 	struct Operator final {
-		const base::StrID VALUE;
+		const base::StrID value;
 
 		Operator() = delete;
 
-		Operator(const base::StrID id): VALUE(id) {}
+		Operator(const base::StrID id): value(id) {}
 
-		Operator(const lang_def::NamedOperator op): VALUE(lang_def::operatorToStr(op)) {}
+		Operator(const lang_def::NamedOperator op): value(lang_def::operatorToStr(op)) {}
 
 		Operator(const Operator&) = default;
 
-		operator base::StrID() { return VALUE; }
+		operator base::StrID() { return value; }
 
 		[[nodiscard]]
 		bool isComparison() const;
@@ -41,19 +41,19 @@ namespace lexer {
 
 		[[nodiscard]]
 		std::string str() const {
-			return VALUE.str();
+			return value.str();
 		}
 
 		[[nodiscard]]
 		lang_def::NamedOperator asNamed() const {
-			return lang_def::strAsOperator(VALUE);
+			return lang_def::strAsOperator(value);
 		}
 
 		/**
 		 * @note This should do the corrected UTF-8 check in the future.
 		 */
 		bool operator==(const lang_def::NamedOperator& op) const {
-			return lang_def::operatorToStr(op) == VALUE;
+			return lang_def::operatorToStr(op) == value;
 		}
 
 		auto operator<=>(const Operator& other) const = default;
