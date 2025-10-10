@@ -5,8 +5,6 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
-#include <frontend/module_tree/path_hash.hpp>
-
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>

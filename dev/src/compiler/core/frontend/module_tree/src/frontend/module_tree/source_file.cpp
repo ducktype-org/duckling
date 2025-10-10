@@ -7,8 +7,6 @@
 
 #include <filesystem/file.hpp>
 
-#include <utility>
-
 namespace {
 
 	// Content cache for each file path (used for deduplication and fast access)
