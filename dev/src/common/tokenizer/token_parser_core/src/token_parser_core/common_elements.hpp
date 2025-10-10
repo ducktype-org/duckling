@@ -4,7 +4,7 @@
 #include <base/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <hashing/hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <lexer/token.hpp>
 
 namespace tpc {
