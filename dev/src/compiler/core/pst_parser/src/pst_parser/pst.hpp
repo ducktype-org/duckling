@@ -6,8 +6,6 @@
 #include "lang_parser_element.hpp"
 #include "pst_state_forward.hpp"
 
-#include <frontend/module_tree/path_hash.hpp>
-
 #include <token_source/source.hpp>
 
 namespace pst {
@@ -16,9 +14,6 @@ namespace pst {
 		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 	}
-
-	// Context information forwarded into element path creation is defined in
-	// `lang_parser_element.hpp` (struct pst::ContextInfo).
 
 	/**
 	 * @brief PST generation class. Parses on construction if possible.
