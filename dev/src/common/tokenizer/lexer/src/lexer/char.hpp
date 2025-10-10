@@ -13,9 +13,9 @@ namespace lexer {
 	 */
 	class Char final {
 	public:
-		const UChar32 VALUE;
-		const u8      SIZE;
-		const usize   INDEX;
+		const UChar32 value;
+		const u8      size;
+		const usize   index;
 
 		Char(UChar32, u8, usize);
 

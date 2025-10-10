@@ -567,7 +567,7 @@ namespace lexer {
 		usize end{};
 		auto  source_start = currentPosition();
 
-		Token::BracketType bracket_type{ peek().VALUE };
+		Token::BracketType bracket_type{ peek().value };
 		auto               group_end           = peek().bracketPair();
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
