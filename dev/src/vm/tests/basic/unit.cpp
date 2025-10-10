@@ -38,6 +38,8 @@ private:
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0", {}); }
 
+	void check16BitsInstructions() { runTestOnVm("16bits.dbc", "", "1", {}); }
+
 	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "11", {}); }
 
 	void check64BitsInstructions() { runTestOnVm("64bits.dbc", "", "11", {}); }
