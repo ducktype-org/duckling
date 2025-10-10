@@ -1,5 +1,7 @@
 #pragma once
 
+#include "path_hash.hpp"
+
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
@@ -27,14 +29,16 @@ namespace compiler::frontend {
 		base::Optional<pst::PST<>> parse_tree;
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
+		PathHash               path_hash;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
 		 * @param file The file system file.
 		 * @param linked_module The module this file belongs to.
+		 * @param parent_path_hash The path hash of the parent module.
 		 * @note The file content is cached on construction.
 		 */
-		SourceFile(fs::File file, ModuleID linked_module);
+		SourceFile(fs::File file, ModuleID linked_module, PathHash parent_path_hash);
 
 		/**
 		 * @brief Reloads the file content and resets the parse tree.
@@ -62,6 +66,7 @@ namespace compiler::frontend {
 		 * @brief Creates a new SourceFile or returns an existing one for the given file file.
 		 * @param file The file system file.
 		 * @param linked_module The module this file belongs to.
+		 * @param parent_path_hash The path hash of the parent module.
 		 * @return Reference to the created or existing SourceFile.
 		 * @note If a SourceFile for the given file already exists, and the content matches,
 		 *       the new SourceFile is returned. If the content differs, an assertion fails.
@@ -69,7 +74,9 @@ namespace compiler::frontend {
 		 *       The file content is always hashed and cached.
 		 *       Each fileID has a unique UnstableHash even if it is pointing to the same fs::File
 		 */
-		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
+		static Ref<SourceFile> create(
+			fs::File file, ModuleID linked_module, PathHash parent_path_hash
+		);
 
 		/**
 		 * @brief Retrieves all SourceFile instances associated with the given File.

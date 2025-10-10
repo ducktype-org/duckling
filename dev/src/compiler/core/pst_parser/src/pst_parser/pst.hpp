@@ -3,7 +3,10 @@
 #include "access.hpp"
 #include "elements/hierarchy/declarations/top_level.hpp"
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
+#include "lang_parser_element.hpp"
 #include "pst_state_forward.hpp"
+
+#include <frontend/module_tree/path_hash.hpp>
 
 #include <token_source/source.hpp>
 
@@ -13,6 +16,9 @@ namespace pst {
 		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 	}
+
+	// Context information forwarded into element path creation is defined in
+	// `lang_parser_element.hpp` (struct pst::ContextInfo).
 
 	/**
 	 * @brief PST generation class. Parses on construction if possible.
@@ -38,6 +44,7 @@ namespace pst {
 		Box<tokenizer::TokenSource>      file;
 		AccessInternalAnonymous<Element> element;
 		std::vector<ImportType>          imports;
+		ContextInfo                      context_info;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -65,8 +72,10 @@ namespace pst {
 		 * @brief Construct a new Pst from text content
 		 */
 		template<typename... Args>
-		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>:
-			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))) {
+		explicit PST(std::string_view content, ContextInfo context = {}, Args&&... args)
+			requires ParseAble<Args...>:
+			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))),
+			  context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -75,9 +84,13 @@ namespace pst {
 		 * @brief Construct a new Pst from expanded text
 		 */
 		template<typename... Args>
-		explicit PST(dia::SourcePosition pos, std::string_view content, Args&&... args)
-			requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenSource(pos, content)) {
+		explicit PST(
+			dia::SourcePosition pos,
+			std::string_view    content,
+			ContextInfo         context = {},
+			Args&&... args
+		) requires ParseAble<Args...>
+			  : file(tokenizer::makeTokenSource(pos, content)), context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -86,7 +99,7 @@ namespace pst {
 		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
 		void calcElementPaths() {
-			if (auto ref = element.internalMut()) ref->calcElementPaths({});
+			if (auto ref = element.internalMut()) ref->calcElementPaths(ElementPath(context_info));
 		}
 
 		/**
@@ -100,7 +113,8 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(Box<tokenizer::TokenSource>&& file) requires ParseAble<>: file(std::move(file)) {
+		PST(Box<tokenizer::TokenSource>&& file, ContextInfo context = {})
+		requires ParseAble<>: file(std::move(file)), context_info(std::move(context)) {
 			if (getLogger()->bad()) return;
 			parse();
 		}
@@ -108,7 +122,9 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::File& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
+		PST(const fs::File& path, ContextInfo context = {})
+		requires ParseAble<>
+			  : file(tokenizer::makeTokenSource(path)), context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse();
 		}
@@ -120,7 +136,7 @@ namespace pst {
 		template<typename... Args>
 		static PST fromContentsWithContext(std::string_view contents, Args&&... args)
 			requires ParseAble<Args...> {
-			return PST(contents, std::forward<Args>(args)...);
+			return PST(contents, ContextInfo{}, std::forward<Args>(args)...);
 		}
 
 		static PST fromExpand(dia::SourcePosition pos, std::string_view contents) {
@@ -131,7 +147,7 @@ namespace pst {
 		static PST fromExpandWithContext(
 			dia::SourcePosition pos, std::string_view contents, Args&&... args
 		) requires ParseAble<Args...> {
-			return PST(pos, contents, std::forward<Args>(args)...);
+			return PST(pos, contents, ContextInfo{}, std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]

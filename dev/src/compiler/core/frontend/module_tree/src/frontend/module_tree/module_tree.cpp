@@ -52,6 +52,9 @@ namespace {
 }
 
 namespace compiler::frontend {
+	// Return const reference to module's path hash
+	const PathHash& ModuleTree::getPathHash() const { return m_path_hash; }
+
 	Ref<ModuleTree> ModuleTreeBuilder::create(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
@@ -269,14 +272,20 @@ namespace compiler::frontend {
 		module_ref->m_name        = m_name;
 		module_ref->m_other_files = std::move(m_other_files);
 
+		// Compute and set path hash
+		base::Optional<PathHash> parent_hash;
+		if (m_parent.has_value()) parent_hash = m_parent.value()->m_path_hash;
+		module_ref->m_path_hash = PathHash(parent_hash, m_name);
+
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
-			module_ref->m_main_source_file
-				= SourceFile::create(m_main_source_file_path.value(), mod_id);
+			module_ref->m_main_source_file = SourceFile::create(
+				m_main_source_file_path.value(), mod_id, module_ref->m_path_hash
+			);
 		}
 
 		for (const auto& file_path: m_source_file_paths) {
-			auto source_file = SourceFile::create(file_path, mod_id);
+			auto source_file = SourceFile::create(file_path, mod_id, module_ref->m_path_hash);
 			module_ref->m_source_files.push_back(source_file);
 		}
 
@@ -293,7 +302,9 @@ namespace compiler::frontend {
 	 *********************/
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
+		module->m_source_files.push_back(
+			SourceFile::create(file, ModuleID(module), module->m_path_hash)
+		);
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
@@ -320,7 +331,8 @@ namespace compiler::frontend {
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
 		);
-		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
+		module->m_main_source_file
+			= SourceFile::create(file, ModuleID(module), module->m_path_hash);
 	}
 
 	void ModuleTreeModifier::addSubmodule(

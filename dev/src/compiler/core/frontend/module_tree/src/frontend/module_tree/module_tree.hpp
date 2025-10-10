@@ -1,6 +1,7 @@
 #pragma once
 
 #include "file_id.hpp"
+#include "path_hash.hpp"
 #include "source_file.hpp"
 
 #include <pst_parser/pst.hpp>
@@ -16,7 +17,6 @@
 #include <string>
 
 namespace compiler::frontend {
-
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
@@ -60,6 +60,9 @@ namespace compiler::frontend {
 
 	public:
 		ModuleID getModuleID() const;
+		// Returns the module path hash (partial state + finalized hash)
+		[[nodiscard]]
+		const PathHash& getPathHash() const;
 
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
@@ -139,6 +142,7 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+		PathHash                                          m_path_hash;
 	};
 
 	/**
@@ -361,5 +365,4 @@ namespace compiler::frontend {
 	 * for more details see ModuleTreeBuilder::create
 	 */
 	ModuleID createModuleTree(const fs::File& file);
-
 }

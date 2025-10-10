@@ -7,6 +7,8 @@
 
 #include <filesystem/file.hpp>
 
+#include <utility>
+
 namespace {
 
 	// Content cache for each file path (used for deduplication and fast access)
@@ -28,20 +30,23 @@ namespace {
 
 namespace compiler::frontend {
 
-	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
+	SourceFile::SourceFile(fs::File file, ModuleID linked_module, PathHash parent_path_hash):
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
+		path_hash      = PathHash(parent_path_hash, lang_file_name);
 		// Add or replace file content in cache
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 	}
 
-	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
+	Ref<SourceFile> SourceFile::create(
+		fs::File file, ModuleID linked_module, PathHash parent_path_hash
+	) {
 		auto abs_path = file.getFilePath().absolute().getPath();
 
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		files.pushBack(SourceFile(std::move(file), linked_module));
+		files.pushBack(SourceFile(std::move(file), linked_module, std::move(parent_path_hash)));
 		files_map.at(abs_path).emplace_back(files.last());
 		files.last()->file_id = FileID(files.last());
 		return files.last();
@@ -66,7 +71,7 @@ namespace compiler::frontend {
 		if (parse_tree) {
 			return &parse_tree.value();
 		} else {
-			parse_tree.emplace(pst::PST(file));
+			parse_tree.emplace(pst::PST(file, pst::ContextInfo(path_hash.elements)));
 			return &parse_tree.value();
 		}
 	}

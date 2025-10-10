@@ -5,6 +5,8 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
+#include <frontend/module_tree/path_hash.hpp>
+
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
@@ -18,6 +20,16 @@
 #include <variant>
 
 namespace pst {
+
+	// Context information passed from PST to element path creation.
+	// Keeps a vector of strings that will be used as initial ElementPath elements.
+	struct ContextInfo {
+		std::vector<std::string> elements;
+		constexpr ContextInfo() = default;
+
+		constexpr ContextInfo(const std::vector<std::string>& v) noexcept: elements(v) {}
+	};
+
 	class Import;
 
 	template<typename State>
@@ -49,6 +61,9 @@ namespace pst {
 			  elements(parent.elements.begin(), parent.elements.end()) {
 			elements.emplace_back(ext);
 		}
+
+		// Construct ElementPath from ContextInfo (move contents)
+		ElementPath(const ContextInfo& ctx): elements(ctx.elements.begin(), ctx.elements.end()) {}
 
 		friend constexpr auto hashDecompose(const ElementPath& t) noexcept {
 			return std::tie(t.elements);
