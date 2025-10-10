@@ -101,27 +101,31 @@ namespace base {
 	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
 #endif
 
-/**
- * @brief base::Panic based throw that allows catching for testing purposes
- */
-#define CORE_PANIC(what, ...) \
-	DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
-
-/**
- * @brief Wrapper for CORE_PANIC intended to be used
- * for clearly unreachable code, e.g. after swich case where each case returns,
- * especially in cases when linter complains about missing return.
- *
- * @note CORE_PANIC is by definition also unreachable during correct execution.
- * This macro should be used instead of CORE_PANIC **only** in places where it is intuitively clear
- * that it better encapsulates the meaning/intent of the code. Examples where panic is better:
- * * `if (cond) CORE_PANIC("error description")`,
- * * `default: CORE_PANIC("unhandled case")`.
- */
+#if defined(BUILD_TYPE_DEV)
+	/**
+     * @brief base::Panic based throw that allows catching for testing purposes
+     */
+	#define CORE_PANIC(what, ...) \
+		DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
+#else
+	#define CORE_PANIC(what, ...) std::unreachable()
+#endif
 
 
 #if defined(BUILD_TYPE_DEV)
-	#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.");
+	/**
+     * @brief Wrapper for CORE_PANIC intended to be used
+     * for clearly unreachable code, e.g. after swich case where each case returns,
+     * especially in cases when linter complains about missing return.
+     *
+     * @note CORE_PANIC is by definition also unreachable during correct execution.
+     * This macro should be used instead of CORE_PANIC **only** in places where it is intuitively
+     * clear that it better encapsulates the meaning/intent of the code. Examples where panic is
+     * better:
+     * * `if (cond) CORE_PANIC("error description")`,
+     * * `default: CORE_PANIC("unhandled case")`.
+     */
+	#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.")
 #else
-	#define CORE_UNREACHABLE() std::unreachable();
+	#define CORE_UNREACHABLE() std::unreachable()
 #endif

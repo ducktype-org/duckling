@@ -33,8 +33,6 @@ function(make_module MODULE_NAME)
 	add_to_coverage(${MODULE_NAME})
 endfunction()
 
-
-
 add_custom_target(build_all_examples)
 
 function(add_example exmaple_name source USES)
