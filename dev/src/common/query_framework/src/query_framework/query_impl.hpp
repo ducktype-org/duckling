@@ -118,6 +118,12 @@ namespace query::internal {
 		 *  static auto store(UKHash key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
 		 */
+
+		/**
+		 * Whether query is cached on disk.
+		 * Queries cached on disk must use stable hashing.
+		 * @note not used yet
+		 */
 		static constexpr bool CACHE_ON_DISK = false;
 	};
 
