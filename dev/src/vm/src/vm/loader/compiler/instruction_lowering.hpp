@@ -12,33 +12,7 @@ namespace vm::loader::compiler {
 
 	namespace high = vm::code::instructions;
 
-	// @TODOB move to the place where the concepts are defined and the like
-	namespace {
-		template<typename T>
-		struct Meta;
-
-#define HANDLE_INSTR_0ARGS(instr)            \
-	template<>                               \
-	struct Meta<VM_INSTR_FROM_NAME(instr)> { \
-		using Args = std::tuple<>;           \
-	};
-#define HANDLE_INSTR_1ARGS(instr, arg0)      \
-	template<>                               \
-	struct Meta<VM_INSTR_FROM_NAME(instr)> { \
-		using Args = std::tuple<arg0>;       \
-	};
-#define HANDLE_INSTR_2ARGS(instr, arg0, arg1) \
-	template<>                                \
-	struct Meta<VM_INSTR_FROM_NAME(instr)> {  \
-		using Args = std::tuple<arg0, arg1>;  \
-	};
-#include <vm/bytecode/instruction_definitions.hpp>
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-	}
-
-	struct InstructionLowerer {
+	class InstructionLowerer {
 		CRef<Compiler>                             compiler;
 		CRef<Compiler::FunctionCompilationContext> ctx;
 		usize                                      instruction_index;
@@ -74,8 +48,9 @@ namespace vm::loader::compiler {
 #undef HANDLE_MICRO_INSTR_1ARGS
 #undef HANDLE_MICRO_INSTR_2ARGS
 
+	public:
 		template<typename T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename Meta<T>::Args> auto lower(Args...);
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> auto lower(Args...);
 
 		template<>
 		auto lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
@@ -83,5 +58,61 @@ namespace vm::loader::compiler {
 				makeLow<add_l64_imm>(var, n),
 			};
 		}
+
+		template<>
+		auto lower<high::Comment>() {
+			return std::array<MicroInstruction, 0>{};
+		}
 	};
+
+	template<typename T>
+	constexpr usize LOWERING_SIZE = std::tuple_size_v<decltype(std::apply(
+		[](auto... args) { return std::declval<InstructionLowerer>().lower<T>(args...); },
+		std::declval<typename T::ArgTypes>()
+	))>;
+
+	/*
+	 * Some helper concepts to verify at compile time (quickly and showing error close to the
+	 * source) when lowering is not (propely) implemented for some high bytecode instruction.
+	 *
+	 * Makes sure InstructionLowerer::lower works for all alternatives of vm::code::Instruction,
+	 * i.e. all template specialisations exists and return a std::array<MicroInstruction, N> for
+	 * some N.
+	 */
+	namespace {
+		template<typename T>
+		concept IsMicroInstructionsStdArray = requires {
+			// required in order to use tuple_size_v safely (clang clashes otherwise :O)
+			typename std::tuple_size<T>::type;
+
+			requires std::same_as<T, std::array<MicroInstruction, std::tuple_size_v<T>>>;
+		};
+
+		// Checks if InstructionLowerer::lower<T> exists and returns a MicroInstruction array.
+		template<typename T>
+		concept LoweringWorksForInstr = requires {
+			{
+				std::apply(
+					[](auto... args) {
+						return std::declval<InstructionLowerer>().lower<T>(args...);
+					},
+					std::declval<typename T::ArgTypes>()
+				)
+			} -> IsMicroInstructionsStdArray;
+		};
+
+		// Checks if the above concept holds for alternatives of variant V.
+		template<typename V>
+		concept LoweringWorksForVariant = []<typename... Alts>(std::variant<Alts...>*) {
+			return (LoweringWorksForInstr<Alts> && ...);
+		}(static_cast<V*>(nullptr));
+
+		static_assert(
+			LoweringWorksForVariant<
+				std::variant<high::Op_add_l64_imm, high::Comment>>,  // @TODOB make this
+		                                                             // code::Instruction
+			"Lowering not implemented for all high bytecode instructions"
+			" / some lowering does not return a microinstructions array"
+		);
+	}
 }

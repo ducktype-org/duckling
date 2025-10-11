@@ -21,23 +21,26 @@ namespace vm::code {
 	 * @brief `instructions` namespace encapsulates available VM instructions.
 	 */
 	namespace instructions {
-#define HANDLE_INSTR_0ARGS(opcode)                                                   \
+#define HANDLE_INSTR_0ARGS(opcode)                                                    \
 	struct Op_##opcode final: ElementBase {                                           \
+		using ArgTypes = std::tuple<>;                                                \
 		constexpr bool operator==(const Op_##opcode&) const noexcept { return true; } \
 	};
 
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                               \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                \
 	struct Op_##opcode final: ElementBase {                                  \
 		Op_##opcode(arg0_type arg0): arg0(arg0) {}                           \
+		using ArgTypes = std::tuple<arg0_type>;                              \
 		arg0_type      arg0;                                                 \
 		constexpr bool operator==(const Op_##opcode& other) const noexcept { \
 			return arg0 == other.arg0;                                       \
 		}                                                                    \
 	};
 
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                      \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                       \
 	struct Op_##opcode final: ElementBase {                                    \
 		Op_##opcode(arg0_type arg0, arg1_type arg1): arg0(arg0), arg1(arg1) {} \
+		using ArgTypes = std::tuple<arg0_type, arg1_type>;                     \
 		arg0_type      arg0;                                                   \
 		arg1_type      arg1;                                                   \
 		constexpr bool operator==(const Op_##opcode& other) const noexcept {   \
@@ -57,7 +60,8 @@ namespace vm::code {
 		 * below would finish with a `,`, which does not compile.
 		 */
 		struct Comment final: ElementBase {
-			Comment() = default;
+			Comment()      = default;
+			using ArgTypes = std::tuple<>;
 
 			Comment(base::StrID comment): comment(comment) {}
 
@@ -70,16 +74,13 @@ namespace vm::code {
 	}
 
 	template<typename T>
-	concept TwoArgumentOpcode = requires(T t) {
-		t.arg0;
-		t.arg1;
-	};
+	concept TwoArgumentOpcode = std::tuple_size_v<typename T::ArgTypes> == 2;
 
 	template<typename T>
-	concept OneArgumentOpcode = requires(T t) { t.arg0; } && !TwoArgumentOpcode<T>;
+	concept OneArgumentOpcode = std::tuple_size_v<typename T::ArgTypes> == 1;
 
 	template<typename T>
-	concept ZeroArgumentOpcode = !OneArgumentOpcode<T> and !TwoArgumentOpcode<T>;
+	concept ZeroArgumentOpcode = std::tuple_size_v<typename T::ArgTypes> == 0;
 
 	using Instruction = std::variant<
 #define HANDLE_INSTR(opcode) VM_INSTR_FROM_NAME(opcode),
