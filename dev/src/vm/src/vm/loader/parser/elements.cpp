@@ -222,9 +222,9 @@ namespace vm::loader::parser {
 
 #define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
 
-#define HANDLE_OPCODE_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
+#define HANDLE_INSTR_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
         // @TODOB w_tf
@@ -233,9 +233,9 @@ namespace vm::loader::parser {
 
 		};
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 #undef MAKE_LINK
 	}
 

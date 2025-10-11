@@ -31,7 +31,7 @@ namespace vm::loader::compiler {
 		const FunctionCompilationContext& ctx,
 		const usize                       instruction_index,
 		const opargs::OpCodeArg&          opcode_arg
-	) {
+	) const {
 		variant_match(opcode_arg) {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
 
@@ -98,14 +98,14 @@ namespace vm::loader::compiler {
 			u64                      arg_1 = 0;
 
 			variant_match(op) {
-#define HANDLE_OPCODE_0ARGS(opcode) \
+#define HANDLE_INSTR_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)          \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)          \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {   \
 		arg_0 = lowerArgument(ctx, op_idx, instr.arg0); \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {     \
 		arg_0 = lowerArgument(ctx, op_idx, instr.arg0);   \
 		arg_1 = lowerArgument(ctx, op_idx, instr.arg1);   \

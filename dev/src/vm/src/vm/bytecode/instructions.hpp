@@ -21,12 +21,12 @@ namespace vm::code {
 	 * @brief `instructions` namespace encapsulates available VM instructions.
 	 */
 	namespace instructions {
-#define HANDLE_OPCODE_0ARGS(opcode)                                                   \
+#define HANDLE_INSTR_0ARGS(opcode)                                                   \
 	struct Op_##opcode final: ElementBase {                                           \
 		constexpr bool operator==(const Op_##opcode&) const noexcept { return true; } \
 	};
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                               \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                               \
 	struct Op_##opcode final: ElementBase {                                  \
 		Op_##opcode(arg0_type arg0): arg0(arg0) {}                           \
 		arg0_type      arg0;                                                 \
@@ -35,7 +35,7 @@ namespace vm::code {
 		}                                                                    \
 	};
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                      \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                      \
 	struct Op_##opcode final: ElementBase {                                    \
 		Op_##opcode(arg0_type arg0, arg1_type arg1): arg0(arg0), arg1(arg1) {} \
 		arg0_type      arg0;                                                   \
@@ -47,9 +47,9 @@ namespace vm::code {
 
 #include <vm/bytecode/instruction_definitions.hpp>
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 
 		/**
 		 * @brief An extra instruction that represents a comment.
@@ -82,8 +82,8 @@ namespace vm::code {
 	concept ZeroArgumentOpcode = !OneArgumentOpcode<T> and !TwoArgumentOpcode<T>;
 
 	using Instruction = std::variant<
-#define HANDLE_OPCODE(opcode) VM_INSTR_FROM_NAME(opcode),
+#define HANDLE_INSTR(opcode) VM_INSTR_FROM_NAME(opcode),
 #include <vm/bytecode/instruction_definitions.hpp>
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 		instructions::Comment>;
 }

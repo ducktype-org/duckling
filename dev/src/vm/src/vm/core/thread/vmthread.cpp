@@ -372,16 +372,16 @@ namespace vm {
 			opcode_label = {
 
 
-	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
+	#define HANDLE_INSTR(opcode) (&&LABEL_##opcode),
 	#include <vm/bytecode/instruction_definitions.hpp>
 
 
-	#undef HANDLE_OPCODE
+	#undef HANDLE_INSTR
 			};
 
 		goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];
 
-	#define HANDLE_OPCODE(opcode_name)                                          \
+	#define HANDLE_INSTR(opcode_name)                                          \
 		LABEL_##opcode_name: {                                                  \
 			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
 			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
@@ -394,7 +394,7 @@ namespace vm {
 	#include <vm/bytecode/instruction_definitions.hpp>
 
 
-	#undef HANDLE_OPCODE
+	#undef HANDLE_INSTR
 
 	End:
 
@@ -402,7 +402,7 @@ namespace vm {
 #elif defined(USE_SWITCH_CASE)
 		while (true) {
 			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
-	#define HANDLE_OPCODE(opcode_name)                                                              \
+	#define HANDLE_INSTR(opcode_name)                                                              \
 	case low::OpcodeFix8::opcode_name: {                                                            \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
@@ -412,7 +412,7 @@ namespace vm {
 		}                                                                                           \
 	}
 	#include <vm/bytecode/instruction_definitions.hpp>
-	#undef HANDLE_OPCODE
+	#undef HANDLE_INSTR
 
 			default: {
 				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));

@@ -41,11 +41,11 @@ namespace {
 	 */
 	constexpr u16 countOpCases() {
 		u16 count = 0;
-#define HANDLE_OPCODE(opcode) count++;
+#define HANDLE_INSTR(opcode) count++;
 #include <vm/bytecode/instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 		return count;
 	}
 }

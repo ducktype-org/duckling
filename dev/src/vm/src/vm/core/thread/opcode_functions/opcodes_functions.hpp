@@ -29,17 +29,17 @@ namespace vm {
 	 */
 	class OpFuns final {
 	public:
-#define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
+#define HANDLE_INSTR(opcode) static OpFun op_##opcode;
 #include <vm/bytecode/instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 
-#define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
+#define HANDLE_INSTR(opcode) static DebugOpFun op_debug_##opcode;
 #include <vm/bytecode/instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 
 		// NOLINTBEGIN(readability-identifier-naming)
 		// Opcodes utilities functions (named the similar way as all OpFuns)
@@ -53,22 +53,22 @@ namespace vm {
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
-#define HANDLE_OPCODE(opcode) op_##opcode,
+#define HANDLE_INSTR(opcode) op_##opcode,
 #include <vm/bytecode/instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 		};
 
 		/**
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define HANDLE_OPCODE(opcode) op_debug_##opcode,
+#define HANDLE_INSTR(opcode) op_debug_##opcode,
 #include <vm/bytecode/instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 		};
 
 		/**

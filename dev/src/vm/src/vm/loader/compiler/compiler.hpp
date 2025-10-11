@@ -17,6 +17,8 @@ namespace vm::loader::compiler {
 	 * code injection, compiling only the new elements (types, globals, and functions).
 	 */
 	class Compiler {
+		friend struct InstructionLowerer;
+
 	public:
 		Compiler() = default;
 
@@ -154,7 +156,7 @@ namespace vm::loader::compiler {
 			const FunctionCompilationContext& local_ctx,
 			usize                             instruction_index,
 			const opargs::OpCodeArg&          opcode_arg
-		);
+		) const;
 	};
 
 }
