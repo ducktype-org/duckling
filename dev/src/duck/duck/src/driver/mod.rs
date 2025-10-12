@@ -3,6 +3,8 @@ use clap::{Command, crate_name, crate_version};
 pub(crate) mod cli_ext;
 pub mod run;
 pub mod subcommands;
+pub mod expand_aliases;
+pub mod builtin;
 
 use cli_ext::CommandExt;
 

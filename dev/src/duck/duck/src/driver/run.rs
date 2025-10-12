@@ -1,11 +1,9 @@
-use std::{collections::HashMap, ffi::OsString, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use crate::{
-    DuckCtx,
     driver::{
-        cli,
-        subcommands::{exec_for, subcommands},
-    },
+        builtin::{is_builtin_subcommand}, cli, expand_aliases::expand_aliases, subcommands::subcommands
+    }, DuckCtx
 };
 use anyhow::Context;
 use anyhow::anyhow;
@@ -56,90 +54,6 @@ fn fix_typos(
     debug!("Testing levenshtein of `{name}` against `{targets:?}`");
     // TODO: Rerun parsing later, on new subcommand.
     Ok(args)
-}
-
-const BUILTIN_ALIASES: [(&'static str, &'static str); 2] = [("b", "build"), ("r", "run")];
-
-fn get_builtin_alias(name: &str) -> Option<&'static str> {
-    for (k, v) in BUILTIN_ALIASES {
-        if k == name {
-            return Some(v);
-        }
-    }
-    None
-}
-
-fn expand_aliases(
-    args: ArgMatches,
-    ctx: &DuckCtx,
-    external_cmds: &HashMap<String, PathBuf>,
-    mut visited: Vec<String>,
-) -> QuackResult<ArgMatches> {
-    let Some((subcmd, subcmd_args)) = args.subcommand() else {
-        return Ok(args);
-    };
-    debug!("expanding alias `{subcmd}`");
-    match (
-        is_builtin_subcommand(subcmd),
-        ctx.alias_for(subcmd),
-        external_cmds.contains_key(subcmd),
-        get_builtin_alias(subcmd),
-    ) {
-        // TODO: This will be warned on, when inferring cmd.
-        (_, Ok(None) | Err(_), _, _) => Ok(args),
-        (true, Ok(Some(new)), false, None) => {
-            ctx.error_console().warning(format!(
-                "user-defined alias `{new}` shadows builtin subcommand, ignoring it..."
-            ));
-            Ok(args)
-        }
-        (false, Ok(Some(new)), true, None) => {
-            ctx.error_console().warning(format!(
-                "user-defined alias `{new}` shadows external subcommand, ignoring it..."
-            ));
-            Ok(args)
-        }
-        (false, Ok(Some(new)), false, Some(v)) => {
-            ctx.error_console().warning(format!(
-                "user-defined alias `{new}` shadows builtin alias, ignoring it..."
-            ));
-            Ok(args)
-        }
-        (false, Ok(Some(new)), false, None) => {
-            // This is actually interesting part.
-            let mut new_cli_args = new
-                .split(' ')
-                .map(|x| OsString::from(x))
-                .collect::<Vec<_>>();
-            new_cli_args.extend(
-                subcmd_args
-                    .get_many::<OsString>("")
-                    .unwrap_or_default()
-                    .cloned(),
-            );
-            debug!("replaced alias `{subcmd}` with `{new_cli_args:?}`");
-            let parsed = cli()
-                .no_binary_name(true)
-                .try_get_matches_from(new_cli_args)?;
-            let Some(new_subcmd) = parsed.subcommand_name() else {
-                bail!("user-defined alias `{new}` does not have subcommand")
-            };
-            visited.push(subcmd.into());
-            if visited.contains(&new_subcmd.into()) {
-                bail!(
-                    "user-defined alias `{new}` cycles: {} -> {}",
-                    visited.join(" -> "),
-                    new
-                );
-            }
-            expand_aliases(parsed, ctx, external_cmds, visited)
-        }
-        _ => Ok(args),
-    }
-}
-
-fn is_builtin_subcommand(name: &str) -> bool {
-    exec_for(name).is_some()
 }
 
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
