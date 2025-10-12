@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	 * @brief Attempts to use given positional and named arguments as arguments for given function.
 	 * @note invalidates positional and named_arguments (moves boxes and leaves them empty).
 	 * @TODO: #1029 in order to handle overloads, make positional_arguments and named_arguments not
-	 * get invalidated. Requires #1300.
+	 * get invalidated. Requires #1309.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
@@ -36,30 +36,28 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>&                positional_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		// note: this has to be a copy, because we move default arguments from it:
-		// @TODO: #1300 just change to clone
 		auto decl = ctx.query<QueryDeclOfFun>(fun);
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		usize                        normal_args_position = 0;
 		usize                        used_named_args      = 0;
 
-		for (auto& param: *(decl.parameters)) {
+		for (auto& param: decl->parameters) {
 			auto get_arg = [&]() -> base::Optional<Box<Expr>> {
 				if (named_arguments.contains(param.name)) {
 					used_named_args++;
 					return std::move(named_arguments.at(param.name));
 				} else if (normal_args_position < positional_arguments.size())
 					return std::move(positional_arguments.at(normal_args_position++));
-				else if (param.initial_value.has_value())
-					return std::move(param.initial_value.value());
-				else
+				else if (param.initial_value.has_value()) {
+					return param.initial_value->ref()->clone();
+				} else
 					return std::nullopt;
 			};
 
 			match_optional(get_arg()) {
 				opt_some(arg) {
-					// @TODO: #1300 (for consideration)
+					// @TODO: #1029 overloads resolution
 					auto coerced = coerceExpression(std::move(arg), param.type);
 					if (coerced.hasError())
 						return std::nullopt;
@@ -83,7 +81,7 @@ namespace compiler::helios::code {
 	 * function.
 	 * @note invalidates positional and named_arguments (moves boxes and leaves them empty).
 	 * @TODO: #1029 in order to handle overloads, make positional_arguments and named_arguments not
-	 * get invalidated. Requires #1300.
+	 * get invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingBuiltin(
 		query::Context&                        ctx,
@@ -125,6 +123,7 @@ namespace compiler::helios::code {
 	) {
 		switch (kind(fun)) {
 		case SymbolKind::Function:
+		case SymbolKind::FunctionDeclaration:
 			return attemptFittingFun(ctx, fun, positional_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
 			return attemptFittingBuiltin(ctx, fun, positional_arguments, named_arguments);
@@ -154,7 +153,7 @@ namespace compiler::helios::code {
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
 			if (arg_expr.hasError()) return query::QError(errors::Failed());
 			if (arg.unlock(ctx)->isNamedArg()) {
-				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().value;
+				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				if (named_arguments.contains(arg_name))
 					return query::QError(errors::Failed());  // Not unique names.
 				named_arguments.emplace(arg_name, std::move(arg_expr.value()));

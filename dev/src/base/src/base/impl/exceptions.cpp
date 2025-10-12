@@ -1,7 +1,7 @@
 #include "../exceptions.hpp"
 
 #include <ostream>
-#include <version>
+#include <version>  // IWYU pragma: keep
 
 #ifdef __cpp_lib_stacktrace
 	#include "../pretty_stacktrace.hpp"

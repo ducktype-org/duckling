@@ -36,7 +36,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query declaration of function: types, args and its names.
 	 */
-	DECLARE_QUERY(QueryDeclOfFun, SymID, HOUTFunctionDeclaration);
+	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<HOUTFunctionDeclaration>);
 
 	/**
 	 * @brief Query code of a function.

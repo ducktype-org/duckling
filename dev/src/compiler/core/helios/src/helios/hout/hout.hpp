@@ -45,7 +45,7 @@ namespace compiler::helios {
 
 		HOUTFunctionDeclaration() = delete;
 
-		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = default;
+		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = delete;
 		HOUTFunctionDeclaration(HOUTFunctionDeclaration&&)      = default;
 
 		/**
@@ -60,15 +60,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> return_type;
 
-		/**
-		 * @note use of shared_ptrs is intentional, as they
-		 * work well for incomplete types, and fit the use case.
-		 * In the future we might optimize it to single (or zero) shared_ptr, but
-		 * that will require some boilerplate. Stored vector can't be const, because
-		 * it is moved (contains boxes), when handling initial arguments. @TODO: #1300 Coercions
-		 */
-		std::shared_ptr<std::vector<code::Parameter>> parameters;
-
+		std::vector<code::Parameter> parameters;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -78,9 +70,7 @@ namespace compiler::helios {
 
 	private:
 		HOUTFunctionDeclaration(
-			SymID                                                symbol,
-			tsh::SymbolType<>                                    ret_type,
-			const std::shared_ptr<std::vector<code::Parameter>>& parameters
+			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
 		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
@@ -92,14 +82,16 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunction final {
 	private:
-		HOUTFunction(HOUTFunctionDeclaration, const std::shared_ptr<const code::CodeBlock>& body);
+		HOUTFunction(
+			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
+		);
 		friend struct ImplementationOf_QueryCodeOfFun;
 		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 
 	public:
 		HOUTFunction() = delete;
 
-		HOUTFunctionDeclaration declaration;
+		CRef<HOUTFunctionDeclaration> declaration;
 
 		/**
 		 * @note use of shared_ptr's is intentional, as they

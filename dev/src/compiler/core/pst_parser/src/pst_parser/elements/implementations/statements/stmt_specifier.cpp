@@ -99,6 +99,11 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& StmtSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, lang_def::keywordToStr(specifier));
+		return partial_hash;
+	}
+
 	bool StmtSpecifier::trailingSemicolon() { return false; }
 
 	void StmtSpecifier::acceptVisitor(PstVisitor& visitor) const {

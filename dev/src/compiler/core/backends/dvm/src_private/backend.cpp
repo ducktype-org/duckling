@@ -287,9 +287,11 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		vm::opargs::OpCodeArg lirOutputToOpArg(
+		base::Optional<vm::opargs::OpCodeArg> lirOutputToOpArg(
 			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
 		) {
+			if (!lir_instruction.output.has_value()) return {};
+
 			variant_match(lir_instruction.output.value()) {
 				variant_case(lir::LocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
@@ -403,25 +405,27 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		void handleAddCall(AddLirFuncContext& ctx, std::deque<vm::opargs::OpCodeArg> args) {
-			auto lir_result_argument = args.front();
-			args.pop_front();
+		void handleAddCall(
+			AddLirFuncContext&                    ctx,
+			std::deque<vm::opargs::OpCodeArg>     args,
+			base::Optional<vm::opargs::OpCodeArg> output
+		) {
 			auto called_func_arg = args.front();
 			args.pop_front();
-
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-
 			auto called_func_signature = ctx.SIGNATURES.at(called_func_name);
-			// Init result type
 
+			// Init result type
 			usize call_id     = ctx.next_call_id++;
 			auto  result_name = base::StrID(base::strConcat("call", call_id, "_res").c_str());
-			auto  func_result_argument = modifyVarNameOpArg(lir_result_argument, result_name);
-			initType(ctx, result_name, called_func_signature.result_type);
+			base::Optional<vm::opargs::OpCodeArg> func_result_argument
+				= output.map([&](const auto o) {
+					  initType(ctx, result_name, called_func_signature.result_type);
+					  return modifyVarNameOpArg(o, result_name);
+				  });
 
 			// Instantiate function parameters on the stack.
-
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
 				std::cerr << "Initializing: " << type_name.str.str() << '\n';
@@ -440,17 +444,19 @@ namespace compiler::backend_vm {
 
 			pushInstruction(ctx.bytecode_func, { OpKind::call, called_func_arg });
 
-			pushInstruction(
-				ctx.bytecode_func,
-				{
-					OpKind::mov,
-					lir_result_argument,
-					func_result_argument,
-				}
-			);
-			pushInstruction(
-				ctx.bytecode_func, { instructions::Op_deinit() }
-			);  // Deinit func result
+			if_opt_some(output, lir_result_argument) {
+				pushInstruction(
+					ctx.bytecode_func,
+					{
+						OpKind::mov,
+						lir_result_argument,
+						func_result_argument.value(),
+					}
+				);
+				pushInstruction(
+					ctx.bytecode_func, { instructions::Op_deinit() }
+				);  // Deinit func result
+			}
 		}
 
 		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
@@ -467,7 +473,8 @@ namespace compiler::backend_vm {
 			const auto output = lirOutputToOpArg(ctx, lir_instruction);
 
 			// Add output as an argument.
-			std::deque args = { output };
+			std::deque<vm::opargs::OpCodeArg> args{};
+			if_opt_some(output, output_some) args.push_back(output_some);
 
 			// Add other arguments.
 			for (auto&& lir_location: lir_instruction.arguments)
@@ -491,7 +498,7 @@ namespace compiler::backend_vm {
 
 					args.pop_front();
 					args.pop_front();
-					args.push_front(output);
+					args.push_front(output.value());
 				}
 			} else if (kind == OpKind::cmpL || kind == OpKind::ucmpL || kind == OpKind::cmpG
 			           || kind == OpKind::ucmpG || kind == OpKind::cmpEq) {
@@ -525,7 +532,9 @@ namespace compiler::backend_vm {
 					args.pop_back();
 				}
 			} else if (kind == OpKind::call) {
-				handleAddCall(ctx, args);
+				auto args_copy = args;
+				if_opt_some(output, _) args_copy.pop_front();
+				handleAddCall(ctx, args_copy, output);
 				return;
 			}
 

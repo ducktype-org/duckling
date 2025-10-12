@@ -56,6 +56,7 @@ jobs:
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
           database: 'dev'
+          ignore: '**/*.c'
 
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.
@@ -111,6 +112,8 @@ jobs:
         shell: bash
 
       - name: Run TODO validation
+        env:
+          GH_TOKEN: ${{ secrets.READ_ISSUE_DATA }}
         run: |
          cd dev
          python3 toolbox.py todo-validate --branch origin/main --no-merge-base

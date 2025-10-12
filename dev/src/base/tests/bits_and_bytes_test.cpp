@@ -1,7 +1,6 @@
 #include <base/bits_and_bytes.hpp>
 
 #include <tester/tester.hpp>
-#include <tester/testing_utils.hpp>
 
 using base::bytes2bits;
 

@@ -94,7 +94,7 @@ private:
 			{ ' '_BT, 0b10000000_BT, 'x'_BT },
 		};
 		for (auto& in: ins)
-			assumeBadDecode<fs::Encoding::US_ASCII>(base::RawView(in.data(), in.size()));
+			assumeBadDecode<fs::Encoding::UsAscii>(base::RawView(in.data(), in.size()));
 	}
 
 	void goodAscii() {
@@ -105,7 +105,7 @@ private:
 		std::string content{ reinterpret_cast<char*>(in.data()), in.size() };
 		auto        path = fs::FileManager::createRandomTempFile(content);
 		auto        file = tokenizer::makeTokenSource(path);
-		file->decode<fs::Encoding::US_ASCII>();
+		file->decode<fs::Encoding::UsAscii>();
 		assertTrue(file->getLogger()->good(), "Valid Ascii not accepted");
 	}
 };

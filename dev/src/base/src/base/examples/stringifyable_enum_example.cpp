@@ -4,14 +4,14 @@
 
 #include <iostream>
 
-MAKE_STRINGIFYABLE_ENUM(N, u16, MyEnum, A, B, C)
+MAKE_STRINGIFYABLE_ENUM(n, u16, MyEnum, A, B, C)
 
 // NOLINTBEGIN
 int main() {
-	N::MyEnum enum_value = N::MyEnum::A;
+	n::MyEnum enum_value = n::MyEnum::A;
 
 	std::cout << base::enumToStr(enum_value).strView() << "\n";  // "A"
-	enum_value = base::strToEnum<N::MyEnum>(base::StrID("B"));
+	enum_value = base::strToEnum<n::MyEnum>(base::StrID("B"));
 }
 
 // NOLINTEND

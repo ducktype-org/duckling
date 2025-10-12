@@ -293,6 +293,8 @@
 																							"sourceEnd": 113
 																						},
 																						"Call argument": {
+																							"name": "<ANONYMOUS>",
+																						"value": {
 																							"position": {
 																								"sourceStart": 113,
 																								"sourceEnd": 113
@@ -667,19 +669,22 @@
 																									"sourceEnd": 263
 																								},
 																								"Call argument": {
-																									"position": {
-																										"sourceStart": 263,
-																										"sourceEnd": 263
-																									},
-																									"Top Level Expression": {
-																										"expr": {
-																											"position": {
-																												"sourceStart": 263,
-																												"sourceEnd": 263
-																											},
-																											"Identifier Expression": {
-																												"name": {
-																													"Name": "c"
+																									"name": "<ANONYMOUS>",
+																									"value": {
+																										"position": {
+																											"sourceStart": 263,
+																											"sourceEnd": 263
+																										},
+																										"Top Level Expression": {
+																											"expr": {
+																												"position": {
+																													"sourceStart": 263,
+																													"sourceEnd": 263
+																												},
+																												"Identifier Expression": {
+																													"name": {
+																														"Name": "c"
+																													}
 																												}
 																											}
 																										}

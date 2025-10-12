@@ -38,12 +38,16 @@ namespace base {
 
 		// size(char[N]) overrides std::size(char[N]) as more specialized
 		// ***Assumes char[N] is string literal*** ***STRIPS ZERO TERMINATOR***
+		// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		template<usize N>
 		constexpr usize size(const char (&)[N]) {
 			return N - 1;
 		}
 
-		constexpr char* copy_n(const char* cs, usize n, char* p) {
+		// NOLINTEND(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+
+
+		constexpr char* copyN(const char* cs, usize n, char* p) {
 			for (usize i = 0; i < n; i++) *(p + i) = *(cs + i);
 			return p + n;
 		}
@@ -67,7 +71,7 @@ namespace base {
 		std::array<char, SIZE> ret{ {} };
 		if constexpr (ret.size()) {
 			char* p = ret.data();
-			((p = impl::copy_n(data(cs), size(cs), p)), ...);
+			((p = impl::copyN(data(cs), size(cs), p)), ...);
 		}
 		return ret;
 	}

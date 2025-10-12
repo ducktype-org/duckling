@@ -46,5 +46,7 @@ function main { i64, ptr_argv } -> i64 {
 
 	output_l64 x;
 
+	free_lptr helper_dog;
+
 	ret;
 }

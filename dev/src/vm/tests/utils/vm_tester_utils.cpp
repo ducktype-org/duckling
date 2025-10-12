@@ -49,9 +49,10 @@ void VmTestSuite::assertExecutionPanickedWith(
 			ASSERT_TRUE(panicked.error_message.contains(err_piece));
 		}
 		variant_default {
+			ASSERT_TRUE(!test_result.run_result.has_value());
 			fail(base::strConcat(
 				"Expected ",
-				TypeParseTraits<vm::api::ExecutionPanicked>::name.data(),
+				TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
 				", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
 			));
 		}
@@ -139,4 +140,7 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 		fail(err_str);
 	}
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
+	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
+	ASSERT_TRUE(validation_result.has_value());
+	ASSERT_TRUE(validation_result.value());
 }

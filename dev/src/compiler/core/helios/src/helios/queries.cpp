@@ -143,14 +143,10 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
-			// @TODO: make failure more explicit
-			void visitFun(pst::Access<pst::Fun> stmt) final {
-				// @TODO: rest, flags, attributes, etc
-
-
-				// Return type:
-				auto ret = stmt->getRet();
-
+			void emplaceDeclaration(
+				pst::AccessLocked<pst::ParamList>                  param_list,
+				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
+			) {
 				// Default return type is a direct unit.
 				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
@@ -161,7 +157,7 @@ namespace compiler::helios {
 				if (ret.has_value()) {
 					if (auto ctv
 					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType())
+						if (auto maybe_type = ctv.value().asType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;
@@ -173,7 +169,7 @@ namespace compiler::helios {
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *stmt->getParams().unlock(ctx)) {
+				for (auto param: *param_list.unlock(ctx)) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
 					auto param_name   = name(param_symbol);
 					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
@@ -208,24 +204,31 @@ namespace compiler::helios {
 					}
 				}
 
-				HOUTFunctionDeclaration output(
-					original_symbol,
-					ret_type,
-					std::make_shared<std::vector<code::Parameter>>(std::move(parameters))
-				);
+				HOUTFunctionDeclaration output(original_symbol, ret_type, std::move(parameters));
 
 				this->out.emplace(std::move(output));
+			}
+
+			// @TODO: #1029 make failure more explicit
+			void visitFun(pst::Access<pst::Fun> stmt) final {
+				// @TODO: #1029 rest, flags, attributes, etc
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+			}
+
+			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (kind(key)) {
 			case SymbolKind::Function:
+			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstSymbolData) {
 						DeclarationVisitor func_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(func_maker);
-						return func_maker.out.value();
+						return std::move(func_maker.out).value();
 					}
 					variant_case(houtgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {
@@ -234,15 +237,15 @@ namespace compiler::helios {
 							) {
 								auto class_type
 									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-								          ->expect(
+										  ->expect(
 											  "Not handling errors here yet... (getting "
 											  "declaration of generated constructor symbol)"
 										  )
-								          .getType()
-								          .as<tsh::ClassAbstractType>();
+										  .getType()
+										  .as<tsh::ClassAbstractType>();
 								return ctx
-								    .query<houtgen::QueryImplicitClassConstructor>({ class_type })
-								    ->declaration;
+									.query<houtgen::QueryImplicitClassConstructor>({ class_type })
+									->declaration;
 							}
 							variant_default { CORE_UNREACHABLE(); }
 						}
@@ -253,6 +256,7 @@ namespace compiler::helios {
 					}
 				}
 				CORE_UNREACHABLE();
+			}
 			case SymbolKind::BuiltinFunction: {
 				const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
 				                              ->expect(
@@ -280,7 +284,7 @@ namespace compiler::helios {
 				return HOUTFunctionDeclaration{
 					key,
 					return_type,
-					std::make_shared<std::vector<code::Parameter>>(std::move(parameters)),
+					std::move(parameters),
 				};
 			}
 			default:
@@ -288,15 +292,15 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_NO_CACHE  // @TODO: #1300 Enable canCoerce, unify logic between HELIoS and TSH.
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
 
 	struct IMPLEMENT_QUERY(QueryCodeOfFun, HOUTFunction) {
 		/**
-		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or pst::CodeBlockOrStmt
-		 * Might be changed into query in the future
+		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or
+		 * pst::CodeBlockOrStmt Might be changed into query in the future
 		 */
 		template<class Container>
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {

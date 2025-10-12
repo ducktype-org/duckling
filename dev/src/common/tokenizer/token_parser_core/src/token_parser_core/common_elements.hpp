@@ -4,6 +4,7 @@
 #include <base/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <lexer/token.hpp>
 
 namespace tpc {
@@ -16,6 +17,12 @@ namespace tpc {
 		// @TODO: this should be changed do be properly set during parsing:
 		dia::SourcePosition position = dia::SourcePosition::fakePosition();
 
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const Identifier& t
+		) noexcept {
+			addToHash(h, t.value.strView());
+		}
+
 		operator base::StrID() { return value; }
 	};
 
@@ -27,6 +34,13 @@ namespace tpc {
 
 		// @TODO: this should be changed do be properly set during parsing:
 		dia::SourcePosition position = dia::SourcePosition::fakePosition();
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const OptionalIdentifier& t
+		) noexcept {
+			addToHash(h, t.value.has_value());
+			if (t.value) addToHash(h, t.value->strView());
+		}
 	};
 
 	/**
@@ -61,6 +75,12 @@ namespace tpc {
 		 * @note This should probably do something more in the future.
 		 */
 		bool operator==(StringValue& other) { return str() == other.str(); }
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const StringValue& t
+		) noexcept {
+			addToHash(h, t.value.str());
+		}
 	};
 
 	/**
@@ -95,5 +115,11 @@ namespace tpc {
 		 * @note This should probably do something more in the future
 		 */
 		bool operator==(CharValue& other) { return charValue() == other.charValue(); }
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const CharValue& t
+		) noexcept {
+			addToHash(h, t.value.strView());
+		}
 	};
 }

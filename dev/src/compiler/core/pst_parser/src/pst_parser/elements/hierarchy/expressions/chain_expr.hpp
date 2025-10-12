@@ -23,6 +23,7 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 		void                     dprint(std::ostream& out) const final;
 		void                     acceptExprVisitor(PstExprVisitor& visitor) const final;
+		HashAlg&                 addElementDataToStableHash(HashAlg&) const override;
 
 		~ChainExpr() override = default;
 

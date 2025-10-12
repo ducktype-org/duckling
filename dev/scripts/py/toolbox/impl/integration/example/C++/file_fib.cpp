@@ -1,6 +1,6 @@
 #include <iostream>
 
-constexpr long long MOD = 1e9 + 7;
+constexpr long long MOD = static_cast<long long>(1e9) + 7;
 
 int main() {
 	int n = 0;

@@ -48,6 +48,7 @@ CheckOptions:
   readability-identifier-naming.VariableCase: lower_case
   readability-identifier-naming.ClassMemberCase: lower_case
   readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.ConstantMemberCase: lower_case
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.LocalConstantCase: lower_case
   readability-identifier-naming.ConstantParameterCase: lower_case
@@ -62,6 +63,9 @@ CheckOptions:
   readability-identifier-naming.ConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE
+
+  # Constexpr:
+  readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
 
   # Macros:
   readability-identifier-naming.MacroDefinitionCase: aNy_CasE
