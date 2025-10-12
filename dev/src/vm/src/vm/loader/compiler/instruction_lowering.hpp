@@ -6,19 +6,23 @@
 
 #include <vm/bytecode/opcode_args.hpp>
 
-#include <array>
-
 namespace vm::loader::compiler {
 
 	namespace high = vm::code::instructions;
 
-	class InstructionLowerer {
+	class MicroBytecodeBuilder {
 		CRef<Compiler>                             compiler;
 		CRef<Compiler::FunctionCompilationContext> ctx;
-		usize                                      instruction_index;
 
+		low::MicroBytecode result;
+
+		// @TODOB once you're done experimenting with argument lowering,
+		// inline this function in the X-macro thingy
 		u64 lowerArgument(const opargs::OpCodeArg& arg) {
-			return compiler->lowerArgument(*ctx, instruction_index, arg);
+			//
+			(void) arg;
+			return 42;
+			// return compiler->lowerArgument(*ctx, arg);
 		}
 
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
@@ -40,23 +44,22 @@ namespace vm::loader::compiler {
 #undef HANDLE_MICRO_INSTR_2ARGS
 
 		template<typename T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes>
-		MicroInstruction makeLow(Args...);
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args...);
 
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
 	template<>                          \
-	MicroInstruction makeLow<INSTR>() { \
-		return {};                      \
+	void addLow<INSTR>() {              \
+		result.emplace_back();          \
 	}
-#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)    \
-	template<>                                   \
-	MicroInstruction makeLow<INSTR>(ARG0 arg0) { \
-		return { .arg0 = lowerArgument(arg0) };  \
+#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)              \
+	template<>                                             \
+	void addLow<INSTR>(ARG0 arg0) {                        \
+		result.push_back({ .arg0 = lowerArgument(arg0) }); \
 	}
-#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                          \
-	template<>                                                               \
-	MicroInstruction makeLow<INSTR>(ARG0 arg0, ARG1 arg1) {                  \
-		return { .arg0 = lowerArgument(arg0), .arg1 = lowerArgument(arg1) }; \
+#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                                     \
+	template<>                                                                          \
+	void addLow<INSTR>(ARG0 arg0, ARG1 arg1) {                                          \
+		result.push_back({ .arg0 = lowerArgument(arg0), .arg1 = lowerArgument(arg1) }); \
 	}
 
 #include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
@@ -66,72 +69,17 @@ namespace vm::loader::compiler {
 
 	public:
 		template<typename T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> auto lower(Args...);
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void lower(Args...);
 
 		// -----------------------
 		template<>
-		auto lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
-			return std::array{
-				makeLow<add_l64_imm>(var, n),
-			};
+		void lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
+			addLow<add_l64_imm>(var, n);
 		}
 
 		template<>
-		auto lower<high::Comment>() {
-			return std::array<MicroInstruction, 0>{};
-		}
+		void lower<high::Comment>() {}
 
 		// -----------------------
 	};
-
-	template<typename T>
-	constexpr usize LOWERING_SIZE = std::tuple_size_v<decltype(std::apply(
-		[](auto... args) { return std::declval<InstructionLowerer>().lower<T>(args...); },
-		std::declval<typename T::ArgTypes>()
-	))>;
-
-	/*
-	 * Some helper concepts to verify at compile time (quickly and showing error close to the
-	 * source) when lowering is not (propely) implemented for some high bytecode instruction.
-	 *
-	 * Makes sure InstructionLowerer::lower works for all alternatives of vm::code::Instruction,
-	 * i.e. all template specialisations exists and return a std::array<MicroInstruction, N> for
-	 * some N.
-	 */
-	namespace {
-		template<typename T>
-		concept IsMicroInstructionsStdArray = requires {
-			// required in order to use tuple_size_v safely (clang clashes otherwise :O)
-			typename std::tuple_size<T>::type;
-
-			requires std::same_as<T, std::array<MicroInstruction, std::tuple_size_v<T>>>;
-		};
-
-		// Checks if InstructionLowerer::lower<T> exists and returns a MicroInstruction array.
-		template<typename T>
-		concept LoweringWorksForInstr = requires {
-			{
-				std::apply(
-					[](auto... args) {
-						return std::declval<InstructionLowerer>().lower<T>(args...);
-					},
-					std::declval<typename T::ArgTypes>()
-				)
-			} -> IsMicroInstructionsStdArray;
-		};
-
-		// Checks if the above concept holds for alternatives of variant V.
-		template<typename V>
-		concept LoweringWorksForVariant = []<typename... Alts>(std::variant<Alts...>*) {
-			return (LoweringWorksForInstr<Alts> && ...);
-		}(static_cast<V*>(nullptr));
-
-		static_assert(
-			LoweringWorksForVariant<
-				std::variant<high::Op_add_l64_imm, high::Comment>>,  // @TODOB make this
-		                                                             // code::Instruction
-			"Lowering not implemented for all high bytecode instructions"
-			" / some lowering does not return a microinstructions array"
-		);
-	}
 }
