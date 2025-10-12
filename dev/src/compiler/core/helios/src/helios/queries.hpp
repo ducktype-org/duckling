@@ -35,7 +35,6 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query declaration of function: types, args and its names.
-	 * @note Currently works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 */
 	DECLARE_QUERY(QueryDeclOfFun, SymID, HOUTFunctionDeclaration);
 
