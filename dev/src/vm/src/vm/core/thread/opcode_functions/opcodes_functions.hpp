@@ -29,17 +29,17 @@ namespace vm {
 	 */
 	class OpFuns final {
 	public:
-#define HANDLE_INSTR(opcode) static OpFun op_##opcode;
-#include <vm/bytecode/instruction_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) static OpFun op_##opcode;
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_INSTR
+#undef HANDLE_MICRO_INSTR
 
-#define HANDLE_INSTR(opcode) static DebugOpFun op_debug_##opcode;
-#include <vm/bytecode/instruction_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) static DebugOpFun op_debug_##opcode;
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_INSTR
+#undef HANDLE_MICRO_INSTR
 
 		// NOLINTBEGIN(readability-identifier-naming)
 		// Opcodes utilities functions (named the similar way as all OpFuns)
@@ -53,29 +53,29 @@ namespace vm {
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
-#define HANDLE_INSTR(opcode) op_##opcode,
-#include <vm/bytecode/instruction_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) op_##opcode,
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_INSTR
+#undef HANDLE_MICRO_INSTR
 		};
 
 		/**
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define HANDLE_INSTR(opcode) op_debug_##opcode,
-#include <vm/bytecode/instruction_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) op_debug_##opcode,
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_INSTR
+#undef HANDLE_MICRO_INSTR
 		};
 
 		/**
 		 * @brief Get the Opcode from the OpFun pointer.
 		 */
-		static u16 getOpcodeFromOpFun(OpFun* fun) {
-			for (u16 i = 0; i < OP_CASES_COUNT; i++)
+		static u64 getOpcodeFromOpFun(OpFun* fun) {
+			for (u64 i = 0; i < OP_CASES_COUNT; i++)
 				if (OPFUNS.at(i) == fun) return i;
 			CORE_UNREACHABLE();
 		}

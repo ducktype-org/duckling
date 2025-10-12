@@ -50,8 +50,10 @@
 #ifndef DEF_MICRO_INSTR
 #define DEFAULT_DEF_MICRO_INSTR
 #define GET_MACRO(_instr, _1, _2, NAME, ...) NAME
-#define DEF_MICRO_INSTR(...)                                                                   \
-	GET_MACRO(__VA_ARGS__, HANDLE_MICRO_INSTR_2ARGS, HANDLE_MICRO_INSTR_1ARGS, HANDLE_MICRO_INSTR_0ARGS) \
+#define DEF_MICRO_INSTR(...)                                                                      \
+	GET_MACRO(                                                                                    \
+		__VA_ARGS__, HANDLE_MICRO_INSTR_2ARGS, HANDLE_MICRO_INSTR_1ARGS, HANDLE_MICRO_INSTR_0ARGS \
+	)                                                                                             \
 	(__VA_ARGS__)
 #endif
 
@@ -283,9 +285,7 @@ DEF_MICRO_INSTR(
     vm::opargs::Type 			 expected_type */
 )
 
-// ========= LABELS AND JUMPS ========
-
-DEF_MICRO_INSTR(label, vm::opargs::Label)
+// ========= JUMPS ========
 
 DEF_MICRO_INSTR(jmp_label, vm::opargs::Label)
 DEF_MICRO_INSTR(jmpIf_label, vm::opargs::Label)

@@ -32,6 +32,4 @@ namespace vm::low {
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	};
-
-	u64 fix8FromMicroInstr(const code::Instruction& instruction);
 }

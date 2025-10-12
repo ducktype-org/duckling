@@ -1,22 +1,23 @@
 #include "instruction.hpp"
 
-#include "../config.hpp"
+#include "../config.hpp"  // IWYU pragma: keep
 
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 
 namespace vm {
 
-	MicroInstruction makeLowInstruction(u64 opcode, u64 arg0, u64 arg1) {
+	MicroInstruction makeLowInstruction(low::MicroOpcode opcode, u64 arg0, u64 arg1) {
+        u64 opcode_num = std::to_underlying(opcode);
 #ifdef USE_TAIL_CALLS
 		return MicroInstruction{
-			.tc_opfun = OpFuns::OPFUNS.at(opcode),
+			.tc_opfun = OpFuns::OPFUNS.at(opcode_num),
 			.arg0     = arg0,
 			.arg1     = arg1,
 		};
 #else
 		return MicroInstruction{
-			.nontc_opcode = opcode,
+			.nontc_opcode = opcode_num,
 			.arg0         = arg0,
 			.arg1         = arg1,
 		};

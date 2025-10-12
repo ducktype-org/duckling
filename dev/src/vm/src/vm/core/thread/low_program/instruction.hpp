@@ -7,6 +7,7 @@
 
 #include <base/ints.hpp>
 
+#include "opcodes.hpp"
 #include <vm/core/process/memory/frame.hpp>
 
 /**
@@ -39,10 +40,10 @@ namespace {
 	 *
 	 * @return constexpr u16
 	 */
-	constexpr u16 countOpCases() {
-		u16 count = 0;
-#define HANDLE_INSTR(opcode) count++;
-#include <vm/bytecode/instruction_definitions.hpp>
+	constexpr u64 countOpCases() {
+		u64 count = 0;
+#define HANDLE_MICRO_INSTR(opcode) count++;
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
 #undef HANDLE_INSTR
@@ -66,7 +67,7 @@ namespace vm {
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr u16 OP_CASES_COUNT = countOpCases();
+	constexpr u64 OP_CASES_COUNT = countOpCases();
 
 	struct MicroInstruction {
 		union {
@@ -86,6 +87,7 @@ namespace vm {
 		u64 arg0;
 		u64 arg1;
 
+		// @TODOB do something about this
 #if defined(BUILD_TYPE_DEV_DEBUG)
 		u64         opcode_id = std::numeric_limits<u64>::max();
 		std::string representation{};
@@ -96,7 +98,7 @@ namespace vm {
 	 * @brief Creates a low-level instruction with correct "union" type depending on the config.
 	 * @return MicroInstruction
 	 */
-	MicroInstruction makeLowInstruction(u64 opcode, u64 arg0 = 0, u64 arg1 = 0);
+	MicroInstruction makeLowInstruction(low::MicroOpcode opcode, u64 arg0 = 0, u64 arg1 = 0);
 
 	/**
 	 * @brief For main purposes only.

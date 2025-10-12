@@ -87,12 +87,15 @@ namespace vm::loader::compiler {
 	 * @brief Compiles a single function. Refactor this
      * @TODOB change this comment
 	 */
-	low::MicroBytecode Compiler::lowerInstructions(const FunctionCompilationContext& ctx) {
-		MicroBytecodeBuilder builder{ this, &ctx };
+	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
+        detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		for (const auto& instr: ctx.function.body) VISIT(instr, i, builder.lower(i));
+        // @TODOB uncomment this
+		// for (const auto& instr: ctx.function.body) VISIT(instr, i, builder.lower(i));
 
-		return builder.build();
+		auto [micro_bytecode, label_map] = builder.build();
+
+        return micro_bytecode;
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {

@@ -7,6 +7,10 @@
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
+	namespace detail {
+		class MicroBytecodeBuilder;
+	}
+
 	/**
 	 * @class Compiler
 	 * @brief A stateful, incremental bytecode compiler.
@@ -18,7 +22,7 @@ namespace vm::loader::compiler {
 	 */
 	class Compiler {
 		// @TODOB try to make this friend unnecessary
-		friend class MicroBytecodeBuilder;
+		friend class detail::MicroBytecodeBuilder;
 
 	public:
 		Compiler() = default;
@@ -72,7 +76,8 @@ namespace vm::loader::compiler {
 			FunctionCompilationContext(const code::Function& func): function(func) {}
 
 			/// The high level function definition.
-			const code::Function&             function;
+			const code::Function& function;
+			// @TODO document this
 			base::HashMap<base::StrID, usize> label_id_map;
 			usize                             next_label_id = 0;
 			/// A mapping from a local variable's name to its offset on the function's local stack.
@@ -138,7 +143,7 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		low::MicroBytecode lowerInstructions(const FunctionCompilationContext& ctx);
+		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)

@@ -1002,10 +1002,6 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(label)(FUNCTION_ARGS) {
-		CORE_PANIC("Handling label should not be possible");
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
 			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
