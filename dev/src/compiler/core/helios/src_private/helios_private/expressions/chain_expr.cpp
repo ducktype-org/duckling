@@ -266,6 +266,9 @@ namespace compiler::helios::code {
 					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
 				return { ctor->declaration.original_symbol };
 			}
+			case SymbolKind::BuiltinFunction: {
+				return { symbol };
+			}
 			default:
 				CORE_PANIC("Not implemented yet");
 			}

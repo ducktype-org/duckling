@@ -20,7 +20,7 @@ class FirstClassEver {
     FirstClassEver.destroy() = {}
 }
 
-# class SecondClass extends FirstClassEver {}
+class SecondClass extends FirstClassEver {}
 
 let a: FirstClassEver = FirstClassEver(1, 2.0);
 let b = a;
