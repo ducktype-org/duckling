@@ -1,6 +1,8 @@
 use std::fmt::Display;
+use std::io::Write;
 
 use console::{Term, style};
+use paste::item;
 
 #[derive(Debug)]
 pub struct Terminal {
@@ -14,6 +16,37 @@ pub enum Verbosity {
     #[default]
     Default,
     Verbose,
+}
+
+macro_rules! delegate_styles {
+    (
+        $(
+            $name:ident => $value:literal $(+ $opt:ident )* $(,)?
+        ),*
+    ) => {
+    $(
+        item! {
+            pub fn $name(&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_nl_impl(full_text, false);
+            }
+
+            pub fn [<$name _verbose>](&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_nl_impl(full_text, true);
+            }
+
+            pub fn [<$name _no_nl>](&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_impl(full_text, false);
+            }
+            pub fn [<$name _verbose_no_nl>](&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_impl(full_text, true);
+            }
+        }
+    )*
+    };
 }
 
 impl Verbosity {
@@ -45,7 +78,7 @@ impl Terminal {
         }
     }
 
-    fn print_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
+    fn print_nl_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
         if self.verbosity.is_quiet() {
             return;
         }
@@ -55,51 +88,37 @@ impl Terminal {
         drop(self.term.write_line(&text()));
     }
 
+    fn print_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
+        if self.verbosity.is_quiet() {
+            return;
+        }
+        if verbose_only && !self.verbosity.is_verbose() {
+            return;
+        };
+        let mut term = &self.term;
+        drop(term.write_all(text().as_bytes()));
+    }
+
     pub fn print(&self, text: impl Display) {
-        self.print_impl(|| format!("{}", text), false);
-    }
-
-    pub fn error(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Error:").red().bold(), text);
-        self.print_impl(full_text, false);
-    }
-
-    pub fn warning(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Warning:").yellow().bold(), text);
-        self.print_impl(full_text, false);
-    }
-
-    pub fn critical(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Critical:").red().reverse().bold(), text);
-        self.print_impl(full_text, false);
-    }
-
-    pub fn info(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Info:").cyan(), text);
-        self.print_impl(full_text, false);
+        self.print_nl_impl(|| format!("{}", text), false);
     }
 
     pub fn print_verbose(&self, text: impl Display) {
+        self.print_nl_impl(|| format!("{}", text), true);
+    }
+
+    pub fn print_no_nl(&self, text: impl Display) {
+        self.print_impl(|| format!("{}", text), false);
+    }
+
+    pub fn print_verbose_no_nl(&self, text: impl Display) {
         self.print_impl(|| format!("{}", text), true);
     }
 
-    pub fn error_verbose(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Error:").red().bold(), text);
-        self.print_impl(full_text, true);
-    }
-
-    pub fn warning_verbose(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Warning:").yellow().bold(), text);
-        self.print_impl(full_text, true);
-    }
-
-    pub fn critical_verbose(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Critical:").red().reverse().bold(), text);
-        self.print_impl(full_text, true);
-    }
-
-    pub fn info_verbose(&self, text: impl Display) {
-        let full_text = || format!("{} {}", style("Info:").cyan(), text);
-        self.print_impl(full_text, true);
-    }
+    delegate_styles!(
+        error => "Error:" + red + bold,
+        warning => "Warning:" + yellow + bold,
+        info => "Info:" + cyan + bold,
+        critical => "Critical:" + red + reverse + bold,
+    );
 }

@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, Command};
+use clap::{builder::ValueParser, Arg, ArgAction, Command};
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
@@ -64,6 +64,7 @@ pub trait CommandExt: Sized {
                 "Change to <DIRECTORY> before performing any actions",
             )
             .value_name("DIRECTORY")
+            .value_parser(ValueParser::path_buf())
             .short('C'),
         )
     }

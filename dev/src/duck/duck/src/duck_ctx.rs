@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::env::Env;
 use crate::{duck_cfg::DuckCfg, terminal::Terminal};
 use quackpack::QuackResult;
@@ -46,5 +48,13 @@ impl DuckCtx {
 
     pub fn env_mut(&mut self) -> &mut Env {
         &mut self.env
+    }
+
+    pub fn alias_for(&self, _name: &str) -> QuackResult<Option<String>> {
+        Ok(None)
+    }
+
+    pub fn aliases(&self) -> QuackResult<HashMap<String, String>> {
+        Ok(HashMap::new())
     }
 }
