@@ -91,5 +91,4 @@ namespace compiler::helios::code {
 		new_value_expr->debugPrint(out);
 		out << ";\n";
 	}
-
 }

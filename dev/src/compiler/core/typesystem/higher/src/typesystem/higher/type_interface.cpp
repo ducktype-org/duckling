@@ -34,9 +34,9 @@ namespace tsh {
 
 	const std::vector<InterfaceElement>& TypeInterface::getElementsWithName(const base::StrID name
 	) const {
-		static constexpr std::vector<InterfaceElement> empty{};
+		static constexpr std::vector<InterfaceElement> EMPTY{};
 		if (elements_by_name.contains(name)) return elements_by_name.at(name);
-		return empty;
+		return EMPTY;
 	}
 
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {

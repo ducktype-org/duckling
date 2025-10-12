@@ -234,7 +234,8 @@ namespace compiler::helios::code {
 		std::vector<SymID> getCallableCandidates(const std::vector<SymID>& looked_up_callees) const {
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
-					return kind(symbol) == SymbolKind::Function;
+					return kind(symbol) == SymbolKind::Function
+				        || kind(symbol) == SymbolKind::FunctionDeclaration;
 				}))
 				return looked_up_callees;
 
@@ -270,7 +271,7 @@ namespace compiler::helios::code {
 				return { ctor->declaration->original_symbol };
 			}
 			default:
-				CORE_PANIC("Not implemented yet");
+				CORE_PANIC("Not implemented yet (", name(symbol), ")");
 			}
 			CORE_UNREACHABLE();
 		}
@@ -291,10 +292,10 @@ namespace compiler::helios::code {
 					"HOUT call with invalid bracket type: ", char(call_expr->getType())
 				));
 			}
-			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			auto lookup_result
+			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-			auto callees = getCallableCandidates(lookup_result->leaves);
+			const auto callees = getCallableCandidates(lookup_result->leaves);
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 
