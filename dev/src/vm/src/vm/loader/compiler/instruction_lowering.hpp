@@ -5,10 +5,12 @@
 #include <base/macros/for_each.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
 
 namespace vm::loader::compiler {
 
 	namespace high = vm::code::instructions;
+	using namespace vm::low::instruction_tags;
 
 	class MicroBytecodeBuilder {
 		CRef<Compiler>                             compiler;
@@ -25,47 +27,24 @@ namespace vm::loader::compiler {
 			// return compiler->lowerArgument(*ctx, arg);
 		}
 
-#define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
-	struct INSTR {                      \
-		using ArgTypes = std::tuple<>;  \
-	};
-#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0) \
-	struct INSTR {                            \
-		using ArgTypes = std::tuple<ARG0>;    \
-	};
-#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1) \
-	struct INSTR {                                  \
-		using ArgTypes = std::tuple<ARG0, ARG1>;    \
-	};
-
-#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
-#undef HANDLE_MICRO_INSTR_0ARGS
-#undef HANDLE_MICRO_INSTR_1ARGS
-#undef HANDLE_MICRO_INSTR_2ARGS
-
-		template<typename T, typename... Args>
+		template<IsMicroInstructionTag T, typename... Args>
 		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args...);
 
-#define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
-	template<>                          \
-	void addLow<INSTR>() {              \
-		result.emplace_back();          \
-	}
-#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)              \
-	template<>                                             \
-	void addLow<INSTR>(ARG0 arg0) {                        \
-		result.push_back({ .arg0 = lowerArgument(arg0) }); \
-	}
-#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                                     \
-	template<>                                                                          \
-	void addLow<INSTR>(ARG0 arg0, ARG1 arg1) {                                          \
-		result.push_back({ .arg0 = lowerArgument(arg0), .arg1 = lowerArgument(arg1) }); \
-	}
+		template<IsMicroInstructionTag T>
+		requires std::same_as<std::tuple<>, typename T::ArgTypes> void addLow() {
+			result.push_back({});
+		}
 
-#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
-#undef HANDLE_MICRO_INSTR_0ARGS
-#undef HANDLE_MICRO_INSTR_1ARGS
-#undef HANDLE_MICRO_INSTR_2ARGS
+		template<IsMicroInstructionTag T, typename Arg0>
+		requires std::same_as<std::tuple<Arg0>, typename T::ArgTypes> void addLow(Arg0 arg0) {
+			result.push_back({ .arg0 = lowerArgument(arg0) });
+		}
+
+		template<IsMicroInstructionTag T, typename Arg0, typename Arg1>
+		requires std::same_as<std::tuple<Arg0, Arg1>, typename T::ArgTypes>
+		void addLow(Arg0 arg0, Arg1 arg1) {
+			result.push_back({ .arg0 = lowerArgument(arg0), .arg1 = lowerArgument(arg1) });
+		}
 
 	public:
 		template<typename T, typename... Args>
@@ -74,7 +53,7 @@ namespace vm::loader::compiler {
 		// -----------------------
 		template<>
 		void lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
-			addLow<add_l64_imm>(var, n);
+			addLow<Op_add_l64_imm>(var, n);
 		}
 
 		template<>
