@@ -1,9 +1,8 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use crate::{
-    driver::{
-        builtin::{is_builtin_subcommand}, cli, expand_aliases::expand_aliases, subcommands::subcommands
-    }, DuckCtx
+    DuckCtx,
+    driver::{aliases_expansion::expand_aliases, cli, typos_fixing::fix_typos},
 };
 use anyhow::Context;
 use anyhow::anyhow;
@@ -24,36 +23,11 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let global_opts = GlobalCliOptions::from_matches(&matches)?;
     let args = fix_typos(matches, &ctx, &external)?;
     let args = expand_aliases(args, &ctx, &external, vec![])?;
-    debug!("after expanding everything we have subcommand: `{:#?}`", args.subcommand_name());
+    debug!(
+        "after expanding everything we have subcommand: `{:#?}`",
+        args.subcommand_name()
+    );
     Ok(())
-}
-
-fn fix_typos(
-    args: ArgMatches,
-    ctx: &DuckCtx,
-    external_cmds: &HashMap<String, PathBuf>,
-) -> QuackResult<ArgMatches> {
-    // No subcommand.
-    let Some(name) = args.subcommand_name() else {
-        return Ok(args);
-    };
-    // `name` is valid subcommand, ignore.
-    if is_builtin_subcommand(name)
-        || ctx.alias_for(name)?.is_some()
-        || external_cmds.contains_key(name)
-    {
-        return Ok(args);
-    };
-    let mut targets = subcommands()
-        .into_iter()
-        .map(|x| x.get_name().to_string())
-        .collect::<Vec<_>>();
-    targets.extend(ctx.aliases()?.keys().cloned());
-    targets.extend(external_cmds.keys().cloned());
-    // TODO: Run levenshtein algorithm.
-    debug!("Testing levenshtein of `{name}` against `{targets:?}`");
-    // TODO: Rerun parsing later, on new subcommand.
-    Ok(args)
 }
 
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {

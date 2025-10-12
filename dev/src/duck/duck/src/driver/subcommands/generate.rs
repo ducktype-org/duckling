@@ -8,7 +8,8 @@ use crate::driver::cli_ext::{CommandExt, optional, subcommand};
 use clap::ArgMatches;
 
 pub fn get_parser() -> Command {
-    subcommand("generate").about("Generate shell completions")
+    subcommand("generate")
+        .about("Generate shell completions")
         .arg(optional("generator", "Choose target shell").value_parser(value_parser!(Shell)))
 }
 

@@ -1,4 +1,4 @@
-use clap::{builder::ValueParser, Arg, ArgAction, Command, ValueHint};
+use clap::{Arg, ArgAction, Command, ValueHint, builder::ValueParser};
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;

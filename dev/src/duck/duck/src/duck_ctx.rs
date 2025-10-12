@@ -57,4 +57,12 @@ impl DuckCtx {
     pub fn aliases(&self) -> QuackResult<HashMap<String, String>> {
         Ok(HashMap::new())
     }
+
+    pub fn typos_fixes_enabled(&self) -> bool {
+        self.duck_cfg.fixes_enabled()
+    }
+
+    pub fn max_fix_dist(&self) -> u32 {
+        self.duck_cfg.max_fix_dist()
+    }
 }

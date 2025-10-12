@@ -1,10 +1,11 @@
 use clap::{Command, crate_name, crate_version};
 
+pub mod aliases_expansion;
+pub mod builtin;
 pub(crate) mod cli_ext;
 pub mod run;
 pub mod subcommands;
-pub mod expand_aliases;
-pub mod builtin;
+pub mod typos_fixing;
 
 use cli_ext::CommandExt;
 

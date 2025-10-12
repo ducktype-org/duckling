@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use quackpack::QuackResult;
 
 #[derive(Debug)]
-pub struct TyposCfg {
+struct TyposCfg {
     fixes_enabled: bool,
     max_fix_dist: u32,
 }
@@ -24,5 +24,13 @@ impl DuckCfg {
                 max_fix_dist: 1,
             },
         })
+    }
+
+    pub fn fixes_enabled(&self) -> bool {
+        self.typos_cfg.fixes_enabled
+    }
+
+    pub fn max_fix_dist(&self) -> u32 {
+        self.typos_cfg.max_fix_dist
     }
 }
