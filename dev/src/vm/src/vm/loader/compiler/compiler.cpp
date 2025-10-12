@@ -250,6 +250,7 @@ namespace vm::loader::compiler {
 		ctx.local_stack_size = max_stack_size;
 	}
 
+    // @TODOB |-> calculateLabelPositions
 	void Compiler::splitCodeAndLabels(FunctionCompilationContext& ctx) {
 		std::vector<code::Instruction>    instructions_without_labels;
 		base::HashMap<base::StrID, usize> label_positions;
