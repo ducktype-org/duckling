@@ -42,7 +42,7 @@ namespace compiler::helios::houtgen {
 			std::vector<code::Parameter> parameters;
 			parameters.reserve(num_fields);
 
-			for (auto field: fields) {
+			for (const auto& field: fields) {
 				const SymID argument_symbol = ctx.query<QueryGeneratedSymbol>(
 					{ .name = base::StrID(name(field.getSymbol())),
 				      .generated_symbol_data

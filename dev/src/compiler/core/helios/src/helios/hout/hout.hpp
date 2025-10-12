@@ -25,6 +25,7 @@ namespace compiler::helios {
 
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
+
 	namespace houtgen {
 		struct ImplementationOf_QueryImplicitClassConstructor;
 	}
@@ -64,7 +65,7 @@ namespace compiler::helios {
 		 * work well for incomplete types, and fit the use case.
 		 * In the future we might optimize it to single (or zero) shared_ptr, but
 		 * that will require some boilerplate. Stored vector can't be const, because
-		 * it is moved (contains boxes), when handling initial arguments. @TODO #1300
+		 * it is moved (contains boxes), when handling initial arguments. @TODO: #1300 Coercions
 		 */
 		std::shared_ptr<std::vector<code::Parameter>> parameters;
 

@@ -42,7 +42,7 @@ namespace tsh {
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
 		if (isField()) return getResultType();
 
-		// @TODO: Add .is_mutable and .pure when additional method specifiers are supported.
+		// @TODO: #1396 Add .is_mutable and .pure when additional method specifiers are supported.
 		std::vector<SymbolType<>> all_parameter_types{};
 		// @note: The first parameter is the implicit self parameter. It might change to
 		// being specified in the method declaration.

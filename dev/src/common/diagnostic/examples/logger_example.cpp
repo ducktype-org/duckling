@@ -19,9 +19,8 @@ protected:
 	}
 
 public:
-	MessageRelevantToThisSituation(
-		const dia::SourcePosition& source_position
-	): dia::Error(source_position) {
+	MessageRelevantToThisSituation(const dia::SourcePosition& source_position):
+		  dia::Error(source_position) {
 		// possibly store more info here
 	}
 };

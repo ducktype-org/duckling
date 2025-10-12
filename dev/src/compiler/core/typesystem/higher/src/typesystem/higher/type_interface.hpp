@@ -160,10 +160,10 @@ namespace tsh {
 		 * @return The parameter types of this element.
 		 */
 		[[nodiscard]]
-		base::Optional<base::CRef<std::vector<Parameter>>> getParameters() const {
+		base::Optional<CRef<std::vector<Parameter>>> getParameters() const {
 			return parameters.has_value()
-			         ? base::Optional<base::CRef<std::vector<Parameter>>>(&parameters.value())
-			         : base::Optional<base::CRef<std::vector<Parameter>>>();
+			         ? base::Optional<CRef<std::vector<Parameter>>>(&parameters.value())
+			         : base::Optional<CRef<std::vector<Parameter>>>();
 		}
 
 		/**
@@ -235,7 +235,10 @@ namespace tsh {
 		 */
 		explicit TypeInterface(const std::vector<InterfaceElement>& elements);
 
-		const std::vector<InterfaceElement>& getElements() const { return elements; }
+		[[nodiscard]]
+		const std::vector<InterfaceElement>& getElements() const {
+			return elements;
+		}
 
 		/**
 		 * @brief Gets all the elements of an interface, grouped by name.

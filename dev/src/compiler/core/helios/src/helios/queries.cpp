@@ -267,7 +267,10 @@ namespace compiler::helios {
 					const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 						base::StrID(base::strConcat("_", i).c_str()),
 						houtgen::GeneratedSymbolData{
-							houtgen::GeneratedSymbolData::Parameter{ key, i },
+							houtgen::GeneratedSymbolData::Parameter{
+								.function_symbol = key,
+								.parameter_index = i,
+							},
 						},
 					});
 					parameters.emplace_back(
@@ -285,7 +288,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_NO_CACHE  // @TODO: #1300
+		QUERY_AUTO_NO_CACHE  // @TODO: #1300 Enable canCoerce, unify logic between HELIoS and TSH.
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);

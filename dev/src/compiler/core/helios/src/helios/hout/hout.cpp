@@ -22,7 +22,7 @@ namespace compiler::helios {
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& const_GD: glob_data) out += const_GD.debugPrint();
+		for (auto& const_gd: glob_data) out += const_gd.debugPrint();
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
@@ -96,8 +96,7 @@ namespace compiler::helios {
 					<< '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
-				out << "var " << original_name.strView() << " : "
-					<< type.toString() << " = ";
+				out << "var " << original_name.strView() << " : " << type.toString() << " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}
@@ -122,7 +121,10 @@ namespace compiler::helios {
 				                                               .value()
 				                                               .unlock(ctx)
 				                                               ->getExpr())
-				                    .expect("Handling errors in HOUT is not supported yet 2 — " + name(symbol).str()))
+				                    .expect(
+										"Handling errors in HOUT is not supported yet 2 — "
+										+ name(symbol).str()
+									))
 				  ) };
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
@@ -133,6 +135,6 @@ namespace compiler::helios {
 			  }
 		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str(
-		  ))) {}
+			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
+		  )) {}
 }

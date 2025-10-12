@@ -120,9 +120,10 @@ namespace compiler::helios {
 
 			std::variant<ImplicitConstructor, Parameter, Variable> data;
 
-			explicit GeneratedSymbolData(std::variant<ImplicitConstructor, Parameter, Variable> data
+			explicit GeneratedSymbolData(
+				const std::variant<ImplicitConstructor, Parameter, Variable>& data
 			):
-				  data(std::move(data)) {}
+				  data(data) {}
 
 			[[nodiscard]]
 			u64 queryUnstablePerfectHash() const {
