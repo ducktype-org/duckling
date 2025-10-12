@@ -1,6 +1,7 @@
 #include "class_constructors.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
+#include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -20,60 +21,37 @@ namespace compiler::helios::houtgen {
 			const tsh::TypeInterface& class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Parameter           = GeneratedSymbolData::Parameter;
 			using Variable            = GeneratedSymbolData::Variable;
 			using std::ranges::to;
 			using std::views::transform;
 
 			// Construct the constructor's type.
 			// @TODO: #1328 Properly handle value categories in class constructors.
-			std::vector<tsh::InterfaceElement> fields
+			const std::vector<tsh::InterfaceElement> fields
 				= class_interface.getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
-			// Prepare the necessary symbols (of the constructor and its parameters).
+			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = name(class_type.getSymbol()),
 				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
 			});
 
-			// - The parameter symbols.
-			u64                          argument_index = 0;
-			std::vector<code::Parameter> parameters;
-			parameters.reserve(num_fields);
-
-			for (const auto& field: fields) {
-				const SymID argument_symbol = ctx.query<QueryGeneratedSymbol>(
-					{ .name = base::StrID(name(field.getSymbol())),
-				      .generated_symbol_data
-				      = GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } } }
-				);
-				// @TODO: #1328 Properly handle value categories in class constructors.
-				parameters.emplace_back(
-					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
-				);
-				argument_index++;
-			}
-
-			// - The result variable symbol
-			const auto result_symbol_type = tsh::SymbolType<>{
-				class_type,
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
-			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name = base::StrID("result"),
-				.generated_symbol_data
-				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
-			});
+			const auto ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol);
 
 			// Prepare the body of the constructor.
 			std::vector<Box<code::Stmt>> body{};
 
-			// - One declarations, one assignment per field, one return.
+			// - One declaration, one assignment per field, one return.
 			body.reserve(1 + num_fields + 1);
 
 			// - Declare result variable.
+			const auto  result_symbol_type = ctor_decl->return_type;
+			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
+					 .name = base::StrID("result"),
+					 .generated_symbol_data
+                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+            });
 			body.emplace_back(
 				makeBox<code::VariableStmt>(std::nullopt, result_symbol_type, result_symbol)
 			);
@@ -86,7 +64,7 @@ namespace compiler::helios::houtgen {
 						makeBox<code::IdentifierExpr>(ctx, result_symbol),
 						name(fields.at(i).getSymbol())
 					),
-					makeBox<code::IdentifierExpr>(ctx, parameters.at(i).helios_symbol)
+					makeBox<code::IdentifierExpr>(ctx, ctor_decl->parameters.at(i).helios_symbol)
 				));
 			}
 
@@ -96,13 +74,10 @@ namespace compiler::helios::houtgen {
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction{
-				HOUTFunctionDeclaration{
-					ctor_symbol,
-					result_symbol_type,
-					std::make_shared<std::vector<code::Parameter>>(std::move(parameters)),
-				},
-				std::make_shared<const code::CodeBlock>(code::CodeBlock{ .statements
-				                                                         = std::move(body) }),
+				ctor_decl,
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				}),
 			};
 		}
 

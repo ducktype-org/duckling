@@ -220,33 +220,80 @@ namespace compiler::helios {
 			}
 		};
 
+		static PResult getImplicitCtorDecl(
+			Context& ctx, const houtgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
+		) {
+			// Preamble
+			using GeneratedSymbolData = houtgen::GeneratedSymbolData;
+			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
+			using Parameter           = GeneratedSymbolData::Parameter;
+			using std::ranges::to;
+			using std::views::transform;
+
+			// Get class data
+			const auto class_type = ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
+			                            ->expect(
+											"Not handling errors here yet... (getting "
+											"declaration of generated constructor symbol)"
+										)
+			                            .getType()
+			                            .as<tsh::ClassAbstractType>();
+			const SymID                              class_symbol    = class_type.getSymbol();
+			const tsh::TypeInterface&                class_interface = class_type.getInterface(ctx);
+			const std::vector<tsh::InterfaceElement> fields
+				= class_interface.getFieldsView() | to<std::vector>();
+			const u64 num_fields = fields.size();
+
+			// Prepare the necessary symbols (of the constructor and its parameters).
+			const SymID ctor_symbol        = ctx.query<houtgen::QueryGeneratedSymbol>({
+					   .name                  = name(class_type.getSymbol()),
+					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
+            });
+			const auto  result_symbol_type = tsh::SymbolType<>{
+                class_type,
+                tsh::ReferenceKind::Direct,
+                tsh::Mutability::Mutable,
+			};
+
+			std::vector<code::Parameter> parameters;
+			parameters.reserve(num_fields);
+
+			u64 argument_index = 0;
+			for (const auto& field: fields) {
+				const SymID argument_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					.name = base::StrID(name(field.getSymbol())),
+					.generated_symbol_data
+					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
+				});
+				// @TODO: #1328 Properly handle value categories in class constructors.
+				parameters.emplace_back(
+					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
+				);
+				argument_index++;
+			}
+
+			return HOUTFunctionDeclaration{
+				ctor_symbol,
+				result_symbol_type,
+				std::move(parameters),
+			};
+		}
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (kind(key)) {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstSymbolData) {
-						DeclarationVisitor func_maker(ctx, key);
-						stmt(ctx, key).value()->acceptVisitor(func_maker);
-						return std::move(func_maker.out).value();
+						DeclarationVisitor decl_maker(ctx, key);
+						stmt(ctx, key).value()->acceptVisitor(decl_maker);
+						return std::move(decl_maker.out).value();
 					}
 					variant_case(houtgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {
 							variant_case(
 								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
-							) {
-								auto class_type
-									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-										  ->expect(
-											  "Not handling errors here yet... (getting "
-											  "declaration of generated constructor symbol)"
-										  )
-										  .getType()
-										  .as<tsh::ClassAbstractType>();
-								return ctx
-									.query<houtgen::QueryImplicitClassConstructor>({ class_type })
-									->declaration;
-							}
+							) return getImplicitCtorDecl(ctx, ctor_data);
 							variant_default { CORE_UNREACHABLE(); }
 						}
 					}

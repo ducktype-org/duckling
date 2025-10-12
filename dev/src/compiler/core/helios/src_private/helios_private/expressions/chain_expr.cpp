@@ -267,7 +267,7 @@ namespace compiler::helios::code {
 				                      .as<tsh::ClassAbstractType>();
 				const auto ctor
 					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
-				return { ctor->declaration.original_symbol };
+				return { ctor->declaration->original_symbol };
 			}
 			default:
 				CORE_PANIC("Not implemented yet");
