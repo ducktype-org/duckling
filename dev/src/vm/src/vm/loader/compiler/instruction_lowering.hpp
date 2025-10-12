@@ -21,23 +21,39 @@ namespace vm::loader::compiler {
 			return compiler->lowerArgument(*ctx, instruction_index, arg);
 		}
 
+#define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
+	struct INSTR {                      \
+		using ArgTypes = std::tuple<>;  \
+	};
+#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0) \
+	struct INSTR {                            \
+		using ArgTypes = std::tuple<ARG0>;    \
+	};
+#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1) \
+	struct INSTR {                                  \
+		using ArgTypes = std::tuple<ARG0, ARG1>;    \
+	};
+
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR_0ARGS
+#undef HANDLE_MICRO_INSTR_1ARGS
+#undef HANDLE_MICRO_INSTR_2ARGS
+
 		template<typename T, typename... Args>
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes>
 		MicroInstruction makeLow(Args...);
 
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
-	struct INSTR {};                    \
 	template<>                          \
 	MicroInstruction makeLow<INSTR>() { \
 		return {};                      \
 	}
 #define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)    \
-	struct INSTR {};                             \
 	template<>                                   \
 	MicroInstruction makeLow<INSTR>(ARG0 arg0) { \
 		return { .arg0 = lowerArgument(arg0) };  \
 	}
 #define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                          \
-	struct INSTR {};                                                         \
 	template<>                                                               \
 	MicroInstruction makeLow<INSTR>(ARG0 arg0, ARG1 arg1) {                  \
 		return { .arg0 = lowerArgument(arg0), .arg1 = lowerArgument(arg1) }; \
@@ -52,6 +68,7 @@ namespace vm::loader::compiler {
 		template<typename T, typename... Args>
 		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> auto lower(Args...);
 
+		// -----------------------
 		template<>
 		auto lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
 			return std::array{
@@ -63,6 +80,8 @@ namespace vm::loader::compiler {
 		auto lower<high::Comment>() {
 			return std::array<MicroInstruction, 0>{};
 		}
+
+		// -----------------------
 	};
 
 	template<typename T>
