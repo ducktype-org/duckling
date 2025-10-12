@@ -73,18 +73,22 @@ namespace vm::code {
 		};
 	}
 
-	template<typename T>
-	concept TwoArgumentOpcode = std::tuple_size_v<typename T::ArgTypes> == 2;
-
-	template<typename T>
-	concept OneArgumentOpcode = std::tuple_size_v<typename T::ArgTypes> == 1;
-
-	template<typename T>
-	concept ZeroArgumentOpcode = std::tuple_size_v<typename T::ArgTypes> == 0;
-
 	using Instruction = std::variant<
 #define HANDLE_INSTR(opcode) VM_INSTR_FROM_NAME(opcode),
 #include <vm/bytecode/instruction_definitions.hpp>
 #undef HANDLE_INSTR
 		instructions::Comment>;
+
+	template<typename T>
+	concept IsInstruction = base::IS_VARIANT_MEMBER_V<T, Instruction>;
+
+	template<typename T>
+	concept TwoArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 2;
+
+	template<typename T>
+	concept OneArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 1;
+
+	template<typename T>
+	concept ZeroArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 0;
+
 }

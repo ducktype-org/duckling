@@ -47,7 +47,9 @@ namespace vm::loader::compiler {
 		}
 
 	public:
-		template<typename T, typename... Args>
+		low::MicroBytecode build() { return std::move(result); }
+
+		template<code::IsInstruction T, typename... Args>
 		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void lower(Args...);
 
 		// -----------------------
