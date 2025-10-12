@@ -207,7 +207,7 @@ namespace fs {
 	 * This class contains helper and factory methods for creating, managing, and generating paths
 	 * for files and directories.
 	 */
-	class FileManager {
+	class FileManager final {
 	public:
 		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
