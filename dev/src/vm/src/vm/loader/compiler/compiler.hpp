@@ -17,7 +17,7 @@ namespace vm::loader::compiler {
 	 * code injection, compiling only the new elements (types, globals, and functions).
 	 */
 	class Compiler {
-        // @TODOB try to make this friend unnecessary
+		// @TODOB try to make this friend unnecessary
 		friend class MicroBytecodeBuilder;
 
 	public:
@@ -72,11 +72,9 @@ namespace vm::loader::compiler {
 			FunctionCompilationContext(const code::Function& func): function(func) {}
 
 			/// The high level function definition.
-			const code::Function& function;
-			/// Function code after the label instructions have been removed.
-			std::vector<code::Instruction> instructions_without_labels;
-			/// A mapping from a label's name to it's instruction index in the function instruction list.
-			base::HashMap<base::StrID, usize> label_positions{};
+			const code::Function&             function;
+			base::HashMap<base::StrID, usize> label_id_map;
+			usize                             next_label_id = 0;
 			/// A mapping from a local variable's name to its offset on the function's local stack.
 			base::HashMap<base::StrID, usize> local_offset_map{};
 			/// Total required size for the local stack frame, in bytes.
@@ -153,11 +151,7 @@ namespace vm::loader::compiler {
 		 * @param opcode_arg The symbolic argument to translate.
 		 * @return The 64-bit numeric value of the argument.
 		 */
-		u64 lowerArgument(
-			const FunctionCompilationContext& local_ctx,
-			usize                             instruction_index,
-			const opargs::OpCodeArg&          opcode_arg
-		) const;
+		u64 lowerArgument(FunctionCompilationContext& local_ctx, const opargs::OpCodeArg& opcode_arg);
 	};
 
 }
