@@ -1,4 +1,4 @@
-use clap::{builder::ValueParser, Arg, ArgAction, Command};
+use clap::{builder::ValueParser, Arg, ArgAction, Command, ValueHint};
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
@@ -65,6 +65,7 @@ pub trait CommandExt: Sized {
             )
             .value_name("DIRECTORY")
             .value_parser(ValueParser::path_buf())
+            .value_hint(ValueHint::DirPath)
             .short('C'),
         )
     }

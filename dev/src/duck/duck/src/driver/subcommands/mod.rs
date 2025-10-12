@@ -5,6 +5,7 @@ use crate::DuckCtx;
 
 mod add;
 mod build;
+mod generate;
 mod info;
 mod init;
 mod list;
@@ -20,6 +21,7 @@ pub fn subcommands() -> Vec<Command> {
     vec![
         add::get_parser(),
         build::get_parser(),
+        generate::get_parser(),
         info::get_parser(),
         init::get_parser(),
         list::get_parser(),
@@ -39,6 +41,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "add" => add::execute,
         "build" => build::execute,
+        "generate" => generate::execute,
         "info" => info::execute,
         "init" => init::execute,
         "list" => list::execute,

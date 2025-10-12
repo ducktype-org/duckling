@@ -9,7 +9,7 @@ use crate::{
 
 pub fn get_parser() -> Command {
     subcommand("build")
-        .alias("b")
+        .visible_alias("b")
         .about("Build a current package")
         .add_profile()
         .add_release()

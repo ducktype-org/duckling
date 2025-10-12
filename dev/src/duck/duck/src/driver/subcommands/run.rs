@@ -11,7 +11,7 @@ use crate::{
 
 pub fn get_parser() -> Command {
     subcommand("run")
-        .alias("r")
+        .visible_alias("r")
         .about("Build a current package and run it")
         .add_profile()
         .add_release()
