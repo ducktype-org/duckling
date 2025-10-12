@@ -35,7 +35,7 @@ pub fn fix_typos(
         || closest_targets.len() > 1
         || fix_dist_exceeds_max(ctx, &closest_targets)
     {
-        _ = no_fix(name, &closest_targets)?;
+        no_fix(name, &closest_targets)?;
         panic!("Unreachable");
     } else {
         let new_args = fix(name, &closest_targets, subcmd_args)?;
@@ -98,17 +98,17 @@ fn find_closest_targets<'a>(
 fn levenshtein_distance(x: &str, y: &str) -> u32 {
     let word1: Vec<char> = x.chars().collect();
     let word2: Vec<char> = y.chars().collect();
-    let n = x.len();
-    let m = y.len();
+    let m = x.len();
+    let n = y.len();
     let mut v0 = Vec::from_iter(0..(n + 1));
     let mut v1 = vec![0, n + 1];
-    for i in 0..m {
+    for (i, w1_letter) in word1.iter().enumerate().take(m) {
         v1[0] = i + 1;
-        for j in 0..n {
+        for (j, w2_letter) in word2.iter().enumerate().take(n) {
             let deletion_cost = v0[j + 1] + 1;
             let insertion_cost = v1[j] + 1;
-            let substitution_cost = v0[j] + (word1[i] != word2[j]) as usize;
-            v1[j + 1] = *vec![deletion_cost, insertion_cost, substitution_cost]
+            let substitution_cost = v0[j] + (w1_letter != w2_letter) as usize;
+            v1[j + 1] = *[deletion_cost, insertion_cost, substitution_cost]
                 .iter()
                 .min()
                 .unwrap();
@@ -118,17 +118,17 @@ fn levenshtein_distance(x: &str, y: &str) -> u32 {
     v0[n].try_into().unwrap()
 }
 
-fn fix_dist_exceeds_max(ctx: &DuckCtx, closest_targets: &Vec<CorrectionCandidate>) -> bool {
+fn fix_dist_exceeds_max(ctx: &DuckCtx, closest_targets: &[CorrectionCandidate]) -> bool {
     ctx.max_fix_dist() < closest_targets[0].distance
 }
 
-fn no_fix(bad_cmd: &str, closest_targets: &Vec<CorrectionCandidate>) -> QuackResult<()> {
+fn no_fix(bad_cmd: &str, closest_targets: &[CorrectionCandidate]) -> QuackResult<()> {
     let suggestions = suggestions_str(closest_targets);
     let error_msg = format!("No such command as `{bad_cmd}`. Did you mean `{suggestions}`?",);
     bail!(error_msg)
 }
 
-fn suggestions_str(closest_targets: &Vec<CorrectionCandidate>) -> String {
+fn suggestions_str(closest_targets: &[CorrectionCandidate]) -> String {
     let n_targets = closest_targets.len();
     if closest_targets.len() == 1 {
         String::from(closest_targets[0].target)
@@ -146,7 +146,7 @@ fn suggestions_str(closest_targets: &Vec<CorrectionCandidate>) -> String {
 
 fn fix(
     bad_cmd: &str,
-    closest_targets: &Vec<CorrectionCandidate>,
+    closest_targets: &[CorrectionCandidate],
     subcmd_args: &ArgMatches,
 ) -> QuackResult<ArgMatches> {
     let new_sub_cmd = closest_targets[0].target;

@@ -73,19 +73,19 @@ fn expand_single_alias(
     subcmd_args: &ArgMatches,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
-    let new_cli_args = new_cli_args(&alias, subcmd_args);
+    let new_cli_args = new_cli_args(alias, subcmd_args);
     debug!("replaced alias `{subcmd}` with `{new_cli_args:?}`");
     let parsed = new_arg_matches(new_cli_args)?;
-    let new_subcmd = get_new_subcmd(&parsed, &alias)?;
+    let new_subcmd = get_new_subcmd(&parsed, alias)?;
     visited.push(subcmd.into());
-    _ = check_no_cycle(subcmd, new_subcmd, visited, &alias)?;
+    check_no_cycle(subcmd, new_subcmd, visited, alias)?;
     Ok(parsed)
 }
 
 fn new_cli_args(alias: &str, subcmd_args: &ArgMatches) -> Vec<OsString> {
     let mut result = alias
         .split(' ')
-        .map(|x| OsString::from(x))
+        .map(OsString::from)
         .collect::<Vec<_>>();
     result.extend(
         subcmd_args
