@@ -4,11 +4,8 @@
 #include "token.hpp"
 
 #include <diagnostic/logger.hpp>
-#include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
-
-#include <vector>
 
 namespace lexer {
 
@@ -19,7 +16,7 @@ namespace lexer {
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format
 	 * controls)
 	 */
-	class Lexer {
+	class Lexer final {
 	public:
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
