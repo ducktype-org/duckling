@@ -16,7 +16,7 @@ namespace lexer {
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format
 	 * controls)
 	 */
-	class Lexer {
+	class Lexer final {
 	public:
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
