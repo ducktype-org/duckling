@@ -113,11 +113,12 @@ namespace vm::loader::parser {
 					base = 16;
 					number.remove_prefix(2);
 				}
+
 				T           result;
 				usize       pos = 0;
 				std::string str(number);
 				if (!suffix.empty()) {  // Type specifier exists.
-					if ((suffix.starts_with("f") || suffix.starts_with("F")) && base != 10) {
+					if (suffix.starts_with("f") && base != 10) {
 						state.log(makeBox<InvalidLiteral>(
 							token.getPosition(),
 							"Floating-point literals must be in decimal base for: "
@@ -125,14 +126,14 @@ namespace vm::loader::parser {
 						return { T{ 0 }, 0 };
 					}
 
-					if (suffix == "f32" || suffix == "F32") {
+					if (suffix == "f32") {
 						float value      = std::stof(str, &pos) * static_cast<float>(sign);
 						u32   float_bits = std::bit_cast<u32>(value);
 						result           = std::bit_cast<T>(static_cast<u64>(float_bits));
-					} else if (suffix == "f64" || suffix == "F64") {
+					} else if (suffix == "f64") {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
-					} else if (suffix == "i32" || suffix == "I32") {
+					} else if (suffix == "i32") {
 						u64 raw_val = std::stoull(str, &pos, base);
 
 						if (sign == 1
@@ -156,7 +157,7 @@ namespace vm::loader::parser {
 
 						i32 value = static_cast<i32>(raw_val) * sign;
 						result    = std::bit_cast<T>(static_cast<u64>(std::bit_cast<u32>(value)));
-					} else if (suffix == "i64" || suffix == "I64") {
+					} else if (suffix == "i64") {
 						u64 raw_val = std::stoull(str, &pos, base);
 
 						if (sign == 1
@@ -178,7 +179,7 @@ namespace vm::loader::parser {
 						}
 						i64 value = static_cast<i64>(raw_val) * sign;
 						result    = std::bit_cast<T>(std::bit_cast<u64>(value));
-					} else if (suffix == "u32" || suffix == "U32") {
+					} else if (suffix == "u32") {
 						u64 raw_val = std::stoull(str, &pos, base);
 
 						if (raw_val > std::numeric_limits<u32>::max()) {
@@ -190,7 +191,7 @@ namespace vm::loader::parser {
 						}
 						u32 value = static_cast<u32>(raw_val);
 						result    = std::bit_cast<T>(static_cast<u64>(value));
-					} else if (suffix == "u64" || suffix == "U64") {
+					} else if (suffix == "u64") {
 						u64 value = std::stoull(str, &pos, base);
 						result    = std::bit_cast<T>(value);
 					} else {
