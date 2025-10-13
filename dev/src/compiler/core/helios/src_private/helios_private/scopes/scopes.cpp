@@ -20,6 +20,7 @@
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
+#include <base/str_utils.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>

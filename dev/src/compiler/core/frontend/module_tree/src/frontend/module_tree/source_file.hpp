@@ -12,6 +12,8 @@
 
 namespace compiler::frontend {
 
+	class ModuleTreeModifier;
+	class ModuleTree;
 
 	/**
 	 * @brief Represents a source file in the Duckling compiler.

@@ -21,7 +21,6 @@
 #include <vm/loader/logger.hpp>
 
 #include <expected>
-#include <variant>
 #include <vector>
 
 using namespace vm::loader;

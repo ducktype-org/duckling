@@ -4,7 +4,7 @@
  */
 
 
-#include <base/macros/diagnostics.hpp>
+#include <base/macros/diagnostics.hpp> // this is included here, to provide push/pop diagnostics macros
 
 #include <base64.hpp>
 
@@ -23,8 +23,6 @@ POP_DIAGNOSTIC;
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <pst_parser/pst.hpp>
-
-#include <base/macros/diagnostics.hpp>
 
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>
