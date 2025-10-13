@@ -667,8 +667,8 @@ private:
 		ASSERT_TRUE(!hr1.hasError());
 		ASSERT_EQUAL(1, hr1.value());
 
-		int                            temp_val = hr1.value();
-		base::Optional<base::Ref<int>> opt1     = base::Ref<int>(&temp_val);
+		int                      temp_val = hr1.value();
+		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
