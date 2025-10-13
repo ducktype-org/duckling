@@ -6,11 +6,9 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
-#include <base/stable_hashmap.hpp>
 
 #include <filesystem/file.hpp>
 

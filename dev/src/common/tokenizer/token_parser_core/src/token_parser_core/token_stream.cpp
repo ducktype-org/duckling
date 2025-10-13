@@ -7,9 +7,6 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
-#include <iostream>
-#include <utility>
-
 namespace tpc {
 
 	TokenStream::TokenStream(
