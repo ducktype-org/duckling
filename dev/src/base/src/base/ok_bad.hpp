@@ -6,7 +6,7 @@ namespace base {
 	 * ok/bad makes more sense then true/false.
 	 * It's a struct instead of plain enum to allow methods.
 	 */
-	struct OkBad {
+	struct OkBad final {
 		enum class OkBadEnum : bool { Ok, Bad };
 		OkBadEnum value;
 

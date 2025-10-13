@@ -74,7 +74,7 @@ namespace lsp {
 			auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
 			if (sym_id.has_value()) {
 				auto stmt = compiler::helios::stmt(ctx, sym_id.value());
-				result    = Definition(&*stmt.value());
+				result    = Definition{ &*stmt.value() };
 			}
 		});
 
