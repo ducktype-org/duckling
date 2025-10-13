@@ -10,6 +10,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/lang_parser_element.hpp>
+#include <pst_parser/pst.hpp>
 
 #include <base/optional.hpp>
 
@@ -76,7 +77,7 @@ namespace lsp {
 			auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
 			if (sym_id.has_value()) {
 				auto stmt = compiler::helios::stmt(ctx, sym_id.value());
-				result    = Definition(&*stmt.value());
+				result    = Definition{&*stmt.value()};
 			}
 		});
 
