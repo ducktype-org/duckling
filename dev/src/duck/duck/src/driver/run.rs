@@ -121,16 +121,10 @@ impl GlobalCliOptions {
             ctx.error_console_mut().set_verbosity(Verbosity::Quiet);
         }
 
-        // https://docs.rs/console/latest/console/fn.colors_enabled.html
         if let Color::Never = self.color {
-            unsafe {
-                std::env::set_var("CLICOLOR", "0");
-            }
+            console::set_colors_enabled(false);
         } else if let Color::Always = self.color {
-            unsafe {
-                std::env::set_var("CLICOLOR_FORCE", "1");
-            }
+            console::set_colors_enabled(true);
         }
-        ctx.env_mut().reload();
     }
 }
