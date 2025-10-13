@@ -67,6 +67,7 @@ fn print_parser_help(ctx: &DuckCtx) {
     ctx.console().print_no_nl(help.ansi());
 }
 
+#[derive(Debug)]
 enum Color {
     Always,
     Never,
@@ -123,12 +124,11 @@ impl GlobalCliOptions {
         // https://docs.rs/console/latest/console/fn.colors_enabled.html
         if let Color::Never = self.color {
             unsafe {
-                std::env::remove_var("CLICOLOR");
-                std::env::remove_var("CLICOLOR_FORCE");
+                std::env::set_var("CLICOLOR", "0");
             }
         } else if let Color::Always = self.color {
             unsafe {
-                std::env::set_var("CLICOLOR_FORCE", "TRUE");
+                std::env::set_var("CLICOLOR_FORCE", "1");
             }
         }
         ctx.env_mut().reload();
