@@ -11,7 +11,7 @@ namespace tpc {
 	/**
 	 * @brief Implements higher level token stream interactions
 	 */
-	class ParserState final {
+	class ParserState {
 		std::vector<TokenStream> stream_stack;  ///< Internal storage of recursive strings
 
 	public:
