@@ -5,6 +5,7 @@
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
 
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS
@@ -74,10 +75,13 @@ namespace vm {
 		/**
 		 * @brief Get the Opcode from the OpFun pointer.
 		 */
-		static u64 getOpcodeFromOpFun(OpFun* fun) {
-			for (u64 i = 0; i < OP_CASES_COUNT; i++)
-				if (OPFUNS.at(i) == fun) return i;
-			CORE_UNREACHABLE();
+		static low::MicroOpcode getOpcodeFromOpFun(OpFun* fun) {
+            static std::unordered_map<OpFun*, low::MicroOpcode> map {
+#define HANDLE_MICRO_INSTR(instr) {op_##instr, low::instruction_tags::Op_##instr::OPCODE},
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR
+            };
+            return map.at(fun);
 		}
 
 		/**
