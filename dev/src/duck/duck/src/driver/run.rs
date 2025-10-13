@@ -3,6 +3,7 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr};
 use crate::{
     DuckCtx,
     driver::{aliases_expansion::expand_aliases, cli, typos_fixing::fix_typos},
+    terminal::Verbosity,
 };
 use anyhow::Context;
 use anyhow::anyhow;
@@ -13,7 +14,6 @@ use tracing::debug;
 
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
-    let aliases = ctx.aliases()?;
     let cli = cli();
     let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
@@ -21,6 +21,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
             .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
     }
     let global_opts = GlobalCliOptions::from_matches(&matches)?;
+    global_opts.update_context(ctx);
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
     debug!(
@@ -37,7 +38,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
     let Some(path) = ctx.env().get_os("PATH") else {
         return HashMap::new();
     };
-    let mut commands = HashMap::new();
+    let commands = HashMap::new();
     for segment in env::split_paths(path) {
         let Ok(dir) = segment.read_dir() else {
             continue;
@@ -89,7 +90,7 @@ impl FromStr for Color {
 }
 
 struct GlobalCliOptions {
-    verbosity: u32,
+    verbosity: bool,
     quiet: bool,
     color: Color,
 }
@@ -97,7 +98,7 @@ struct GlobalCliOptions {
 impl GlobalCliOptions {
     fn from_matches(matches: &ArgMatches) -> QuackResult<Self> {
         let quiet = matches.get_flag("quiet");
-        let verbosity = matches.get_count("verbose").into();
+        let verbosity = matches.get_flag("verbose");
         let color = Color::from_str(
             matches
                 .get_one::<String>("color")
@@ -108,5 +109,27 @@ impl GlobalCliOptions {
             quiet,
             color,
         })
+    }
+
+    fn update_context(&self, ctx: &mut DuckCtx) {
+        if self.verbosity {
+            ctx.console_mut().set_verbosity(Verbosity::Verbose);
+            ctx.error_console_mut().set_verbosity(Verbosity::Verbose);
+        } else if self.quiet {
+            ctx.console_mut().set_verbosity(Verbosity::Quiet);
+            ctx.error_console_mut().set_verbosity(Verbosity::Quiet);
+        }
+
+        // https://docs.rs/console/latest/console/fn.colors_enabled.html
+        if let Color::Never = self.color {
+            unsafe {
+                std::env::set_var("CLICOLOR", "0");
+            }
+        } else if let Color::Always = self.color {
+            unsafe {
+                std::env::set_var("CLICOLOR_FORCE", "TRUE");
+            }
+        }
+        ctx.env_mut().reload();
     }
 }

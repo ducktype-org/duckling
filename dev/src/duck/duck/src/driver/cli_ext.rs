@@ -43,7 +43,6 @@ pub trait CommandExt: Sized {
     fn add_verbose(self) -> Self {
         self._arg_impl(
             optional("verbose", "Use more verbose output")
-                .action(ArgAction::Count)
                 .conflicts_with("quiet")
                 .short('v'),
         )
