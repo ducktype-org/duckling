@@ -30,11 +30,11 @@ fn setup_logger() {
         prelude::*,
         registry,
     };
-    let subscriper = EnvFilter::from_env("QP_DEBUG");
+    let subscriber = EnvFilter::from_env("QP_DEBUG");
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)
-        .with_filter(subscriper);
+        .with_filter(subscriber);
 
     let registry = registry().with(layer);
     registry.init();
