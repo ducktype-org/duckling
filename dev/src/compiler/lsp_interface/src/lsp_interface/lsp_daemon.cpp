@@ -4,7 +4,7 @@
  */
 
 
-#include <base/macros/diagnostics.hpp> // this is included here, to provide push/pop diagnostics macros
+#include <base/macros/diagnostics.hpp>  // this is included here, to provide push/pop diagnostics macros
 
 #include <base64.hpp>
 
