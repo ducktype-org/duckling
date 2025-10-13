@@ -1,7 +1,6 @@
 #include "instruction_builder.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/variant.hpp>
 
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>

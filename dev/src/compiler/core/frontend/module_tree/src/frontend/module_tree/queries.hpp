@@ -8,7 +8,6 @@
 #include <base/maps.hpp>
 #include <base/ref.hpp>
 
-#include <filesystem/file.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {

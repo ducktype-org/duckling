@@ -17,7 +17,6 @@
 #include <tester/tester.hpp>
 
 #include <sstream>
-#include <utility>
 
 using namespace printer;
 
