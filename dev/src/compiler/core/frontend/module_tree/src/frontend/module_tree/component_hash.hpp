@@ -25,7 +25,9 @@ namespace compiler::frontend {
 		constexpr ComponentHash() noexcept = default;
 
 		// Construct from optional parent partial hash and module name
-		constexpr ComponentHash(const base::Optional<ComponentHash>& parent, base::StrID name) noexcept {
+		constexpr ComponentHash(
+			const base::Optional<ComponentHash>& parent, base::StrID name
+		) noexcept {
 			if (parent.has_value()) {
 				elements = parent->elements;
 				partial  = parent->partial;
@@ -40,8 +42,9 @@ namespace compiler::frontend {
 			hash = partial.finalize();
 		}
 
-		ComponentHash(const ComponentHash& parent, std::string_view ext) noexcept
-			: partial(parent.partial), elements(parent.elements) {
+		ComponentHash(const ComponentHash& parent, std::string_view ext) noexcept:
+			  partial(parent.partial),
+			  elements(parent.elements) {
 			if (!ext.empty()) {
 				elements.emplace_back(ext);
 				// add string to partial hash
@@ -53,15 +56,15 @@ namespace compiler::frontend {
 		// Construct directly from a vector of string elements
 		explicit ComponentHash(const std::vector<std::string>& elems) noexcept: elements(elems) {
 			// build partial by hashing all elements in order
-			for (const auto& e : elements) hashing::addToHash(partial, std::string_view(e));
+			for (const auto& e: elements) hashing::addToHash(partial, std::string_view(e));
 			hash = partial.finalize();
 		}
 
 		// Return elements joined by '.'
 		[[nodiscard]] std::string str() const {
 			std::string out;
-			bool first = true;
-			for (const auto& e : elements) {
+			bool        first = true;
+			for (const auto& e: elements) {
 				if (!first) out.push_back('.');
 				out.append(e);
 				first = false;
@@ -70,6 +73,8 @@ namespace compiler::frontend {
 		}
 
 		// Allow hashing utilities to decompose ComponentHash by its elements
-		friend constexpr auto hashDecompose(const ComponentHash& t) noexcept { return std::tie(t.elements); }
+		friend constexpr auto hashDecompose(const ComponentHash& t) noexcept {
+			return std::tie(t.elements);
+		}
 	};
 }
