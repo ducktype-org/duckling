@@ -6,7 +6,6 @@
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include <base/box.hpp>
-#include <base/optional.hpp>
 
 #include <query_framework/query_result.hpp>
 

@@ -19,7 +19,6 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 

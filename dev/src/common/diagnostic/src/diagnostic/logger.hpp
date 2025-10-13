@@ -49,6 +49,8 @@
 #include <diagnostic/source_position.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <iostream>
+
 namespace dia {
 	/**
 	 * @brief Class used to log diagnostic messages for later output.

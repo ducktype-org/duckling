@@ -7,12 +7,10 @@
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
-#include <base/exceptions.hpp>
 #include <base/ints.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
-#include <base/stable_container.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>

@@ -24,7 +24,6 @@
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <lexer/lexer_class.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>

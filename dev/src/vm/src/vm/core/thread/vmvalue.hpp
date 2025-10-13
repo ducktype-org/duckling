@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/raw_view.hpp>
 
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
