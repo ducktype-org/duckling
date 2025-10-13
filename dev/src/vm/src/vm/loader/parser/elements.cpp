@@ -18,7 +18,6 @@
 #include <vm/core/process/memory/memory.hpp>
 
 #include <algorithm>
-#include <cstddef>
 #include <iterator>
 #include <ranges>
 #include <string>
@@ -55,7 +54,7 @@ namespace vm::loader::parser {
 			// f32/f64 suffix is interpreted as part of a number.
 			if (literal.starts_with("0x") || literal.starts_with("0X")) {
 				bool is_part_of_hex = true;
-				for (size_t i = suffix_start_index; i < literal.length(); ++i) {
+				for (usize i = suffix_start_index; i < literal.length(); ++i) {
 					if (!std::isxdigit(static_cast<unsigned char>(literal[i]))) {
 						is_part_of_hex = false;
 						break;
@@ -68,13 +67,10 @@ namespace vm::loader::parser {
 		}
 
 		template<class T>
-		std::pair<T, size_t> parseLiteral(F8ParserState& state) {
-			std::cout << "Literal: " << state.tokens().peek().getStrValue() << '\n';
-
-			size_t literal_length   = 0;
-			auto   maybe_sign_token = state.tokens().peek();
-			i32    sign             = 1;
-			// TODOP: This may be bugged?
+		std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
+			usize literal_length   = 0;
+			auto  maybe_sign_token = state.tokens().peek();
+			i32   sign             = 1;
 			if (maybe_sign_token.isOperatorSymbol()) {
 				if (maybe_sign_token.getValue().str() == "-") {
 					sign = -1;
@@ -88,13 +84,13 @@ namespace vm::loader::parser {
 			}
 
 			auto token = state.tokens().peek();
-			std::cout << "Number token: " << token.getStrValue() << '\n';
 			if (!token.isNumLiteral()) {
 				state.log(
 					makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
 				);
 				return { T{ 0 }, 0 };
 			}
+			state.tokens().next();
 
 			if constexpr (sizeof(T) != 8) {
 				state.log(
@@ -108,41 +104,111 @@ namespace vm::loader::parser {
 				return { T{ 0 }, 0 };
 			}
 
-			auto&& str_view = token.getValue().strView();
+			auto str_view = token.getValue().strView();
 			literal_length += str_view.length();
-
 			try {
 				auto [number, suffix] = splitNumberAndSuffix(str_view);
 
-				std::cout << "===============\n";
-				std::cout << "Number: " << number << '\n';
-				std::cout << "Suffix: " << suffix << '\n';
-				std::cout << "===============\n";
+				int base = 10;
+				if (number.starts_with("0b") || number.starts_with("0B"))
+					base = 2;
+				else if (number.starts_with("0o") || number.starts_with("0O"))
+					base = 8;
+				else if (number.starts_with("0x") || number.starts_with("0X"))
+					base = 16;
 
 				T           result;
 				usize       pos = 0;
 				std::string str(number);
-				if (!suffix.empty()) {  // Type specifier exists
-					if (suffix == "f64" || suffix == "F64") {
+				if (!suffix.empty()) {  // Type specifier exists.
+					if ((suffix.starts_with("f") || suffix.starts_with("F")) && base != 10) {
+						state.log(
+							makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Floating-point literals must be in decimal base for: "
+							)
+						);
+						return { T{ 0 }, 0 };
+					}
+
+					if (suffix == "f32" || suffix == "F32") {
 						float value      = std::stof(str, &pos) * static_cast<float>(sign);
 						u32   float_bits = std::bit_cast<u32>(value);
 						result           = std::bit_cast<T>(static_cast<u64>(float_bits));
-					} else if (suffix == "f32" || suffix == "f32") {
+					} else if (suffix == "f64" || suffix == "F64") {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
 					} else if (suffix == "i32" || suffix == "I32") {
-						u32 bits = std::bit_cast<u32>(std::stoi(str, &pos) * sign);
-						result   = std::bit_cast<T>(static_cast<u64>(bits));
+						u64 raw_val = std::stoull(str, &pos, base);
+
+						if (sign == 1
+						    && raw_val > static_cast<u64>(std::numeric_limits<i32>::max())) {
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal overflows a 32-bit signed integer."
+								)
+							);
+							return { T{ 0 }, 0 };
+						}
+						if (sign == -1
+						    && raw_val
+						           > (static_cast<u64>(std::numeric_limits<i32>::max()) + 1ULL)) {
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal underflows a 32-bit signed integer."
+								)
+							);
+							return { T{ 0 }, 0 };
+						}
+
+
+						i32 value = static_cast<i32>(raw_val) * sign;
+						result    = std::bit_cast<T>(static_cast<u64>(std::bit_cast<u32>(value)));
 					} else if (suffix == "i64" || suffix == "I64") {
-						u64 bits
-							= std::bit_cast<u64>(std::stoll(str, &pos) * static_cast<i64>(sign));
-						result = std::bit_cast<T>(bits);
+						u64 raw_val = std::stoull(str, &pos, base);
+
+						if (sign == 1
+						    && raw_val > static_cast<u64>(std::numeric_limits<i64>::max())) {
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal overflows a 64-bit signed integer."
+								)
+							);
+							return { T{ 0 }, 0 };
+						}
+						if (sign == -1
+						    && raw_val
+						           > (static_cast<u64>(std::numeric_limits<i64>::max()) + 1ULL)) {
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal underflows a 64-bit signed integer."
+								)
+							);
+							return { T{ 0 }, 0 };
+						}
+						i64 value = static_cast<i64>(raw_val) * sign;
+						result    = std::bit_cast<T>(std::bit_cast<u64>(value));
 					} else if (suffix == "u32" || suffix == "U32") {
-						u32 bits = static_cast<u32>(std::stoul(str, &pos));
-						result   = std::bit_cast<T>(static_cast<u64>(bits));
+						u64 raw_val = std::stoull(str, &pos, base);
+
+						if (raw_val > std::numeric_limits<u32>::max()) {
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal overflows a 32-bit unsigned integer."
+								)
+							);
+							return { T{ 0 }, 0 };
+						}
+						u32 value = static_cast<u32>(raw_val);
+						result    = std::bit_cast<T>(static_cast<u64>(value));
 					} else if (suffix == "u64" || suffix == "U64") {
-						u64 bits = std::stoull(str, &pos);
-						result   = std::bit_cast<T>(bits);
+						u64 value = std::stoull(str, &pos, base);
+						result    = std::bit_cast<T>(value);
 					} else {
 						state.log(
 							makeBox<InvalidLiteral>(
@@ -159,32 +225,17 @@ namespace vm::loader::parser {
 						return { T{ 0 }, 0 };
 					}
 				} else {
-					// By default, we assume 64-bit integer or double if it has a dot
+					// By default, we assume 64-bit integer or double if it has a dot.
 					if (str.find('.') != std::string::npos || str.find('e') != std::string::npos
 					    || str.find('E') != std::string::npos) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
-					} else if (str.starts_with("0b") || str.starts_with("0B")) {
-						// For binary numbers, we parse them as 64-bit integers
-						u64 value = std::stoull(str.substr(2), &pos, 2);
-						result    = std::bit_cast<T>(value);
-						pos += 2;
-					} else if (str.starts_with("0o") || str.starts_with("0O")) {
-						// For octal numbers, we parse them as 64-bit integers
-						u64 value = std::stoull(str.substr(2), &pos, 8);
-						result    = std::bit_cast<T>(value);
-						pos += 2;
-					} else if (str.starts_with("0x") || str.starts_with("0X")) {
-						// For hex numbers, we parse them as 64-bit integers
-						u64 value = std::stoull(str.substr(2), &pos, 16);
-						result    = std::bit_cast<T>(value);
-						pos += 2;
 					} else {
-						i64 value = std::bit_cast<i64>(std::stoull(str, &pos, 0))
-						          * static_cast<i64>(sign);
-						result = std::bit_cast<T>(value);
+						i64 value = static_cast<i64>(std::stoull(str, &pos, base)) * sign;
+						result    = std::bit_cast<T>(value);
 					}
 				}
+
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
@@ -202,6 +253,7 @@ namespace vm::loader::parser {
 				}
 			} catch (std::logic_error&) {}
 
+			// TODOP: Remove that
 			state.log(
 				makeBox<InvalidLiteral>(
 					token.getPosition(),
@@ -231,7 +283,7 @@ namespace vm::loader::parser {
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
 			auto pos            = state.getPosition();
-			auto parsed_literal = parseLiteral<u64>(state);
+			auto parsed_literal = parseNumericLiteral<u64>(state);
 			auto value          = parsed_literal.first;
 			auto arg            = opargs::Immediate{ value };
 			arg.bytecode_pos    = dia::SourcePosition(
@@ -366,6 +418,7 @@ namespace vm::loader::parser {
 		tpc::Identifier identifier1;
 		bool            logged = false;
 		while (state.notEmpty()) {
+			std::cout << "Opcode parse: " << state[0].getStrValue() << '\n';
 			if (state[0].isIdentifier()) {
 				state.parse().one(&identifier1);
 				if (opargs_parsers::OP_CODE_TO_ARGS_PARSER.contains(identifier1.value.str())) {
@@ -389,6 +442,7 @@ namespace vm::loader::parser {
 
 					return out;
 				} else if (!logged) {
+					std::cout << "Hello\n";
 					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value));
 					logged = true;
 				}

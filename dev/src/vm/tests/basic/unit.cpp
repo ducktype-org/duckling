@@ -10,25 +10,25 @@ class VmUnitTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(globalsTest);
-		// TESTER_ADD_TEST(commandLineArguments);
-		// TESTER_ADD_TEST(jump);
-		// TESTER_ADD_TEST(return1337);
-		// TESTER_ADD_TEST(initPrimitivesWithZero);
-		// TESTER_ADD_TEST(check32BitsInstructions);
-		// TESTER_ADD_TEST(pointerTest);
-		// TESTER_ADD_TEST(globalInitializationTest);
-		// TESTER_ADD_TEST(globalsInitializationTest);
-		// TESTER_ADD_TEST(globalDestructorTest);
-		// TESTER_ADD_TEST(globalNoConstructorTest);
-		// TESTER_ADD_TEST(globalNoDestructorTest);
-		// TESTER_ADD_TEST(verySimpleUnsignedTest);
-		// TESTER_ADD_TEST(verySimpleBooleanTest);
-		// TESTER_ADD_TEST(floatOperationTest);
+		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(commandLineArguments);
+		TESTER_ADD_TEST(jump);
+		TESTER_ADD_TEST(return1337);
+		TESTER_ADD_TEST(initPrimitivesWithZero);
+		TESTER_ADD_TEST(check32BitsInstructions);
+		TESTER_ADD_TEST(pointerTest);
+		TESTER_ADD_TEST(globalInitializationTest);
+		TESTER_ADD_TEST(globalsInitializationTest);
+		TESTER_ADD_TEST(globalDestructorTest);
+		TESTER_ADD_TEST(globalNoConstructorTest);
+		TESTER_ADD_TEST(globalNoDestructorTest);
+		TESTER_ADD_TEST(verySimpleUnsignedTest);
+		TESTER_ADD_TEST(verySimpleBooleanTest);
+		TESTER_ADD_TEST(floatOperationTest);
 		TESTER_ADD_TEST(literalsTest);
-		// TESTER_ADD_TEST(checkLiteralErrorHandling);
-		// TESTER_ADD_TEST(checkZeroDivision);
-		// TESTER_ADD_TEST(invalidPrimitiveTypes);
+		TESTER_ADD_TEST(checkLiteralErrorHandling);
+		TESTER_ADD_TEST(checkZeroDivision);
+		TESTER_ADD_TEST(invalidPrimitiveTypes);
 	}
 
 private:
@@ -103,9 +103,13 @@ private:
 	}
 
 	void checkLiteralErrorHandling() {
-		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
-		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
-		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
+		loadInvalidDbc("invalid_literal.dbc", { 
+			"Invalid literal: Numeric literal overflows a 32-bit signed integer",
+			"Invalid literal: Numeric literal underflows a 32-bit signed integer",
+			"Invalid literal: Numeric literal overflows a 32-bit unsigned integer",
+			"Invalid literal: Numeric literal overflows a 64-bit signed integer",
+			"Invalid literal: Floating-point literals must be in decimal base for"
+		});
 	}
 
 	void invalidPrimitiveTypes() {

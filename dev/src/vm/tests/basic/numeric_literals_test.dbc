@@ -1,0 +1,126 @@
+function test_32bit_literals {} -> i32 {
+	init_lany_type		a, i32;
+
+    mov_l32_imm     a, 123i32;
+    cmpEq_l32_imm   a, 123; 
+    jmpIfNot_label  fail;
+
+    mov_l32_imm     a, -456i32;
+    cmpEq_l32_imm   a, -456; 
+    jmpIfNot_label  fail;
+
+    mov_l32_imm     a, 0xFFi32;
+    cmpEq_l32_imm   a, 255; 
+    jmpIfNot_label  fail;
+    k
+    mov_l32_imm     a, 0b1101i32;
+    cmpEq_l32_imm   a, 13; 
+    jmpIfNot_label  fail;
+
+    mov_l32_imm     a, 0o17u32;
+    cmpEq_l32_imm   a, 15; 
+    jmpIfNot_label  fail;
+
+    mov_l32_imm     a, 4294967295u32;
+    cmpEq_l32_imm   a, -1; 
+    jmpIfNot_label  fail;
+
+	mov_l32_imm		a, 0x00000001;
+	cmpEq_l32_imm 	a, 1;
+	jmpIfNot_label 	fail;
+
+	mov_l32_0 		ret_val, 0;
+	ret;
+
+	label fail;
+	mov_l32_imm 	ret_val, 101;
+	ret;
+}
+
+
+function test_64bit_literals {} -> i32 {
+	init_lany_type		b, i64;
+
+	mov_l64_imm 		b, 5000000000i64;
+	cmpEq_l64_imm       b, 5000000000;
+	jmpIfNot_label 	    fail;
+
+	mov_l64_imm 		b, -9876543210123i64;
+	cmpEq_l64_imm       b, -9876543210123;
+	jmpIfNot_label 	    fail;
+	
+	mov_l64_imm 		b, 0xABCDEF1234567890u64;
+	cmpEq_l64_imm       b, -6084319436418582384; 
+	jmpIfNot_label 	    fail;
+
+	mov_l64_imm 		b, 18446744073709551615u64;
+	cmpEq_l64_imm       b, -1;
+	jmpIfNot_label 	    fail;
+
+	mov_l32_imm 		ret_val, 0;
+	ret;
+
+	label fail;
+	mov_l32_imm 		ret_val, 102;
+	ret;
+}
+
+function test_32bit_float_literals {} -> i32 {
+	init_lany_type		a, i32;
+
+	# TODOP: To add
+	mov_l32_imm 		a, 123f32;
+	
+
+
+	mov_l32_imm 		a, 0.5f32;		    # b = 0.5    
+    cmpEq_l32_imm       a, 1056964608i32;   # 1056964608 as int has same bits as 0.5f 
+	jmpIfNot_label 	    fail;
+	
+	mov_l32_imm 		a, -1.25e1f32;      # -12.5f32
+    cmpEq_l32_imm       a, -1054001562;     # 0xc1480000
+	jmpIfNot_label 	    fail;
+	
+	mov_l32_imm 		ret_val, 0;
+	ret;
+	
+	label fail;
+	mov_l32_imm 		ret_val, 103;
+	ret;
+}
+
+function test_64bit_float_literals {} -> i32 {
+	init_lany_type		a, i64;
+
+	mov_l64_imm 		a, 0.5f64;		    # b = 0.5    
+    cmpEq_l64_imm       a, 1056964608i64;   # 1056964608 as int has same bits as 0.5f 
+	jmpIfNot_label 	    fail;
+	
+	mov_l64_imm 		a, -1.25e1f64;      # -12.5f32
+    cmpEq_l64_imm       a, -1054001562;     # 0xc1480000
+	jmpIfNot_label 	    fail;
+	
+	mov_l32_imm 		ret_val, 0;
+	ret;
+	
+	label fail;
+	mov_l32_imm 		ret_val, 104;
+	ret;
+}
+
+
+function main { i64, ptr_argv } -> i64 {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type 	foo_ret_val, i32;
+
+	call_func 	foo;
+	output_l32 	foo_ret_val;
+
+	deinit;
+    deinit; # *argv
+    deinit; # argc
+	ret;
+}

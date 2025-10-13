@@ -5,7 +5,7 @@ function foo {} -> i64 {
     cmpEq_l64_imm       a, 4602678819172646912u64;
 	jmpIfNot_label 	fail;
 
-    mov_l64_imm 		a, 0.5d;		# a = 0.5    
+    mov_l64_imm 		a, 0.5f64;		# a = 0.5    
     cmpEq_l64_imm       a, 4602678819172646912u64;
 	jmpIfNot_label 	fail;
 

@@ -402,8 +402,13 @@ namespace lexer {
 	}
 
 	void Lexer::parseNumericLiteralTypeSuffix(bool is_float_literal) {
-		if (is_float_literal && (peek().is('i') || peek().is('u'))) return;
-		if (!peek().is('i') && !peek().is('f') && !peek().is('u')) return;
+		if (is_float_literal
+		    && (peek().is('i') || peek().is('u') || peek().is('I') || peek().is('U')))
+			return;
+		// TODOP: Make this better to allow for numeric literals defined in the language automatically.
+		if (!peek().is('i') && !peek().is('f') && !peek().is('u') && !peek().is('I')
+		    && !peek().is('F') && !peek().is('U'))
+			return;
 
 		const auto next1 = peek(1);
 		const auto next2 = peek(2);
