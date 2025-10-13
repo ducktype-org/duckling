@@ -1,7 +1,5 @@
 #pragma once
 
-#include "base_element.hpp"
-#include "common_elements.hpp"
 #include "token_stream.hpp"
 
 #include <diagnostic/logger.hpp>
@@ -13,7 +11,7 @@ namespace tpc {
 	/**
 	 * @brief Implements higher level token stream interactions
 	 */
-	class ParserState {
+	class ParserState final {
 		std::vector<TokenStream> stream_stack;  ///< Internal storage of recursive strings
 
 	public:
