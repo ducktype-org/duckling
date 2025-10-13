@@ -83,8 +83,8 @@ private:
 	}
 
 	void literalsTest() {
-		runTestOnVm("literals_test_32.dbc", "", "3", {});
-		runTestOnVm("literals_test_64.dbc", "", "3", {});
+		runTestOnVm("literals_test_32.dbc", "", "1", {});
+		runTestOnVm("literals_test_64.dbc", "", "1", {});
 	}
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "1235", {}); }

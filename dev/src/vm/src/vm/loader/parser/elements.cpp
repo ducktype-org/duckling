@@ -108,15 +108,21 @@ namespace vm::loader::parser {
 			literal_length += str_view.length();
 			try {
 				auto [number, suffix] = splitNumberAndSuffix(str_view);
+				std::cout << "Number: " << number << '\n';
+				std::cout << "Suffix: " << suffix << '\n';
 
 				int base = 10;
-				if (number.starts_with("0b") || number.starts_with("0B"))
+				if (number.starts_with("0b") || number.starts_with("0B")) {
 					base = 2;
-				else if (number.starts_with("0o") || number.starts_with("0O"))
+					number.remove_prefix(2);
+				} else if (number.starts_with("0o") || number.starts_with("0O")) {
 					base = 8;
-				else if (number.starts_with("0x") || number.starts_with("0X"))
+					number.remove_prefix(2);
+				} else if (number.starts_with("0x") || number.starts_with("0X")) {
 					base = 16;
-
+					number.remove_prefix(2);
+				}
+				std::cout << "Base: " << base << '\n';
 				T           result;
 				usize       pos = 0;
 				std::string str(number);
@@ -231,11 +237,14 @@ namespace vm::loader::parser {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
 					} else {
+						std::cout << "Hello\n";
+						std::cout << str << '\n';
 						i64 value = static_cast<i64>(std::stoull(str, &pos, base)) * sign;
-						result    = std::bit_cast<T>(value);
+						std::cout << pos << '\n';
+						result = std::bit_cast<T>(value);
 					}
 				}
-
+				std::cout << pos << " " << str.length() << '\n';
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
