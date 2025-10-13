@@ -123,7 +123,8 @@ impl GlobalCliOptions {
         // https://docs.rs/console/latest/console/fn.colors_enabled.html
         if let Color::Never = self.color {
             unsafe {
-                std::env::set_var("CLICOLOR", "0");
+                std::env::remove_var("CLICOLOR");
+                std::env::remove_var("CLICOLOR_FORCE");
             }
         } else if let Color::Always = self.color {
             unsafe {
