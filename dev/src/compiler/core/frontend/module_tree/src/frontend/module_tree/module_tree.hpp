@@ -30,6 +30,9 @@ namespace compiler::frontend {
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
 
+	class ModuleTreeBuilder;
+	class ModuleTreeModifier;
+
 	/**
 	 * @brief Represents a single module in the Duckling project tree.
 	 *
