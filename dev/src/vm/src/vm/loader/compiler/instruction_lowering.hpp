@@ -61,7 +61,8 @@ namespace vm::loader::compiler::detail {
 		}
 
 		template<code::IsInstruction T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void lower(Args...);
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes>
+		void lower(Args...) = delete;
 
 		// -----------------------
 		template<>
@@ -74,6 +75,35 @@ namespace vm::loader::compiler::detail {
 
 		// -----------------------
 	};
-}
 
-// @TODOB add back the macro checking if everything is defined
+	/*
+	 * Some helper concepts to show a nice compile-time error in this file
+     * when someone defines a high instruction and forgets to add its lowering.
+	 *
+	 * Makes sure InstructionLowerer::lower works for all alternatives of vm::code::Instruction.
+	 */
+	namespace {
+		// Checks if InstructionLowerer::lower<T> exists.
+		template<typename T>
+		concept LoweringWorksForInstr = requires {
+			std::apply(
+				[](auto... args) { return std::declval<MicroBytecodeBuilder>().lower<T>(args...); },
+				std::declval<typename T::ArgTypes>()
+			);
+		};
+
+		// Checks if the above concept holds for alternatives of variant V.
+		template<typename V>
+		concept LoweringWorksForVariant = []<typename... Alts>(std::variant<Alts...>*) {
+			return (LoweringWorksForInstr<Alts> && ...);
+		}(static_cast<V*>(nullptr));
+
+		static_assert(
+			LoweringWorksForVariant<
+				std::variant<high::Op_add_l64_imm, high::Comment>>,  // @TODO make this
+		                                                             // code::Instruction
+			"Lowering not implemented for all high bytecode instructions"
+			" / some lowering does not return a microinstructions array"
+		);
+	}
+}
