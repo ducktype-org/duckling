@@ -227,7 +227,6 @@ namespace vm::loader::parser {
 #define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
-        // @TODOB w_tf
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
 #include <vm/bytecode/instruction_definitions.hpp>
 
