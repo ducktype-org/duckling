@@ -31,7 +31,8 @@ namespace vm::loader::parser {
 	 * be type of size 64bits.
 	 */
 	namespace opargs_parsers {
-		std::pair<std::string_view, std::string_view> splitNumberAndSuffix(std::string_view literal) {
+		std::pair<std::string_view, std::string_view> splitNumberAndSuffix(std::string_view literal
+		) {
 			if (literal.empty()) return { "", "" };
 			auto it = std::ranges::find_if(std::ranges::reverse_view(literal), [](char c) {
 				return std::isalpha(static_cast<unsigned char>(c));
@@ -85,22 +86,19 @@ namespace vm::loader::parser {
 
 			auto token = state.tokens().peek();
 			if (!token.isNumLiteral()) {
-				state.log(
-					makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
+				state.log(makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
 				);
 				return { T{ 0 }, 0 };
 			}
 			state.tokens().next();
 
 			if constexpr (sizeof(T) != 8) {
-				state.log(
-					makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat(
-							"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
-						)
+				state.log(makeBox<InvalidLiteral>(
+					token.getPosition(),
+					base::strConcat(
+						"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
 					)
-				);
+				));
 				return { T{ 0 }, 0 };
 			}
 
@@ -128,12 +126,10 @@ namespace vm::loader::parser {
 				std::string str(number);
 				if (!suffix.empty()) {  // Type specifier exists.
 					if ((suffix.starts_with("f") || suffix.starts_with("F")) && base != 10) {
-						state.log(
-							makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Floating-point literals must be in decimal base for: "
-							)
-						);
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							"Floating-point literals must be in decimal base for: "
+						));
 						return { T{ 0 }, 0 };
 					}
 
@@ -149,23 +145,19 @@ namespace vm::loader::parser {
 
 						if (sign == 1
 						    && raw_val > static_cast<u64>(std::numeric_limits<i32>::max())) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal overflows a 32-bit signed integer."
-								)
-							);
+							state.log(makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Numeric literal overflows a 32-bit signed integer."
+							));
 							return { T{ 0 }, 0 };
 						}
 						if (sign == -1
 						    && raw_val
 						           > (static_cast<u64>(std::numeric_limits<i32>::max()) + 1ULL)) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal underflows a 32-bit signed integer."
-								)
-							);
+							state.log(makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Numeric literal underflows a 32-bit signed integer."
+							));
 							return { T{ 0 }, 0 };
 						}
 
@@ -177,23 +169,19 @@ namespace vm::loader::parser {
 
 						if (sign == 1
 						    && raw_val > static_cast<u64>(std::numeric_limits<i64>::max())) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal overflows a 64-bit signed integer."
-								)
-							);
+							state.log(makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Numeric literal overflows a 64-bit signed integer."
+							));
 							return { T{ 0 }, 0 };
 						}
 						if (sign == -1
 						    && raw_val
 						           > (static_cast<u64>(std::numeric_limits<i64>::max()) + 1ULL)) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal underflows a 64-bit signed integer."
-								)
-							);
+							state.log(makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Numeric literal underflows a 64-bit signed integer."
+							));
 							return { T{ 0 }, 0 };
 						}
 						i64 value = static_cast<i64>(raw_val) * sign;
@@ -202,12 +190,10 @@ namespace vm::loader::parser {
 						u64 raw_val = std::stoull(str, &pos, base);
 
 						if (raw_val > std::numeric_limits<u32>::max()) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal overflows a 32-bit unsigned integer."
-								)
-							);
+							state.log(makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Numeric literal overflows a 32-bit unsigned integer."
+							));
 							return { T{ 0 }, 0 };
 						}
 						u32 value = static_cast<u32>(raw_val);
@@ -216,18 +202,16 @@ namespace vm::loader::parser {
 						u64 value = std::stoull(str, &pos, base);
 						result    = std::bit_cast<T>(value);
 					} else {
-						state.log(
-							makeBox<InvalidLiteral>(
-								token.getPosition(),
-								base::strConcat(
-									"Unknown type specifier `",
-									suffix,
-									"` for `",
-									base::typeName<vm::opargs::Immediate>(),
-									"`."
-								)
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Unknown type specifier `",
+								suffix,
+								"` for `",
+								base::typeName<vm::opargs::Immediate>(),
+								"`."
 							)
-						);
+						));
 						return { T{ 0 }, 0 };
 					}
 				} else {
@@ -248,29 +232,25 @@ namespace vm::loader::parser {
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
-					state.log(
-						makeBox<InvalidLiteral>(
-							token.getPosition(),
-							base::strConcat(
-								"Number not read fully for `",
-								base::typeName<vm::opargs::Immediate>(),
-								"`."
-							)
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Number not read fully for `",
+							base::typeName<vm::opargs::Immediate>(),
+							"`."
 						)
-					);
+					));
 					return { T{ 0 }, 0 };
 				}
 			} catch (std::logic_error&) {}
 
 			// TODOP: Remove that
-			state.log(
-				makeBox<InvalidLiteral>(
-					token.getPosition(),
-					base::strConcat(
-						"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
-					)
+			state.log(makeBox<InvalidLiteral>(
+				token.getPosition(),
+				base::strConcat(
+					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
 				)
-			);
+			));
 			return { T{ 0 }, 0 };
 		}
 

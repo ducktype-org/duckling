@@ -244,15 +244,13 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (token_messages) {
-			printer::StreamPrinter::printNL(
-				{
-					"Add token: ",
-					std::string(token_type),
-					"(",
-					std::string(file->getCharRange(begin, end + 1).stringView()),
-					")",
-				}
-			);
+			printer::StreamPrinter::printNL({
+				"Add token: ",
+				std::string(token_type),
+				"(",
+				std::string(file->getCharRange(begin, end + 1).stringView()),
+				")",
+			});
 		}
 	}
 
@@ -559,11 +557,9 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(
-			Token::makeString(
-				file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
-			)
-		);
+		output.push_back(Token::makeString(
+			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
+		));
 	}
 
 	void Lexer::charHandler(Tokens& output) {
@@ -622,8 +618,7 @@ namespace lexer {
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
 		if (token_messages)
-			printer::StreamPrinter::printNL(
-				base::strConcat("group begin", generateLineColumnInfo())
+			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
 			);
 
 
@@ -654,15 +649,13 @@ namespace lexer {
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
 		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
-		output.push_back(
-			Token::makeBracketGroup(
-				bracket_type,
-				std::move(inner_tokens),
-				std::move(sentinel_begin),
-				std::move(sentinel_end),
-				source_position
-			)
-		);
+		output.push_back(Token::makeBracketGroup(
+			bracket_type,
+			std::move(inner_tokens),
+			std::move(sentinel_begin),
+			std::move(sentinel_end),
+			source_position
+		));
 		if (token_messages) printer::StreamPrinter::printNL("group end");
 	}
 

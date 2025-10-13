@@ -48,4 +48,3 @@ namespace lexer {
 		return res;
 	}
 }
-
