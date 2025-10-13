@@ -123,8 +123,10 @@ impl GlobalCliOptions {
 
         if let Color::Never = self.color {
             console::set_colors_enabled(false);
+            console::set_colors_enabled_stderr(false);
         } else if let Color::Always = self.color {
             console::set_colors_enabled(true);
+            console::set_colors_enabled_stderr(true);
         }
     }
 }
