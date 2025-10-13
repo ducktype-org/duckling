@@ -84,15 +84,17 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::linkLabelArguments(
-		const FunctionCompilationContext& ctx, low::MicroBytecode& instructions
+		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 	) {
-        for (auto [instr_idx, instr] : std::views::enumerate(instructions)) {
-            for (auto arg_idx : std::views::iota(2)) {
-                // @TODOB use some getOpcodeFromMicroInstr (define it first)
-                // if (low::instruction_tags::IS_ARGUMENT_LABEL())
-            }
-        }
-    }
+		for (auto [instr_idx, instr]: std::views::enumerate(instructions)) {
+			auto       opcode_num = std::to_underlying(getInstructionOpcode(instr));
+			std::array args{ instr.arg0, instr.arg1 };
+			auto       are_args_labels = low::instruction_tags::IS_ARGUMENT_LABEL.at(opcode_num);
+
+			for (auto [arg, is_label]: std::views::zip(args, are_args_labels))
+				if (is_label) arg = label_map.at(arg) - static_cast<usize>(instr_idx);
+		}
+	}
 
 	/**
 	 * @brief Compiles a single function. Refactor this
@@ -105,6 +107,7 @@ namespace vm::loader::compiler {
 		// for (const auto& instr: ctx.function.body) VISIT(instr, i, builder.lower(i));
 
 		auto [micro_bytecode, label_map] = builder.build();
+		linkLabelArguments(ctx, micro_bytecode, label_map);
 
 		return micro_bytecode;
 	}

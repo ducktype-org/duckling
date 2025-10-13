@@ -8,7 +8,7 @@
 namespace vm {
 
 	MicroInstruction makeLowInstruction(low::MicroOpcode opcode, u64 arg0, u64 arg1) {
-        u64 opcode_num = std::to_underlying(opcode);
+		u64 opcode_num = std::to_underlying(opcode);
 #ifdef USE_TAIL_CALLS
 		return MicroInstruction{
 			.tc_opfun = OpFuns::OPFUNS.at(opcode_num),
@@ -21,6 +21,14 @@ namespace vm {
 			.arg0         = arg0,
 			.arg1         = arg1,
 		};
+#endif
+	}
+
+	low::MicroOpcode getInstructionOpcode(const MicroInstruction& instruction) {
+#ifdef USE_TAIL_CALLS
+		return OpFuns::getOpcodeFromOpFun(instruction.tc_opfun);
+#else
+		return low::MicroOpcode{ instruction.nontc_opcode };
 #endif
 	}
 

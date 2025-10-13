@@ -137,8 +137,10 @@ namespace vm::loader::compiler {
 		 */
 		void calculateOffsets(FunctionCompilationContext& ctx);
 
-        // @TODOB docs
-        void linkLabelArguments(const FunctionCompilationContext&ctx, low::MicroBytecode &instructions);
+		// @TODOB docs
+		void linkLabelArguments(
+			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
+		);
 
 		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the label-less

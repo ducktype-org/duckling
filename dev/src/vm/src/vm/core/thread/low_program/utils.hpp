@@ -64,10 +64,8 @@ namespace vm::low::instruction_tags {
 	template<typename T>
 	concept IsMicroInstructionTag = IS_MICRO_TAG<T>;
 
-	constexpr auto IS_ARGUMENT_LABEL = std::to_array<std::pair<bool, bool>>({
-#define HANDLE_MICRO_INSTR(INSTR) \
-	std::pair{ IS_ARG_LABEL<Op_##INSTR, 0>, IS_ARG_LABEL<Op_##INSTR, 1> },
-
+	constexpr auto IS_ARGUMENT_LABEL = std::to_array<std::array<bool, 2>>({
+#define HANDLE_MICRO_INSTR(INSTR) { IS_ARG_LABEL<Op_##INSTR, 0>, IS_ARG_LABEL<Op_##INSTR, 1> },
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	});

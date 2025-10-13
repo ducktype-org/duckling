@@ -5,9 +5,10 @@
  */
 #pragma once
 
+#include "opcodes.hpp"
+
 #include <base/ints.hpp>
 
-#include "opcodes.hpp"
 #include <vm/core/process/memory/frame.hpp>
 
 /**
@@ -99,6 +100,8 @@ namespace vm {
 	 * @return MicroInstruction
 	 */
 	MicroInstruction makeLowInstruction(low::MicroOpcode opcode, u64 arg0 = 0, u64 arg1 = 0);
+
+	low::MicroOpcode getInstructionOpcode(const MicroInstruction& instruction);
 
 	/**
 	 * @brief For main purposes only.
