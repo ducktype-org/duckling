@@ -1,6 +1,6 @@
 use crate::driver::subcommands::exec_for;
 
-const BUILTIN_ALIASES: [(&'static str, &'static str); 2] = [("b", "build"), ("r", "run")];
+const BUILTIN_ALIASES: [(&str, &str); 2] = [("b", "build"), ("r", "run")];
 
 pub fn get_builtin_alias(name: &str) -> Option<&'static str> {
     for (k, v) in BUILTIN_ALIASES {

@@ -35,7 +35,7 @@ pub fn expand_aliases(
         (false, Ok(Some(new)), false, Some(_)) => shadows_builtin_alias(ctx, &new, args),
         (false, Ok(Some(new)), false, None) => {
             // This is the actually interesting part.
-            let new_args = expand_single_alias(&new, subcmd, subcmd_args, &mut visited)?;
+            let new_args = expand_single_alias(subcmd, subcmd_args, &new, &mut visited)?;
             expand_aliases(new_args, ctx, external_cmds, visited)
         }
         _ => Ok(args),
@@ -69,22 +69,25 @@ fn shadows_builtin_alias(ctx: &DuckCtx, alias: &str, args: ArgMatches) -> QuackR
 
 fn expand_single_alias(
     alias: &str,
-    subcmd: &str,
-    prev_subcmd_matches: &ArgMatches,
+    alias_args: &ArgMatches,
+    alias_expansion: &str,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
-    let new_cli_args = new_cli_args(alias, prev_subcmd_matches);
-    debug!("replaced alias `{subcmd}` with `{new_cli_args:?}`");
-    let new_subcmd_matches = new_arg_matches(new_cli_args)?;
-    let new_subcmd = try_get_new_subcmd(&new_subcmd_matches, alias)?;
-    check_no_cycle(subcmd, new_subcmd, visited, alias)?;
-    Ok(new_subcmd_matches)
+    let new_cli_args = args_from_alias(alias_expansion, alias_args);
+    debug!("replaced alias `{alias}` with `{new_cli_args:?}`");
+    let parsed = parse_alias_args(new_cli_args)?;
+    let Some(new_subcmd) = parsed.subcommand_name() else {
+        bail!("user-defined alias `{alias}` does not have subcommand")
+    };
+    visited.push(alias.into());
+    check_alias_cycle(alias, new_subcmd, visited)?;
+    Ok(parsed)
 }
 
-fn new_cli_args(alias: &str, prev_subcmd_matches: &ArgMatches) -> Vec<OsString> {
+fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> Vec<OsString> {
     let mut result = alias.split(' ').map(OsString::from).collect::<Vec<_>>();
     result.extend(
-        prev_subcmd_matches
+        subcmd_args
             .get_many::<OsString>("")
             .unwrap_or_default()
             .cloned(),
@@ -92,31 +95,17 @@ fn new_cli_args(alias: &str, prev_subcmd_matches: &ArgMatches) -> Vec<OsString> 
     result
 }
 
-fn new_arg_matches(new_cli_args: Vec<OsString>) -> Result<ArgMatches, clap::Error> {
-    cli()
+fn parse_alias_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
+    Ok(cli()
         .no_binary_name(true)
-        .try_get_matches_from(new_cli_args)
+        .try_get_matches_from(new_cli_args)?)
 }
 
-fn try_get_new_subcmd<'a>(parsed: &'a ArgMatches, alias: &str) -> QuackResult<&'a str> {
-    let Some(new_subcmd) = parsed.subcommand_name() else {
-        bail!("user-defined alias `{alias}` does not have subcommand")
-    };
-    Ok(new_subcmd)
-}
-
-fn check_no_cycle(
-    subcmd: &str,
-    new_subcmd: &str,
-    visited: &mut Vec<String>,
-    alias: &str,
-) -> QuackResult<()> {
-    visited.push(subcmd.into());
-    if visited.contains(&new_subcmd.into()) {
+fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
+    if visited.contains(&next.into()) {
         bail!(
-            "user-defined alias `{alias}` cycles: {} -> {}",
+            "user-defined alias `{current}` cycles: {} -> {next}",
             visited.join(" -> "),
-            alias
         );
     }
     Ok(())

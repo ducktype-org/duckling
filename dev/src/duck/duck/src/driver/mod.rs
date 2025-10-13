@@ -6,6 +6,7 @@ pub(crate) mod cli_ext;
 pub mod run;
 pub mod subcommands;
 pub mod typos_fixing;
+pub mod levenshtein;
 
 use cli_ext::CommandExt;
 

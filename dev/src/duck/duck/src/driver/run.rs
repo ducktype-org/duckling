@@ -17,12 +17,12 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let cli = cli();
     let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
-        std::env::set_current_dir(&chdir)
+        std::env::set_current_dir(chdir)
             .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
     }
     let global_opts = GlobalCliOptions::from_matches(&matches)?;
-    let args = fix_typos(matches, &ctx, &external)?;
-    let args = expand_aliases(args, &ctx, &external, vec![])?;
+    let args = fix_typos(matches, ctx, &external)?;
+    let args = expand_aliases(args, ctx, &external, vec![])?;
     debug!(
         "after expanding everything we have subcommand: `{:#?}`",
         args.subcommand_name()
@@ -32,8 +32,8 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
     use std::env;
-    const PREFIX: &'static str = "qp-";
-    const SUFFIX: &'static str = env::consts::EXE_SUFFIX;
+    const PREFIX: &str = "qp-";
+    const SUFFIX: &str = env::consts::EXE_SUFFIX;
     let Some(path) = ctx.env().get_os("PATH") else {
         return HashMap::new();
     };
