@@ -24,7 +24,7 @@ public:
 		TESTER_ADD_TEST(testVirtualFilesLikeModuleTree);
 		TESTER_ADD_TEST(testModuleTreeModifierVariants);
 		TESTER_ADD_TEST(testManualModuleTreeBuilder);
-		TESTER_ADD_TEST(testPathHash);
+		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
 	}
 
@@ -456,7 +456,7 @@ private:
 		ASSERT_EQUAL("parent_mod", mt->getParentModule().value()->getName().strView());
 	}
 
-	void testPathHash() {
+	void testComponentHash() {
 		// Create virtual directory with main module and two submodules
 		auto root = fs::FileManager::createRandomVirtualDirectory();
 		(void) root.createSubFile("root", "root.dmf");
@@ -469,13 +469,13 @@ private:
 		// Build two module trees from the same virtual directory and compare path hashes
 		auto mt1 = ModuleTreeBuilder::create(root);
 		auto mt2 = ModuleTreeBuilder::create(root);
-		ASSERT_TRUE(mt1->getPathHash().hash == mt2->getPathHash().hash);
+		ASSERT_TRUE(mt1->getComponentHash().hash == mt2->getComponentHash().hash);
 
 		// Ensure submodule hashes differ from parent and from each other
 		auto sub1 = mt1->getSubmodules().at(base::StrID("sub1"));
 		auto sub2 = mt1->getSubmodules().at(base::StrID("sub2"));
-		ASSERT_TRUE(sub1->getPathHash().hash != mt1->getPathHash().hash);
-		ASSERT_TRUE(sub1->getPathHash().hash != sub2->getPathHash().hash);
+		ASSERT_TRUE(sub1->getComponentHash().hash != mt1->getComponentHash().hash);
+		ASSERT_TRUE(sub1->getComponentHash().hash != sub2->getComponentHash().hash);
 	}
 };
 

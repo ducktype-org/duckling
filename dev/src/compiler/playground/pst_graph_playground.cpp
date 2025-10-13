@@ -78,7 +78,7 @@ std::string stringPosition(dia::SourcePosition pos) {
  */
 Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 	// std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType() + "\n\""
-	// + el->getElementPath().str() + "\"";
+	// + el->getComponentHash().str() + "\"";
 	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
 	auto        self = hdl.addNode(name);
 

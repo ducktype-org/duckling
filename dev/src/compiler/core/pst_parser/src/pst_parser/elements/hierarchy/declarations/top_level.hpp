@@ -59,6 +59,6 @@ namespace pst {
 			return DeclKind::Transparent;
 		}
 
-		void calcElementPathsRecursive() override;
+		void calcComponentHashRecursive() override;
 	};
 }
