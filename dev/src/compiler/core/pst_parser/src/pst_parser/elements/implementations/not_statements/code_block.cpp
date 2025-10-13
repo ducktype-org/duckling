@@ -54,10 +54,10 @@ namespace pst {
 		}
 	}
 
-	void CodeBlock::calcElementPathsRecursive() {
-		auto path = getElementPath();
+	void CodeBlock::calcComponentHashRecursive() {
+		auto path = getComponentHash();
 		if (type == Ordered) {
-			auto ordered = ElementPath(path, "ordered");
+			auto ordered = ComponentHash(path, "ordered");
 			calcIndexedListChildPath<Stmt>({ statements }, ordered);
 		} else if (type == Unordered) {
 			calcOrderedListChildPath(statements, path);

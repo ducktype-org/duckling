@@ -106,7 +106,7 @@ namespace pst {
 
 		void dprintPrefix(std::ostream& out) const override;
 
-		void calcElementPathsRecursive() override;
+		void calcComponentHashRecursive() override;
 
 	public:
 		[[nodiscard]]

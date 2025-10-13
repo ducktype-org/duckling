@@ -1,7 +1,7 @@
 #pragma once
 
+#include "component_hash.hpp"
 #include "file_id.hpp"
-#include "path_hash.hpp"
 #include "source_file.hpp"
 
 #include <pst_parser/pst.hpp>
@@ -62,7 +62,7 @@ namespace compiler::frontend {
 		ModuleID getModuleID() const;
 		// Returns the module path hash (partial state + finalized hash)
 		[[nodiscard]]
-		const PathHash& getPathHash() const;
+		const ComponentHash& getComponentHash() const;
 
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
@@ -142,7 +142,7 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-		PathHash                                          m_path_hash;
+		ComponentHash                                     m_component_hash;
 	};
 
 	/**

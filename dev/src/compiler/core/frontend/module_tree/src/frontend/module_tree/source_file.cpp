@@ -28,23 +28,25 @@ namespace {
 
 namespace compiler::frontend {
 
-	SourceFile::SourceFile(fs::File file, ModuleID linked_module, PathHash parent_path_hash):
+	SourceFile::SourceFile(
+		fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
+	):
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		path_hash      = PathHash(parent_path_hash, lang_file_name);
+		component_hash = ComponentHash(parent_component_hash, lang_file_name);
 		// Add or replace file content in cache
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 	}
 
 	Ref<SourceFile> SourceFile::create(
-		fs::File file, ModuleID linked_module, PathHash parent_path_hash
+		fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
 	) {
 		auto abs_path = file.getFilePath().absolute().getPath();
 
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		files.pushBack(SourceFile(std::move(file), linked_module, std::move(parent_path_hash)));
+		files.pushBack(SourceFile(std::move(file), linked_module, std::move(parent_component_hash)));
 		files_map.at(abs_path).emplace_back(files.last());
 		files.last()->file_id = FileID(files.last());
 		return files.last();
@@ -69,7 +71,7 @@ namespace compiler::frontend {
 		if (parse_tree) {
 			return &parse_tree.value();
 		} else {
-			parse_tree.emplace(pst::PST(file, pst::ContextInfo(path_hash.elements)));
+			parse_tree.emplace(pst::PST(file, component_hash));
 			return &parse_tree.value();
 		}
 	}
