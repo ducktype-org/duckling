@@ -2,7 +2,6 @@
 
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 
 #include <iostream>
 

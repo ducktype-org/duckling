@@ -4,8 +4,6 @@
 #include <tester/testing_utils.hpp>
 #include <token_source/source.hpp>
 
-#include <fstream>
-#include <iostream>
 #include <sstream>
 
 void print(const lexer::Tokens& tokens, std::ostream& out, const std::string& indent = "") {

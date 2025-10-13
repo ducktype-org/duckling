@@ -5,14 +5,12 @@
 
 #pragma once
 
-#include "char.hpp"
 #include "token_common.hpp"
 
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <lang_definitions/key_spec_op.hpp>
 
 #include <vector>
 
