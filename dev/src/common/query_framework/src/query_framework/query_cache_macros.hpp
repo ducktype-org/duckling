@@ -27,8 +27,7 @@
 	);
 
 
-#define QUERY_CACHE_ON_DISK static constexpr bool CACHE_ON_DISK = true; \
-	using KHash = query::KHash<QKey>;
+#define QUERY_CACHE_ON_DISK static constexpr bool CACHE_ON_DISK = true;
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
