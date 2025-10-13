@@ -18,6 +18,6 @@ namespace query::internal {
 	 */
 	template<typename KeyType>
 	internal::NodeID makeNodeID(QueryID id, const KeyType& key) {
-		return NodeID(id, { .val = unstableHashKey(key) });
+		return NodeID(id, { .val = perfectHashKey(key) });
 	}
 }

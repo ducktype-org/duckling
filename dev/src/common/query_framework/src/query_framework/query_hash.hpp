@@ -3,60 +3,65 @@
 #include <base/bit256.hpp>
 #include <base/ints.hpp>
 
+#include <type_traits>
+#include <utility>
+
 namespace query {
 	using QueryStableHash = base::Bit256;
 
-	/**
-	 * @brief Helper struct to determine the hash type for a given KeyType.
-	 * Specializations handle cases where KeyType is u64, bool, or has a queryUnstablePerfectHash
-	 * method.
-	 */
-	template<typename KeyType, bool IsU64OrBool>
-	struct UKHashHelper;
+	// Trait: whether a type has a static constexpr CACHE_ON_DISK and whether it is true
+	template<typename T, typename = void>
+	struct HasCacheOnDisk: std::false_type {};
+
+	template<typename T>
+	struct HasCacheOnDisk<T, std::void_t<decltype(T::CACHE_ON_DISK)>>:
+		  std::bool_constant<static_cast<bool>(T::CACHE_ON_DISK)> {};
 
 	/**
-	 * @brief Specialization of UKHashHelper for KeyType that is u64 or bool.
-	 * Defines the hash type as u64.
+	 * @brief Helper struct to determine the hash type for a given KeyType.
+	 * Specializations handle cases where KeyType is u64, bool, or has perfect-hash methods.
 	 */
+	template<typename KeyType, bool IsU64OrBool>
+	struct KHashHelper;
+
+	// For u64/bool we keep u64
 	template<typename KeyType>
-	struct UKHashHelper<KeyType, true> {
+	struct KHashHelper<KeyType, true> {
 		using type = u64;
 	};
 
-	/**
-	 * @brief Specialization of UKHashHelper for KeyType with queryUnstablePerfectHash.
-	 * Defines the hash type as the return type of queryUnstablePerfectHash().
-	 */
+	// For other keys: if KeyType::CACHE_ON_DISK == true -> stable (Bit256),
+	// otherwise use the return type of queryUnstablePerfectHash().
 	template<typename KeyType>
-	struct UKHashHelper<KeyType, false> {
-		using type = decltype(std::declval<KeyType>().queryUnstablePerfectHash());
+	struct KHashHelper<KeyType, false> {
+		using Clean = std::remove_cvref_t<KeyType>;
+		using type  = std::conditional_t<
+			 HasCacheOnDisk<Clean>::value,
+			 QueryStableHash,
+			 decltype(std::declval<Clean>().queryUnstablePerfectHash())>;
 	};
 
 	/**
 	 * @brief Type alias to determine the hash type for a given KeyType.
-	 * If KeyType is u64 or bool, the hash type is u64. Otherwise, it is the return type of
-	 * queryUnstablePerfectHash().
 	 */
 	template<typename KeyType>
-	using UKHash = typename UKHashHelper<
+	using KHash = typename KHashHelper<
 		KeyType,
 		std::is_same_v<std::remove_cvref_t<KeyType>, u64>
 			|| std::is_same_v<std::remove_cvref_t<KeyType>, bool>>::type;
 
 	/**
-	 * @brief Gets hash from a key.
-	 * As of right now it is assumed that hashKey is collision less (per query).
-	 * It has to be ensured by a programmer.
-	 * For things like SymID / StrID / ints it is trivial.
-	 * For other types it might be necessary to increase hash size to 128 bits
-	 * and use "legit hashing algorithm".
+	 * @brief Gets "perfect" hash from a key: stable if CACHE_ON_DISK==true,
+	 * otherwise unstable. Keeps the u64/bool fast-paths.
 	 */
 	template<typename KeyType>
-	UKHash<KeyType> unstableHashKey(const KeyType& key) {
+	KHash<KeyType> perfectHashKey(const KeyType& key) {
 		if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
 			return key;
 		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
 			return static_cast<u64>(key);
+		else if constexpr (HasCacheOnDisk<std::remove_cvref_t<KeyType>>::value)
+			return key.queryStablePerfectHash();
 		else
 			return key.queryUnstablePerfectHash();
 	}

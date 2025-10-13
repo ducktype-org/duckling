@@ -5,6 +5,7 @@
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/path_hash.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
@@ -27,9 +28,17 @@ namespace compiler::driver {
 		return { module_id.queryUnstablePerfectHash(), std::to_underlying(backend_type) };
 	}
 
+	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
+		auto path_hash = compiler::frontend::GetModuleID_Functor::get(module_id)->getPathHash();
+		auto partial   = path_hash.partial;
+		hashing::addToHash(partial, std::to_underlying(backend_type));
+		return partial.finalize();
+	}
+
 	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
+		QUERY_CACHE_ON_DISK
 
 		static auto typeExtension(BackendType backend) {
 			switch (backend) {
@@ -45,11 +54,8 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
-			// Note: #939 in the future it should use stable hashing for incremental
-			// compilation. For now its ok.
-			// Also deal with module id (it is unstable).
 			auto output_name
-				= key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
@@ -71,7 +77,6 @@ namespace compiler::driver {
 						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
-
 
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
 					base::StrID llvm_ir_path

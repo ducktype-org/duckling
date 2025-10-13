@@ -8,6 +8,7 @@
 
 #include "../backend_type.hpp"
 
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <linker/link.hpp>
 
@@ -44,6 +45,9 @@ namespace compiler::driver {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
+
+		[[nodiscard]]
+		base::Bit256 queryStablePerfectHash() const;
 	};
 
 	/**
