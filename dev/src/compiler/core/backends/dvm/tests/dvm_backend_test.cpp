@@ -7,7 +7,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 
 #include <query_framework/context.hpp>
