@@ -492,23 +492,6 @@ namespace lexer {
 		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 	}
 
-	void Lexer::typeSpecifierHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
-		auto  source_start = currentPosition();
-
-		next();  // first char - character
-		while (peek().is(Class::name_continue)) next();
-		end = where - 1;
-
-		dia::SourcePosition source_position(source_start, end);
-		std::string         message;
-		output.push_back(
-			Token::makeTypeSpecifier(file->getCharRange(begin, end + 1), source_position)
-		);
-		addTokenMsg(begin, end, "typeSpecifier");
-	}
-
 	void Lexer::stringHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};

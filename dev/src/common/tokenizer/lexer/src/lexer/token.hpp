@@ -38,7 +38,6 @@ namespace lexer {
 			Keyword,
 			Identifier,
 			NumLiteral,
-			TypeSpecifier,
 			String,
 			Char,
 			FormattedString,  ///< group
@@ -82,7 +81,6 @@ namespace lexer {
 		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
 		static Token makeSpecial(base::RawView identifier, const dia::SourcePosition&);
 		static Token makeNumLiteral(base::RawView literal, const dia::SourcePosition&);
-		static Token makeTypeSpecifier(base::RawView literal, const dia::SourcePosition&);
 		/**@}*/
 
 		virtual ~Token() = default;
@@ -175,8 +173,6 @@ namespace lexer {
 		bool isIdentifier() const;
 		[[nodiscard]]
 		bool isNumLiteral() const;
-		[[nodiscard]]
-		bool isTypeSpecifier() const;
 		[[nodiscard]]
 		bool isComment() const;
 		[[nodiscard]]

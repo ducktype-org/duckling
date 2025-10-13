@@ -6,7 +6,6 @@
 #include <base/raw_view.hpp>
 
 #include <array>
-#include <iostream>
 
 namespace lang_def {
 	namespace {
