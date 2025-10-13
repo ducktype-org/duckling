@@ -1,6 +1,5 @@
 #include "query_graph.hpp"
 
-#include "../query_data/query_id.hpp"
 #include "node_id.hpp"
 
 #include <base/bit256.hpp>
@@ -8,7 +7,6 @@
 
 #include <cstring>
 #include <iomanip>
-#include <iostream>
 #include <ostream>
 #include <queue>
 #include <ranges>
