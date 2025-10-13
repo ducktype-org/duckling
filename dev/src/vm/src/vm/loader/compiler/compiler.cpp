@@ -83,19 +83,30 @@ namespace vm::loader::compiler {
 		CORE_UNREACHABLE();
 	}
 
+	void Compiler::linkLabelArguments(
+		const FunctionCompilationContext& ctx, low::MicroBytecode& instructions
+	) {
+        for (auto [instr_idx, instr] : std::views::enumerate(instructions)) {
+            for (auto arg_idx : std::views::iota(2)) {
+                // @TODOB use some getOpcodeFromMicroInstr (define it first)
+                // if (low::instruction_tags::IS_ARGUMENT_LABEL())
+            }
+        }
+    }
+
 	/**
 	 * @brief Compiles a single function. Refactor this
-     * @TODOB change this comment
+	 * @TODOB change this comment
 	 */
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
-        detail::MicroBytecodeBuilder builder{ *this, ctx };
+		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-        // @TODOB uncomment this
+		// @TODOB uncomment this
 		// for (const auto& instr: ctx.function.body) VISIT(instr, i, builder.lower(i));
 
 		auto [micro_bytecode, label_map] = builder.build();
 
-        return micro_bytecode;
+		return micro_bytecode;
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
