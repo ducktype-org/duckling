@@ -7,7 +7,8 @@ use quackpack::QuackResult;
 use tracing::debug;
 
 use crate::{
-    driver::{builtin::is_builtin_subcommand, cli, levenshtein, subcommands::subcommands}, DuckCtx
+    DuckCtx,
+    driver::{builtin::is_builtin_subcommand, cli, levenshtein, subcommands::subcommands},
 };
 
 pub fn fix_typos(
@@ -30,6 +31,7 @@ pub fn fix_typos(
         targets.join(", ")
     );
     let closest_targets = find_closest_targets(name, &targets, ctx);
+    print!("{:#?}", closest_targets);
 
     let Some((&first, rest)) = closest_targets.as_slice().split_first() else {
         return Ok(args);
@@ -80,7 +82,6 @@ fn find_closest_targets<'a>(bad_cmd: &str, targets: &'a [String], ctx: &DuckCtx)
         .collect::<Vec<_>>()
 }
 
-
 fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String {
     let suggestions = closest_targets
         .iter()
@@ -110,4 +111,45 @@ fn parse_fixed_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
     Ok(cli()
         .no_binary_name(true)
         .try_get_matches_from(new_cli_args)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use injectorpp::interface::injector::*;
+
+    #[test]
+    fn test_fixes() {
+        let mut injector = InjectorPP::new();
+        injector
+            .when_called(injectorpp::func!(fn (DuckCtx::aliases)(&DuckCtx) -> QuackResult<HashMap<String, String>>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_x: &DuckCtx) -> QuackResult<HashMap<String, String>>,
+                returns: Ok(HashMap::new())
+            ));
+        injector
+            .when_called(injectorpp::func!(fn (DuckCtx::alias_for)(&DuckCtx, &str) -> QuackResult<Option<String>>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_x: &DuckCtx, _y: &str) -> QuackResult<Option<String>>,
+                returns: Ok(None)
+            ));
+        injector
+            .when_called(injectorpp::func!(fn (DuckCtx::typos_fixes_enabled)(&DuckCtx) -> bool))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_x: &DuckCtx) -> bool,
+                returns: true
+            ));
+        injector
+            .when_called(injectorpp::func!(fn (DuckCtx::max_fix_dist)(&DuckCtx) -> u32))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_x: &DuckCtx) -> u32,
+                returns: 1
+            ));
+
+        let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
+        let ctx = DuckCtx::new().unwrap();
+        let external_cmds = HashMap::new();
+        let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
+        assert!(result.subcommand_name().unwrap() == "search")
+    }
 }

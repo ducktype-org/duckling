@@ -3,10 +3,10 @@ use clap::{Command, crate_name, crate_version};
 pub mod aliases_expansion;
 pub mod builtin;
 pub(crate) mod cli_ext;
+pub mod levenshtein;
 pub mod run;
 pub mod subcommands;
 pub mod typos_fixing;
-pub mod levenshtein;
 
 use cli_ext::CommandExt;
 
