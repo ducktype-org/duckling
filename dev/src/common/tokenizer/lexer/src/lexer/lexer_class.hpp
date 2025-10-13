@@ -89,7 +89,7 @@ namespace lexer {
 		 * literal. If 'true' we disallow 'iXX', 'uXX' suffixes (they will be parsed as separate
 		 * tokens).
 		 */
-		void parseNumericLiteralTypeSuffix(bool is_float_literal);
+		void parseNumericLiteralTypeSuffix();
 
 		/**
 		 * @name helper functions checking for patterns ahead

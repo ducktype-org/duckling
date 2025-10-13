@@ -6,6 +6,7 @@
 #include <base/raw_view.hpp>
 
 #include <array>
+#include <iostream>
 
 namespace lang_def {
 	namespace {
@@ -72,18 +73,21 @@ namespace lang_def {
 			{ Keyword::i32, "i32", KeywordFlags() },
 			{ Keyword::i64, "i64", KeywordFlags() },
 			{ Keyword::i128, "i128", KeywordFlags() },
+			{ Keyword::isize, "isize", KeywordFlags() },
 
 			{ Keyword::u8, "u8", KeywordFlags() },
 			{ Keyword::u16, "u16", KeywordFlags() },
 			{ Keyword::u32, "u32", KeywordFlags() },
 			{ Keyword::u64, "u64", KeywordFlags() },
 			{ Keyword::u128, "u128", KeywordFlags() },
+			{ Keyword::usize, "usize", KeywordFlags() },
 
 			{ Keyword::f16, "f16", KeywordFlags() },
 			{ Keyword::f32, "f32", KeywordFlags() },
 			{ Keyword::f64, "f64", KeywordFlags() },
 			{ Keyword::f80, "f80", KeywordFlags() },
 			{ Keyword::f128, "f128", KeywordFlags() },
+
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
@@ -152,9 +156,6 @@ namespace lang_def {
 		== LANG_KEYWORDS_ARRAY.size() + BC_KEYWORDS_ARRAY.size()
 	);
 
-	/**
-	 * When modifing it modify also char.cpp -> makeCharTable
-	 */
 	constexpr auto SPECIAL_ARRAY = std::to_array<std::pair<Special, std::string_view>>({
 		{ Special::NotASpecial, "NotASpecial" },
 		{ Special::Semicolon, ";" },
@@ -200,6 +201,28 @@ namespace lang_def {
 		{ NamedOperator::Exponentiate, "**" },
 	});
 
+	constexpr auto NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY
+		= std::to_array<std::pair<NumericLiteralTypeSpecifier, std::string_view>>({
+			{ NumericLiteralTypeSpecifier::NotATypeSpecifier, "NotATypeSpecifier" },
+			{ NumericLiteralTypeSpecifier::i8, "i8" },
+			{ NumericLiteralTypeSpecifier::i16, "i16" },
+			{ NumericLiteralTypeSpecifier::i32, "i32" },
+			{ NumericLiteralTypeSpecifier::i64, "i64" },
+			{ NumericLiteralTypeSpecifier::i128, "i128" },
+
+			{ NumericLiteralTypeSpecifier::u8, "u8" },
+			{ NumericLiteralTypeSpecifier::u16, "u16" },
+			{ NumericLiteralTypeSpecifier::u32, "u32" },
+			{ NumericLiteralTypeSpecifier::u64, "u64" },
+			{ NumericLiteralTypeSpecifier::u128, "u128" },
+
+			{ NumericLiteralTypeSpecifier::f16, "f16" },
+			{ NumericLiteralTypeSpecifier::f32, "f32" },
+			{ NumericLiteralTypeSpecifier::f64, "f64" },
+			{ NumericLiteralTypeSpecifier::f128, "f128" },
+
+		});
+
 	// Distinct for all keyword modes:
 	base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;
 	base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
@@ -210,11 +233,13 @@ namespace lang_def {
 	// Single for all:
 	base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
 
-	base::VectorMap<base::StrID, Special, false, true>       special_map;
-	base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
+	base::VectorMap<base::StrID, Special, false, true>                     special_map;
+	base::VectorMap<base::StrID, NamedOperator, false, true>               operator_map;
+	base::VectorMap<base::StrID, NumericLiteralTypeSpecifier, false, true> numeric_specifier_map;
 
 	base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
 	base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
+	base::VectorMap<NumericLiteralTypeSpecifier, base::StrID, false, true> rev_numeric_specifier_map;
 
 	void key_spec_op::init() {
 		SIMPLE_INIT_GUARD_BEGIN;
@@ -249,6 +274,12 @@ namespace lang_def {
 			rev_operator_map.put(k, makeStrID(s));
 		}
 
+		// numeric literal type suffixes:
+		for (auto [k, s]: NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY) {
+			numeric_specifier_map.put(makeStrID(s), k);
+			rev_numeric_specifier_map.put(k, makeStrID(s));
+		}
+
 		// just to be safe for any future changes
 		// @TODO: move to same tests
 		CORE_ASSERT(LANG_KEYWORDS_ARRAY.size() == lang_keyword_map.size(), "keyword map error");
@@ -261,6 +292,11 @@ namespace lang_def {
 			OPERATOR_ARRAY.size() == operator_map.size()
 				&& OPERATOR_ARRAY.size() == rev_operator_map.size(),
 			"operator map error"
+		);
+		CORE_ASSERT(
+			NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY.size() == numeric_specifier_map.size(),
+			NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY.size() == rev_numeric_specifier_map.size(),
+			"numeric specifier map error"
 		);
 
 		SIMPLE_INIT_GUARD_END;
@@ -283,8 +319,6 @@ namespace lang_def {
 		default:
 			CORE_PANIC("Illegal keyword_mode");
 		}
-		if (lang_keyword_map.contains(id)) return lang_keyword_map[id];
-		return Keyword::NotAKeyword;
 	}
 
 	Special strAsSpecial(base::StrID id) {
@@ -297,11 +331,20 @@ namespace lang_def {
 		return NamedOperator::NotAnOperator;
 	}
 
+	NumericLiteralTypeSpecifier strAsNumericLiteralTypeSpecifier(base::StrID id) {
+		if (numeric_specifier_map.contains(id)) return numeric_specifier_map[id];
+		return NumericLiteralTypeSpecifier::NotATypeSpecifier;
+	}
+
 	base::StrID keywordToStr(Keyword key) { return rev_keyword_map[key]; }
 
 	base::StrID specialToStr(Special spec) { return rev_special_map[spec]; }
 
 	base::StrID operatorToStr(NamedOperator oper) { return rev_operator_map[oper]; }
+
+	base::StrID numericLiteralTypeSpecifierToStr(NumericLiteralTypeSpecifier oper) {
+		return rev_numeric_specifier_map[oper];
+	}
 
 	KeywordFlags keywordFlags(Keyword key) { return keyword_flags[key]; }
 
@@ -323,6 +366,13 @@ namespace lang_def {
 		std::vector<NamedOperator> result;
 		result.reserve(OPERATOR_ARRAY.size());
 		for (const auto& [k, s]: OPERATOR_ARRAY) result.push_back(k);
+		return result;
+	}
+
+	std::vector<NumericLiteralTypeSpecifier> getNumericTypeSpecifiers() {
+		std::vector<NumericLiteralTypeSpecifier> result;
+		result.reserve(NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY.size());
+		for (const auto& [k, s]: NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY) result.push_back(k);
 		return result;
 	}
 }

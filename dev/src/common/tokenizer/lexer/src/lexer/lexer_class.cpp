@@ -1,5 +1,9 @@
 #include "lexer_class.hpp"
 
+#include "base/raw_view.hpp"
+#include "base/string_id.hpp"
+
+#include "lang_definitions/key_spec_op.hpp"
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <unicode_classification/classifications.hpp>
@@ -399,31 +403,16 @@ namespace lexer {
 		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), source_position));
 	}
 
-	void Lexer::parseNumericLiteralTypeSuffix(bool is_float_literal) {
-		if (is_float_literal
-		    && (peek().is('i') || peek().is('u') || peek().is('I') || peek().is('U')))
-			return;
-		// TODOP: Make this better to allow for numeric literals defined in the language automatically.
-		if (!peek().is('i') && !peek().is('f') && !peek().is('u') && !peek().is('I')
-		    && !peek().is('F') && !peek().is('U'))
-			return;
+	void Lexer::parseNumericLiteralTypeSuffix() {
+		if (isEOF() || !peek().is(Class::name_start)) return;
+		usize lookahead = 0;
+		while (peek(lookahead).is(Class::name_continue)) lookahead++;
 
-		const auto next1 = peek(1);
-		const auto next2 = peek(2);
-		const auto next3 = peek(3);
+		if (lookahead == 0) return;
 
-		if (next1.is('1') && next2.is('2') && next3.is('8'))
-			skip(4);
-		else if (next1.is('6') && next2.is('4'))
-			skip(3);
-		else if (next1.is('3') && next2.is('2'))
-			skip(3);
-		else if (next1.is('1') && next2.is('6'))
-			skip(3);
-		else if (peek().is('f') && next1.is('8') && next2.is('0'))
-			skip(3);
-		else if (next1.is('8'))
-			skip(2);
+		base::RawView suffix_view = file->getCharRange(where, where + lookahead);
+		auto specifier = lang_def::strAsNumericLiteralTypeSpecifier(base::StrID(suffix_view));
+		if (specifier != lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier) skip(lookahead);
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
@@ -433,7 +422,7 @@ namespace lexer {
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
-		parseNumericLiteralTypeSuffix(false);
+		parseNumericLiteralTypeSuffix();
 
 		end = where - 1;
 		dia::SourcePosition source_position(source_start, end);
@@ -448,7 +437,7 @@ namespace lexer {
 
 		skip(2);  // 0o
 		while (peek().isOctDigit()) next();
-		parseNumericLiteralTypeSuffix(false);
+		parseNumericLiteralTypeSuffix();
 
 		end = where - 1;
 		dia::SourcePosition source_position(source_start, end);
@@ -464,7 +453,7 @@ namespace lexer {
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
-		parseNumericLiteralTypeSuffix(false);
+		parseNumericLiteralTypeSuffix();
 
 		end = where - 1;
 		dia::SourcePosition source_position(source_start, end);
@@ -498,7 +487,7 @@ namespace lexer {
 			}
 			next();
 		}
-		parseNumericLiteralTypeSuffix(was_dot || was_e);
+		parseNumericLiteralTypeSuffix();
 
 		end = where - 1;
 		dia::SourcePosition source_position(source_start, end);
