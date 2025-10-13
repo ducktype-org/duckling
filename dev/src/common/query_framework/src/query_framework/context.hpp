@@ -5,6 +5,7 @@
 #pragma once
 
 #include "context_fd.hpp"                        // IWYU pragma: keep
+#include "internal/query_graph/node_id.hpp"
 #include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
 #include "internal/query_graph/query_state.hpp"
 
