@@ -2,7 +2,6 @@
 
 #include "errors.hpp"
 
-#include "base/int_conv.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
@@ -16,12 +15,6 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/memory/memory.hpp>
-
-#include <algorithm>
-#include <iterator>
-#include <ranges>
-#include <string>
-#include <string_view>
 
 namespace vm::loader::parser {
 	/**
@@ -45,14 +38,15 @@ namespace vm::loader::parser {
 				= base::safeIntConv<usize>(std::ranges::distance(it, literal.rend()) - 1);
 			char first_suffix_char = literal[suffix_start_index];
 
-			// No suffix
+			// No suffix.
 			if (first_suffix_char == 'e' || first_suffix_char == 'E' || first_suffix_char == 'x'
 			    || first_suffix_char == 'X' || first_suffix_char == 'b' || first_suffix_char == 'B'
 			    || first_suffix_char == 'o' || first_suffix_char == 'O') {
 				return { literal, "" };
 			}
 
-			// f32/f64 suffix is interpreted as part of a number.
+			// Similarly to Rust and other languages f32/f64 suffix in hex numbers is interpreted as
+			// part of a number.
 			if (literal.starts_with("0x") || literal.starts_with("0X")) {
 				bool is_part_of_hex = true;
 				for (usize i = suffix_start_index; i < literal.length(); ++i) {
@@ -106,10 +100,9 @@ namespace vm::loader::parser {
 			literal_length += str_view.length();
 			try {
 				auto [number, suffix] = splitNumberAndSuffix(str_view);
-				std::cout << "Number: " << number << '\n';
-				std::cout << "Suffix: " << suffix << '\n';
 
 				int base = 10;
+				// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
 				if (number.starts_with("0b") || number.starts_with("0B")) {
 					base = 2;
 					number.remove_prefix(2);
@@ -120,7 +113,6 @@ namespace vm::loader::parser {
 					base = 16;
 					number.remove_prefix(2);
 				}
-				std::cout << "Base: " << base << '\n';
 				T           result;
 				usize       pos = 0;
 				std::string str(number);
@@ -215,20 +207,16 @@ namespace vm::loader::parser {
 						return { T{ 0 }, 0 };
 					}
 				} else {
-					// By default, we assume 64-bit integer or double if it has a dot.
+					// By default, we assume 64-bit integer or a double if it has a dot.
 					if (str.find('.') != std::string::npos || str.find('e') != std::string::npos
 					    || str.find('E') != std::string::npos) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = std::bit_cast<T>(value);
 					} else {
-						std::cout << "Hello\n";
-						std::cout << str << '\n';
 						i64 value = static_cast<i64>(std::stoull(str, &pos, base)) * sign;
-						std::cout << pos << '\n';
-						result = std::bit_cast<T>(value);
+						result    = std::bit_cast<T>(value);
 					}
 				}
-				std::cout << pos << " " << str.length() << '\n';
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
@@ -244,7 +232,6 @@ namespace vm::loader::parser {
 				}
 			} catch (std::logic_error&) {}
 
-			// TODOP: Remove that
 			state.log(makeBox<InvalidLiteral>(
 				token.getPosition(),
 				base::strConcat(
@@ -407,7 +394,6 @@ namespace vm::loader::parser {
 		tpc::Identifier identifier1;
 		bool            logged = false;
 		while (state.notEmpty()) {
-			std::cout << "Opcode parse: " << state[0].getStrValue() << '\n';
 			if (state[0].isIdentifier()) {
 				state.parse().one(&identifier1);
 				if (opargs_parsers::OP_CODE_TO_ARGS_PARSER.contains(identifier1.value.str())) {
@@ -431,7 +417,6 @@ namespace vm::loader::parser {
 
 					return out;
 				} else if (!logged) {
-					std::cout << "Hello\n";
 					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value));
 					logged = true;
 				}

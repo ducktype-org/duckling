@@ -256,7 +256,7 @@ namespace lang_def {
 	};
 }
 
-MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp, IsNumericTypeSuffix)
+MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp)
 
 namespace lang_def {
 	namespace key_spec_op {

@@ -105,11 +105,13 @@ private:
 	void checkLiteralErrorHandling() {
 		loadInvalidDbc(
 			"invalid_literal.dbc",
-			{ "Invalid literal: Numeric literal overflows a 32-bit signed integer",
-		      "Invalid literal: Numeric literal underflows a 32-bit signed integer",
-		      "Invalid literal: Numeric literal overflows a 32-bit unsigned integer",
-		      "Invalid literal: Numeric literal overflows a 64-bit signed integer",
-		      "Invalid literal: Floating-point literals must be in decimal base for" }
+			{
+				"Invalid literal: Numeric literal overflows a 32-bit signed integer",
+				"Invalid literal: Numeric literal underflows a 32-bit signed integer",
+				"Invalid literal: Numeric literal overflows a 32-bit unsigned integer",
+				"Invalid literal: Numeric literal overflows a 64-bit signed integer",
+				"Invalid literal: Floating-point literals must be in decimal base for",
+			}
 		);
 	}
 

@@ -1,9 +1,5 @@
 #include "lexer_class.hpp"
 
-#include "base/raw_view.hpp"
-#include "base/string_id.hpp"
-
-#include "lang_definitions/key_spec_op.hpp"
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <unicode_classification/classifications.hpp>

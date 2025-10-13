@@ -82,9 +82,6 @@ namespace lexer {
 
 		/**
 		 * @brief Consumes a numeric literal type suffix (e.g., i32, f64).
-		 * @param is_float_literal Indicates if the preceding numeric part is a floating-point
-		 * literal. If 'true' we disallow 'iXX', 'uXX' suffixes (they will be parsed as separate
-		 * tokens).
 		 */
 		void parseNumericLiteralTypeSuffix();
 
