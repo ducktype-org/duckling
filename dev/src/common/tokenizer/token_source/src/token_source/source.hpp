@@ -1,5 +1,6 @@
 #pragma once
 
+#include "forward.hpp" // IWYU pragma: keep
 
 #include <base/raw_view.hpp>
 
