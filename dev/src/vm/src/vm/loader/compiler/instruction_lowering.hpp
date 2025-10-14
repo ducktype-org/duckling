@@ -8,6 +8,8 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
 
+// @TODOB docs
+
 namespace vm::loader::compiler::detail {
 
 	namespace high = vm::code::instructions;
@@ -61,29 +63,11 @@ namespace vm::loader::compiler::detail {
 #endif
 		}
 
-		// @TODOB is this needed? the below are not full template specialisations
 		template<IsMicroInstructionTag T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args...);
-
-		template<IsMicroInstructionTag T>
-		requires std::same_as<std::tuple<>, typename T::ArgTypes> void addLow() {
-			result.push_back(makeLowInstruction(T::OPCODE));
-			fillOutDebugData();
-			next_instruction_index++;
-		}
-
-		template<IsMicroInstructionTag T, typename Arg0>
-		requires std::same_as<std::tuple<Arg0>, typename T::ArgTypes> void addLow(Arg0 arg0) {
-			result.push_back(makeLowInstruction(T::OPCODE, compiler.lowerArgument(ctx, arg0)));
-			fillOutDebugData();
-			next_instruction_index++;
-		}
-
-		template<IsMicroInstructionTag T, typename Arg0, typename Arg1>
-		requires std::same_as<std::tuple<Arg0, Arg1>, typename T::ArgTypes>
-		void addLow(Arg0 arg0, Arg1 arg1) {
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes>
+		void addLow(Args... args) {
 			result.push_back(makeLowInstruction(
-				T::OPCODE, compiler.lowerArgument(ctx, arg0), compiler.lowerArgument(ctx, arg1)
+				T::OPCODE, compiler.lowerArgument(ctx, args)...
 			));
 			fillOutDebugData();
 			next_instruction_index++;
@@ -96,16 +80,15 @@ namespace vm::loader::compiler::detail {
 	};
 
 	// -----------------------
-	namespace {
-		using B = MicroBytecodeBuilder;
-
-		template<>
-		void B::lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
-			addLow<Op_add_l64_imm>(var, n);
-		}
-
-		template<>
-		void B::lower<high::Comment>() {}
+	template<>
+	void MicroBytecodeBuilder::lower<high::Op_add_l64_imm>(
+		opargs::StackLocal64 var, opargs::Immediate n
+	) {
+		addLow<Op_add_l64_imm>(var, n);
 	}
+
+	template<>
+	void MicroBytecodeBuilder::lower<high::Comment>() {}
+
 	// -----------------------
 }

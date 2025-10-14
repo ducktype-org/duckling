@@ -21,7 +21,6 @@ namespace vm::loader::compiler {
 	 * code injection, compiling only the new elements (types, globals, and functions).
 	 */
 	class Compiler {
-		// @TODOB try to make this friend unnecessary
 		friend class detail::MicroBytecodeBuilder;
 
 	public:
