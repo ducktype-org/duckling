@@ -28,10 +28,14 @@ namespace {
 	// Helpers for validation, mainly `ext_*` instructions
 	using namespace instructions;
 
-	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
-	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
-	using DeinitializingInstructions
-		= std::tuple<Op_deinit, Op_call_func, Op_call_builtinfunc, Op_call_cppfunc, Op_virtual_call_lptr_method>;
+	using ValidLastInstructions      = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
+	using ExtensionTypes             = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
+	using DeinitializingInstructions = std::tuple<
+		Op_deinit,
+		Op_call_func,
+		Op_call_builtinfunc,
+		Op_call_cppfunc,
+		Op_virtual_call_lptr_method>;
 	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cppfunc>;
 
 	template<typename T>
@@ -229,7 +233,7 @@ class FunctionValidator {
             if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
             if constexpr (std::is_same_v<opargs::CppFunctionName, decltype(instr.arg0)>)
-                return *ext_cpp_signatures.at(instr.arg0.function_name).signature;
+                return &ext_cpp_signatures.at(instr.arg0.function_name)->signature;
             return &signatures.at(instr.arg0.function_name);
 		}();
 
@@ -407,6 +411,12 @@ class FunctionValidator {
 						}
 					}
 				}
+				variant_case(opargs::StackLocalOpq, local) {
+					if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+					CRef<TypeOfData> type = current_stack.at(local.var_name);
+					if (!std::holds_alternative<OpaqueType>(*type))
+						throw InvalidArgumentTypeError(arg);
+				}
 				variant_case_novalue(opargs::Immediate) {}
 				variant_case(opargs::Type, type_value) {
 					if (!tod_map.contains(type_value.type_name)) throw UnknownTypeError(arg);
@@ -578,6 +588,11 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_g8) {}
 			variant_case_novalue(Op_mov_lptr_gptr) {}
 			variant_case_novalue(Op_mov_lptr_lptr) {}
+			variant_case(Op_mov_lopq_lopq, instr) {
+				const auto& dst_type = std::get<OpaqueType>(*current_stack.at(instr.arg0.var_name));
+				const auto& src_type = std::get<OpaqueType>(*current_stack.at(instr.arg1.var_name));
+				if (dst_type.name != src_type.name) throw OpaqueTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_setNull_lptr) {}
 			variant_case_novalue(Op_add_l64_l64) {}
 			variant_case_novalue(Op_add_l64_imm) {}
@@ -1089,6 +1104,10 @@ class FunctionValidator {
 					index++;
 				}
 				variant_case(Op_call_builtinfunc, instr) {
+					validateCallAndPop(local_stack, instr);
+					index++;
+				}
+				variant_case(Op_call_cppfunc, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}

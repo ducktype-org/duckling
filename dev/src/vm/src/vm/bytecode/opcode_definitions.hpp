@@ -99,6 +99,9 @@ DEF_OPCODE(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
 // does a shallow pointer copy
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
+// Copies an opaque value
+DEF_OPCODE(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
+
 // sets pointer to null
 DEF_OPCODE(setNull_lptr, vm::opargs::StackLocalPtr)
 

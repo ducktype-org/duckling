@@ -28,47 +28,47 @@
 
 // @TODO: Do not do packed, but do what the VM does with its stack.
 // @TODO: Validate argument sizes
-#define DEF_VM_EXT_CPP_FUNC(ResTp, ResVmType, FuncName, ...)                                       \
-	struct FuncName {                                                                              \
-		using Result = ResTp;                                                                      \
-		struct FunctionData {                                                                      \
-			FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_FIELDS, __VA_ARGS__)                     \
-		} __attribute__((packed));                                                                 \
-		static_assert(                                                                             \
-			sizeof(FunctionData) != 0, "Cannot create extern functions without arguments"          \
-		);                                                                                         \
-		static ResTp call([[maybe_unused]] u64 _                                                   \
-		                      FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_PARAMS, __VA_ARGS__)); \
-		static void  wrapper(std::byte* storage, std::byte* data) {                                \
-            auto func_args = reinterpret_cast<FunctionData*>(data);                               \
-            if constexpr (std::is_same_v<ResTp, void>)                                            \
-                FuncName::call(                                                                   \
-                    0ULL FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_ARGS, __VA_ARGS__)         \
-                );                                                                                \
-            else                                                                                  \
-                vm::safeWriteBytes(                                                               \
-                    storage,                                                                      \
-                    FuncName::call(                                                               \
-                        0ULL FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_ARGS, __VA_ARGS__)     \
-                    )                                                                             \
-                );                                                                                \
-		}                                                                                          \
-		static vm::code::FuncSignature getSignature(vm::PID pid) {                                 \
-			VM_EXT_CPP_PLACE_VALIDATION(ResTp, ResVmType, result)                                  \
-			FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_PLACE_VALIDATION, __VA_ARGS__);               \
-			vm::code::FuncSignature signature;                                                     \
-			signature.result_type = VM_EXT_CPP_VM_TYPE_NAME(ResVmType);                            \
-			signature.parameters                                                                   \
-				= { FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_VM_TYPE_NAME, __VA_ARGS__) };    \
-			return signature;                                                                      \
-		}                                                                                          \
-	};                                                                                             \
-	ResTp FuncName::call(                                                                          \
-		[[maybe_unused]] u64 _ FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_PARAMS, __VA_ARGS__)  \
+#define DEF_VM_EXT_CPP_FUNC(ResTp, ResVmType, FuncName, ...)                                                \
+	struct FuncName {                                                                                       \
+		using Result = ResTp;                                                                               \
+		struct FunctionData {                                                                               \
+			FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_FIELDS, __VA_ARGS__)                              \
+		} __attribute__((packed));                                                                          \
+		static_assert(                                                                                      \
+			sizeof(FunctionData) != 0, "Cannot create extern functions without arguments"                   \
+		);                                                                                                  \
+		static ResTp          call([[maybe_unused]] u64 _                                                   \
+		                               FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_PARAMS, __VA_ARGS__)); \
+		constexpr static void wrapper(std::byte* storage, std::byte* data) {                                \
+			[[maybe_unused]] auto func_args = reinterpret_cast<FunctionData*>(data);                        \
+			if constexpr (std::is_same_v<ResTp, void>)                                                      \
+				FuncName::call(                                                                             \
+					0ULL FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_ARGS, __VA_ARGS__)                   \
+				);                                                                                          \
+			else                                                                                            \
+				vm::safeWriteBytes(                                                                         \
+					storage,                                                                                \
+					FuncName::call(                                                                         \
+						0ULL FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_ARGS, __VA_ARGS__)               \
+					)                                                                                       \
+				);                                                                                          \
+		}                                                                                                   \
+		static vm::code::FuncSignature getSignature(vm::PID pid) {                                          \
+			VM_EXT_CPP_PLACE_VALIDATION(ResTp, ResVmType, result)                                           \
+			FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_PLACE_VALIDATION, __VA_ARGS__);                        \
+			vm::code::FuncSignature signature;                                                              \
+			signature.result_type = VM_EXT_CPP_VM_TYPE_NAME(ResVmType);                                     \
+			signature.parameters                                                                            \
+				= { FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
+			return signature;                                                                               \
+		}                                                                                                   \
+	};                                                                                                      \
+	ResTp FuncName::call(                                                                                   \
+		[[maybe_unused]] u64 _ FOR_EACH_ARG(VM_EXT_CPP_PUT2, VM_EXT_CPP_INTO_PARAMS, __VA_ARGS__)           \
 	)
 
-#define VM_INSTANCE_EXT_CPP_FUNC(Name, Pid)                                                  \
-	vm::code::CppFunction {                                                                  \
-		.name = vm::code::Identifier(base::StrID(#Name)), .function_pointer = Name::wrapper, \
-		.signature = Name::getSignature(Pid)                                                 \
+#define VM_INSTANCE_EXT_CPP_FUNC(Name, Pid)                                                   \
+	vm::code::CppFunction {                                                                   \
+		.name = vm::code::Identifier(base::StrID(base::strSplit(#Name, "::").back().data())), \
+		.function_pointer = Name::wrapper, .signature = Name::getSignature(Pid)               \
 	}

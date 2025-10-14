@@ -441,8 +441,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_cppfunc)(FUNCTION_ARGS) {
 		{
-			auto ext_func_id         = instr->arg0;
-			auto ext_func = thread.executing_program->getExternCppFunctions().at(ext_func_id);
+			auto ext_func_id = instr->arg0;
+			auto ext_func    = thread.executing_program->getExternCppFunctions().at(ext_func_id);
 			// auto extern_function_param_size_bytes = extern_function->parameter_size_sum;
 
 			// constexpr usize MAX_PARAM_SIZE = 1'000;
@@ -450,17 +450,12 @@ namespace vm {
 			// 	throw base::LogicError("Too humongous size of parameters!!!!!1!1");
 
 			auto arg_count      = ext_func->parameters.size();
-			u64  first_arg_idx  = frame->block_stack.size() - arg_count;
-			auto ext_arg_source = frame->block_stack[first_arg_idx];
-			auto unsafe_view    = thread.process_memory.getBlockViewUnsafe(ext_arg_source);
-			if (ext_func->result_type->getName() != base::StrID("void")) {
-				ext_func->function_pointer(
-					unsafe_view.getBegin() - ext_func->result_type->getSize(),
-					unsafe_view.getBegin()
-				);
-			} else {
-				ext_func->function_pointer(nullptr, unsafe_view.getBegin());
-			}
+			u64  result_value_idx  = frame->block_stack.size() - arg_count - 1;
+			auto ext_result_destination = frame->block_stack[result_value_idx];
+			auto unsafe_view    = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+			ext_func->function_pointer(
+				unsafe_view.getBegin(), unsafe_view.getBegin() + ext_func->result_type->getSize()
+			);
 
 			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
@@ -655,6 +650,19 @@ namespace vm {
 			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
+			auto src_block     = frame->block_stack[src_block_idx];
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
 		}
 		FUNCTION_CONT(1);
 	}
