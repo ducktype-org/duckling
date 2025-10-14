@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use crate::{
     DuckCtx,
@@ -6,9 +6,11 @@ use crate::{
         cli,
         cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
         global_cli_options::GlobalCliOptions,
+        subcommands::exec_for,
     },
 };
-use anyhow::Context;
+use anyhow::{Context, bail};
+use clap::ArgMatches;
 use is_executable::is_executable;
 use quackpack::QuackResult;
 use tracing::debug;
@@ -29,7 +31,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
         "after expanding everything we have subcommand: `{:#?}`",
         args.subcommand_name()
     );
-    Ok(())
+    run_subcmd(ctx, args, &external)
 }
 
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
@@ -62,6 +64,58 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
         }
     }
     commands
+}
+
+fn run_subcmd(
+    ctx: &DuckCtx,
+    args: ArgMatches,
+    external: &HashMap<String, PathBuf>,
+) -> QuackResult<()> {
+    let Some((sub_cmd, sub_args)) = args.subcommand() else {
+        // No subcommand provided.
+        print_parser_help(ctx);
+        return Ok(());
+    };
+    if let Some(exec_fn) = exec_for(sub_cmd) {
+        // Internal subcommand.
+        return exec_fn(ctx, sub_args.to_owned());
+    } else if let Some(exec_path) = external.get(sub_cmd) {
+        // External subcommand.
+        let cli_args = external_cli_args(sub_cmd, sub_args);
+        execute_external_subcmd(ctx, exec_path, cli_args)
+    } else {
+        // Unrecognizable subcommand.
+        bail!("No such command: `{}`", sub_cmd);
+    }
+}
+
+fn external_cli_args(sub_cmd: &str, sub_args: &ArgMatches) -> Vec<OsString> {
+    let mut cli_arguments = vec![OsString::from(sub_cmd)];
+    cli_arguments.extend(
+        sub_args
+            .get_many::<OsString>("")
+            .unwrap_or_default()
+            .cloned(),
+    );
+    cli_arguments
+}
+
+fn execute_external_subcmd(
+    ctx: &DuckCtx,
+    exec_path: &PathBuf,
+    cli_args: Vec<OsString>,
+) -> QuackResult<()> {
+    let Some(exec_path_str) = exec_path.as_os_str().to_str() else {
+        bail!("Could not decode external subcommand path.");
+    };
+    let output = std::process::Command::new(exec_path_str)
+        .args(cli_args)
+        .output()?;
+    ctx.console()
+        .print_no_nl(String::from_utf8_lossy(&output.stdout));
+    ctx.error_console()
+        .print_no_nl(String::from_utf8_lossy(&output.stderr));
+    Ok(())
 }
 
 fn print_parser_help(ctx: &DuckCtx) {
