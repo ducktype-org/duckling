@@ -449,10 +449,10 @@ namespace vm {
 			// if (extern_function_param_size_bytes > MAX_PARAM_SIZE)
 			// 	throw base::LogicError("Too humongous size of parameters!!!!!1!1");
 
-			auto arg_count      = ext_func->parameters.size();
-			u64  result_value_idx  = frame->block_stack.size() - arg_count - 1;
+			auto arg_count              = ext_func->parameters.size();
+			u64  result_value_idx       = frame->block_stack.size() - arg_count - 1;
 			auto ext_result_destination = frame->block_stack[result_value_idx];
-			auto unsafe_view    = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+			auto unsafe_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
 			ext_func->function_pointer(
 				unsafe_view.getBegin(), unsafe_view.getBegin() + ext_func->result_type->getSize()
 			);

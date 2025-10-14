@@ -77,9 +77,9 @@ namespace vm::code {
 	 * @note It's not guaranteed that every code collection is valid.
 	 */
 	struct CodeCollection final {
-		std::vector<Function>   functions;
-		std::vector<TypeOfData> types;
-		std::vector<GlobalData> global_data;
+		std::vector<Function>    functions;
+		std::vector<TypeOfData>  types;
+		std::vector<GlobalData>  global_data;
 		std::vector<CppFunction> cpp_functions;
 	};
 }

@@ -24,8 +24,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .cpp_functions = std::ranges::to<std::vector>(cpp_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306
 	ValidProgram copy = *this;

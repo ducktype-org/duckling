@@ -7,7 +7,9 @@
 
 namespace vm::code {
 	const SpecialTypes& SpecialTypes::get() {
-		static_assert(sizeof(Type*) == 8, "Sanity assert, that the size of VTablePtr can be equal to 8");
+		static_assert(
+			sizeof(Type*) == 8, "Sanity assert, that the size of VTablePtr can be equal to 8"
+		);
 		static const SpecialTypes instance = {
 			.vtable_ptr = TypeOfData(OpaqueType(base::StrID("VTablePtr"), 8)),
 		};

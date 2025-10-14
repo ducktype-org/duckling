@@ -192,8 +192,7 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(
-				block
+			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to

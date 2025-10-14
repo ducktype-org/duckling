@@ -7,16 +7,14 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/kinds/function.hpp"
-#include "vm/core/process/type_metadata/kinds/opaque.hpp"
-#include "vm/core/process/type_metadata/kinds/pointer.hpp"
-#include "vm/core/process/type_metadata/kinds/variant.hpp"
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/core/process/type_metadata/kinds/function.hpp>
+#include <vm/core/process/type_metadata/kinds/opaque.hpp>
+#include <vm/core/process/type_metadata/kinds/pointer.hpp>
+#include <vm/core/process/type_metadata/kinds/variant.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
-#include <ranges>
-#include <type_traits>
 #include <utility>
 
 namespace vm {
