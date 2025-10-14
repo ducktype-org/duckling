@@ -3,8 +3,8 @@ use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use crate::{
     DuckCtx,
     driver::{
-        builtin::{get_builtin_alias, is_builtin_subcommand},
         cli,
+        cli_args_preprocessing::builtin::{get_builtin_alias, is_builtin_subcommand},
     },
 };
 use anyhow::bail;

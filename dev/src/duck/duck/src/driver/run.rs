@@ -2,7 +2,10 @@ use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use crate::{
     DuckCtx,
-    driver::{aliases_expansion::expand_aliases, cli, typos_fixing::fix_typos},
+    driver::{
+        cli,
+        cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
+    },
     terminal::Verbosity,
 };
 use anyhow::Context;

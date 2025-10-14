@@ -8,7 +8,11 @@ use tracing::debug;
 
 use crate::{
     DuckCtx,
-    driver::{builtin::is_builtin_subcommand, cli, levenshtein, subcommands::subcommands},
+    driver::{
+        cli,
+        cli_args_preprocessing::{builtin::is_builtin_subcommand, levenshtein},
+        subcommands::subcommands,
+    },
 };
 
 pub fn fix_typos(
