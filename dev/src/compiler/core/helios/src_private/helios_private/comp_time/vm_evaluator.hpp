@@ -8,7 +8,7 @@
 #include <string>
 
 namespace compiler::helios {
-	struct VmEvaluationError {
+	struct VmEvaluationError final {
 		enum class Kind {
 			ProcessSpawnFailed,
 			CodeLoadFailed,
