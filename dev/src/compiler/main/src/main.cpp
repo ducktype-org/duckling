@@ -11,6 +11,7 @@
 #include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <pst_parser/pst.hpp>
