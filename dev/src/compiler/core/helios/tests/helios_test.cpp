@@ -1,7 +1,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
-#include <helios/hout/elements/stmt.hpp>
+#include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
