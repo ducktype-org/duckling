@@ -103,15 +103,7 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		for (const auto& instr: ctx.function.body) {
-			// clang-format off
-            VARIANT_VISIT(instr, 
-                VISIT_CASE(code::ZeroArgumentOpcode auto, i, builder.lower<decltype(i)>();)
-                VISIT_CASE(code::OneArgumentOpcode auto, i, builder.lower<decltype(i)>(i.arg0);)
-                VISIT_CASE(code::TwoArgumentOpcode auto, i, builder.lower<decltype(i)>(i.arg0, i.arg1);)
-            );
-			// clang-format on
-		}
+		for (const auto& instr: ctx.function.body) builder.add(instr);
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
