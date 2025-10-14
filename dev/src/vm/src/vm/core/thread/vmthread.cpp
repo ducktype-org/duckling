@@ -90,11 +90,7 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
 
-#ifdef USE_TAIL_CALLS
-		auto opcode = OpFuns::getOpcodeFromOpFun(instr->tc_opfun);
-#else
-		auto opcode = static_cast<u16>(instr->nontc_opcode);
-#endif
+		auto opcode = std::to_underlying(getInstructionOpcode(*instr));
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
@@ -381,7 +377,7 @@ namespace vm {
 
 		goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];
 
-	#define HANDLE_INSTR(opcode_name)                                          \
+	#define HANDLE_INSTR(opcode_name)                                           \
 		LABEL_##opcode_name: {                                                  \
 			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
 			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
@@ -402,7 +398,7 @@ namespace vm {
 #elif defined(USE_SWITCH_CASE)
 		while (true) {
 			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
-	#define HANDLE_INSTR(opcode_name)                                                              \
+	#define HANDLE_INSTR(opcode_name)                                                               \
 	case low::OpcodeFix8::opcode_name: {                                                            \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
