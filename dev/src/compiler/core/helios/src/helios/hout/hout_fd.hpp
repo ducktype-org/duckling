@@ -6,5 +6,5 @@
 #pragma once
 
 namespace compiler::helios {
-    struct HOUTGlobalData;
+	struct HOUTGlobalData;
 }
