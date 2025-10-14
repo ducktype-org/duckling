@@ -8,10 +8,10 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
-#include <helios/hout/hout.hpp>
 
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
