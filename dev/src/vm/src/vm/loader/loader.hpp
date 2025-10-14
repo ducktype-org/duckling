@@ -49,7 +49,10 @@ namespace vm::loader {
 		);
 
 	public:
-		explicit Loader() = default;
+		explicit Loader();
+
+		// @TODO: Is this fine?
+		CRef<vm::low::LowVMProgram> getCurrentProgram() const;
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state and

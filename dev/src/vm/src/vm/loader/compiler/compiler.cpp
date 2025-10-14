@@ -1,5 +1,6 @@
 #include "compiler.hpp"
 
+#include "base/exceptions.hpp"
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
@@ -68,6 +69,9 @@ namespace vm::loader::compiler {
 				return base::safeIntConv<u64>(
 					static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
 				);
+			}
+			variant_case(vm::opargs::CppFunctionName, func) {
+				return u64(*program_ctx.cpp_functions.idOf(func.function_name));
 			}
 			variant_case(vm::opargs::MethodName, method) {
 				return base::safeIntConv<u64>(program_ctx.method_name_to_id[method.method_name]);
@@ -223,11 +227,19 @@ namespace vm::loader::compiler {
 					for (usize i = 0; i < number_of_params; i++) pop();
 					index++;
 				}
-				variant_case(Op_call_builtin_func, instr) {
+				variant_case(Op_call_builtinfunc, instr) {
 					for (usize i = 0;
 					     i < builtins::getBuiltinFunctionSignature(instr.arg0.function_name)
 					             .value()
 					             ->parameters.size();
+					     i++) {
+						pop();
+					}
+					index++;
+				}
+				variant_case(Op_call_cppfunc, instr) {
+					for (usize i = 0; i < program_ctx.cpp_functions.at(instr.arg0.function_name)
+					                          ->signature.parameters.size();
 					     i++) {
 						pop();
 					}
@@ -343,8 +355,39 @@ namespace vm::loader::compiler {
 		}
 	}
 
+	void Compiler::compileNewCppFunctions(const std::vector<code::CppFunction>& new_functions) {
+		for (const auto& new_func: new_functions) {
+			program_ctx.cpp_functions.insert(new_func, new_func.name);
+			std::vector<TypeCRef> params = new_func.signature.parameters
+			                             | std::views::transform([this](const auto& param_name) {
+											   return low_program.types->at(param_name);
+										   })
+			                             | std::ranges::to<std::vector<TypeCRef>>();
+			auto param_size_sum = std::ranges::fold_left(
+				params | std::views::transform([](const auto& param) { return param->getSize(); }),
+				0,
+				std::plus()
+			);
+			low_program.extern_cpp_functions.insert(
+				low::LowExternCppFunction{
+					.name               = new_func.name,
+					.function_pointer   = new_func.function_pointer,
+					.parameter_size_sum = param_size_sum,
+					.parameters         = std::move(params),
+					.result_type        = low_program.types->at(new_func.signature.result_type),
+				},
+				new_func.name
+			);
+		}
+	}
+
 	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
+
+		auto new_cpp_functions = high_program.cppFunctions()
+		                       | std::views::drop(low_program.extern_cpp_functions.size())
+		                       | std::ranges::to<std::vector<code::CppFunction>>();
+		compileNewCppFunctions(new_cpp_functions);
 
 		auto new_globals = high_program.globals() | std::views::drop(low_program.global_data.size())
 		                 | std::ranges::to<std::vector<code::GlobalData>>();
@@ -358,4 +401,5 @@ namespace vm::loader::compiler {
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
+
 }

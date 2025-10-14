@@ -7,10 +7,16 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/kinds/function.hpp"
+#include "vm/core/process/type_metadata/kinds/opaque.hpp"
+#include "vm/core/process/type_metadata/kinds/pointer.hpp"
+#include "vm/core/process/type_metadata/kinds/variant.hpp"
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
+#include <ranges>
+#include <type_traits>
 #include <utility>
 
 namespace vm {
@@ -340,6 +346,33 @@ namespace vm {
 				if (offset == 0) return this;
 				return {};
 			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	bool Type::isTriviallyCopyable() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				for (const auto& field: data.fields)
+					if (!field.type->isTriviallyCopyable()) return false;
+				return true;
+			}
+			variant_case(kind::DynamicTable, table) {
+				//  @TODO: hmmm
+				return false;
+			}
+			variant_case(kind::FixedSizeTable, table) {
+				return table.inner_type->isTriviallyCopyable();
+			}
+			variant_case(kind::Variant, variant) {
+				for (const auto& tp: variant.alternatives)
+					if (!tp->isTriviallyCopyable()) return false;
+				return true;
+			}
+			variant_case(kind::Function, function) { return false; }
+			variant_case(kind::Pointer, pointer) { return false; }
+			variant_case(kind::Opaque, opaque) { return true; }
+			variant_default { CORE_PANIC("This should never happen"); }
 		}
 		CORE_UNREACHABLE();
 	}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "extern_cpp_function.hpp"
 #include "instructions.hpp"
 
 #include <base/string_id.hpp>
@@ -65,6 +66,12 @@ namespace vm::code {
 		FuncSignature signature;
 	};
 
+	struct CppFunction final {
+		Identifier name;
+		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		FuncSignature signature;
+	};
+
 	/**
 	 * @brief Represents a group of types, globals and functions.
 	 * @note It's not guaranteed that every code collection is valid.
@@ -73,5 +80,6 @@ namespace vm::code {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;
 		std::vector<GlobalData> global_data;
+		std::vector<CppFunction> cpp_functions;
 	};
 }

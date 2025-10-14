@@ -167,7 +167,7 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
-	    && code_collection.global_data.empty()) {
+	    && code_collection.global_data.empty() && code_collection.cpp_functions.empty()) {
 		return compiler.getLowProgram();
 	}
 
@@ -194,20 +194,20 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 			e.what()
 		);
 	} catch (code::DuplicatedFunctionError& e) {
-		log.logMap<DuplicatedFunctionError>(e.NEW_ELEMENT, [&](auto& err) {
-			log.addNote<DuplicatedFunctionNote>(err, e.PREVIOUS_ELEMENT);
+		log.logMap<DuplicatedFunctionError>(e.new_element, [&](auto& err) {
+			log.addNote<DuplicatedFunctionNote>(err, e.previous_element);
 		});
 	} catch (code::DuplicatedGlobalDataError& e) {
 		log.logMap<DuplicatedGlobalDataError>(
-			e.NEW_ELEMENT,
-			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.PREVIOUS_ELEMENT); },
-			e.NEW_ELEMENT.name.str
+			e.new_element,
+			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.previous_element); },
+			e.new_element.name.str
 		);
 	} catch (code::DuplicatedTypeError& e) {
 		log.logMap<DuplicatedTypeError>(
 			**e.maybeElement(),
-			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.PREVIOUS_ELEMENT); },
-			code::typeName(e.NEW_ELEMENT)
+			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.previous_element); },
+			code::typeName(e.new_element)
 		);
 	} catch (code::ValidationError& e) {
 		match_optional(e.maybeElement()) {
@@ -225,3 +225,9 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
+
+CRef<vm::low::LowVMProgram> vm::loader::Loader::getCurrentProgram() const {
+	return compiler.getLowProgram();
+}
+
+vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }

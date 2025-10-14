@@ -60,6 +60,10 @@ namespace vm::loader::compiler {
 			 * Used when lowering call instructions to translate the function name to it's index.
 			 */
 			ObjIdNameMap<code::Function> function_forward_declarations;
+
+			// @TODO Docs
+			// And use this
+			ObjIdNameMap<code::CppFunction> cpp_functions;
 		};
 
 		/**
@@ -114,6 +118,8 @@ namespace vm::loader::compiler {
 		 * functions.
 		 */
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
+
+		void compileNewCppFunctions(const std::vector<code::CppFunction>& new_functions);
 
 		/**
 		 * @brief Removes label instructions from the compiled functions code. Calculates label

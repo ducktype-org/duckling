@@ -1,0 +1,14 @@
+# @TODO: Opaque types (with size)
+
+type opaque: CPTR 8
+
+function main { i64, ptr_argv } -> i64 {
+    init_lany_type res, i64;
+    init_lany_type a, i64;
+    init_lany_type b, i64;
+    input_l64 a;
+    input_l64 b;
+    call_cppfunc n::add;
+    output_l64 res;
+    ret;
+}

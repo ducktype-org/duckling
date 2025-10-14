@@ -44,6 +44,10 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <functional>
+#include <numeric>
+#include <ranges>
+
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
@@ -390,12 +394,12 @@ namespace vm {
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
 		// instructions. For future returns, the first instruction that should be executed after
-		// call is saved on frame so that op_ret's have to move forward zero instructions after
+		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
 			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
@@ -429,14 +433,36 @@ namespace vm {
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++) {
-				auto block = frame->block_stack.back();
-				frame->block_stack.pop_back();
-				thread.process_memory.freeBlockData(block);
-				thread.process_memory.decreaseBlockRefcount(block);
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cppfunc)(FUNCTION_ARGS) {
+		{
+			auto ext_func_id         = instr->arg0;
+			auto ext_func = thread.executing_program->getExternCppFunctions().at(ext_func_id);
+			// auto extern_function_param_size_bytes = extern_function->parameter_size_sum;
+
+			// constexpr usize MAX_PARAM_SIZE = 1'000;
+			// if (extern_function_param_size_bytes > MAX_PARAM_SIZE)
+			// 	throw base::LogicError("Too humongous size of parameters!!!!!1!1");
+
+			auto arg_count      = ext_func->parameters.size();
+			u64  first_arg_idx  = frame->block_stack.size() - arg_count;
+			auto ext_arg_source = frame->block_stack[first_arg_idx];
+			auto unsafe_view    = thread.process_memory.getBlockViewUnsafe(ext_arg_source);
+			if (ext_func->result_type->getName() != base::StrID("void")) {
+				ext_func->function_pointer(
+					unsafe_view.getBegin() - ext_func->result_type->getSize(),
+					unsafe_view.getBegin()
+				);
+			} else {
+				ext_func->function_pointer(nullptr, unsafe_view.getBegin());
 			}
-			if (arg_count > 0)
-				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
+
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
@@ -523,7 +549,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
-		{ performDeinit(instr, local_stack, frame, thread); }
+		{ performDeinit(frame, thread); }
 		FUNCTION_CONT(1);
 	}
 

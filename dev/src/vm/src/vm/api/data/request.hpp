@@ -22,7 +22,7 @@ namespace vm::api {
 		};
 
 		struct LoadCode {
-			code::CodeCollection code_collections;
+			code::CodeCollection code_collection;
 		};
 
 		struct Pause {};

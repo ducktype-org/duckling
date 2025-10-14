@@ -18,12 +18,14 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
-	return { .functions   = std::ranges::to<std::vector>(function_map),
-		     .types       = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
-		     .global_data = std::ranges::to<std::vector>(globals_map) };
+	return { .functions     = std::ranges::to<std::vector>(function_map),
+		     .types         = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
+		     .global_data   = std::ranges::to<std::vector>(globals_map),
+		     .cpp_functions = std::ranges::to<std::vector>(cpp_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306
 	ValidProgram copy = *this;
@@ -49,6 +51,7 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
+	insertCppFunctions(collection.cpp_functions);
 	insertFunctions(collection.functions);
 }
 
@@ -64,6 +67,9 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
+		// @TODO: Fixed a bug here
+		if (!type_context.getCurrentTypes().contains(global.type))
+			throw UnknownTypeError(opargs::Type(global.type));
 		if (global.ctor_name.has_value() && !available_functions.contains(global.ctor_name.value()))
 			throw MissingGlobalCtorDtorError(true, global.ctor_name.value(), global.name);
 		if (global.dtor_name.has_value() && !available_functions.contains(global.dtor_name.value()))
@@ -82,8 +88,30 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = detail::validateAndExtractReachableCode(
-			type_context.getCurrentTypes(), *type_metadata, globals_map, available_functions, func
+			type_context.getCurrentTypes(),
+			*type_metadata,
+			globals_map,
+			available_functions,
+			cpp_function_map,
+			func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
+}
+
+void vm::code::ValidProgram::insertCppFunctions(const std::vector<CppFunction>& new_functions) {
+	for (const auto& new_func: new_functions) {
+		if (cpp_function_map.contains(new_func.name))
+			throw DuplicatedExtCppFunctionError(new_func, *cpp_function_map.at(new_func.name));
+		if (!type_context.getCurrentTypes().contains(new_func.signature.result_type))
+			throw UnknownTypeError(opargs::Type(new_func.signature.result_type));
+		for (const auto& param: new_func.signature.parameters)
+			if (!type_context.getCurrentTypes().contains(param))
+				throw UnknownTypeError(opargs::Type(param));
+		cpp_function_map.insert(new_func, new_func.name);
+	}
+}
+
+const vm::ObjIdNameMap<vm::code::CppFunction>& vm::code::ValidProgram::cppFunctions() const {
+	return cpp_function_map;
 }

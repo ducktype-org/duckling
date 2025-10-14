@@ -58,10 +58,9 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		if (!loaded_program.has_value()) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		bool response
-			= getMainVMThread().spawnThreadAndRun(*loaded_program, func_name, run_arguments);
+			= getMainVMThread().spawnThreadAndRun(loaded_program, func_name, run_arguments);
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -83,9 +82,11 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(api::ApiError(
-					api::OtherError("Execution panicked with error: " + panicked.error_message)
-				));
+				return std::unexpected(
+					api::ApiError(
+						api::OtherError("Execution panicked with error: " + panicked.error_message)
+					)
+				);
 			}
 			variant_default {
 				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));
@@ -94,8 +95,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request
-	) {
+	std::expected<api::Response, api::ApiError> VMProcess::input(const api::request::Input& request) {
 		// @TODO: https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
@@ -107,8 +107,10 @@ namespace vm {
 		auto lock = io.lock();
 		// Cannot read output from api when IO is being redirected
 		if (io_redirecter)
-			return std::unexpected(api::ApiError{
-				api::IOError{ "Cannot read output from api when IO is being redirected" } });
+			return std::unexpected(
+				api::ApiError{
+					api::IOError{ "Cannot read output from api when IO is being redirected" } }
+			);
 
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
@@ -137,7 +139,7 @@ namespace vm {
 		return api::response::Empty{};
 	}
 
-	base::Optional<api::ApiError> VMProcess::validateMemoryRequest() {
+	base::Optional<api::ApiError> VMProcess::assertProcessCanRespond() {
 		api::ProcStatus status = getStatus();
 
 		if (std::holds_alternative<api::Parsing>(status)
@@ -182,9 +184,11 @@ namespace vm {
 			variant_case_novalue(api::request::Step) {
 				auto response = getMainVMThread().step();
 				if (!response)
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "step error" },
-					});
+					return std::unexpected(
+						api::ApiError{
+							api::OtherError{ "step error" },
+						}
+					);
 				return getMainVMThread().getCurrentPosition();
 			}
 
@@ -195,7 +199,7 @@ namespace vm {
 			}
 
 			variant_case(api::request::LoadCode, load_request) {
-				return loadProgram(load_request.code_collections).transform_error([](auto err) {
+				return loadProgram(load_request.code_collection).transform_error([](auto err) {
 					return api::ApiError{ err };
 				});
 			}
@@ -214,8 +218,9 @@ namespace vm {
 				});
 
 				if (!std::holds_alternative<api::Paused>(status))
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "unexpected status response" } });
+					return std::unexpected(
+						api::ApiError{ api::OtherError{ "unexpected status response" } }
+					);
 
 				return getMainVMThread().getCurrentPosition();
 			}
@@ -232,18 +237,19 @@ namespace vm {
 			variant_case_novalue(api::request::Detach) { return detach(); }
 
 			variant_case(api::request::TypeMetadata, type_request) {
-				match_optional(validateMemoryRequest()) {
+				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto res = (*loaded_program)
-						               ->getTypes()
-						               .atMaybe(base::StrID(type_request.type_name.c_str()));
+						auto res = loaded_program->getTypes().atMaybe(
+							base::StrID(type_request.type_name.c_str())
+						);
 						match_optional(res) {
 							opt_some(value) { return api::response::Type{ value }; }
 
 							opt_none {
-								return std::unexpected(api::ApiError{
-									api::OtherError{ "Type not found" } });
+								return std::unexpected(
+									api::ApiError{ api::OtherError{ "Type not found" } }
+								);
 							}
 						}
 					}
@@ -251,33 +257,27 @@ namespace vm {
 			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
-				match_optional(validateMemoryRequest()) {
+				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						match_optional(loaded_program) {
-							opt_some(program) {
-								auto maybe_type = program->getTypes().atMaybe(
-									base::StrID(vmvalue_request.type_name.c_str())
-								);
-								match_optional(maybe_type) {
-									opt_some(type) {
-										auto vm_value = createOwnedVmValue(type);
-										return api::response::VmValue{ std::move(vm_value) };
-									}
-									opt_none {
-										return std::unexpected(api::ApiError{
-											api::OtherError{ "Type not found" } });
-									}
-								}
+						auto maybe_type = loaded_program->getTypes().atMaybe(
+							base::StrID(vmvalue_request.type_name.c_str())
+						);
+						match_optional(maybe_type) {
+							opt_some(type) {
+								auto vm_value = createOwnedVmValue(type);
+								return api::response::VmValue{ std::move(vm_value) };
 							}
 							opt_none {
-								return std::unexpected(api::ApiError{
-									api::OtherError{ "Program non loaded hence type not found" } });
+								return std::unexpected(
+									api::ApiError{ api::OtherError{ "Type not found" } }
+								);
 							}
 						}
 					}
 				}
 			}
+
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
 			}
@@ -288,6 +288,7 @@ namespace vm {
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
+
 		CORE_UNREACHABLE();
 	}
 
@@ -313,7 +314,10 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {
+	VMProcess::VMProcess(const PID my_pid):
+		  my_pid(my_pid),
+		  status(api::ExecutionNotStarted{}),
+		  loaded_program(loader.getCurrentProgram()) {
 		vm_threads.emplace_back(*this);
 	}
 
@@ -349,10 +353,12 @@ namespace vm {
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				executingStarted(getStatus()) ? "Execution did not complete"
-											  : "Execution did not start"
-			));
+			variant_default return std::unexpected(
+				api::StateError(
+					executingStarted(getStatus()) ? "Execution did not complete"
+												  : "Execution did not start"
+				)
+			);
 		}
 		CORE_UNREACHABLE();
 	}
@@ -365,8 +371,7 @@ namespace vm {
 		try {
 			// There might be numerous runtime exceptions during the deinitialization,
 			// any of those means there was an issue during the validation.
-			if (loaded_program.has_value())
-				getMainVMThread().execGlobalDestructors(*loaded_program);
+			getMainVMThread().execGlobalDestructors(loaded_program);
 
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
