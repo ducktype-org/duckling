@@ -9,6 +9,7 @@ use crate::{
     },
 };
 use anyhow::Context;
+use is_executable::is_executable;
 use quackpack::QuackResult;
 use tracing::debug;
 
@@ -38,7 +39,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
     let Some(path) = ctx.env().get_os("PATH") else {
         return HashMap::new();
     };
-    let commands = HashMap::new();
+    let mut commands = HashMap::new();
     for segment in env::split_paths(path) {
         let Ok(dir) = segment.read_dir() else {
             continue;
@@ -55,7 +56,9 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
             else {
                 continue;
             };
-            // TODO: If `executable` is executable, then add to commands.
+            if is_executable(executable.as_path()) {
+                commands.insert(String::from(stripped), executable);
+            }
         }
     }
     commands

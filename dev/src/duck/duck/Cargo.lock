@@ -137,6 +137,7 @@ dependencies = [
  "clap_complete",
  "console",
  "injectorpp",
+ "is_executable",
  "itertools",
  "paste",
  "quackpack",
@@ -164,6 +165,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d377a64bbe42f7a086ed630fbc66d84b43944f278ef42de53af79aaec6c21687"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "is_executable"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baabb8b4867b26294d818bf3f651a454b6901431711abb96e296245888d6e8c4"
+dependencies = [
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
