@@ -23,7 +23,7 @@ namespace vm::loader::compiler::detail {
 		low::MicroBytecode result;
 
 #if (BUILD_TYPE_DEV_DEBUG)
-		std::string currentHighInstructionRepresentation{};
+		std::string current_high_instruction_representation{};
 #endif
 
 	public:
@@ -37,7 +37,7 @@ namespace vm::loader::compiler::detail {
 
 		void add(const code::Instruction instruction) {
 #if (BUILD_TYPE_DEV_DEBUG)
-			currentHighInstructionRepresentation = code::instructionToString(instruction);
+			current_high_instruction_representation = code::instructionToString(instruction);
 #endif
 			// clang-format off
             VARIANT_VISIT(instruction, 
@@ -56,8 +56,8 @@ namespace vm::loader::compiler::detail {
 		void fillOutDebugData() {
 #if (BUILD_TYPE_DEV_DEBUG)
 			auto& instruction          = result.back();
-			instruction.representation = currentHighInstructionRepresentation;
-			instruction.opcode_id      = getInstructionOpcode(instruction);
+			instruction.representation = current_high_instruction_representation;
+			instruction.opcode_id      = std::to_underlying(getInstructionOpcode(instruction));
 #endif
 		}
 
@@ -93,17 +93,19 @@ namespace vm::loader::compiler::detail {
 			usize lid = compiler.lowerArgument(ctx, label);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
+	};
 
-		// -----------------------
+	// -----------------------
+	namespace {
+		using B = MicroBytecodeBuilder;
 
 		template<>
-		void lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
+		void B::lower<high::Op_add_l64_imm>(opargs::StackLocal64 var, opargs::Immediate n) {
 			addLow<Op_add_l64_imm>(var, n);
 		}
 
 		template<>
-		void lower<high::Comment>() {}
-
-		// -----------------------
-	};
+		void B::lower<high::Comment>() {}
+	}
+	// -----------------------
 }
