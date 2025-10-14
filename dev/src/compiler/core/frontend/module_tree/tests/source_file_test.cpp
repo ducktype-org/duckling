@@ -1,4 +1,3 @@
-#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
@@ -6,7 +5,6 @@
 #include <hashing/add_to_hash.hpp>
 #include <tester/tester.hpp>
 
-#include <algorithm>
 
 using namespace compiler::frontend;
 

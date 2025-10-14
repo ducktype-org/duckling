@@ -7,15 +7,13 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include "elements/expr.hpp"  // IWYU pragma: export
+#include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
+#include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <helios/ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
 #include <base/string_id.hpp>
-
-#include <query_framework/query_int.hpp>
 
 #include <memory>
 #include <variant>
@@ -154,7 +152,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Structure representing single HOUTUnit
 	 */
-	struct HOUTUnit {
+	struct HOUTUnit final {
 		// all first class citizens of module should be here:
 		// * types (in some way?)
 		// * required baked template list?

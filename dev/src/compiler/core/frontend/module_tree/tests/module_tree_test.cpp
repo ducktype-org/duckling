@@ -1,9 +1,7 @@
-#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::frontend;

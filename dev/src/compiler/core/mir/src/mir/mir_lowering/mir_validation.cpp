@@ -4,7 +4,6 @@
 #include <base/optional.hpp>
 
 #include <algorithm>
-#include <cstddef>
 #include <unordered_set>
 #include <variant>
 
@@ -103,7 +102,7 @@ namespace compiler::mir {
 		// two states: variable can be used and can't.
 
 
-		constexpr int usable = 0, not_usable = 1;
+		constexpr int USABLE = 0, NOT_USABLE = 1;
 
 		struct States final {
 			bool state[2] = { false, false };
@@ -117,24 +116,24 @@ namespace compiler::mir {
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
-				visited[id].state[usable] = false, visited[id].state[not_usable] = false;
+				visited[id].state[USABLE] = false, visited[id].state[NOT_USABLE] = false;
 
 			const auto& starting_block = local.second;
 
 			auto visit
 				= [&](this const auto& self, const BlockID& id, const int& cr_state) -> bool {
 				visited[id].state[cr_state] = true;
-				int next_state              = not_usable;
-				if (cr_state == not_usable) {
+				int next_state              = NOT_USABLE;
+				if (cr_state == NOT_USABLE) {
 					if (moved_variables[id].contains(local.first)
 					    || used_variables[id].contains(local.first))
 						return false;
-					next_state = not_usable;
+					next_state = NOT_USABLE;
 				} else {
 					if (moved_variables[id].contains(local.first))
-						next_state = not_usable;
+						next_state = NOT_USABLE;
 					else
-						next_state = usable;
+						next_state = USABLE;
 				}
 
 				for (const auto& next_block: getTerminatorSuccessors(fun.blocks[id].terminator)) {
@@ -145,7 +144,7 @@ namespace compiler::mir {
 				return true;
 			};
 
-			if (!visit(starting_block, usable)) return false;
+			if (!visit(starting_block, USABLE)) return false;
 		}
 
 		return true;

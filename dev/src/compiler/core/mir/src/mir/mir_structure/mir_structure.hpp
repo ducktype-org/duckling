@@ -3,7 +3,6 @@
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
-#include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/ints.hpp>

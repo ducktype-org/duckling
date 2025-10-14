@@ -15,6 +15,7 @@
 
 #include "../lir_structure/lir_structure.hpp"
 
+#include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>

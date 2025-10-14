@@ -215,7 +215,7 @@ namespace pst {
 		auto viewSubElements() const {
 			using namespace std::views;
 
-			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
+			constexpr auto GET_LOCKED = [](const InternalSubElement& t) -> SubElement {
 				if (base::holds<InternalChild>(t)) {
 					return Child(std::get<InternalChild>(t));
 				} else if (base::holds<InternalNamedChild>(t)) {
@@ -226,7 +226,7 @@ namespace pst {
 				}
 			};
 
-			return std::ranges::ref_view(sub_elements) | transform(get_locked);
+			return std::ranges::ref_view(sub_elements) | transform(GET_LOCKED);
 		}
 
 		/**
@@ -236,17 +236,17 @@ namespace pst {
 		auto viewChildren() const {
 			using namespace std::views;
 
-			constexpr auto is_child = [](const SubElement& t) -> bool {
+			constexpr auto IS_CHILD = [](const SubElement& t) -> bool {
 				return base::holds<Child>(t) || base::holds<NamedChild>(t);
 			};
-			constexpr auto strip_name = [](const SubElement& t) -> const Child {
+			constexpr auto STRIP_NAME = [](const SubElement& t) -> const Child {
 				if (base::holds<NamedChild>(t))
 					return std::get<NamedChild>(t).element;
 				else
 					return std::get<Child>(t);
 			};
 
-			return viewSubElements() | filter(is_child) | transform(strip_name);
+			return viewSubElements() | filter(IS_CHILD) | transform(STRIP_NAME);
 		}
 
 		/**
