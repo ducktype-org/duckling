@@ -1,6 +1,5 @@
 #include "scopes.hpp"
 
-#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -16,7 +15,6 @@
 #include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/elements/hierarchy/statements/using.hpp>
 #include <pst_parser/lang_parser_element.hpp>
-#include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 #include <base/exceptions.hpp>
