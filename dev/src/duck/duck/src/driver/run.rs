@@ -121,10 +121,10 @@ impl GlobalCliOptions {
             ctx.error_console_mut().set_verbosity(Verbosity::Quiet);
         }
 
-        if let Color::Never = self.color {
+        if matches!(self.color, Color::Never) {
             console::set_colors_enabled(false);
             console::set_colors_enabled_stderr(false);
-        } else if let Color::Always = self.color {
+        } else if matches!(self.color, Color::Always) {
             console::set_colors_enabled(true);
             console::set_colors_enabled_stderr(true);
         }
