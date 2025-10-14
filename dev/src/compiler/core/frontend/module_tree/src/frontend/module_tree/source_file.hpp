@@ -26,8 +26,8 @@ namespace compiler::frontend {
 		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
-		base::Optional<FileID> file_id;
-		ComponentHash          component_hash;
+		base::Optional<FileID>        file_id;
+		base::Optional<ComponentHash> component_hash;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
@@ -36,7 +36,7 @@ namespace compiler::frontend {
 		 * @param parent_component_hash The path hash of the parent module.
 		 * @note The file content is cached on construction.
 		 */
-		SourceFile(fs::File file, ModuleID linked_module, ComponentHash parent_component_hash);
+		SourceFile(fs::File file, ModuleID linked_module);
 
 		/**
 		 * @brief Reloads the file content and resets the parse tree.
@@ -46,9 +46,7 @@ namespace compiler::frontend {
 		 */
 		void update();
 
-		void updateComponentHash(const ComponentHash& parent_hash) {
-			component_hash = ComponentHash(parent_hash, lang_file_name);
-		}
+		void invalidateComponentHash() { component_hash = {}; }
 
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
@@ -76,9 +74,7 @@ namespace compiler::frontend {
 		 *       The file content is always hashed and cached.
 		 *       Each fileID has a unique UnstableHash even if it is pointing to the same fs::File
 		 */
-		static Ref<SourceFile> create(
-			fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
-		);
+		static Ref<SourceFile> create(fs::File file, ModuleID linked_module);
 
 		/**
 		 * @brief Retrieves all SourceFile instances associated with the given File.
@@ -123,6 +119,8 @@ namespace compiler::frontend {
 		 * @throws Panics if the content is not found in the cache.
 		 */
 		[[nodiscard]] base::SharedView getCachedContent();
+
+		[[nodiscard]] const ComponentHash& getComponentHash();
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;

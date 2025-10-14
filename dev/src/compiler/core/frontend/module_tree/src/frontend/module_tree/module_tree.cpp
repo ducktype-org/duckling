@@ -10,6 +10,7 @@
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
+#include <ranges>
 #include <regex>
 #include <sstream>
 
@@ -53,7 +54,25 @@ namespace {
 
 namespace compiler::frontend {
 	// Return const reference to module's path hash
-	const ComponentHash& ModuleTree::getComponentHash() const { return m_component_hash; }
+	const ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
+		Ref<ModuleTree> module = module_id.ref;
+		if (!module->m_component_hash.has_value()) {
+			// iterate thru parents to find one with component hash set or reach root (go up)
+			base::Ref<ModuleTree>              g_parent          = module;
+			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
+			while (g_parent->m_parent.has_value()
+			       && !g_parent->m_parent.value()->m_component_hash.has_value()) {
+				g_parent = g_parent->m_parent.value();
+				modules_to_update.push_back(g_parent);
+			}
+			// go down
+			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateComponentHash();
+		}
+		CORE_ASSERT(
+			module->m_component_hash.has_value(), "Component hash should have value after update!"
+		);
+		return module->m_component_hash.value();
+	}
 
 	Ref<ModuleTree> ModuleTreeBuilder::create(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
@@ -127,22 +146,38 @@ namespace compiler::frontend {
 		return output.str();
 	}
 
+	void ModuleTree::invalidateComponentHash() {
+		// If ModuleHash is invalid, then children are also invalid
+		if (!m_component_hash.has_value()) {
+			// assert if children are invalid too
+			for (auto& sf: m_source_files)
+				CORE_ASSERT(!sf->component_hash.has_value(), "Child component hash have value!");
+			if (m_main_source_file.has_value())
+				CORE_ASSERT(
+					!m_main_source_file.value()->component_hash.has_value(),
+					"Child component hash have value!"
+				);
+			for (auto& [_, submodule]: m_submodules)
+				CORE_ASSERT(
+					!submodule->m_component_hash.has_value(), "Child component hash have value!"
+				);
+			return;
+		}
+		m_component_hash = {};
+		for (auto& sf: m_source_files) sf->invalidateComponentHash();
+		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
+		for (auto& [_, submodule]: m_submodules) submodule->invalidateComponentHash();
+	}
+
 	void ModuleTree::updateComponentHash() {
 		// Get parent component hash if exists
 		base::Optional<ComponentHash> parent_hash;
-		if (m_parent.has_value()) parent_hash = m_parent.value()->m_component_hash;
-
+		if (m_parent.has_value()) {
+			parent_hash = m_parent.value()->m_component_hash;
+			CORE_ASSERT(parent_hash.has_value(), "Parent component hash should have value!");
+		}
 		// Create new component hash for this module
 		m_component_hash = ComponentHash(parent_hash, m_name);
-
-		// Update all source files to have correct component hash
-		if (m_main_source_file.has_value())
-			m_main_source_file.value()->updateComponentHash(m_component_hash);
-
-		for (auto& sf: m_source_files) sf->updateComponentHash(m_component_hash);
-
-		// Recursively update all submodules
-		for (auto& [_, submodule]: m_submodules) submodule->updateComponentHash();
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
@@ -295,24 +330,17 @@ namespace compiler::frontend {
 		module_ref->m_name        = m_name;
 		module_ref->m_other_files = std::move(m_other_files);
 
-		// It is needed to set component hash before creating SourceFiles and submodules
-		// the setParent call below will update the component hash
-		// but if there is no parent we need to set the component hash here
-		if (m_parent.has_value())
-			ModuleTreeModifier::setParent(module_ref, m_parent);
-		else
-			module_ref->m_component_hash = ComponentHash({}, m_name);
+		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
 
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
-			module_ref->m_main_source_file = SourceFile::create(
-				m_main_source_file_path.value(), mod_id, module_ref->m_component_hash
-			);
+			module_ref->m_main_source_file
+				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 		}
 
 		for (const auto& file_path: m_source_file_paths) {
-			auto source_file = SourceFile::create(file_path, mod_id, module_ref->m_component_hash);
+			auto source_file = SourceFile::create(file_path, mod_id);
 			module_ref->m_source_files.push_back(source_file);
 		}
 
@@ -327,9 +355,7 @@ namespace compiler::frontend {
 	 *********************/
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		module->m_source_files.push_back(
-			SourceFile::create(file, ModuleID(module), module->m_component_hash)
-		);
+		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
@@ -356,8 +382,7 @@ namespace compiler::frontend {
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
 		);
-		module->m_main_source_file
-			= SourceFile::create(file, ModuleID(module), module->m_component_hash);
+		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
 	}
 
 	void ModuleTreeModifier::addSubmodule(
@@ -400,8 +425,8 @@ namespace compiler::frontend {
 			current = current->m_parent.value();
 		}
 
-		// Update component hash for the submodule and its children
-		submodule->updateComponentHash();
+		// Invalidate component hash for the submodule and its children
+		submodule->invalidateComponentHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -505,8 +530,8 @@ namespace compiler::frontend {
 
 		module->m_parent = {};
 
-		// Update component hash for the module and its children as the parent changed
-		module->updateComponentHash();
+		// Invalidate component hash for the module and its children as the parent changed
+		module->invalidateComponentHash();
 	}
 
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {

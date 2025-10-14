@@ -60,10 +60,6 @@ namespace compiler::frontend {
 
 	public:
 		ModuleID getModuleID() const;
-		// Returns the module path hash (partial state + finalized hash)
-		[[nodiscard]]
-		const ComponentHash& getComponentHash() const;
-
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -117,6 +113,10 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		base::StrID getName() const;
 
+		// Returns the module path hash (partial state + finalized hash)
+		[[nodiscard]]
+		static const ComponentHash& getComponentHash(ModuleID module_id);
+
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
 		 * @param indentation For regular printing, leave 0.
@@ -130,6 +130,10 @@ namespace compiler::frontend {
 
 	private:
 		ModuleTree();
+
+
+		/** Invalidate current component hash, used when module structure changes */
+		void invalidateComponentHash();
 
 		/** Use a parent component hash, and update m_component_hash for all children including
 		 * Source Files */
@@ -146,7 +150,7 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-		ComponentHash                                     m_component_hash;
+		base::Optional<ComponentHash>                     m_component_hash;
 	};
 
 	/**

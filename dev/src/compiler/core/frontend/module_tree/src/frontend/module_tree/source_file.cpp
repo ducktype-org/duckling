@@ -7,6 +7,15 @@
 
 #include <filesystem/file.hpp>
 
+// Minimal declaration to allow calling ModuleTree::getComponentHash without including full
+// ModuleTree header
+namespace compiler::frontend {
+	class ModuleTree {
+	public:
+		static const ComponentHash& getComponentHash(ModuleID module_id);
+	};
+}
+
 namespace {
 
 	// Content cache for each file path (used for deduplication and fast access)
@@ -28,25 +37,20 @@ namespace {
 
 namespace compiler::frontend {
 
-	SourceFile::SourceFile(
-		fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
-	):
+	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		component_hash = ComponentHash(parent_component_hash, lang_file_name);
 		// Add or replace file content in cache
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 	}
 
-	Ref<SourceFile> SourceFile::create(
-		fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
-	) {
+	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
 		auto abs_path = file.getFilePath().absolute().getPath();
 
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		files.pushBack(SourceFile(std::move(file), linked_module, std::move(parent_component_hash)));
+		files.pushBack(SourceFile(std::move(file), linked_module));
 		files_map.at(abs_path).emplace_back(files.last());
 		files.last()->file_id = FileID(files.last());
 		return files.last();
@@ -67,11 +71,20 @@ namespace compiler::frontend {
 		parse_tree.reset();
 	}
 
+	const ComponentHash& SourceFile::getComponentHash() {
+		if (!component_hash.has_value()) {
+			auto m_component_hash = ModuleTree::getComponentHash(linked_module);
+			component_hash        = ComponentHash(m_component_hash, lang_file_name);
+		}
+		return component_hash.value();
+	}
+
 	CRef<pst::PST<>> SourceFile::getPST() {
-		if (parse_tree) {
+		// If component hash changed, reset parse tree
+		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			parse_tree.emplace(pst::PST(file, component_hash));
+			parse_tree.emplace(pst::PST(file, getComponentHash()));
 			return &parse_tree.value();
 		}
 	}
