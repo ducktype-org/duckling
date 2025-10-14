@@ -127,6 +127,24 @@ namespace compiler::frontend {
 		return output.str();
 	}
 
+	void ModuleTree::updateComponentHash() {
+		// Get parent component hash if exists
+		base::Optional<ComponentHash> parent_hash;
+		if (m_parent.has_value()) parent_hash = m_parent.value()->m_component_hash;
+
+		// Create new component hash for this module
+		m_component_hash = ComponentHash(parent_hash, m_name);
+
+		// Update all source files to have correct component hash
+		if (m_main_source_file.has_value())
+			m_main_source_file.value()->updateComponentHash(m_component_hash);
+
+		for (auto& sf: m_source_files) sf->updateComponentHash(m_component_hash);
+
+		// Recursively update all submodules
+		for (auto& [_, submodule]: m_submodules) submodule->updateComponentHash();
+	}
+
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File& directory, const std::regex& file_reject, const std::regex& dir_reject
 	) {
@@ -148,7 +166,10 @@ namespace compiler::frontend {
 				// Handle subdirectory
 				if (!isDirectoryNameValid(file.name(), dir_reject)) continue;
 
-				auto submodule = ModuleTreeBuilder::create(file, file_reject, dir_reject);
+				// build sub-module from directory
+				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
+				submodule_builder->buildFromDirectory(file, file_reject, dir_reject);
+				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(
 					submodule->getName() == base::StrID(file.name().c_str()),
 					"Submodule name does not match"
@@ -194,7 +215,9 @@ namespace compiler::frontend {
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
 			} else {
-				auto submodule = ModuleTreeBuilder::create(file);
+				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
+				submodule_builder->buildFromSingleFile(file);
+				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
 			}
@@ -272,10 +295,14 @@ namespace compiler::frontend {
 		module_ref->m_name        = m_name;
 		module_ref->m_other_files = std::move(m_other_files);
 
-		// Compute and set path hash
-		base::Optional<ComponentHash> parent_hash;
-		if (m_parent.has_value()) parent_hash = m_parent.value()->m_component_hash;
-		module_ref->m_component_hash = ComponentHash(parent_hash, m_name);
+		// It is needed to set component hash before creating SourceFiles and submodules
+		// the setParent call below will update the component hash
+		// but if there is no parent we need to set the component hash here
+		if (m_parent.has_value())
+			ModuleTreeModifier::setParent(module_ref, m_parent);
+		else
+			module_ref->m_component_hash = ComponentHash({}, m_name);
+
 
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
@@ -288,8 +315,6 @@ namespace compiler::frontend {
 			auto source_file = SourceFile::create(file_path, mod_id, module_ref->m_component_hash);
 			module_ref->m_source_files.push_back(source_file);
 		}
-
-		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);
@@ -358,6 +383,25 @@ namespace compiler::frontend {
 			base::strConcat("Submodule ", name.strView(), " already has a parent")
 		);
 		submodule->m_parent = module;
+
+		// we need to detect cycles now
+		//  for example if module A is parent of B and we try to add A as submodule of B
+		auto current = module;
+		while (current->m_parent.has_value()) {
+			if (current->m_parent.value() == submodule) {
+				CORE_PANIC(
+					"Adding submodule '",
+					submodule->getName().strView(),
+					"' to module '",
+					module->getName().strView(),
+					"' would create a cycle in the module tree!"
+				);
+			}
+			current = current->m_parent.value();
+		}
+
+		// Update component hash for the submodule and its children
+		submodule->updateComponentHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -460,6 +504,9 @@ namespace compiler::frontend {
 		submodules.erase(it);
 
 		module->m_parent = {};
+
+		// Update component hash for the module and its children as the parent changed
+		module->updateComponentHash();
 	}
 
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {

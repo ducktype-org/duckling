@@ -59,7 +59,7 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithContext(
+			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
 				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
@@ -80,7 +80,7 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithContext(
+			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
 				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
@@ -113,7 +113,7 @@ class PSTErrorTests: public tester::TestSuite {
 			  context{ .name = base::StrID(class_name.c_str()), .specifiers = {} } {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(
+			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
 				this->code, compiler::frontend::ComponentHash{}, context
 			);
 			return parsed.getLogger()->good() == good;

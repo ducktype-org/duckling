@@ -131,6 +131,10 @@ namespace compiler::frontend {
 	private:
 		ModuleTree();
 
+		/** Use a parent component hash, and update m_component_hash for all children including
+		 * Source Files */
+		void updateComponentHash();
+
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
 

@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(testVirtualFilesLikeModuleTree);
 		TESTER_ADD_TEST(testModuleTreeModifierVariants);
 		TESTER_ADD_TEST(testManualModuleTreeBuilder);
+		TESTER_ADD_TEST(testModuleLoop);
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
 	}
@@ -456,9 +457,28 @@ private:
 		ASSERT_EQUAL("parent_mod", mt->getParentModule().value()->getName().strView());
 	}
 
+	void testModuleLoop() {
+		auto root = fs::FileManager::createRandomVirtualDirectory();
+		auto md1  = root.createSubDirectory("md1");
+		(void) md1.createSubFile("main1", "md1.dmf");
+		auto md2 = root.createSubDirectory("md2");
+		(void) md2.createSubFile("main2", "md2.dmf");
+
+		auto mt1 = ModuleTreeBuilder::create(md1);
+		auto mt2 = ModuleTreeBuilder::create(md2);
+
+		ModuleTreeModifier::setParent(mt1, mt2);
+		bool exception_thrown = false;
+		try {
+			ModuleTreeModifier::setParent(mt2, mt1);
+		} catch (const std::exception& e) { exception_thrown = true; }
+		ASSERT_TRUE(exception_thrown);
+	}
+
 	void testComponentHash() {
 		// Create virtual directory with main module and two submodules
-		auto root = fs::FileManager::createRandomVirtualDirectory();
+		auto random = fs::FileManager::createRandomVirtualDirectory();
+		auto root   = random.createSubDirectory("root");
 		(void) root.createSubFile("root", "root.dmf");
 
 		auto sd1 = root.createSubDirectory("sub1");
@@ -466,16 +486,45 @@ private:
 		auto sd2 = root.createSubDirectory("sub2");
 		(void) sd2.createSubFile("sub2 main", "sub2.dmf");
 
-		// Build two module trees from the same virtual directory and compare path hashes
+		(void) sd1.createSubFile("subsub main", "subsub.dmf");
+
+		// Build two module trees from the same virtual directory and compare component hashes
 		auto mt1 = ModuleTreeBuilder::create(root);
 		auto mt2 = ModuleTreeBuilder::create(root);
+
+		ASSERT_TRUE(mt1->getComponentHash().elements == std::vector<std::string>{ "root" });
+		ASSERT_TRUE(mt2->getComponentHash().elements == std::vector<std::string>{ "root" });
 		ASSERT_TRUE(mt1->getComponentHash().hash == mt2->getComponentHash().hash);
 
 		// Ensure submodule hashes differ from parent and from each other
-		auto sub1 = mt1->getSubmodules().at(base::StrID("sub1"));
-		auto sub2 = mt1->getSubmodules().at(base::StrID("sub2"));
-		ASSERT_TRUE(sub1->getComponentHash().hash != mt1->getComponentHash().hash);
-		ASSERT_TRUE(sub1->getComponentHash().hash != sub2->getComponentHash().hash);
+		auto sub1   = mt1->getSubmodules().at(base::StrID("sub1"));
+		auto sub2   = mt1->getSubmodules().at(base::StrID("sub2"));
+		auto subsub = sub1->getSubmodules().at(base::StrID("subsub"));
+
+		ASSERT_TRUE((sub1->getComponentHash().elements == std::vector<std::string>{ "root", "sub1" })
+		);
+		ASSERT_TRUE((sub2->getComponentHash().elements == std::vector<std::string>{ "root", "sub2" })
+		);
+		ASSERT_TRUE(
+			(subsub->getComponentHash().elements
+		     == std::vector<std::string>{ "root", "sub1", "subsub" })
+		);
+
+		ASSERT_TRUE((sub1->getComponentHash().hash != mt1->getComponentHash().hash));
+		ASSERT_TRUE((sub1->getComponentHash().hash != sub2->getComponentHash().hash));
+		ASSERT_TRUE((subsub->getComponentHash().hash != sub1->getComponentHash().hash));
+
+		ModuleTreeModifier::removeParent(sub1);
+
+		ASSERT_TRUE(
+			(subsub->getComponentHash().elements == std::vector<std::string>{ "sub1", "subsub" })
+		);
+		ModuleTreeModifier::setParent(mt1, subsub);
+		ASSERT_TRUE(
+			(sub2->getComponentHash().elements
+		     == std::vector<std::string>{ "sub1", "subsub", "root", "sub2" })
+		);
+		ASSERT_TRUE(mt2->getComponentHash().elements == std::vector<std::string>{ "root" });
 	}
 };
 

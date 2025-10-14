@@ -46,6 +46,10 @@ namespace compiler::frontend {
 		 */
 		void update();
 
+		void updateComponentHash(const ComponentHash& parent_hash) {
+			component_hash = ComponentHash(parent_hash, lang_file_name);
+		}
+
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 		friend struct ImplementationOf_QueryFilePST;

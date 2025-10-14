@@ -7,13 +7,14 @@
 
 namespace compiler::frontend {
 	/**
-	 * ComponentHash - stores both the streaming (partial) hash state for a module path
-	 * and the finalized hash value. The constructor computes the partial hash by
-	 * optionally starting from parent's partial hash, adding the module name and
-	 * finalizing to produce hash.
+	 * ComponentHash - stores both the streaming (partial) hash state for a
+	 * hierarchical component path and the finalized hash value. The constructor
+	 * computes the partial hash by optionally starting from a parent's partial
+	 * state, adding an identifier for this component, and finalizing to produce
+	 * the concrete hash.
 	 */
-	struct ComponentHash {
-		// Hash algorithm and result type used for module path hashing
+	struct ComponentHash final {
+		// Hash algorithm and result type used for hierarchical path hashing
 		using HashAlg  = hashing::StatefulHash<hashing::SHA256, void>;
 		using HashType = HashAlg::result_type;
 
@@ -21,10 +22,10 @@ namespace compiler::frontend {
 		HashType                 hash;
 		std::vector<std::string> elements;
 
-		// Default constructible so ModuleTree member can be value-initialized
+		// Default constructible so containers holding ComponentHash can be value-initialized
 		constexpr ComponentHash() noexcept = default;
 
-		// Construct from optional parent partial hash and module name
+		// Construct from optional parent partial hash and a component identifier
 		constexpr ComponentHash(
 			const base::Optional<ComponentHash>& parent, base::StrID name
 		) noexcept {
@@ -34,7 +35,7 @@ namespace compiler::frontend {
 			}
 			if (name.isGood()) {
 				elements.emplace_back(name.strView());
-				// add module name to partial hash
+				// add component identifier to partial hash
 				hashing::addToHash(partial, name);
 			}
 
@@ -47,20 +48,20 @@ namespace compiler::frontend {
 			  elements(parent.elements) {
 			if (!ext.empty()) {
 				elements.emplace_back(ext);
-				// add string to partial hash
+				// add extra fragment to partial hash
 				hashing::addToHash(partial, std::string_view(ext));
 			}
 			hash = partial.finalize();
 		}
 
-		// Construct directly from a vector of string elements
+		// Construct directly from a vector of path elements
 		explicit ComponentHash(const std::vector<std::string>& elems) noexcept: elements(elems) {
 			// build partial by hashing all elements in order
 			for (const auto& e: elements) hashing::addToHash(partial, std::string_view(e));
 			hash = partial.finalize();
 		}
 
-		// Return elements joined by '.'
+		// Return elements joined by '.' (represents the hierarchical path)
 		[[nodiscard]] std::string str() const {
 			std::string out;
 			bool        first = true;
