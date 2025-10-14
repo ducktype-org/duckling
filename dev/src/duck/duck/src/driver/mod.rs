@@ -2,6 +2,7 @@ use clap::{Command, crate_name, crate_version};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
+pub mod global_cli_options;
 pub mod run;
 pub mod subcommands;
 
