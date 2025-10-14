@@ -7,4 +7,7 @@
 
 namespace compiler::helios {
 	struct HOUTGlobalData;
+	struct HOUTUnit;
+	struct HOUTFunction;
+	struct HOUTFunctionDeclaration;
 }

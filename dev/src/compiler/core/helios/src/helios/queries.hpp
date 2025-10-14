@@ -6,7 +6,8 @@
 #pragma once
 
 
-#include "hout/hout.hpp"
+#include "hout/hout_fd.hpp"
+#include "scope_symbol_id.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 
