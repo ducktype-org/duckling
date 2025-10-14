@@ -255,7 +255,6 @@ namespace vm::loader::compiler {
 
 		for (const auto& function: new_functions) {
 			FunctionCompilationContext ctx(function);
-			splitCodeAndLabels(ctx);
 			calculateOffsets(ctx);
 
 			// Calculate the functions metadata.

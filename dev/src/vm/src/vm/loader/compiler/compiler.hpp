@@ -122,13 +122,6 @@ namespace vm::loader::compiler {
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
-		 * @brief Removes label instructions from the compiled functions code. Calculates label
-		 * positions. Populates the context's `instructions_without_labels` and `label_positions`
-		 * which is used when lowering instructions to microbytecode.
-		 */
-		void splitCodeAndLabels(FunctionCompilationContext& ctx);
-
-		/**
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.
 		 * This function creates an offset map which is used in `lowerInstructions` to change the

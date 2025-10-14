@@ -45,9 +45,7 @@ namespace {
 		u64 count = 0;
 #define HANDLE_MICRO_INSTR(opcode) count++;
 #include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
-
-
-#undef HANDLE_INSTR
+#undef HANDLE_MICRO_INSTR
 		return count;
 	}
 }
