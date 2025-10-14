@@ -56,15 +56,15 @@ namespace compiler::helios::mangler {
 
 			if (number == 0) return "_";
 
-			static constexpr auto digits
+			static constexpr auto DIGITS
 				= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
-			constexpr u64 base = digits.size();
+			constexpr u64 BASE = DIGITS.size();
 
 			std::string ret;
 			--number;
 			do {
-				ret += digits[number % base];
-				number /= base;
+				ret += DIGITS[number % BASE];
+				number /= BASE;
 			} while (number > 0);
 			std::ranges::reverse(ret);
 			ret += '_';
@@ -83,9 +83,9 @@ namespace compiler::helios::mangler {
 				name = std::to_string(name.size()) + name;
 				return name;
 			} else {
-				constexpr char unicode_prefix = 'U';
+				constexpr char UNICODE_PREFIX = 'U';
 				std::string    punny_string   = name;  // @future: convert to punnycode
-				return base::strConcat(unicode_prefix, punny_string.size(), punny_string);
+				return base::strConcat(UNICODE_PREFIX, punny_string.size(), punny_string);
 			}
 		}
 
@@ -402,7 +402,7 @@ namespace compiler::helios::mangler {
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack
-			constexpr auto language_prefix = "_Q"sv;
+			constexpr auto LANGUAGE_PREFIX = "_Q"sv;
 
 			const auto mangling_scheme_version
 				= internal::compactNumber(key.mangling_scheme_version);
@@ -447,7 +447,7 @@ namespace compiler::helios::mangler {
 			std::string metadata = internal::optMetadata(key.additional_metadata);
 
 			std::string mangled_name
-				= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
+				= base::strConcat(LANGUAGE_PREFIX, mangling_scheme_version, encoding, metadata);
 
 			return base::StrID{ mangled_name.c_str() };
 		}
