@@ -57,7 +57,6 @@
 
 #pragma once
 
-#include "maps.hpp"  // PR this can be relaxed, and maps moved to cpp, also just use stable vec for str id?
 #include "raw_view.hpp"
 #include "strongly_typed_id.hpp"
 
@@ -72,14 +71,11 @@ namespace base {
 	}
 
 	class StrID final {
+	public:
 		using InnerID = internal::StrInnerID;
+	private:
 		InnerID id;
-
-		using ToDataType = VectorMap<InnerID, RawView>;
-		using ToIDType   = HashMap<RawView, InnerID>;
-
-		static ToDataType to_data_map;
-		static ToIDType   to_id_map;
+	
 
 	public:
 		StrID(): id(InnerID::bad()) {}
@@ -96,10 +92,7 @@ namespace base {
 		StrID& operator=(const StrID& oth) = default;
 
 		[[nodiscard]]
-		base::RawView view() const {
-			CORE_ASSERT(id.isGood(), "StrID is bad");
-			return to_data_map[id];
-		}
+		base::RawView view() const;
 
 		[[nodiscard]]
 		std::string_view strView() const {

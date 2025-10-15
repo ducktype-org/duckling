@@ -1,18 +1,33 @@
 #include "../string_id.hpp"
+#include "../ref.hpp"
+#include "../maps.hpp"
+#include "../exceptions.hpp"
 
 #include <cstring>
 #include <iostream>
 
 namespace base {
 
-	StrID::ToDataType StrID::to_data_map;
-	StrID::ToIDType   StrID::to_id_map;
-
 	constexpr usize DEFAULT_BUFFER_SIZE = 32'768;
-	using BufferList                    = std::vector<base::OwningView>;
-
+	
 	namespace {
-		BufferList buffer_list;
+		using BufferList                    = std::vector<base::OwningView>;
+		using ToDataType = VectorMap<StrID::InnerID, RawView>;
+		using ToIDType   = HashMap<RawView, StrID::InnerID>;
+
+		Ref<ToDataType> getToDataMap() {
+			static ToDataType to_data_map;
+			return &to_data_map;
+		}
+		Ref<ToIDType> getToIDMap() {
+			static ToIDType to_id_map;
+			return &to_id_map;
+		}
+		Ref<BufferList> getBufferList() {
+			static BufferList buffer_list;
+			return &buffer_list;
+		}
+
 
 		// remanding size of last buffer (equals default_buffer_size - next_pos)
 		usize size_left = 0;
@@ -80,6 +95,11 @@ namespace base {
 	StrID::StrID(const char* data): StrID(base::RawView(data)) {}
 
 	StrID::StrID(char character): StrID(std::string(1, character).c_str()) {}
+
+	base::RawView StrID::view() const {
+			CORE_ASSERT(id.isGood(), "StrID is bad");
+			return to_data_map[id];
+		}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32 i = 0;
