@@ -88,10 +88,10 @@ namespace vm {
 		constexpr static std::string_view ERR_MSG = "C++ type and VM type have different sizes: ";
 
 		ExtCArgumentSizeMismatch(
-			std::string cpp_type,
-			const usize cpp_type_size,
-			std::string vm_type,
-			const usize vm_type_size
+			const std::string& cpp_type,
+			const usize        cpp_type_size,
+			const std::string& vm_type,
+			const usize        vm_type_size
 		):
 			  ExtCFuncError(base::strConcat(
 				  ERR_MSG, cpp_type, "(", cpp_type_size, ") vs. ", vm_type, "(", vm_type_size, ")"
@@ -102,7 +102,7 @@ namespace vm {
 	public:
 		constexpr static std::string_view ERR_MSG = "Given VM type does not exist: ";
 
-		ExtCVmTypeNotExists(std::string vm_type):
+		ExtCVmTypeNotExists(const std::string& vm_type):
 			  ExtCFuncError(base::strConcat(ERR_MSG, vm_type)) {}
 	};
 }
