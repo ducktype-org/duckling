@@ -16,7 +16,6 @@
 #include <unicode_classification/classifications.hpp>
 
 #include <functional>  // IWYU pragma: export
-#include <ostream>
 
 namespace pst {
 	using lang_def::Keyword;
