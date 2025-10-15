@@ -18,10 +18,10 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
-	return { .functions     = std::ranges::to<std::vector>(function_map),
-		     .types         = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
-		     .global_data   = std::ranges::to<std::vector>(globals_map),
-		     .cpp_functions = std::ranges::to<std::vector>(cpp_function_map) };
+	return { .functions            = std::ranges::to<std::vector>(function_map),
+		     .types                = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
+		     .global_data          = std::ranges::to<std::vector>(globals_map),
+		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
@@ -50,7 +50,7 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
-	insertCppFunctions(collection.cpp_functions);
+	insertExternalCFunctions(collection.external_c_functions);
 	insertFunctions(collection.functions);
 }
 
@@ -77,6 +77,8 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
+	if (new_functions.empty()) return;
+
 	// @note: This is a temporary built type metadata for the sake of function verification.
 	// @TODO: #1306
 	auto type_metadata = detail::buildTypeMetadata(type_context);
@@ -90,26 +92,52 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 			*type_metadata,
 			globals_map,
 			available_functions,
-			cpp_function_map,
+			ext_c_function_map,
 			func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
 }
 
-void vm::code::ValidProgram::insertCppFunctions(const std::vector<CppFunction>& new_functions) {
+void vm::code::ValidProgram::insertExternalCFunctions(
+	const std::vector<ExternalCFunction>& new_functions
+) {
+	if (new_functions.empty()) return;
+
+	// @TODO: #1306 Fix
+	auto type_metadata = detail::buildTypeMetadata(type_context);
+
 	for (const auto& new_func: new_functions) {
-		if (cpp_function_map.contains(new_func.name))
-			throw DuplicatedExtCppFunctionError(new_func, *cpp_function_map.at(new_func.name));
-		if (!type_context.getCurrentTypes().contains(new_func.signature.result_type))
+		if (ext_c_function_map.contains(new_func.name))
+			throw DuplicatedExtCFunctionError(new_func, *ext_c_function_map.at(new_func.name));
+
+		// Validate arguments exist and are trivially copyable
+#ifdef __cpp_lib_ranges_concat
+		for (const auto& type: std::views::concat(
+				 new_func.signature.parameters, std::views::single(new_func.signature.result_type)
+			 ))
+			if (auto tp = type_metadata->atMaybe(type)) {
+				if (!tp.value()->isTriviallyCopyable())
+					throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
+			} else
+				throw UnknownTypeError(opargs::Type(type));
+#else
+		if (auto tp = type_metadata->atMaybe(new_func.signature.result_type)) {
+			if (!tp.value()->isTriviallyCopyable()) throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
+		} else
 			throw UnknownTypeError(opargs::Type(new_func.signature.result_type));
-		for (const auto& param: new_func.signature.parameters)
-			if (!type_context.getCurrentTypes().contains(param))
-				throw UnknownTypeError(opargs::Type(param));
-		cpp_function_map.insert(new_func, new_func.name);
+		for (const auto& type: new_func.signature.parameters)
+			if (auto tp = type_metadata->atMaybe(type)) {
+				if (!tp.value()->isTriviallyCopyable())
+					throw ExtCArgumentTypeNotTriviallyCopyable(*tp);
+			} else
+				throw UnknownTypeError(opargs::Type(type));
+#endif
+
+		ext_c_function_map.insert(new_func, new_func.name);
 	}
 }
 
-const vm::ObjIdNameMap<vm::code::CppFunction>& vm::code::ValidProgram::cppFunctions() const {
-	return cpp_function_map;
+const vm::ObjIdNameMap<vm::code::ExternalCFunction>& vm::code::ValidProgram::extCFunctions() const {
+	return ext_c_function_map;
 }

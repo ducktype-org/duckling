@@ -70,8 +70,8 @@ namespace vm::loader::compiler {
 					static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
 				);
 			}
-			variant_case(vm::opargs::CppFunctionName, func) {
-				return u64(*program_ctx.cpp_functions.idOf(func.function_name));
+			variant_case(vm::opargs::ExtCFunctionName, func) {
+				return u64(*program_ctx.ext_c_functions.idOf(func.function_name));
 			}
 			variant_case(vm::opargs::MethodName, method) {
 				return base::safeIntConv<u64>(program_ctx.method_name_to_id[method.method_name]);
@@ -237,8 +237,8 @@ namespace vm::loader::compiler {
 					}
 					index++;
 				}
-				variant_case(Op_call_cppfunc, instr) {
-					for (usize i = 0; i < program_ctx.cpp_functions.at(instr.arg0.function_name)
+				variant_case(Op_call_cfunc, instr) {
+					for (usize i = 0; i < program_ctx.ext_c_functions.at(instr.arg0.function_name)
 					                          ->signature.parameters.size();
 					     i++) {
 						pop();
@@ -355,9 +355,10 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewCppFunctions(const std::vector<code::CppFunction>& new_functions) {
+	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
+	) {
 		for (const auto& new_func: new_functions) {
-			program_ctx.cpp_functions.insert(new_func, new_func.name);
+			program_ctx.ext_c_functions.insert(new_func, new_func.name);
 			std::vector<TypeCRef> params = new_func.signature.parameters
 			                             | std::views::transform([this](const auto& param_name) {
 											   return low_program.types->at(param_name);
@@ -368,8 +369,8 @@ namespace vm::loader::compiler {
 				0,
 				std::plus()
 			);
-			low_program.extern_cpp_functions.insert(
-				low::LowExternCppFunction{
+			low_program.extern_c_functions.insert(
+				low::LowExternCFunction{
 					.name               = new_func.name,
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
@@ -384,10 +385,10 @@ namespace vm::loader::compiler {
 	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
 
-		auto new_cpp_functions = high_program.cppFunctions()
-		                       | std::views::drop(low_program.extern_cpp_functions.size())
-		                       | std::ranges::to<std::vector<code::CppFunction>>();
-		compileNewCppFunctions(new_cpp_functions);
+		auto new_c_functions = high_program.extCFunctions()
+		                     | std::views::drop(low_program.extern_c_functions.size())
+		                     | std::ranges::to<std::vector<code::ExternalCFunction>>();
+		compileNewExtCFunctions(new_c_functions);
 
 		auto new_globals = high_program.globals() | std::views::drop(low_program.global_data.size())
 		                 | std::ranges::to<std::vector<code::GlobalData>>();

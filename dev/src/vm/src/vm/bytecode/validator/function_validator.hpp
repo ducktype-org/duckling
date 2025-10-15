@@ -12,7 +12,7 @@ namespace vm::code::detail {
 		const TypeMetadata&                              type_metadata,
 		const ObjIdNameMap<GlobalData>&                  globals_map,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const ObjIdNameMap<CppFunction>&                 ext_cpp_functions,
+		const ObjIdNameMap<ExternalCFunction>&           ext_c_functions,
 		const Function&                                  function
 	);
 }

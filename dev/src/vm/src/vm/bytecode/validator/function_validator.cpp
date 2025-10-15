@@ -34,9 +34,9 @@ namespace {
 		Op_deinit,
 		Op_call_func,
 		Op_call_builtinfunc,
-		Op_call_cppfunc,
+		Op_call_cfunc,
 		Op_virtual_call_lptr_method>;
-	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cppfunc>;
+	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
 
 	template<typename T>
 	concept Extension = base::IsTupleMember<T, ExtensionTypes>;
@@ -217,7 +217,7 @@ class FunctionValidator {
 	const TypeMetadata&                              type_metadata;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
-	const ObjIdNameMap<CppFunction>&                 ext_cpp_signatures;
+	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
@@ -232,8 +232,8 @@ class FunctionValidator {
 		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
             if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
-            if constexpr (std::is_same_v<opargs::CppFunctionName, decltype(instr.arg0)>)
-                return &ext_cpp_signatures.at(instr.arg0.function_name)->signature;
+            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
+                return &ext_c_signatures.at(instr.arg0.function_name)->signature;
             return &signatures.at(instr.arg0.function_name);
 		}();
 
@@ -432,10 +432,10 @@ class FunctionValidator {
 					if (!builtins::isBuiltinFunction(fun_name))
 						throw InvalidBuiltinFunctionError(generic_arg);
 				}
-				variant_case(opargs::CppFunctionName, function_value) {
+				variant_case(opargs::ExtCFunctionName, function_value) {
 					auto fun_name    = function_value.function_name;
 					auto generic_arg = opargs::OpCodeArg{ function_value };
-					if (!ext_cpp_signatures.contains(fun_name))
+					if (!ext_c_signatures.contains(fun_name))
 						throw UnknownFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
@@ -746,7 +746,7 @@ class FunctionValidator {
 			variant_case_novalue(Op_jmpIfNot_label) {}
 			variant_case_novalue(Op_call_func) {}
 			variant_case_novalue(Op_call_builtinfunc) {}
-			variant_case_novalue(Op_call_cppfunc) {}
+			variant_case_novalue(Op_call_cfunc) {}
 			variant_case(Op_virtual_call_lptr_method, instr) {
 				// For a method all to be valid, the called method has to be declared as a virtual
 				// method in this inheritable or it's superclasses or interfaces.
@@ -1106,7 +1106,7 @@ class FunctionValidator {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_call_cppfunc, instr) {
+				variant_case(Op_call_cfunc, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
@@ -1147,14 +1147,14 @@ public:
 		const TypeMetadata&                              type_metadata,
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const ObjIdNameMap<CppFunction>&                 ext_cpp_signatures,
+		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const Function&                                  function
 	):
 		  tod_map(tod_map),
 		  type_metadata(type_metadata),
 		  globals(globals),
 		  signatures(signatures),
-		  ext_cpp_signatures(ext_cpp_signatures),
+		  ext_c_signatures(ext_c_signatures),
 		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
@@ -1175,13 +1175,13 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
-	const ObjIdNameMap<CppFunction>&                 ext_cpp_signatures,
+	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
 	FunctionValidator validator(
-		tod_map, type_metadata, globals_map, signatures, ext_cpp_signatures, function
+		tod_map, type_metadata, globals_map, signatures, ext_c_signatures, function
 	);
 
 	Function new_function;

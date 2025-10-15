@@ -67,6 +67,7 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection);
+		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
+		);
 	};
 }

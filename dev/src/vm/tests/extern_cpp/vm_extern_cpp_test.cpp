@@ -1,18 +1,18 @@
 #include <vm_tester_utils.hpp>
 
 #include <vm/api/vm.hpp>
-#include <vm/bytecode/extern_cpp_function.hpp>
+#include <vm/bytecode/extern_c_function.hpp>
 
 namespace simple {
-	DEF_VM_EXT_CPP_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
+	DEF_VM_EXT_C_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
 }
 
 namespace cpp_vector {
 	std::vector<i64> vec;
 
-	DEF_VM_EXT_CPP_FUNC(std::vector<i64>*, "opaque_ptr", vecSpawn) { return &vec; }
+	DEF_VM_EXT_C_FUNC(std::vector<i64>*, "opaque_ptr", vecSpawn) { return &vec; }
 
-	DEF_VM_EXT_CPP_FUNC(
+	DEF_VM_EXT_C_FUNC(
 		std::vector<i64>*,
 		"opaque_ptr",
 		vecPushBack,
@@ -23,7 +23,7 @@ namespace cpp_vector {
 		return vec;
 	}
 
-	DEF_VM_EXT_CPP_FUNC(u64, "i64", vecSize, (std::vector<i64>*, "opaque_ptr", vec)) {
+	DEF_VM_EXT_C_FUNC(u64, "i64", vecSize, (std::vector<i64>*, "opaque_ptr", vec)) {
 		return vec->size();
 	}
 }
@@ -42,15 +42,16 @@ private:
 	void simple() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(
-				vm::api::loadCode(
-					pid,
-					{ .functions     = {},
-			          .types         = {},
-			          .global_data   = {},
-			          .cpp_functions = { VM_INSTANCE_EXT_CPP_FUNC(simple::add, pid) } }
-				).has_value()
-			);
+			ASSERT_TRUE(vm::api::loadCode(
+							pid,
+							{
+								.functions   = {},
+								.types       = {},
+								.global_data = {},
+								.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(simple::add, pid) },
+							}
+			)
+			                .has_value());
 			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }).has_value());
 			return pid;
 		};
@@ -65,13 +66,13 @@ private:
 			ASSERT_TRUE(
 				vm::api::loadCode(
 					pid,
-					{ .functions     = {},
-			          .types         = {},
-			          .global_data   = {},
-			          .cpp_functions = {
-						  VM_INSTANCE_EXT_CPP_FUNC(cpp_vector::vecSpawn, pid),
-						  VM_INSTANCE_EXT_CPP_FUNC(cpp_vector::vecPushBack, pid),
-						  VM_INSTANCE_EXT_CPP_FUNC(cpp_vector::vecSize, pid),
+					{ .functions            = {},
+			          .types                = {},
+			          .global_data          = {},
+			          .external_c_functions = {
+						  VM_INSTANCE_EXT_C_FUNC(cpp_vector::vecSpawn, pid),
+						  VM_INSTANCE_EXT_C_FUNC(cpp_vector::vecPushBack, pid),
+						  VM_INSTANCE_EXT_C_FUNC(cpp_vector::vecSize, pid),
 					  } }
 				).has_value()
 			);

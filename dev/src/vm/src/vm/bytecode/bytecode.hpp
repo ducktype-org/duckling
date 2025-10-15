@@ -1,6 +1,5 @@
 #pragma once
 
-#include "extern_cpp_function.hpp"
 #include "instructions.hpp"
 
 #include <base/string_id.hpp>
@@ -66,7 +65,13 @@ namespace vm::code {
 		FuncSignature signature;
 	};
 
-	struct CppFunction final {
+	/**
+	 * @brief Represents C/C++ function, that can be called from bytecode by its name.
+	 * It's required that function accepts two parameters:
+	 * - std::byte* destination - a place to store the call result
+	 * - std::byte* arguments - arguments passed directly from the VM
+	 */
+	struct ExternalCFunction final {
 		Identifier name;
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
 		FuncSignature signature;
@@ -77,9 +82,9 @@ namespace vm::code {
 	 * @note It's not guaranteed that every code collection is valid.
 	 */
 	struct CodeCollection final {
-		std::vector<Function>    functions;
-		std::vector<TypeOfData>  types;
-		std::vector<GlobalData>  global_data;
-		std::vector<CppFunction> cpp_functions;
+		std::vector<Function>          functions;
+		std::vector<TypeOfData>        types;
+		std::vector<GlobalData>        global_data;
+		std::vector<ExternalCFunction> external_c_functions;
 	};
 }

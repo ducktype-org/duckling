@@ -6,8 +6,7 @@
 namespace vm::code::detail {
 	/**
 	 * @brief Builds TypeMetadata from TypeContext without validation. Assumes that the passed
-	 * TypeContext was validated by `vm::code::detail::validateTypes()` beforehand (in particular,
-	 * there are no cycles in the inheritance hierarchy).
+	 * TypeContext was validated by e.g. `validateTypesIntegrity()`.
 	 */
 	Box<TypeMetadata> buildTypeMetadata(const TypeContext& ctx);
 
@@ -23,8 +22,8 @@ namespace vm::code::detail {
 	 * The answer is we need the full type context in order to build vtables for inheritable types.
 	 *
 	 * @note Assumes that the newly added types won't invalidate the state. Before calling this
-	 * function you should use `vm::code::detail::validateTypesIntegrity()` on the whole context and
-	 * `vm::code::detail::validateType()` on every new type.
+	 * function you should use validate types with e.g. `vm::code::detail::validateTypesIntegrity()`
+	 * on the whole context or `vm::code::detail::validateType()` on every new type.
 	 */
 	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const TypeContext& new_ctx);
 }

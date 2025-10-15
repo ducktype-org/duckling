@@ -64,10 +64,10 @@ namespace vm::loader::compiler {
 
 			/**
 			 * @brief All available C++ external functions callable from the program.
-			 * Used when lowering call_cppfunc instructions to translate the function name to it's
+			 * Used when lowering call_cfunc instructions to translate the function name to it's
 			 * index.
 			 */
-			ObjIdNameMap<code::CppFunction> cpp_functions;
+			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
 		};
 
 		/**
@@ -124,10 +124,10 @@ namespace vm::loader::compiler {
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
-		 * @brief Compiles newly added C++ functions and adds the compiled function into the internal
-		 * `low_program.extern_cpp_functions`.
+		 * @brief Compiles newly added C++ functions and adds the compiled function into the
+		 * internal `low_program.extern_c_functions`.
 		 */
-		void compileNewCppFunctions(const std::vector<code::CppFunction>& new_functions);
+		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
 		 * @brief Removes label instructions from the compiled functions code. Calculates label

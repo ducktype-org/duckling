@@ -439,10 +439,10 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_cppfunc)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
 		{
 			auto ext_func_id = instr->arg0;
-			auto ext_func    = thread.executing_program->getExternCppFunctions().at(ext_func_id);
+			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
 			// auto extern_function_param_size_bytes = extern_function->parameter_size_sum;
 
 			// constexpr usize MAX_PARAM_SIZE = 1'000;

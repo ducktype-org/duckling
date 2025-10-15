@@ -145,18 +145,18 @@ namespace vm::opargs {
 	};
 
 	/**
-	 * @brief Represents function name argument.
+	 * @brief Represents extern C function name argument.
 	 */
-	struct CppFunctionName final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "cppfunc";
+	struct ExtCFunctionName final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "cfunc";
 
-		CppFunctionName() = default;
+		ExtCFunctionName() = default;
 
-		CppFunctionName(const base::StrID function_name): function_name(function_name) {}
+		ExtCFunctionName(const base::StrID function_name): function_name(function_name) {}
 
 		base::StrID function_name = base::StrID("");
 
-		constexpr bool operator==(const CppFunctionName& other) const noexcept {
+		constexpr bool operator==(const ExtCFunctionName& other) const noexcept {
 			return function_name == other.function_name;
 		}
 	};
@@ -203,11 +203,11 @@ namespace vm::opargs {
 		Field,
 		FunctionName,
 		BuiltinFunctionName,
-		CppFunctionName,
+		ExtCFunctionName,
 		MethodName,
 		Label>;
 	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
-	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, CppFunctionName>;
+	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
 	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
 }
 

@@ -76,9 +76,9 @@ protected:
 
 	TestResult runTestOnVmGetResult(
 		vm::PID                            pid,
-		const base::Optional<std::string>& optional_input,
-		const base::Optional<std::string>& optional_output,
-		const std::vector<std::string>&    args
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
 	);
 
 	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece);

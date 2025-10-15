@@ -11,6 +11,7 @@
 #include <vm/core/process/type_metadata/kinds/function.hpp>
 #include <vm/core/process/type_metadata/kinds/opaque.hpp>
 #include <vm/core/process/type_metadata/kinds/pointer.hpp>
+#include <vm/core/process/type_metadata/kinds/primitive.hpp>
 #include <vm/core/process/type_metadata/kinds/variant.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
@@ -355,9 +356,7 @@ namespace vm {
 					if (!field.type->isTriviallyCopyable()) return false;
 				return true;
 			}
-			variant_case(kind::DynamicTable, table) {
-				return false;
-			}
+			variant_case(kind::DynamicTable, table) { return false; }
 			variant_case(kind::FixedSizeTable, table) {
 				return table.inner_type->isTriviallyCopyable();
 			}
@@ -369,6 +368,7 @@ namespace vm {
 			variant_case(kind::Function, function) { return false; }
 			variant_case(kind::Pointer, pointer) { return false; }
 			variant_case(kind::Opaque, opaque) { return true; }
+			variant_case(kind::Primitive, primitive) { return true; }
 			variant_default { CORE_PANIC("This should never happen"); }
 		}
 		CORE_UNREACHABLE();

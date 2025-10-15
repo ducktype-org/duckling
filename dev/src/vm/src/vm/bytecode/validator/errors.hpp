@@ -143,8 +143,20 @@ namespace vm::code {
 
 	DEFINE_DUPLICATED_ELEMENT_ERROR(DuplicatedFunctionError, code::Function, "Duplicated function: ");
 	DEFINE_DUPLICATED_ELEMENT_ERROR(
-		DuplicatedExtCppFunctionError, code::CppFunction, "Duplicated external C++ function: "
+		DuplicatedExtCFunctionError, code::ExternalCFunction, "Duplicated external C function: "
 	);
+
+	/**
+	 * @note A type may be trivially copyable if its bits can be just copied and they
+	 * value remains correct.
+	 */
+	class ExtCArgumentTypeNotTriviallyCopyable: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
+
+		ExtCArgumentTypeNotTriviallyCopyable(TypeCRef vm_type):
+			  ValidationError(base::strConcat(ERR_MSG, vm_type->getName())) {}
+	};
 
 	class DuplicatedTypeError: public ValidationError {
 	public:

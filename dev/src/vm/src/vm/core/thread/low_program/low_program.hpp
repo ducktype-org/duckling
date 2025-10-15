@@ -39,7 +39,10 @@ namespace vm::low {
 		base::Optional<base::StrID> dtor_name;
 	};
 
-	struct LowExternCppFunction {
+	/**
+	 * @brief Micro bytecode representation of an extern C function.
+	 */
+	struct LowExternCFunction {
 		base::StrID name;
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
 		usize                 parameter_size_sum;
@@ -69,8 +72,8 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const { return functions; }
 
-		const ObjIdNameMap<LowExternCppFunction>& getExternCppFunctions() const {
-			return extern_cpp_functions;
+		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const {
+			return extern_c_functions;
 		}
 
 		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const { return global_data; }
@@ -83,7 +86,7 @@ namespace vm::low {
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
-		ObjIdNameMap<LowExternCppFunction>        extern_cpp_functions{};
+		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
