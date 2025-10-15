@@ -17,7 +17,6 @@
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 
-#include <map>
 #include <set>
 #include <string>
 #include <variant>
