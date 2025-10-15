@@ -42,18 +42,16 @@ private:
 	void simple() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(
-				vm::api::loadCode(
-					pid,
-					{
-						.functions            = {},
-						.types                = {},
-						.global_data          = {},
-						.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(simple::add, pid) },
-					}
-				)
-					.has_value()
-			);
+			ASSERT_TRUE(vm::api::loadCode(
+							pid,
+							{
+								.functions   = {},
+								.types       = {},
+								.global_data = {},
+								.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(simple::add, pid) },
+							}
+			)
+			                .has_value());
 			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }).has_value());
 			return pid;
 		};

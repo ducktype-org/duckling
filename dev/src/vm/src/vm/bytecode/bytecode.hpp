@@ -70,6 +70,7 @@ namespace vm::code {
 	 * It's required that function accepts two parameters:
 	 * - std::byte* destination - a place to store the call result
 	 * - std::byte* arguments - arguments passed directly from the VM
+	 * It's also required, that the VM types are trivially copyable.
 	 */
 	struct ExternalCFunction final {
 		Identifier name;

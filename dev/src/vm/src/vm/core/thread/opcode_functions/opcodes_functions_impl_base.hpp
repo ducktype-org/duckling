@@ -444,18 +444,15 @@ namespace vm {
 		{
 			auto ext_func_id = instr->arg0;
 			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
-			// auto extern_function_param_size_bytes = extern_function->parameter_size_sum;
 
-			// constexpr usize MAX_PARAM_SIZE = 1'000;
-			// if (extern_function_param_size_bytes > MAX_PARAM_SIZE)
-			// 	throw base::LogicError("Too humongous size of parameters!!!!!1!1");
+			auto arg_count        = ext_func->parameters.size();
+			u64  result_value_idx = frame->block_stack.size() - arg_count - 1;
 
-			auto arg_count              = ext_func->parameters.size();
-			u64  result_value_idx       = frame->block_stack.size() - arg_count - 1;
 			auto ext_result_destination = frame->block_stack[result_value_idx];
-			auto unsafe_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+			auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+
 			ext_func->function_pointer(
-				unsafe_view.getBegin(), unsafe_view.getBegin() + ext_func->result_type->getSize()
+				result_view.getBegin(), result_view.getBegin() + ext_func->result_type->getSize()
 			);
 
 			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
