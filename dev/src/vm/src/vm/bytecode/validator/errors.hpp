@@ -147,7 +147,7 @@ namespace vm::code {
 	);
 
 	/**
-	 * @note A type may be trivially copyable if its bits can be just copied and they
+	 * @note A type may be trivially copyable if its bits can be just copied and its
 	 * value remains correct.
 	 */
 	class ExtCArgumentTypeNotTriviallyCopyable: public ValidationError {
