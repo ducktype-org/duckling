@@ -1,11 +1,11 @@
 #pragma once
 
-
 #include "../lir_module_data.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <query_framework/context_fd.hpp>
 
 namespace compiler::driver {
 
