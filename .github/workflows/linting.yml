@@ -10,7 +10,6 @@ env:
   TIDY_VERSION: 19
 
 jobs:
-
   determine-runners:
     if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
