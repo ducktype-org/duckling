@@ -100,8 +100,8 @@ namespace vm::code {
 		void insertFunctions(const std::vector<Function>& new_functions);
 
 		/**
-		 * @brief Inserts a cpp-function. May invalidate state.
-		 * Cannot insert the same cpp-function multiple times.
+		 * @brief Inserts an ExternalCFunction. May invalidate state.
+		 * Cannot insert multiple ExternalCFunctions with the same name.
 		 */
 		void insertExternalCFunctions(const std::vector<ExternalCFunction>& new_functions);
 	};
