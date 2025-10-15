@@ -28,6 +28,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/ADT/APInt.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/MCJIT.h>  // This inlude is not used, but left as an example.
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
@@ -39,6 +40,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Support/Casting.h>  // This inlude is not used, but left as an example.
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
 
