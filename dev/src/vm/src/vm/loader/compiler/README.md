@@ -1,33 +1,47 @@
 # Compiler
-This is a last step on the loading pipeline.
+compiler is the last module on the whole loading pipeline. It's execution 
+begins with a validated high level program and it's output is the compiled 
+low level implementation of the program -  `LowVMProgram`. This module performs 
+the translation from Fat-Bytecode to Micro-Bytecode
 
-Compiler 
+Compiler is a stateful structure which updates the inner program incrementally enabling for incremental code injection without the need to recompile the whole program each time a new function is injected.
+
+## Compilation process
 
 
+1.  **"Compiling" new types:**
+    - New types from the fat-bytecode program are being added to the `LowVmPrograms` internal type set called `TypeMetadata`. This is done by the `TypeBuilder`
+    by a function called `vm::code::detail::rebuildTypeMetadata()`. An important note is that the previously existing `TypeMetadata` is not getting invalidated when this
+    function is ran. `TypeMetadata` is a structure which holds cross references against other types (for example a pointer type instead of holding it's inner types name holds a direct reference to the inner type existing in the `TypeMetadata` set). 
+    - This type references are also held in the memory module of the VM. Each memory block holds a reference to a type it holds. This means that if we were to rebuilt the whole type metadata on each code injection the memory blocks would hold dangling reference to types which were existing in the previous `TypeMetadata`.
+    - This step also checks for any new methods which may have been declared in object types or interfaces. And stores them in the `method_name_pool`. The mappings in this map are needed to translate the method names to their IDs when lowering `virtual_call_lptr_method` instructions to micro bytecode.
+    
+2.  **"Compiling" new globals:**
+    - New global variables from the fat-bytecode program are added to the global data set. 
+    The order of globals in this structure is important. The index in the `std::vector` used 
+    internally by the `ObjIdNameMap` is the value of the micro bytecode instruction argument
+    in opcodes operating on global variables. 
+    
+3.  **Compiling new functions:**
+    - New functions from the high program are translated to their micro bytecode form and added to the LowProgram. This process splits into two steps;
+      - **Preprocessing:** 
+        - The positions of labels in the code are saved, and the labels
+        themselves are removed from the resulting set of function
+        instructions.
+        - Names of local variables and arguments are converted to constant
+        offsets relative to the beginning of the stack frame. This process is
+        realized by re-analyzing the control flow graph and calculating
+        offsets on the local stack.
+    - **Translation to micro-bytecode:**
+        - Jump instructions are updated — symbolic label names are replaced by
+        previously calculated relative offsets in the instruction table.
+        - The representation of each instruction is changed to its final, numeric
+        form. Instruction arguments are converted to their numeric
+        identifiers: variable names to offsets on the local stack, names of functions, 
+        types, and global variables to their corresponding IDs. Additionally, function 
+        metadata needed for the execution module, such as `local_size`, `arg_size`, and
+        `ret_size` is calculated.
 
-For each function, this process
+        An ID in this context is the index in the in the `ObjIdNameMap`/`StableObjIdNameMap` which internally uses `std::vector`/`std::deque`. This means the order of functions/globals/types in these structures is important.
 
-proceeds as follows:
-
-1.  **Function translation:**
-    - Names of local variables and arguments are converted to constant
-    offsets relative to the beginning of the stack frame. This process is
-    realized by re-analyzing the control flow graph and calculating
-    offsets on the local stack.
-    - The positions of labels in the code are saved, and the labels
-    themselves are removed from the resulting set of function
-    instructions.
-
-2.  **Translation to micro-bytecode:**
-    - Jump instructions are updated — symbolic label names are replaced by
-    previously calculated relative offsets in the instruction table.
-    - The representation of each instruction is changed to its final, numeric
-    form. Instruction arguments are converted to their numeric
-    identifiers: variable names to offsets, names of functions, types, and
-    global variables to their corresponding identifiers. Additionally,
-    function metadata needed for the execution module, such as
-    `local_size`, `arg_size`, and `ret_size` is calculated.
-
-The resulting `LowVMProgram` is passed to the `VMProcess`. Separating this stage
-allows for the future introduction of additional optimization steps that generate
-code optimized for execution(Micro-bytecode).
+The resulting `LowVMProgram` is passed to the `VMProcess`. 

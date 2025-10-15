@@ -25,10 +25,6 @@ determined the structure and behavior of the individual system components:
     Every code fragment, before being allowed for execution, goes through
     validation, which checks for structural and logical correctness, as well as
     type compatibility.
--   **Room for future optimizations:**
-    The loading process concludes with compilation to a low-level representation,
-    called "micro-bytecode." This stage was intentionally separated to allow for
-    the future introduction of more advanced optimization techniques.
 
 ## Code Representations in the loading Pipeline
 As the code flows through the system's modules, it is transformed and stored in
@@ -194,4 +190,7 @@ request works as follows:
 ### Compiler
 The compiler is the last module in the loading pipeline. Its task is to
 translate the high-level, verified program representation into a low-level,
-executable representation of bytecode (`LowVMProgram`). Since the compiler it receives a program with a guarantee of correctness, the compilation process cannot fail and does not need to contain any validation logic. The process of compilation is described in [compiler](./compiler/README.md). 
+executable representation of bytecode (`LowVMProgram`). Since the compiler 
+receives a program with a guarantee of correctness, the compilation process 
+cannot fail and does not need to contain any validation logic. The process of 
+compilation is described in [compiler](./compiler/README.md). 
