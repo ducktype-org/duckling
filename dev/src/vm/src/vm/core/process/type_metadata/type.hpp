@@ -12,6 +12,7 @@
 #include <variant>
 
 namespace vm {
+	class TypeMetadata;
 
 	/// Size of type in bytes
 	// @TODO: change to strongly typed int

@@ -20,8 +20,6 @@
 #include <variant>
 #include <vector>
 
-namespace vm::loader {}
-
 namespace vm {
 
 	/**
