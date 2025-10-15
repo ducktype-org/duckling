@@ -57,7 +57,7 @@
 
 #pragma once
 
-#include "maps.hpp"
+#include "maps.hpp"  // PR this can be relaxed, and maps moved to cpp, also just use stable vec for str id?
 #include "raw_view.hpp"
 #include "strongly_typed_id.hpp"
 
