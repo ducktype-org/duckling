@@ -1,6 +1,6 @@
 #pragma once
 
-#include "function_forward.hpp"
+#include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/hout_fd.hpp>

@@ -1,7 +1,6 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
-#include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
