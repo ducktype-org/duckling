@@ -37,39 +37,20 @@ namespace vm::loader::compiler::detail {
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
 
-		void add(const code::Instruction instruction) {
-#if (BUILD_TYPE_DEV_DEBUG)
-			current_high_instruction_representation = code::instructionToString(instruction);
-#endif
-			// clang-format off
-            VARIANT_VISIT(instruction, 
-                VISIT_CASE(code::ZeroArgumentOpcode auto, i, lower<decltype(i)>();)
-                VISIT_CASE(code::OneArgumentOpcode auto, i, lower<decltype(i)>(i.arg0);)
-                VISIT_CASE(code::TwoArgumentOpcode auto, i, lower<decltype(i)>(i.arg0, i.arg1);)
-            );
-			// clang-format on
-		}
+		void add(const code::Instruction instruction);
 
 		template<code::IsInstruction T, typename... Args>
 		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes>
 		void lower(Args...) = delete;
 
 	private:
-		void fillOutDebugData() {
-#if (BUILD_TYPE_DEV_DEBUG)
-			auto& instruction          = result.back();
-			instruction.representation = current_high_instruction_representation;
-			instruction.opcode_id      = std::to_underlying(getInstructionOpcode(instruction));
-#endif
-		}
-
 		template<IsMicroInstructionTag T, typename... Args>
-		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes>
-		void addLow(Args... args) {
-			result.push_back(makeLowInstruction(
-				T::OPCODE, compiler.lowerArgument(ctx, args)...
-			));
-			fillOutDebugData();
+		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args... args) {
+			result.push_back(makeLowInstruction(T::OPCODE, compiler.lowerArgument(ctx, args)...));
+#if (BUILD_TYPE_DEV_DEBUG)
+			result.back().opcode_id      = std::to_underlying(T::OPCODE);
+			result.back().representation = current_high_instruction_representation;
+#endif
 			next_instruction_index++;
 		}
 
@@ -81,14 +62,50 @@ namespace vm::loader::compiler::detail {
 
 	// -----------------------
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_add_l64_imm>(
-		opargs::StackLocal64 var, opargs::Immediate n
-	) {
-		addLow<Op_add_l64_imm>(var, n);
+	void MicroBytecodeBuilder::lower<high::Comment>() {
+		// emit nothing
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Comment>() {}
+	void MicroBytecodeBuilder::lower<high::Op_label>(opargs::Label label) {
+		addLabel(label);
+	}
+
+#define HANDLE_MICRO_INSTR_0ARGS(INSTR)                    \
+	template<>                                             \
+	void MicroBytecodeBuilder::lower<high::Op_##INSTR>() { \
+		addLow<Op_##INSTR>();                              \
+	}
+
+#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)                       \
+	template<>                                                      \
+	void MicroBytecodeBuilder::lower<high::Op_##INSTR>(ARG0 arg0) { \
+		addLow<Op_##INSTR>(arg0);                                   \
+	}
+
+#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                            \
+	template<>                                                                 \
+	void MicroBytecodeBuilder::lower<high::Op_##INSTR>(ARG0 arg0, ARG1 arg1) { \
+		addLow<Op_##INSTR>(arg0, arg1);                                        \
+	}
+
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR_0ARGS
+#undef HANDLE_MICRO_INSTR_1ARGS
+#undef HANDLE_MICRO_INSTR_2ARGS
 
 	// -----------------------
+
+	void MicroBytecodeBuilder::add(const code::Instruction instruction) {
+#if (BUILD_TYPE_DEV_DEBUG)
+		current_high_instruction_representation = code::instructionToString(instruction);
+#endif
+		// clang-format off
+            VARIANT_VISIT(instruction, 
+                VISIT_CASE(code::ZeroArgumentOpcode auto, i, lower<decltype(i)>();)
+                VISIT_CASE(code::OneArgumentOpcode auto, i, lower<decltype(i)>(i.arg0);)
+                VISIT_CASE(code::TwoArgumentOpcode auto, i, lower<decltype(i)>(i.arg0, i.arg1);)
+            );
+		// clang-format on
+	}
 }
