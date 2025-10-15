@@ -1,9 +1,9 @@
 #pragma once
 
-#include "empty_struct.hpp"
-#include "exception.hpp"
-#include "ref.hpp"
-#include "type_parse.hpp"
-#include "variant.hpp"
+#include "empty_struct.hpp"  // IWYU pragma: export
+#include "exception.hpp"     // IWYU pragma: export
+#include "ref.hpp"           // IWYU pragma: export
+#include "type_parse.hpp"    // IWYU pragma: export
+#include "variant.hpp"       // IWYU pragma: export
 
 #include <nlohmann/json.hpp>

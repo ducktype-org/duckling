@@ -4,7 +4,6 @@
 #include "low_program/instruction.hpp"
 #include "vmvalue.hpp"
 
-#include <base/box.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 

@@ -3,6 +3,7 @@
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>

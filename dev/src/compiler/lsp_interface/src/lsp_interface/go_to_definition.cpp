@@ -5,24 +5,22 @@
 
 #include "go_to_definition.hpp"
 
-#include <helios/hout/elements/expr.hpp>
-#include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/lang_parser_element.hpp>
+#include <pst_parser/pst.hpp>
 
-#include <base/exceptions.hpp>
 #include <base/optional.hpp>
 
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <token_source/source.hpp>
 
 #include <format>
 #include <string>
 
 namespace lsp {
 	std::string Definition::toJSON() {
-		constexpr std::string_view json_template
+		constexpr std::string_view JSON_TEMPLATE
 			= "uri: {},\n"
 			  "range: {{\n"
 			  "    start: {{\n"
@@ -36,7 +34,7 @@ namespace lsp {
 			  "}}\n";
 
 		return std::format(
-			json_template,
+			JSON_TEMPLATE,
 			this->uri,
 			this->start.first,
 			this->start.second,
@@ -76,7 +74,7 @@ namespace lsp {
 			auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
 			if (sym_id.has_value()) {
 				auto stmt = compiler::helios::stmt(ctx, sym_id.value());
-				result    = Definition(&*stmt.value());
+				result    = Definition{ &*stmt.value() };
 			}
 		});
 

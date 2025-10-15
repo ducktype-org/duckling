@@ -1,11 +1,9 @@
-#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
-#include <algorithm>
 
 using namespace compiler::frontend;
 

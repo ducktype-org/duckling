@@ -4,10 +4,8 @@
 #include "parser/parser.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
-#include <base/variant.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>

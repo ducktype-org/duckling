@@ -2,6 +2,7 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -19,9 +20,7 @@
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/exceptions.hpp>
-#include <base/stable_hashmap.hpp>
 
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {

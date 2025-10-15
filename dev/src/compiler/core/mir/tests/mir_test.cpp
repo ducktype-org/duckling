@@ -11,7 +11,6 @@
 #include <typesystem/higher/queries.hpp>
 
 #include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 

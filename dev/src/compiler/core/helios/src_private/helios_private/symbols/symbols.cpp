@@ -1,7 +1,6 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios/ctv/ctv.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
@@ -19,7 +18,6 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 

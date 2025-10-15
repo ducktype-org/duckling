@@ -12,8 +12,6 @@
 #include <base/ref.hpp>
 #include <base/stringifyable_enum.hpp>
 
-#include <lexer/lexer.hpp>
-
 #include <string>
 
 MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
@@ -44,9 +42,8 @@ MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 )
 
 namespace lsp {
-	class SemanticToken;
 
-	class SemanticToken {
+	class SemanticToken final {
 	public:
 		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
 
