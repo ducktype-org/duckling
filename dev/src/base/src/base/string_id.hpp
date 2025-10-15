@@ -73,9 +73,9 @@ namespace base {
 	class StrID final {
 	public:
 		using InnerID = internal::StrInnerID;
+
 	private:
 		InnerID id;
-	
 
 	public:
 		StrID(): id(InnerID::bad()) {}
