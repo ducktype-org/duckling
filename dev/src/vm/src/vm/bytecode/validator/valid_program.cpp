@@ -66,7 +66,6 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
-		// @TODO: Fixed a bug here
 		if (!type_context.getCurrentTypes().contains(global.type))
 			throw UnknownTypeError(opargs::Type(global.type));
 		if (global.ctor_name.has_value() && !available_functions.contains(global.ctor_name.value()))

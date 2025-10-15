@@ -56,13 +56,17 @@ namespace vm::loader::compiler {
 			 */
 			base::HashMap<base::StrID, u64> method_name_to_id;
 			/**
-			 * @brief A complete list of all functions which will be added in the compilation process.
-			 * Used when lowering call instructions to translate the function name to it's index.
+			 * @brief A complete list of all bytecode functions which will be added in the
+			 * compilation process. Used when lowering call instructions to translate the function
+			 * name to it's index.
 			 */
 			ObjIdNameMap<code::Function> function_forward_declarations;
 
-			// @TODO Docs
-			// And use this
+			/**
+			 * @brief All available C++ external functions callable from the program.
+			 * Used when lowering call_cppfunc instructions to translate the function name to it's
+			 * index.
+			 */
 			ObjIdNameMap<code::CppFunction> cpp_functions;
 		};
 
@@ -119,6 +123,10 @@ namespace vm::loader::compiler {
 		 */
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
+		/**
+		 * @brief Compiles newly added C++ functions and adds the compiled function into the internal
+		 * `low_program.extern_cpp_functions`.
+		 */
 		void compileNewCppFunctions(const std::vector<code::CppFunction>& new_functions);
 
 		/**

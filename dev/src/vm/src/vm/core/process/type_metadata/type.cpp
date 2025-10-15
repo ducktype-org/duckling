@@ -356,7 +356,6 @@ namespace vm {
 				return true;
 			}
 			variant_case(kind::DynamicTable, table) {
-				//  @TODO: hmmm
 				return false;
 			}
 			variant_case(kind::FixedSizeTable, table) {
