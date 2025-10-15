@@ -8,6 +8,9 @@
 
 namespace base {
 
+	/**
+	 * Size of memory buffers used to store byte-strings represented by StrID
+	 */
 	constexpr usize DEFAULT_BUFFER_SIZE = 32'768;
 	
 	namespace {
@@ -40,12 +43,12 @@ namespace base {
 
 	void newBuffer() {
 		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
-		buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
+		getBufferList()->emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
 		size_left = DEFAULT_BUFFER_SIZE;
 		next_pos  = 0;
 	}
 
-	base::RawView lastBuffer() { return buffer_list.back().view(); }
+	base::RawView lastBuffer() { return getBufferList()->back().view(); }
 
 	/**
 	 * @brief
@@ -60,8 +63,8 @@ namespace base {
 	StrID::StrID(const base::RawView& data) {
 		CORE_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
-		if (to_id_map.contains(data)) {
-			id = to_id_map[data];
+		if (getToIDMap()->contains(data)) {
+			id = getToIDMap()->at(data);
 			return;
 		}
 
@@ -72,7 +75,7 @@ namespace base {
 		// @TODO: add test to this:
 		if (data.size() > DEFAULT_BUFFER_SIZE) {
 			// Data is too big to fit into any buffer
-			buffer_list.emplace_back(base::OwningView::copy(data));
+			getBufferList()->emplace_back(base::OwningView::copy(data));
 			actual_data      = RawView(lastBuffer().getBegin(), data.size());
 			any_buffer_exits = true;
 		} else {
@@ -83,13 +86,13 @@ namespace base {
 			}
 
 			actual_data = RawView(lastBuffer().getBegin() + next_pos, data.size());
-			std::memcpy(buffer_list.back().begin + next_pos, data.getBegin(), data.size());
+			std::memcpy(getBufferList()->back().begin + next_pos, data.getBegin(), data.size());
 			size_left -= data.size();
 			next_pos += data.size();
 		}
 
-		to_data_map.put(id, actual_data);
-		to_id_map.put(actual_data, id);
+		getToDataMap()->put(id, actual_data);
+		getToIDMap()->put(actual_data, id);
 	}
 
 	StrID::StrID(const char* data): StrID(base::RawView(data)) {}
@@ -98,12 +101,12 @@ namespace base {
 
 	base::RawView StrID::view() const {
 			CORE_ASSERT(id.isGood(), "StrID is bad");
-			return to_data_map[id];
+			return getToDataMap()->operator[](id);
 		}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32 i = 0;
-		for (auto v: to_data_map) {
+		for (auto v: *getToDataMap()) {
 			if (v) out << i << ": " << v->stringView() << "\n";
 			i++;
 		}
