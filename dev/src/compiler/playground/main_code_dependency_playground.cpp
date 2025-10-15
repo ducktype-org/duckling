@@ -1,4 +1,5 @@
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 
