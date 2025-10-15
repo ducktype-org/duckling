@@ -63,7 +63,7 @@ namespace vm::loader::compiler {
 			ObjIdNameMap<code::Function> function_forward_declarations;
 
 			/**
-			 * @brief All available C++ external functions callable from the program.
+			 * @brief All available ExternCFunctions callable from the program.
 			 * Used when lowering call_cfunc instructions to translate the function name to it's
 			 * index.
 			 */
@@ -124,7 +124,7 @@ namespace vm::loader::compiler {
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
-		 * @brief Compiles newly added C++ functions and adds the compiled function into the
+		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
 		 * internal `low_program.extern_c_functions`.
 		 */
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
