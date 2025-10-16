@@ -26,7 +26,7 @@ namespace pst::internal {
 	 *
 	 * @note They are defined in a class this way so that they can be template arguments.
 	 */
-	class Conditions {
+	class Conditions final {
 	public:
 		Conditions() = delete;
 
@@ -56,7 +56,7 @@ namespace pst::internal {
 	/**
 	 * @brief These are helper static functions returning names that can be passed to templates.
 	 */
-	class NameGetters {
+	class NameGetters final {
 	public:
 		NameGetters() = delete;
 
@@ -85,7 +85,7 @@ namespace pst::internal {
 	 * @tparam Container Container that of Boxs to the @p ParserElement .
 	 */
 	template<class ParserElement, class Container>
-	class ForwardBorrowIterator {
+	class ForwardBorrowIterator final {
 	private:
 		using internal_iterator = typename Container::const_iterator;
 		internal_iterator it;
