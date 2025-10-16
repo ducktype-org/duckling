@@ -168,7 +168,7 @@ namespace base {
 	 * @brief Checks if A implies B.
 	 */
 	template<bool A, bool B>
-	constexpr bool Implication = !A || B;
+	concept Implication = !A || B;
 
 	/**
 	 * @brief Returns the name of the passed type `T`.

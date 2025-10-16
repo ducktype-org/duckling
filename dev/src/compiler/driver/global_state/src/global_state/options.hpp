@@ -21,6 +21,4 @@ namespace global_state {
 	 * @note This can be used for modification
 	 */
 	Ref<DynamicDebugOptions> getDynamicDebugOptions();
-
-
 }

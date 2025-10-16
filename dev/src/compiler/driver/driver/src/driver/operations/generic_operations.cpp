@@ -8,6 +8,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
@@ -105,7 +106,11 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackage(const fs::File& package_location, BackendType backend) {
+	void compilerEntirePackage(
+		const fs::File&               package_location,
+		BackendType                   backend,
+		const linker::LinkingOptions& linking_options
+	) {
 		auto root = frontend::createModuleTree(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
@@ -126,7 +131,8 @@ namespace compiler::driver {
 			);
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
-			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
+
+			linker::link(output_file, objects, linking_options);
 		}
 	}
 

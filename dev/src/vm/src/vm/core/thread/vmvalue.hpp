@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/raw_view.hpp>
 
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -119,7 +118,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::VmValue, "VmValue");
 template<>
 struct nlohmann::adl_serializer<vm::VmValue> {
 	static void to_json(json& j, const vm::VmValue& v) {
-		j["type"]        = std::string(TypeParseTraits<vm::VmValue>::name.data());
+		j["type"]        = std::string(TypeParseTraits<vm::VmValue>::NAME.data());
 		j["data_type"]   = v.type->getName().str();
 		j["data_length"] = v.type->getSize();
 		// Convert VmValue's bytes to HEX string

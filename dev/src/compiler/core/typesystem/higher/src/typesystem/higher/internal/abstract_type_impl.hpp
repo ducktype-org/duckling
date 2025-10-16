@@ -118,6 +118,16 @@ namespace tsh::internal {
 			return false;
 		}
 
+		/**
+		 * @brief Whether the type carries any information, in an information-theoretic sense. For
+		 * example, the unit and void types does not carry any information, while other types do.
+		 * @return Whether the type carries information.
+		 */
+		[[nodiscard]]
+		virtual bool carriesInformation() const {
+			return true;
+		}
+
 		[[nodiscard]]
 		AbstractType toAbstractType() const {
 			return this;
@@ -154,9 +164,11 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Unit;
 
-		UnitAbstractTypeImpl() { representation = "unit"; }
+		UnitAbstractTypeImpl() { representation = "()"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool carriesInformation() const override { return false; }
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -174,6 +186,8 @@ namespace tsh::internal {
 		VoidAbstractTypeImpl() { representation = "void"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool carriesInformation() const override { return false; }
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {

@@ -74,12 +74,12 @@ namespace tpc {
 		}
 
 		// @IDEA perhaps add virtual final, so no one can override it
-		inline void* operator new(usize size) {
+		void* operator new(usize size) {
 			// placeholder for future custom allocation
 			return ::operator new(size);
 		}
 
-		inline void operator delete(void* p) {
+		void operator delete(void* p) {
 			// placeholder for future custom allocation
 			return ::operator delete(p);
 		}

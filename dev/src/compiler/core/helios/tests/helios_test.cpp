@@ -2,8 +2,6 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
-#include <helios/hout/elements/expr.hpp>
-#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -22,8 +20,7 @@
 #include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
-#include <typesystem/higher/all.hpp>
-#include <typesystem/higher/internal/queries.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -32,7 +29,6 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>
@@ -71,7 +67,7 @@ public:
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
-		// TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
 
 		// this is at the end

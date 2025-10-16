@@ -20,6 +20,7 @@
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 
 #include <cstring>
@@ -393,6 +394,7 @@ namespace vm {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		DEBUG_LOG("Executed opcode: " << #opcode_name);                                             \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \

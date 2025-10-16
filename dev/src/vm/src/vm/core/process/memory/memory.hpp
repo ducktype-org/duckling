@@ -7,12 +7,10 @@
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
-#include <base/exceptions.hpp>
 #include <base/ints.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
-#include <base/stable_container.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -210,6 +208,16 @@ namespace vm {
 		) -> base::ModRawView {
 			std::lock_guard lock(mutex);
 			return global_data.atMaybe(id).expect("Id not stored!")->modView();
+		}
+
+		/**
+		 * @brief Returns a view of block's data
+		 */
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getBlockViewUnsafe(
+			Ref<Block> block
+		) -> base::ModRawView {
+			std::lock_guard lock(mutex);
+			return block->data.view;
 		}
 
 		/**

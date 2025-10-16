@@ -10,10 +10,12 @@ namespace base {
 	 */
 	template<usize N>
 	struct TemplateStringLiteral {
+		// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 		constexpr TemplateStringLiteral(const char (&str)[N]): value() {
 			std::copy_n(str, N, value);
 		}
 
 		char value[N];
+		// NOLINTEND(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 	};
 }

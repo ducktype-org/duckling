@@ -19,7 +19,7 @@ namespace query {
 		 * Helper class implementing query entry point
 		 * @note This exist only, so it can be easily friend-ed by queries.
 		 */
-		struct EntryPointHelper {
+		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
 				return QueryType::internal_query(

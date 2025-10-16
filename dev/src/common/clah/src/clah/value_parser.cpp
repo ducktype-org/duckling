@@ -95,8 +95,8 @@ namespace clah {
 		auto result = StringParser::make()->parse(start, raw_input);
 		auto str    = std::any_cast<std::string>(result.value);
 
-		std::smatch _match;
-		if (!std::regex_match(str, _match, file_regex))
+		std::smatch match;
+		if (!std::regex_match(str, match, file_regex))
 			throw clah::exceptions::ValueParsingException(
 				getTypeName().c_str(),
 				start,

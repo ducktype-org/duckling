@@ -13,7 +13,7 @@ template<class T>
 struct nlohmann::adl_serializer<Ref<T>> {
 	static void to_json(json& j, const Ref<T>& v) {
 		using DT  = std::decay_t<T>;
-		j["type"] = std::string(TypeParseTraits<DT>::name.data());
+		j["type"] = std::string(TypeParseTraits<DT>::NAME.data());
 		j["data"] = *v;
 	}
 

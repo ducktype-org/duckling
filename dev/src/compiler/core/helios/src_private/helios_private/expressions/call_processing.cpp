@@ -3,6 +3,7 @@
 #include "coercions.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -10,6 +11,7 @@
 #include <pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
@@ -120,6 +122,7 @@ namespace compiler::helios::code {
 	) {
 		switch (kind(fun)) {
 		case SymbolKind::Function:
+		case SymbolKind::FunctionDeclaration:
 			return attemptFittingFun(ctx, fun, normal_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
 			return attemptFittingBuiltin(ctx, fun, normal_arguments, named_arguments);
