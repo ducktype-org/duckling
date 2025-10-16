@@ -1,6 +1,6 @@
 # CLI tests
 
-Run: "@{duck_path} @{run_args}"
+Run: "@{duckc_path} @{run_args}"
 
 Tests:
   cli-options:

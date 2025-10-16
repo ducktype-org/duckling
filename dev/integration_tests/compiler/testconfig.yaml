@@ -1,7 +1,7 @@
-compile_duck: "cmake --build @{build_dir} -- duckc"
-duck_path: "@{build_dir}/bin/duckc"
+compile_duckc: "cmake --build @{build_dir} -- duckc"
+duckc_path: "@{build_dir}/bin/duckc"
 
-PreTest: "@{compile_duck}"
+PreTest: "@{compile_duckc}"
 
 SubDirs:
   - cli
