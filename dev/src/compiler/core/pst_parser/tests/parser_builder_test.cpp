@@ -92,24 +92,24 @@ private:
 	}
 
 	template<typename Element>
-	void signgleEquivalency(const std::string& local_path) {
+	void singleEquivalency(const std::string& local_path) {
 		const std::string error       = "outputs from parsing on file " + local_path + "differ.";
 		const std::string filepath    = path(local_path);
-		pst::PST<Element> PSTmanual   = manualSteps<Element>(filepath);
-		pst::PST<Element> PSTcontent  = fromContents<Element>(filepath);
-		pst::PST<Element> PSTfilename = fromFilename<Element>(filepath);
-		assertTrue(PSTmanual.getLogger()->good() == PSTcontent.getLogger()->good(), error);
-		assertTrue(PSTmanual.getLogger()->good() == PSTfilename.getLogger()->good(), error);
-		std::string manual_print   = stringDprint(PSTmanual);
-		std::string content_print  = stringDprint(PSTcontent);
-		std::string filename_print = stringDprint(PSTfilename);
+		pst::PST<Element> pst_manual   = manualSteps<Element>(filepath);
+		pst::PST<Element> pst_content  = fromContents<Element>(filepath);
+		pst::PST<Element> pst_filename = fromFilename<Element>(filepath);
+		assertTrue(pst_manual.getLogger()->good() == pst_content.getLogger()->good(), error);
+		assertTrue(pst_manual.getLogger()->good() == pst_filename.getLogger()->good(), error);
+		std::string manual_print   = stringDprint(pst_manual);
+		std::string content_print  = stringDprint(pst_content);
+		std::string filename_print = stringDprint(pst_filename);
 		assertTrue(manual_print == content_print, error);
 		assertTrue(manual_print == filename_print, error);
 	}
 
 	template<typename Element>
 	void equivalencyTest() {
-		for (const auto& local_path: paths) signgleEquivalency<Element>(local_path);
+		for (const auto& local_path: paths) singleEquivalency<Element>(local_path);
 	}
 
 public:
