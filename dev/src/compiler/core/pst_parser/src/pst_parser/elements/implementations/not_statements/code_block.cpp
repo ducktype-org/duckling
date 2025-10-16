@@ -54,7 +54,7 @@ namespace pst {
 		}
 	}
 
-	void CodeBlock::calcComponentHashRecursive() {
+	void CodeBlock::calcElementPathHashRecursive() {
 		auto path = getComponentHash();
 		if (type == Ordered) {
 			auto ordered = ComponentHash(path, "ordered");

@@ -110,7 +110,16 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		base::StrID getName() const;
 
-		// Returns the module path hash (partial state + finalized hash)
+		/**
+		 * Returns ComponentHash of the module.
+		 * it is calculater from module logical path
+		 * eg. for module tree like:
+		 * /root
+		 *   /sub1
+		 *     /sub2
+		 * The component hash of sub2 will be hash("/root/sub1/sub2")
+		 * @param module_id ModuleID of the module to get the component hash for.
+		 */
 		[[nodiscard]]
 		static const ComponentHash& getComponentHash(ModuleID module_id);
 
@@ -129,11 +138,15 @@ namespace compiler::frontend {
 		ModuleTree();
 
 
-		/** Invalidate current component hash, used when module structure changes */
+		/**
+		 * Invalidate current component hash, used when module structure changes
+		 */
 		void invalidateComponentHash();
 
-		/** Use a parent component hash, and update m_component_hash for all children including
-		 * Source Files */
+		/**
+		 * Use a parent component hash, and update m_component_hash for this module only
+		 * This does not propagate to children
+		 */
 		void updateComponentHash();
 
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree

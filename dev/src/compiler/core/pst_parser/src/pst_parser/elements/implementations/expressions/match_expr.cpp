@@ -123,7 +123,7 @@ namespace pst::expr {
 		visitor.visitMatchExpr(*this);
 	}
 
-	void MatchExpr::calcComponentHashRecursive() {
+	void MatchExpr::calcElementPathHashRecursive() {
 		calcNamedChildPath(value_to_match, getComponentHash());
 		auto path = getComponentHash();
 		calcIndexedListChildPath<MatchCase>({ cases }, { path, "cases" });

@@ -62,7 +62,7 @@ namespace pst::expr {
 		visitor.visitComparisonChain(*this);
 	}
 
-	void ComparisonChain::calcComponentHashRecursive() {
+	void ComparisonChain::calcElementPathHashRecursive() {
 		calcIndexedListChildPath<ExprElement>({ sub_expr }, getComponentHash());
 	}
 }

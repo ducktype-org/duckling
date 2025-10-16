@@ -44,7 +44,7 @@ namespace pst {
 		AccessInternalAnonymous<Element> element;
 		/** Import entries collected during parsing. */
 		std::vector<ImportType> imports;
-		/** Contextual component path/hash for hierarchical naming. */
+		/** Contextual component path/hash in this PST for hierarchical naming. */
 		compiler::frontend::ComponentHash context_info;
 
 		/**
@@ -65,7 +65,7 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
-			calcComponentHash();
+			calcElementPathHash();
 			calcHashes();
 		}
 
@@ -100,8 +100,8 @@ namespace pst {
 		/**
 		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
-		void calcComponentHash() {
-			if (auto ref = element.internalMut()) ref->calcComponentHash(context_info);
+		void calcElementPathHash() {
+			if (auto ref = element.internalMut()) ref->calcElementPathHash(context_info);
 		}
 
 		/**

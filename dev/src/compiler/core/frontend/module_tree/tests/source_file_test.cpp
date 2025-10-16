@@ -303,9 +303,8 @@ private:
 		// and adding the language-level file name. Do NOT construct ComponentHash manually here.
 		{
 			// start from module partial hasher
-			auto parent_partial
-				= ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mod_a)).partial;
-			auto hasher1 = parent_partial;
+			auto parent_partial = ModuleTree::getComponentHash(mod_a->getModuleID()).partial;
+			auto hasher1        = parent_partial;
 			hashing::addToHash(hasher1, sf_1->getLangFileName());
 			auto final_a_1 = hasher1.finalize();
 
@@ -324,9 +323,8 @@ private:
 			ASSERT_TRUE(final_a_1 != final_a_other);
 
 			// Same file stem but different module -> different hash
-			auto parent_b_partial
-				= ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mod_b)).partial;
-			auto hasher_b = parent_b_partial;
+			auto parent_b_partial = ModuleTree::getComponentHash(mod_b->getModuleID()).partial;
+			auto hasher_b         = parent_b_partial;
 			hashing::addToHash(hasher_b, sf_1->getLangFileName());
 			auto final_b_same = hasher_b.finalize();
 			ASSERT_TRUE(final_a_1 != final_b_same);

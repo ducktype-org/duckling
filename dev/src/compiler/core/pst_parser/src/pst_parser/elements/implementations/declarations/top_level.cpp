@@ -37,7 +37,7 @@ namespace pst {
 		}
 	}
 
-	void TopLevel::calcComponentHashRecursive() {
+	void TopLevel::calcElementPathHashRecursive() {
 		calcOrderedListChildPath(statements, getComponentHash());
 	}
 

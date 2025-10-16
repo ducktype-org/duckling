@@ -17,8 +17,6 @@ namespace compiler::frontend {
 		static auto getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(FileID id) {
 			return id.ref;
 		}
-
-		static auto fromRef(base::Ref<SourceFile> ref) { return FileID(ref); }
 	};
 
 	inline auto getFileRef(FileID id) { return GetFileID_Functor::get(id); }
@@ -33,8 +31,6 @@ namespace compiler::frontend {
 		static auto getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(ModuleID id) {
 			return id.ref;
 		}
-
-		static auto fromRef(base::Ref<ModuleTree> ref) { return ModuleID(ref); }
 	};
 
 	inline auto getModuleRef(ModuleID id) { return GetModuleID_Functor::get(id); }

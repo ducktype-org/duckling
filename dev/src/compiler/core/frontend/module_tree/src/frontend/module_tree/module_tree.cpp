@@ -53,7 +53,7 @@ namespace {
 }
 
 namespace compiler::frontend {
-	// Return const reference to module's path hash
+
 	const ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
 		Ref<ModuleTree> module = module_id.ref;
 		if (!module->m_component_hash.has_value()) {
@@ -65,7 +65,7 @@ namespace compiler::frontend {
 				g_parent = g_parent->m_parent.value();
 				modules_to_update.push_back(g_parent);
 			}
-			// go down
+			// go from top module to bottom module, so its in linear time
 			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateComponentHash();
 		}
 		CORE_ASSERT(
@@ -163,21 +163,24 @@ namespace compiler::frontend {
 				);
 			return;
 		}
-		m_component_hash = {};
+		m_component_hash.reset();
 		for (auto& sf: m_source_files) sf->invalidateComponentHash();
 		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
 		for (auto& [_, submodule]: m_submodules) submodule->invalidateComponentHash();
 	}
 
 	void ModuleTree::updateComponentHash() {
-		// Get parent component hash if exists
+		// Get parent component hash if existsS
 		base::Optional<ComponentHash> parent_hash;
 		if (m_parent.has_value()) {
-			parent_hash = m_parent.value()->m_component_hash;
-			CORE_ASSERT(parent_hash.has_value(), "Parent component hash should have value!");
+			CORE_ASSERT(
+				m_parent.value()->m_component_hash.has_value(),
+				"Parent component hash should have value!"
+			);
+			m_component_hash.emplace(m_parent.value()->m_component_hash.value(), m_name);
+		} else {
+			m_component_hash.emplace(base::Optional<ComponentHash>{}, m_name);
 		}
-		// Create new component hash for this module
-		m_component_hash = ComponentHash(parent_hash, m_name);
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
@@ -409,8 +412,12 @@ namespace compiler::frontend {
 		);
 		submodule->m_parent = module;
 
-		// we need to detect cycles now
-		//  for example if module A is parent of B and we try to add A as submodule of B
+		// we need to detect cycles as someone could accidentally create one
+		// for example if module A is parent of B in oryginal module tree
+		// and function addSubmodule(B, A) is called
+		// we would have a cycle A -> B -> A
+		// this is a programer error, because cycle is not possible in standard module tree from
+		// path creation
 		auto current = module;
 		while (current->m_parent.has_value()) {
 			if (current->m_parent.value() == submodule) {

@@ -66,6 +66,6 @@ namespace pst {
 			return true;
 		}
 
-		void calcComponentHashRecursive() override;
+		void calcElementPathHashRecursive() override;
 	};
 }

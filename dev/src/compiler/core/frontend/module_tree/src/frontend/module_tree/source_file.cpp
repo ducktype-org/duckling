@@ -110,4 +110,6 @@ namespace compiler::frontend {
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
 	}
+
+	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
 }

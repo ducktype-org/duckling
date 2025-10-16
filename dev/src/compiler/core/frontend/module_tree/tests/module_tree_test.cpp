@@ -492,16 +492,16 @@ private:
 		auto mt2 = ModuleTreeBuilder::create(root);
 
 		ASSERT_TRUE(
-			ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mt1)).elements
+			ModuleTree::getComponentHash(mt1->getModuleID()).elements
 			== std::vector<std::string>{ "root" }
 		);
 		ASSERT_TRUE(
-			ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mt2)).elements
+			ModuleTree::getComponentHash(mt2->getModuleID()).elements
 			== std::vector<std::string>{ "root" }
 		);
 		ASSERT_TRUE(
-			ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mt1)).hash
-			== ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mt2)).hash
+			ModuleTree::getComponentHash(mt1->getModuleID()).hash
+			== ModuleTree::getComponentHash(mt2->getModuleID()).hash
 		);
 
 		// Ensure submodule hashes differ from parent and from each other
@@ -510,44 +510,44 @@ private:
 		auto subsub = sub1->getSubmodules().at(base::StrID("subsub"));
 
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub1)).elements
+			(ModuleTree::getComponentHash(sub1->getModuleID()).elements
 		     == std::vector<std::string>{ "root", "sub1" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub2)).elements
+			(ModuleTree::getComponentHash(sub2->getModuleID()).elements
 		     == std::vector<std::string>{ "root", "sub2" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(subsub)).elements
+			(ModuleTree::getComponentHash(subsub->getModuleID()).elements
 		     == std::vector<std::string>{ "root", "sub1", "subsub" })
 		);
 
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub1)).hash
-		     != ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mt1)).hash)
+			(ModuleTree::getComponentHash(sub1->getModuleID()).hash
+		     != ModuleTree::getComponentHash(mt1->getModuleID()).hash)
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub1)).hash
-		     != ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub2)).hash)
+			(ModuleTree::getComponentHash(sub1->getModuleID()).hash
+		     != ModuleTree::getComponentHash(sub2->getModuleID()).hash)
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(subsub)).hash
-		     != ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub1)).hash)
+			(ModuleTree::getComponentHash(subsub->getModuleID()).hash
+		     != ModuleTree::getComponentHash(sub1->getModuleID()).hash)
 		);
 
 		ModuleTreeModifier::removeParent(sub1);
 
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(subsub)).elements
+			(ModuleTree::getComponentHash(subsub->getModuleID()).elements
 		     == std::vector<std::string>{ "sub1", "subsub" })
 		);
 		ModuleTreeModifier::setParent(mt1, subsub);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(sub2)).elements
+			(ModuleTree::getComponentHash(sub2->getModuleID()).elements
 		     == std::vector<std::string>{ "sub1", "subsub", "root", "sub2" })
 		);
 		ASSERT_TRUE(
-			ModuleTree::getComponentHash(GetModuleID_Functor::fromRef(mt2)).elements
+			ModuleTree::getComponentHash(mt2->getModuleID()).elements
 			== std::vector<std::string>{ "root" }
 		);
 	}

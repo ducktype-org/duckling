@@ -12,6 +12,12 @@ namespace compiler::frontend {
 	 * computes the partial hash by optionally starting from a parent's partial
 	 * state, adding an identifier for this component, and finalizing to produce
 	 * the concrete hash.
+	 * This is useful for creating a hash of pathes like module/submodule/sourcefile
+	 * where each component is identified by a base::StrID.
+	 * This object can be copied and still calculatuion of path hash will be linear
+	 * the vector of strings stores the path elements in order
+	 * this vector is only for testing and debuging purposes (pretty print)
+	 * for calculating the hash of the path it is not used
 	 */
 	struct ComponentHash final {
 		// Hash algorithm and result type used for hierarchical path hashing
@@ -71,11 +77,6 @@ namespace compiler::frontend {
 				first = false;
 			}
 			return out;
-		}
-
-		// Allow hashing utilities to decompose ComponentHash by its elements
-		friend constexpr auto hashDecompose(const ComponentHash& t) noexcept {
-			return std::tie(t.elements);
 		}
 	};
 }

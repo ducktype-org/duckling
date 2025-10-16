@@ -26,14 +26,14 @@ namespace compiler::frontend {
 		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
-		base::Optional<FileID>        file_id;
-		base::Optional<ComponentHash> component_hash;
+		base::Optional<FileID> file_id;
+		base::Optional<ComponentHash>
+			component_hash;  //< Logical path hash for this file (module path + file name)
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
 		 * @param file The file system file.
 		 * @param linked_module The module this file belongs to.
-		 * @param parent_component_hash The path hash of the parent module.
 		 * @note The file content is cached on construction.
 		 */
 		SourceFile(fs::File file, ModuleID linked_module);
@@ -46,7 +46,10 @@ namespace compiler::frontend {
 		 */
 		void update();
 
-		void invalidateComponentHash() { component_hash = {}; }
+		/**
+		 * Invalidate the component hash for this source file.
+		 */
+		void invalidateComponentHash();
 
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
@@ -66,7 +69,6 @@ namespace compiler::frontend {
 		 * @brief Creates a new SourceFile or returns an existing one for the given file file.
 		 * @param file The file system file.
 		 * @param linked_module The module this file belongs to.
-		 * @param parent_component_hash The path hash of the parent module.
 		 * @return Reference to the created or existing SourceFile.
 		 * @note If a SourceFile for the given file already exists, and the content matches,
 		 *       the new SourceFile is returned. If the content differs, an assertion fails.
