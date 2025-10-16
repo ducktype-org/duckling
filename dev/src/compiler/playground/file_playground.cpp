@@ -1,4 +1,3 @@
-#include <base/exceptions.hpp>
 
 #include <filesystem/file.hpp>
 

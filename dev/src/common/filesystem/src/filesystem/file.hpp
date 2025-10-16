@@ -2,10 +2,7 @@
 
 #include "file_path.hpp"
 
-#include <base/maps.hpp>
-#include <base/optional.hpp>
 #include <base/raw_view.hpp>
-#include <base/ref.hpp>
 
 #include <expected>
 #include <filesystem>
@@ -210,7 +207,7 @@ namespace fs {
 	 * This class contains helper and factory methods for creating, managing, and generating paths
 	 * for files and directories.
 	 */
-	class FileManager {
+	class FileManager final {
 	public:
 		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random

@@ -7,9 +7,7 @@
 #pragma once
 
 #include <base/box.hpp>
-#include <base/exceptions.hpp>
 #include <base/optional.hpp>
-#include <base/type_traits.hpp>
 
 #include <any>
 #include <regex>

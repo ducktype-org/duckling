@@ -6,8 +6,6 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/process_info.hpp>
 
-#include <json/json.hpp>
-
 #include <iostream>
 
 std::string convertError(const vm::api::ApiError& api_error) {

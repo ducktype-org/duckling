@@ -8,6 +8,8 @@
 
 #include <query_framework/context.hpp>
 
+#include <sstream>
+
 using base::bytes2bits;
 
 namespace tsl {

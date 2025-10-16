@@ -16,7 +16,7 @@ namespace query::internal {
 	/**
 	 * Struct holding universal meta data of each query type.
 	 */
-	struct QueryData {
+	struct QueryData final {
 		QueryType        type;
 		std::string_view name;
 
