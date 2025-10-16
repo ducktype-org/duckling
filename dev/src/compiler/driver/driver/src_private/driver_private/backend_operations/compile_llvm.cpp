@@ -6,8 +6,8 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <lir/lir_structure/function_forward.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_structure/function_forward.hpp>
 
 namespace compiler::driver {
 
