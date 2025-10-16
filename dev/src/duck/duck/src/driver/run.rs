@@ -1,4 +1,10 @@
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::{
+    collections::HashMap,
+    ffi::OsString,
+    os::unix::process::CommandExt,
+    path::{Path, PathBuf},
+    process::exit,
+};
 
 use crate::{
     DuckCtx,
@@ -78,11 +84,11 @@ fn run_subcmd(
     };
     if let Some(exec_fn) = exec_for(sub_cmd) {
         // Internal subcommand.
-        return exec_fn(ctx, sub_args.to_owned());
+        exec_fn(ctx, sub_args.to_owned())
     } else if let Some(exec_path) = external.get(sub_cmd) {
         // External subcommand.
         let cli_args = external_cli_args(sub_cmd, sub_args);
-        execute_external_subcmd(ctx, exec_path, cli_args)
+        execute_external_subcmd(exec_path, cli_args)
     } else {
         // Unrecognizable subcommand.
         bail!("No such command: `{}`", sub_cmd);
@@ -100,23 +106,24 @@ fn external_cli_args(sub_cmd: &str, sub_args: &ArgMatches) -> Vec<OsString> {
     cli_arguments
 }
 
-fn execute_external_subcmd(
-    ctx: &DuckCtx,
-    exec_path: &PathBuf,
-    cli_args: Vec<OsString>,
-) -> QuackResult<()> {
+fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
     let Some(exec_path_str) = exec_path.as_os_str().to_str() else {
         bail!("Could not decode external subcommand path.");
     };
-    let mut child = std::process::Command::new(exec_path_str)
-        .args(cli_args)
-        .spawn()?;
-    let child_exit_status = child.wait()?;
-    match child_exit_status.code() {
-        Some(code) => std::process::exit(code),
-        None => {
-            // TODO
-            bail!("Idk");
+    let mut command = std::process::Command::new(exec_path_str);
+    command.args(cli_args);
+    if cfg!(unix) {
+        // If nothing goes wrong exec does not return.
+        let err: anyhow::Error = command.exec().into();
+        Err(err)
+    } else {
+        let mut child = command.spawn()?;
+        let child_exit_status = child.wait()?;
+        match child_exit_status.code() {
+            Some(n) => exit(n),
+
+            // The child process was interrupted
+            None => Ok(()),
         }
     }
 }
