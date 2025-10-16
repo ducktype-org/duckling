@@ -100,6 +100,12 @@ namespace compiler::helios {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		/**
+		 * @brief Query a compiler-generated symbol ID, given its identifying parameters.
+		 *
+		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
+		 * SymIDs are returned for the same parameters.
+		 */
 		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID);
 	}
 }

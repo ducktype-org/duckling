@@ -1,24 +1,20 @@
 #pragma once
 
+#include "builtin_symbol_data.hpp"
+#include "generated_symbol_data.hpp"
+#include "pst_symbol_data.hpp"
+
 #include <helios/scope_symbol_id.hpp>
-// #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
-#include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/string_id.hpp>
-#include <base/variant.hpp>
 
-#include <hashing/hash.hpp>
 #include <query_framework/context.hpp>
 
 namespace compiler::helios {
-	struct QueryTypeOfSymbol;
-	struct QueryTypeFromDefinition;
-
 	/**
 	 * Symbol data shared by all symbols.
 	 */
@@ -61,82 +57,6 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Symbol data for all symbols that are created from PST elements.
-	 */
-	struct PstSymbolData final {
-		/**
-		 * Scope in which the symbol was defined.
-		 */
-		ScopeID scope;
-
-		/**
-		 * PST element that the symbol was created from.
-		 */
-		pst::AccessLocked<pst::LangElement> pst_element;
-	};
-
-	namespace builtin {
-		struct BuiltinFunctionData final {
-			tsh::FunctionAbstractType type;
-
-			explicit BuiltinFunctionData(const tsh::FunctionAbstractType type): type(type) {}
-		};
-	}
-
-	namespace houtgen {
-		struct GeneratedSymbolData final {
-			// Data for a compiler-generated implicit constructor.
-			struct ImplicitConstructor final {
-				SymID class_symbol;  // The symbol of the class this constructor belongs to.
-
-				[[nodiscard]]
-				u64 queryUnstablePerfectHash() const {
-					return hashing::justHash(class_symbol.ref.get());
-				}
-			};
-
-			// Data for a compiler-generated parameter of a function.
-			struct Parameter final {
-				SymID function_symbol;  // The symbol of the function this parameter belongs to.
-				u64   parameter_index;  // The index of the parameter in the function's signature.
-
-				[[nodiscard]]
-				u64 queryUnstablePerfectHash() const {
-					return hashing::justHash(function_symbol.ref.get(), parameter_index);
-				}
-			};
-
-			// Data for a compiler-generated variable (not parameter) in a function.
-			struct Variable final {
-				SymID function_symbol;   // The symbol of the function this variable belongs to.
-				u64   variable_index;    // The index of the variable in the function's body.
-				tsh::SymbolType<> type;  // The type of the variable.
-
-				[[nodiscard]]
-				u64 queryUnstablePerfectHash() const {
-					return hashing::justHash(function_symbol.ref.get(), variable_index);
-				}
-			};
-
-			std::variant<ImplicitConstructor, Parameter, Variable> data;
-
-			explicit GeneratedSymbolData(
-				const std::variant<ImplicitConstructor, Parameter, Variable>& data
-			):
-				  data(data) {}
-
-			[[nodiscard]]
-			u64 queryUnstablePerfectHash() const {
-				return hashing::justHash(
-					data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
-				);
-			}
-
-			tsh::SymbolType<> getType(query::Context& ctx) const;
-		};
-	}
-
-	/**
 	 * @brief Stores generic symbol data.
 	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
 	 * SymbolData is by design a "read-only" structure.
@@ -148,49 +68,15 @@ namespace compiler::helios {
 		CommonSymbolData common;
 		OtherData        other;
 
-		static auto makePSTSymbolData(const CommonSymbolData common_data, PstSymbolData pst_data) {
-			return SymbolData{
-				.common = common_data,
-				.other  = pst_data,
-			};
-		}
+		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
 
-		static auto makeBuiltinFunction(
-			const base::StrID name, builtin::BuiltinFunctionData builtin_data
-		) {
-			return SymbolData{
-				.common = {
-					.name = name,
-					.kind = SymbolKind::BuiltinFunction,
-				},
-				.other  = builtin_data,
-			};
-		}
+		static SymbolData makeBuiltinFunction(
+			base::StrID name, builtin::BuiltinFunctionData builtin_data
+		);
 
-		static auto makeGeneratedSymbol(
-			const base::StrID name, houtgen::GeneratedSymbolData generated_data
-		) {
-			SymbolKind kind{};
-			variant_match(generated_data.data) {
-				variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
-					kind = SymbolKind::Function;
-				}
-				variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {
-					kind = SymbolKind::Parameter;
-				}
-				variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
-					kind = SymbolKind::Variable;
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
-			return SymbolData{
-				.common = {
-					.name = name,
-					.kind = kind,
-				},
-				.other  = generated_data,
-			};
-		}
+		static SymbolData makeGeneratedSymbol(
+			base::StrID name, houtgen::GeneratedSymbolData generated_data
+		);
 
 		template<class T>
 		[[nodiscard]]

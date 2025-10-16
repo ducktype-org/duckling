@@ -1,10 +1,9 @@
 #include "queries.hpp"
 
-#include "symbols/query_class_symbol_data.hpp"
-#include "symbols/query_type_from_definition.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/symbols/query_class_symbol_data.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -28,8 +27,6 @@
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
-
-#include <iostream>
 
 namespace compiler::helios {
 
@@ -57,6 +54,12 @@ namespace compiler::helios {
 			return out;
 		}
 
+		/**
+		 * Append the constructors of a class to the provided vector of functions.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param class_sym The symbol of the class, whose constructors are to be appended.
+		 * @param ctx The query context.
+		 */
 		static void appendClassConstructors(
 			std::vector<HOUTFunction>& out_functions, const SymID class_sym, Context& ctx
 		) {
@@ -265,7 +268,8 @@ namespace compiler::helios {
 					.generated_symbol_data
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
-				// @TODO: #1328 Properly handle value categories in class constructors.
+				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
+				// in class constructors.
 				parameters.emplace_back(
 					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
 				);
@@ -294,11 +298,14 @@ namespace compiler::helios {
 							variant_case(
 								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
 							) return getImplicitCtorDecl(ctx, ctor_data);
-							variant_default { CORE_UNREACHABLE(); }
+							variant_default {
+								// Other generated symbols are not functions.
+								CORE_UNREACHABLE();
+							}
 						}
 					}
 					variant_default {
-						// Builtin symbols are handled below.
+						// Builtin symbols are handled below due to a different SymbolKind.
 						CORE_UNREACHABLE();
 					}
 				}

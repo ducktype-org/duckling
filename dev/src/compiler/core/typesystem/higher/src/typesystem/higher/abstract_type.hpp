@@ -139,6 +139,7 @@ namespace tsh {
 
 		/**
 		 * @brief Cast the object to another type from the AbstractType hierarchy in an OOP way.
+		 * @note OOP-style method provided for convenience. It is equivalent to a manual conversion.
 		 * @tparam ABSTRACT_TYPE The target type from the AbstractType hierarchy.
 		 */
 		template<std::derived_from<AbstractType> ABSTRACT_TYPE>

@@ -218,7 +218,7 @@ namespace compiler::helios::code {
 		};
 
 		/**
-		 * Resolves a set of symbols act as callees into a set of function symbols.
+		 * @brief Resolves a set of symbols which act as callees into a set of function symbols.
 		 *
 		 * The resolution follows the following steps:
 		 * 1. If the set consists of only function symbols, return them as is.
@@ -227,15 +227,21 @@ namespace compiler::helios::code {
 		 * 3. Otherwise, the set consists of a single non-function symbol. Then, look up
 		 *    its call operators (like `operator()`, or constructors of a class).
 		 *
+		 * This implements
+		 * https://docs.duckling.pl/duckling/writing_code/expressions/expression_types/call.html#callee-expression
+		 *
 		 * @param looked_up_callees The result of the lookup for the function being called.
 		 * @return Candidates after resolution of functions vs call operators.
 		 */
 		[[nodiscard]]
-		std::vector<SymID> getCallableCandidates(const std::vector<SymID>& looked_up_callees) const {
+		query::QResult<std::vector<SymID>, errors::Failed> getCallableCandidates(
+			const std::vector<SymID>& looked_up_callees
+		) const {
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Function
-				        || kind(symbol) == SymbolKind::FunctionDeclaration;
+				        || kind(symbol) == SymbolKind::FunctionDeclaration
+				        || kind(symbol) == SymbolKind::BuiltinFunction;
 				}))
 				return looked_up_callees;
 
@@ -250,15 +256,12 @@ namespace compiler::helios::code {
 					));
 				}
 				query_ctx.log(std::move(error));
-				return {};
+				return query::QError(errors::Failed());
 			}
 
 			// We have a single non-function candidate. Perform lookup for its call operators.
 			// @TODO: #520 Perform proper lookup in type for different cases.
 			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
-			case SymbolKind::BuiltinFunction: {
-				return { symbol };
-			}
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
@@ -268,7 +271,7 @@ namespace compiler::helios::code {
 				                      .as<tsh::ClassAbstractType>();
 				const auto ctor
 					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
-				return { ctor->declaration->original_symbol };
+				return std::vector{ ctor->declaration->original_symbol };
 			}
 			default:
 				CORE_PANIC("Not implemented yet (", name(symbol), ")");
@@ -295,7 +298,10 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-			const auto callees = getCallableCandidates(lookup_result->leaves);
+			const auto callees_QResult = getCallableCandidates(lookup_result->leaves);
+			if (callees_QResult.hasError())
+				return query::QError(errors::Failed(callees_QResult.error()));
+			const auto callees = callees_QResult.value();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 
@@ -360,7 +366,7 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
 
@@ -472,7 +478,10 @@ namespace compiler::helios::code {
 			                         .lookup(query_ctx, expr_access->getName().value);
 
 			// @TODO #981: make it better:
-			auto callees = getCallableCandidates(lookup_result->leaves);
+			auto callees_QResult = getCallableCandidates(lookup_result->leaves);
+			if (callees_QResult.hasError())
+				return query::QError(errors::Failed(callees_QResult.error()));
+			const auto callees = callees_QResult.value();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 			if (res.hasError()) {

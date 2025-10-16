@@ -726,9 +726,9 @@ namespace compiler::helios {
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymID) {
 			static auto provide(Context&, QKey key) -> PResult {
-				return putInSymtable(
+				return GetSymRef_Functor::make(putInSymtable(
 					SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data)
-				);
+				));
 			}
 
 			QUERY_AUTO_CACHE_COPY

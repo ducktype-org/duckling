@@ -106,14 +106,6 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		std::string debugPrint() const;
-
-	private:
-		/**
-		 * Construct a HOUT Function object from a SymID which appears in the PST.
-		 * @param symbol The symbol of the function.
-		 * @param ctx The query context to resolve the function's properties.
-		 */
-		HOUTFunction(SymID symbol, query::Context& ctx);
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };

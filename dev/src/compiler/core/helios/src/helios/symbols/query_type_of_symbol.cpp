@@ -1,7 +1,5 @@
 #include "query_type_of_symbol.hpp"
 
-#include "query_type_from_definition.hpp"
-
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>

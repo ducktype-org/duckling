@@ -9,11 +9,6 @@
 #include <base/ref.hpp>
 
 namespace compiler::helios {
-	namespace houtgen {
-		struct GeneratedSymbolData;
-		struct ImplementationOf_QueryGeneratedSymbol;
-	}
-
 	// Forward:
 	// @TODO: put in internal namespace
 	struct SymbolData;
@@ -42,8 +37,6 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;
-		friend houtgen::GeneratedSymbolData;
-		friend houtgen::ImplementationOf_QueryGeneratedSymbol;
 	};
 
 	/**

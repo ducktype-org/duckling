@@ -38,10 +38,10 @@ namespace pst {
 			return params.give();
 		}
 
-		[[nodiscard]]
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
+		[[nodiscard]]
 		base::Optional<AccessLocked<ExprHolder>> getRet() const {
 			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
 		}
