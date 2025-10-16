@@ -21,7 +21,6 @@ pub fn expand_aliases(
     let Some((subcmd, subcmd_args)) = args.subcommand() else {
         return Ok(args);
     };
-    debug!("expanding alias `{subcmd}`");
     match (
         is_builtin_subcommand(subcmd),
         ctx.alias_for(subcmd),
@@ -109,4 +108,77 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use injectorpp::interface::injector::*;
+
+    #[test]
+    fn test_cycles() {
+        fn fake_alias_for(name: &str) -> Option<String> {
+            match name {
+                "x" => Some(String::from("y --a")),
+                "y" => Some(String::from("z --b xd")),
+                "z" => Some(String::from("x")),
+                _ => None,
+            }
+        }
+
+        let mut injector = InjectorPP::new();
+        injector
+            .when_called(injectorpp::func!(fn (DuckCtx::alias_for)(&DuckCtx, &str) -> QuackResult<Option<String>>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_x: &DuckCtx, name: &str) -> QuackResult<Option<String>>,
+                returns: Ok(fake_alias_for(name))
+            ));
+
+        let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
+        let ctx = DuckCtx::new().unwrap();
+        let external_cmds = HashMap::new();
+        let visited = Vec::new();
+        let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
+        match result {
+            Ok(_) => panic!(""),
+            Err(err) => {
+                assert_eq!(
+                    err.to_string(),
+                    "user-defined alias `z` cycles: x -> y -> z -> x"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_expands_ok() {
+        fn fake_alias_for(name: &str) -> Option<String> {
+            match name {
+                "x" => Some(String::from("y")),
+                "y" => Some(String::from("z --all-features")),
+                "z" => Some(String::from("build")),
+                _ => None,
+            }
+        }
+
+        let mut injector = InjectorPP::new();
+        injector
+            .when_called(injectorpp::func!(fn (DuckCtx::alias_for)(&DuckCtx, &str) -> QuackResult<Option<String>>))
+            .will_execute(injectorpp::fake!(
+                func_type: fn(_x: &DuckCtx, name: &str) -> QuackResult<Option<String>>,
+                returns: Ok(fake_alias_for(name))
+            ));
+
+        let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
+        let ctx = DuckCtx::new().unwrap();
+        let external_cmds = HashMap::new();
+        let visited = Vec::new();
+        let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
+        match result {
+            Ok(new_args_matches) => {
+                assert_eq!(new_args_matches.subcommand_name().unwrap(), "build");
+            }
+            Err(_) => panic!(""),
+        }
+    }
 }

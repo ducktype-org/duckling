@@ -35,7 +35,6 @@ pub fn fix_typos(
         targets.join(", ")
     );
     let closest_targets = find_closest_targets(name, &targets, ctx);
-    print!("{:#?}", closest_targets);
 
     let Some((&first, rest)) = closest_targets.as_slice().split_first() else {
         return Ok(args);
