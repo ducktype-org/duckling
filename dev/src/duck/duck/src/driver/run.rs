@@ -108,14 +108,17 @@ fn execute_external_subcmd(
     let Some(exec_path_str) = exec_path.as_os_str().to_str() else {
         bail!("Could not decode external subcommand path.");
     };
-    let output = std::process::Command::new(exec_path_str)
+    let mut child = std::process::Command::new(exec_path_str)
         .args(cli_args)
-        .output()?;
-    ctx.console()
-        .print_no_nl(String::from_utf8_lossy(&output.stdout));
-    ctx.error_console()
-        .print_no_nl(String::from_utf8_lossy(&output.stderr));
-    Ok(())
+        .spawn()?;
+    let child_exit_status = child.wait()?;
+    match child_exit_status.code() {
+        Some(code) => std::process::exit(code),
+        None => {
+            // TODO
+            bail!("Idk");
+        }
+    }
 }
 
 fn print_parser_help(ctx: &DuckCtx) {
