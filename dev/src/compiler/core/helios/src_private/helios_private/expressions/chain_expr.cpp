@@ -297,7 +297,7 @@ namespace compiler::helios::code {
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
-			const auto callees = callees_q_result.value();
+			const auto& callees = callees_q_result.value();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 
@@ -477,7 +477,7 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
-			const auto callees = callees_q_result.value();
+			const auto& callees = callees_q_result.value();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 			if (res.hasError()) {
