@@ -8,6 +8,7 @@
 #include "call_processing.hpp"
 
 #include <helios/hout/elements/expr.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -293,10 +294,10 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-			const auto callees_QResult = getCallableCandidates(lookup_result->leaves);
-			if (callees_QResult.hasError())
-				return query::QError(errors::Failed(callees_QResult.error()));
-			const auto callees = callees_QResult.value();
+			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			if (callees_q_result.hasError())
+				return query::QError(errors::Failed(callees_q_result.error()));
+			const auto callees = callees_q_result.value();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 
@@ -473,10 +474,10 @@ namespace compiler::helios::code {
 			                         .lookup(query_ctx, expr_access->getName().value);
 
 			// @TODO #981: make it better:
-			auto callees_QResult = getCallableCandidates(lookup_result->leaves);
-			if (callees_QResult.hasError())
-				return query::QError(errors::Failed(callees_QResult.error()));
-			const auto callees = callees_QResult.value();
+			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			if (callees_q_result.hasError())
+				return query::QError(errors::Failed(callees_q_result.error()));
+			const auto callees = callees_q_result.value();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 			if (res.hasError()) {

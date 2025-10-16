@@ -2,8 +2,8 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
-#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
