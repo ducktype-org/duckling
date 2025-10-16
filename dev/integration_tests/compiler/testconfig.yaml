@@ -1,5 +1,5 @@
-compile_duck: "cmake --build @{build_dir} -- duck"
-duck_path: "@{build_dir}/bin/duck"
+compile_duck: "cmake --build @{build_dir} -- duckc"
+duck_path: "@{build_dir}/bin/duckc"
 
 PreTest: "@{compile_duck}"
 

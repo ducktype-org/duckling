@@ -2,7 +2,7 @@
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
  * conveniently run (or add) certain functionalities of the Duckling compiler.
- * It compiles to `duck` binary.
+ * It compiles to `duckc` binary.
  * @note: The ideas from here might be one day separated into a framework.
  */
 
@@ -43,7 +43,7 @@ void printContextErrors() {
 }
 
 clah::Clah getStandardDucklingOptions() {
-	return clah::Clah("duck", "The Duckling compiler")
+	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addLongName("logger-cerr")
 	             .addShortDesc("If set, Logger class will immediately print its messages to cerr.")
