@@ -17,15 +17,17 @@
  * This above function just counts the instructions, but the possibilities are endless.
  *
  * There are other macros for cases where you want to know
- * what arguments the instruction has - HANDLE_INSTR_#ARGS,
+ * what arguments the instruction has - HANDLE_MICRO_INSTR_#ARGS,
  * where # is the number of arguments.
  * You can define them similarly to the above example.
  *
- * You can also override the `DEF_INSTR` macro for
+ * You can also override the `DEF_MICRO_INSTR` macro for
  * even higher control.
  */
 
-// @TODOB document this
+// @TODO #1189: This is where you define the new micro instructions.
+// For now this file is almost exactly the same as its high bytecode equivalent,
+// except for the lack of Op_label and Comment, since they do not make sense as a runtime instructions.
 
 #ifndef HANDLE_MICRO_INSTR
 #define DEFAULT_HANDLE_MICRO_INSTR

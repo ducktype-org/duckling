@@ -73,7 +73,10 @@ namespace vm::loader::compiler {
 				return base::safeIntConv<u64>(program_ctx.method_name_to_id[method.method_name]);
 			}
 			variant_case(vm::opargs::Label, label) {
-				// @TODOB document this
+				// Lower the label names into temporary label IDs.
+				// A label ID is some number, used later by `linkLabelArguments`
+				// to generate actual offsets once we know where each label
+				// lands after lowering.
 				if (!ctx.label_id_map.contains(label.label_name))
 					ctx.label_id_map.put(label.label_name, ctx.next_label_id++);
 				return ctx.label_id_map.at(label.label_name);
@@ -96,10 +99,6 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	/**
-	 * @brief Compiles a single function. Refactor this
-	 * @TODOB change this comment
-	 */
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
@@ -156,7 +155,8 @@ namespace vm::loader::compiler {
 			CORE_UNREACHABLE();
 		};
 
-		// @TODOB document this
+        // Label positions in high bytecode, used only for graph traversing
+        // in this function. Not used when lowering to microbytecode.
 		base::HashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			variant_match(instr) {

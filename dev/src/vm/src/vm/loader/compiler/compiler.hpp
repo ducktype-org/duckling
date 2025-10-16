@@ -129,7 +129,14 @@ namespace vm::loader::compiler {
 		 */
 		void calculateOffsets(FunctionCompilationContext& ctx);
 
-		// @TODOB docs
+		/**
+		 * @brief Fills out label arguments from IDs to label offsets in micro-bytecode.
+		 * Since a single high bytecode instruction can lower into many micro instructions,
+		 * we do not know in advance where labels land after lowering.
+		 * Instead `MicroBytecodeBuilder` generates temporary label IDs and calculates label
+		 * offsets during building. This function uses this information to go through
+		 * the instructions again and fill out the correct offsets.
+		 */
 		void linkLabelArguments(
 			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
 		);
