@@ -92,7 +92,7 @@ namespace vm::loader::compiler {
 			auto       are_args_labels = low::instruction_tags::IS_ARGUMENT_LABEL.at(opcode_num);
 
 			for (auto [arg, is_label]: std::views::zip(args, are_args_labels))
-				if (is_label) arg = label_map.at(arg) - static_cast<usize>(instr_idx);
+				if (is_label) arg = label_map.at(arg) - static_cast<usize>(instr_idx) - 1;
 		}
 	}
 
