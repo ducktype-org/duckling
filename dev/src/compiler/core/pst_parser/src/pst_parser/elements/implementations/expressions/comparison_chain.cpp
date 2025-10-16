@@ -63,6 +63,6 @@ namespace pst::expr {
 	}
 
 	void ComparisonChain::calcElementPathHashRecursive() {
-		calcIndexedListChildPath<ExprElement>({ sub_expr }, getComponentHash());
+		calcIndexedListChildPath<ExprElement>({ sub_expr }, getElementPathHash());
 	}
 }

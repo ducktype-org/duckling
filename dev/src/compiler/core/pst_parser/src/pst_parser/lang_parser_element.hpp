@@ -151,7 +151,7 @@ namespace pst {
 		) const {
 			if (auto ref = access_ref.internalMut())
 				ref->calcElementPathHash(
-					compiler::frontend::ComponentHash(path, std::string(name.value))
+					compiler::frontend::ComponentHash(path, std::string_view(name.value))
 				);
 		}
 
@@ -323,7 +323,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const ComponentHash& getComponentHash() const {
+		const ComponentHash& getElementPathHash() const {
 			CORE_ASSERT(
 				element_path_hash.has_value(),
 				"element path not calculated for this " + elementType()

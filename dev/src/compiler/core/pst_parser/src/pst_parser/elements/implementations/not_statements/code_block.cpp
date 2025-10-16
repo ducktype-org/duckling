@@ -55,7 +55,7 @@ namespace pst {
 	}
 
 	void CodeBlock::calcElementPathHashRecursive() {
-		auto path = getComponentHash();
+		auto path = getElementPathHash();
 		if (type == Ordered) {
 			auto ordered = ComponentHash(path, "ordered");
 			calcIndexedListChildPath<Stmt>({ statements }, ordered);

@@ -38,7 +38,7 @@ namespace pst {
 	}
 
 	void TopLevel::calcElementPathHashRecursive() {
-		calcOrderedListChildPath(statements, getComponentHash());
+		calcOrderedListChildPath(statements, getElementPathHash());
 	}
 
 	void TopLevel::acceptVisitor(PstVisitor&) const { CORE_PANIC("Visitng TopLevel statement"); }

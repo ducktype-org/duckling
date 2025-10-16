@@ -1,20 +1,12 @@
 #include "source_file.hpp"
 
 #include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 
 #include <filesystem/file.hpp>
-
-// Minimal declaration to allow calling ModuleTree::getComponentHash without including full
-// ModuleTree header
-namespace compiler::frontend {
-	class ModuleTree {
-	public:
-		static const ComponentHash& getComponentHash(ModuleID module_id);
-	};
-}
 
 namespace {
 

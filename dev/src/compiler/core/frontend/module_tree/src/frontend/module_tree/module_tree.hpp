@@ -117,7 +117,7 @@ namespace compiler::frontend {
 		 * /root
 		 *   /sub1
 		 *     /sub2
-		 * The component hash of sub2 will be hash("/root/sub1/sub2")
+		 * The component hash of sub2 will be ComponentHash({"root", "sub1", "sub2"})
 		 * @param module_id ModuleID of the module to get the component hash for.
 		 */
 		[[nodiscard]]

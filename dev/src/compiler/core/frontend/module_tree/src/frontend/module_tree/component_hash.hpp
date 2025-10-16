@@ -49,7 +49,7 @@ namespace compiler::frontend {
 			hash = partial.finalize();
 		}
 
-		ComponentHash(const ComponentHash& parent, std::string_view ext) noexcept:
+		constexpr ComponentHash(const ComponentHash& parent, std::string_view ext) noexcept:
 			  partial(parent.partial),
 			  elements(parent.elements) {
 			if (!ext.empty()) {
@@ -68,15 +68,6 @@ namespace compiler::frontend {
 		}
 
 		// Return elements joined by '.' (represents the hierarchical path)
-		[[nodiscard]] std::string str() const {
-			std::string out;
-			bool        first = true;
-			for (const auto& e: elements) {
-				if (!first) out.push_back('.');
-				out.append(e);
-				first = false;
-			}
-			return out;
-		}
+		[[nodiscard]] std::string str() const;
 	};
 }

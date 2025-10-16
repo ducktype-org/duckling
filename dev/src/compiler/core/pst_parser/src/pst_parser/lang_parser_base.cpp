@@ -27,7 +27,7 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ComponentHash child_path(getComponentHash(), named_child.name);
+					ComponentHash child_path(getElementPathHash(), named_child.name);
 					named_child.element->calcElementPathHash(child_path);
 				}
 			}
@@ -96,7 +96,7 @@ namespace pst {
 	}
 
 	LangElement::HashAlg LangElement::calcStableHash() const {
-		HashAlg partial_hash = getComponentHash().partial;
+		HashAlg partial_hash = getElementPathHash().partial;
 		addToHash(partial_hash, elementType());
 		addGenericDataToHash(partial_hash);
 		addElementDataToStableHash(partial_hash);

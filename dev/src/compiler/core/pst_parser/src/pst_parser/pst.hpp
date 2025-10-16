@@ -3,7 +3,6 @@
 #include "access.hpp"
 #include "elements/hierarchy/declarations/top_level.hpp"
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
-#include "lang_parser_element.hpp"
 #include "pst_state_forward.hpp"
 
 #include <token_source/source.hpp>
@@ -44,7 +43,7 @@ namespace pst {
 		AccessInternalAnonymous<Element> element;
 		/** Import entries collected during parsing. */
 		std::vector<ImportType> imports;
-		/** Contextual component path/hash in this PST for hierarchical naming. */
+		/** Contextual component path/hash of this PST for hierarchical naming. */
 		compiler::frontend::ComponentHash context_info;
 
 		/**

@@ -124,8 +124,8 @@ namespace pst::expr {
 	}
 
 	void MatchExpr::calcElementPathHashRecursive() {
-		calcNamedChildPath(value_to_match, getComponentHash());
-		auto path = getComponentHash();
+		calcNamedChildPath(value_to_match, getElementPathHash());
+		auto path = getElementPathHash();
 		calcIndexedListChildPath<MatchCase>({ cases }, { path, "cases" });
 	}
 }
