@@ -87,8 +87,8 @@ namespace vm {
 		u64 arg1;
 
 #if defined(BUILD_TYPE_DEV_DEBUG)
-		u64         opcode_id = std::numeric_limits<u64>::max();
-		std::string representation{};
+		low::MicroOpcode opcode_id = low::MicroOpcode{ std::numeric_limits<u64>::max() };
+		std::string      representation{};
 #endif
 	};
 

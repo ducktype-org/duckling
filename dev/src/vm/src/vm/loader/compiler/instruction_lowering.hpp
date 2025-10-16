@@ -48,7 +48,7 @@ namespace vm::loader::compiler::detail {
 		requires std::same_as<std::tuple<Args...>, typename T::ArgTypes> void addLow(Args... args) {
 			result.push_back(makeLowInstruction(T::OPCODE, compiler.lowerArgument(ctx, args)...));
 #if (BUILD_TYPE_DEV_DEBUG)
-			result.back().opcode_id      = std::to_underlying(T::OPCODE);
+			result.back().opcode_id      = T::OPCODE;
 			result.back().representation = current_high_instruction_representation;
 #endif
 			next_instruction_index++;

@@ -88,11 +88,11 @@ namespace vm::loader::compiler {
 	) {
 		for (auto [instr_idx, instr]: std::views::enumerate(instructions)) {
 			auto       opcode_num = std::to_underlying(getInstructionOpcode(instr));
-			std::array args{ instr.arg0, instr.arg1 };
+			std::array args{ Ref(&instr.arg0), Ref(&instr.arg1) };
 			auto       are_args_labels = low::instruction_tags::IS_ARGUMENT_LABEL.at(opcode_num);
 
 			for (auto [arg, is_label]: std::views::zip(args, are_args_labels))
-				if (is_label) arg = label_map.at(arg) - static_cast<usize>(instr_idx) - 1;
+				if (is_label) *arg = label_map.at(*arg) - static_cast<usize>(instr_idx) - 1;
 		}
 	}
 
