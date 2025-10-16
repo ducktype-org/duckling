@@ -155,8 +155,8 @@ namespace vm::loader::compiler {
 			CORE_UNREACHABLE();
 		};
 
-        // Label positions in high bytecode, used only for graph traversing
-        // in this function. Not used when lowering to microbytecode.
+		// Label positions in high bytecode, used only for graph traversing
+		// in this function. Not used when lowering to microbytecode.
 		base::HashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			variant_match(instr) {

@@ -48,7 +48,7 @@
 #ifndef DEF_INSTR
 #define DEFAULT_DEF_INSTR
 #define GET_MACRO(_instr, _1, _2, NAME, ...) NAME
-#define DEF_INSTR(...)                                                                   \
+#define DEF_INSTR(...)                                                                 \
 	GET_MACRO(__VA_ARGS__, HANDLE_INSTR_2ARGS, HANDLE_INSTR_1ARGS, HANDLE_INSTR_0ARGS) \
 	(__VA_ARGS__)
 #endif

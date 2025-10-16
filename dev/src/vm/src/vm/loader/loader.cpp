@@ -39,7 +39,7 @@ namespace {
 	template<class Instruction>
 	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
 
-#define HANDLE_INSTR_0ARGS(opcode)                                       \
+#define HANDLE_INSTR_0ARGS(opcode)                                        \
 	template<>                                                            \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
 		const parser::OpCode& opcode                                      \
@@ -50,7 +50,7 @@ namespace {
 		return instr;                                                     \
 	}
 
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                 \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                  \
 	template<>                                                                                 \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
 		const parser::OpCode& opcode                                                           \
@@ -64,7 +64,7 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
 	}
 
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                              \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                               \
 	template<>                                                                                         \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
 		const parser::OpCode& opcode                                                                   \

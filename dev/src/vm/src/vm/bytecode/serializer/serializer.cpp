@@ -72,11 +72,11 @@ namespace vm::code {
 
 #define HANDLE_INSTR_0ARGS(opcode) \
 	void operator()(VM_INSTR_FROM_NAME(opcode)) const { write0ArgOpcodeTemplate(#opcode, out); }
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                 \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                  \
 	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const { \
 		write1ArgOpcodeTemplate(#opcode, opcode.arg0, out);    \
 	}
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                 \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                  \
 	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const {            \
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
