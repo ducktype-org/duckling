@@ -18,6 +18,7 @@ use crate::{
 use anyhow::{Context, bail};
 use clap::ArgMatches;
 use is_executable::is_executable;
+use itertools::Itertools;
 use quackpack::QuackResult;
 use tracing::debug;
 
@@ -42,7 +43,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
     use std::env;
-    const PREFIX: &str = "qp-";
+    const PREFIX: &str = "duck-";
     const SUFFIX: &str = env::consts::EXE_SUFFIX;
     let Some(path) = ctx.env().get_os("PATH") else {
         return HashMap::new();
@@ -87,7 +88,7 @@ fn run_subcmd(
         exec_fn(ctx, sub_args.to_owned())
     } else if let Some(exec_path) = external.get(sub_cmd) {
         // External subcommand.
-        let cli_args = external_cli_args(sub_cmd, sub_args);
+        let cli_args = external_cli_args(sub_args);
         execute_external_subcmd(exec_path, cli_args)
     } else {
         // Unrecognizable subcommand.
@@ -95,15 +96,12 @@ fn run_subcmd(
     }
 }
 
-fn external_cli_args(sub_cmd: &str, sub_args: &ArgMatches) -> Vec<OsString> {
-    let mut cli_arguments = vec![OsString::from(sub_cmd)];
-    cli_arguments.extend(
-        sub_args
-            .get_many::<OsString>("")
-            .unwrap_or_default()
-            .cloned(),
-    );
-    cli_arguments
+fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
+    sub_args
+        .get_many::<OsString>("")
+        .unwrap_or_default()
+        .cloned()
+        .collect_vec()
 }
 
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
