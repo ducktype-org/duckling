@@ -80,7 +80,7 @@ namespace vm::code {
 		instructions::Comment>;
 
 	template<typename T>
-	concept IsInstruction = base::IS_VARIANT_MEMBER_V<T, Instruction>;
+	concept IsInstruction = base::IS_VARIANT_MEMBER_V<std::remove_cvref_t<T>, Instruction>;
 
 	template<typename T>
 	concept TwoArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 2;
