@@ -99,7 +99,7 @@ namespace vm::loader::compiler::detail {
 		addLabel(label);
 	}
 
-// @TODO #1189: Define proper lowering recipes once the translation gets nontrivial.
+// @TODO: #1189 Define proper lowering recipes once the translation gets nontrivial.
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR)                    \
 	template<>                                             \
 	void MicroBytecodeBuilder::lower<high::Op_##INSTR>() { \

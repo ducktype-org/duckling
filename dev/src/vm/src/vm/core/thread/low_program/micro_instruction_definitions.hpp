@@ -25,7 +25,7 @@
  * even higher control.
  */
 
-// @TODO #1189: This is where you define the new micro instructions.
+// @TODO: #1189 This is where you define the new micro instructions.
 // For now this file is almost exactly the same as its high bytecode equivalent,
 // except for the lack of Op_label and Comment, since they do not make sense as a runtime instructions.
 
