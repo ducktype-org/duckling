@@ -93,8 +93,8 @@ private:
 
 	template<typename Element>
 	void singleEquivalency(const std::string& local_path) {
-		const std::string error       = "outputs from parsing on file " + local_path + "differ.";
-		const std::string filepath    = path(local_path);
+		const std::string error        = "outputs from parsing on file " + local_path + "differ.";
+		const std::string filepath     = path(local_path);
 		pst::PST<Element> pst_manual   = manualSteps<Element>(filepath);
 		pst::PST<Element> pst_content  = fromContents<Element>(filepath);
 		pst::PST<Element> pst_filename = fromFilename<Element>(filepath);
