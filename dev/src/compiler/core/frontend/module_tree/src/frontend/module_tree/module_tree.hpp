@@ -112,7 +112,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Returns ComponentHash of the module.
-		 * it is calculater from module logical path
+		 * it is calculated from module logical path
 		 * eg. for module tree like:
 		 * /root
 		 *   /sub1
