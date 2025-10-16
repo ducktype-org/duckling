@@ -71,7 +71,6 @@ namespace compiler::helios {
 			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
-		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 	};
 
 	/**
