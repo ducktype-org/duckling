@@ -1,6 +1,6 @@
 #include <base/preproc/argument_splitter.hpp>
 
-#include <base/misc/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <sstream>
 
