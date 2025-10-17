@@ -90,5 +90,4 @@ namespace vm::code {
 
 	template<typename T>
 	concept ZeroArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 0;
-
 }
