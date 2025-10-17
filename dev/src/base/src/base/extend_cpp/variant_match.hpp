@@ -42,7 +42,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include "macros/diagnostics.hpp"
+#include <base/preproc/diagnostics.hpp>
 
 #include <limits>
 #include <type_traits>

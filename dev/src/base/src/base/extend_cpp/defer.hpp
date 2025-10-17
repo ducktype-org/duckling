@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "macros/diagnostics.hpp"
+#include <base/preproc/diagnostics.hpp>
 
 #include <utility>
 

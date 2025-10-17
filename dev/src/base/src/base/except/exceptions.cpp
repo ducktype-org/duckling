@@ -1,4 +1,4 @@
-#include "../exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <ostream>
 #include <version>  // IWYU pragma: keep

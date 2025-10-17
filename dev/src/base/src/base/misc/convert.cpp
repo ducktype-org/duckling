@@ -1,4 +1,4 @@
-#include "../convert.hpp"
+#include "convert.hpp"
 
 namespace base {
 	std::string toHexString(usize hex, usize length) {

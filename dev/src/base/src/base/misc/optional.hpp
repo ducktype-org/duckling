@@ -31,7 +31,7 @@
  */
 #pragma once
 
-#include "exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <base/macros/diagnostics.hpp>
 

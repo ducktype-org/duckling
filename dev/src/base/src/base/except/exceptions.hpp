@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "macros/utils.hpp"
-#include "str_utils.hpp"  // IWYU pragma: export
+#include <base/preproc/utils.hpp>
+#include <base/str/str_utils.hpp>  // IWYU pragma: export
 
 #include <exception>
 #include <string>

@@ -2,7 +2,7 @@
 
 #ifdef __cpp_lib_stacktrace
 
-	#include "../pretty_stacktrace.hpp"
+	#include "pretty_stacktrace.hpp"
 
 	#include <filesystem>
 

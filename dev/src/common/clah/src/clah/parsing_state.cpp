@@ -1,6 +1,6 @@
 #include "parsing_state.hpp"
 
-#include "exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 /**
  * Basic helper functions.

@@ -20,7 +20,7 @@
  */
 #pragma once
 
-#include "macros/utils.hpp"
+#include <base/preproc/utils.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 

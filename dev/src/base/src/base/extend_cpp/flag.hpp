@@ -6,7 +6,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>                // IWYU pragma: export
-#include "stringifyable_enum.hpp"  // IWYU pragma: export
+#include <base/extend_cpp/stringifyable_enum.hpp>  // IWYU pragma: export
 
 #include <compare>                 // IWYU pragma: export
 #include <sstream>                 // IWYU pragma: export

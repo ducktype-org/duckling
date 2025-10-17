@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include "exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 namespace base::internal {
 	enum class InitState : unsigned char {
