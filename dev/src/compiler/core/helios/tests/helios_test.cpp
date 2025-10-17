@@ -13,6 +13,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -129,7 +130,8 @@ private:
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
 		          ->valueOrThrow()
-		          .getType();
+		          .getType()
+		          .as<tsh::ClassAbstractType>();
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -138,6 +140,12 @@ private:
 		ASSERT_TRUE(not first_class_info.base.has_value());
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
+
+		const auto first_ctor
+			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+				first_class_abstract_type
+			);
+		ASSERT_EQUAL(first_ctor->declaration->return_type.getType(), first_class_abstract_type);
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info

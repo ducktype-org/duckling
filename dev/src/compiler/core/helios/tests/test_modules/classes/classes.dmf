@@ -1,3 +1,5 @@
+# Simple classes
+
 class FirstClassEver {
     a: i32 = 0;
     b: f32 = 0;
@@ -25,6 +27,23 @@ class SecondClass extends FirstClassEver {}
 let a: FirstClassEver = FirstClassEver(1, 2.0);
 let b = a;
 
+# Classes as members
+
+class ClassWithMember {
+    member: FirstClassEver = FirstClassEver(3, 4.0);
+
+    fun getMemberA() -> i32 = {
+        return member.getA();
+    }
+}
+
+let c: ClassWithMember = ClassWithMember(FirstClassEver(5, 6.0));
+let c_member: FirstClassEver = c.member;
+let c_member_a: i32 = c.getMemberA();
+
+# Nested classes
+
+# @TODO: #1420 Support nested classes in PST
 # class OuterClass {
 #     class InnerClass {
 #         x: i32 = 0;
