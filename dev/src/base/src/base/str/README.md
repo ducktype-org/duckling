@@ -1,1 +1,1 @@
-Components for working with string.
+Components for working with strings.
