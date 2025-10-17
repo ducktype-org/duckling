@@ -27,19 +27,20 @@ class SecondClass extends FirstClassEver {}
 let a: FirstClassEver = FirstClassEver(1, 2.0);
 let b = a;
 
+# @TODO: #520 Support lookup in types; type interfaces
 # Classes as members
 
-class ClassWithMember {
-    member: FirstClassEver = FirstClassEver(3, 4.0);
+# class ClassWithMember {
+#     member: FirstClassEver = FirstClassEver(3, 4.0);
+#
+#     fun getMemberA() -> i32 = {
+#         return member.getA();
+#     }
+# }
 
-    fun getMemberA() -> i32 = {
-        return member.getA();
-    }
-}
-
-let c: ClassWithMember = ClassWithMember(FirstClassEver(5, 6.0));
-let c_member: FirstClassEver = c.member;
-let c_member_a: i32 = c.getMemberA();
+# let c: ClassWithMember = ClassWithMember(FirstClassEver(5, 6.0));
+# let c_member: FirstClassEver = c.member;
+# let c_member_a: i32 = c.getMemberA();
 
 # Nested classes
 

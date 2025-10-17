@@ -46,7 +46,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testError);
 		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
@@ -70,6 +69,10 @@ public:
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
+
+		// error tests
+		TESTER_ADD_TEST(testErrorBadExpr);
+		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -122,7 +125,7 @@ private:
 	}
 
 	void testClassSymbolData() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/classes")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
@@ -158,6 +161,8 @@ private:
 		ASSERT_TRUE(second_class_info.base.has_value());
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
+
+		query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
 	}
 
 	void testTypeOf() {
@@ -621,53 +626,6 @@ private:
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 	}
 
-	void testError() {
-		using namespace compiler::helios;
-
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
-
-
-		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-
-		try {
-			getConstValueAs<i64>("InvalidExpr", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (base::NotYetImplemented& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("InvalidSym", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("C", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<bool>("InvalidCompFirst", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-	}
-
 	void testHoutVariables() {
 		auto [module, _] = getModule(fs::File(path("test_modules/variables")));
 
@@ -1027,62 +985,11 @@ private:
 			= compiler::helios::getIdentifierExprSymID(call_expr_2->callee.ref()).value();
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2_callee));
 		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
-	}
-
-	void testScopeParentsAndDepth() {
-		auto all_scopes = compiler::helios::getAllHeliosScopes();
-		message(base::strConcat("Scope count: ", all_scopes.size()));
-		for (auto scope: all_scopes) {
-			auto depth = scopeDepth(scope);
-			while (depth != 0) {
-				scope = parent(scope).value();
-				ASSERT_TRUE(depth > 0);
-				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
-				depth = scopeDepth(scope);
-
-				// it is just for cov mostly
-
-				// we redirect cerr to a stringstream to avoid printing a lot of stuff to console
-				// here:
-				std::cerr.flush();
-				std::stringstream buffer;
-				std::streambuf*   org_buffer = std::cerr.rdbuf(buffer.rdbuf());
-				defer(std::cerr.rdbuf(org_buffer));
-
-				// @TODO: make it not print to cerr, but to ostream or string:
-				scope.debugPrintScopeAndParents();
-
-				std::cerr.flush();
-			}
-			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
-		}
-	}
-
-	/**
-	 * This checks for all symbols that if a given
-	 * symbol `s` is in the scope `N`, then it is also in the
-	 * output of QuerySymbolsInScope(N).
-	 */
-	void testScopeSymbolsConsistency() {
-		auto all_symbols = compiler::helios::getAllHeliosSymbols();
-
-		// this is quadratic in theory, if it ever get too slow,
-		// we can optimize it with some maps.
-		for (auto symbol: all_symbols) {
-			auto maybe_scope = compiler::helios::maybeScope(symbol);
-			if (maybe_scope.empty()) continue;
-			auto scope            = maybe_scope.value();
-			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
-
-			auto found = false;
-			for (auto s: *symbols_in_scope) {
-				if (s == symbol) {
-					found = true;
-					break;
-				}
-			}
-			assertTrue(found, "Symbol was not fount in its scope");
-		}
+		auto builtin_output_decl
+			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee);
+		ASSERT_EQUAL(
+			builtin_output_decl->parameters.at(0).type.getType().getKind(), tsh::Kind::Integral
+		);
 	}
 
 	void testMangler() {
@@ -1512,6 +1419,129 @@ private:
 				// Expected failure for invalid ABI
 			}
 		});
+	}
+
+	void testErrorBadExpr() {
+		using namespace compiler::helios;
+
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
+
+
+		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+
+		try {
+			getConstValueAs<i64>("InvalidExpr", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (base::NotYetImplemented& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<i64>("InvalidSym", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<i64>("C", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		// This fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		try {
+			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("InvalidCompFirst", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+	}
+
+	void testErrorAmbiguousCallableCandidates() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_callable_candidates")
+		    ));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
+			assertThrows<std::exception>(
+				[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
+				"Expected ambiguous callable candidates error"
+			);
+
+			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+			std::stringstream non_detailed_log;
+			ctx.logger.dumpLog(false, non_detailed_log);
+			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testScopeParentsAndDepth() {
+		auto all_scopes = compiler::helios::getAllHeliosScopes();
+		message(base::strConcat("Scope count: ", all_scopes.size()));
+		for (auto scope: all_scopes) {
+			auto depth = scopeDepth(scope);
+			while (depth != 0) {
+				scope = parent(scope).value();
+				ASSERT_TRUE(depth > 0);
+				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
+				depth = scopeDepth(scope);
+
+				// it is just for cov mostly
+
+				// we redirect cerr to a stringstream to avoid printing a lot of stuff to console
+				// here:
+				std::cerr.flush();
+				std::stringstream buffer;
+				std::streambuf*   org_buffer = std::cerr.rdbuf(buffer.rdbuf());
+				defer(std::cerr.rdbuf(org_buffer));
+
+				// @TODO: make it not print to cerr, but to ostream or string:
+				scope.debugPrintScopeAndParents();
+
+				std::cerr.flush();
+			}
+			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
+		}
+	}
+
+	/**
+	 * This checks for all symbols that if a given
+	 * symbol `s` is in the scope `N`, then it is also in the
+	 * output of QuerySymbolsInScope(N).
+	 */
+	void testScopeSymbolsConsistency() {
+		auto all_symbols = compiler::helios::getAllHeliosSymbols();
+
+		// this is quadratic in theory, if it ever get too slow,
+		// we can optimize it with some maps.
+		for (auto symbol: all_symbols) {
+			auto maybe_scope = compiler::helios::maybeScope(symbol);
+			if (maybe_scope.empty()) continue;
+			auto scope            = maybe_scope.value();
+			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
+
+			auto found = false;
+			for (auto s: *symbols_in_scope) {
+				if (s == symbol) {
+					found = true;
+					break;
+				}
+			}
+			assertTrue(found, "Symbol was not fount in its scope");
+		}
 	}
 };
 
