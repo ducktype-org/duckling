@@ -1,4 +1,4 @@
-# generated with duck compile_module --dvm-backend
+# generated with duckc compile_module --dvm-backend
 # from compiler/driver/driver/tests/modules/globals_initialization/
 
 global_data _Q_M22globals_initializationG1g i64 {
