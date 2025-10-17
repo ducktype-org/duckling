@@ -224,6 +224,10 @@ namespace tsh {
 		 */
 		std::vector<InterfaceElement> elements;
 
+		/**
+		 * @brief The collection of elements of the interface, grouped by name.
+		 * @note This is duplicated from `elements` for performance reasons.
+		 */
 		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
 
 	public:

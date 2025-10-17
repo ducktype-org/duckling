@@ -23,8 +23,8 @@ namespace compiler::helios {
 		):
 			  data(data) {}
 
-		u64 GeneratedSymbolData::queryUnstablePerfectHash() const {
-			return hashing::justHash(
+		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256, void>(
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}

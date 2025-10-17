@@ -11,6 +11,7 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/actions/return.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -274,6 +275,23 @@ namespace compiler::helios {
 				argument_index++;
 			}
 
+			// Check that this logic did not diverge from `GeneratedSymbolData::getType()`.
+			const auto expected_function_type = ctx.query<QueryTypeOfSymbol>({ ctor_symbol })
+			                                        ->value()
+			                                        .getType()
+			                                        .as<tsh::FunctionAbstractType>();
+			CORE_ASSERT(
+				result_symbol_type == expected_function_type.getResultType(),
+				"Generated constructor return type mismatch"
+			);
+			for (u64 i = 0; i < num_fields; i++) {
+				CORE_ASSERT(
+					parameters[i].type == expected_function_type.getParameterTypes().at(i),
+					"Generated constructor parameter type mismatch"
+				);
+			}
+
+			// Return the declaration.
 			return HOUTFunctionDeclaration{
 				ctor_symbol,
 				result_symbol_type,

@@ -718,8 +718,9 @@ namespace compiler::helios {
 
 	namespace houtgen {
 		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
-			return { std::hash<base::StrID>()(name),
-				     generated_symbol_data.queryUnstablePerfectHash() };
+			return hashing::justHash<hashing::SHA256>(
+				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
+			);
 		}
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymID) {

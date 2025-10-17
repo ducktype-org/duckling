@@ -58,7 +58,7 @@ namespace compiler::helios::houtgen {
 		);
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const;
+		base::Bit256 queryUnstablePerfectHash() const;
 
 		tsh::SymbolType<> getType(query::Context& ctx) const;
 	};

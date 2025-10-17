@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "symbol_data.hpp"
+#include "generated_symbol_data.hpp"
 
 #include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
