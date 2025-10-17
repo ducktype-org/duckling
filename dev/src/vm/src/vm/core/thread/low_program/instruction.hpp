@@ -39,7 +39,7 @@ namespace {
 	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
 	 * Used for `vm::OP_CASES_COUNT`.
 	 *
-	 * @return constexpr u16
+	 * @return constexpr u64
 	 */
 	constexpr u64 countOpCases() {
 		u64 count = 0;
