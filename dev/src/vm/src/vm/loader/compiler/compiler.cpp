@@ -6,7 +6,7 @@
 #include <base/types/ints.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/misc/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <vm/bytecode/bytecode.hpp>

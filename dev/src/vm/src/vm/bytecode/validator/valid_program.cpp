@@ -2,7 +2,7 @@
 
 #include "errors.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>

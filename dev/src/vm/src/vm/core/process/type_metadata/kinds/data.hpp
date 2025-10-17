@@ -4,7 +4,7 @@
 #include "../inheritance_metadata.hpp"
 
 #include <base/misc/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <unordered_map>
 #include <vector>

@@ -12,7 +12,7 @@
 #pragma once
 
 #include <base/extend_cpp/flag.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <init/init.hpp>
 

@@ -11,7 +11,7 @@
 #include <pst_parser/generic_query_key.hpp>
 
 #include <base/types/bit256.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>

@@ -6,7 +6,7 @@
 #include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 #include <base/variant.hpp>
 
 namespace compiler::helios {

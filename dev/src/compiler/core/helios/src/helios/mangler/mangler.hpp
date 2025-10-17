@@ -1,6 +1,6 @@
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <query_framework/query_int.hpp>
 

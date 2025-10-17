@@ -5,7 +5,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>

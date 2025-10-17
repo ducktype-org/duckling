@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/pointers/box.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>

@@ -1,5 +1,5 @@
 #include <base/types/ints.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
 #include <iostream>

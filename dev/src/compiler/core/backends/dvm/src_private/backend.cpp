@@ -4,7 +4,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/macros/for_each.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <query_framework/context.hpp>

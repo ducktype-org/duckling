@@ -18,7 +18,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/optional.hpp>
 #include <base/collections/stable_container.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <query_framework/query_impl.hpp>

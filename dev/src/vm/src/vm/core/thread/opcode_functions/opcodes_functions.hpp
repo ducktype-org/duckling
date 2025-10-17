@@ -3,7 +3,7 @@
 #include "../config.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/raw_view.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>

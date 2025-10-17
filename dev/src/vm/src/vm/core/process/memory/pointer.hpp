@@ -2,7 +2,7 @@
 
 #include <base/int_conv.hpp>
 #include <base/types/ints.hpp>
-#include <base/raw_view.hpp>
+#include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <vm/core/process/exceptions.hpp>

@@ -3,7 +3,7 @@
 #include "../config.hpp"
 
 #include <base/types/ints.hpp>
-#include <base/raw_view.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <vm/utils/interpret.hpp>
 

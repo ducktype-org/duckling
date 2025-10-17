@@ -1,7 +1,7 @@
 #include <vm_tester_utils.hpp>
 
 #include <base/misc/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
