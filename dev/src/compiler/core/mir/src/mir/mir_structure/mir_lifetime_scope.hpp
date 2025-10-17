@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/stable_container.hpp>
 
 namespace compiler::mir {

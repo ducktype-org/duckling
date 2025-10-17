@@ -4,9 +4,9 @@
 #include "source_file.hpp"
 
 #include <base/types/ints.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 #include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <filesystem/file.hpp>
 

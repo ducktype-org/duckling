@@ -8,7 +8,7 @@
 
 #include "element_base.hpp"
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 

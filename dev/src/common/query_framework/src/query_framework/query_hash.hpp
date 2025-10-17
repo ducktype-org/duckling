@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/bit256.hpp>
+#include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
 namespace query {

@@ -2,7 +2,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 #include <base/raw_view.hpp>
 
 #include <array>

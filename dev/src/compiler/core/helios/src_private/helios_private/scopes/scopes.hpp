@@ -24,7 +24,7 @@
 #include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/generic_query_key.hpp>
 
-#include <base/bit256.hpp>
+#include <base/types/bit256.hpp>
 #include <base/string_id.hpp>
 
 #include <diagnostic/logger.hpp>

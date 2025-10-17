@@ -4,7 +4,7 @@
 
 #include <base/types/ints.hpp>
 #include <base/raw_view.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>

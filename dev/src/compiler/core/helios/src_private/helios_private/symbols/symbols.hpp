@@ -10,7 +10,7 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/generic_query_key.hpp>
 
-#include <base/bit256.hpp>
+#include <base/types/bit256.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/query_int.hpp>

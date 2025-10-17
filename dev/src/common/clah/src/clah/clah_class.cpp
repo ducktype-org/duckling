@@ -5,7 +5,7 @@
 
 #include "clah.hpp"
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 

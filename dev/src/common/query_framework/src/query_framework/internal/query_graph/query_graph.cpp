@@ -2,7 +2,7 @@
 
 #include "node_id.hpp"
 
-#include <base/bit256.hpp>
+#include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
 #include <cstring>

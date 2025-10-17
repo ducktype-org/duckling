@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <query_framework/context.hpp>
 

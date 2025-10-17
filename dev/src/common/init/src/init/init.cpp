@@ -1,7 +1,7 @@
 #include "init.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <cstdlib>
 #include <iostream>

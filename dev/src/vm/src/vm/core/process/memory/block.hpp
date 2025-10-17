@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 #include <base/strongly_typed_id.hpp>
 
 #include <vm/core/process/memory/allocator/block_data.hpp>

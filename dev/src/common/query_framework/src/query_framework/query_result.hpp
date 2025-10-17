@@ -5,7 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/macros/utils.hpp>
 #include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <expected>
 #include <type_traits>

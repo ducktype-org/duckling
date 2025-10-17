@@ -2,9 +2,9 @@
 
 #include "pst_id.hpp"
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 #include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/template_string.hpp>
 
 #include <query_framework/context_fd.hpp>

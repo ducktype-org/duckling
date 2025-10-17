@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
 #include <ostream>

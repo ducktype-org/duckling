@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace vm {
 	struct BlockData;

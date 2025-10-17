@@ -4,7 +4,7 @@
 #include "block_data.hpp"
 
 #include <base/types/ints.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>

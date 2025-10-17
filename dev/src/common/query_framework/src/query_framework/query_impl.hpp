@@ -16,9 +16,9 @@
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 #include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 

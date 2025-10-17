@@ -6,7 +6,7 @@
 #include "operator_precedence.hpp"
 
 #include <base/init_guard.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 namespace lang_def {
 

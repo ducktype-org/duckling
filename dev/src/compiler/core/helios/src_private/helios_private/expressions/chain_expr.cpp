@@ -18,7 +18,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/types/ints.hpp>
 #include <base/optional.hpp>

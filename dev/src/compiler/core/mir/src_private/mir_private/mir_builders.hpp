@@ -4,7 +4,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vector>
 

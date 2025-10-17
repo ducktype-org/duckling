@@ -18,7 +18,7 @@
 #include <pst_parser/pst_visitor.hpp>
 
 #include <base/exceptions.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 #include <base/stable_container.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 #include <base/optional.hpp>
 
 #include <vm/core/process/memory/block.hpp>

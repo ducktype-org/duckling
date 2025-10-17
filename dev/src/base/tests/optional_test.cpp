@@ -4,7 +4,7 @@
  */
 
 #include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <tester/tester.hpp>
 

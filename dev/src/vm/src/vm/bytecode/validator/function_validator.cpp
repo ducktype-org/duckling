@@ -4,7 +4,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/type_traits.hpp>
 #include <base/variant.hpp>
 
