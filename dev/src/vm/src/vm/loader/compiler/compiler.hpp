@@ -78,7 +78,6 @@ namespace vm::loader::compiler {
 			const code::Function& function;
 			/// Temporary label IDs used before label linking.
 			base::HashMap<base::StrID, usize> label_id_map;
-			usize                             next_label_id = 0;
 			/// A mapping from a local variable's name to its offset on the function's local stack.
 			base::HashMap<base::StrID, usize> local_offset_map{};
 			/// Total required size for the local stack frame, in bytes.

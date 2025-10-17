@@ -79,7 +79,7 @@ namespace vm::loader::compiler {
 				// to generate actual offsets once we know where each label
 				// lands after lowering.
 				if (!ctx.label_id_map.contains(label.label_name))
-					ctx.label_id_map.put(label.label_name, ctx.next_label_id++);
+					ctx.label_id_map.put(label.label_name, ctx.label_id_map.size());
 				return ctx.label_id_map.at(label.label_name);
 			}
 			variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
