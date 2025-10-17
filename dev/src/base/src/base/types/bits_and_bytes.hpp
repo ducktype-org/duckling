@@ -7,7 +7,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include "strongly_typed_int.hpp"
+#include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <string>
 

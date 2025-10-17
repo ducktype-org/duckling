@@ -1,4 +1,5 @@
 #pragma once
+
 #include <base/macros/for_each.hpp>
 #include <base/type_traits.hpp>
 

@@ -1,4 +1,4 @@
-#include "../bit256.hpp"
+#include "bit256.hpp"
 
 namespace base {
 	std::string Bit256::toStringHex() const {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/except/exceptions.hpp>
-#include "optional.hpp"
+#include <base/misc/optional.hpp>
 
 namespace base {
 

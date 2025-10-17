@@ -8,7 +8,7 @@
  */
 #pragma once
 
-#include "strongly_typed_int.hpp"
+#include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <cstddef>
 #include <cstdint>

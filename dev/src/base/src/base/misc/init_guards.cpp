@@ -1,4 +1,4 @@
-#include "../init_guard.hpp"
+#include "init_guard.hpp"
 
 #include <iostream>
 
