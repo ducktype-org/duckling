@@ -42,6 +42,6 @@ namespace pst::expr {
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
-		void calcElementPathsRecursive() override;
+		void calcElementPathHashRecursive() override;
 	};
 }

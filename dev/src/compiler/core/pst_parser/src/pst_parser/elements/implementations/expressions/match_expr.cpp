@@ -123,9 +123,9 @@ namespace pst::expr {
 		visitor.visitMatchExpr(*this);
 	}
 
-	void MatchExpr::calcElementPathsRecursive() {
-		calcNamedChildPath(value_to_match, getElementPath());
-		auto path = getElementPath();
+	void MatchExpr::calcElementPathHashRecursive() {
+		calcNamedChildPath(value_to_match, getElementPathHash());
+		auto path = getElementPathHash();
 		calcIndexedListChildPath<MatchCase>({ cases }, { path, "cases" });
 	}
 }
