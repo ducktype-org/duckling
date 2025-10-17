@@ -7,7 +7,7 @@
 
 #include <base/pointers/box.hpp>
 #include <base/misc/optional.hpp>
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <printer/stream_printer.hpp>
 

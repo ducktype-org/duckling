@@ -4,7 +4,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 

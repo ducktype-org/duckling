@@ -3,9 +3,9 @@
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/except/exceptions.hpp>
-#include <base/macros/for_each.hpp>
+#include <base/preproc/for_each.hpp>
 #include <base/str/string_id.hpp>
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 

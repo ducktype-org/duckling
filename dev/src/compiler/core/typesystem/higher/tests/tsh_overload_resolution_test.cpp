@@ -2,7 +2,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <typesystem/higher/all.hpp>
 
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context_fd.hpp>
 #include <query_framework/query_entry_point.hpp>

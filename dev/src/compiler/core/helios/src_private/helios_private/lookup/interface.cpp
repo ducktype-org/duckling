@@ -3,7 +3,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <query_framework/context.hpp>

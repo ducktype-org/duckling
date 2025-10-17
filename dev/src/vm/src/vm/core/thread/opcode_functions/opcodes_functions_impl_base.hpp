@@ -32,8 +32,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/types/ints.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/extend_cpp/variant.hpp>
+#include <base/preproc/for_each.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>

@@ -25,7 +25,7 @@
 #include <base/pointers/box.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/misc/optional.hpp>
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>

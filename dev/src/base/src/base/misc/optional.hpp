@@ -33,7 +33,7 @@
 
 #include <base/except/exceptions.hpp>
 
-#include <base/macros/diagnostics.hpp>
+#include <base/preproc/diagnostics.hpp>
 
 #include <functional>
 #include <optional>

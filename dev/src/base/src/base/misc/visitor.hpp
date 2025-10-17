@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/macros/for_each.hpp>
+#include <base/preproc/for_each.hpp>
 #include <base/comptime/type_traits.hpp>
 
 /**

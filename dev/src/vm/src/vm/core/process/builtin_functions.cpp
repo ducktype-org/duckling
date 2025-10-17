@@ -2,7 +2,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/int_conv.hpp>
-#include <base/macros/for_each.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>

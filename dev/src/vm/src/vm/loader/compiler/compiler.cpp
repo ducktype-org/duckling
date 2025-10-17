@@ -4,10 +4,10 @@
 
 #include <base/int_conv.hpp>
 #include <base/types/ints.hpp>
-#include <base/macros/for_each.hpp>
+#include <base/preproc/for_each.hpp>
 #include <base/misc/optional.hpp>
 #include <base/str/string_id.hpp>
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>

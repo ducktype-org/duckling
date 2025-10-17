@@ -3,7 +3,7 @@
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/lower/all.hpp>
 
-#include <base/extend_cpp/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
