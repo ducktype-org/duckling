@@ -362,7 +362,7 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr> /* current_expr */, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
 

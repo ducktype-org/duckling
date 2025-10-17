@@ -661,22 +661,22 @@ namespace compiler::helios {
 		return main_file_root_scope;
 	}
 
-	void ScopeID::debugPrintScopeAndParents() {
+	void ScopeID::debugPrintScopeAndParents(std::ostream& os) const {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.queryUnstablePerfectHash() << "("
-					  << (iter_scope.ref->related_pst_element.has_value()
-			                  ? iter_scope.ref->related_pst_element.value()
-			                        .illegalAccess()
-			                        .value()
-			                        ->elementType()
-			                  : "ROOT")
-					  << ")" << " -> ";
+			os << iter_scope.queryUnstablePerfectHash() << "("
+			   << (iter_scope.ref->related_pst_element.has_value()
+			           ? iter_scope.ref->related_pst_element.value()
+			                 .illegalAccess()
+			                 .value()
+			                 ->elementType()
+			           : "ROOT")
+			   << ")" << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();
 		}
-		std::cerr << "\n";
+		os << "\n";
 	}
 }

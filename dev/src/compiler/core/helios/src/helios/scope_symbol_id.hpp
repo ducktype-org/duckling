@@ -56,10 +56,9 @@ namespace compiler::helios {
 		/**
 		 * @brief Debug function to print scope and its parents IDs.
 		 * Useful for debugging weird scope bugs.
-		 * @note: not used right now
-		 * @param scope
+		 * @param os The stream to print to.
 		 */
-		void debugPrintScopeAndParents();
+		void debugPrintScopeAndParents(std::ostream& os) const;
 
 	private:
 		Ref<ScopeData> ref;
