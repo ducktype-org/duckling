@@ -19,8 +19,8 @@
 #include <base/collections/maps.hpp>
 #include <base/misc/optional.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>

@@ -1,4 +1,4 @@
-#include <base/str_utils.hpp>
+#include <base/str/str_utils.hpp>
 
 void base::internal::strConcat(std::string& out, const icu::UnicodeString& unistr) {
 	unistr.toUTF8String(out);

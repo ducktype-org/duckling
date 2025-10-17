@@ -1,5 +1,5 @@
-#include <base/str_utils.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/str/str_utils.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
 #include <tester/tester.hpp>
 

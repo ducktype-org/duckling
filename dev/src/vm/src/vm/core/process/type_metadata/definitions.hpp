@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include <base/stable_container.hpp>
+#include <base/collections/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 
 namespace vm {

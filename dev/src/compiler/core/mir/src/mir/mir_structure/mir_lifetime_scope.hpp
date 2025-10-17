@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/pointers/ref.hpp>
-#include <base/stable_container.hpp>
+#include <base/collections/stable_container.hpp>
 
 namespace compiler::mir {
 

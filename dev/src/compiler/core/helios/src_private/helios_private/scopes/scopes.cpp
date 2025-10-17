@@ -19,8 +19,8 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/collections/maps.hpp>
-#include <base/stable_container.hpp>
-#include <base/str_utils.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>

@@ -1,6 +1,6 @@
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/strongly_typed_int.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <tester/tester.hpp>
 

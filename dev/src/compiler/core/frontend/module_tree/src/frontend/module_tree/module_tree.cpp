@@ -4,7 +4,7 @@
 #include "queries.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/stable_container.hpp>
+#include <base/collections/stable_container.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>

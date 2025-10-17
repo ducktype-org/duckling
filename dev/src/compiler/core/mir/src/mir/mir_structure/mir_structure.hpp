@@ -7,10 +7,10 @@
 
 #include <base/types/ints.hpp>
 #include <base/misc/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/string_id.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/variant.hpp>
 

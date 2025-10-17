@@ -2,7 +2,7 @@
 
 #include <base/collections/maps.hpp>             // base::Map
 #include <base/misc/optional.hpp>         // base::Optional
-#include <base/str_utils.hpp>        // base::strConcat
+#include <base/str/str_utils.hpp>        // base::strConcat
 
 #include <query_framework/query_impl.hpp>
 

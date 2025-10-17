@@ -11,8 +11,8 @@
 
 #include <base/types/ok_bad.hpp>
 #include <base/misc/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
 #include <memory>
 #include <utility>

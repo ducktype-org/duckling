@@ -17,7 +17,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/optional.hpp>
-#include <base/stable_container.hpp>
+#include <base/collections/stable_container.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
