@@ -12,7 +12,7 @@
 #include <base/str/string_id.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <variant>
 #include <vector>

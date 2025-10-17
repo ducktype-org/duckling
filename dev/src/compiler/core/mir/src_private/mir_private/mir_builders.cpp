@@ -4,7 +4,7 @@
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <query_framework/query_impl.hpp>
 

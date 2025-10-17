@@ -6,7 +6,7 @@
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <query_framework/query_impl.hpp>
 

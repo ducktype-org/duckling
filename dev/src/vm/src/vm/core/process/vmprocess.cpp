@@ -2,7 +2,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/optional.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>

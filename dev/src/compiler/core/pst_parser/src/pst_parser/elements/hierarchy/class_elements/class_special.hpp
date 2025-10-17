@@ -3,7 +3,7 @@
 #include "../meta.hpp"
 #include "preamble.hpp"
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 namespace pst {
 	/**

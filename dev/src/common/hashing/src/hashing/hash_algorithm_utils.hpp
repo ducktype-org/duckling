@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
-#include <base/type_traits.hpp>
+#include <base/comptime/type_traits.hpp>
 
 #include <array>
 #include <bit>

@@ -5,8 +5,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/type_traits.hpp>
-#include <base/variant.hpp>
+#include <base/comptime/type_traits.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>

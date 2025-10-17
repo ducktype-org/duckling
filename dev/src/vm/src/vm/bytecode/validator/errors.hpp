@@ -1,7 +1,7 @@
 #pragma once
 #include <base/except/exceptions.hpp>
 #include <base/str/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>

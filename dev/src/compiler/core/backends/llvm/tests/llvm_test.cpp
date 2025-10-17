@@ -7,7 +7,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/except/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>

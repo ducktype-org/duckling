@@ -4,7 +4,7 @@
 #include "type_code.hpp"
 
 #include <base/types/ints.hpp>
-#include <base/type_traits.hpp>
+#include <base/comptime/type_traits.hpp>
 
 #include <concepts>
 #include <span>

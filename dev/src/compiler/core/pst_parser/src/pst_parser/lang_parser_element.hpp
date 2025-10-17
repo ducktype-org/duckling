@@ -9,7 +9,7 @@
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <hashing/hash.hpp>
 #include <lexer/token.hpp>

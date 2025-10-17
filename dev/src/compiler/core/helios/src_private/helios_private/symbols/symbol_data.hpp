@@ -7,7 +7,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <base/str/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 namespace compiler::helios {
 	/**

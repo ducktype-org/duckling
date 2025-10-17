@@ -2,7 +2,7 @@
 
 #include <base/misc/optional.hpp>
 #include <base/str/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <vm/api/api.hpp>
 

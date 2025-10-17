@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/macros/for_each.hpp>
-#include <base/type_traits.hpp>
+#include <base/comptime/type_traits.hpp>
 
 /**
  * @brief Helper for MAKE_VISITOR. Default method interface.

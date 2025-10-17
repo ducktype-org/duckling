@@ -10,7 +10,7 @@
 #include <base/types/ints.hpp>
 #include <base/misc/optional.hpp>
 #include <base/str/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>

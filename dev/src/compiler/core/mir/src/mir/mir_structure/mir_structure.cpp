@@ -3,7 +3,7 @@
 #include <helios/symbols/simple.hpp>
 
 #include <base/misc/optional.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <iomanip>
 #include <sstream>

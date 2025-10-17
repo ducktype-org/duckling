@@ -5,7 +5,7 @@
 
 #include "help_message_generator.hpp"
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <ranges>
 

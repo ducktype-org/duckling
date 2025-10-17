@@ -1,7 +1,7 @@
 #include <base/anycast.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>

@@ -1,6 +1,6 @@
 #include "cli.hpp"
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>

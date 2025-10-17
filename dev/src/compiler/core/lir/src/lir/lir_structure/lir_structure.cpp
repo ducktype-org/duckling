@@ -3,7 +3,7 @@
 #include <helios/symbols/simple.hpp>
 
 #include <base/collections/maps.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <iomanip>
 #include <set>

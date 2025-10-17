@@ -4,7 +4,7 @@
 #include "lang_parser_state.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant.hpp>
 
 #include <ranges>
 
