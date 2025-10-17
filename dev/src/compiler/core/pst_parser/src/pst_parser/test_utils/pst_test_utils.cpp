@@ -19,11 +19,11 @@ namespace pst {
 		return result;
 	}
 
-	base::OkBad checkUniqueElementPaths(AccessLocked<pst::LangElement> root) {
+	base::OkBad checkUniqueComponentHashs(AccessLocked<pst::LangElement> root) {
 		std::set<std::string> paths;
 		auto                  elements = viewAllSubTreeElements(root);
 		for (auto& element: elements) {
-			std::string path = element.illegalAccess().value()->getElementPath().str();
+			std::string path = element.illegalAccess().value()->getElementPathHash().str();
 			if (paths.contains(path)) return base::BAD;
 			paths.insert(path);
 		}

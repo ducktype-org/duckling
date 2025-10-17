@@ -1,5 +1,6 @@
 #pragma once
 
+#include "component_hash.hpp"
 #include "source_file.hpp"
 
 #include <base/ints.hpp>
@@ -13,7 +14,6 @@
 #include <string>
 
 namespace compiler::frontend {
-
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
@@ -57,7 +57,6 @@ namespace compiler::frontend {
 
 	public:
 		ModuleID getModuleID() const;
-
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -112,6 +111,19 @@ namespace compiler::frontend {
 		base::StrID getName() const;
 
 		/**
+		 * Returns ComponentHash of the module.
+		 * it is calculated from module logical path
+		 * eg. for module tree like:
+		 * /root
+		 *   /sub1
+		 *     /sub2
+		 * The component hash of sub2 will be ComponentHash({"root", "sub1", "sub2"})
+		 * @param module_id ModuleID of the module to get the component hash for.
+		 */
+		[[nodiscard]]
+		static const ComponentHash& getComponentHash(ModuleID module_id);
+
+		/**
 		 * Creates a nice, human-readable representation of this module tree.
 		 * @param indentation For regular printing, leave 0.
 		 * @return std::string with the representation.
@@ -125,6 +137,18 @@ namespace compiler::frontend {
 	private:
 		ModuleTree();
 
+
+		/**
+		 * Invalidate current component hash, used when module structure changes
+		 */
+		void invalidateComponentHash();
+
+		/**
+		 * Use a parent component hash, and update m_component_hash for this module only
+		 * This does not propagate to children
+		 */
+		void updateComponentHash();
+
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
 
@@ -136,6 +160,7 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+		base::Optional<ComponentHash>                     m_component_hash;
 	};
 
 	/**
@@ -358,5 +383,4 @@ namespace compiler::frontend {
 	 * for more details see ModuleTreeBuilder::create
 	 */
 	ModuleID createModuleTree(const fs::File& file);
-
 }
