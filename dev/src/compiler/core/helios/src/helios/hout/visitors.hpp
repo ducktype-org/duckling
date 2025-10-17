@@ -2,7 +2,7 @@
 
 #include "elements.hpp"
 
-#include <base/visitor.hpp>
+#include <base/misc/visitor.hpp>
 
 namespace compiler::helios::code {
 	MAKE_VISITOR(HoutStmt,
