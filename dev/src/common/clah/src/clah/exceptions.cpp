@@ -3,7 +3,7 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include <base/except/exceptions.hpp>
+#include "exceptions.hpp"
 
 #include "parsing_result.hpp"
 

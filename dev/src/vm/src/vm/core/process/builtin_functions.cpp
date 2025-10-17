@@ -1,7 +1,7 @@
 #include "builtin_functions.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>

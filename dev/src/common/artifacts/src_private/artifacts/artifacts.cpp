@@ -1,5 +1,5 @@
 #include <base/except/exceptions.hpp>
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 #include <base/misc/optional.hpp>
 
 #include <artifacts/artifacts.hpp>

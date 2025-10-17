@@ -1,6 +1,6 @@
 #include "serializer.hpp"
 
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>

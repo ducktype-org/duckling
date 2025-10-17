@@ -1,7 +1,7 @@
 #include "key_spec_op.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/init_guard.hpp>
+#include <base/misc/init_guard.hpp>
 #include <base/collections/maps.hpp>
 #include <base/misc/raw_view.hpp>
 
