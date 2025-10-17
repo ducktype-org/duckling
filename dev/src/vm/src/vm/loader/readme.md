@@ -5,7 +5,7 @@ contains just the overview of the verification stage.
 
 The details of this process are described more throughly in 
 [Bytecode Validation](../bytecode/validator/readme.md).
-[Compiler](compiler/README.md).
+[Compiler](compiler/readme.md).
 
 ## Design Assumptions
 When designing the architecture, we aimed to meet the assumptions we set, which
@@ -56,7 +56,7 @@ and types of the entire program. This structure is the main input for the
 validation module. This structure can also serve the role of the input to the VM. 
 The duckling compiler builds this structure directly and loads it via the `loadCode`
 endpoint which allows for skipping the lexing and parsing stage. In 
-[builders](../bytecode/builders/README.md) you can read more about a module which 
+[builders](../bytecode/builders/readme.md) you can read more about a module which 
 helps in building the `CodeCollection` directly.
 
 This structure stores the program in the fat bytecode form and may contain bytecode which is considered invalid. Is serves as a simple container for DVMs code.
@@ -190,4 +190,4 @@ translate the high-level, verified program representation into a low-level,
 executable representation of bytecode (`LowVMProgram`). Since the compiler 
 receives a program with a guarantee of correctness, the compilation process 
 cannot fail and does not need to contain any validation logic. The process of 
-compilation is described in [compiler](./compiler/README.md). 
+compilation is described in [compiler](./compiler/readme.md). 

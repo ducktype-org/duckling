@@ -1,54 +1,8 @@
-# DVM - Core architecture overview
-
-## [`Supervisor`](supervisor/supervisor.hpp)
-The `Supervisor` is the central, high-level management component of the virtual machine's architecture. 
-It acts as the primary dispatcher, mediating all communication between the outside world (e.g., via an API) 
-and the individual processes (`VMProcess`) running within the machine.
-
-The `Supervisor` is the sole module responsible for creating and terminating virtual processes. It maintains 
-a central registry of all active processes currently running within DVM. All external commands targeting 
-a specific process (such as executing code or handling I/O) are first sent to the `Supervisor` and based on 
-the Process ID (`PID`) included in the request, the `Supervisor` locates the corresponding `VMProcess` and forwards
-the command for execution.
-
-## [`VMProcess`](process/vmprocess.hpp)
-The `VMProcess` is the core component that represents a single, isolated execution environment for a program 
-running within the virtual machine. While the `Supervisor` manages multiple processes, the `VMProcess` is 
-concerned with everything needed to run *one* specific program from start to finish. It does not execute 
-bytecode directly, instead it orchestrates all the necessary resources and delegates the actual execution 
-to one or more `VMThread`s.
-
-All management operations on a `VMProcess` (like loading code or requesting output) are performed in the 
-context of the caller's thread (e.g., the Supervisor's), ensuring that the core program logic runs without 
-interruption.
-
-### Core Responsibilities
-
-1.  **Program Loading and Management:** `VMProcess` is responsible for managing the entire loading pipeline. 
-It receives source code, utilizes an internal [`Loader`](../loader/logger.hpp) module to parse and compile 
-it into executable bytecode, and stores the resulting program, making it ready for execution.
-
-2.  **Memory Governance:** Each process has its own dedicated and isolated memory space, managed by an internal
-[`Memory`](./process/memory/memory.hpp) module. This ensures that one process cannot interfere with the memory of another.
-
-3.  **Thread and Execution Management:** `VMProcess` manages the lifecycle of `VMThread` instances, which are the
-actual execution units that interpret and run the bytecode. Its responsibilities include:
-  *   Creating new threads to execute requested functions.
-  *   Controlling the execution state of the process (e.g., running, paused, stopped).
-  *   Passing requests and commands down to the appropriate `VMThread`.
-
-4.  **I/O Handling:** The process manages its own input and output streams (`ProcIO`). It provides an API to 
-send input to the running program, retrieve its output, and can "attach" its I/O to external streams (like 
-the system's standard input/output) for interactive sessions.
-
-5.  **VmValue Lifetime Management:** `VMProcess` acts as a factory and owner for [`VmValue`](./thread/vmvalue.hpp) 
-objects which are used to pass values to DVM from the outside world. More on [`VMValue`](./thread/vmvalue.hpp) 
-can be found in [here](./README.md#vmvalue)
-
-## [`VMThread`](./thread/vmthread.hpp)
+# DVM - VMThread and VMValue module
+## [`VMThread`](./vmthread.hpp)
 The `VMThread` is the primary execution engine of DVM. While a `VMProcess` manages the overall environment 
 for a program, the `VMThread` is the component that actually interprets and executes the 
-[low-level bytecode](./thread/low_program/low_program.hpp) instructions, one by one. Each `VMThread` represents
+[low-level bytecode](./low_program/low_program.hpp) instructions, one by one. Each `VMThread` represents
 a single thread of execution within a process.
 
 ### Core Responsibilities
@@ -85,9 +39,9 @@ During execution, the `VMThread` is exclusively responsible for managing the act
 specific thread of control. The key components of this environment are:
 *   **Memory Interaction:** The `VMThread` does not own any memory. Instead, it operates on dedicated 
 memory regions provided by the `Memory` module owned by its parent `VMProcess`:
-    1.  **[Thread Stack](./process/memory/thread_stack.hpp):** This is a stack of 
-   [`Frame`](./process/memory/frame.hpp) structures. 
-    2.  **[RuntimeData](./process/memory/vmthread.hpp):** 
+    1.  **[Thread Stack](../process/memory/thread_stack.hpp):** This is a stack of 
+   [`Frame`](../process/memory/frame.hpp) structures. 
+    2.  **[RuntimeData](../process/memory/vmthread.hpp):** 
     3. **Execution Context:** The state of the machine is passed directly as arguments to each opcode's
     implementation function. At any point in time, an instruction has immediate access to its complete
     execution context:
@@ -112,8 +66,8 @@ This process can be broken down into three key concepts:
 1.  **Memory Allocation by `Memory`:**
     For each `VMThread`, the `Memory` module allocates a dedicated `ThreadStack` object. This object contains 
     two distinct, pre-allocated memory regions:
-    *   **[`ThreadStack`](./process/memory/thread_stack.hpp):** This is a vector of 
-    [`Frame`](./process/memory/frame.hpp) structures. Each `Frame` represents a single active function call 
+    *   **[`ThreadStack`](../process/memory/thread_stack.hpp):** This is a vector of 
+    [`Frame`](../process/memory/frame.hpp) structures. Each `Frame` represents a single active function call 
    and stores crucial data needed for execution, such as the local stack pointer, instruction pointer to return 
    to when returning from the function, information about the local variables used by the function, the amount 
    of the local stack used by the function and additional data needed when returning from a function.
@@ -123,7 +77,7 @@ This process can be broken down into three key concepts:
 
 2.  **The Live Execution Context (`FUNCTION_ARGS`):**
     The execution context is **passed as arguments** to every opcode implementation function, as defined by the
-    [`FUNCTION_ARGS`](./thread/opcode_functions/opcodes_functions.hpp) macro. This "live" context contains:
+    [`FUNCTION_ARGS`](./opcode_functions/opcodes_functions.hpp) macro. This "live" context contains:
     *   `instr`: A pointer to the current `MicroInstruction` being executed.
     *   `frame`: A pointer to the current `Frame` on the call stack.
     *   `local_stack`: A pointer to the base of the *current function's* variable space within the large local data stack block.
@@ -149,7 +103,7 @@ pauses its execution loop and waits for the necessary data to become available b
 
 
 ## VmValue
-The [`VmValue`](./thread/vmvalue.hpp) class is the key mechanism for bidirectional communication between the 
+The [`VmValue`](./vmvalue.hpp) class is the key mechanism for bidirectional communication between the 
 external world (e.g the compiler or other C++ code) and the virtual machine's internal environment. It 
 functions as a data Transfer Object designed to safely package, transfer, and unpack data across in DVM.
 
