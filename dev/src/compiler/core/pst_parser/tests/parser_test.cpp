@@ -125,7 +125,8 @@ private:
 	) {
 		pst::PST<> pst = prepare(duckling_file);
 		assertTrue(
-			pst::checkUniqueElementPaths(pst.getRootElement()).isOk(), "Element paths are not unique"
+			pst::checkUniqueComponentHashs(pst.getRootElement()).isOk(),
+			"Element paths are not unique"
 		);
 		assertTrue(
 			pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"

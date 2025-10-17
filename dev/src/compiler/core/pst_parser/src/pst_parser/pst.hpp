@@ -8,6 +8,8 @@
 #include <token_source/source.hpp>
 
 namespace pst {
+	//@TODO: #1406 move pst_parser to frontend
+
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger);
@@ -35,9 +37,14 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		Box<tokenizer::TokenSource>      file;
+		/** Token source backing this PST (tokenized file or virtual input). */
+		Box<tokenizer::TokenSource> file;
+		/** Root element access wrapper for the parsed element tree. */
 		AccessInternalAnonymous<Element> element;
-		std::vector<ImportType>          imports;
+		/** Import entries collected during parsing. */
+		std::vector<ImportType> imports;
+		/** Contextual component path/hash of this PST for hierarchical naming. */
+		compiler::frontend::ComponentHash context_info;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -57,7 +64,7 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));
-			calcElementPaths();
+			calcElementPathHash();
 			calcHashes();
 		}
 
@@ -65,8 +72,11 @@ namespace pst {
 		 * @brief Construct a new Pst from text content
 		 */
 		template<typename... Args>
-		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>:
-			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))) {
+		explicit PST(
+			std::string_view content, compiler::frontend::ComponentHash context = {}, Args&&... args
+		) requires ParseAble<Args...>:
+			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))),
+			  context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -75,9 +85,13 @@ namespace pst {
 		 * @brief Construct a new Pst from expanded text
 		 */
 		template<typename... Args>
-		explicit PST(dia::SourcePosition pos, std::string_view content, Args&&... args)
-			requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenSource(pos, content)) {
+		explicit PST(
+			dia::SourcePosition               pos,
+			std::string_view                  content,
+			compiler::frontend::ComponentHash context = {},
+			Args&&... args
+		) requires ParseAble<Args...>
+			  : file(tokenizer::makeTokenSource(pos, content)), context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -85,8 +99,8 @@ namespace pst {
 		/**
 		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
-		void calcElementPaths() {
-			if (auto ref = element.internalMut()) ref->calcElementPaths({});
+		void calcElementPathHash() {
+			if (auto ref = element.internalMut()) ref->calcElementPathHash(context_info);
 		}
 
 		/**
@@ -100,7 +114,9 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(Box<tokenizer::TokenSource>&& file) requires ParseAble<>: file(std::move(file)) {
+		PST(Box<tokenizer::TokenSource> file, compiler::frontend::ComponentHash context = {})
+
+		requires ParseAble<>: file(std::move(file)), context_info(std::move(context)) {
 			if (getLogger()->bad()) return;
 			parse();
 		}
@@ -108,30 +124,44 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::File& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
+		PST(const fs::File& path, compiler::frontend::ComponentHash context = {})
+
+		requires ParseAble<>:
+			  file(tokenizer::makeTokenSource(path)),
+			  context_info(std::move(context)) {
 			if (!file->tokenize()) return;
 			parse();
 		}
 
-		static PST fromContents(std::string_view contents) requires ParseAble<> {
-			return PST(contents);
+		static PST fromContents(
+			std::string_view contents, compiler::frontend::ComponentHash context = {}
+		) requires ParseAble<> {
+			return PST(contents, std::move(context));
 		}
 
 		template<typename... Args>
-		static PST fromContentsWithContext(std::string_view contents, Args&&... args)
-			requires ParseAble<Args...> {
-			return PST(contents, std::forward<Args>(args)...);
-		}
-
-		static PST fromExpand(dia::SourcePosition pos, std::string_view contents) {
-			return PST(pos, contents);
-		}
-
-		template<typename... Args>
-		static PST fromExpandWithContext(
-			dia::SourcePosition pos, std::string_view contents, Args&&... args
+		static PST fromContentsWithArgs(
+			std::string_view contents, compiler::frontend::ComponentHash context = {}, Args&&... args
 		) requires ParseAble<Args...> {
-			return PST(pos, contents, std::forward<Args>(args)...);
+			return PST(contents, std::move(context), std::forward<Args>(args)...);
+		}
+
+		static PST fromExpand(
+			dia::SourcePosition               pos,
+			std::string_view                  contents,
+			compiler::frontend::ComponentHash context = {}
+		) {
+			return PST(pos, contents, std::move(context));
+		}
+
+		template<typename... Args>
+		static PST fromExpandWithArgs(
+			dia::SourcePosition               pos,
+			std::string_view                  contents,
+			compiler::frontend::ComponentHash context = {},
+			Args&&... args
+		) requires ParseAble<Args...> {
+			return PST(pos, contents, std::move(context), std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]
@@ -157,7 +187,8 @@ namespace pst {
 		PST(PST&& other) noexcept:
 			  file(std::move(other.file)),
 			  element(std::move(other.element)),
-			  imports(std::move(other.imports)) {}
+			  imports(std::move(other.imports)),
+			  context_info(std::move(other.context_info)) {}
 
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
 	};
