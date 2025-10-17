@@ -76,8 +76,8 @@ namespace unicode {
 	 */
 	void sanityChecks() {
 		using Class = Classifications;
-		for (auto cl: Class::classes) CORE_ASSERT(!cl->isEmpty(), "a classification is empty");
-		for (auto cl: Class::classes) CORE_ASSERT(cl->isFrozen(), "a classification isn't frozen");
+		for (auto cl: Class::CLASSES) CORE_ASSERT(!cl->isEmpty(), "a classification is empty");
+		for (auto cl: Class::CLASSES) CORE_ASSERT(cl->isFrozen(), "a classification isn't frozen");
 
 		CORE_ASSERT(
 			Class::name_continue.containsAll(Class::name_start),
@@ -152,7 +152,7 @@ namespace unicode {
 
 	void Classifications::init() {
 		SIMPLE_INIT_GUARD_BEGIN
-		for (auto cl: classes)
+		for (auto cl: CLASSES)
 			CORE_ASSERT(!cl->isFrozen(), "a classification is frozen at the beginning");
 		createFromPattern(name_start, u8R"([[:XID_Start:][:ID_Compat_Math_Start:][_]])");
 		createFromPattern(name_continue, u8R"([[:XID_Continue:][:ID_Compat_Math_Continue:]])");
@@ -189,7 +189,7 @@ namespace unicode {
 			.freeze();
 		if (err.isFailure()) CORE_PANIC(std::string(err.errorName()));
 
-		end_of_file.add(end_of_file_value).freeze();
+		end_of_file.add(END_OF_FILE_VALUE).freeze();
 
 		sanityChecks();
 		SIMPLE_INIT_GUARD_END

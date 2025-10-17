@@ -192,9 +192,9 @@ int main(int argc, const char** argv) {
 	// }
 	catch (const clah::exceptions::ClahException& e) {
 		printer::StreamPrinter::print({
-			{ "playground: ", printer::Color::DEFAULT },
-			{ "error: ", printer::Color::RED },
-			{ e.what(), printer::Color::DEFAULT },
+			{ "playground: ", printer::Color::Default },
+			{ "error: ", printer::Color::Red },
+			{ e.what(), printer::Color::Default },
 		});
 		return 1;
 	} catch (const std::exception& e) {
@@ -209,9 +209,9 @@ int main(int argc, const char** argv) {
 		result = clah.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clah::exceptions::ClahException& e) {
 		printer::StreamPrinter::print({
-			{ "duckling: ", printer::Color::DEFAULT },
-			{ "error: ", printer::Color::RED },
-			{ e.what(), printer::Color::DEFAULT },
+			{ "duckling: ", printer::Color::Default },
+			{ "error: ", printer::Color::Red },
+			{ e.what(), printer::Color::Default },
 		});
 		return 1;
 	} catch (clah::exceptions::HelpException& e) {

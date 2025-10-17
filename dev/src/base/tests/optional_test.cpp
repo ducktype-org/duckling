@@ -432,7 +432,6 @@ public:
 
 		Optional<u32> optional{ 21 };
 		u32&          internal_integer = optional.value();
-		u32           other_integer    = 10;
 		assert_equal_addr(internal_integer, optional.value(), "value");
 		assert_equal_addr(internal_integer, *optional, "*operator");
 		assert_equal_addr(internal_integer, optional.expect(""), "expect with message");

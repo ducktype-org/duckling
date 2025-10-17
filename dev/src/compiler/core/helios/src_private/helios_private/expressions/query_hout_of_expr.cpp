@@ -1,16 +1,10 @@
 #include "query_hout_of_expr.hpp"
 
 #include <helios/hout/elements/expr.hpp>
-#include <helios/hout/visitors.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
-#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
@@ -76,6 +70,10 @@ namespace compiler::helios::code {
 			 * The "output" of the visitor.
 			 */
 			base::Optional<base::Box<Expr>> node;
+
+			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
+				node = makeBox<LiteralUnitExpr>(ctx);
+			}
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.

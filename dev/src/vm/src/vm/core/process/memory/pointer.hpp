@@ -38,6 +38,12 @@ namespace vm {
 			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
 		}
 
+		Pointer movedPointer(i64 move_by) {
+			Pointer cpy(*this);
+			cpy.movePointer(move_by);
+			return cpy;
+		}
+
 		[[nodiscard]]
 		auto getBlock() -> Ref<Block> {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
@@ -45,16 +51,20 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		auto getOffset() {
+		auto getOffset() const {
 			return offset;
 		}
 
 		[[nodiscard]]
-		auto isNull() -> bool {
+		auto isNull() const -> bool {
 			return block == nullptr;
 		}
 
+		operator bool() const { return !isNull(); }
+
 		static Pointer null() { return {}; }
+
+		constexpr bool operator==(const Pointer&) const = default;
 	};
 
 	static_assert(sizeof(Pointer) == 16);

@@ -9,6 +9,9 @@ namespace pst {
 	class TuplePattern final: public AnalysisPattern {
 		NAMED_CHILD(elements, FlowPatternList);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		// explicit TuplePattern(const dia::SourcePosition& position);
 		explicit TuplePattern(const dia::SourcePosition& position): AnalysisPattern(position) {

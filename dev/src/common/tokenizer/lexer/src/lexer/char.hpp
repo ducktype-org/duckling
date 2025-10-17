@@ -1,6 +1,7 @@
 #pragma once
 
-#include <base/raw_view.hpp>
+
+#include <base/ints.hpp>
 
 #include <unicode_classification/classifications.hpp>
 
@@ -8,6 +9,7 @@
 #include <vector>
 
 namespace lexer {
+
 	/**
 	 * @brief Class representing a Unicode code point and allowing to check it's classifications
 	 */

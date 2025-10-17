@@ -14,14 +14,12 @@
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>
-#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
 #include <cmath>
 #include <ranges>
-#include <type_traits>
 
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryEvaluateExpression, CompTimeEvalResult) {
@@ -44,6 +42,10 @@ namespace compiler::helios {
 			TreeEvalResult evaluateSubExpr(CRef<code::Expr> expr) {
 				expr->acceptVisitor(*this);
 				return std::move(result);
+			}
+
+			void visitLiteralUnitExpr(const code::LiteralUnitExpr&) final {
+				result = CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 			}
 
 			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {

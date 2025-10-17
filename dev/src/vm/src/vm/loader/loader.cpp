@@ -4,10 +4,8 @@
 #include "parser/parser.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
-#include <base/variant.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
@@ -187,7 +185,9 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 			e.label,
 			[&](Box<SomeValidationError>& err) {
 				for (const auto& instruction: e.jumps)
-					log.addNote<SomeValidationNote>(err, instruction, e.NOTE_MSG);
+					log.addNote<SomeValidationNote>(
+						err, instruction, code::StackStructureMismatchError::NOTE_MSG
+					);
 			},
 			e.what()
 		);

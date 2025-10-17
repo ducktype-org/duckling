@@ -1,16 +1,11 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <global_state/options.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
-#include <linker/link.hpp>
 
 #include <base/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -107,7 +102,9 @@ private:
 
 		// this also checks if llvm IR lib compile and link into the executable:
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::LLVM
+			fs::File(path("modules/functions_4")),
+			driver::BackendType::LLVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -117,7 +114,9 @@ private:
 		);
 
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::DVM
+			fs::File(path("modules/functions_4")),
+			driver::BackendType::DVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 	}
 

@@ -7,7 +7,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 
 #include <query_framework/context.hpp>
@@ -31,6 +30,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(unitsTest);
 	}
 
 protected:
@@ -118,6 +118,8 @@ private:
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };
 
 

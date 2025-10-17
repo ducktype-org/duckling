@@ -24,6 +24,9 @@ namespace pst {
 		 */
 		void fillSymbols();
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel, ElementKind::TopLevel);
 

@@ -25,6 +25,12 @@ namespace pst {
 		out << "]}";
 	}
 
+	LangElement::HashAlg& DeconstructorPattern::addElementDataToStableHash(HashAlg& partial_hash
+	) const {
+		addToHash(partial_hash, deconstructor_name);
+		return partial_hash;
+	}
+
 	void DeconstructorPattern::acceptVisitor(PstVisitor& visitor) const {
 		visitor.visitDeconstructorPattern(*this);
 	}

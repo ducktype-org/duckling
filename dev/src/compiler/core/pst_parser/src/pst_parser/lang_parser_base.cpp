@@ -4,7 +4,6 @@
 #include "lang_parser_state.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
 #include <ranges>
@@ -81,6 +80,37 @@ namespace pst {
 				break;
 			}
 		}
+	}
+
+	void LangElement::calcHashRecursive() {
+		calcHash();
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { el->calcHashRecursive(); }
+				variant_case(InternalNamedChild, el) { el.element->calcHashRecursive(); }
+			}
+		}
+	}
+
+	void LangElement::calcHash() {
+		hash = calcStableHash().finalize();
+
+		// Can be used to turn on unstable hashing for testing purposes.
+		// hash = getID().asInt();
+	}
+
+	LangElement::HashAlg LangElement::calcStableHash() const {
+		HashAlg partial_hash;
+		addToHash(partial_hash, getElementPath());
+		addToHash(partial_hash, elementType());
+		addGenericDataToHash(partial_hash);
+		addElementDataToStableHash(partial_hash);
+		return partial_hash;
+	}
+
+	LangElement::HashAlg& LangElement::addGenericDataToHash(LangElement::HashAlg& partial_hash
+	) const {
+		return partial_hash;
 	}
 
 	void LangElement::addToken(CRef<tpc::Token> t) {

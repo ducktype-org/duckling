@@ -1,6 +1,6 @@
 #pragma once
 
-#include "forward.hpp"
+#include "forward.hpp"  // IWYU pragma: keep
 
 #include <base/raw_view.hpp>
 
@@ -10,7 +10,6 @@
 #include <filesystem/file.hpp>
 #include <lexer/char.hpp>
 #include <lexer/decode.hpp>
-#include <lexer/lexer.hpp>
 #include <lexer/token.hpp>
 
 #include <set>

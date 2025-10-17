@@ -13,6 +13,9 @@ namespace pst {
 		NAMED_CHILD(iterable, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
 

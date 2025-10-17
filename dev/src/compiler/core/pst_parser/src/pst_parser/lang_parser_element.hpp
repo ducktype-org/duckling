@@ -9,6 +9,7 @@
 #include <base/ref.hpp>
 #include <base/variant.hpp>
 
+#include <hashing/hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -49,6 +50,10 @@ namespace pst {
 			elements.emplace_back(ext);
 		}
 
+		friend constexpr auto hashDecompose(const ElementPath& t) noexcept {
+			return std::tie(t.elements);
+		}
+
 		/**
 		 * @brief Return the path as a string by joining with '.'
 		 */
@@ -63,6 +68,19 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+	protected:
+		/**
+		 * @brief Hash algorithm used for PST stable hashing
+		 * @TODO: #1337 Swap to CRC256
+		 */
+		using HashAlg = hashing::StatefulHash<hashing::SHA256, void>;
+
+	public:
+		/**
+		 * @brief Hash type for PST stable hashing
+		 */
+		using HashType = HashAlg::result_type;
+
 	public:
 		using SubToken = base::CRef<lexer::Token>;
 
@@ -76,6 +94,11 @@ namespace pst {
 		 * @brief Needed for access to element path methods.
 		 */
 		friend class Stmt;
+
+		/**
+		 * @brief Needed for access to hash methods.
+		 */
+		friend class ClassStmt;
 
 	protected:
 		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
@@ -182,6 +205,39 @@ namespace pst {
 		 */
 		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
 
+	protected:
+		/**
+		 * @brief Calculates the hashes recursively for the element and all children.
+		 */
+		void calcHashRecursive();
+
+		/**
+		 * @brief Calculates and sets the hash for this element, can be modified to change between
+		 * stable and unstable hashes.
+		 */
+		void calcHash();
+
+		/**
+		 * @brief Calculates the whole hash for the element including common parts like path and
+		 * element type. Can be overriden for specific parent elements that add common information.
+		 */
+		[[nodiscard]]
+		HashAlg calcStableHash() const;
+
+		/**
+		 * @brief Used to add additional data that is generic to multiple elements for example in
+		 * Stmt.
+		 */
+		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
+
+		/**
+		 * @brief Adds the element specific information to the hash (Not generic ones such as number
+		 * of attributes or path). Should be overriden for each element.
+		 * @important Each implementation has to return the same reference it received (similar to
+		 * `<<` operator).
+		 */
+		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const = 0;
+
 	public:
 		/**
 		 * @brief View all sub-elements.
@@ -190,7 +246,7 @@ namespace pst {
 		auto viewSubElements() const {
 			using namespace std::views;
 
-			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
+			constexpr auto GET_LOCKED = [](const InternalSubElement& t) -> SubElement {
 				if (base::holds<InternalChild>(t)) {
 					return Child(std::get<InternalChild>(t));
 				} else if (base::holds<InternalNamedChild>(t)) {
@@ -201,7 +257,7 @@ namespace pst {
 				}
 			};
 
-			return std::ranges::ref_view(sub_elements) | transform(get_locked);
+			return std::ranges::ref_view(sub_elements) | transform(GET_LOCKED);
 		}
 
 		/**
@@ -211,17 +267,17 @@ namespace pst {
 		auto viewChildren() const {
 			using namespace std::views;
 
-			constexpr auto is_child = [](const SubElement& t) -> bool {
+			constexpr auto IS_CHILD = [](const SubElement& t) -> bool {
 				return base::holds<Child>(t) || base::holds<NamedChild>(t);
 			};
-			constexpr auto strip_name = [](const SubElement& t) -> const Child {
+			constexpr auto STRIP_NAME = [](const SubElement& t) -> const Child {
 				if (base::holds<NamedChild>(t))
 					return std::get<NamedChild>(t).element;
 				else
 					return std::get<Child>(t);
 			};
 
-			return viewSubElements() | filter(is_child) | transform(strip_name);
+			return viewSubElements() | filter(IS_CHILD) | transform(STRIP_NAME);
 		}
 
 		/**
@@ -237,6 +293,12 @@ namespace pst {
 		[[nodiscard]]
 		PstID getID() const {
 			return id;
+		}
+
+		[[nodiscard]]
+		HashType getHash() const {
+			CORE_ASSERT(hash.has_value(), "Hash not calculated for this" + elementType());
+			return hash.value();
 		}
 
 		/**
@@ -293,7 +355,9 @@ namespace pst {
 
 		[[nodiscard]]
 		const ElementPath& getElementPath() const {
-			CORE_ASSERT(element_path.has_value(), "element path not calculated");
+			CORE_ASSERT(
+				element_path.has_value(), "element path not calculated for this " + elementType()
+			);
 			return element_path.value();
 		}
 
@@ -303,10 +367,18 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition                       source_position;
-		std::vector<InternalSubElement>           sub_elements;
-		base::Optional<AccessLocked<LangElement>> parent;
-		base::Optional<ElementPath>               element_path;
+		dia::SourcePosition source_position;
+		std::vector<InternalSubElement>
+			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
+		base::Optional<AccessLocked<LangElement>>
+									parent;  ///< Parent element in PST if element is not root.
+		base::Optional<ElementPath> element_path;  ///< The Path that uniquely identifies the
+		                                           ///< element and allows to conserve some
+		                                           ///< information between compilations. Has no
+		                                           ///< value if it's incalculable.
+		base::Optional<HashType>
+			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
+		           ///< information between compilations. Has no value if it's incalculable.
 
 		/**
 		 * @brief Kind of the element.

@@ -15,14 +15,12 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 
 LLVM_INCLUDE_END()
 
 #include "module_impl.hpp"
 
-#include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -166,8 +164,16 @@ namespace compiler::backend_llvm {
 		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
 	}
 
+	llvm::CallingConv::ID getCallingConvFromABI(const helios::SymbolABI& abi) {
+		variant_match(abi) {
+			variant_case(helios::DefaultAbi, name) { return llvm::CallingConv::C; }
+			variant_case(helios::CAbi, name) { return llvm::CallingConv::C; }
+		}
+		CORE_UNREACHABLE();
+	}
+
 	/**
-	 * Gets a function from a module by mangled name.
+	 * Gets a function from a module by the function literal (using a mangle_name field).
 	 *
 	 * If the function doesn't exits it adds a function prototype with
 	 * external linkage to the module based on provided lir_functions.
@@ -177,36 +183,32 @@ namespace compiler::backend_llvm {
 	 * of how we are creating llvm modules, as we need to know what function in local to which
 	 * module.
 	 */
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
-		Ref<llvm::Module> module, const lir::Function& lir_function
-	) {
-		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(lir_function.mangled_name.strView())) return func;
-
-		auto& context = module->getContext();
-		return module->getOrInsertFunction(
-			lir_function.mangled_name.strView(),
-			getFunType(context, lir_function.parameter_layouts, lir_function.return_type_layout)
-		);
-	}
-
-	/**
-	 * Same as getOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
-	 */
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
 		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
-		auto& context      = module->getContext();
-		auto  mangled_name = function_literal.mangled_name;
-
+		auto mangled_name = function_literal.mangled_name;
 		// We check if function exist first, to avoid unnecessary construction of types:
 		if (auto func = module->getFunction(mangled_name.strView())) return func;
 
-		return module->getOrInsertFunction(
-			mangled_name.strView(),
-			getFunType(
-				context, *function_literal.parameter_layouts, *function_literal.return_type_layout
-			)
+		auto&                context = module->getContext();
+		llvm::FunctionCallee callee  = module->getOrInsertFunction(
+            mangled_name.strView(),
+            getFunType(
+                context, *function_literal.parameter_layouts, *function_literal.return_type_layout
+            )
+        );
+
+		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee()))
+			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
+
+		return callee;
+	}
+
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
+		Ref<llvm::Module> module, const lir::Function& lir_function
+	) {
+		return getOrInsertFunctionPrototypeFromLiteral(
+			module, lir::FunctionLiteral::fromFunction(lir_function)
 		);
 	}
 

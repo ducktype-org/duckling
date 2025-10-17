@@ -7,15 +7,13 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include "elements/expr.hpp"  // IWYU pragma: export
+#include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
+#include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <helios/ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
 #include <base/string_id.hpp>
-
-#include <query_framework/query_int.hpp>
 
 #include <memory>
 #include <variant>
@@ -42,7 +40,7 @@ namespace compiler::helios {
 
 		HOUTFunctionDeclaration() = delete;
 
-		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = default;
+		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = delete;
 		HOUTFunctionDeclaration(HOUTFunctionDeclaration&&)      = default;
 
 		/**
@@ -57,15 +55,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> return_type;
 
-		/**
-		 * @note use of shared_ptr's is intentional, as they
-		 * work well for incomplete types, and fit the use case.
-		 * In the future we might optimize it to single (or zero) shared_ptr, but
-		 * that will require some boilerplate. Stored vector can't be const, because
-		 * it is moved (contains boxes), when handling initial arguments. @TODO #1300
-		 */
-		std::shared_ptr<std::vector<code::Parameter>> parameters;
-
+		std::vector<code::Parameter> parameters;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -75,9 +65,7 @@ namespace compiler::helios {
 
 	private:
 		HOUTFunctionDeclaration(
-			SymID                                                symbol,
-			tsh::SymbolType<>                                    ret_type,
-			const std::shared_ptr<std::vector<code::Parameter>>& parameters
+			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
 	};
@@ -88,13 +76,15 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunction final {
 	private:
-		HOUTFunction(HOUTFunctionDeclaration, const std::shared_ptr<const code::CodeBlock>& body);
+		HOUTFunction(
+			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
+		);
 		friend struct ImplementationOf_QueryCodeOFFun;
 
 	public:
 		HOUTFunction() = delete;
 
-		HOUTFunctionDeclaration declaration;
+		CRef<HOUTFunctionDeclaration> declaration;
 
 		/**
 		 * @note use of shared_ptr's is intentional, as they
@@ -162,7 +152,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Structure representing single HOUTUnit
 	 */
-	struct HOUTUnit {
+	struct HOUTUnit final {
 		// all first class citizens of module should be here:
 		// * types (in some way?)
 		// * required baked template list?

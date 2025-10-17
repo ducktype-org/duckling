@@ -39,6 +39,13 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, as_identifier.has_value());
+		if (as_identifier.has_value()) addToHash(partial_hash, as_identifier.value());
+		addToHash(partial_hash, type_constraint.has_value());
+		return partial_hash;
+	}
+
 	void FlowPattern::acceptVisitor(PstVisitor& visitor) const {
 		return visitor.visitFlowPattern(*this);
 	}

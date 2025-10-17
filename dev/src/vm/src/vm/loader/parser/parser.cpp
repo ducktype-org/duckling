@@ -1,4 +1,4 @@
-
+#include <lexer/lexer.hpp>
 #include <token_source/source.hpp>
 
 #include <vm/loader/parser/elements.hpp>

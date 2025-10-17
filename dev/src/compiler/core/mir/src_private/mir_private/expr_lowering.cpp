@@ -64,6 +64,10 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
+		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
+			valueOutput(continuation, MIRValue{ MirUnitConst{} });
+		}
+
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			valueOutput(continuation, MIRValue{ MirIntegerConst{ expr.value } });
 		}

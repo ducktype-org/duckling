@@ -2,6 +2,7 @@
 
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <linker/link.hpp>
 
 #include <base/variant.hpp>
 

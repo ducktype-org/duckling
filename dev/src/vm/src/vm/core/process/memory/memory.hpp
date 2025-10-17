@@ -7,12 +7,10 @@
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
-#include <base/exceptions.hpp>
 #include <base/ints.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
-#include <base/stable_container.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -50,9 +48,10 @@ namespace vm {
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);
 
+		/**
+		 * @brief Erases the block object from the memory.
+		 */
 		void deleteBlock(Ref<Block> block);
-
-		void destroyReference(Ref<Block> block);
 
 		[[nodiscard]]
 		Ref<Block> getBlock(BlockID id);
@@ -64,14 +63,97 @@ namespace vm {
 		void copyBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
 
 		/**
-		 * @brief Copies `byte_size` bytes pointed-to by `src` to `dst`.
-		 * @note Frees *block_dst's nested blocks whose offsets would not fit
-		   inside the new memory area.
+		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
+		 * hierarchy.
+		 * @note Moving here means no data copy-constructors are called.
 		 */
-		auto copyPointedDataAndEraseSuffix(Pointer dst, Pointer src, usize byte_size) -> void;
+		void moveBlocksRecursively(Ref<Block> block_dst, Ref<Block> block_src);
+
+		/**
+		 * @brief Moves `byte_size` bytes pointed-to by `src` to `dst`.
+		 * Moving here means data copy-constructors of the moved object are not invoked.
+		 * The objects that are in the "suffix" are destructed.
+		 * @note Frees *block_dst's nested blocks whose offsets would not fit
+		 * inside the new memory area.
+		 * @note These blocks must be of a dynamic table type.
+		 */
+		void moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count);
+
+		/**
+		 * @brief Executes destructors on individual objects that are in the block.
+		 * @param block The block to source the data from.
+		 */
+		void runDataDestructors(Ref<Block> block);
+
+		/**
+		 * @brief Executes destructors on a range of objects, that lay next to each other.
+		 */
+		void runDataDestructors(base::ModRawView data, TypeCRef type);
+
+		/**
+		 * @brief Executes copy constructors on individual objects that are in the block.
+		 * @param block The block to source the data from.
+		 */
+		void runDataCopyConstructors(Ref<Block> block);
+
+		/**
+		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
+		 */
+		void runDataCopyConstructors(base::ModRawView data, TypeCRef type);
+
+		/**
+		 * @brief Iterates over each object in the block and calls the callback on it.
+		 * @note The callback should not change the layout of the objects in the block.
+		 * @param callback A function that will be called on each object.
+		 */
+		void iterateOverDataAndExecute(
+			Ref<Block> block, void (Memory::*callback)(base::ModRawView data, TypeCRef type)
+		);
+
+		/**
+		 * @brief Iterates over each object in the `data` and calls the callback on it.
+		 * @note The callback should not change the layout of the objects in the block.
+		 * @note In opposition to `runObjectDestructor` and `runObjectCopyConstructor`, here `data`
+		 * can represent multiple objects.
+		 * @param callback A function that will be called on each object.
+		 */
+		void iterateOverDataAndExecute(
+			base::ModRawView data,
+			TypeCRef         type,
+			void (Memory::*callback)(base::ModRawView data, TypeCRef type)
+		);
+
+		/**
+		 * @brief Based on data's type, performs destruction of the data.
+		 * E.g. in case of a non-null pointer, decreases pointed block's reference count.
+		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
+		 * range of objects from a table, but it can be a single object from a table, or from
+		 * somewhere else.
+		 */
+		void runObjectDestructor(base::ModRawView data, TypeCRef type);
+
+		/**
+		 * @brief Based on data's type, performs copy-constructor of the data.
+		 * E.g. in case of a non-null pointer, increases pointed block's reference count.
+		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
+		 * range of objects from a table, but it can be a single object from a table, or from
+		 * somewhere else.
+		 */
+		void runObjectCopyConstructor(base::ModRawView data, TypeCRef type);
 
 	public:
 		Memory() = default;
+
+		/**
+		 * @brief Validates the memory state.
+		 * It can be thought of as a check that is executed after program's exit
+		 * to determine the correctness of memory usage
+		 * (and potentially bugs inside the VM itself as well).
+		 * For the memory to be valid, all the blocks' referenceCount needs to be 0. This means
+		 * no leaks, etc.
+		 * @return True if memory was used correctly, false otherwise.
+		 */
+		bool validateMemoryState() const;
 
 		// =================== Used by executor ===================
 
@@ -97,7 +179,11 @@ namespace vm {
 		 */
 		auto dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void;
 
-		void freeBlock(Ref<Block> block);
+		/**
+		 * @brief Frees block's data, but not the block structure itself.
+		 * For the block to be freed, use deleteBlock.
+		 */
+		void freeBlockData(Ref<Block> block);
 
 		/**
 		 * @brief Attempts to insert global data associated with the given ID.
@@ -110,6 +196,11 @@ namespace vm {
 		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
 
 		/**
+		 * @brief Frees all the global data
+		 */
+		void deinitGlobals();
+
+		/**
 		 * @brief Returns a view of global data by the id.
 		 */
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
@@ -117,6 +208,16 @@ namespace vm {
 		) -> base::ModRawView {
 			std::lock_guard lock(mutex);
 			return global_data.atMaybe(id).expect("Id not stored!")->modView();
+		}
+
+		/**
+		 * @brief Returns a view of block's data
+		 */
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getBlockViewUnsafe(
+			Ref<Block> block
+		) -> base::ModRawView {
+			std::lock_guard lock(mutex);
+			return block->data.view;
 		}
 
 		/**
@@ -152,11 +253,12 @@ namespace vm {
 
 		// ======================== Pointers ========================
 
+		static void increaseBlockRefcount(Ref<Block> block);
+		void        decreaseBlockRefcount(Ref<Block> block);
+
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer;
 
-		// @todo panics slows down the execution of the code in executor
-		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
 		static constexpr
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
@@ -181,9 +283,6 @@ namespace vm {
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer;
 
 		// ======================== Requests ========================
-
-		[[nodiscard]]
-		auto requestBlockIDs() -> std::vector<BlockID>;
 
 		[[nodiscard]]
 		auto requestBlockID(Ref<Block> block) -> BlockID;
