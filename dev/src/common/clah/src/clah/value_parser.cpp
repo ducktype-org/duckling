@@ -6,7 +6,7 @@
 
 #include "value_parser.hpp"
 
-#include <base/except/exceptions.hpp>
+#include "exceptions.hpp"
 
 #include <filesystem/file.hpp>
 

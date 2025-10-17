@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <base/execpt/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <any>
 

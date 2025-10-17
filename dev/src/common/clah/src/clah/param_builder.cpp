@@ -5,7 +5,7 @@
 
 #include "param_builder.hpp"
 
-#include <base/except/exceptions.hpp>
+#include "exceptions.hpp"
 
 namespace clah {
 
