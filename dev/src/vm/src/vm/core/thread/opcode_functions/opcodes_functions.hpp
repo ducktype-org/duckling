@@ -9,6 +9,7 @@
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
 
@@ -35,17 +36,17 @@ namespace vm {
 	 */
 	class OpFuns final {
 	public:
-#define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
-#include <vm/bytecode/opcode_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) static OpFun op_##opcode;
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_MICRO_INSTR
 
-#define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
-#include <vm/bytecode/opcode_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) static DebugOpFun op_debug_##opcode;
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_MICRO_INSTR
 
 		// NOLINTBEGIN(readability-identifier-naming)
 		// Opcodes utilities functions (named the similar way as all OpFuns)
@@ -59,31 +60,34 @@ namespace vm {
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
-#define HANDLE_OPCODE(opcode) op_##opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) op_##opcode,
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_MICRO_INSTR
 		};
 
 		/**
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define HANDLE_OPCODE(opcode) op_debug_##opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
+#define HANDLE_MICRO_INSTR(opcode) op_debug_##opcode,
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE
+#undef HANDLE_MICRO_INSTR
 		};
 
 		/**
 		 * @brief Get the Opcode from the OpFun pointer.
 		 */
-		static u16 getOpcodeFromOpFun(OpFun* fun) {
-			for (u16 i = 0; i < OP_CASES_COUNT; i++)
-				if (OPFUNS.at(i) == fun) return i;
-			CORE_UNREACHABLE();
+		static low::MicroOpcode getOpcodeFromOpFun(OpFun* fun) {
+			static std::unordered_map<OpFun*, low::MicroOpcode> map{
+#define HANDLE_MICRO_INSTR(instr) { op_##instr, low::instruction_tags::Op_##instr::OPCODE },
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR
+			};
+			return map.at(fun);
 		}
 
 		/**
