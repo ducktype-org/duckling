@@ -1,1 +1,2 @@
-Various utility types, both generic and non-generic.
+Various non-generic utility types.
+
