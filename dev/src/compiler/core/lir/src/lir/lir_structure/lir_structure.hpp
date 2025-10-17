@@ -9,8 +9,8 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/ok_bad.hpp>
-#include <base/optional.hpp>
+#include <base/types/ok_bad.hpp>
+#include <base/misc/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
 

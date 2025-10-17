@@ -1,7 +1,7 @@
 #include "vmprocess.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/api/data/api_error.hpp>

@@ -6,7 +6,7 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 

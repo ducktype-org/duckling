@@ -3,7 +3,7 @@
 #include "pst_id.hpp"
 
 #include <base/pointers/box.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/template_string.hpp>
 

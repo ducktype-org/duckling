@@ -2,7 +2,7 @@
 
 #include "kinds.hpp"
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>

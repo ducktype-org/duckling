@@ -4,7 +4,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 namespace compiler::helios {
 	/**

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <hashing/hash.hpp>

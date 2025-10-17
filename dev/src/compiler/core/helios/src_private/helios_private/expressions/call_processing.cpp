@@ -16,7 +16,7 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 #include <base/collections/maps.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <query_framework/context.hpp>
 

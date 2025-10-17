@@ -3,7 +3,7 @@
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/query_int.hpp>

@@ -3,7 +3,7 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <tester/tester.hpp>

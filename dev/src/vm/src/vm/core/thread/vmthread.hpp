@@ -5,7 +5,7 @@
 #include "vmvalue.hpp"
 
 #include <base/types/ints.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>

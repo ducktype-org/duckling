@@ -1,7 +1,7 @@
 #include "../mir_structure/mir_structure.hpp"
 
 #include <base/collections/maps.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <algorithm>
 #include <unordered_set>

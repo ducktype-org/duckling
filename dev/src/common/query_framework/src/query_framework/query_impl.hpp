@@ -17,7 +17,7 @@
 #include <base/extend_cpp/defer.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/collections/maps.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>

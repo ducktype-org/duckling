@@ -6,7 +6,7 @@
 #include "clah.hpp"
 
 #include <base/pointers/box.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/variant.hpp>
 
 #include <printer/stream_printer.hpp>

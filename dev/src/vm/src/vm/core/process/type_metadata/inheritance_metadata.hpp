@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>

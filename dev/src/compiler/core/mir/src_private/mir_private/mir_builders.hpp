@@ -3,7 +3,7 @@
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <vector>

@@ -21,7 +21,7 @@
 #include <base/pointers/box.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>

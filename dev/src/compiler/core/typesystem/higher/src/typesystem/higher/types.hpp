@@ -13,7 +13,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/types/bits_and_bytes.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 namespace tsh {
 	namespace internal {

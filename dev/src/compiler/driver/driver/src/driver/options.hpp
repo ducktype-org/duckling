@@ -3,7 +3,7 @@
 #include <linker/link.hpp>
 
 #include <base/types/ints.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <filesystem/file.hpp>
 

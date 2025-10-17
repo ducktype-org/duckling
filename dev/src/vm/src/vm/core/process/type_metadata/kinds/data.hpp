@@ -3,7 +3,7 @@
 #include "../definitions.hpp"
 #include "../inheritance_metadata.hpp"
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <unordered_map>

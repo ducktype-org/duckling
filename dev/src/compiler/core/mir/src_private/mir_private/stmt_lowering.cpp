@@ -6,7 +6,7 @@
 #include <helios/hout/visitors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <ranges>
 

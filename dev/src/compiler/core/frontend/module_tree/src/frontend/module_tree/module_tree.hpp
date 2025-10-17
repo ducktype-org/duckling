@@ -5,7 +5,7 @@
 
 #include <base/types/ints.hpp>
 #include <base/collections/maps.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <filesystem/file.hpp>

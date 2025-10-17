@@ -4,7 +4,7 @@
 #include "parser/parser.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <diagnostic/logger.hpp>

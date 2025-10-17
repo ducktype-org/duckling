@@ -14,7 +14,7 @@
 
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 #include <base/string_id.hpp>
 
 #include <set>

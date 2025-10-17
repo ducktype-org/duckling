@@ -4,7 +4,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
+#include <base/misc/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>

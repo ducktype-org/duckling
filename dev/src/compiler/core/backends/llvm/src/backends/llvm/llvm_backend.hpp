@@ -5,7 +5,7 @@
 #include <lir/lir_structure/function_forward.hpp>
 
 #include <base/pointers/box.hpp>
-#include <base/ok_bad.hpp>
+#include <base/types/ok_bad.hpp>
 #include <base/string_id.hpp>
 
 #include <query_framework/context_fd.hpp>
