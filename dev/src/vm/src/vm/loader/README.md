@@ -1,6 +1,4 @@
 # Code Loading
-TODOP: Update after refactor changes
-
 This file presents a brief overview of the architecture of the process of loading,
 verifying, and compiling bytecode in the system designed by ZPP 3.2. This file
 contains just the overview of the verification stage. 
@@ -42,7 +40,7 @@ into a sequence of tokens. The `TokenSource` structure stores not only the token
 themselves but also information about their location in the source file (line and
 column number), which is later used to generate clear and accurate error messages.
 
-### Parsed File (`vm::loader::parser::ParsedFile`)
+### Parsed File ([`vm::loader::parser::ParsedFile`](./parser/elements.hpp))
 The parser builds a syntax tree based on the token stream, with the `ParsedFile`
 structure as its root. Each source file is represented by one such structure. It
 is a high-level, direct abstraction of the file's content, containing only
@@ -51,7 +49,7 @@ stage, functions, opcodes and global variables are still identified by plain str
 (their names). Types are stored in a `TypeOfData` variant.
 Structures like virtual tables (v-tables) are not yet built.
 
-### Code Collection (`vm::code::CodeCollection`) [Fat bytecode]
+### Code Collection ([`vm::code::CodeCollection`](../bytecode/bytecode.hpp))
 After parsing all the files that are part of the program, their contents are
 combined into a single `CodeCollection` structure, which represents the source code
 and types of the entire program. This structure is the main input for the
@@ -61,8 +59,7 @@ endpoint which allows for skipping the lexing and parsing stage. In
 [builders](../bytecode/builders/README.md) you can read more about a module which 
 helps in building the `CodeCollection` directly.
 
-This structure stores the program in the fat bytecode form and may contain bytecode which is considered invalid.
-Is serves as a simple container for DVMs code.
+This structure stores the program in the fat bytecode form and may contain bytecode which is considered invalid. Is serves as a simple container for DVMs code.
 
 The key difference compared to `ParsedFile` is the representation of instructions —
 instead of raw strings, a variant (`std::variant`) is used here, which encloses
@@ -71,7 +68,7 @@ all possible instructions in the C++ type system.
 The types of arguments passed to instructions are represented in a similar way
 (by the `vm::opargs::OpCodeArg` variant).
 
-### Valid Program (`vm::code::ValidProgram`) [Fat bytecode]
+### Valid Program ([`vm::code::ValidProgram`](../bytecode/validator/valid_program.hpp))
 `ValidProgram` is the main, high-level representation of the program maintained
 within the `Loader` module. Its invariant is the guarantee that the state stored
 in it is always correct. It's state can be expanded with the `tryInsertCode` function. This structure similarly to `CodeCollection` stores the program in the fat bytecode
@@ -79,7 +76,7 @@ form, with the difference being that the program state is guaranteed to be valid
 The additional feature is that functions stored in valid program store only the reachable code. Any dead code that could exist in `CodeCollection` function is removed in the validation phase.
 For more detailed explanation see [Bytecode Validation](../bytecode/validator/readme.md).
 
-### Low-level machine program (`vm::code::LowVMProgram`) [Micro bytecode]
+### Low-level machine program ([`vm::code::LowVMProgram`](../core/thread/low_program/low_program.hpp))
 After successful validation, `ValidProgram` is passed to the compiler, which
 translates it into `LowVMProgram` — a low-level and understandable for the 
 execution module representation. At this stage, all symbolic names are replaced 

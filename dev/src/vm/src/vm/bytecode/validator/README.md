@@ -37,7 +37,6 @@ working copy. The verification process works as follows:
     into the program state and verified for correctness. This involves:
     - Checking for duplicate names of global variables,
     - Whether the types of declared global variables exist in the program,
-    <!-- TODOP: This should probably verified better than just for existance -->
     - If a global variable was declared with a constructor or deconstructor we check if the specified function (which serves as a constructor/deconstructor) exists in the program.
 1.  **Validating and injecting functions:** 
     At the beginning of this stage a high level set of types `TypeContext` is translated into a **temporary** low level type representation called `TypeMetadata`. This representation is crucial for function verification as it contains the built v-tables for object and interface types which are needed for statically verifying method calls on objects (`virtual_call_lptr_method`). 
@@ -212,7 +211,6 @@ individually against a set of rules.
     from this rule.
 *   **Opaque types**:
     Nothing is verified with opaque types.
-    <!-- TODOP: Maybe add an explanation on opaque types -->
 This step is done by the `vm::code::detail::validateType()` which verifies a single type in the full context of types.
 
 ### Type builder 

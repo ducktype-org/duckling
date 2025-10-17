@@ -1,1 +1,0 @@
-TODOP: Explain what parser does and where the representations are. Additionally what errors are detected by the parser

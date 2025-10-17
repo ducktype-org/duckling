@@ -1,1 +1,0 @@
-TODOP: Here we should explain the role of builders and serializers, mainly their role in the DVM backend
