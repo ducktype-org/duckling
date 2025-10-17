@@ -144,8 +144,7 @@ It operates based on an "execution strategy" that can be one of several modes:
 Before each instruction it's checked whether the execution strategy has changed.
 
 #### Handling Blocking Operations
-When a program needs to perform a blocking operation, such as waiting for user input, it is the `VMThread` that 
-pauses its execution loop and waits for the necessary data to become available before resuming.
+When a program needs to perform a blocking operation, such as waiting for user input, it is the `VMThread` that pauses its execution loop and waits for the necessary data to become available before resuming.
 
 
 ## VmValue
@@ -153,8 +152,8 @@ The [`VmValue`](./thread/vmvalue.hpp) class is the key mechanism for bidirection
 external world (e.g the compiler or other C++ code) and the virtual machine's internal environment. It 
 functions as a data Transfer Object designed to safely package, transfer, and unpack data across in DVM.
 
-Its primary purpose is to enable the transfer of values that may have complex, hierarchical structures 
-(e.g., objects containing pointers), not just simple byte streams.
+Its primary purpose is to enable the transfer of values that may have complex, hierarchical structures, 
+not just simple byte streams.
 
 ### Key Aspects
 
@@ -162,13 +161,19 @@ Its primary purpose is to enable the transfer of values that may have complex, h
     holds its data in a `std::vector<byte>`, but critically, it also uses a special mechanism to register 
     the data with the parent process's `Memory` module. As a result, from the VM's perspective, the data 
     within a `VmValue` looks and behaves like a native, fully-functional memory `Block`. This allows standard 
-    memory operations, such as creating nested child blocks or copying complex data structures, to be 
-    performed on it.
+    memory operations, such as creating nested child blocks, copying complex data structures and reference 
+    counting, to be performed on it.
 
 2.  **The Bridge for Input and Output:** `VmValue` is the standard method for interacting with executing code. 
     Its primary use cases include:
     *   **Passing Arguments to Functions:** When a user wants to call a function inside the VM, its arguments 
         are first packaged into `VmValue` objects. The execution engine (`VMThread`) then treats these as 
-        source memory blocks from which to read the input data.
+        source memory blocks from which to read the input data. Typically the argument values are created 
+        with the `vm::api::getVmValue()` endpoint, filled in with the appropriate data and passed to the `vm::api::runFunction()` endpoint. An important note is that all the `VmValue` object created by the `getVmValue()` endpoint are owned by the caller. This means they are expected to be freed by the caller. If not freed they will be counted as memory leaks when calling `vm::api::deinitAndValidate()`.
     *   **Receiving Results:** After execution completes, the function's return value (or the entire program's 
-        exit code) is packaged into a `VmValue` and returned to the user, who can then safely read and interpret it.
+        exit code) is packaged into a `VmValue` which can be read with the `vm::api::getExitCode()` endpoint 
+        and interpreted. Note that `VmValues` returned by the `vm::api::getExitCode()` are owned by the
+        `VMProcess` and are automatically freed when the process in destructed.
+    Some may ask, why not all `VMValue` objects are owned by the process. This is done from the performance
+    standpoint. When calling functions in the VM multiple times we want to avoid the memory bloat which we 
+    may encounter by creating many function arguments.

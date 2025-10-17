@@ -61,7 +61,7 @@ namespace vm {
 		 *
 		 * @note At first glance, one could wonder why do you have to manually call freeData()
 		 * instead of putting the free'ing logic into the vmvalue destructor. The answer is -
-		 * freeing blocks in the memory module isn't exception free.
+		 * freeing pblocks in the memory module isn't exception free.
 		 */
 		void freeData();
 
