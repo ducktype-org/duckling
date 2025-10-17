@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/ref.hpp>
 
 namespace vm {

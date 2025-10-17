@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "box.hpp"
-#include "maps.hpp"
+#include <base/pointers/box.hpp>
+#include <base/collections/maps.hpp>
 
 #include <type_traits>
 

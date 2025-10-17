@@ -2,7 +2,7 @@
 #include "allocator.hpp"
 #include "block_data.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>
 

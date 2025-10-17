@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include "ints.hpp"  // IWYU pragma: export
+#include <base/types/ints.hpp>  // IWYU pragma: export
 
 #include <compare>   // IWYU pragma: export
 

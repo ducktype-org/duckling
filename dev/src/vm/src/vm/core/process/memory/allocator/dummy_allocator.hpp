@@ -3,7 +3,7 @@
 #include "allocator.hpp"
 #include "block_data.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/ref.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>

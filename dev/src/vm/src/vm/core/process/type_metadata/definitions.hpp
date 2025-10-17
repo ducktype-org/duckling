@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 

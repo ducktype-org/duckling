@@ -1,5 +1,5 @@
 #include <base/box.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/ref.hpp>
 
 #include <tester/tester.hpp>

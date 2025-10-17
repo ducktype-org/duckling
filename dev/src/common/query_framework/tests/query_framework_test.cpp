@@ -1,6 +1,6 @@
 #include <base/anycast.hpp>
 #include <base/exceptions.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/variant.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>

@@ -3,7 +3,7 @@
 #include "hashing_algorithms.hpp"
 #include "type_code.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/type_traits.hpp>
 
 #include <concepts>

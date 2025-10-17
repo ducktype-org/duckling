@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/bit256.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 namespace query {
 	using QueryStableHash = base::Bit256;

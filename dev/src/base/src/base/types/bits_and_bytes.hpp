@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include "ints.hpp"
+#include <base/types/ints.hpp>
 #include "strongly_typed_int.hpp"
 
 #include <string>

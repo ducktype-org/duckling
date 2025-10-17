@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/type_traits.hpp>
 
 #include <array>

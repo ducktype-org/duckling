@@ -8,7 +8,7 @@
 #include <frontend/module_tree/source_file.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/ref.hpp>
 #include <base/stringifyable_enum.hpp>
 

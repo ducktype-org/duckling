@@ -31,7 +31,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/variant.hpp>
 

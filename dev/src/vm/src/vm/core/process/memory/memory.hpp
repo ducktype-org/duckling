@@ -7,7 +7,7 @@
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/ref.hpp>

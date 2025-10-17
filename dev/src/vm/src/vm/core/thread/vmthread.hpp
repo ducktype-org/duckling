@@ -4,7 +4,7 @@
 #include "low_program/instruction.hpp"
 #include "vmvalue.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/optional.hpp>
 
 #include <vm/api/data/api_error.hpp>

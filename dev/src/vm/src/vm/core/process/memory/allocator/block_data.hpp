@@ -2,7 +2,7 @@
 
 #include "allocator.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/raw_view.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>

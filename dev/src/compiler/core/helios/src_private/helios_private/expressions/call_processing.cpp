@@ -14,7 +14,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <base/box.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 

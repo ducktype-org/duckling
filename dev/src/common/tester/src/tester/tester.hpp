@@ -10,7 +10,7 @@
 #include "tester_config.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <init/init.hpp>  // IWYU pragma: export
 #include <printer/stream_printer.hpp>

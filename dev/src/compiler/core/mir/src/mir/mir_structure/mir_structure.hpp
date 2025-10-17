@@ -5,7 +5,7 @@
 
 #include <typesystem/higher/types.hpp>
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>

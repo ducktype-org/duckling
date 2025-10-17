@@ -41,7 +41,7 @@
  */
 #pragma once
 
-#include "ints.hpp"
+#include <base/types/ints.hpp>
 #include "macros/diagnostics.hpp"
 
 #include <limits>

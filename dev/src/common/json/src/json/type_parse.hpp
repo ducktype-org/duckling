@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/constexpr_cat.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <memory>
 #include <variant>

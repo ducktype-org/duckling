@@ -8,7 +8,7 @@
 #include "parameter.hpp"
 
 #include <base/anycast.hpp>
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 
