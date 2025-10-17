@@ -232,9 +232,9 @@ class FunctionValidator {
 		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
             if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
-			if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
-				return &ext_c_signatures.at(instr.arg0.function_name)->signature;
-			return &signatures.at(instr.arg0.function_name);
+            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
+                return &ext_c_signatures.at(instr.arg0.function_name)->signature;
+            return &signatures.at(instr.arg0.function_name);
 		}();
 
 		bool check_ret_val = signature->result_type.str != base::StrID("void");
