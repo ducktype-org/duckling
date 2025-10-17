@@ -1,14 +1,17 @@
 use crate::driver::subcommands::exec_for;
 
+// TODO(Stas): We can either hardcode theme here, all collect them from cli() function.
+//             But it's low priority for now.
 const BUILTIN_ALIASES: [(&str, &str); 2] = [("b", "build"), ("r", "run")];
 
 pub fn get_builtin_alias(name: &str) -> Option<&'static str> {
-    for (k, v) in BUILTIN_ALIASES {
-        if k == name {
-            return Some(v);
+    BUILTIN_ALIASES.iter().find_map(|(alias, expansion)| {
+        if *alias == name {
+            Some(*expansion)
+        } else {
+            None
         }
-    }
-    None
+    })
 }
 
 pub fn is_builtin_subcommand(name: &str) -> bool {
