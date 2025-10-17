@@ -3,7 +3,6 @@ use crate::terminal::Terminal;
 pub mod driver;
 pub mod duck_cfg;
 pub mod duck_ctx;
-mod env;
 mod terminal;
 
 pub use duck_ctx::DuckCtx;

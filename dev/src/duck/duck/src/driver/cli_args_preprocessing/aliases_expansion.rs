@@ -112,6 +112,12 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
 
 #[cfg(test)]
 mod tests {
+    #![cfg(any(
+        all(target_os = "linux", target_arch = "aarch64"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "windows", target_arch = "aarch64"),
+        all(target_os = "windows", target_arch = "x86_64")
+    ))]
     use super::*;
     use injectorpp::interface::injector::*;
 

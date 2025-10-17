@@ -1,9 +1,7 @@
 use std::{
     collections::HashMap,
     ffi::OsString,
-    os::unix::process::CommandExt,
     path::{Path, PathBuf},
-    process::exit,
 };
 
 use crate::{
@@ -17,9 +15,9 @@ use crate::{
 };
 use anyhow::{Context, bail};
 use clap::ArgMatches;
-use is_executable::is_executable;
 use itertools::Itertools;
 use quackpack::QuackResult;
+use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
@@ -65,7 +63,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
             else {
                 continue;
             };
-            if is_executable(executable.as_path()) {
+            if executable.as_path().is_executable() {
                 commands.insert(String::from(stripped), executable);
             }
         }
@@ -90,6 +88,7 @@ fn run_subcmd(
         // External subcommand.
         let cli_args = external_cli_args(sub_args);
         execute_external_subcmd(exec_path, cli_args)
+            .with_context(|| format!("failed to execute external subcmd `{sub_cmd}`"))
     } else {
         // Unrecognizable subcommand.
         bail!("No such command: `{}`", sub_cmd);
@@ -105,25 +104,13 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
 }
 
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
-    let Some(exec_path_str) = exec_path.as_os_str().to_str() else {
-        bail!("Could not decode external subcommand path.");
-    };
-    let mut command = std::process::Command::new(exec_path_str);
+    debug!(
+        "executing external cmd `{}`, args are `{cli_args:?}`",
+        exec_path.display()
+    );
+    let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
-    if cfg!(unix) {
-        // If nothing goes wrong exec does not return.
-        let err: anyhow::Error = command.exec().into();
-        Err(err)
-    } else {
-        let mut child = command.spawn()?;
-        let child_exit_status = child.wait()?;
-        match child_exit_status.code() {
-            Some(n) => exit(n),
-
-            // The child process was interrupted
-            None => Ok(()),
-        }
-    }
+    Err(command.exec_replace().into())
 }
 
 fn print_parser_help(ctx: &DuckCtx) {
