@@ -1,6 +1,6 @@
 #include "../raw_view.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <cstring>
 

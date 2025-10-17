@@ -17,7 +17,7 @@
 #include <pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/int_conv.hpp>
 
 #include <clah/clah.hpp>

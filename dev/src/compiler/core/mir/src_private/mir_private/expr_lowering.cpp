@@ -5,7 +5,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/variant.hpp>
 
 #include <query_framework/query_impl.hpp>

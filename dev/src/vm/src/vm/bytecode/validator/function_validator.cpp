@@ -2,7 +2,7 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/type_traits.hpp>

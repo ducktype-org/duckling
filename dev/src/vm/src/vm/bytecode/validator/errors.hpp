@@ -1,5 +1,5 @@
 #pragma once
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 

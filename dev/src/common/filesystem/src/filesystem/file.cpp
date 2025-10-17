@@ -2,7 +2,7 @@
 
 #include <filesystem_private/vfs.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 

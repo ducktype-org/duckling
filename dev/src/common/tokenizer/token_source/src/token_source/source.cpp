@@ -1,6 +1,6 @@
 #include "source.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/raw_view.hpp>
 
 #include <diagnostic/location.hpp>

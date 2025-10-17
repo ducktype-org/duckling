@@ -2,8 +2,8 @@
 
 #include <bits/ranges_algo.h>
 
-#include <base/defer.hpp>
-#include <base/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 

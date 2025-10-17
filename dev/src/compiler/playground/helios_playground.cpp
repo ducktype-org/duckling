@@ -3,7 +3,7 @@
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>

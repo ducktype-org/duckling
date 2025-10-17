@@ -1,6 +1,6 @@
 #include "init.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <cstdlib>

@@ -11,7 +11,7 @@
 #include <typesystem/higher/queries.hpp>
 
 #include <base/pointers/box.hpp>
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/optional.hpp>
 
 #include <query_framework/query_impl.hpp>

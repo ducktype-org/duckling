@@ -15,7 +15,7 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/string_id.hpp>

@@ -1,6 +1,6 @@
 #include "vmprocess.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 

@@ -11,7 +11,7 @@
  * @note Outputs and returns -1 on error in code;
  */
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/int_conv.hpp>
 
 #include <clah/clah.hpp>

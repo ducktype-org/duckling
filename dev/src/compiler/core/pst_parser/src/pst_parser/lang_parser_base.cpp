@@ -3,7 +3,7 @@
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/variant.hpp>
 
 #include <ranges>

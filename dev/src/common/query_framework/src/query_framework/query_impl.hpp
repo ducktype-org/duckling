@@ -14,8 +14,8 @@
 #include "query_hash.hpp"
 #include "query_int.hpp"
 
-#include <base/defer.hpp>
-#include <base/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/collections/maps.hpp>
 #include <base/optional.hpp>
 #include <base/pointers/ref.hpp>

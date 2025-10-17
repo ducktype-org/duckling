@@ -2,7 +2,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>

@@ -1,6 +1,6 @@
 #include "builtin_functions.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 

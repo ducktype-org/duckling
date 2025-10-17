@@ -19,7 +19,7 @@
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
 

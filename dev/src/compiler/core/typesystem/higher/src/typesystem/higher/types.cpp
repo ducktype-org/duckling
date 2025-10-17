@@ -12,7 +12,7 @@
 #include "expression_type.hpp"
 #include "internal/abstract_type_impl.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <concepts>
 #include <sstream>

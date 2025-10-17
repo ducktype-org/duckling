@@ -7,7 +7,7 @@
 
 #include "parsing_result.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <filesystem>
 

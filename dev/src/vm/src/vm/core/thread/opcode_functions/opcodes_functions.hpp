@@ -2,7 +2,7 @@
 
 #include "../config.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/raw_view.hpp>
 
 #include <vm/core/process/exceptions.hpp>

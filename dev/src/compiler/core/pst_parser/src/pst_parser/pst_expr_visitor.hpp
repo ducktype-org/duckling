@@ -3,7 +3,7 @@
 #include "access.hpp"
 #include "elements/elements_list.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/visitor.hpp>
 
 namespace pst::expr {

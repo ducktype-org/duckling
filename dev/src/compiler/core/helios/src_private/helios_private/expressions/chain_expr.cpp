@@ -19,7 +19,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include <base/pointers/box.hpp>
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
 #include <base/optional.hpp>
 

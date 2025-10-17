@@ -3,7 +3,7 @@
 #include "functors.hpp"
 #include "queries.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/stable_container.hpp>
 #include <base/string_id.hpp>
 

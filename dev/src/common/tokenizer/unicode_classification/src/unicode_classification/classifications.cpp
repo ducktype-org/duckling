@@ -1,6 +1,6 @@
 #include "classifications.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/init_guard.hpp>
 
 #include <init/init.hpp>

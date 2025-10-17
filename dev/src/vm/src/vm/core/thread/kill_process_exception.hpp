@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <string>
 

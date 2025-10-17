@@ -5,7 +5,7 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/types/ints.hpp>
 #include <base/optional.hpp>
