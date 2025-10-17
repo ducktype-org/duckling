@@ -1,13 +1,17 @@
 add_library(Base
-        src/base/impl/argument_splitter.cpp
-        src/base/impl/exceptions.cpp
-        src/base/impl/pretty_stacktrace.cpp
-        src/base/impl/raw_view.cpp
-        src/base/impl/string_id.cpp
-        src/base/impl/convert.cpp
-        src/base/impl/str_utils.cpp
-        src/base/impl/init_guards.cpp
-        src/base/impl/bit256.cpp
+        src/base/preproc/argument_splitter.cpp
+        
+        src/base/except/exceptions.cpp
+        src/base/except/pretty_stacktrace.cpp
+        
+        src/base/misc/raw_view.cpp
+        src/base/misc/convert.cpp
+        src/base/misc/init_guards.cpp
+        
+        src/base/str/string_id.cpp
+        src/base/str/str_utils.cpp
+        
+        src/base/types/bit256.cpp
 )
 
 # @TODO: unicode dependency might not be optimal.
