@@ -284,7 +284,7 @@ namespace tsl {
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(const tsh::TypeInterface&
 		                                                                   interface) {
-			const auto&                        elements = interface.getElements();
+			const auto&                        elements = interface.getElementsByName();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
 

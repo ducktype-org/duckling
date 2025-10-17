@@ -371,8 +371,8 @@ namespace compiler::helios::code {
 	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
-		base::Box<Expr> base;
-		base::StrID     field;
+		Box<Expr>   base;
+		base::StrID field;
 
 		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
 

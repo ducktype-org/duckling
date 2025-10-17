@@ -1,0 +1,88 @@
+#include "class_constructors.hpp"
+
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/internal/queries.hpp>
+#include <typesystem/higher/queries/types.hpp>
+
+#include <base/stable_container.hpp>
+
+#include <query_framework/query_impl.hpp>
+
+namespace compiler::helios::houtgen {
+	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, HOUTFunction) {
+		static PResult provide(Context& ctx, const QKey class_type) {
+			// Preamble, get some basic data.
+			const SymID               class_symbol    = class_type.getSymbol();
+			const tsh::TypeInterface& class_interface = class_type.getInterface(ctx);
+
+			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
+			using Variable            = GeneratedSymbolData::Variable;
+			using std::ranges::to;
+			using std::views::transform;
+
+			// Construct the constructor's type.
+			// @TODO: #1328 Properly handle value categories in class constructors.
+			const std::vector<tsh::InterfaceElement> fields
+				= class_interface.getFieldsView() | to<std::vector>();
+			const u64 num_fields = fields.size();
+
+			// Prepare the ctor symbol and declaration.
+			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
+				.name                  = name(class_type.getSymbol()),
+				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
+			});
+
+			const auto ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol);
+
+			// Prepare the body of the constructor.
+			std::vector<Box<code::Stmt>> body{};
+
+			// - One declaration, one assignment per field, one return.
+			body.reserve(1 + num_fields + 1);
+
+			// - Declare result variable.
+			const auto  result_symbol_type = ctor_decl->return_type;
+			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
+					 .name = base::StrID("result"),
+					 .generated_symbol_data
+                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+            });
+			body.emplace_back(
+				makeBox<code::VariableStmt>(std::nullopt, result_symbol_type, result_symbol)
+			);
+
+			// - Assign each field from the corresponding parameter.
+			for (usize i = 0; i < num_fields; i++) {
+				body.emplace_back(makeBox<code::AssignmentStmt>(
+					makeBox<code::AccessExpr>(
+						ctx,
+						makeBox<code::IdentifierExpr>(ctx, result_symbol),
+						name(fields.at(i).getSymbol())
+					),
+					makeBox<code::IdentifierExpr>(ctx, ctor_decl->parameters.at(i).helios_symbol)
+				));
+			}
+
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(makeBox<code::IdentifierExpr>(ctx, result_symbol))
+			);
+
+			// Finally, create the HOUTFunction object.
+			return HOUTFunction{
+				ctor_decl,
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				}),
+			};
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitClassConstructor);
+}

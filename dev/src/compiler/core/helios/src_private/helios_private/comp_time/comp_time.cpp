@@ -389,7 +389,7 @@ namespace compiler::helios {
 
 			// Get code of the called function.
 			// @todo: Change this code to a single query once it gets implemented #826.
-			auto fun_hout_result = ctx.query<QueryCodeOFFun>(function_sym_id);
+			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id);
 
 			auto mir_func_result = ctx.query<mir::LowerToMirFunction>({ fun_hout_result });
 			if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
