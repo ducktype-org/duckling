@@ -64,7 +64,7 @@ else() # Unity compilation is disabled by default.
 	message("-- PstParser will NOT use UNITY compilation, compilation will be longer")
 endif()
 
-make_module(PstParser USES Hashing Lexer UnicodeClassification Printer TPC QueryFramework)
+make_module(PstParser USES Hashing Lexer UnicodeClassification Printer TPC QueryFramework ModuleTree)
 
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)

@@ -1,9 +1,10 @@
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
 #include <filesystem/file.hpp>
+#include <hashing/add_to_hash.hpp>
 #include <tester/tester.hpp>
-
 
 using namespace compiler::frontend;
 
@@ -18,6 +19,7 @@ public:
 		TESTER_ADD_TEST(testPSTGeneration);
 		TESTER_ADD_TEST(testContentCaching);
 		TESTER_ADD_TEST(testHashGeneration);
+		TESTER_ADD_TEST(testComponentHashComputation);
 		TESTER_ADD_TEST(testMultipleSourceFiles);
 		TESTER_ADD_TEST(testFileModifiedUpdatesContent);
 		TESTER_ADD_TEST(testGetSourceFilesfromFile);
@@ -271,6 +273,66 @@ private:
 			"source_file2 should be found"
 		);
 		fs::FileManager::deleteFile(temp_file);
+	}
+
+	void testComponentHashComputation() {
+		// Prepare virtual directory with named files so stems are controlled
+		auto root       = fs::FileManager::createRandomVirtualDirectory();
+		auto file_same  = root.createSubFile("content", "same.duck");
+		auto file_other = root.createSubFile("content", "other.duck");
+
+		// Build first module (named "modA")
+		auto mod_a_builder = ModuleTreeBuilder::create();
+		mod_a_builder->setName(base::StrID("modA"));
+		auto mod_a_main = root.createSubFile("mainA", "modA.dmf");
+		mod_a_builder->setMainSourceFile(mod_a_main);
+		auto mod_a = mod_a_builder->finalize();
+
+		// Build second module (named "modB")
+		auto mod_b_builder = ModuleTreeBuilder::create();
+		mod_b_builder->setName(base::StrID("modB"));
+		auto mod_b_main = root.createSubFile("mainB", "modB.dmf");
+		mod_b_builder->setMainSourceFile(mod_b_main);
+		auto mod_b = mod_b_builder->finalize();
+
+		// Create SourceFile instances for the same fs::File inside the same module
+		auto sf_1 = SourceFile::create(file_same, mod_a->getModuleID());
+		auto sf_2 = SourceFile::create(file_same, mod_a->getModuleID());
+
+		// Compute finalized path-hash for each SourceFile by starting from module partial
+		// and adding the language-level file name. Do NOT construct ComponentHash manually here.
+		{
+			// start from module partial hasher
+			auto parent_partial = ModuleTree::getComponentHash(mod_a->getModuleID()).partial;
+			auto hasher1        = parent_partial;
+			hashing::addToHash(hasher1, sf_1->getLangFileName());
+			auto final_a_1 = hasher1.finalize();
+
+			auto hasher2 = parent_partial;
+			hashing::addToHash(hasher2, sf_2->getLangFileName());
+			auto final_a_2 = hasher2.finalize();
+
+			// Same file stem in same module -> hashes must match
+			ASSERT_EQUAL(final_a_1, final_a_2);
+
+			// Different filename in same module -> different hash
+			auto sf_other     = SourceFile::create(file_other, mod_a->getModuleID());
+			auto hasher_other = parent_partial;
+			hashing::addToHash(hasher_other, sf_other->getLangFileName());
+			auto final_a_other = hasher_other.finalize();
+			ASSERT_TRUE(final_a_1 != final_a_other);
+
+			// Same file stem but different module -> different hash
+			auto parent_b_partial = ModuleTree::getComponentHash(mod_b->getModuleID()).partial;
+			auto hasher_b         = parent_b_partial;
+			hashing::addToHash(hasher_b, sf_1->getLangFileName());
+			auto final_b_same = hasher_b.finalize();
+			ASSERT_TRUE(final_a_1 != final_b_same);
+		}
+
+		// Cleanup virtual files
+		fs::FileManager::deleteFile(file_same);
+		fs::FileManager::deleteFile(file_other);
 	}
 };
 

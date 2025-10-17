@@ -37,7 +37,7 @@ namespace {
 	template<class Instruction>
 	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
 
-#define HANDLE_OPCODE_0ARGS(opcode)                                       \
+#define HANDLE_INSTR_0ARGS(opcode)                                        \
 	template<>                                                            \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
 		const parser::OpCode& opcode                                      \
@@ -48,7 +48,7 @@ namespace {
 		return instr;                                                     \
 	}
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                 \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                  \
 	template<>                                                                                 \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
 		const parser::OpCode& opcode                                                           \
@@ -62,7 +62,7 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                              \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                               \
 	template<>                                                                                         \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
 		const parser::OpCode& opcode                                                                   \
@@ -78,20 +78,20 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
 	}
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 
-#define HANDLE_OPCODE(opcode) \
+#define HANDLE_INSTR(opcode) \
 	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 	std::unordered_map instr_to_factory{
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 	};
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 
 	/**
 	 * @brief Translates a parsed opcode (`parser::OpCode`) into a high-level bytecode instruction

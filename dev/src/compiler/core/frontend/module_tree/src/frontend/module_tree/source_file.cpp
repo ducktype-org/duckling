@@ -1,6 +1,7 @@
 #include "source_file.hpp"
 
 #include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
@@ -62,11 +63,20 @@ namespace compiler::frontend {
 		parse_tree.reset();
 	}
 
+	const ComponentHash& SourceFile::getComponentHash() {
+		if (!component_hash.has_value()) {
+			auto m_component_hash = ModuleTree::getComponentHash(linked_module);
+			component_hash        = ComponentHash(m_component_hash, lang_file_name);
+		}
+		return component_hash.value();
+	}
+
 	CRef<pst::PST<>> SourceFile::getPST() {
-		if (parse_tree) {
+		// If component hash changed, reset parse tree
+		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			parse_tree.emplace(pst::PST(file));
+			parse_tree.emplace(pst::PST(file, getComponentHash()));
 			return &parse_tree.value();
 		}
 	}
@@ -92,4 +102,6 @@ namespace compiler::frontend {
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
 	}
+
+	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
 }
