@@ -399,18 +399,6 @@ namespace lexer {
 		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), source_position));
 	}
 
-	void Lexer::parseNumericLiteralTypeSuffix() {
-		if (isEOF() || !peek().is(Class::name_start)) return;
-		usize lookahead = 0;
-		while (peek(lookahead).is(Class::name_continue)) lookahead++;
-
-		if (lookahead == 0) return;
-
-		base::RawView suffix_view = file->getCharRange(where, where + lookahead);
-		auto specifier = lang_def::strAsNumericLiteralTypeSpecifier(base::StrID(suffix_view));
-		if (specifier != lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier) skip(lookahead);
-	}
-
 	base::Optional<Token> Lexer::tryParseNumericLiteralTypeSuffix() {
 		if (isEOF() || !peek().is(Class::name_start)) return {};
 		usize suffix_begin     = where;
@@ -435,12 +423,12 @@ namespace lexer {
 		return {};
 	}
 
-	void Lexer::binLiteralHandler(Tokens& output) {
+	template<typename NumberParser>
+	void Lexer::numericLiteralHandler(Tokens& output, NumberParser parse_number) {
 		usize begin        = where;
 		auto  source_start = currentPosition();
 
-		skip(2);  // 0b
-		while (peek().isBinDigit()) next();
+		parse_number();
 
 		usize               number_end = where - 1;
 		dia::SourcePosition number_pos(source_start, number_end);
@@ -467,130 +455,52 @@ namespace lexer {
 
 		output.push_back(std::move(value_token));
 		return;
+	}
+
+	void Lexer::binLiteralHandler(Tokens& output) {
+		numericLiteralHandler(output, [&]() {
+			skip(2);  // 0b
+			while (peek().isBinDigit()) next();
+		});
 	}
 
 	void Lexer::octLiteralHandler(Tokens& output) {
-		usize begin        = where;
-		auto  source_start = currentPosition();
-
-		skip(2);  // 0o
-		while (peek().isOctDigit()) next();
-
-		usize               number_end = where - 1;
-		dia::SourcePosition number_pos(source_start, number_end);
-		auto                value_token
-			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
-		addTokenMsg(begin, number_end, "numLiteralValue");
-
-		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
-
-		if_opt_some(opt_type_specifier_token, specifier) {
-			usize               full_group_end = where - 1;
-			dia::SourcePosition full_pos(source_start, full_group_end);
-			auto                num_literal_group = Token::makeNumLiteralGroup(
-                file->getCharRange(begin, full_group_end + 1),
-                std::move(value_token),
-                std::move(specifier),
-                full_pos
-            );
-
-			output.push_back(num_literal_group);
-			addTokenMsg(begin, full_group_end, "numLiteralGroup");
-			return;
-		}
-
-		output.push_back(std::move(value_token));
-		return;
+		numericLiteralHandler(output, [&]() {
+			skip(2);  // 0o
+			while (peek().isOctDigit()) next();
+		});
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
-		usize begin        = where;
-		auto  source_start = currentPosition();
-
-		skip(2);  // 0x
-		while (peek().isHexDigit()) next();
-
-		usize               number_end = where - 1;
-		dia::SourcePosition number_pos(source_start, number_end);
-		auto                value_token
-			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
-		addTokenMsg(begin, number_end, "numLiteralValue");
-
-		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
-
-		if_opt_some(opt_type_specifier_token, specifier) {
-			usize               full_group_end = where - 1;
-			dia::SourcePosition full_pos(source_start, full_group_end);
-			auto                num_literal_group = Token::makeNumLiteralGroup(
-                file->getCharRange(begin, full_group_end + 1),
-                std::move(value_token),
-                std::move(specifier),
-                full_pos
-            );
-
-			output.push_back(num_literal_group);
-			addTokenMsg(begin, full_group_end, "numLiteralGroup");
-			return;
-		}
-
-		output.push_back(std::move(value_token));
-		return;
+		numericLiteralHandler(output, [&]() {
+			skip(2);  // 0x
+			while (peek().isHexDigit()) next();
+		});
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
-		usize begin        = where;
-		auto  source_start = currentPosition();
-
-		bool was_dot = false;
-		bool was_e   = false;
-		next();  // first char - digit
-		while (!isEOF()) {
-			if (!peek().isDigit()) {
-				if (!was_dot && peek().is('.')) {  // Only one dot can appear.
-					was_dot = true;
-				} else if (!was_e
-				           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
-					was_e   = true;
-					was_dot = true;
-					next();
-					// '+'/'-' an appear only straight after 'e'/'E'
-					if (peek().is('+') or peek().is('-')) next();
-				} else {
-					break;
+		numericLiteralHandler(output, [&]() {
+			bool was_dot = false;
+			bool was_e   = false;
+			next();  // first char - digit
+			while (!isEOF()) {
+				if (!peek().isDigit()) {
+					if (!was_dot && peek().is('.')) {  // Only one dot can appear.
+						was_dot = true;
+					} else if (!was_e
+					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
+						was_e   = true;
+						was_dot = true;
+						next();
+						// '+'/'-' an appear only straight after 'e'/'E'
+						if (peek().is('+') or peek().is('-')) next();
+					} else {
+						break;
+					}
 				}
+				next();
 			}
-			next();
-		}
-
-		usize               number_end = where - 1;
-		dia::SourcePosition number_pos(source_start, number_end);
-		auto                value_token
-			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
-		addTokenMsg(begin, number_end, "numLiteralValue");
-
-
-		std::cout << "Value token: " << value_token.getStrValue() << '\n';
-
-		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
-
-		if_opt_some(opt_type_specifier_token, specifier) {
-			std::cout << "Specifier token: " << specifier.getStrValue() << '\n';
-			usize               full_group_end = where - 1;
-			dia::SourcePosition full_pos(source_start, full_group_end);
-			auto                num_literal_group = Token::makeNumLiteralGroup(
-                file->getCharRange(begin, full_group_end + 1),
-                std::move(value_token),
-                std::move(specifier),
-                full_pos
-            );
-
-			output.push_back(num_literal_group);
-			addTokenMsg(begin, full_group_end, "numLiteralGroup");
-			return;
-		}
-		std::cout << "NO TYPE SPECIFIER\n";
-		output.push_back(std::move(value_token));
-		return;
+		});
 	}
 
 	void Lexer::stringHandler(Tokens& output) {

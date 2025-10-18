@@ -73,6 +73,10 @@ namespace lexer {
 		void stringHandler(Tokens& output);
 		void charHandler(Tokens& output);
 		void specialHandler(Tokens& output);
+
+		template<typename NumberParser>
+		void numericLiteralHandler(Tokens& output, NumberParser parse_number);
+
 		void decLiteralHandler(Tokens& output);
 		void binLiteralHandler(Tokens& output);
 		void octLiteralHandler(Tokens& output);
@@ -81,8 +85,8 @@ namespace lexer {
 
 		/**
 		 * @brief Consumes a numeric literal type suffix (e.g., i32, f64).
+		 * @return The suffix token or an empty optional if no suffix exists.
 		 */
-		void                  parseNumericLiteralTypeSuffix();
 		base::Optional<Token> tryParseNumericLiteralTypeSuffix();
 
 		/**

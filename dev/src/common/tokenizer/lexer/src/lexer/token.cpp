@@ -24,7 +24,6 @@ namespace lexer {
 		  str_id(value),
 		  recursive(std::move(recursive)),
 		  source_position(position) {
-		// TODOP: Remove that.
 		CORE_ASSERT(
 			type == Type::NumLiteral || type == Type::FormattedString,
 			"Recursive ctor called on non recursive"
@@ -186,7 +185,8 @@ namespace lexer {
 	}
 
 	bool Token::isRecursive() const {
-		return type == Type::BracketGroup || type == Type::FormattedString;
+		return type == Type::BracketGroup || type == Type::FormattedString
+		    || type == Type::NumLiteral;
 	}
 
 	bool Token::isSpecial() const { return type == Type::Special; }
