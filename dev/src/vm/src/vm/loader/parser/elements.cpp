@@ -2,6 +2,7 @@
 
 #include "errors.hpp"
 
+#include "base/str_utils.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
@@ -16,6 +17,9 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/memory/memory.hpp>
 
+#include <bit>
+#include <limits>
+#include <string>
 #include <string_view>
 
 namespace vm::loader::parser {
@@ -26,11 +30,101 @@ namespace vm::loader::parser {
 	 * binary too). T has to be type of size 64bits.
 	 */
 	namespace opargs_parsers {
+		namespace detail {
+			/**
+			 * @brief "Packs" bits of value `V` to 64-bit type`T`.
+			 * 32-bit values are zero-extended to 64-bits and bit casted to T
+			 * 64-bit values are just bit casted to T.
+			 */
+			template<typename T, typename V>
+			T packValue(V value) {
+				static_assert(sizeof(T) == 8, "T must be a 64-bit type");
+				if constexpr (sizeof(V) == 8) {
+					return std::bit_cast<T>(value);
+				} else if constexpr (sizeof(V) == 4) {
+					auto bits = std::bit_cast<u32>(value);
+					return std::bit_cast<T>(static_cast<u64>(bits));
+				}
+			}
+
+			/**
+			 * @brief Checks if the value fits in bounds of the given signed type.
+			 * Logs an error otherwise.
+			 */
+			template<typename SignedInt>
+			bool checkSignedBoundsAndLog(
+				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
+			) {
+				if (sign == 1) {
+					if (raw_val > static_cast<u64>(std::numeric_limits<SignedInt>::max())) {
+						state.log(
+							makeBox<InvalidLiteral>(
+								token.getPosition(),
+								base::strConcat(
+									"Numeric literal overflows a ",
+									base::toString(sizeof(SignedInt) * 8),
+									"-bit signed integer."
+								)
+							)
+						);
+						return false;
+					}
+				} else if (raw_val
+				           > (static_cast<u64>(std::numeric_limits<SignedInt>::max()) + 1ULL)) {
+					state.log(
+						makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Numeric literal underflows a ",
+								base::toString(sizeof(SignedInt) * 8),
+								"-bit signed integer."
+							)
+						)
+					);
+					return false;
+				}
+				return true;
+			}
+
+			/**
+			 * @brief Checks if the value fits in bounds of the given unsigned type.
+			 * Logs an error otherwise.
+			 */
+			template<typename UnsignedInt>
+			bool checkUnsignedBoundsAndLog(
+				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
+			) {
+				if (sign == -1) {
+					state.log(
+						makeBox<InvalidLiteral>(
+							token.getPosition(), "Unsigned integer literal cannot be negative."
+						)
+					);
+					return false;
+				}
+				if (raw_val > std::numeric_limits<UnsignedInt>::max()) {
+					state.log(
+						makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Numeric literal overflows a ",
+								base::toString(sizeof(UnsignedInt) * 8),
+								"-bit unsigned integer."
+							)
+						)
+					);
+					return false;
+				}
+				return true;
+			}
+		}
+
 		template<class T>
 		std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
-			usize literal_length   = 0;
-			auto  maybe_sign_token = state.tokens().peek();
-			i32   sign             = 1;
+			usize literal_length = 0;
+			i32   sign           = 1;
+
+			const auto& maybe_sign_token = state.tokens().peek();
 			if (maybe_sign_token.isOperatorSymbol()) {
 				if (maybe_sign_token.getValue().str() == "-") {
 					sign = -1;
@@ -43,7 +137,7 @@ namespace vm::loader::parser {
 				}
 			}
 
-			auto token = state.tokens().peek();
+			const auto& token = state.tokens().peek();
 			if (!token.isNumLiteral()) {
 				state.log(
 					makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
@@ -51,18 +145,8 @@ namespace vm::loader::parser {
 				return { T{ 0 }, 0 };
 			}
 			state.tokens().next();
+			literal_length += token.getValue().strView().length();
 
-			if constexpr (sizeof(T) != 8) {
-				state.log(
-					makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat(
-							"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
-						)
-					)
-				);
-				return { T{ 0 }, 0 };
-			}
 
 			std::string_view number;
 			std::string_view suffix;
@@ -86,8 +170,6 @@ namespace vm::loader::parser {
 				suffix = sub_tokens[1].getValue().strView();
 			}
 
-			literal_length += token.getValue().strView().length();
-
 			int base = 10;
 			// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
 			if (number.starts_with("0b") || number.starts_with("0B")) {
@@ -101,10 +183,10 @@ namespace vm::loader::parser {
 				number.remove_prefix(2);
 			}
 
+			T           result;
+			usize       pos = 0;
+			std::string str(number);
 			try {
-				T           result;
-				usize       pos = 0;
-				std::string str(number);
 				if (!suffix.empty()) {  // Type specifier exists.
 					if (suffix.starts_with("f") && base != 10) {
 						state.log(
@@ -117,83 +199,33 @@ namespace vm::loader::parser {
 					}
 
 					if (suffix == "f32") {
-						float value      = std::stof(str, &pos) * static_cast<float>(sign);
-						u32   float_bits = std::bit_cast<u32>(value);
-						result           = std::bit_cast<T>(static_cast<u64>(float_bits));
+						float value = std::stof(str, &pos) * static_cast<float>(sign);
+						result      = detail::packValue<T>(value);
 					} else if (suffix == "f64") {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
-						result       = std::bit_cast<T>(value);
+						result       = detail::packValue<T>(value);
 					} else if (suffix == "i32") {
 						u64 raw_val = std::stoull(str, &pos, base);
-
-						if (sign == 1
-						    && raw_val > static_cast<u64>(std::numeric_limits<i32>::max())) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal overflows a 32-bit signed integer."
-								)
-							);
-							return { T{ 0 }, 0 };
+						if (detail::checkSignedBoundsAndLog<i32>(state, token, raw_val, sign)) {
+							i32 value = static_cast<i32>(raw_val) * sign;
+							result    = detail::packValue<T>(value);
 						}
-						if (sign == -1
-						    && raw_val
-						           > (static_cast<u64>(std::numeric_limits<i32>::max()) + 1ULL)) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal underflows a 32-bit signed integer."
-								)
-							);
-							return { T{ 0 }, 0 };
-						}
-
-
-						i32 value = static_cast<i32>(raw_val) * sign;
-						result    = std::bit_cast<T>(static_cast<u64>(std::bit_cast<u32>(value)));
 					} else if (suffix == "i64") {
 						u64 raw_val = std::stoull(str, &pos, base);
-
-						if (sign == 1
-						    && raw_val > static_cast<u64>(std::numeric_limits<i64>::max())) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal overflows a 64-bit signed integer."
-								)
-							);
-							return { T{ 0 }, 0 };
+						if (detail::checkSignedBoundsAndLog<i64>(state, token, raw_val, sign)) {
+							i64 value = static_cast<i64>(raw_val) * sign;
+							result    = detail::packValue<T>(value);
 						}
-						if (sign == -1
-						    && raw_val
-						           > (static_cast<u64>(std::numeric_limits<i64>::max()) + 1ULL)) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal underflows a 64-bit signed integer."
-								)
-							);
-							return { T{ 0 }, 0 };
-						}
-						i64 value = static_cast<i64>(raw_val) * sign;
-						result    = std::bit_cast<T>(std::bit_cast<u64>(value));
 					} else if (suffix == "u32") {
 						u64 raw_val = std::stoull(str, &pos, base);
-
-						if (raw_val > std::numeric_limits<u32>::max()) {
-							state.log(
-								makeBox<InvalidLiteral>(
-									token.getPosition(),
-									"Numeric literal overflows a 32-bit unsigned integer."
-								)
-							);
-							return { T{ 0 }, 0 };
+						if (detail::checkUnsignedBoundsAndLog<u32>(state, token, raw_val, sign)) {
+							u32 value = static_cast<u32>(raw_val);
+							result    = detail::packValue<T>(value);
 						}
-						u32 value = static_cast<u32>(raw_val);
-						result    = std::bit_cast<T>(static_cast<u64>(value));
 					} else if (suffix == "u64") {
-						u64 value = std::stoull(str, &pos, base);
-						result    = std::bit_cast<T>(value);
+						u64 raw_val = std::stoull(str, &pos, base);
+						if (detail::checkUnsignedBoundsAndLog<u64>(state, token, raw_val, sign))
+							result = detail::packValue<T>(raw_val);
 					} else {
 						state.log(
 							makeBox<InvalidLiteral>(
@@ -211,15 +243,16 @@ namespace vm::loader::parser {
 					}
 				} else {
 					// By default, we assume 64-bit integer or a double if it has a dot.
-					if (str.find('.') != std::string::npos || str.find('e') != std::string::npos
-					    || str.find('E') != std::string::npos) {
+					if (str.find_first_of(".eE") != std::string::npos) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
-						result       = std::bit_cast<T>(value);
+						result       = detail::packValue<T>(value);
 					} else {
-						i64 value = static_cast<i64>(std::stoull(str, &pos, base)) * sign;
-						result    = std::bit_cast<T>(value);
+						u64 raw_val = std::stoull(str, &pos, base);
+						i64 value   = static_cast<i64>(raw_val) * sign;
+						result      = detail::packValue<T>(value);
 					}
 				}
+
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
