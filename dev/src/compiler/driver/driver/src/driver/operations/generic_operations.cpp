@@ -39,7 +39,7 @@ namespace compiler::driver {
 	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
-		
+
 		static auto typeExtension(BackendType backend) {
 			switch (backend) {
 			case BackendType::LLVM:
