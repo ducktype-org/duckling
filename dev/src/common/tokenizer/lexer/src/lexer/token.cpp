@@ -18,6 +18,20 @@ namespace lexer {
 		  source_position(position) {}
 
 	Token::Token(
+		Type type, base::RawView value, Tokens&& recursive, const dia::SourcePosition& position
+	):
+		  type(type),
+		  str_id(value),
+		  recursive(std::move(recursive)),
+		  source_position(position) {
+		// TODOP: Remove that.
+		CORE_ASSERT(
+			type == Type::NumLiteral || type == Type::FormattedString,
+			"Recursive ctor called on non recursive"
+		);
+	}
+
+	Token::Token(
 		Token::Type                type,
 		Tokens&&                   recursive,
 		Token&&                    sentinel_begin,
@@ -86,6 +100,17 @@ namespace lexer {
 
 	Token Token::makeNumLiteral(const base::RawView literal, const dia::SourcePosition& position) {
 		return { Type::NumLiteral, literal, position };
+	}
+
+	Token Token::makeTypeSpecifier(const base::RawView literal, const dia::SourcePosition& position) {
+		return { Type::TypeSpecifier, literal, position };
+	}
+
+	Token Token::makeNumLiteralGroup(
+		base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition& position
+	) {
+		Tokens sub_tokens{ std::move(value), std::move(specifier) };
+		return { Type::NumLiteral, full_view, std::move(sub_tokens), position };
 	}
 
 	Token Token::makeString(const base::RawView string, const dia::SourcePosition& position) {
@@ -205,6 +230,8 @@ namespace lexer {
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
+
+	bool Token::isTypeSpecifier() const { return type == Type::TypeSpecifier; }
 
 	bool Token::isComment() const { return type == Type::Comment; }
 

@@ -16,51 +16,16 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/memory/memory.hpp>
 
+#include <string_view>
+
 namespace vm::loader::parser {
 	/**
 	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type
-	 * specifier like `i32`, `f`, etc., it will adjust the parsing behavior accordingly. By default,
-	 * it assumes 64-bit integer or double if it has a dot (works for hex and binary too). T has to
-	 * be type of size 64bits.
+	 * specifier like `i32`, `f64`, etc., it will adjust the parsing behavior accordingly. By
+	 * default, it assumes 64-bit integer or double if it has a dot or an `e` (works for hex and
+	 * binary too). T has to be type of size 64bits.
 	 */
 	namespace opargs_parsers {
-		std::pair<std::string_view, std::string_view> splitNumberAndSuffix(std::string_view literal
-		) {
-			if (literal.empty()) return { "", "" };
-			auto it = std::ranges::find_if(std::ranges::reverse_view(literal), [](char c) {
-				return std::isalpha(static_cast<unsigned char>(c));
-			});
-
-			if (it == literal.rend())  // No suffix.
-				return { literal, "" };
-
-			auto suffix_start_index
-				= base::safeIntConv<usize>(std::ranges::distance(it, literal.rend()) - 1);
-			char first_suffix_char = literal[suffix_start_index];
-
-			// No suffix.
-			if (first_suffix_char == 'e' || first_suffix_char == 'E' || first_suffix_char == 'x'
-			    || first_suffix_char == 'X' || first_suffix_char == 'b' || first_suffix_char == 'B'
-			    || first_suffix_char == 'o' || first_suffix_char == 'O') {
-				return { literal, "" };
-			}
-
-			// Similarly to Rust and other languages f32/f64 suffix in hex numbers is interpreted as
-			// part of a number.
-			if (literal.starts_with("0x") || literal.starts_with("0X")) {
-				bool is_part_of_hex = true;
-				for (usize i = suffix_start_index; i < literal.length(); ++i) {
-					if (!std::isxdigit(static_cast<unsigned char>(literal[i]))) {
-						is_part_of_hex = false;
-						break;
-					}
-				}
-				if (is_part_of_hex) return { literal, "" };
-			}
-
-			return { literal.substr(0, suffix_start_index), literal.substr(suffix_start_index) };
-		}
-
 		template<class T>
 		std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
 			usize literal_length   = 0;
@@ -80,49 +45,74 @@ namespace vm::loader::parser {
 
 			auto token = state.tokens().peek();
 			if (!token.isNumLiteral()) {
-				state.log(makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
+				state.log(
+					makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
 				);
 				return { T{ 0 }, 0 };
 			}
 			state.tokens().next();
 
 			if constexpr (sizeof(T) != 8) {
-				state.log(makeBox<InvalidLiteral>(
-					token.getPosition(),
-					base::strConcat(
-						"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
+				state.log(
+					makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
+						)
 					)
-				));
+				);
 				return { T{ 0 }, 0 };
 			}
 
-			auto str_view = token.getValue().strView();
-			literal_length += str_view.length();
+			std::string_view number;
+			std::string_view suffix;
+
+			if (token.getRecursive().empty()) {  // No suffix
+				number = token.getValue().strView();
+				suffix = "";
+			} else {
+				const auto& sub_tokens = token.getRecursive();
+				CORE_ASSERT(
+					sub_tokens.size() == 2, "Complex numeric literal should have 2 subtokens"
+				);
+				CORE_ASSERT(
+					sub_tokens[0].isNumLiteral(), "First sub-token should be a numeric literal"
+				);
+				CORE_ASSERT(
+					sub_tokens[1].isTypeSpecifier(), "Second sub-token should be a type specifier"
+				);
+
+				number = sub_tokens[0].getValue().strView();
+				suffix = sub_tokens[1].getValue().strView();
+			}
+
+			literal_length += token.getValue().strView().length();
+
+			int base = 10;
+			// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
+			if (number.starts_with("0b") || number.starts_with("0B")) {
+				base = 2;
+				number.remove_prefix(2);
+			} else if (number.starts_with("0o") || number.starts_with("0O")) {
+				base = 8;
+				number.remove_prefix(2);
+			} else if (number.starts_with("0x") || number.starts_with("0X")) {
+				base = 16;
+				number.remove_prefix(2);
+			}
+
 			try {
-				auto [number, suffix] = splitNumberAndSuffix(str_view);
-
-				int base = 10;
-				// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
-				if (number.starts_with("0b") || number.starts_with("0B")) {
-					base = 2;
-					number.remove_prefix(2);
-				} else if (number.starts_with("0o") || number.starts_with("0O")) {
-					base = 8;
-					number.remove_prefix(2);
-				} else if (number.starts_with("0x") || number.starts_with("0X")) {
-					base = 16;
-					number.remove_prefix(2);
-				}
-
 				T           result;
 				usize       pos = 0;
 				std::string str(number);
 				if (!suffix.empty()) {  // Type specifier exists.
 					if (suffix.starts_with("f") && base != 10) {
-						state.log(makeBox<InvalidLiteral>(
-							token.getPosition(),
-							"Floating-point literals must be in decimal base for: "
-						));
+						state.log(
+							makeBox<InvalidLiteral>(
+								token.getPosition(),
+								"Floating-point literals must be in decimal base for: "
+							)
+						);
 						return { T{ 0 }, 0 };
 					}
 
@@ -138,19 +128,23 @@ namespace vm::loader::parser {
 
 						if (sign == 1
 						    && raw_val > static_cast<u64>(std::numeric_limits<i32>::max())) {
-							state.log(makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Numeric literal overflows a 32-bit signed integer."
-							));
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal overflows a 32-bit signed integer."
+								)
+							);
 							return { T{ 0 }, 0 };
 						}
 						if (sign == -1
 						    && raw_val
 						           > (static_cast<u64>(std::numeric_limits<i32>::max()) + 1ULL)) {
-							state.log(makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Numeric literal underflows a 32-bit signed integer."
-							));
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal underflows a 32-bit signed integer."
+								)
+							);
 							return { T{ 0 }, 0 };
 						}
 
@@ -162,19 +156,23 @@ namespace vm::loader::parser {
 
 						if (sign == 1
 						    && raw_val > static_cast<u64>(std::numeric_limits<i64>::max())) {
-							state.log(makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Numeric literal overflows a 64-bit signed integer."
-							));
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal overflows a 64-bit signed integer."
+								)
+							);
 							return { T{ 0 }, 0 };
 						}
 						if (sign == -1
 						    && raw_val
 						           > (static_cast<u64>(std::numeric_limits<i64>::max()) + 1ULL)) {
-							state.log(makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Numeric literal underflows a 64-bit signed integer."
-							));
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal underflows a 64-bit signed integer."
+								)
+							);
 							return { T{ 0 }, 0 };
 						}
 						i64 value = static_cast<i64>(raw_val) * sign;
@@ -183,10 +181,12 @@ namespace vm::loader::parser {
 						u64 raw_val = std::stoull(str, &pos, base);
 
 						if (raw_val > std::numeric_limits<u32>::max()) {
-							state.log(makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Numeric literal overflows a 32-bit unsigned integer."
-							));
+							state.log(
+								makeBox<InvalidLiteral>(
+									token.getPosition(),
+									"Numeric literal overflows a 32-bit unsigned integer."
+								)
+							);
 							return { T{ 0 }, 0 };
 						}
 						u32 value = static_cast<u32>(raw_val);
@@ -195,16 +195,18 @@ namespace vm::loader::parser {
 						u64 value = std::stoull(str, &pos, base);
 						result    = std::bit_cast<T>(value);
 					} else {
-						state.log(makeBox<InvalidLiteral>(
-							token.getPosition(),
-							base::strConcat(
-								"Unknown type specifier `",
-								suffix,
-								"` for `",
-								base::typeName<vm::opargs::Immediate>(),
-								"`."
+						state.log(
+							makeBox<InvalidLiteral>(
+								token.getPosition(),
+								base::strConcat(
+									"Unknown type specifier `",
+									suffix,
+									"` for `",
+									base::typeName<vm::opargs::Immediate>(),
+									"`."
+								)
 							)
-						));
+						);
 						return { T{ 0 }, 0 };
 					}
 				} else {
@@ -221,24 +223,28 @@ namespace vm::loader::parser {
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
-					state.log(makeBox<InvalidLiteral>(
-						token.getPosition(),
-						base::strConcat(
-							"Number not read fully for `",
-							base::typeName<vm::opargs::Immediate>(),
-							"`."
+					state.log(
+						makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Number not read fully for `",
+								base::typeName<vm::opargs::Immediate>(),
+								"`."
+							)
 						)
-					));
+					);
 					return { T{ 0 }, 0 };
 				}
 			} catch (std::logic_error&) {}
 
-			state.log(makeBox<InvalidLiteral>(
-				token.getPosition(),
-				base::strConcat(
-					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+			state.log(
+				makeBox<InvalidLiteral>(
+					token.getPosition(),
+					base::strConcat(
+						"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
+					)
 				)
-			));
+			);
 			return { T{ 0 }, 0 };
 		}
 

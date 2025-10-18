@@ -22,7 +22,6 @@ namespace lexer {
 	class Token;
 	/**
 	 * @brief Type representing a list of tokens
-	 *
 	 */
 	using Tokens = std::vector<lexer::Token>;
 
@@ -38,6 +37,7 @@ namespace lexer {
 			Keyword,
 			Identifier,
 			NumLiteral,
+			TypeSpecifier,
 			String,
 			Char,
 			FormattedString,  ///< group
@@ -74,13 +74,23 @@ namespace lexer {
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeChar(base::RawView string, const dia::SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);  ///< Unimplemented
-		static Token
-			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
+		static Token makeBracketGroup(
+			BracketType bracket_type,
+			Tokens&&    tokens,
+			Token&&     sentinel_begin,
+			Token&&     sentinel_end,
+			const dia::SourcePosition&
+		);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
 		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
 		static Token makeSpecial(base::RawView identifier, const dia::SourcePosition&);
 		static Token makeNumLiteral(base::RawView literal, const dia::SourcePosition&);
+		// TODOP: Probably unneeded.
+		static Token makeTypeSpecifier(base::RawView literal, const dia::SourcePosition&);
+		static Token makeNumLiteralGroup(
+			base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition&
+		);
 		/**@}*/
 
 		virtual ~Token() = default;
@@ -97,6 +107,10 @@ namespace lexer {
 			const dia::SourcePosition& position,
 			BracketType                bracket
 		);
+		Token(
+			Type type, base::RawView value, Tokens&& recursive, const dia::SourcePosition& position
+		);
+
 		friend void swap(Token& first, Token& second) noexcept;
 		Token&      operator=(Token&& other) noexcept;
 
@@ -173,6 +187,8 @@ namespace lexer {
 		bool isIdentifier() const;
 		[[nodiscard]]
 		bool isNumLiteral() const;
+		[[nodiscard]]
+		bool isTypeSpecifier() const;
 		[[nodiscard]]
 		bool isComment() const;
 		[[nodiscard]]

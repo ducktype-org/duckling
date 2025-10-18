@@ -1,5 +1,8 @@
 #include "lexer_class.hpp"
 
+#include "base/optional.hpp"
+
+#include "diagnostic/source_position.hpp"
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <unicode_classification/classifications.hpp>
@@ -244,13 +247,15 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (token_messages) {
-			printer::StreamPrinter::printNL({
-				"Add token: ",
-				std::string(token_type),
-				"(",
-				std::string(file->getCharRange(begin, end + 1).stringView()),
-				")",
-			});
+			printer::StreamPrinter::printNL(
+				{
+					"Add token: ",
+					std::string(token_type),
+					"(",
+					std::string(file->getCharRange(begin, end + 1).stringView()),
+					")",
+				}
+			);
 		}
 	}
 
@@ -411,56 +416,134 @@ namespace lexer {
 		if (specifier != lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier) skip(lookahead);
 	}
 
+	base::Optional<Token> Lexer::tryParseNumericLiteralTypeSuffix() {
+		if (isEOF() || !peek().is(Class::name_start)) return {};
+		usize suffix_begin     = where;
+		auto  suffix_start_pos = currentPosition();
+		usize lookahead        = 0;
+
+		while (peek(lookahead).is(Class::name_continue)) lookahead++;
+
+		if (lookahead == 0) return {};
+
+		base::RawView suffix_view = file->getCharRange(where, where + lookahead);
+		auto specifier = lang_def::strAsNumericLiteralTypeSpecifier(base::StrID(suffix_view));
+		if (specifier != lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier) {
+			skip(lookahead);
+			usize               suffix_end = where - 1;
+			dia::SourcePosition source_position(suffix_start_pos, suffix_end);
+			addTokenMsg(suffix_begin, suffix_end, "numLiteralTypeSpecifier");
+			return Token::makeTypeSpecifier(
+				file->getCharRange(suffix_begin, suffix_end + 1), source_position
+			);
+		}
+		return {};
+	}
+
 	void Lexer::binLiteralHandler(Tokens& output) {
 		usize begin = where;
-		usize end{};
 		auto  source_start = currentPosition();
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
-		parseNumericLiteralTypeSuffix();
 
-		end = where - 1;
-		dia::SourcePosition source_position(source_start, end);
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+		usize               number_end = where - 1;
+		dia::SourcePosition number_pos(source_start, number_end);
+		auto                value_token
+			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
+		addTokenMsg(begin, number_end, "numLiteralValue");
+
+		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
+
+		if_opt_some(opt_type_specifier_token, specifier) {
+			usize               full_group_end = where - 1;
+			dia::SourcePosition full_pos(source_start, full_group_end);
+			auto                num_literal_group = Token::makeNumLiteralGroup(
+                file->getCharRange(begin, full_group_end + 1),
+                std::move(value_token),
+                std::move(specifier),
+                full_pos
+            );
+
+			output.push_back(num_literal_group);
+			addTokenMsg(begin, full_group_end, "numLiteralGroup");
+			return;
+		}
+
+		output.push_back(std::move(value_token));
+		return;
 	}
 
 	void Lexer::octLiteralHandler(Tokens& output) {
 		usize begin = where;
-		usize end{};
 		auto  source_start = currentPosition();
 
 		skip(2);  // 0o
 		while (peek().isOctDigit()) next();
-		parseNumericLiteralTypeSuffix();
+		
+		usize               number_end = where - 1;
+		dia::SourcePosition number_pos(source_start, number_end);
+		auto                value_token
+			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
+		addTokenMsg(begin, number_end, "numLiteralValue");
 
-		end = where - 1;
-		dia::SourcePosition source_position(source_start, end);
+		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
 
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+		if_opt_some(opt_type_specifier_token, specifier) {
+			usize               full_group_end = where - 1;
+			dia::SourcePosition full_pos(source_start, full_group_end);
+			auto                num_literal_group = Token::makeNumLiteralGroup(
+                file->getCharRange(begin, full_group_end + 1),
+                std::move(value_token),
+                std::move(specifier),
+                full_pos
+            );
+
+			output.push_back(num_literal_group);
+			addTokenMsg(begin, full_group_end, "numLiteralGroup");
+			return;
+		}
+
+		output.push_back(std::move(value_token));
+		return;
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
+		usize begin        = where;
 		auto  source_start = currentPosition();
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
-		parseNumericLiteralTypeSuffix();
 
-		end = where - 1;
-		dia::SourcePosition source_position(source_start, end);
+		usize               number_end = where - 1;
+		dia::SourcePosition number_pos(source_start, number_end);
+		auto                value_token
+			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
+		addTokenMsg(begin, number_end, "numLiteralValue");
 
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
+
+		if_opt_some(opt_type_specifier_token, specifier) {
+			usize               full_group_end = where - 1;
+			dia::SourcePosition full_pos(source_start, full_group_end);
+			auto                num_literal_group = Token::makeNumLiteralGroup(
+                file->getCharRange(begin, full_group_end + 1),
+                std::move(value_token),
+                std::move(specifier),
+                full_pos
+            );
+
+			output.push_back(num_literal_group);
+			addTokenMsg(begin, full_group_end, "numLiteralGroup");
+			return;
+		}
+
+		output.push_back(std::move(value_token));
+		return;
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
+		usize begin        = where;
 		auto  source_start = currentPosition();
 
 		bool was_dot = false;
@@ -483,13 +566,37 @@ namespace lexer {
 			}
 			next();
 		}
-		parseNumericLiteralTypeSuffix();
 
-		end = where - 1;
-		dia::SourcePosition source_position(source_start, end);
+		usize               number_end = where - 1;
+		dia::SourcePosition number_pos(source_start, number_end);
+		auto                value_token
+			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
+		addTokenMsg(begin, number_end, "numLiteralValue");
+		
 
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+
+		std::cout << "Value token: " << value_token.getStrValue() << '\n';
+
+		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
+
+		if_opt_some(opt_type_specifier_token, specifier) {
+			std::cout << "Specifier token: " << specifier.getStrValue() << '\n';
+			usize               full_group_end = where - 1;
+			dia::SourcePosition full_pos(source_start, full_group_end);
+			auto                num_literal_group = Token::makeNumLiteralGroup(
+                file->getCharRange(begin, full_group_end + 1),
+                std::move(value_token),
+                std::move(specifier),
+                full_pos
+            );
+
+			output.push_back(num_literal_group);
+			addTokenMsg(begin, full_group_end, "numLiteralGroup");
+			return;
+		}
+		std::cout << "NO TYPE SPECIFIER\n";
+		output.push_back(std::move(value_token));
+		return;
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
@@ -525,9 +632,11 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
-		));
+		output.push_back(
+			Token::makeString(
+				file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
+			)
+		);
 	}
 
 	void Lexer::charHandler(Tokens& output) {
@@ -586,7 +695,8 @@ namespace lexer {
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
 		if (token_messages)
-			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
+			printer::StreamPrinter::printNL(
+				base::strConcat("group begin", generateLineColumnInfo())
 			);
 
 
@@ -617,13 +727,15 @@ namespace lexer {
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
 		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
-		output.push_back(Token::makeBracketGroup(
-			bracket_type,
-			std::move(inner_tokens),
-			std::move(sentinel_begin),
-			std::move(sentinel_end),
-			source_position
-		));
+		output.push_back(
+			Token::makeBracketGroup(
+				bracket_type,
+				std::move(inner_tokens),
+				std::move(sentinel_begin),
+				std::move(sentinel_end),
+				source_position
+			)
+		);
 		if (token_messages) printer::StreamPrinter::printNL("group end");
 	}
 
