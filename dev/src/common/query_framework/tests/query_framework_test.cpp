@@ -378,7 +378,7 @@ DECLARE_QUERY(StableHashTest, KeyStable, u64);
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
 	static constexpr bool CACHE_ON_DISK = true;
-	using KHash = query::KHash<QKey>;
+	using KHash                         = query::KHash<QKey>;
 	// record the hash value passed to load()
 	static inline query::QueryStableHash last_hash;
 

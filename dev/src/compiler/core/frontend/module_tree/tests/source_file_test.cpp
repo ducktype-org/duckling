@@ -33,9 +33,7 @@ private:
 		auto dummy_module = ModuleTreeBuilder::create()->finalize();
 
 		// Create SourceFile
-		auto source_file = SourceFile::create(
-			temp_file, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
+		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Test basic properties
 		ASSERT_EQUAL(
@@ -52,9 +50,7 @@ private:
 		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
 		auto dummy_module = ModuleTreeBuilder::create()->finalize();
 
-		auto source_file = SourceFile::create(
-			temp_file, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
+		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Test file properties
 		assertTrue(source_file->getFile().isFile(), "Should be recognized as file");
@@ -62,9 +58,7 @@ private:
 		ASSERT_EQUAL(test_content, source_file->getFile().getContent().view().stringView());
 
 		// Test FileID uniqueness
-		auto another_source_file = SourceFile::create(
-			temp_file, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
+		auto another_source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 		assertTrue(source_file != another_source_file, "SourceFiles should be different");
 
 		// Cleanup
@@ -77,9 +71,7 @@ private:
 		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
 		auto dummy_module = ModuleTreeBuilder::create()->finalize();
 
-		auto source_file = SourceFile::create(
-			temp_file, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
+		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Get PST - this should trigger parsing
 		source_file->getPST();
@@ -103,12 +95,8 @@ private:
 			auto basic_content1 = temp_file1.getContent();
 
 			// Create SourceFile objects - this will cache the content
-			auto source_file1 = SourceFile::create(
-				temp_file1, dummy_module->getModuleID(), dummy_module->getComponentHash()
-			);
-			auto source_file2 = SourceFile::create(
-				temp_file2, dummy_module->getModuleID(), dummy_module->getComponentHash()
-			);
+			auto source_file1 = SourceFile::create(temp_file1, dummy_module->getModuleID());
+			auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
 
 			// Test getCachedContent on SourceFile objects
 			auto cached_content1 = source_file1->getCachedContent();
@@ -122,9 +110,7 @@ private:
 			ASSERT_EQUAL(content1, cached_content1_again.view().stringView());
 
 			// Test with same file path - create new SourceFile with same path
-			auto same_file_source = SourceFile::create(
-				temp_file1, dummy_module->getModuleID(), dummy_module->getComponentHash()
-			);
+			auto same_file_source    = SourceFile::create(temp_file1, dummy_module->getModuleID());
 			auto cached_content_same = same_file_source->getCachedContent();
 			ASSERT_EQUAL(content1, cached_content_same.view().stringView());
 
@@ -146,12 +132,8 @@ private:
 		auto temp_file2   = fs::FileManager::createRandomTempFile("content2");
 		auto dummy_module = ModuleTreeBuilder::create()->finalize();
 
-		auto source_file1 = SourceFile::create(
-			temp_file1, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
-		auto source_file2 = SourceFile::create(
-			temp_file2, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
+		auto source_file1 = SourceFile::create(temp_file1, dummy_module->getModuleID());
+		auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
 
 		// Test hash generation
 		u64 hash1 = source_file1->getFileID().queryUnstablePerfectHash();
@@ -166,10 +148,8 @@ private:
 
 		// Create another SourceFile with same path - the hash must be different this is because the
 		// file might be in different module and the manging names will be different
-		auto source_file1_copy = SourceFile::create(
-			temp_file1, dummy_module->getModuleID(), dummy_module->getComponentHash()
-		);
-		u64 hash1_copy = source_file1_copy->getFileID().queryUnstablePerfectHash();
+		auto source_file1_copy = SourceFile::create(temp_file1, dummy_module->getModuleID());
+		u64  hash1_copy        = source_file1_copy->getFileID().queryUnstablePerfectHash();
 		ASSERT_TRUE(hash1_copy != hash1);
 
 		// Cleanup
@@ -189,9 +169,7 @@ private:
 				= "fn function" + std::to_string(i) + "() { return " + std::to_string(i) + "; }";
 			auto temp_file = fs::FileManager::createRandomTempFile(content);
 			temp_files.push_back(temp_file);
-			source_files.push_back(SourceFile::create(
-				temp_file, dummy_module->getModuleID(), dummy_module->getComponentHash()
-			));
+			source_files.push_back(SourceFile::create(temp_file, dummy_module->getModuleID()));
 		}
 
 		// Test that all files have unique IDs
@@ -228,12 +206,8 @@ private:
 		auto dummy_module1 = ModuleTreeBuilder::create()->finalize();
 		auto dummy_module2 = ModuleTreeBuilder::create()->finalize();
 
-		auto source_file1 = SourceFile::create(
-			temp_file, dummy_module1->getModuleID(), dummy_module1->getComponentHash()
-		);
-		auto source_file2 = SourceFile::create(
-			temp_file, dummy_module2->getModuleID(), dummy_module2->getComponentHash()
-		);
+		auto source_file1 = SourceFile::create(temp_file, dummy_module1->getModuleID());
+		auto source_file2 = SourceFile::create(temp_file, dummy_module2->getModuleID());
 
 		// Should have different IDs even with same file path
 		assertTrue(
@@ -261,9 +235,7 @@ private:
 		// Create a temp file and SourceFile
 		auto temp_file    = fs::FileManager::createRandomVirtualFile("original content");
 		auto dummy_module = ModuleTreeBuilder::create()->finalize();
-		auto source_file  = SourceFile::create(
-            temp_file, dummy_module->getModuleID(), dummy_module->getComponentHash()
-        );
+		auto source_file  = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Check initial cached content
 		ASSERT_EQUAL("original content", source_file->getCachedContent().view().stringView());
@@ -288,12 +260,8 @@ private:
 		auto dummy_module1 = ModuleTreeBuilder::create()->finalize();
 		auto dummy_module2 = ModuleTreeBuilder::create()->finalize();
 		// Create two SourceFiles for the same fs::File but different modules
-		auto source_file1 = SourceFile::create(
-			temp_file, dummy_module1->getModuleID(), dummy_module1->getComponentHash()
-		);
-		auto source_file2 = SourceFile::create(
-			temp_file, dummy_module2->getModuleID(), dummy_module2->getComponentHash()
-		);
+		auto source_file1 = SourceFile::create(temp_file, dummy_module1->getModuleID());
+		auto source_file2 = SourceFile::create(temp_file, dummy_module2->getModuleID());
 		// Should both be returned by getSourceFilesfromFile
 		auto files_vec = SourceFile::getSourceFilesfromFile(temp_file);
 		assertTrue(

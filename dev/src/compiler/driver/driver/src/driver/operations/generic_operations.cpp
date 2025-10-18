@@ -4,8 +4,8 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
-#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/component_hash.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
@@ -31,7 +31,7 @@ namespace compiler::driver {
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
 		auto component_hash = compiler::frontend::ModuleTree::getComponentHash(module_id);
-		auto partial   = component_hash.partial;
+		auto partial        = component_hash.partial;
 		hashing::addToHash(partial, std::to_underlying(backend_type));
 		return partial.finalize();
 	}

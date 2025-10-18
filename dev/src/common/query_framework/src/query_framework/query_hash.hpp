@@ -26,7 +26,8 @@ namespace query {
 
 	template<typename KeyType>
 	struct KHashSelector {
-		using type = decltype(std::declval<std::remove_cvref_t<KeyType>>().queryUnstablePerfectHash());
+		using type
+			= decltype(std::declval<std::remove_cvref_t<KeyType>>().queryUnstablePerfectHash());
 	};
 
 	template<>
@@ -40,11 +41,9 @@ namespace query {
 	};
 
 	template<typename KeyType>
-		requires HasStablePerfectHash<std::remove_cvref_t<KeyType>>
-	struct KHashSelector<KeyType> {
+	requires HasStablePerfectHash<std::remove_cvref_t<KeyType>> struct KHashSelector<KeyType> {
 		using type = QueryStableHash;
 	};
-
 
 	template<typename KeyType>
 	using KHash = typename KHashSelector<KeyType>::type;
