@@ -181,6 +181,10 @@ namespace compiler::frontend {
 		} else {
 			m_component_hash.emplace(base::Optional<ComponentHash>{}, m_name);
 		}
+		// HOT FIX, to change to package id:
+		m_component_hash.emplace(
+			m_component_hash.value(), std::to_string(this->m_id.value().queryUnstablePerfectHash())
+		);
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(

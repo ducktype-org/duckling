@@ -382,5 +382,8 @@ namespace compiler::frontend {
 	 * it is created recursively based on the Duckling module structure
 	 * for more details see ModuleTreeBuilder::create
 	 */
-	ModuleID createModuleTree(const fs::File& file);
+	ModuleID createModuleTree(const fs::File& file, std::string_view package_id);
+
+	// used for tests mostly
+	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file);
 }

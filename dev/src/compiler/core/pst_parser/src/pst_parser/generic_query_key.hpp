@@ -29,7 +29,11 @@ namespace pst {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
+			CORE_PANIC("aa");
 			return element.illegalAccess().value()->getID().asInt();
+		}
+		auto queryStablePerfectHash() const {
+			return element.illegalAccess().value()->getElementPathHash().hash;
 		}
 	};
 }

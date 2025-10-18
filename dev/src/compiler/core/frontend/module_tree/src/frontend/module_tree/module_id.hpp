@@ -20,6 +20,8 @@ namespace compiler::frontend {
 			return reinterpret_cast<u64>(ref.get());
 		}
 
+		// this should be stable
+
 		bool operator==(const ModuleID&) const = default;
 
 		auto operator<=>(const ModuleID& other) const { return ref.get() <=> other.ref.get(); }
