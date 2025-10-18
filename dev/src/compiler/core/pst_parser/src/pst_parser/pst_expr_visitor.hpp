@@ -4,7 +4,7 @@
 #include "elements/elements_list.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/misc/visitor.hpp>
+#include <base/extend_cpp/visitor.hpp>
 
 namespace pst::expr {
 	MAKE_ACCESS_VISITOR(

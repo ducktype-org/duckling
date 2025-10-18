@@ -1,2 +1,2 @@
-Various collections/containers.
+Various collections/containers/smart wrappers etc.
 
