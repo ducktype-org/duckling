@@ -1,17 +1,18 @@
 #pragma once
 
-#include "function_forward.hpp"
+#include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <helios/ctv/ctv.hpp>
-#include <helios/hout/hout.hpp>
+#include <helios/hout/hout_fd.hpp>
+#include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/ok_bad.hpp>
-#include <base/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <memory>
 #include <utility>

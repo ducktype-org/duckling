@@ -4,7 +4,7 @@
 
 #include <pst_parser/access.hpp>
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace pst {
 	/**

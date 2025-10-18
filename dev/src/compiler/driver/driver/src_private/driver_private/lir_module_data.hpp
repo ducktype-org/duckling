@@ -3,7 +3,7 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 namespace compiler::driver {
 	struct LIRModuleGlobal final {

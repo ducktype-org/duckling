@@ -4,17 +4,17 @@ namespace compiler::helios::errors {
 	/**
 	 * @brief An error indicating a queried symbol was not found.
 	 */
-	struct SymbolNotFound {};
+	struct SymbolNotFound final {};
 
 	/**
 	 * @brief An error indicating an ambiguity in queried symbols.
 	 */
-	struct Ambiguity {};
+	struct Ambiguity final {};
 
 	/**
 	 * @brief An error reported upon expression parsing failure.
 	 */
-	struct InvalidExpr {};
+	struct InvalidExpr final {};
 
 	/**
 	 * @brief A general error indicating, that a query has failed, but also that the
@@ -23,5 +23,5 @@ namespace compiler::helios::errors {
 	 * to print a good error, we propagate specific errors (or transform them). After
 	 * reporting, and if an error is irrecoverable, return a general error.
 	 */
-	struct Failed {};
+	struct Failed final {};
 }

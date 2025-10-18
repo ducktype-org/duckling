@@ -6,8 +6,8 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>

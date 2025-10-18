@@ -14,13 +14,13 @@
 #include "query_hash.hpp"
 #include "query_int.hpp"
 
-#include <base/defer.hpp>
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>

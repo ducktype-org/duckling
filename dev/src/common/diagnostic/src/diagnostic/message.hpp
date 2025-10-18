@@ -81,7 +81,7 @@
 
 #include "source_position.hpp"
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <printer/printer_content.hpp>
 
@@ -258,8 +258,8 @@ namespace dia {
 		 * @return An std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		std::string toString(bool detailed) const {
-			return detailed ? toStringBrief() : toStringDetailed();
+		std::string toString(const bool detailed) const {
+			return detailed ? toStringDetailed() : toStringBrief();
 		}
 
 		/**

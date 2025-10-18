@@ -1,5 +1,8 @@
 #include "system_command.hpp"
 
+#include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+
 #include <iostream>
 
 namespace system_command {

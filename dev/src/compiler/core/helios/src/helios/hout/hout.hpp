@@ -7,15 +7,13 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include "elements/expr.hpp"  // IWYU pragma: export
+#include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
+#include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <helios/ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
 
-#include <base/box.hpp>
-#include <base/string_id.hpp>
-
-#include <query_framework/query_int.hpp>
+#include <base/pointers/box.hpp>
+#include <base/str/string_id.hpp>
 
 #include <memory>
 #include <variant>
@@ -25,6 +23,10 @@ namespace compiler::helios {
 
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
+
+	namespace houtgen {
+		struct ImplementationOf_QueryImplicitClassConstructor;
+	}
 
 	namespace code {
 		// Forward declaration:
@@ -37,7 +39,6 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunctionDeclaration final {
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
-		// @TODO:
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunctionDeclaration() = delete;
@@ -47,7 +48,7 @@ namespace compiler::helios {
 
 		/**
 		 * @note it is used for hashes
-		 * @note For now it works,
+		 * @note For now, it works,
 		 * but in the future with generics, and templates it might not
 		 * We might want to add actual hash?
 		 */
@@ -81,7 +82,8 @@ namespace compiler::helios {
 		HOUTFunction(
 			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
 		);
-		friend struct ImplementationOf_QueryCodeOFFun;
+		friend struct ImplementationOf_QueryCodeOfFun;
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 
 	public:
 		HOUTFunction() = delete;
@@ -154,7 +156,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Structure representing single HOUTUnit
 	 */
-	struct HOUTUnit {
+	struct HOUTUnit final {
 		// all first class citizens of module should be here:
 		// * types (in some way?)
 		// * required baked template list?

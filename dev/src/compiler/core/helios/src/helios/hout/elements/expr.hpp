@@ -2,13 +2,11 @@
 
 #include "../../scope_symbol_id.hpp"
 
-#include <helios/utils/symbol_list.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
-#include <base/box.hpp>
-#include <base/ints.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ints.hpp>
 
-#include <query_framework/query_int.hpp>
 #include <token_parser_core/common_elements.hpp>
 
 #include <vector>
@@ -373,8 +371,8 @@ namespace compiler::helios::code {
 	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
-		base::Box<Expr> base;
-		base::StrID     field;
+		Box<Expr>   base;
+		base::StrID field;
 
 		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
 

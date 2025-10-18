@@ -1,6 +1,6 @@
 #include "instruction_builder.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -39,43 +39,43 @@ namespace vm::code::builders {
 
 #define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
 
-#define HANDLE_OPCODE_0ARGS(opcode) MAKE_LINK(opcode, makeVmOpcode0Args<VM_INSTR_FROM_NAME(opcode)>)
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
+#define HANDLE_INSTR_0ARGS(opcode) MAKE_LINK(opcode, makeVmOpcode0Args<VM_INSTR_FROM_NAME(opcode)>)
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map OPCODE_TO_0_ARGS_FACTORY = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 		};
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 
-#define HANDLE_OPCODE_0ARGS(opcode)
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) \
+#define HANDLE_INSTR_0ARGS(opcode)
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type) \
 	MAKE_LINK(opcode, makeVmOpcode1Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type>)
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map OPCODE_TO_1_ARGS_FACTORY = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 		};
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 
-#define HANDLE_OPCODE_0ARGS(opcode)
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
+#define HANDLE_INSTR_0ARGS(opcode)
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
 	MAKE_LINK(opcode, makeVmOpcode2Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OPCODE_TO_2_ARGS_FACTORY = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 		};
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 #undef MAKE_LINK
 
 		/**

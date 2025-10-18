@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/optional.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <hashing/hashing_algorithms.hpp>

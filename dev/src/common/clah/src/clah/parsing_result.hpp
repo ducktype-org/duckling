@@ -7,10 +7,10 @@
 #pragma once
 #include "parameter.hpp"
 
-#include <base/anycast.hpp>
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/misc/anycast.hpp>
+#include <base/types/ints.hpp>
 
 #include <any>
 #include <string>
