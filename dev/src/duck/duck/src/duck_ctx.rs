@@ -52,12 +52,12 @@ impl DuckCtx {
         &mut self.env
     }
 
-    pub fn alias_for(&self, _name: &str) -> QuackResult<Option<String>> {
-        Ok(None)
+    pub fn alias_for(&self, name: &str) -> QuackResult<Option<String>> {
+        self.duck_cfg.alias_for(name)
     }
 
     pub fn aliases(&self) -> QuackResult<HashMap<String, String>> {
-        Ok(HashMap::new())
+        self.duck_cfg.aliases()
     }
 
     pub fn typos_fixes_enabled(&self) -> QuackResult<bool> {

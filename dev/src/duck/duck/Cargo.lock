@@ -142,6 +142,7 @@ dependencies = [
  "quackpack",
  "rustvil",
  "thiserror",
+ "toml",
  "tracing",
  "tracing-subscriber",
 ]
