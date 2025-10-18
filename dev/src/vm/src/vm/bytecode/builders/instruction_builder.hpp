@@ -2,7 +2,7 @@
 
 #include "../instructions.hpp"
 
-#include <base/stringifyable_enum.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>

@@ -3,8 +3,8 @@
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <ranges>
 
@@ -16,7 +16,7 @@ namespace pst {
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 
-	void LangElement::calcComponentHashRecursive() {
+	void LangElement::calcElementPathHashRecursive() {
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
@@ -27,8 +27,8 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ComponentHash child_path(getComponentHash(), named_child.name);
-					named_child.element->calcComponentHash(child_path);
+					ComponentHash child_path(getElementPathHash(), named_child.name);
+					named_child.element->calcElementPathHash(child_path);
 				}
 			}
 		}
@@ -96,8 +96,7 @@ namespace pst {
 	}
 
 	LangElement::HashAlg LangElement::calcStableHash() const {
-		HashAlg partial_hash;
-		addToHash(partial_hash, getComponentHash());
+		HashAlg partial_hash = getElementPathHash().partial;
 		addToHash(partial_hash, elementType());
 		addGenericDataToHash(partial_hash);
 		addElementDataToStableHash(partial_hash);

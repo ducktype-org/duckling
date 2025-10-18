@@ -15,22 +15,20 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 
 LLVM_INCLUDE_END()
 
 #include "module_impl.hpp"
 
-#include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/box.hpp>
-#include <base/int_conv.hpp>
-#include <base/maps.hpp>
-#include <base/ref.hpp>
-#include <base/variant.hpp>
+#include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <init/init.hpp>
 

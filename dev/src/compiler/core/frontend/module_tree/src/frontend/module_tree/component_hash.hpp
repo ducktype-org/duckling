@@ -1,19 +1,26 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/optional.hpp>
+#include <base/str/string_id.hpp>
 
 #include <hashing/hash.hpp>
 
 namespace compiler::frontend {
 	/**
-	 * ComponentHash - stores both the streaming (partial) hash state for a module path
-	 * and the finalized hash value. The constructor computes the partial hash by
-	 * optionally starting from parent's partial hash, adding the module name and
-	 * finalizing to produce hash.
+	 * ComponentHash - stores both the streaming (partial) hash state for a
+	 * hierarchical component path and the finalized hash value. The constructor
+	 * computes the partial hash by optionally starting from a parent's partial
+	 * state, adding an identifier for this component, and finalizing to produce
+	 * the concrete hash.
+	 * This is useful for creating a hash of pathes like module/submodule/sourcefile
+	 * where each component is identified by a base::StrID.
+	 * This object can be copied and still calculatuion of path hash will be linear
+	 * the vector of strings stores the path elements in order
+	 * this vector is only for testing and debuging purposes (pretty print)
+	 * for calculating the hash of the path it is not used
 	 */
-	struct ComponentHash {
-		// Hash algorithm and result type used for module path hashing
+	struct ComponentHash final {
+		// Hash algorithm and result type used for hierarchical path hashing
 		using HashAlg  = hashing::StatefulHash<hashing::SHA256, void>;
 		using HashType = HashAlg::result_type;
 
@@ -21,10 +28,10 @@ namespace compiler::frontend {
 		HashType                 hash;
 		std::vector<std::string> elements;
 
-		// Default constructible so ModuleTree member can be value-initialized
+		// Default constructible so containers holding ComponentHash can be value-initialized
 		constexpr ComponentHash() noexcept = default;
 
-		// Construct from optional parent partial hash and module name
+		// Construct from optional parent partial hash and a component identifier
 		constexpr ComponentHash(
 			const base::Optional<ComponentHash>& parent, base::StrID name
 		) noexcept {
@@ -34,7 +41,7 @@ namespace compiler::frontend {
 			}
 			if (name.isGood()) {
 				elements.emplace_back(name.strView());
-				// add module name to partial hash
+				// add component identifier to partial hash
 				hashing::addToHash(partial, name);
 			}
 
@@ -42,39 +49,25 @@ namespace compiler::frontend {
 			hash = partial.finalize();
 		}
 
-		ComponentHash(const ComponentHash& parent, std::string_view ext) noexcept:
+		constexpr ComponentHash(const ComponentHash& parent, std::string_view ext) noexcept:
 			  partial(parent.partial),
 			  elements(parent.elements) {
 			if (!ext.empty()) {
 				elements.emplace_back(ext);
-				// add string to partial hash
+				// add extra fragment to partial hash
 				hashing::addToHash(partial, std::string_view(ext));
 			}
 			hash = partial.finalize();
 		}
 
-		// Construct directly from a vector of string elements
+		// Construct directly from a vector of path elements
 		explicit ComponentHash(const std::vector<std::string>& elems) noexcept: elements(elems) {
 			// build partial by hashing all elements in order
 			for (const auto& e: elements) hashing::addToHash(partial, std::string_view(e));
 			hash = partial.finalize();
 		}
 
-		// Return elements joined by '.'
-		[[nodiscard]] std::string str() const {
-			std::string out;
-			bool        first = true;
-			for (const auto& e: elements) {
-				if (!first) out.push_back('.');
-				out.append(e);
-				first = false;
-			}
-			return out;
-		}
-
-		// Allow hashing utilities to decompose ComponentHash by its elements
-		friend constexpr auto hashDecompose(const ComponentHash& t) noexcept {
-			return std::tie(t.elements);
-		}
+		// Return elements joined by '.' (represents the hierarchical path)
+		[[nodiscard]] std::string str() const;
 	};
 }

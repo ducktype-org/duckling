@@ -122,8 +122,8 @@ namespace pst {
 		return partial_hash;
 	}
 
-	void Stmt::calcComponentHashRecursive() {
-		auto          path       = getComponentHash();
+	void Stmt::calcElementPathHashRecursive() {
+		auto          path       = getElementPathHash();
 		ComponentHash attrs_path = { path, "attributes" };
 		calcIndexedListChildPath<Attribute>({ attributes }, attrs_path);
 		for (auto& el: sub_elements) {
@@ -138,7 +138,7 @@ namespace pst {
 				}
 				variant_case(InternalNamedChild, named_child) {
 					ComponentHash child_path(path, named_child.name);
-					named_child.element->calcComponentHash(child_path);
+					named_child.element->calcElementPathHash(child_path);
 				}
 			}
 		}

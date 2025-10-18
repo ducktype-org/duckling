@@ -8,7 +8,7 @@
 
 #include "query_data.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 template<>
 struct std::hash<query::internal::QueryID> {

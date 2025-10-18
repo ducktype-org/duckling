@@ -6,8 +6,6 @@
 #include <hashing/add_to_hash.hpp>
 #include <tester/tester.hpp>
 
-#include <algorithm>
-
 using namespace compiler::frontend;
 
 class SourceFileTest: public tester::TestSuite {
@@ -330,14 +328,14 @@ private:
 		auto mod_b = mod_b_builder->finalize();
 
 		// Create SourceFile instances for the same fs::File inside the same module
-		auto sf_1 = SourceFile::create(file_same, mod_a->getModuleID(), mod_a->getComponentHash());
-		auto sf_2 = SourceFile::create(file_same, mod_a->getModuleID(), mod_a->getComponentHash());
+		auto sf_1 = SourceFile::create(file_same, mod_a->getModuleID());
+		auto sf_2 = SourceFile::create(file_same, mod_a->getModuleID());
 
 		// Compute finalized path-hash for each SourceFile by starting from module partial
 		// and adding the language-level file name. Do NOT construct ComponentHash manually here.
 		{
 			// start from module partial hasher
-			auto parent_partial = mod_a->getComponentHash().partial;
+			auto parent_partial = ModuleTree::getComponentHash(mod_a->getModuleID()).partial;
 			auto hasher1        = parent_partial;
 			hashing::addToHash(hasher1, sf_1->getLangFileName());
 			auto final_a_1 = hasher1.finalize();
@@ -350,15 +348,14 @@ private:
 			ASSERT_EQUAL(final_a_1, final_a_2);
 
 			// Different filename in same module -> different hash
-			auto sf_other
-				= SourceFile::create(file_other, mod_a->getModuleID(), mod_a->getComponentHash());
+			auto sf_other     = SourceFile::create(file_other, mod_a->getModuleID());
 			auto hasher_other = parent_partial;
 			hashing::addToHash(hasher_other, sf_other->getLangFileName());
 			auto final_a_other = hasher_other.finalize();
 			ASSERT_TRUE(final_a_1 != final_a_other);
 
 			// Same file stem but different module -> different hash
-			auto parent_b_partial = mod_b->getComponentHash().partial;
+			auto parent_b_partial = ModuleTree::getComponentHash(mod_b->getModuleID()).partial;
 			auto hasher_b         = parent_b_partial;
 			hashing::addToHash(hasher_b, sf_1->getLangFileName());
 			auto final_b_same = hasher_b.finalize();

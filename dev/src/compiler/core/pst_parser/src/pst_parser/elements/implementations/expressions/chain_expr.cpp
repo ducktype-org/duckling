@@ -102,8 +102,8 @@ namespace pst::expr {
 
 	AccessLocked<ExprElement> ChainExpr::getAtom() const { return atom.give(); }
 
-	void ChainExpr::calcComponentHashRecursive() {
-		auto path = getComponentHash();
+	void ChainExpr::calcElementPathHashRecursive() {
+		auto path = getElementPathHash();
 		calcNamedChildPath(atom, path);
 
 		calcIndexedListChildPath<ExprElement>({ chain }, path);

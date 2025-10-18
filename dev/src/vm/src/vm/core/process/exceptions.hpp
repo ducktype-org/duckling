@@ -1,5 +1,5 @@
 #pragma once
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace vm::exceptions {
 	class VMRuntimeException: public base::Exception {

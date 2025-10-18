@@ -54,7 +54,7 @@ namespace pst::expr {
 
 	void Comma::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitComma(*this); }
 
-	void Comma::calcComponentHashRecursive() {
-		calcIndexedListChildPath<ExprElement>({ expressions }, getComponentHash());
+	void Comma::calcElementPathHashRecursive() {
+		calcIndexedListChildPath<ExprElement>({ expressions }, getElementPathHash());
 	}
 }

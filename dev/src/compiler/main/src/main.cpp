@@ -2,7 +2,7 @@
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
  * conveniently run (or add) certain functionalities of the Duckling compiler.
- * It compiles to `duck` binary.
+ * It compiles to `duckc` binary.
  * @note: The ideas from here might be one day separated into a framework.
  */
 
@@ -11,13 +11,14 @@
 #include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
@@ -42,7 +43,7 @@ void printContextErrors() {
 }
 
 clah::Clah getStandardDucklingOptions() {
-	return clah::Clah("duck", "The Duckling compiler")
+	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addLongName("logger-cerr")
 	             .addShortDesc("If set, Logger class will immediately print its messages to cerr.")
@@ -186,9 +187,10 @@ clah::Clah getClahForMain() {
 							   // @TODO: error handling
 							   using namespace compiler;
 							   auto root = frontend::createModuleTree(path_to_compile);
-							   auto top_level
-								   = query::entryPoint<helios::QueryTopLevelEntities>(root);
-							   std::cout << top_level->debugPrint();
+							   auto hout_units
+								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+							   for (const auto& hout_unit: hout_units)
+								   std::cout << hout_unit.debugPrint();
 
 							   return exit_code;
 						   }))

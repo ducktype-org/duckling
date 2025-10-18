@@ -71,7 +71,7 @@
  *
  * Global flags are an exception and can be types anywhere.
  */
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 #include <printer/stream_printer.hpp>

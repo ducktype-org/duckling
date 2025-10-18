@@ -1,15 +1,12 @@
 #pragma once
 
 #include "component_hash.hpp"
-#include "file_id.hpp"
 #include "source_file.hpp"
 
-#include <pst_parser/pst.hpp>
-
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -60,10 +57,6 @@ namespace compiler::frontend {
 
 	public:
 		ModuleID getModuleID() const;
-		// Returns the module path hash (partial state + finalized hash)
-		[[nodiscard]]
-		const ComponentHash& getComponentHash() const;
-
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -118,6 +111,19 @@ namespace compiler::frontend {
 		base::StrID getName() const;
 
 		/**
+		 * Returns ComponentHash of the module.
+		 * it is calculated from module logical path
+		 * eg. for module tree like:
+		 * /root
+		 *   /sub1
+		 *     /sub2
+		 * The component hash of sub2 will be ComponentHash({"root", "sub1", "sub2"})
+		 * @param module_id ModuleID of the module to get the component hash for.
+		 */
+		[[nodiscard]]
+		static const ComponentHash& getComponentHash(ModuleID module_id);
+
+		/**
 		 * Creates a nice, human-readable representation of this module tree.
 		 * @param indentation For regular printing, leave 0.
 		 * @return std::string with the representation.
@@ -131,6 +137,18 @@ namespace compiler::frontend {
 	private:
 		ModuleTree();
 
+
+		/**
+		 * Invalidate current component hash, used when module structure changes
+		 */
+		void invalidateComponentHash();
+
+		/**
+		 * Use a parent component hash, and update m_component_hash for this module only
+		 * This does not propagate to children
+		 */
+		void updateComponentHash();
+
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
 
@@ -142,7 +160,7 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-		ComponentHash                                     m_component_hash;
+		base::Optional<ComponentHash>                     m_component_hash;
 	};
 
 	/**

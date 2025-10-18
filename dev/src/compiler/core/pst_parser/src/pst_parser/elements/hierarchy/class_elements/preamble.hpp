@@ -12,7 +12,9 @@
 
 #define CLASS_STMT_SPEC_CONSTRUCTOR(class_name)                               \
 	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
-		  ClassSpecial(StmtKind::class_name, position, ctx) {}
+		  ClassSpecial(StmtKind::class_name, position, ctx) {                 \
+		this->element_kind = ElementKind::ClassSpecial;                       \
+	}
 
 #define CLASS_STMT_PARSE(class_name) \
 	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx)

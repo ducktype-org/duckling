@@ -7,9 +7,9 @@
 
 #include <frontend/module_tree/component_hash.hpp>
 
-#include <base/box.hpp>
-#include <base/ref.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <hashing/hash.hpp>
 #include <lexer/token.hpp>
@@ -120,15 +120,15 @@ namespace pst {
 		 * @brief Calculates the Element paths for children of this element, has to be overriden for
 		 * elements that have unnamed children.
 		 */
-		virtual void calcComponentHashRecursive();
+		virtual void calcElementPathHashRecursive();
 
 		/**
 		 * @brief Calculates Element paths for this Element and children.
 		 */
-		void calcComponentHash(const ComponentHash& path) {
+		void calcElementPathHash(const ComponentHash& path) {
 			// append element type to incoming ComponentHash path
-			element_path = compiler::frontend::ComponentHash(path, elementType());
-			calcComponentHashRecursive();
+			element_path_hash = compiler::frontend::ComponentHash(path, elementType());
+			calcElementPathHashRecursive();
 		}
 
 		/**
@@ -138,7 +138,7 @@ namespace pst {
 		template<typename Element>
 		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ComponentHash& path)
 			const {
-			if (auto ref = access_ref.internalMut()) ref->calcComponentHash(path);
+			if (auto ref = access_ref.internalMut()) ref->calcElementPathHash(path);
 		}
 
 		/**
@@ -150,8 +150,8 @@ namespace pst {
 			AccessInternal<Element, name>& access_ref, const ComponentHash& path
 		) const {
 			if (auto ref = access_ref.internalMut())
-				ref->calcComponentHash(
-					compiler::frontend::ComponentHash(path, std::string(name.value))
+				ref->calcElementPathHash(
+					compiler::frontend::ComponentHash(path, std::string_view(name.value))
 				);
 		}
 
@@ -215,7 +215,7 @@ namespace pst {
 		auto viewSubElements() const {
 			using namespace std::views;
 
-			constexpr auto get_locked = [](const InternalSubElement& t) -> SubElement {
+			constexpr auto GET_LOCKED = [](const InternalSubElement& t) -> SubElement {
 				if (base::holds<InternalChild>(t)) {
 					return Child(std::get<InternalChild>(t));
 				} else if (base::holds<InternalNamedChild>(t)) {
@@ -226,7 +226,7 @@ namespace pst {
 				}
 			};
 
-			return std::ranges::ref_view(sub_elements) | transform(get_locked);
+			return std::ranges::ref_view(sub_elements) | transform(GET_LOCKED);
 		}
 
 		/**
@@ -236,17 +236,17 @@ namespace pst {
 		auto viewChildren() const {
 			using namespace std::views;
 
-			constexpr auto is_child = [](const SubElement& t) -> bool {
+			constexpr auto IS_CHILD = [](const SubElement& t) -> bool {
 				return base::holds<Child>(t) || base::holds<NamedChild>(t);
 			};
-			constexpr auto strip_name = [](const SubElement& t) -> const Child {
+			constexpr auto STRIP_NAME = [](const SubElement& t) -> const Child {
 				if (base::holds<NamedChild>(t))
 					return std::get<NamedChild>(t).element;
 				else
 					return std::get<Child>(t);
 			};
 
-			return viewSubElements() | filter(is_child) | transform(strip_name);
+			return viewSubElements() | filter(IS_CHILD) | transform(STRIP_NAME);
 		}
 
 		/**
@@ -323,11 +323,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const ComponentHash& getComponentHash() const {
+		const ComponentHash& getElementPathHash() const {
 			CORE_ASSERT(
-				element_path.has_value(), "element path not calculated for this " + elementType()
+				element_path_hash.has_value(),
+				"element path not calculated for this " + elementType()
 			);
-			return element_path.value();
+			return element_path_hash.value();
 		}
 
 		virtual void acceptVisitor(PstVisitor& visitor) const;
@@ -341,10 +342,10 @@ namespace pst {
 			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
 		base::Optional<AccessLocked<LangElement>>
 									  parent;  ///< Parent element in PST if element is not root.
-		base::Optional<ComponentHash> element_path;  ///< The Path that uniquely identifies the
-		                                             ///< element and allows to conserve some
-		                                             ///< information between compilations. Has no
-		                                             ///< value if it's incalculable.
+		base::Optional<ComponentHash> element_path_hash;  ///< The Path that uniquely identifies the
+		                                                  ///< element and allows to conserve some
+		                                                  ///< information between compilations. Has
+		                                                  ///< no value if it's incalculable.
 		base::Optional<HashType>
 			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
 		           ///< information between compilations. Has no value if it's incalculable.

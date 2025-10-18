@@ -19,7 +19,7 @@ int main() {
 
 #include "location_types.hpp"
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <printer/printer_content.hpp>
 #include <printer/printer_ostream.hpp>

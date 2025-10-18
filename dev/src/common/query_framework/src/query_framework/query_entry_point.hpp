@@ -10,7 +10,7 @@
 #include "internal/query_data/query_id.hpp"
 #include "internal/query_graph/node_making.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace query {
 

@@ -5,7 +5,7 @@
 
 #include "char.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <unicode_classification/classifications.hpp>
 

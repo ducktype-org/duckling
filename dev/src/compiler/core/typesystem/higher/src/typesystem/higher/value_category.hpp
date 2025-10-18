@@ -10,7 +10,7 @@
 
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/flag.hpp>
+#include <base/extend_cpp/flag.hpp>
 
 namespace tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"

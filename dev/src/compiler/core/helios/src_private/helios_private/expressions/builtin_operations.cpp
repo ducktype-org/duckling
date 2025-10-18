@@ -1,7 +1,7 @@
 
 #include "builtin_operations.hpp"
 
-#include <typesystem/higher/queries.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 

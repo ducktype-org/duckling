@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/exceptions.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
 #include <filesystem>
 #include <string>

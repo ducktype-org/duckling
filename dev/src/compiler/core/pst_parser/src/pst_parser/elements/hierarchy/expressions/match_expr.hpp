@@ -48,6 +48,6 @@ namespace pst::expr {
 			return std::ranges::ref_view(cases) | transform(give_one);
 		}
 
-		void calcComponentHashRecursive() override;
+		void calcElementPathHashRecursive() override;
 	};
 }

@@ -1,10 +1,9 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
-#include <pst_parser/pst_query/pst_access_side_input.hpp>
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>
@@ -62,7 +61,7 @@ int notMain(int argc, const char* const* argv) {
 
 	for (auto& i: top_level->functions) {
 		if (i.declaration->original_name == base::StrID("main")) {
-			auto positions = pst::queryPositionDependencies<helios::QueryCodeOFFun>(
+			auto positions = pst::queryPositionDependencies<helios::QueryCodeOfFun>(
 				i.declaration->original_symbol
 			);
 

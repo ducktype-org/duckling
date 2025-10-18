@@ -2,7 +2,7 @@
 
 #include "forward.hpp"  // IWYU pragma: keep
 
-#include <base/raw_view.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <diagnostic/location.hpp>
 #include <diagnostic/logger.hpp>

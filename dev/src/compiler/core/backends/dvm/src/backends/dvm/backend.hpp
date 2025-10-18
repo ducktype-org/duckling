@@ -1,12 +1,9 @@
 
-#include <lir/lir_structure/function_forward.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm {

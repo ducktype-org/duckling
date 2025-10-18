@@ -47,8 +47,8 @@ namespace pst {
 		}
 	}
 
-	void ClassBlock::calcComponentHashRecursive() {
-		auto                          path            = getComponentHash();
+	void ClassBlock::calcElementPathHashRecursive() {
+		auto                          path            = getElementPathHash();
 		auto                          no_symbol_path  = ComponentHash(path, "no_symbol");
 		usize                         no_symbol_count = 0;
 		auto                          by_symbol_path  = ComponentHash(path, "by_symbol");

@@ -1,11 +1,13 @@
 #include "compiler.hpp"
 
-#include <base/int_conv.hpp>
-#include <base/ints.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include "instruction_lowering.hpp"
+
+#include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/for_each.hpp>
+#include <base/str/string_id.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -29,9 +31,7 @@
 
 namespace vm::loader::compiler {
 	u64 Compiler::lowerArgument(
-		const FunctionCompilationContext& ctx,
-		const usize                       instruction_index,
-		const opargs::OpCodeArg&          opcode_arg
+		FunctionCompilationContext& ctx, const opargs::OpCodeArg& opcode_arg
 	) {
 		variant_match(opcode_arg) {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
@@ -74,54 +74,41 @@ namespace vm::loader::compiler {
 				return base::safeIntConv<u64>(program_ctx.method_name_to_id[method.method_name]);
 			}
 			variant_case(vm::opargs::Label, label) {
-				// Labels are guaranteed to exist by static verification.
-				auto pos = ctx.label_positions.at(label.label_name);
-				// We have to calculate the
-				// difference instead of absolute jump position,
-				// because our instruction index is a pointer.
-				return static_cast<u64>(pos) - static_cast<u64>(instruction_index) - 1;
+				// Lower the label names into temporary label IDs.
+				// A label ID is some number, used later by `linkLabelArguments`
+				// to generate actual offsets once we know where each label
+				// lands after lowering.
+				if (!ctx.label_id_map.contains(label.label_name))
+					ctx.label_id_map.put(label.label_name, ctx.label_id_map.size());
+				return ctx.label_id_map.at(label.label_name);
 			}
 			variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 		}
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * @brief Compiles a single function. Refactor this
-	 */
-	low::MicroBytecode Compiler::lowerInstructions(const FunctionCompilationContext& ctx) {
-		low::MicroBytecode bc;
-		bc.reserve(ctx.instructions_without_labels.size());
+	void Compiler::linkLabelArguments(
+		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
+	) {
+		for (auto [instr_idx, instr]: std::views::enumerate(instructions)) {
+			auto       opcode_num = std::to_underlying(getInstructionOpcode(instr));
+			std::array args{ Ref(&instr.arg0), Ref(&instr.arg1) };
+			auto       are_args_labels = low::instruction_tags::IS_ARGUMENT_LABEL.at(opcode_num);
 
-		for (usize op_idx = 0; op_idx < ctx.instructions_without_labels.size(); ++op_idx) {
-			const code::Instruction& op    = ctx.instructions_without_labels[op_idx];
-			u64                      arg_0 = 0;
-			u64                      arg_1 = 0;
-
-			variant_match(op) {
-#define HANDLE_OPCODE_0ARGS(opcode) \
-	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)          \
-	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {   \
-		arg_0 = lowerArgument(ctx, op_idx, instr.arg0); \
-	}
-
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
-	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {     \
-		arg_0 = lowerArgument(ctx, op_idx, instr.arg0);   \
-		arg_1 = lowerArgument(ctx, op_idx, instr.arg1);   \
-	}
-#include <vm/bytecode/opcode_definitions.hpp>
-			}
-
-			auto opcode_id = low::fix8FromInstr(op);
-			bc.emplace_back(makeLowInstruction(opcode_id, arg_0, arg_1));
-#if defined(BUILD_TYPE_DEV_DEBUG)
-			bc.back().representation = instructionToString(op);
-			bc.back().opcode_id      = opcode_id;
-#endif
+			for (auto [arg, is_label]: std::views::zip(args, are_args_labels))
+				if (is_label) *arg = label_map.at(*arg) - static_cast<usize>(instr_idx) - 1;
 		}
-		return bc;
+	}
+
+	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
+		detail::MicroBytecodeBuilder builder{ *this, ctx };
+
+		for (const auto& instr: ctx.function.body) builder.add(instr);
+
+		auto [micro_bytecode, label_map] = builder.build();
+		linkLabelArguments(micro_bytecode, label_map);
+
+		return micro_bytecode;
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
@@ -169,18 +156,29 @@ namespace vm::loader::compiler {
 			CORE_UNREACHABLE();
 		};
 
+		// Label positions in high bytecode, used only for graph traversing
+		// in this function. Not used when lowering to microbytecode.
+		base::HashMap<base::StrID, usize> label_positions{};
+		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
+			variant_match(instr) {
+				variant_case(code::instructions::Op_label, label) {
+					label_positions.put(label.arg0.label_name, idx);
+				}
+			}
+		}
+
 		code::FuncSignature func_signature = ctx.function.signature;
 		push(base::StrID("ret_val"), func_signature.result_type.str);
 		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
-			{ ctx.instructions_without_labels.size(), {}, 0 }  // sentinel
+			{ ctx.function.body.size(), {}, 0 }  // sentinel
 		};
-		std::vector<bool> visited_instructions(ctx.instructions_without_labels.size());
+		std::vector<bool> visited_instructions(ctx.function.body.size());
 		usize             index = 0;
 
-		while (index != ctx.instructions_without_labels.size()) {
+		while (index != ctx.function.body.size()) {
 			if (visited_instructions[index]) {
 				std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
 				dfs_stack.pop_back();
@@ -188,7 +186,7 @@ namespace vm::loader::compiler {
 			}
 			visited_instructions[index] = true;
 
-			variant_match(ctx.instructions_without_labels[index]) {
+			variant_match(ctx.function.body[index]) {
 				using namespace code::instructions;
 				variant_case(Op_init_lany_type, instr) {
 					push(instr.arg0, instr.arg1);
@@ -199,18 +197,18 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				variant_case(Op_jmp_label, instr) {
-					index = ctx.label_positions[instr.arg0.label_name];
+					index = label_positions[instr.arg0.label_name];
 				}
 				variant_case(Op_jmpIf_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						ctx.label_positions[instr.arg0.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.arg0.label_name], type_size_stack, curr_stack_size
 					);
 				}
 				variant_case(Op_jmpIfNot_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						ctx.label_positions[instr.arg0.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.arg0.label_name], type_size_stack, curr_stack_size
 					);
 				}
 				variant_case(Op_ret, instr) {
@@ -251,22 +249,6 @@ namespace vm::loader::compiler {
 		ctx.local_stack_size = max_stack_size;
 	}
 
-	void Compiler::splitCodeAndLabels(FunctionCompilationContext& ctx) {
-		std::vector<code::Instruction>    instructions_without_labels;
-		base::HashMap<base::StrID, usize> label_positions;
-		for (const auto& instr: ctx.function.body) {
-			variant_match(instr) {
-				variant_case_novalue(code::instructions::Comment) {}
-				variant_case(code::instructions::Op_label, label) {
-					label_positions.put(label.arg0.label_name, instructions_without_labels.size());
-				}
-				variant_default { instructions_without_labels.push_back(instr); }
-			}
-		}
-		ctx.instructions_without_labels = std::move(instructions_without_labels);
-		ctx.label_positions             = std::move(label_positions);
-	}
-
 	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
 		// Forward declare all functions
 		for (const auto& function: new_functions)
@@ -274,7 +256,6 @@ namespace vm::loader::compiler {
 
 		for (const auto& function: new_functions) {
 			FunctionCompilationContext ctx(function);
-			splitCodeAndLabels(ctx);
 			calculateOffsets(ctx);
 
 			// Calculate the functions metadata.
