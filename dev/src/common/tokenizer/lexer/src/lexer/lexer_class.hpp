@@ -82,7 +82,7 @@ namespace lexer {
 		/**
 		 * @brief Consumes a numeric literal type suffix (e.g., i32, f64).
 		 */
-		void parseNumericLiteralTypeSuffix();
+		void                  parseNumericLiteralTypeSuffix();
 		base::Optional<Token> tryParseNumericLiteralTypeSuffix();
 
 		/**

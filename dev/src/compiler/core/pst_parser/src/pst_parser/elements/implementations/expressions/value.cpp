@@ -51,7 +51,34 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprValue>(pos, state[0].getValue());
+		const auto&                 token = state[0];
+		base::StrID                 value;
+		base::Optional<base::StrID> type_specifier;
+
+
+		if (!token.getRecursive().empty()) {  // Type specifier exists.
+			const auto& sub_tokens = token.getRecursive();
+			CORE_ASSERT(
+				sub_tokens.size() == 2, "Complex numeric literals should have two subtokens"
+			);
+			const auto& value_token     = sub_tokens[0];
+			const auto& specifier_token = sub_tokens[1];
+			CORE_ASSERT(value_token.isNumLiteral(), "First sub-token must be a numLiteral");
+			CORE_ASSERT(
+				specifier_token.isTypeSpecifier(), "Second sub-token must be a typeSpecifier"
+			);
+
+			value          = sub_tokens[0].getValue();
+			type_specifier = sub_tokens[1].getValue();
+		} else {
+			value          = token.getValue();
+			type_specifier = {};
+		}
+
+
+		auto out = makeBox<ExprValue>(pos, value, type_specifier.map([](const base::StrID& val) {
+			return lexer::Value(val);
+		}));
 		state.parse(out).eatOne();
 
 		if (length > 1) {
@@ -67,11 +94,14 @@ namespace pst::expr {
 
 		out << R"("number": ")" << number.str() << "\"";
 
+		if (type_specifier) out << R"(, "type_specifier": ")" << type_specifier->str() << "\"";
+
 		out << "}";
 	}
 
 	LangElement::HashAlg& ExprValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, number);
+		if (type_specifier) addToHash(partial_hash, *type_specifier);
 		return partial_hash;
 	}
 

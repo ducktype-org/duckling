@@ -23,12 +23,6 @@
 #include <string_view>
 
 namespace vm::loader::parser {
-	/**
-	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type
-	 * specifier like `i32`, `f64`, etc., it will adjust the parsing behavior accordingly. By
-	 * default, it assumes 64-bit integer or double if it has a dot or an `e` (works for hex and
-	 * binary too). T has to be type of size 64bits.
-	 */
 	namespace opargs_parsers {
 		namespace detail {
 			/**
@@ -57,30 +51,26 @@ namespace vm::loader::parser {
 			) {
 				if (sign == 1) {
 					if (raw_val > static_cast<u64>(std::numeric_limits<SignedInt>::max())) {
-						state.log(
-							makeBox<InvalidLiteral>(
-								token.getPosition(),
-								base::strConcat(
-									"Numeric literal overflows a ",
-									base::toString(sizeof(SignedInt) * 8),
-									"-bit signed integer."
-								)
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Numeric literal overflows a ",
+								base::toString(sizeof(SignedInt) * 8),
+								"-bit signed integer."
 							)
-						);
+						));
 						return false;
 					}
 				} else if (raw_val
 				           > (static_cast<u64>(std::numeric_limits<SignedInt>::max()) + 1ULL)) {
-					state.log(
-						makeBox<InvalidLiteral>(
-							token.getPosition(),
-							base::strConcat(
-								"Numeric literal underflows a ",
-								base::toString(sizeof(SignedInt) * 8),
-								"-bit signed integer."
-							)
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Numeric literal underflows a ",
+							base::toString(sizeof(SignedInt) * 8),
+							"-bit signed integer."
 						)
-					);
+					));
 					return false;
 				}
 				return true;
@@ -95,30 +85,32 @@ namespace vm::loader::parser {
 				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
 			) {
 				if (sign == -1) {
-					state.log(
-						makeBox<InvalidLiteral>(
-							token.getPosition(), "Unsigned integer literal cannot be negative."
-						)
-					);
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(), "Unsigned integer literal cannot be negative."
+					));
 					return false;
 				}
 				if (raw_val > std::numeric_limits<UnsignedInt>::max()) {
-					state.log(
-						makeBox<InvalidLiteral>(
-							token.getPosition(),
-							base::strConcat(
-								"Numeric literal overflows a ",
-								base::toString(sizeof(UnsignedInt) * 8),
-								"-bit unsigned integer."
-							)
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Numeric literal overflows a ",
+							base::toString(sizeof(UnsignedInt) * 8),
+							"-bit unsigned integer."
 						)
-					);
+					));
 					return false;
 				}
 				return true;
 			}
 		}
 
+		/**
+		 * @brief Parses number literal and returns it's bits stored in type T. If it contains a
+		 * type specifier like `i32`, `f64`, etc., it will adjust the parsing behavior accordingly.
+		 * By default, it assumes 64-bit integer or double if it has a dot or an `e` (works for hex
+		 * and binary too). T has to be type of size 64bits.
+		 */
 		template<class T>
 		std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
 			usize literal_length = 0;
@@ -139,8 +131,7 @@ namespace vm::loader::parser {
 
 			const auto& token = state.tokens().peek();
 			if (!token.isNumLiteral()) {
-				state.log(
-					makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
+				state.log(makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
 				);
 				return { T{ 0 }, 0 };
 			}
@@ -189,12 +180,10 @@ namespace vm::loader::parser {
 			try {
 				if (!suffix.empty()) {  // Type specifier exists.
 					if (suffix.starts_with("f") && base != 10) {
-						state.log(
-							makeBox<InvalidLiteral>(
-								token.getPosition(),
-								"Floating-point literals must be in decimal base for: "
-							)
-						);
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							"Floating-point literals must be in decimal base for: "
+						));
 						return { T{ 0 }, 0 };
 					}
 
@@ -227,18 +216,16 @@ namespace vm::loader::parser {
 						if (detail::checkUnsignedBoundsAndLog<u64>(state, token, raw_val, sign))
 							result = detail::packValue<T>(raw_val);
 					} else {
-						state.log(
-							makeBox<InvalidLiteral>(
-								token.getPosition(),
-								base::strConcat(
-									"Unknown type specifier `",
-									suffix,
-									"` for `",
-									base::typeName<vm::opargs::Immediate>(),
-									"`."
-								)
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Unknown type specifier `",
+								suffix,
+								"` for `",
+								base::typeName<vm::opargs::Immediate>(),
+								"`."
 							)
-						);
+						));
 						return { T{ 0 }, 0 };
 					}
 				} else {
@@ -256,28 +243,24 @@ namespace vm::loader::parser {
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
-					state.log(
-						makeBox<InvalidLiteral>(
-							token.getPosition(),
-							base::strConcat(
-								"Number not read fully for `",
-								base::typeName<vm::opargs::Immediate>(),
-								"`."
-							)
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Number not read fully for `",
+							base::typeName<vm::opargs::Immediate>(),
+							"`."
 						)
-					);
+					));
 					return { T{ 0 }, 0 };
 				}
 			} catch (std::logic_error&) {}
 
-			state.log(
-				makeBox<InvalidLiteral>(
-					token.getPosition(),
-					base::strConcat(
-						"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
-					)
+			state.log(makeBox<InvalidLiteral>(
+				token.getPosition(),
+				base::strConcat(
+					"Not a valid number for `", base::typeName<vm::opargs::Immediate>(), "`."
 				)
-			);
+			));
 			return { T{ 0 }, 0 };
 		}
 

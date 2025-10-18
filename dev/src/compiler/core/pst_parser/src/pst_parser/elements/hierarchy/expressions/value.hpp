@@ -7,7 +7,8 @@ namespace pst::expr {
 	 * @brief Element representing a number value in an expression
 	 */
 	class ExprValue final: public ExprElement {
-		lexer::Value number;
+		lexer::Value                 number;
+		base::Optional<lexer::Value> type_specifier;
 
 	public:
 		[[nodiscard]]
@@ -15,9 +16,19 @@ namespace pst::expr {
 			return number;
 		}
 
-		explicit ExprValue(const dia::SourcePosition& position, lexer::Value value):
+		[[nodiscard]]
+		base::Optional<lexer::Value> getTypeSpecifier() const {
+			return type_specifier;
+		}
+
+		explicit ExprValue(
+			const dia::SourcePosition&   position,
+			lexer::Value                 value,
+			base::Optional<lexer::Value> type_specifier = {}
+		):
 			  ExprElement(position, 0),
-			  number(value) {}
+			  number(value),
+			  type_specifier(std::move(type_specifier)) {}
 
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 

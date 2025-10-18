@@ -74,13 +74,8 @@ namespace lexer {
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeChar(base::RawView string, const dia::SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);  ///< Unimplemented
-		static Token makeBracketGroup(
-			BracketType bracket_type,
-			Tokens&&    tokens,
-			Token&&     sentinel_begin,
-			Token&&     sentinel_end,
-			const dia::SourcePosition&
-		);
+		static Token
+			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
 		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
@@ -88,9 +83,8 @@ namespace lexer {
 		static Token makeNumLiteral(base::RawView literal, const dia::SourcePosition&);
 		// TODOP: Probably unneeded.
 		static Token makeTypeSpecifier(base::RawView literal, const dia::SourcePosition&);
-		static Token makeNumLiteralGroup(
-			base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition&
-		);
+		static Token
+			makeNumLiteralGroup(base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition&);
 		/**@}*/
 
 		virtual ~Token() = default;
