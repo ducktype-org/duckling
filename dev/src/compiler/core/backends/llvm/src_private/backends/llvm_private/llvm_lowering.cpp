@@ -24,11 +24,11 @@ LLVM_INCLUDE_END()
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/pointers/box.hpp>
-#include <base/misc/int_conv.hpp>
 #include <base/collections/maps.hpp>
-#include <base/pointers/ref.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <init/init.hpp>
 

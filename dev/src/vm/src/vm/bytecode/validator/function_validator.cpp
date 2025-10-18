@@ -2,11 +2,11 @@
 
 #include "errors.hpp"
 
-#include <base/except/exceptions.hpp>
-#include <base/preproc/for_each.hpp>
-#include <base/pointers/ref.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>

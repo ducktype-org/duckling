@@ -41,8 +41,8 @@
  */
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/preproc/diagnostics.hpp>
+#include <base/types/ints.hpp>
 
 #include <limits>
 #include <type_traits>

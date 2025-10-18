@@ -16,8 +16,8 @@
  */
 #pragma once
 
-#include <base/misc/raw_view.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <unicode/unistr.h>
 

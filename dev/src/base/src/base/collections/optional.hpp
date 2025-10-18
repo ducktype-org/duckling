@@ -32,7 +32,6 @@
 #pragma once
 
 #include <base/except/exceptions.hpp>
-
 #include <base/preproc/diagnostics.hpp>
 
 #include <functional>

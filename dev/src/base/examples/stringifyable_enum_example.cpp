@@ -1,6 +1,6 @@
-#include <base/types/ints.hpp>
-#include <base/str/string_id.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/str/string_id.hpp>
+#include <base/types/ints.hpp>
 
 #include <iostream>
 

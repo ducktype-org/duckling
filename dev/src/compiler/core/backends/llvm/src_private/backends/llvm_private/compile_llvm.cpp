@@ -16,8 +16,8 @@ LLVM_INCLUDE_END()
 #include "compile_llvm.hpp"
 #include "module_impl.hpp"
 
-#include <base/pointers/box.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/pointers/box.hpp>
 
 namespace compiler::backend_llvm {
 

@@ -2,8 +2,8 @@
 
 #include "allocator.hpp"
 
-#include <base/types/ints.hpp>
 #include <base/misc/raw_view.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 

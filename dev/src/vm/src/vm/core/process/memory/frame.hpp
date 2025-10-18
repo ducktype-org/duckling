@@ -8,9 +8,9 @@
  */
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>

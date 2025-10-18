@@ -1,8 +1,8 @@
 #pragma once
 
 #include <base/comptime/is_complete.hpp>
-#include <base/pointers/ref.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace base {
 

@@ -9,9 +9,10 @@
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/type_interface.hpp>
-#include <query_framework/context.hpp> // @TODO: #404 relax to fd
 
 #include <base/str/string_id.hpp>
+
+#include <query_framework/context.hpp>  // @TODO: #404 relax to fd
 
 namespace compiler::helios {
 	/**

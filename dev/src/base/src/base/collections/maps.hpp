@@ -5,9 +5,9 @@
  */
 #pragma once
 
-#include <base/except/exceptions.hpp>
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <map>
 #include <type_traits>

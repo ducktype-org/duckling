@@ -1,8 +1,8 @@
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
+#include <base/types/ints.hpp>
 
 namespace vm {
 	using Offset = u64;

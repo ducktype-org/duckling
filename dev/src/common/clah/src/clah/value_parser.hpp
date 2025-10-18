@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <base/pointers/box.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 
 #include <any>
 #include <regex>

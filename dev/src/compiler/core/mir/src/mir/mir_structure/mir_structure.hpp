@@ -5,14 +5,14 @@
 
 #include <typesystem/higher/types.hpp>
 
-#include <base/types/ints.hpp>
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/collections/stable_hashmap.hpp>
-#include <base/str/string_id.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/string_id.hpp>
+#include <base/types/ints.hpp>
 
 #include <variant>
 #include <vector>

@@ -30,10 +30,10 @@
 #include "opcodes_functions_utils.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/misc/int_conv.hpp>
-#include <base/types/ints.hpp>
-#include <base/preproc/for_each.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/for_each.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>

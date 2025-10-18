@@ -7,9 +7,9 @@
 
 #include <frontend/module_tree/component_hash.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/hash.hpp>
 #include <lexer/token.hpp>

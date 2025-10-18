@@ -3,8 +3,8 @@
 #include "hashing_algorithms.hpp"
 #include "type_code.hpp"
 
-#include <base/types/ints.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/types/ints.hpp>
 
 #include <concepts>
 #include <span>

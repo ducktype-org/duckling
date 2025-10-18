@@ -3,9 +3,9 @@
 #include "hash_algorithm_utils.hpp"
 #include "type_code.hpp"
 
+#include <base/comptime/type_traits.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
-#include <base/comptime/type_traits.hpp>
 
 #include <array>
 #include <bit>
