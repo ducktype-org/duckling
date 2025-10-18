@@ -29,25 +29,20 @@ namespace {
 
 namespace compiler::frontend {
 
-	SourceFile::SourceFile(
-		fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
-	):
+	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
-		component_hash = ComponentHash(parent_component_hash, lang_file_name);
 		// Add or replace file content in cache
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 	}
 
-	Ref<SourceFile> SourceFile::create(
-		fs::File file, ModuleID linked_module, ComponentHash parent_component_hash
-	) {
+	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
 		auto abs_path = file.getFilePath().absolute().getPath();
 
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		files.pushBack(SourceFile(std::move(file), linked_module, std::move(parent_component_hash)));
+		files.pushBack(SourceFile(std::move(file), linked_module));
 		files_map.at(abs_path).emplace_back(files.last());
 		files.last()->file_id = FileID(files.last());
 		return files.last();
