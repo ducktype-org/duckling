@@ -13,7 +13,7 @@
 #include "parsing_state.hpp"
 #include "value_parser.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <functional>
 #include <string>

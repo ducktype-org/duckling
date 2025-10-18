@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/stringifyable_enum.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
 namespace pst {
 	/**

@@ -7,7 +7,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <query_framework/context_fd.hpp>
 

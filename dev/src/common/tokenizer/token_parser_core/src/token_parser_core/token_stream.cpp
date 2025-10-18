@@ -4,8 +4,8 @@
 
 #include "token_stream.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
 
 namespace tpc {
 

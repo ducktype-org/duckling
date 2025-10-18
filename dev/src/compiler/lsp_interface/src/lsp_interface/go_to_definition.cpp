@@ -10,7 +10,7 @@
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <query_framework/utils/with_context_do.hpp>
 #include <token_source/source.hpp>

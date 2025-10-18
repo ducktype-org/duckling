@@ -3,7 +3,7 @@
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <base/int_conv.hpp>
-#include <base/ints.hpp>
-#include <base/raw_view.hpp>
-#include <base/ref.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 

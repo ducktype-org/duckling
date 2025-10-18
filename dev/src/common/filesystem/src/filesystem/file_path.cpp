@@ -2,8 +2,8 @@
 
 #include <filesystem_private/vfs.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/ref.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace {
 	Ref<fs::VFS> vfs = fs::VFS::getInstance();

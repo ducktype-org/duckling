@@ -4,7 +4,7 @@
 #include "../pst_state_forward.hpp"
 #include "elements_list.hpp"
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <diagnostic/source_position.hpp>
 

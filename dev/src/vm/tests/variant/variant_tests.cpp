@@ -1,6 +1,6 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>

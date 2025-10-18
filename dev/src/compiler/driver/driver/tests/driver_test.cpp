@@ -3,7 +3,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/options.hpp>
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <query_framework/utils/with_context_do.hpp>

@@ -3,8 +3,8 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/int_conv.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>

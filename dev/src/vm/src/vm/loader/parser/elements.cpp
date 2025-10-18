@@ -2,9 +2,9 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>

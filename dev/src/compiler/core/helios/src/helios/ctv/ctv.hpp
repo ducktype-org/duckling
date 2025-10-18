@@ -2,8 +2,8 @@
 
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <base/type_traits.hpp>
-#include <base/variant.hpp>
+#include <base/comptime/type_traits.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <string>
 

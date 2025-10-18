@@ -12,7 +12,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
 

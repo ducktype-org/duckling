@@ -3,8 +3,8 @@
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <base/bit256.hpp>
-#include <base/ints.hpp>
+#include <base/types/bit256.hpp>
+#include <base/types/ints.hpp>
 
 #include <variant>
 

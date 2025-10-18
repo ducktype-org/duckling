@@ -9,7 +9,7 @@
 #include <typesystem/higher/internal/queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/stable_container.hpp>
+#include <base/collections/stable_container.hpp>
 
 #include <query_framework/query_impl.hpp>
 

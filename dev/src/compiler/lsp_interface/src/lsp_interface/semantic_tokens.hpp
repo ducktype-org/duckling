@@ -8,9 +8,9 @@
 #include <frontend/module_tree/source_file.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/ints.hpp>
-#include <base/ref.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <string>
 

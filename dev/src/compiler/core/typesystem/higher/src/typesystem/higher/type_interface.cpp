@@ -4,7 +4,7 @@
 
 #include <helios/symbols/simple.hpp>
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <query_framework/context.hpp>
 

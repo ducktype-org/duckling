@@ -12,8 +12,8 @@
 
 #include <helios/ctv/ctv.hpp>
 
-#include <base/box.hpp>
-#include <base/string_id.hpp>
+#include <base/pointers/box.hpp>
+#include <base/str/string_id.hpp>
 
 #include <memory>
 #include <variant>

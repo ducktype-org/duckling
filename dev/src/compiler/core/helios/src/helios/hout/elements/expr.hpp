@@ -4,8 +4,8 @@
 
 #include <typesystem/higher/expression_type.hpp>
 
-#include <base/box.hpp>
-#include <base/ints.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
 

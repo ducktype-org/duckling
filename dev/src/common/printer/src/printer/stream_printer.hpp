@@ -33,7 +33,7 @@
 
 #include "printer_content.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <iostream>
 

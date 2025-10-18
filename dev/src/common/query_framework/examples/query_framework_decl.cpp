@@ -1,8 +1,8 @@
-#include "query_framework_decl.hpp"  // query declaration
+#include "query_framework_decl.hpp"       // query declaration
 
-#include <base/maps.hpp>             // base::Map
-#include <base/optional.hpp>         // base::Optional
-#include <base/str_utils.hpp>        // base::strConcat
+#include <base/collections/maps.hpp>      // base::Map
+#include <base/collections/optional.hpp>  // base::Optional
+#include <base/str/str_utils.hpp>         // base::strConcat
 
 #include <query_framework/query_impl.hpp>
 

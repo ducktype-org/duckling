@@ -1,4 +1,4 @@
-#include <base/bit256.hpp>
+#include <base/types/bit256.hpp>
 
 #include <tester/tester.hpp>
 

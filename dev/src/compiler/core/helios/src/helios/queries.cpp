@@ -23,7 +23,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
 
