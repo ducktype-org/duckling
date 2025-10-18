@@ -24,6 +24,10 @@ namespace compiler::helios {
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
 
+	namespace houtgen {
+		struct ImplementationOf_QueryImplicitClassConstructor;
+	}
+
 	namespace code {
 		// Forward declaration:
 		struct CodeBlock;
@@ -35,7 +39,6 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunctionDeclaration final {
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
-		// @TODO:
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunctionDeclaration() = delete;
@@ -45,7 +48,7 @@ namespace compiler::helios {
 
 		/**
 		 * @note it is used for hashes
-		 * @note For now it works,
+		 * @note For now, it works,
 		 * but in the future with generics, and templates it might not
 		 * We might want to add actual hash?
 		 */
@@ -79,7 +82,8 @@ namespace compiler::helios {
 		HOUTFunction(
 			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
 		);
-		friend struct ImplementationOf_QueryCodeOFFun;
+		friend struct ImplementationOf_QueryCodeOfFun;
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 
 	public:
 		HOUTFunction() = delete;

@@ -1,13 +1,19 @@
 #pragma once
 
+#include "builtin_symbol_data.hpp"
+#include "generated_symbol_data.hpp"
+#include "pst_symbol_data.hpp"
+
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/includes/basic.hpp>
-#include <typesystem/higher/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
+#include <query_framework/context.hpp> // @TODO: #404 relax to fd
 
 #include <base/str/string_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
 
 namespace compiler::helios {
 	/**
@@ -19,7 +25,7 @@ namespace compiler::helios {
 		 *
 		 * @note In the future there might also be anonymous symbols (symbols with no name), like:
 		 * `let _ = 5;`, lambdas, `using a.*`, etc.
-		 * For now we workaround it, as all things that could be anonymous are also a wildcard.
+		 * For now, we work around it, as all things that could be anonymous are also a wildcard.
 		 * Those symbols will also need to have mangled name.
 		 */
 		base::StrID name;
@@ -52,55 +58,26 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Symbol data for all symbols that are created from PST elements.
-	 */
-	struct PstSymbolData final {
-		/**
-		 * Scope in which the symbol was defined.
-		 */
-		ScopeID scope;
-
-		/**
-		 * PST element that the symbol was created from.
-		 */
-		pst::AccessLocked<pst::LangElement> pst_element;
-	};
-
-	namespace builtin {
-		struct BuiltinFunctionData final {
-			tsh::FunctionAbstractType type;
-
-			BuiltinFunctionData(tsh::FunctionAbstractType type): type(type) {}
-		};
-	}
-
-	/**
 	 * @brief Stores generic symbol data.
 	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using OtherData = std::variant<PstSymbolData, builtin::BuiltinFunctionData>;
+		using OtherData
+			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, houtgen::GeneratedSymbolData>;
 
 		CommonSymbolData common;
 		OtherData        other;
 
-		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
-			return SymbolData{
-				.common = common_data,
-				.other  = pst_data,
-			};
-		}
+		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
 
-		static auto makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
-			return SymbolData{
-				.common = {
-					.name = name,
-					.kind = SymbolKind::BuiltinFunction,
-				},
-				.other  = builtin_data,
-			};
-		}
+		static SymbolData makeBuiltinFunction(
+			base::StrID name, builtin::BuiltinFunctionData builtin_data
+		);
+
+		static SymbolData makeGeneratedSymbol(
+			base::StrID name, houtgen::GeneratedSymbolData generated_data
+		);
 
 		template<class T>
 		[[nodiscard]]
@@ -128,11 +105,10 @@ namespace compiler::helios {
 	 * It is used by HELIOS only. It is a struct so SymID can friend it.
 	 */
 	struct GetSymRef_Functor final {
-		static auto get(SymID id) { return id.ref; }
+		static auto get(const SymID id) { return id.ref; }
 
-		static SymID make(CRef<SymbolData> ref) { return SymID{ ref }; }
+		static SymID make(const CRef<SymbolData> ref) { return SymID{ ref }; }
 	};
 
-	inline auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
-
+	inline auto getSymRef(const SymID id) { return GetSymRef_Functor::get(id); }
 }

@@ -67,7 +67,7 @@
 									}
 								}
 							}
-						},
+						}
 					]
 				},
 				"body": {
@@ -111,7 +111,7 @@
 								"sourceEnd": 75
 							},
 							"specifiers": [
-								"private",
+								"private"
 							],
 							"Class Field": {
 								"is mutable": "true",
@@ -230,7 +230,7 @@
 													}
 												}
 											}
-										},
+										}
 									]
 								},
 								"return": "unit",
@@ -239,88 +239,94 @@
 										"sourceStart": 105,
 										"sourceEnd": 118
 									},
-									"Code Block": [
-										{
-											"position": {
-												"sourceStart": 109,
-												"sourceEnd": 115
-											},
-											"Expr Stmt": {
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 105,
+											"sourceEnd": 118
+										},
+										"Code Block": [
+											{
 												"position": {
 													"sourceStart": 109,
-													"sourceEnd": 114
+													"sourceEnd": 115
 												},
-												"Top Level Expression": {
-													"expr": {
-														"position": {
-															"sourceStart": 109,
-															"sourceEnd": 114
-														},
-														"Chain Expression": {
-															"atom": {
-																"position": {
-																	"sourceStart": 109,
-																	"sourceEnd": 111
-																},
-																"Identifier Expression": {
-																	"name": {
-																		"Name": "goo"
-																	}
-																}
+												"Expr Stmt": {
+													"position": {
+														"sourceStart": 109,
+														"sourceEnd": 114
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 109,
+																"sourceEnd": 114
 															},
-															"chain": [
-																{
+															"Chain Expression": {
+																"atom": {
 																	"position": {
-																		"sourceStart": 112,
-																		"sourceEnd": 114
+																		"sourceStart": 109,
+																		"sourceEnd": 111
 																	},
-																	"Call Expression": {
-																		"type": "()",
-																		"arguments": {
-																			"position": {
-																				"sourceStart": 113,
-																				"sourceEnd": 113
-																			},
-																			"call list": [
-																				{
-																					"position": {
-																						"sourceStart": 113,
-																						"sourceEnd": 113
-																					},
-																					"Call argument": {
-																						"name": "<ANONYMOUS>",
-																						"value": {
-																							"position": {
-																								"sourceStart": 113,
-																								"sourceEnd": 113
-																							},
-																							"Top Level Expression": {
-																								"expr": {
-																									"position": {
-																										"sourceStart": 113,
-																										"sourceEnd": 113
-																									},
-																									"Identifier Expression": {
-																										"name": {
-																											"Name": "a"
+																	"Identifier Expression": {
+																		"name": {
+																			"Name": "goo"
+																		}
+																	}
+																},
+																"chain": [
+																	{
+																		"position": {
+																			"sourceStart": 112,
+																			"sourceEnd": 114
+																		},
+																		"Call Expression": {
+																			"type": "()",
+																			"arguments": {
+																				"position": {
+																					"sourceStart": 113,
+																					"sourceEnd": 113
+																				},
+																				"call list": [
+																					{
+																						"position": {
+																							"sourceStart": 113,
+																							"sourceEnd": 113
+																						},
+																						"Call argument": {
+																							"name": "<ANONYMOUS>",
+																							"value": {
+																								"position": {
+																									"sourceStart": 113,
+																									"sourceEnd": 113
+																								},
+																								"Top Level Expression": {
+																									"expr": {
+																										"position": {
+																											"sourceStart": 113,
+																											"sourceEnd": 113
+																										},
+																										"Identifier Expression": {
+																											"name": {
+																												"Name": "a"
+																											}
 																										}
 																									}
 																								}
 																							}
 																						}
 																					}
-																				},
-																			]
+																				]
+																			}
 																		}
 																	}
-																}
-															]
+																]
+															}
 														}
 													}
 												}
 											}
-										},
-									]
+										]
+									}
 								}
 							}
 						},
@@ -330,7 +336,7 @@
 								"sourceEnd": 178
 							},
 							"specifiers": [
-								"private",
+								"private"
 							],
 							"Class Method": {
 								"name": {
@@ -371,7 +377,7 @@
 													}
 												}
 											}
-										},
+										}
 									]
 								},
 								"return": {
@@ -396,81 +402,87 @@
 										"sourceStart": 154,
 										"sourceEnd": 178
 									},
-									"Code Block": [
-										{
-											"position": {
-												"sourceStart": 158,
-												"sourceEnd": 163
-											},
-											"Expr Stmt": {
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 154,
+											"sourceEnd": 178
+										},
+										"Code Block": [
+											{
 												"position": {
 													"sourceStart": 158,
-													"sourceEnd": 162
+													"sourceEnd": 163
 												},
-												"Top Level Expression": {
-													"expr": {
-														"position": {
-															"sourceStart": 158,
-															"sourceEnd": 162
-														},
-														"Assignment Expr": {
-															"assigned variables": {
-																"position": {
-																	"sourceStart": 158,
-																	"sourceEnd": 158
-																},
-																"Identifier Expression": {
-																	"name": {
-																		"Name": "x"
-																	}
-																}
-															},
-															"assignment type": "=",
-															"assigned value": {
-																"position": {
-																	"sourceStart": 162,
-																	"sourceEnd": 162
-																},
-																"Identifier Expression": {
-																	"name": {
-																		"Name": "z"
-																	}
-																}
-															}
-														}
-													}
-												}
-											}
-										},
-										{
-											"position": {
-												"sourceStart": 167,
-												"sourceEnd": 175
-											},
-											"Action": {
-												"kind": "Return",
-												"value": {
+												"Expr Stmt": {
 													"position": {
-														"sourceStart": 174,
-														"sourceEnd": 174
+														"sourceStart": 158,
+														"sourceEnd": 162
 													},
 													"Top Level Expression": {
 														"expr": {
 															"position": {
-																"sourceStart": 174,
-																"sourceEnd": 174
+																"sourceStart": 158,
+																"sourceEnd": 162
 															},
-															"Identifier Expression": {
-																"name": {
-																	"Name": "y"
+															"Assignment Expr": {
+																"assigned variables": {
+																	"position": {
+																		"sourceStart": 158,
+																		"sourceEnd": 158
+																	},
+																	"Identifier Expression": {
+																		"name": {
+																			"Name": "x"
+																		}
+																	}
+																},
+																"assignment type": "=",
+																"assigned value": {
+																	"position": {
+																		"sourceStart": 162,
+																		"sourceEnd": 162
+																	},
+																	"Identifier Expression": {
+																		"name": {
+																			"Name": "z"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											},
+											{
+												"position": {
+													"sourceStart": 167,
+													"sourceEnd": 175
+												},
+												"Action": {
+													"kind": "Return",
+													"value": {
+														"position": {
+															"sourceStart": 174,
+															"sourceEnd": 174
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 174,
+																	"sourceEnd": 174
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "y"
+																	}
 																}
 															}
 														}
 													}
 												}
 											}
-										},
-									]
+										]
+									}
 								}
 							}
 						},
@@ -498,7 +510,7 @@
 												},
 												{
 													"Name": "math"
-												},
+												}
 											]
 										}
 									}
@@ -511,7 +523,7 @@
 								"sourceEnd": 373
 							},
 							"specifiers": [
-								"public",
+								"public"
 							],
 							"Access specification block": {
 								"specifier": "public",
@@ -527,7 +539,7 @@
 												"sourceEnd": 235
 											},
 											"specifiers": [
-												"public",
+												"public"
 											],
 											"Non Class Statement": {
 												"internal stmt": {
@@ -553,7 +565,7 @@
 																	},
 																	{
 																		"Name": "sqrt"
-																	},
+																	}
 																]
 															}
 														}
@@ -567,7 +579,7 @@
 												"sourceEnd": 282
 											},
 											"specifiers": [
-												"public",
+												"public"
 											],
 											"Class Constructor": {
 												"name": "create",
@@ -606,7 +618,7 @@
 																	}
 																}
 															}
-														},
+														}
 													]
 												},
 												"inits": {
@@ -679,7 +691,7 @@
 																										}
 																									}
 																								}
-																							},
+																							}
 																						]
 																					}
 																				}
@@ -688,7 +700,7 @@
 																	}
 																}
 															}
-														},
+														}
 													]
 												},
 												"body": {
@@ -741,7 +753,7 @@
 																	}
 																}
 															}
-														},
+														}
 													]
 												}
 											}
@@ -752,7 +764,7 @@
 												"sourceEnd": 316
 											},
 											"specifiers": [
-												"public",
+												"public"
 											],
 											"Copy Constructor": {
 												"name": "copy",
@@ -769,51 +781,57 @@
 														"sourceStart": 301,
 														"sourceEnd": 316
 													},
-													"Code Block": [
-														{
-															"position": {
-																"sourceStart": 306,
-																"sourceEnd": 312
-															},
-															"Expr Stmt": {
+													"Code Block or Statement": {
+														"position": {
+															"sourceStart": 301,
+															"sourceEnd": 316
+														},
+														"Code Block": [
+															{
 																"position": {
 																	"sourceStart": 306,
-																	"sourceEnd": 311
+																	"sourceEnd": 312
 																},
-																"Top Level Expression": {
-																	"expr": {
-																		"position": {
-																			"sourceStart": 306,
-																			"sourceEnd": 311
-																		},
-																		"Assignment Expr": {
-																			"assigned variables": {
-																				"position": {
-																					"sourceStart": 306,
-																					"sourceEnd": 306
-																				},
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "x"
-																					}
-																				}
+																"Expr Stmt": {
+																	"position": {
+																		"sourceStart": 306,
+																		"sourceEnd": 311
+																	},
+																	"Top Level Expression": {
+																		"expr": {
+																			"position": {
+																				"sourceStart": 306,
+																				"sourceEnd": 311
 																			},
-																			"assignment type": "=",
-																			"assigned value": {
-																				"position": {
-																					"sourceStart": 310,
-																					"sourceEnd": 311
+																			"Assignment Expr": {
+																				"assigned variables": {
+																					"position": {
+																						"sourceStart": 306,
+																						"sourceEnd": 306
+																					},
+																					"Identifier Expression": {
+																						"name": {
+																							"Name": "x"
+																						}
+																					}
 																				},
-																				"Value Expr": {
-																					"number": "81"
+																				"assignment type": "=",
+																				"assigned value": {
+																					"position": {
+																						"sourceStart": 310,
+																						"sourceEnd": 311
+																					},
+																					"Value Expr": {
+																						"number": "81"
+																					}
 																				}
 																			}
 																		}
 																	}
 																}
 															}
-														},
-													]
+														]
+													}
 												}
 											}
 										},
@@ -823,7 +841,7 @@
 												"sourceEnd": 348
 											},
 											"specifiers": [
-												"public",
+												"public"
 											],
 											"Class Constructor": {
 												"name": "abc",
@@ -883,7 +901,7 @@
 																	}
 																}
 															}
-														},
+														}
 													]
 												}
 											}
@@ -894,7 +912,7 @@
 												"sourceEnd": 370
 											},
 											"specifiers": [
-												"public",
+												"public"
 											],
 											"Class Destructor": {
 												"body": {
@@ -905,14 +923,14 @@
 													"Code Block": []
 												}
 											}
-										},
+										}
 									]
 								}
 							}
-						},
+						}
 					]
 				}
 			}
-		},
+		}
 	]
 }

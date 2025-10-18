@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include "generated_symbol_data.hpp"
+
 #include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -88,4 +90,22 @@ namespace compiler::helios {
 	 * @brief Query stmt specifiers associated with given symbol in HELIOS
 	 */
 	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>);
+
+	namespace houtgen {
+		struct KeyFor_QueryGeneratedSymbol {
+			base::StrID         name;
+			GeneratedSymbolData generated_symbol_data;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * @brief Query a compiler-generated symbol ID, given its identifying parameters.
+		 *
+		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
+		 * SymIDs are returned for the same parameters.
+		 */
+		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID);
+	}
 }

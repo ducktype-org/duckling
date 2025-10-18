@@ -187,9 +187,10 @@ clah::Clah getClahForMain() {
 							   // @TODO: error handling
 							   using namespace compiler;
 							   auto root = frontend::createModuleTree(path_to_compile);
-							   auto top_level
-								   = query::entryPoint<helios::QueryTopLevelEntities>(root);
-							   std::cout << top_level->debugPrint();
+							   auto hout_units
+								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+							   for (const auto& hout_unit: hout_units)
+								   std::cout << hout_unit.debugPrint();
 
 							   return exit_code;
 						   }))

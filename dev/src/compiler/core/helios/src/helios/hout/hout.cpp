@@ -22,7 +22,7 @@ namespace compiler::helios {
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& constt: glob_data) out += constt.debugPrint();
+		for (auto& const_gd: glob_data) out += const_gd.debugPrint();
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
@@ -34,14 +34,15 @@ namespace compiler::helios {
 	}
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
-		SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+		const SymID symbol, const tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  return_type(ret_type),
 		  parameters(std::move(parameters)) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
+				or kind(symbol) == SymbolKind::BuiltinFunction,
 			"Symbol is not a function or function declaration"
 		);
 	}
@@ -53,8 +54,8 @@ namespace compiler::helios {
 	std::string HOUTFunctionDeclaration::debugPrint() const {
 		std::stringstream out;
 		out << "fun ";
-		out << original_name.strView() << " : ";
-		out << "Return type: ";
+		out << original_name.strView() << " (" << original_symbol.queryUnstablePerfectHash() << ")";
+		out << " : " << "Return type: ";
 		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
 		if (parameters.empty()) out << "  none\n";
@@ -97,6 +98,7 @@ namespace compiler::helios {
 					<< '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
+				out << "var " << original_name.strView() << " : " << type.toString() << " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}
@@ -104,7 +106,9 @@ namespace compiler::helios {
 		return out.str();
 	}
 
-	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type):
+	HOUTGlobalData::HOUTGlobalData(
+		const SymID symbol, query::Context& ctx, const HOUTGlobalDataType data_type
+	):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
 		  data_type(data_type),
@@ -119,17 +123,20 @@ namespace compiler::helios {
 				                                               .value()
 				                                               .unlock(ctx)
 				                                               ->getExpr())
-				                    .expect("Handling errors in HOUT is not supported yet"))
+				                    .expect(
+										"Handling errors in HOUT is not supported yet 2 — "
+										+ name(symbol).str()
+									))
 				  ) };
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
-					  "Handling errors in HOUT is not supported yet"
+					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-			  "Handling errors in HOUT is not supported yet"
+			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
 		  )) {}
 }

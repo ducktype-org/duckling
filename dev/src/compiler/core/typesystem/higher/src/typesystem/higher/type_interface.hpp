@@ -17,7 +17,7 @@
 #include <base/misc/optional.hpp>
 #include <base/str/string_id.hpp>
 
-#include <set>
+#include <ranges>
 #include <string>
 #include <variant>
 
@@ -56,12 +56,10 @@ namespace tsh {
 		 */
 		AbstractType source;
 
-		// @TODO: Add declaration order in source.
-		// That is: Add information which describes the index of a field / method in
-		// the declaration source code of a class / scope. The first declared field would
-		// have index 0, the next one would have 1, etc.
-		// This could be useful later on when addressing fields by index and when forming
-		// packing strategies which the user can influence with the order of declarations.
+		/**
+		 * The index of a field / method in the declaration source code of a class / scope.
+		 */
+		u32 declaration_order;
 
 		/**
 		 * @brief The input parameters of this element of the interface.
@@ -91,6 +89,7 @@ namespace tsh {
 		 * @brief Construct an element of an interface of a type.
 		 * @param symbol The symbol of this element.
 		 * @param parameters The parameters of this element.
+		 * @param declaration_order The index of this element in the declaration source code.
 		 * @param result_type The result type of this element.
 		 * @param source The source of this element, i.e. the class which declares it.
 		 * @param visibility The visibility level of this element.
@@ -98,12 +97,14 @@ namespace tsh {
 		explicit InterfaceElement(
 			const compiler::helios::SymID          symbol,
 			const AbstractType                     source,
+			const u32                              declaration_order,
 			base::Optional<std::vector<Parameter>> parameters,
 			const SymbolType<>                     result_type,
 			const Visibility                       visibility
 		):
 			  symbol(symbol),
 			  source(source),
+			  declaration_order(declaration_order),
 			  parameters(std::move(parameters)),
 			  result_type(result_type),
 			  visibility(visibility) {}
@@ -159,10 +160,10 @@ namespace tsh {
 		 * @return The parameter types of this element.
 		 */
 		[[nodiscard]]
-		base::Optional<base::CRef<std::vector<Parameter>>> getParameters() const {
+		base::Optional<CRef<std::vector<Parameter>>> getParameters() const {
 			return parameters.has_value()
-			         ? base::Optional<base::CRef<std::vector<Parameter>>>(&parameters.value())
-			         : base::Optional<base::CRef<std::vector<Parameter>>>();
+			         ? base::Optional<CRef<std::vector<Parameter>>>(&parameters.value())
+			         : base::Optional<CRef<std::vector<Parameter>>>();
 		}
 
 		/**
@@ -221,7 +222,13 @@ namespace tsh {
 		/**
 		 * @brief The collection of elements of the interface of a type.
 		 */
-		const base::Map<base::StrID, std::set<InterfaceElement>> elements{};
+		std::vector<InterfaceElement> elements;
+
+		/**
+		 * @brief The collection of elements of the interface, grouped by name.
+		 * @note This is duplicated from `elements` for performance reasons.
+		 */
+		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
 
 	public:
 		TypeInterface() = default;
@@ -230,16 +237,19 @@ namespace tsh {
 		 * @brief Construct the interface of a type from the elements of that interface.
 		 * @param elements The elements of the interface.
 		 */
-		explicit TypeInterface(const std::set<InterfaceElement>& elements);
+		explicit TypeInterface(const std::vector<InterfaceElement>& elements);
+
+		[[nodiscard]]
+		const std::vector<InterfaceElement>& getElements() const {
+			return elements;
+		}
 
 		/**
 		 * @brief Gets all the elements of an interface, grouped by name.
 		 * @return The elements of an interface, grouped by name.
 		 */
 		[[nodiscard]]
-		const base::Map<base::StrID, std::set<InterfaceElement>>& getElements() const {
-			return elements;
-		}
+		const base::Map<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
 
 		/**
 		 * @brief Gets all the elements of an interface with a given name.
@@ -247,10 +257,26 @@ namespace tsh {
 		 * @return The elements of an interface with the requested name.
 		 */
 		[[nodiscard]]
-		const std::set<InterfaceElement>& getElements(const base::StrID name) const {
-			static std::set<InterfaceElement> empty_set{};
-			if (!elements.contains(name)) return empty_set;
-			return elements.at(name);
+		const std::vector<InterfaceElement>& getElementsWithName(base::StrID name) const;
+
+		/**
+		 * @brief Gets a view of all the fields of this interface.
+		 * @return A view of all the fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isField(); });
+		}
+
+		/**
+		 * @brief Gets a view of all the methods of this interface.
+		 * @return A view of all the methods of this interface.
+		 */
+		[[nodiscard]]
+		auto getMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
 		}
 
 		/*-------------------------*\
@@ -274,7 +300,7 @@ namespace tsh {
 			/**
 			 * @brief Elements with the requested name.
 			 */
-			std::set<InterfaceElement> non_matches;
+			std::vector<InterfaceElement> non_matches;
 		};
 
 		/**
@@ -289,12 +315,12 @@ namespace tsh {
 			/**
 			 * @brief Other members of the same name which matched less accurately.
 			 */
-			std::set<InterfaceElement> alternative_matches;
+			std::vector<InterfaceElement> alternative_matches;
 
 			/**
 			 * @brief Elements with the requested name which did not match.
 			 */
-			std::set<InterfaceElement> non_matches;
+			std::vector<InterfaceElement> non_matches;
 		};
 
 		/**
@@ -309,17 +335,17 @@ namespace tsh {
 			/**
 			 * @brief The conflicting matches.
 			 */
-			std::set<InterfaceElement> conflicting_matches;
+			std::vector<InterfaceElement> conflicting_matches;
 
 			/**
 			 * @brief Other members of the same name which matched less accurately.
 			 */
-			std::set<InterfaceElement> alternative_matches;
+			std::vector<InterfaceElement> alternative_matches;
 
 			/**
 			 * @brief Elements with the requested name which did not match.
 			 */
-			std::set<InterfaceElement> non_matches;
+			std::vector<InterfaceElement> non_matches;
 		};
 
 		using ResolutionResult = std::variant<NoMatch, SingleMatch, AmbiguousMatch>;
@@ -333,7 +359,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrID name, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, query::Context& ctx) const;
 
 		/**
 		 * @brief Gets the elements which match a name and given arguments.
@@ -348,11 +374,11 @@ namespace tsh {
 		 * @return The elements which match the name.
 		 */
 		ResolutionResult resolve(
-			base::StrID                      name,
-			const std::vector<AbstractType>& positional_arg_types,
-			const std::set<NamedArgument>&   named_args,
-			query::Context&                  ctx
-		);
+			base::StrID                       name,
+			const std::vector<AbstractType>&  positional_arg_types,
+			const std::vector<NamedArgument>& named_args,
+			query::Context&                   ctx
+		) const;
 
 		/**
 		 * @brief Gets the elements which match a name and a single given argument.
@@ -366,11 +392,13 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(
+			base::StrID name, AbstractType single_arg_type, query::Context& ctx
+		) const;
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.
-		 * @param name The name of the requested member.
+		 * @param request_name The name of the requested member.
 		 * @param argument_info The arguments provided.
 		 * Empty optional if no arguments list was provided.
 		 * Optional with empty argument lists if an empty argument list was provided.
@@ -391,7 +419,7 @@ namespace tsh {
 		 * (notation simplified), and stringifies to `foo(i32, f32, print_result : bool)`.
 		 */
 		static std::string stringifyRequestSignature(
-			base::StrID name,
+			base::StrID request_name,
 			const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>&
 				argument_info
 		);
