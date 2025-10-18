@@ -24,8 +24,8 @@ macro_rules! delegate_styles {
             $name:ident => $value:literal $(+ $opt:ident )* $(,)?
         ),*
     ) => {
-    $(
-        item! {
+    item! {
+        $(
             pub fn $name(&self, text: impl ::std::fmt::Display) {
                 let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
                 self.print_nl_impl(full_text, false);
@@ -44,8 +44,8 @@ macro_rules! delegate_styles {
                 let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
                 self.print_impl(full_text, true);
             }
-        }
-    )*
+        )*
+    }
     };
 }
 
@@ -115,10 +115,10 @@ impl Terminal {
         self.print_impl(|| format!("{}", text), true);
     }
 
-    delegate_styles!(
+    delegate_styles! {
         error => "Error:" + red + bold,
         warning => "Warning:" + yellow + bold,
         info => "Info:" + cyan + bold,
         critical => "Critical:" + red + reverse + bold,
-    );
+    }
 }

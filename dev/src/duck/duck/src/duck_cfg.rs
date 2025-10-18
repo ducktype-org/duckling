@@ -1,36 +1,34 @@
-use std::collections::HashMap;
+use anyhow::Context;
+use quackpack::{QuackResult, paths::config_file, toml_config::TomlConfig};
+use rustvil::os::env::Env;
 
-use quackpack::QuackResult;
-
-#[derive(Debug)]
-struct TyposCfg {
-    fixes_enabled: bool,
-    max_fix_dist: u32,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DuckCfg {
-    aliases: HashMap<String, String>,
-    typos_cfg: TyposCfg,
+    inner: TomlConfig,
 }
 
 impl DuckCfg {
-    // TODO: This will likely change, when we'll start to parse real files.
-    pub fn new() -> QuackResult<DuckCfg> {
-        Ok(DuckCfg {
-            aliases: HashMap::new(),
-            typos_cfg: TyposCfg {
-                fixes_enabled: false,
-                max_fix_dist: 1,
-            },
+    pub fn new(env: &Env) -> QuackResult<DuckCfg> {
+        let Some(file) = config_file(env) else {
+            return Ok(DuckCfg::default());
+        };
+        Ok(Self {
+            inner: TomlConfig::new(file)?,
         })
     }
 
-    pub fn fixes_enabled(&self) -> bool {
-        self.typos_cfg.fixes_enabled
+    pub fn fixes_enabled(&self) -> QuackResult<bool> {
+        Ok(self
+            .inner
+            .get_bool("security.typos.enabled")?
+            .unwrap_or(false))
     }
 
-    pub fn max_fix_dist(&self) -> u32 {
-        self.typos_cfg.max_fix_dist
+    pub fn max_fix_dist(&self) -> QuackResult<u32> {
+        self.inner
+            .get_int("security.typos.max_distance")?
+            .unwrap_or(3)
+            .try_into()
+            .with_context(|| self.inner.make_location_error())
     }
 }

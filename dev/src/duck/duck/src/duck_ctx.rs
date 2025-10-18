@@ -14,11 +14,13 @@ pub struct DuckCtx {
 
 impl DuckCtx {
     pub fn new() -> QuackResult<Self> {
+        let env = Env::default();
+        let config = DuckCfg::new(&env)?;
         Ok(Self {
             console: Terminal::stdout(),
             error_console: Terminal::stderr(),
-            duck_cfg: DuckCfg::new()?,
-            env: Env::default(),
+            duck_cfg: config,
+            env,
         })
     }
 
@@ -58,11 +60,11 @@ impl DuckCtx {
         Ok(HashMap::new())
     }
 
-    pub fn typos_fixes_enabled(&self) -> bool {
+    pub fn typos_fixes_enabled(&self) -> QuackResult<bool> {
         self.duck_cfg.fixes_enabled()
     }
 
-    pub fn max_fix_dist(&self) -> u32 {
+    pub fn max_fix_dist(&self) -> QuackResult<u32> {
         self.duck_cfg.max_fix_dist()
     }
 }

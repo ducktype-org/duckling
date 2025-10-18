@@ -4,7 +4,7 @@ use clap_complete::Shell;
 use quackpack::QuackResult;
 
 use crate::DuckCtx;
-use crate::driver::cli_ext::{CommandExt, optional, subcommand};
+use crate::driver::cli_ext::{optional, subcommand};
 use clap::ArgMatches;
 
 pub fn get_parser() -> Command {

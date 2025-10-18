@@ -34,13 +34,13 @@ pub fn fix_typos(
         "Testing levenshtein of `{name}` against `{}`",
         targets.join(", ")
     );
-    let closest_targets = find_closest_targets(name, &targets, ctx);
+    let closest_targets = find_closest_targets(name, &targets, ctx.max_fix_dist()?);
 
     let Some((&first, rest)) = closest_targets.as_slice().split_first() else {
         return Ok(args);
     };
 
-    if ctx.typos_fixes_enabled() && rest.is_empty() {
+    if ctx.typos_fixes_enabled()? && rest.is_empty() {
         let new_args = fix(name, first, subcmd_args)?;
         Ok(new_args)
     } else {
@@ -71,12 +71,16 @@ fn possible_targets(
     Ok(targets)
 }
 
-fn find_closest_targets<'a>(bad_cmd: &str, targets: &'a [String], ctx: &DuckCtx) -> Vec<&'a str> {
+fn find_closest_targets<'a>(
+    bad_cmd: &str,
+    targets: &'a [String],
+    max_fix_dist: u32,
+) -> Vec<&'a str> {
     targets
         .iter()
         .filter_map(|target| {
             let distance = levenshtein::distance(target, bad_cmd);
-            if distance <= ctx.max_fix_dist() {
+            if distance <= max_fix_dist {
                 Some(target.as_str())
             } else {
                 None
