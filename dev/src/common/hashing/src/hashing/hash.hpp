@@ -6,7 +6,7 @@
 #include "type_hash_code.hpp"
 #include "type_unique_code.hpp"
 
-#include <base/type_traits.hpp>
+#include <base/comptime/type_traits.hpp>
 
 #include <type_traits>
 

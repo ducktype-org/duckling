@@ -58,12 +58,14 @@ namespace unicode {
 		 * @note This codepoint is in a private use plane(It's left empty by the Unicode standard)
 		 */
 		static icu::UnicodeSet   end_of_file;
-		static constexpr UChar32 end_of_file_value = 0x10'FF'FF;
+		static constexpr UChar32 END_OF_FILE_VALUE = 0x10'FF'FF;
 
-		inline static const std::array<icu::UnicodeSet*, 13> classes
+		// NOLINTBEGIN(cppcoreguidelines-interfaces-global-init)
+		inline static const std::array<icu::UnicodeSet*, 13> CLASSES
 			= { &name_start,   &name_continue, &operator_start, &operator_continue, &vertical_space,
 			    &newline,      &whitespace,    &format_control, &special,           &syntax,
 			    &open_bracket, &close_bracket, &end_of_file };
+		// NOLINTEND(cppcoreguidelines-interfaces-global-init)
 
 		/**
 		 * @brief Populates the data members of this class.

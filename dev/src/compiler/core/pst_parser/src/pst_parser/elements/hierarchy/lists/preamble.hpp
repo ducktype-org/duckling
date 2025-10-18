@@ -45,11 +45,16 @@ namespace pst {
 			out << "]";
 		}
 
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override {
+			addToHash(partial_hash, elements.size());
+			return partial_hash;
+		}
+
 		/**
 		 * @brief A default override for lists that adds the index.
 		 */
-		void calcElementPathsRecursive() override {
-			calcIndexedListChildPath<ListElements>({ elements }, getElementPath());
+		void calcElementPathHashRecursive() override {
+			calcIndexedListChildPath<ListElements>({ elements }, getElementPathHash());
 		}
 	};
 }

@@ -1,10 +1,7 @@
 #pragma once
 
-#include <base/box.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/maps.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/pointers/box.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>

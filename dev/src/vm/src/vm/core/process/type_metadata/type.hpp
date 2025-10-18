@@ -2,8 +2,8 @@
 
 #include "kinds.hpp"
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/optional.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
 
@@ -115,7 +115,7 @@ namespace vm {
 		}
 
 		template<class T>
-		base::Optional<base::CRef<T>> get() const {
+		base::Optional<CRef<T>> get() const {
 			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
 			return {};
 		}
@@ -136,9 +136,26 @@ namespace vm {
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
+		/**
+		 * @brief Find what type is located at offset.
+		 * Useful when we have a pointer and we want to know what type it points to.
+		 * @note It cannot be used to locate certain types, e.g. fixed_size_table, dynamic_table,
+		 * data types, as it always steps into those types recursively.
+		 * @note Offset has to precisely match the nested type's position at the end of the
+		 * recursion.
+		 * @TODO: #1369 Remove this method
+		 */
+		base::Optional<TypeCRef> getNonCompoundTypeAtOffsetRecursive(Offset offset) const;
+
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+		[[nodiscard]]
+		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
+
+		// variant
+		base::Optional<usize>                 getTypeTagSizeBytes() const;
+		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
 
 		// inheritance
 		[[nodiscard]]

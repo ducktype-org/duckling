@@ -1,11 +1,8 @@
 #include "lookup_result.hpp"
 
 #include <helios/helios_errors.hpp>
-#include <helios_private/symbols/symbols.hpp>
 
-#include <base/exceptions.hpp>
-
-#include <query_framework/context.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
 

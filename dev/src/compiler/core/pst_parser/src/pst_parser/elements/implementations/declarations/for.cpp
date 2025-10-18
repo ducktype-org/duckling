@@ -80,5 +80,11 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, optional_name);
+		addToHash(partial_hash, iterator);
+		return partial_hash;
+	}
+
 	void For::acceptVisitor(PstVisitor& visitor) const { visitor.visitFor(*this); }
 }

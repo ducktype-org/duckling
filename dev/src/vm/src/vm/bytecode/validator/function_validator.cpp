@@ -2,11 +2,11 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/ref.hpp>
-#include <base/type_traits.hpp>
-#include <base/variant.hpp>
+#include <base/comptime/type_traits.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -569,6 +569,7 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_g8) {}
 			variant_case_novalue(Op_mov_lptr_gptr) {}
 			variant_case_novalue(Op_mov_lptr_lptr) {}
+			variant_case_novalue(Op_setNull_lptr) {}
 			variant_case_novalue(Op_add_l64_l64) {}
 			variant_case_novalue(Op_add_l64_imm) {}
 			variant_case_novalue(Op_add_l32_l32) {}

@@ -2,9 +2,9 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
@@ -222,19 +222,19 @@ namespace vm::loader::parser {
 
 #define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
 
-#define HANDLE_OPCODE_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
+#define HANDLE_INSTR_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 		};
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 #undef MAKE_LINK
 	}
 

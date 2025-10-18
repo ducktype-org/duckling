@@ -5,8 +5,8 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -62,6 +62,10 @@ namespace compiler::mir {
 
 		ExprLowerRes lowerSubExpr(const hc::Expr& expr, BlockBuilderRef continuation) {
 			return lowerExpr(expr, continuation, function, expr_scope);
+		}
+
+		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
+			valueOutput(continuation, MIRValue{ MirUnitConst{} });
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {

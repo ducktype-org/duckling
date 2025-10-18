@@ -118,7 +118,6 @@ def todo_validate_impl(
     files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
         only_modified=not all, lines=True, branch=branch, no_merge_base=no_merge_base
     ) # type: ignore
-    print(files_and_lines)
 
     # Pop the current file, so that the verification can pass
     for file in list(files_and_lines.keys()):

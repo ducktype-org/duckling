@@ -2,7 +2,6 @@
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
-#include <lexer/decode.hpp>
 #include <token_source/source.hpp>
 
 int main(int argc, char** argv) {

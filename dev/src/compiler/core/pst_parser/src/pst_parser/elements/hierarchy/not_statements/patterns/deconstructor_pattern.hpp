@@ -10,6 +10,9 @@ namespace pst {
 		tpc::Identifier deconstructor_name;
 		NAMED_CHILD(arguments, FlowPatternList);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		explicit DeconstructorPattern(const dia::SourcePosition& position):
 			  AnalysisPattern(position) {

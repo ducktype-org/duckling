@@ -115,9 +115,16 @@ namespace pst {
 		return out;
 	}
 
-	void Stmt::calcElementPathsRecursive() {
-		auto        path       = getElementPath();
-		ElementPath attrs_path = { path, "attributes" };
+	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, attributes.size());
+		// note: Value of Kind should be strictly implied by elementType, that is added to hash for
+		// each element
+		return partial_hash;
+	}
+
+	void Stmt::calcElementPathHashRecursive() {
+		auto          path       = getElementPathHash();
+		ComponentHash attrs_path = { path, "attributes" };
 		calcIndexedListChildPath<Attribute>({ attributes }, attrs_path);
 		for (auto& el: sub_elements) {
 			variant_match(el) {
@@ -130,8 +137,8 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ElementPath child_path(path, named_child.name);
-					named_child.element->calcElementPaths(child_path);
+					ComponentHash child_path(path, named_child.name);
+					named_child.element->calcElementPathHash(child_path);
 				}
 			}
 		}

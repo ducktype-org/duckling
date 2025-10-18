@@ -5,7 +5,7 @@
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -106,7 +106,7 @@ namespace pst {
 
 		void dprintPrefix(std::ostream& out) const override;
 
-		void calcElementPathsRecursive() override;
+		void calcElementPathHashRecursive() override;
 
 	public:
 		[[nodiscard]]
@@ -117,6 +117,8 @@ namespace pst {
 		static MBox<Stmt> parse(LangParserState& state);
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
+
+		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 		/**
 		 * @note This might need to return a vector of borrow pointers instead
@@ -211,6 +213,9 @@ namespace pst {
 
 	private:
 		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
+
+	protected:
+		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:
 		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);

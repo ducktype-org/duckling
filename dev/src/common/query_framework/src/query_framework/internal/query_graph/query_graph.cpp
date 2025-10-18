@@ -1,14 +1,12 @@
 #include "query_graph.hpp"
 
-#include "../query_data/query_id.hpp"
 #include "node_id.hpp"
 
-#include <base/bit256.hpp>
-#include <base/ints.hpp>  // IWYU pragma: export
+#include <base/types/bit256.hpp>
+#include <base/types/ints.hpp>  // IWYU pragma: export
 
 #include <cstring>
 #include <iomanip>
-#include <iostream>
 #include <ostream>
 #include <queue>
 #include <ranges>
@@ -198,7 +196,7 @@ namespace query::internal {
 			HVType hash;
 			read(hash);
 
-			return NodeID{ .q_id = QueryID(q_id), .hash = { HType(hash) } };
+			return NodeID(QueryID(q_id), { HType(hash) });
 		};
 
 		// Deserialize the size of the node_deps map

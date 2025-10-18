@@ -12,7 +12,7 @@
 #include "expression_type.hpp"
 #include "internal/abstract_type_impl.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <concepts>
 #include <sstream>
@@ -155,10 +155,14 @@ namespace tsh {
 			std::stringstream ss;
 			const Kind        original_kind = p->getKind();
 			const Kind        target_kind   = TYPE_AbstractType::Impl::STATIC_KIND;
-			ss << "Type cast between TypeAbstractType kinds failed. A cast from "
-			   << base::enumToStr(original_kind).str() << " to "
-			   << base::enumToStr(target_kind).str() << " was attempted.";
-			throw base::LogicError{ ss.str() };
+			CORE_PANIC(
+				"Type cast between TypeAbstractType kinds failed. ",
+				"A cast from ",
+				base::enumToStr(original_kind).str(),
+				" to ",
+				base::enumToStr(target_kind).str(),
+				" was attempted."
+			);
 		}
 		return result;
 	}

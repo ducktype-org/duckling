@@ -11,6 +11,7 @@ env:
 
 jobs:
   determine-runners:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
     with:
       self-hosted-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
@@ -56,6 +57,7 @@ jobs:
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
           database: 'dev'
+          ignore: '**/*.c'
 
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.

@@ -1,6 +1,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 

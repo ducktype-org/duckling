@@ -2,7 +2,7 @@
 
 #include "elements.hpp"
 
-#include <base/visitor.hpp>
+#include <base/extend_cpp/visitor.hpp>
 
 namespace compiler::helios::code {
 	MAKE_VISITOR(HoutStmt,
@@ -15,6 +15,7 @@ namespace compiler::helios::code {
 		AssignmentStmt
 	);
 	MAKE_VISITOR(HoutExpr,
+		LiteralUnitExpr,
 		LiteralIntExpr,
 		LiteralBoolExpr,
 		LiteralStringExpr,

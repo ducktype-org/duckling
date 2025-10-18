@@ -31,7 +31,7 @@
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 #include <query_framework/query_int.hpp>
 

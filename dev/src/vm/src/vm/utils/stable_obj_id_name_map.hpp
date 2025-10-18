@@ -1,9 +1,9 @@
 #pragma once
 
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/ref.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/maps.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/str/string_id.hpp>
+#include <base/types/ints.hpp>
 
 #include <deque>
 #include <ranges>

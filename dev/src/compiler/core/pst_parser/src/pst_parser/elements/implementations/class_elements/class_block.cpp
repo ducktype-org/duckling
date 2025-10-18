@@ -47,23 +47,23 @@ namespace pst {
 		}
 	}
 
-	void ClassBlock::calcElementPathsRecursive() {
-		auto                          path            = getElementPath();
-		auto                          no_symbol_path  = ElementPath(path, "no_symbol");
+	void ClassBlock::calcElementPathHashRecursive() {
+		auto                          path            = getElementPathHash();
+		auto                          no_symbol_path  = ComponentHash(path, "no_symbol");
 		usize                         no_symbol_count = 0;
-		auto                          by_symbol_path  = ElementPath(path, "by_symbol");
+		auto                          by_symbol_path  = ComponentHash(path, "by_symbol");
 		base::Map<base::StrID, usize> by_symbol_count;
 		usize                         symbol_count      = 0;
-		auto                          transparent_path  = ElementPath(path, "transparent");
+		auto                          transparent_path  = ComponentHash(path, "transparent");
 		usize                         transparent_count = 0;
 
-		ElementPath id_path = no_symbol_path;
+		ComponentHash id_path = no_symbol_path;
 
 		for (auto& stmt: statements) {
 			base::StrID symbol;
 			switch (stmt.internal()->isDeclaration()) {
 			case DeclKind::None:
-				id_path = ElementPath(no_symbol_path, std::format("[{}]", no_symbol_count));
+				id_path = ComponentHash(no_symbol_path, std::format("[{}]", no_symbol_count));
 				calcChildPath(stmt, id_path);
 				no_symbol_count++;
 				break;
@@ -75,13 +75,14 @@ namespace pst {
 					by_symbol_count.put(symbol);
 					symbol_count = 0;
 				}
-				id_path
-					= ElementPath(by_symbol_path, std::format("{}[{}]", symbol.str(), symbol_count));
+				id_path = ComponentHash(
+					by_symbol_path, std::format("{}[{}]", symbol.str(), symbol_count)
+				);
 				calcChildPath(stmt, id_path);
 				by_symbol_count[symbol]++;
 				break;
 			case DeclKind::Transparent:
-				id_path = ElementPath(transparent_path, std::format("[{}]", transparent_count));
+				id_path = ComponentHash(transparent_path, std::format("[{}]", transparent_count));
 				calcChildPath(stmt, id_path);
 				transparent_count++;
 				break;
@@ -96,5 +97,17 @@ namespace pst {
 			out << ", ";
 		}
 		out << "]";
+	}
+
+	LangElement::HashAlg& ClassBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, statements.size());
+		addToHash(partial_hash, no_symbol.size());
+		addToHash(partial_hash, transparent.size());
+		std::vector<std::pair<std::string, usize>> symbols_available_data;
+		for (auto& [name, vec]: by_symbol)
+			symbols_available_data.emplace_back(name.strView(), vec.size());
+		std::ranges::sort(symbols_available_data);
+		addToHash(partial_hash, symbols_available_data);
+		return partial_hash;
 	}
 }

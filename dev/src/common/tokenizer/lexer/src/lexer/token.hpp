@@ -5,17 +5,13 @@
 
 #pragma once
 
-#include "char.hpp"
 #include "token_common.hpp"
 
-#include <base/raw_view.hpp>
-#include <base/string_id.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <filesystem/file.hpp>
-#include <lang_definitions/key_spec_op.hpp>
 
-#include <string>
 #include <vector>
 
 namespace lexer {
@@ -103,7 +99,7 @@ namespace lexer {
 			const dia::SourcePosition& position,
 			BracketType                bracket
 		);
-		friend void swap(Token& first, Token& second);
+		friend void swap(Token& first, Token& second) noexcept;
 		Token&      operator=(Token&& other) noexcept;
 
 		[[nodiscard]]

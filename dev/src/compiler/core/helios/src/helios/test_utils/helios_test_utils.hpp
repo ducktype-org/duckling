@@ -4,8 +4,10 @@
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
+#include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -48,12 +50,16 @@ namespace compiler::helios::test_utils {
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
-		if constexpr (std::is_same_v<T, i64>)
+		if constexpr (std::is_same_v<T, CompileTimeValue::UnitCTV>)
+			maybe_value = ctv_result.asUnit();
+		else if constexpr (std::is_same_v<T, i64>)
 			maybe_value = ctv_result.asI64();
 		else if constexpr (std::is_same_v<T, bool>)
 			maybe_value = ctv_result.asBool();
 		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
-			maybe_value = ctv_result.asType();
+			query::utils::withContextDo([&](query::Context& ctx) {
+				maybe_value = ctv_result.asType(ctx);
+			});
 		else
 			static_assert(false, "Unsupported type for getConstValueAs");
 

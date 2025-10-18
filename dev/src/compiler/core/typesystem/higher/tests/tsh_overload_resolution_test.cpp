@@ -2,9 +2,9 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <typesystem/higher/all.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context_fd.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -32,18 +32,18 @@ private:
 
 
 		withContextDo([&](query::Context& ctx) {
-			TypeInterface my_class_interface = my_class_type.getInterface(ctx);
+			const TypeInterface& my_class_interface = my_class_type.getInterface(ctx);
 
 			assertTrue(
-				my_class_interface.getElements(base::StrID("a")).size() == 1,
+				my_class_interface.getElementsWithName(base::StrID("a")).size() == 1,
 				"There should be exactly one 'a' member."
 			);
 			assertTrue(
-				my_class_interface.getElements(base::StrID("b")).size() == 1,
+				my_class_interface.getElementsWithName(base::StrID("b")).size() == 1,
 				"There should be exactly one 'b' member."
 			);
 			assertTrue(
-				my_class_interface.getElements(base::StrID("c")).empty(),
+				my_class_interface.getElementsWithName(base::StrID("c")).empty(),
 				"There should be exactly no 'c' members."
 			);
 

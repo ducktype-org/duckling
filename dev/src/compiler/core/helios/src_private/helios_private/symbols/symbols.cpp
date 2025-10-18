@@ -1,7 +1,6 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios/ctv/ctv.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
@@ -16,12 +15,11 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -92,6 +90,7 @@ namespace compiler::helios {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
+			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -201,7 +200,7 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
 					.name = function->getName(),
-					.kind = SymbolKind::Function,
+					.kind = SymbolKind::FunctionDeclaration,
 				},
 				pst_data
 			));
@@ -635,7 +634,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
-		// @TODO do not unlock whole elements, checking the type of the parent would be enough #1321
+		// @TODO: #1321 do not unlock whole elements, checking the type of the parent would be enough
 
 		/**
 		 * @brief Check if the ancestors of PST element `el` match the provided kinds in order,
@@ -674,6 +673,11 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
 
+			if (kind(key) == SymbolKind::BuiltinFunction) {
+				// Builtin functions have no specifiers
+				return {};
+			}
+
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
 			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
@@ -711,4 +715,24 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
+
+	namespace houtgen {
+		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
+			);
+		}
+
+		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymID) {
+			static auto provide(Context&, QKey key) -> PResult {
+				return GetSymRef_Functor::make(putInSymtable(
+					SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data)
+				));
+			}
+
+			QUERY_AUTO_CACHE_COPY
+		};
+
+		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
+	}
 }

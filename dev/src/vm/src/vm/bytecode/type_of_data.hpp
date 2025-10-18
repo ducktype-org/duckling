@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
 
@@ -113,7 +113,6 @@ namespace vm::code {
 
 	/**
 	 * @brief Represents a variant of types.
-	 * @note This is a partial feature, as there are no bytecode instructions regarding variants.
 	 */
 	struct VariantType final: ElementBase {
 		VariantType() = default;

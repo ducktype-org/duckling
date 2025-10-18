@@ -2,12 +2,16 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/hout.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/actions/return.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -17,11 +21,10 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/stable_hashmap.hpp>
+#include <base/except/exceptions.hpp>
 
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
@@ -42,10 +45,39 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)
-						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+						out.functions.push_back(ctx.query<QueryCodeOfFun>(sym));
+					if (kind(sym) == SymbolKind::Class)
+						appendClassConstructors(out.functions, sym, ctx);
 				}
 			}
 			return out;
+		}
+
+		/**
+		 * Append the constructors of a class to the provided vector of functions.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param class_sym The symbol of the class, whose constructors are to be appended.
+		 * @param ctx The query context.
+		 */
+		static void appendClassConstructors(
+			std::vector<HOUTFunction>& out_functions, const SymID class_sym, Context& ctx
+		) {
+			CORE_ASSERT(
+				kind(class_sym) == SymbolKind::Class,
+				"Invalid argument exception: expected class symbol"
+			);
+
+			// For now, we handle only the class's primary constructor.
+			// @TODO: #1290 Handle auxiliary constructors.
+
+			const auto class_type
+				= ctx.query<QueryTypeFromDefinition>(class_sym)
+			          ->expect("Not handling errors here yet... (generating class constructor)")
+			          .getType()
+			          .as<tsh::ClassAbstractType>();
+			const auto implicit_ctor
+				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type);
+			out_functions.push_back(*implicit_ctor);
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -91,7 +123,7 @@ namespace compiler::helios {
 					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
-					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+					out.functions.push_back(ctx.query<QueryCodeOfFun>(sym));
 			}
 
 			return out;
@@ -113,14 +145,10 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
-			// @TODO: make failure more explicit
-			void visitFun(pst::Access<pst::Fun> stmt) final {
-				// @TODO: rest, flags, attributes, etc
-
-
-				// Return type:
-				auto ret = stmt->getRet();
-
+			void emplaceDeclaration(
+				pst::AccessLocked<pst::ParamList>                  param_list,
+				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
+			) {
 				// Default return type is a direct unit.
 				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
@@ -131,7 +159,7 @@ namespace compiler::helios {
 				if (ret.has_value()) {
 					if (auto ctv
 					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType())
+						if (auto maybe_type = ctv.value().asType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;
@@ -143,7 +171,7 @@ namespace compiler::helios {
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *stmt->getParams().unlock(ctx)) {
+				for (auto param: *param_list.unlock(ctx)) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
 					auto param_name   = name(param_symbol);
 					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
@@ -178,37 +206,171 @@ namespace compiler::helios {
 					}
 				}
 
-				HOUTFunctionDeclaration output(
-					original_symbol,
-					ret_type,
-					std::make_shared<std::vector<code::Parameter>>(std::move(parameters))
-				);
+				HOUTFunctionDeclaration output(original_symbol, ret_type, std::move(parameters));
 
 				this->out.emplace(std::move(output));
 			}
+
+			// @TODO: #1029 make failure more explicit
+			void visitFun(pst::Access<pst::Fun> stmt) final {
+				// @TODO: #1029 rest, flags, attributes, etc
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+			}
+
+			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+			}
 		};
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static PResult getImplicitCtorDecl(
+			Context& ctx, const houtgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
+		) {
+			// Preamble
+			using GeneratedSymbolData = houtgen::GeneratedSymbolData;
+			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
+			using Parameter           = GeneratedSymbolData::Parameter;
+			using std::ranges::to;
+			using std::views::transform;
+
+			// Get class data
+			const auto class_type = ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
+			                            ->expect(
+											"Not handling errors here yet... (getting "
+											"declaration of generated constructor symbol)"
+										)
+			                            .getType()
+			                            .as<tsh::ClassAbstractType>();
+			const SymID                              class_symbol    = class_type.getSymbol();
+			const tsh::TypeInterface&                class_interface = class_type.getInterface(ctx);
+			const std::vector<tsh::InterfaceElement> fields
+				= class_interface.getFieldsView() | to<std::vector>();
+			const u64 num_fields = fields.size();
+
+			// Prepare the necessary symbols (of the constructor and its parameters).
+			const SymID ctor_symbol        = ctx.query<houtgen::QueryGeneratedSymbol>({
+					   .name                  = name(class_type.getSymbol()),
+					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
+            });
+			const auto  result_symbol_type = tsh::SymbolType<>{
+                class_type,
+                tsh::ReferenceKind::Direct,
+                tsh::Mutability::Mutable,
+			};
+
+			std::vector<code::Parameter> parameters;
+			parameters.reserve(num_fields);
+
+			u64 argument_index = 0;
+			for (const auto& field: fields) {
+				const SymID argument_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+					.name = base::StrID(name(field.getSymbol())),
+					.generated_symbol_data
+					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
+				});
+				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
+				// in class constructors.
+				parameters.emplace_back(
+					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
+				);
+				argument_index++;
+			}
+
+			// Check that this logic did not diverge from `GeneratedSymbolData::getType()`.
+			const auto expected_function_type = ctx.query<QueryTypeOfSymbol>({ ctor_symbol })
+			                                        ->value()
+			                                        .getType()
+			                                        .as<tsh::FunctionAbstractType>();
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function,
-				"Function declaration processing called on non-function symbol"
+				result_symbol_type == expected_function_type.getResultType(),
+				"Generated constructor return type mismatch"
 			);
+			for (u64 i = 0; i < num_fields; i++) {
+				CORE_ASSERT(
+					parameters[i].type == expected_function_type.getParameterTypes().at(i),
+					"Generated constructor parameter type mismatch"
+				);
+			}
 
-			DeclarationVisitor func_maker(ctx, key);
-			stmt(ctx, key).value()->acceptVisitor(func_maker);
-
-			return func_maker.out.value();
+			// Return the declaration.
+			return HOUTFunctionDeclaration{
+				ctor_symbol,
+				result_symbol_type,
+				std::move(parameters),
+			};
 		}
 
-		QUERY_AUTO_NO_CACHE  // @TODO #1300
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			switch (kind(key)) {
+			case SymbolKind::Function:
+			case SymbolKind::FunctionDeclaration: {
+				variant_match(getSymRef(key)->other) {
+					variant_case_novalue(PstSymbolData) {
+						DeclarationVisitor decl_maker(ctx, key);
+						stmt(ctx, key).value()->acceptVisitor(decl_maker);
+						return std::move(decl_maker.out).value();
+					}
+					variant_case(houtgen::GeneratedSymbolData, generated_data) {
+						variant_match(generated_data.data) {
+							variant_case(
+								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
+							) return getImplicitCtorDecl(ctx, ctor_data);
+							variant_default {
+								// Other generated symbols are not functions.
+								CORE_UNREACHABLE();
+							}
+						}
+					}
+					variant_default {
+						// Builtin symbols are handled below due to a different SymbolKind.
+						CORE_UNREACHABLE();
+					}
+				}
+				CORE_UNREACHABLE();
+			}
+			case SymbolKind::BuiltinFunction: {
+				const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
+				                              ->expect(
+												  "Not handling errors here yet... (getting "
+												  "declaration of builtin function)"
+											  )
+				                              .getType()
+				                              .as<tsh::FunctionAbstractType>();
+				const auto return_type = builtin_type.getResultType();
+				auto       parameters  = std::vector<code::Parameter>{};
+				for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
+					const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+						base::StrID(base::strConcat("_", i).c_str()),
+						houtgen::GeneratedSymbolData{
+							houtgen::GeneratedSymbolData::Parameter{
+								.function_symbol = key,
+								.parameter_index = i,
+							},
+						},
+					});
+					parameters.emplace_back(
+						name(param_symbol), param_type, std::nullopt, param_symbol
+					);
+				}
+				return HOUTFunctionDeclaration{
+					key,
+					return_type,
+					std::move(parameters),
+				};
+			}
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
 
-	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
+	struct IMPLEMENT_QUERY(QueryCodeOfFun, HOUTFunction) {
 		/**
-		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or pst::CodeBlockOrStmt
-		 * Might be changed into query in the future
+		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or
+		 * pst::CodeBlockOrStmt Might be changed into query in the future
 		 */
 		template<class Container>
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
@@ -526,5 +688,5 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOFFun);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOfFun);
 }

@@ -6,7 +6,6 @@
 #include "abstract_type.hpp"
 
 #include "internal/abstract_type_impl.hpp"
-#include "internal/queries.hpp"
 
 namespace tsh {
 	[[nodiscard]]
@@ -28,6 +27,8 @@ namespace tsh {
 	bool AbstractType::isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
+
+	bool AbstractType::carriesInformation() const { return pimpl->carriesInformation(); }
 
 	[[nodiscard]]
 	const std::string& AbstractType::toString() const {

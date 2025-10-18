@@ -2,15 +2,18 @@
 
 #include "../meta.hpp"
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
 namespace pst {
 	/**
 	 * @brief Call argument, handles both named and normal arguments.
 	 */
 	class CallArgument final: public NotStmt {
-		base::Optional<tpc::Identifier> arg_name;
+		tpc::OptionalIdentifier arg_name;
 		NAMED_CHILD(arg, UniversalExprHolderLowerLevel);
+
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
 		explicit CallArgument(const dia::SourcePosition& pos): NotStmt(pos) {
@@ -24,11 +27,11 @@ namespace pst {
 
 		[[nodiscard]]
 		bool isNamedArg() const {
-			return arg_name.has_value();
+			return arg_name.value.has_value();
 		}
 
 		[[nodiscard]]
-		base::Optional<tpc::Identifier> getArgName() const {
+		tpc::OptionalIdentifier getArgName() const {
 			return arg_name;
 		}
 

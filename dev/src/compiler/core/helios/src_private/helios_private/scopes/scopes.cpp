@@ -1,6 +1,5 @@
 #include "scopes.hpp"
 
-#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -8,6 +7,7 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
+#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
@@ -16,15 +16,13 @@
 #include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <pst_parser/elements/hierarchy/statements/using.hpp>
 #include <pst_parser/lang_parser_element.hpp>
-#include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
@@ -149,6 +147,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
 		case pst::ElementKind::StmtSpecifier:
+		case pst::ElementKind::FunDecl:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
@@ -162,6 +161,7 @@ namespace compiler::helios {
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ClassConstructor:
@@ -423,6 +423,30 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
+			void visitMethod(pst::Access<pst::Method> meth) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *meth->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
+			void visitDestructor(pst::Access<pst::Destructor>) override {
+				output(std::vector<SymID>{});
+			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *cctor->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
 			void visitIf(pst::Access<pst::If>) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
@@ -438,7 +462,7 @@ namespace compiler::helios {
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
-				output(std::vector<SymID>());
+				output(std::vector<SymID>{});
 			}
 		};
 
@@ -637,22 +661,22 @@ namespace compiler::helios {
 		return main_file_root_scope;
 	}
 
-	void ScopeID::debugPrintScopeAndParents() {
+	void ScopeID::debugPrintScopeAndParents(std::ostream& os) const {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.queryUnstablePerfectHash() << "("
-					  << (iter_scope.ref->related_pst_element.has_value()
-			                  ? iter_scope.ref->related_pst_element.value()
-			                        .illegalAccess()
-			                        .value()
-			                        ->elementType()
-			                  : "ROOT")
-					  << ")" << " -> ";
+			os << iter_scope.queryUnstablePerfectHash() << "("
+			   << (iter_scope.ref->related_pst_element.has_value()
+			           ? iter_scope.ref->related_pst_element.value()
+			                 .illegalAccess()
+			                 .value()
+			                 ->elementType()
+			           : "ROOT")
+			   << ")" << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();
 		}
-		std::cerr << "\n";
+		os << "\n";
 	}
 }
