@@ -2,7 +2,6 @@
 
 #include "errors.hpp"
 
-#include "base/str_utils.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>

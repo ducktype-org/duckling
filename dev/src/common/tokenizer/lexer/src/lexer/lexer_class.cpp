@@ -1,8 +1,5 @@
 #include "lexer_class.hpp"
 
-#include "base/optional.hpp"
-
-#include "diagnostic/source_position.hpp"
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <unicode_classification/classifications.hpp>
