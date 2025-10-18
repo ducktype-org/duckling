@@ -338,13 +338,12 @@ namespace compiler::frontend {
 
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
-			module_ref->m_main_source_file = SourceFile::create(
-				m_main_source_file_path.value(), mod_id, module_ref->m_component_hash
-			);
+			module_ref->m_main_source_file
+				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 		}
 
 		for (const auto& file_path: m_source_file_paths) {
-			auto source_file = SourceFile::create(file_path, mod_id, module_ref->m_component_hash);
+			auto source_file = SourceFile::create(file_path, mod_id);
 			module_ref->m_source_files.push_back(source_file);
 		}
 
@@ -359,9 +358,7 @@ namespace compiler::frontend {
 	 *********************/
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		module->m_source_files.push_back(
-			SourceFile::create(file, ModuleID(module), module->m_component_hash)
-		);
+		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
@@ -388,8 +385,7 @@ namespace compiler::frontend {
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
 		);
-		module->m_main_source_file
-			= SourceFile::create(file, ModuleID(module), module->m_component_hash);
+		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
 	}
 
 	void ModuleTreeModifier::addSubmodule(
