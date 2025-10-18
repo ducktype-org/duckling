@@ -4,7 +4,7 @@
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/elements_list.hpp>
 
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 namespace compiler::helios {

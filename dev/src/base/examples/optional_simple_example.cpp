@@ -1,4 +1,4 @@
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <cassert>

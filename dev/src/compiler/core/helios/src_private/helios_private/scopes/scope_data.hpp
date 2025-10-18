@@ -5,7 +5,7 @@
 #include <helios/utils/symbol_list.hpp>
 #include <pst_parser/access.hpp>
 
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 
 namespace compiler::helios {
 

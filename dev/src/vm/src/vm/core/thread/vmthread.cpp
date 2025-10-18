@@ -8,7 +8,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/str/string_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 

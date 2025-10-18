@@ -2,7 +2,7 @@
 
 #include "interface_types.hpp"
 
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>

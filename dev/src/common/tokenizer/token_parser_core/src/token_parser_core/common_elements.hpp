@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>

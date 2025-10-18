@@ -10,7 +10,7 @@
 
 #include <base/types/ints.hpp>
 #include <base/collections/maps.hpp>
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>

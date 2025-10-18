@@ -10,7 +10,7 @@
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/types/ok_bad.hpp>
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 

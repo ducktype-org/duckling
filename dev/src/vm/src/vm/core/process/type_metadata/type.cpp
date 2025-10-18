@@ -4,7 +4,7 @@
 
 #include <base/extend_cpp/defer.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>

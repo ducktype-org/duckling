@@ -4,7 +4,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/preproc/utils.hpp>
-#include <base/misc/optional.hpp>
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <expected>
