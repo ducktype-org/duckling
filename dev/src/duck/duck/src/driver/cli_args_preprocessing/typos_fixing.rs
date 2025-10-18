@@ -148,16 +148,20 @@ mod tests {
                 returns: Ok(None)
             ));
         injector
-            .when_called(injectorpp::func!(fn (DuckCtx::typos_fixes_enabled)(&DuckCtx) -> bool))
+            .when_called(
+                injectorpp::func!(fn (DuckCtx::typos_fixes_enabled)(&DuckCtx) -> QuackResult<bool>),
+            )
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx) -> bool,
-                returns: true
+                func_type: fn(_x: &DuckCtx) -> QuackResult<bool>,
+                returns: Ok(true)
             ));
         injector
-            .when_called(injectorpp::func!(fn (DuckCtx::max_fix_dist)(&DuckCtx) -> u32))
+            .when_called(
+                injectorpp::func!(fn (DuckCtx::max_fix_dist)(&DuckCtx) -> QuackResult<u32>),
+            )
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx) -> u32,
-                returns: 1
+                func_type: fn(_x: &DuckCtx) -> QuackResult<u32>,
+                returns: Ok(1)
             ));
 
         let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
