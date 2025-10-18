@@ -30,7 +30,7 @@ namespace compiler::driver {
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
-		auto component_hash = compiler::frontend::GetModuleID_Functor::get(module_id)->getComponentHash();
+		auto component_hash = compiler::frontend::ModuleTree::getComponentHash(module_id);
 		auto partial   = component_hash.partial;
 		hashing::addToHash(partial, std::to_underlying(backend_type));
 		return partial.finalize();
