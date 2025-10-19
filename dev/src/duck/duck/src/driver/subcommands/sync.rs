@@ -25,6 +25,6 @@ pub fn get_parser() -> Command {
         )
 }
 
-pub fn execute(ctx: &DuckCtx, matches: ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     bail!("implement sync")
 }

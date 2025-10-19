@@ -1,8 +1,9 @@
-use crate::terminal::Terminal;
+use crate::{indent::indent, terminal::Terminal};
 
 pub mod driver;
 pub mod duck_cfg;
 pub mod duck_ctx;
+pub mod indent;
 mod terminal;
 
 pub use duck_ctx::DuckCtx;
@@ -57,8 +58,8 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
             term.error(e);
         } else {
             term.print("");
-            term.print(format!("{:indent$}Caused by:", "", indent = 2));
-            term.print(format!("{:indent$}{}", "", e, indent = 4));
+            term.print_no_nl(indent("Caused by:", 2));
+            term.print_no_nl(indent(&e.to_string(), 4));
         }
     }
 }

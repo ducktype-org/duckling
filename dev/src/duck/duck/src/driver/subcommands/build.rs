@@ -9,7 +9,6 @@ use crate::{
 
 pub fn get_parser() -> Command {
     subcommand("build")
-        .visible_alias("b")
         .about("Build a current package")
         .add_profile()
         .add_release()
@@ -17,6 +16,6 @@ pub fn get_parser() -> Command {
         .arg(flag("all-features", "Use all possible features").conflicts_with("features"))
         .add_jobs()
 }
-pub fn execute(ctx: &DuckCtx, matches: ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     bail!("implement build")
 }

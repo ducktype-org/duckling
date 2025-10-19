@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-
 use anyhow::Context;
 use quackpack::{QuackResult, paths::config_file, toml_config::TomlConfig};
 use rustvil::os::env::Env;
-use toml::map::Map;
+use tracing::debug;
+
+use crate::terminal::Terminal;
 
 #[derive(Debug, Default)]
 pub struct DuckCfg {
@@ -11,52 +11,55 @@ pub struct DuckCfg {
 }
 
 impl DuckCfg {
-    pub fn new(env: &Env) -> QuackResult<DuckCfg> {
-        let Some(file) = config_file(env) else {
-            return Ok(DuckCfg::default());
+    pub fn new(env: &Env, term: &Terminal) -> QuackResult<DuckCfg> {
+        let inner = match config_file(env) {
+            Some(path) => {
+                debug!("reading user config from `{}`", path.display());
+                TomlConfig::new(path)?
+            }
+            None => {
+                term.warning("couldn't detect user config path, falling back to defaults...");
+                TomlConfig::default()
+            }
         };
-        Ok(Self {
-            inner: TomlConfig::new(file)?,
-        })
+        debug!("parsed user config `{inner:?}`");
+        Ok(Self { inner })
     }
 
     pub fn fixes_enabled(&self) -> QuackResult<bool> {
         Ok(self
             .inner
-            .get_bool("security.typos.enabled")?
+            .get_bool("security.typos.enabled")
+            .context("when trying to determine whether typos fixing is enabled")?
             .unwrap_or(false))
     }
 
     pub fn max_fix_dist(&self) -> QuackResult<u32> {
         self.inner
-            .get_int("security.typos.max_distance")?
+            .get_int("security.typos.max_distance")
+            .context("when trying to check maximum typos fixing distance")?
             .unwrap_or(3)
             .try_into()
             .with_context(|| self.inner.make_location_error())
+            .context("maximum typos fixing distance does not fit in `u32`")
+            .context("when getting key `security.typos.max_distance`")
+            .context("when trying to check maximum typos fixing distance")
     }
 
-    pub fn aliases(&self) -> QuackResult<HashMap<String, String>> {
-        let default_map = Map::new();
-        self.inner
-            .get_table("aliases")?
-            .unwrap_or(&default_map)
-            .iter()
-            .map(|(k, v)| {
-                Ok((
-                    k.clone(),
-                    String::from(
-                        v.as_str()
-                            .with_context(|| self.inner.make_location_error())?,
-                    ),
-                ))
-            })
-            .collect()
-    }
-
-    pub fn alias_for(&self, name: &str) -> QuackResult<Option<String>> {
-        Ok(self
+    pub fn aliases(&self) -> QuackResult<Option<impl Iterator<Item = &String>>> {
+        let Some(aliases) = self
             .inner
-            .get_str(format!("aliases.{}", name).as_str())?
-            .map(String::from))
+            .get_table("aliases")
+            .context("when trying to get all user-defined aliases")?
+        else {
+            return Ok(None);
+        };
+        Ok(Some(aliases.keys()))
+    }
+
+    pub fn alias_for(&self, key: &str) -> QuackResult<Option<&str>> {
+        self.inner
+            .get_str(&format!("aliases.{key}"))
+            .with_context(|| format!("when trying to get alias expansions `{key}`"))
     }
 }

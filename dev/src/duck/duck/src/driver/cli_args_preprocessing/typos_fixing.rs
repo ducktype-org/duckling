@@ -34,13 +34,13 @@ pub fn fix_typos(
         "Testing levenshtein of `{name}` against `{}`",
         targets.join(", ")
     );
-    let closest_targets = find_closest_targets(name, &targets, ctx.max_fix_dist()?);
+    let closest_targets = find_closest_targets(name, &targets, ctx.duck_cfg().max_fix_dist()?);
 
     let Some((&first, rest)) = closest_targets.as_slice().split_first() else {
         return Ok(args);
     };
 
-    if ctx.typos_fixes_enabled()? && rest.is_empty() {
+    if ctx.duck_cfg().fixes_enabled()? && rest.is_empty() {
         let new_args = fix(name, first, subcmd_args)?;
         Ok(new_args)
     } else {
@@ -54,7 +54,7 @@ fn is_valid_subcmd(
     external_cmds: &HashMap<String, PathBuf>,
 ) -> QuackResult<bool> {
     Ok(is_builtin_subcommand(name)
-        || ctx.alias_for(name)?.is_some()
+        || ctx.duck_cfg().alias_for(name)?.is_some()
         || external_cmds.contains_key(name))
 }
 
@@ -66,7 +66,9 @@ fn possible_targets(
         .into_iter()
         .map(|x| x.get_name().to_string())
         .collect::<Vec<_>>();
-    targets.extend(ctx.aliases()?.keys().cloned());
+    if let Some(iter) = ctx.duck_cfg().aliases()? {
+        targets.extend(iter.cloned());
+    }
     targets.extend(external_cmds.keys().cloned());
     Ok(targets)
 }

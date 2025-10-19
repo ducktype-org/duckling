@@ -24,6 +24,6 @@ pub fn get_parser() -> Command {
         .arg(flag("sort-reverse", "Display output in reverse order"))
 }
 
-pub fn execute(ctx: &DuckCtx, matches: ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     bail!("implement list")
 }

@@ -13,6 +13,6 @@ pub fn get_parser() -> Command {
         .arg(optional("generator", "Choose target shell").value_parser(value_parser!(Shell)))
 }
 
-pub fn execute(ctx: &DuckCtx, matches: ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     bail!("implement generate")
 }

@@ -14,7 +14,9 @@ const QP_DATA_RELATIVE_TO_DATA_DIR: &str = "qp";
 const QP_CONFIG_ENV: &str = "QP_CONFIG";
 const QP_CACHE_ENV: &str = "QP_CACHE";
 const QP_STORAGE_ENV: &str = "QP_STORAGE";
-const QP_GLOBAL_STORAGE_ENV: &str = "QP_GLOBAL_ENV";
+const QP_GLOBAL_VENV_ENV: &str = "QP_GLOBAL_ENV";
+
+const DEFAULT_MACOS_BEHAVIOUR: MacOSBehaviour = MacOSBehaviour::LinuxFallback;
 
 fn config_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> {
     env.get_os(QP_CONFIG_ENV).map(PathBuf::from).or_else(|| {
@@ -34,7 +36,7 @@ fn cache_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> {
     })
 }
 
-fn default_storage_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> {
+fn storage_base_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> {
     env.get_os(QP_STORAGE_ENV).map(PathBuf::from).or_else(|| {
         xdg::data(env, behaviour).map(|mut config| {
             config.push(QP_DATA_RELATIVE_TO_DATA_DIR);
@@ -43,8 +45,8 @@ fn default_storage_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> 
     })
 }
 
-fn default_global_venv_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> {
-    env.get_os(QP_GLOBAL_STORAGE_ENV)
+fn global_venv_base_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathBuf> {
+    env.get_os(QP_GLOBAL_VENV_ENV)
         .map(PathBuf::from)
         .or_else(|| {
             xdg::data(env, behaviour).map(|mut config| {
@@ -55,49 +57,49 @@ fn default_global_venv_dir(env: &Env, behaviour: MacOSBehaviour) -> Option<PathB
 }
 
 pub fn download_dir(env: &Env) -> Option<PathBuf> {
-    cache_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    cache_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("downloads");
         buf
     })
 }
 
 pub fn artifacts_dir(env: &Env) -> Option<PathBuf> {
-    cache_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    cache_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("artifacts");
         buf
     })
 }
 
 pub fn metadata_db(env: &Env) -> Option<PathBuf> {
-    cache_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    cache_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("metadata_db.sqlite");
         buf
     })
 }
 
 pub fn fetcher_lockfile(env: &Env) -> Option<PathBuf> {
-    cache_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    cache_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("fetcher.lock");
         buf
     })
 }
 
 pub fn storage_dir(env: &Env) -> Option<PathBuf> {
-    default_storage_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    storage_base_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("storage");
         buf
     })
 }
 
 pub fn global_venv_dir(env: &Env) -> Option<PathBuf> {
-    default_global_venv_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    global_venv_base_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("global_venv");
         buf
     })
 }
 
 pub fn config_file(env: &Env) -> Option<PathBuf> {
-    config_dir(env, MacOSBehaviour::LinuxFallback).map(|mut buf| {
+    config_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("config.toml");
         buf
     })

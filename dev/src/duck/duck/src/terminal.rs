@@ -3,6 +3,7 @@ use std::io::Write;
 
 use console::{Term, style};
 use paste::item;
+use quackpack::QuackResult;
 
 #[derive(Debug)]
 pub struct Terminal {
@@ -76,6 +77,10 @@ impl Terminal {
             term: Term::stderr(),
             verbosity: Verbosity::Default,
         }
+    }
+
+    pub fn flush(&self) -> QuackResult<()> {
+        Ok(self.term.flush()?)
     }
 
     fn print_nl_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {

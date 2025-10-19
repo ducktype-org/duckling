@@ -19,10 +19,6 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn add_all_features(self) -> Self {
-        self._arg_impl(flag("all-features", "Use all possible features"))
-    }
-
     fn add_packages(self, help: &'static str) -> Self {
         self._arg_impl(multi("packages", help))
     }

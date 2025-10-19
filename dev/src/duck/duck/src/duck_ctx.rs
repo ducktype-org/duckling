@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{duck_cfg::DuckCfg, terminal::Terminal};
 use quackpack::QuackResult;
 use rustvil::os::env::Env;
@@ -15,9 +13,10 @@ pub struct DuckCtx {
 impl DuckCtx {
     pub fn new() -> QuackResult<Self> {
         let env = Env::default();
-        let config = DuckCfg::new(&env)?;
+        let console = Terminal::stdout();
+        let config = DuckCfg::new(&env, &console)?;
         Ok(Self {
-            console: Terminal::stdout(),
+            console,
             error_console: Terminal::stderr(),
             duck_cfg: config,
             env,
@@ -50,21 +49,5 @@ impl DuckCtx {
 
     pub fn env_mut(&mut self) -> &mut Env {
         &mut self.env
-    }
-
-    pub fn alias_for(&self, name: &str) -> QuackResult<Option<String>> {
-        self.duck_cfg.alias_for(name)
-    }
-
-    pub fn aliases(&self) -> QuackResult<HashMap<String, String>> {
-        self.duck_cfg.aliases()
-    }
-
-    pub fn typos_fixes_enabled(&self) -> QuackResult<bool> {
-        self.duck_cfg.fixes_enabled()
-    }
-
-    pub fn max_fix_dist(&self) -> QuackResult<u32> {
-        self.duck_cfg.max_fix_dist()
     }
 }

@@ -9,6 +9,7 @@ use crate::{
 };
 use anyhow::bail;
 use clap::ArgMatches;
+use itertools::chain;
 use quackpack::QuackResult;
 use tracing::debug;
 
@@ -21,49 +22,66 @@ pub fn expand_aliases(
     let Some((subcmd, subcmd_args)) = args.subcommand() else {
         return Ok(args);
     };
-    match (
-        is_builtin_subcommand(subcmd),
-        ctx.alias_for(subcmd),
-        external_cmds.contains_key(subcmd),
-        get_builtin_alias(subcmd),
-    ) {
-        // TODO: This will be warned on, when inferring cmd.
-        (_, Ok(None) | Err(_), _, _) => Ok(args),
-        (true, Ok(Some(new)), false, None) => shadows_builtin_subcmd(ctx, &new, args),
-        (false, Ok(Some(new)), true, None) => shadows_external_subcmd(ctx, &new, args),
-        (false, Ok(Some(new)), false, Some(_)) => shadows_builtin_alias(ctx, &new, args),
+    let is_builtin = is_builtin_subcommand(subcmd);
+    // TODO: We are silently ignoring errors in user configuration
+    let alias = ctx.duck_cfg().alias_for(subcmd);
+    let is_external = external_cmds.contains_key(subcmd);
+    let builtin_alias = get_builtin_alias(subcmd);
+    match (is_builtin, &alias, is_external, builtin_alias) {
+        (false, Ok(None) | Err(_), true, Some(builtin)) => {
+            ctx.error_console().warning(format!(
+                "builtin alias `{subcmd}` shadows external subcommand"
+            ));
+            expand_builtin_alias(builtin, subcmd_args)
+        }
+        (false, Ok(Some(_)), false, Some(builtin)) => {
+            ctx.error_console().warning(format!(
+                "builtin alias `{subcmd}` shadows user-defined alias"
+            ));
+            expand_builtin_alias(builtin, subcmd_args)
+        }
+        (false, Ok(Some(_)), true, Some(builtin)) => {
+            ctx.error_console().warning(format!(
+                "builtin alias `{subcmd}` shadows user-defined alias and external subcommand"
+            ));
+            expand_builtin_alias(builtin, subcmd_args)
+        }
+        (false, Ok(None) | Err(_), false, Some(builtin)) => {
+            expand_builtin_alias(builtin, subcmd_args)
+        }
+        (true, Ok(Some(_)), false, None) => {
+            ctx.error_console().warning(format!(
+                "builtin subcommand `{subcmd}` shadows user-defined alias"
+            ));
+            Ok(args)
+        }
+        (false, Ok(Some(_)), true, None) => {
+            ctx.error_console().warning(format!(
+                "external subcommand `{subcmd}` shadows user-defined alias"
+            ));
+            Ok(args)
+        }
         (false, Ok(Some(new)), false, None) => {
             // This is the actually interesting part.
-            let new_args = expand_single_alias(subcmd, subcmd_args, &new, &mut visited)?;
+            let new_args = expand_single_alias(subcmd, subcmd_args, new, &mut visited)?;
             expand_aliases(new_args, ctx, external_cmds, visited)
         }
-        _ => Ok(args),
+        _ => {
+            debug!(
+                "expanding aliases: default branch with `{:?}`",
+                (is_builtin, alias, is_external, builtin_alias)
+            );
+            Ok(args)
+        }
     }
 }
 
-fn shadows_builtin_subcmd(ctx: &DuckCtx, alias: &str, args: ArgMatches) -> QuackResult<ArgMatches> {
-    ctx.error_console().warning(format!(
-        "user-defined alias `{alias}` shadows builtin subcommand, ignoring it..."
-    ));
-    Ok(args)
-}
-
-fn shadows_external_subcmd(
-    ctx: &DuckCtx,
-    alias: &str,
-    args: ArgMatches,
-) -> QuackResult<ArgMatches> {
-    ctx.error_console().warning(format!(
-        "user-defined alias `{alias}` shadows external subcommand, ignoring it..."
-    ));
-    Ok(args)
-}
-
-fn shadows_builtin_alias(ctx: &DuckCtx, alias: &str, args: ArgMatches) -> QuackResult<ArgMatches> {
-    ctx.error_console().warning(format!(
-        "user-defined alias `{alias}` shadows builtin alias, ignoring it..."
-    ));
-    Ok(args)
+fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatches> {
+    let builtin = OsString::from(builtin);
+    Ok(cli().no_binary_name(true).try_get_matches_from(chain(
+        [&builtin],
+        args.get_many::<OsString>("").unwrap_or_default(),
+    ))?)
 }
 
 fn expand_single_alias(
@@ -73,7 +91,7 @@ fn expand_single_alias(
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
-    debug!("replaced alias `{alias}` with `{new_cli_args:?}`");
+    debug!("replaced alias `{alias}` with `{alias_expansion}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
         bail!("user-defined alias `{alias}` does not have subcommand")
@@ -83,18 +101,18 @@ fn expand_single_alias(
     Ok(parsed)
 }
 
-fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> Vec<OsString> {
-    let mut result = alias.split(' ').map(OsString::from).collect::<Vec<_>>();
-    result.extend(
+fn args_from_alias(alias: &str, subcmd_args: &ArgMatches) -> impl Iterator<Item = OsString> {
+    let split = alias.split(' ').map(OsString::from);
+    chain(
+        split,
         subcmd_args
             .get_many::<OsString>("")
             .unwrap_or_default()
             .cloned(),
-    );
-    result
+    )
 }
 
-fn parse_alias_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
+fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult<ArgMatches> {
     Ok(cli()
         .no_binary_name(true)
         .try_get_matches_from(new_cli_args)?)

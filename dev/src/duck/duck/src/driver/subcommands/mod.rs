@@ -35,7 +35,7 @@ pub fn subcommands() -> Vec<Command> {
     ]
 }
 
-pub type ExecFn = fn(&DuckCtx, ArgMatches) -> QuackResult<()>;
+pub type ExecFn = fn(&DuckCtx, &ArgMatches) -> QuackResult<()>;
 
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {

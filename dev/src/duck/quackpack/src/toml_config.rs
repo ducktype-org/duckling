@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, bail};
+use anyhow::{Context, anyhow, bail};
 use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
@@ -32,7 +32,10 @@ macro_rules! delegate_getter {
                     match value.[<as_ $toml_value_fn>]() {
                         Some(x) => Ok(Some(x)),
                         // TODO: Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
-                        None => bail!("expected {}, not a {}", stringify!($toml_value_fn), value.type_str()),
+                        None => Err(anyhow!(self.make_location_error()))
+                                    .context(
+                                        format!("when getting key `{key}` expected {}, not a {}", stringify!($toml_value_fn), value.type_str())
+                                    )
                     }
                 }
             )*

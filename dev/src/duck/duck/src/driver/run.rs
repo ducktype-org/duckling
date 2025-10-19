@@ -15,13 +15,16 @@ use crate::{
 };
 use anyhow::{Context, bail};
 use clap::ArgMatches;
-use itertools::Itertools;
 use quackpack::QuackResult;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
+    debug!(
+        "found external subcommands `{}`",
+        external.keys().cloned().collect::<Vec<_>>().join(", ")
+    );
     let cli = cli();
     let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
@@ -81,17 +84,22 @@ fn run_subcmd(
         print_parser_help(ctx);
         return Ok(());
     };
-    if let Some(exec_fn) = exec_for(sub_cmd) {
-        // Internal subcommand.
-        exec_fn(ctx, sub_args.to_owned())
-    } else if let Some(exec_path) = external.get(sub_cmd) {
-        // External subcommand.
-        let cli_args = external_cli_args(sub_args);
-        execute_external_subcmd(exec_path, cli_args)
-            .with_context(|| format!("failed to execute external subcmd `{sub_cmd}`"))
-    } else {
-        // Unrecognizable subcommand.
-        bail!("No such command: `{}`", sub_cmd);
+    match (exec_for(sub_cmd), external.get(sub_cmd)) {
+        (Some(exec_fn), Some(_)) => {
+            ctx.error_console().warning(format!(
+                "builtin subcommand `{sub_cmd}` shadows external subcmd"
+            ));
+            exec_fn(ctx, sub_args)
+        }
+        (Some(exec_fn), None) => exec_fn(ctx, sub_args),
+        (None, Some(exec_path)) => {
+            drop(ctx.console().flush());
+            drop(ctx.error_console().flush());
+            let args = external_cli_args(sub_args);
+            execute_external_subcmd(exec_path, args)
+                .with_context(|| format!("failed to execute external subcmd `{sub_cmd}`"))
+        }
+        (None, None) => bail!("No such command: `{sub_cmd}`"),
     }
 }
 
@@ -100,7 +108,7 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
         .get_many::<OsString>("")
         .unwrap_or_default()
         .cloned()
-        .collect_vec()
+        .collect::<Vec<_>>()
 }
 
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {

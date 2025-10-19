@@ -10,6 +10,6 @@ pub fn get_parser() -> Command {
         .arg(Arg::new("package").help("Package name"))
 }
 
-pub fn execute(ctx: &DuckCtx, matches: ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
     bail!("implement search")
 }
