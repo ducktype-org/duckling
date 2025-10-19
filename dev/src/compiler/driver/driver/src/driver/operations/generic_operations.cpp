@@ -115,7 +115,7 @@ namespace compiler::driver {
 		BackendType                   backend,
 		const linker::LinkingOptions& linking_options
 	) {
-		auto root = frontend::createModuleTree(package_location);
+		auto root = frontend::createModuleTreeWithRandomPackageID(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
 

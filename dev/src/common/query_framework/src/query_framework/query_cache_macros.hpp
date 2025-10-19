@@ -26,6 +26,9 @@
 		"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"        \
 	);
 
+
+#define QUERY_CACHE_ON_DISK static constexpr bool CACHE_ON_DISK = true;
+
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
  * It caches PResults using base::HashMap and returns directly constructed QResults on cache hit.

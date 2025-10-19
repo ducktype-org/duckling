@@ -275,7 +275,23 @@ namespace context_leak {
 	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);
 }
 
-DECLARE_QUERY_SIDE_INPUT(SideInput, u64);
+struct KeyOf_SideInput {
+	u64 v;
+
+	KeyOf_SideInput(u64 v): v(v) {}
+
+	[[nodiscard]]
+	u64 queryUnstablePerfectHash() const {
+		CORE_PANIC("Unstable perfect hash should not be used for SideInput");
+	}
+
+	[[nodiscard]]
+	query::QueryStableHash queryStablePerfectHash() const {
+		return { v, 0, 0, 0 };
+	}
+};
+
+DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
 
 DECLARE_QUERY(EmptyQuery, u64, u64);

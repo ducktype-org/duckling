@@ -66,7 +66,7 @@ namespace pst {
 		friend class ClassStmt;
 
 	protected:
-		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
+		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_id_map;
 
 		using InternalChild = Ref<LangElement>;
 
@@ -89,9 +89,7 @@ namespace pst {
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
-			  id(PstID::next()) {
-			pst_id_map.emplace(id, AccessLocked<LangElement>(CRef<LangElement>(this)));
-		}
+			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;
 		LangElement(LangElement&&)      = delete;
@@ -106,7 +104,7 @@ namespace pst {
 		 * @brief Get pst node the by id. Throws on non-existent id.
 		 */
 		[[nodiscard]]
-		static AccessLocked<LangElement> getByID(u64);
+		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
 
 	protected:
 		void dprintPrefix(std::ostream& out) const override {

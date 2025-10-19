@@ -30,7 +30,7 @@ private:
 		// Create a temporary file for testing
 		auto temp_file
 			= fs::FileManager::createRandomTempFile("fn main() { println(\"Hello World\"); }");
-		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		// Create SourceFile
 		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
@@ -48,7 +48,7 @@ private:
 		// Create test file with specific content
 		auto test_content = "struct Point { x: i32, y: i32 }";
 		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
-		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 
@@ -69,7 +69,7 @@ private:
 		// Create test file with valid syntax
 		auto test_content = "fn test() { return 42; }";
 		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
-		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 
@@ -88,7 +88,7 @@ private:
 		auto temp_file1 = fs::FileManager::createRandomTempFile(content1);
 		auto temp_file2 = fs::FileManager::createRandomTempFile(content2);
 
-		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		try {
 			// Test basic file content first
@@ -130,7 +130,7 @@ private:
 		// Create test files
 		auto temp_file1   = fs::FileManager::createRandomTempFile("content1");
 		auto temp_file2   = fs::FileManager::createRandomTempFile("content2");
-		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file1 = SourceFile::create(temp_file1, dummy_module->getModuleID());
 		auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
@@ -161,7 +161,7 @@ private:
 		// Test working with multiple source files
 		std::vector<fs::File>        temp_files;
 		std::vector<Ref<SourceFile>> source_files;
-		auto                         dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		// Create multiple source files
 		for (int i = 0; i < 5; ++i) {
@@ -203,8 +203,8 @@ private:
 		// Test source files belonging to different modules
 		auto temp_file = fs::FileManager::createRandomTempFile("fn shared_function() {}");
 
-		auto dummy_module1 = ModuleTreeBuilder::create()->finalize();
-		auto dummy_module2 = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file1 = SourceFile::create(temp_file, dummy_module1->getModuleID());
 		auto source_file2 = SourceFile::create(temp_file, dummy_module2->getModuleID());
@@ -234,7 +234,7 @@ private:
 	void testFileModifiedUpdatesContent() {
 		// Create a temp file and SourceFile
 		auto temp_file    = fs::FileManager::createRandomVirtualFile("original content");
-		auto dummy_module = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		auto source_file  = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Check initial cached content
@@ -257,8 +257,8 @@ private:
 
 	void testGetSourceFilesfromFile() {
 		auto temp_file     = fs::FileManager::createRandomTempFile("abc");
-		auto dummy_module1 = ModuleTreeBuilder::create()->finalize();
-		auto dummy_module2 = ModuleTreeBuilder::create()->finalize();
+		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		// Create two SourceFiles for the same fs::File but different modules
 		auto source_file1 = SourceFile::create(temp_file, dummy_module1->getModuleID());
 		auto source_file2 = SourceFile::create(temp_file, dummy_module2->getModuleID());
@@ -282,14 +282,14 @@ private:
 		auto file_other = root.createSubFile("content", "other.duck");
 
 		// Build first module (named "modA")
-		auto mod_a_builder = ModuleTreeBuilder::create();
+		auto mod_a_builder = ModuleTreeBuilder::createWithRandomPackageID();
 		mod_a_builder->setName(base::StrID("modA"));
 		auto mod_a_main = root.createSubFile("mainA", "modA.dmf");
 		mod_a_builder->setMainSourceFile(mod_a_main);
 		auto mod_a = mod_a_builder->finalize();
 
 		// Build second module (named "modB")
-		auto mod_b_builder = ModuleTreeBuilder::create();
+		auto mod_b_builder = ModuleTreeBuilder::createWithRandomPackageID();
 		mod_b_builder->setName(base::StrID("modB"));
 		auto mod_b_main = root.createSubFile("mainB", "modB.dmf");
 		mod_b_builder->setMainSourceFile(mod_b_main);

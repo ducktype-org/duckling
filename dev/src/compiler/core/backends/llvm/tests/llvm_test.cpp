@@ -42,7 +42,8 @@ private:
 		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
+			auto module
+				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
