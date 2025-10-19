@@ -72,14 +72,12 @@ namespace lang_def {
 			{ Keyword::i32, "i32", KeywordFlags() },
 			{ Keyword::i64, "i64", KeywordFlags() },
 			{ Keyword::i128, "i128", KeywordFlags() },
-			{ Keyword::isize, "isize", KeywordFlags() },
 
 			{ Keyword::u8, "u8", KeywordFlags() },
 			{ Keyword::u16, "u16", KeywordFlags() },
 			{ Keyword::u32, "u32", KeywordFlags() },
 			{ Keyword::u64, "u64", KeywordFlags() },
 			{ Keyword::u128, "u128", KeywordFlags() },
-			{ Keyword::usize, "usize", KeywordFlags() },
 
 			{ Keyword::f16, "f16", KeywordFlags() },
 			{ Keyword::f32, "f32", KeywordFlags() },
