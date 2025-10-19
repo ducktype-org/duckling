@@ -57,10 +57,9 @@ impl DuckCfg {
         Ok(Some(aliases.keys()))
     }
 
-    pub fn alias_for(&self, key: &str) -> QuackResult<Option<String>> {
+    pub fn alias_for(&self, key: &str) -> QuackResult<Option<&str>> {
         self.inner
             .get_str(&format!("aliases.{key}"))
             .with_context(|| format!("when trying to get alias expansions `{key}`"))
-            .map(|x| x.map(String::from))
     }
 }

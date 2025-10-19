@@ -143,20 +143,20 @@ mod tests {
     fn test_cycles() {
         use crate::duck_cfg::DuckCfg;
 
-        fn fake_alias_for(name: &str) -> Option<String> {
+        fn fake_alias_for(name: &str) -> Option<&'static str> {
             match name {
-                "x" => Some(String::from("y --a")),
-                "y" => Some(String::from("z --b xd")),
-                "z" => Some(String::from("x")),
+                "x" => Some("y --a"),
+                "y" => Some("z --b xd"),
+                "z" => Some("x"),
                 _ => None,
             }
         }
 
         let mut injector = InjectorPP::new();
         injector
-            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<String>>))
+            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<&str>>))
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<String>>,
+                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<&str>>,
                 returns: Ok(fake_alias_for(name))
             ));
 
@@ -180,20 +180,20 @@ mod tests {
     fn test_expands_ok() {
         use crate::duck_cfg::DuckCfg;
 
-        fn fake_alias_for(name: &str) -> Option<String> {
+        fn fake_alias_for(name: &str) -> Option<&'static str> {
             match name {
-                "x" => Some(String::from("y")),
-                "y" => Some(String::from("z --all-features")),
-                "z" => Some(String::from("build")),
+                "x" => Some("y"),
+                "y" => Some("z --all-features"),
+                "z" => Some("build"),
                 _ => None,
             }
         }
 
         let mut injector = InjectorPP::new();
         injector
-            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<String>>))
+            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<&str>>))
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<String>>,
+                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<&str>>,
                 returns: Ok(fake_alias_for(name))
             ));
 
