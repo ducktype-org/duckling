@@ -206,14 +206,12 @@ namespace lang_def {
 			{ NumericLiteralTypeSpecifier::i32, "i32" },
 			{ NumericLiteralTypeSpecifier::i64, "i64" },
 			{ NumericLiteralTypeSpecifier::i128, "i128" },
-			{ NumericLiteralTypeSpecifier::isize, "isize" },
 
 			{ NumericLiteralTypeSpecifier::u8, "u8" },
 			{ NumericLiteralTypeSpecifier::u16, "u16" },
 			{ NumericLiteralTypeSpecifier::u32, "u32" },
 			{ NumericLiteralTypeSpecifier::u64, "u64" },
 			{ NumericLiteralTypeSpecifier::u128, "u128" },
-			{ NumericLiteralTypeSpecifier::usize, "usize" },
 
 			{ NumericLiteralTypeSpecifier::f16, "f16" },
 			{ NumericLiteralTypeSpecifier::f32, "f32" },
