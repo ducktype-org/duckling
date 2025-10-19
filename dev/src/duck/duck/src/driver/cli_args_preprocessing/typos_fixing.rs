@@ -136,33 +136,23 @@ mod tests {
 
     #[test]
     fn test_fixes() {
+        use crate::duck_cfg::DuckCfg;
+
         let mut injector = InjectorPP::new();
         injector
-            .when_called(injectorpp::func!(fn (DuckCtx::aliases)(&DuckCtx) -> QuackResult<HashMap<String, String>>))
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx) -> QuackResult<HashMap<String, String>>,
-                returns: Ok(HashMap::new())
-            ));
-        injector
-            .when_called(injectorpp::func!(fn (DuckCtx::alias_for)(&DuckCtx, &str) -> QuackResult<Option<String>>))
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx, _y: &str) -> QuackResult<Option<String>>,
-                returns: Ok(None)
-            ));
-        injector
             .when_called(
-                injectorpp::func!(fn (DuckCtx::typos_fixes_enabled)(&DuckCtx) -> QuackResult<bool>),
+                injectorpp::func!(fn (DuckCfg::fixes_enabled)(&DuckCfg) -> QuackResult<bool>),
             )
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx) -> QuackResult<bool>,
+                func_type: fn(_x: &DuckCfg) -> QuackResult<bool>,
                 returns: Ok(true)
             ));
         injector
             .when_called(
-                injectorpp::func!(fn (DuckCtx::max_fix_dist)(&DuckCtx) -> QuackResult<u32>),
+                injectorpp::func!(fn (DuckCfg::max_fix_dist)(&DuckCfg) -> QuackResult<u32>),
             )
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx) -> QuackResult<u32>,
+                func_type: fn(_x: &DuckCfg) -> QuackResult<u32>,
                 returns: Ok(1)
             ));
 

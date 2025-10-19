@@ -141,6 +141,8 @@ mod tests {
 
     #[test]
     fn test_cycles() {
+        use crate::duck_cfg::DuckCfg;
+
         fn fake_alias_for(name: &str) -> Option<String> {
             match name {
                 "x" => Some(String::from("y --a")),
@@ -152,9 +154,9 @@ mod tests {
 
         let mut injector = InjectorPP::new();
         injector
-            .when_called(injectorpp::func!(fn (DuckCtx::alias_for)(&DuckCtx, &str) -> QuackResult<Option<String>>))
+            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<String>>))
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx, name: &str) -> QuackResult<Option<String>>,
+                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<String>>,
                 returns: Ok(fake_alias_for(name))
             ));
 
@@ -176,6 +178,8 @@ mod tests {
 
     #[test]
     fn test_expands_ok() {
+        use crate::duck_cfg::DuckCfg;
+
         fn fake_alias_for(name: &str) -> Option<String> {
             match name {
                 "x" => Some(String::from("y")),
@@ -187,9 +191,9 @@ mod tests {
 
         let mut injector = InjectorPP::new();
         injector
-            .when_called(injectorpp::func!(fn (DuckCtx::alias_for)(&DuckCtx, &str) -> QuackResult<Option<String>>))
+            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<String>>))
             .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCtx, name: &str) -> QuackResult<Option<String>>,
+                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<String>>,
                 returns: Ok(fake_alias_for(name))
             ));
 
