@@ -119,10 +119,11 @@ namespace query::internal {
 		 * QResult;
 		 */
 
+		// @TODO: #1433 implement proper tags for cache-on-disk queries
 		/**
 		 * Whether query is cached on disk.
 		 * Queries cached on disk must use stable hashing.
-		 * @note Currently only queries with CACHE_ON_DISK==true will use a stable hash.
+		 * @note Currently this is not used. It is waiting for query-tags
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
 	};

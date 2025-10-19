@@ -8,7 +8,6 @@
 
 #include "../backend_type.hpp"
 
-#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <linker/link.hpp>
 

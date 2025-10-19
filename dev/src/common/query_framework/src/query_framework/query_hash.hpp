@@ -9,7 +9,9 @@
 namespace query {
 	using QueryStableHash = base::Bit256;
 
-	// Concept to validate queryUnstablePerfectHash signature
+	/**
+	 *  Concept to validate queryUnstablePerfectHash signature
+	 */
 	template<typename KeyType>
 	concept HasUnstablePerfectHash
 		= std::is_same_v<KeyType, bool> || std::is_same_v<KeyType, u64> || requires(KeyType t) {
@@ -18,12 +20,17 @@ namespace query {
 			  { t.queryUnstablePerfectHash() } -> std::same_as<base::Bit256>;
 		  };
 
-	// Concept to validate queryStablePerfectHash signature
+	/** Concept to validate queryStablePerfectHash signature */
 	template<typename KeyType>
 	concept HasStablePerfectHash = requires(KeyType t) {
 		{ t.queryStablePerfectHash() } -> std::same_as<QueryStableHash>;
 	};
 
+	/**
+	 * @brief Selects the correct perfect hash type for a given key type.
+	 * Keeps the u64/bool fast-paths.
+	 * If stable perfect hash is available, uses it.
+	 */
 	template<typename KeyType>
 	struct KHashSelector {
 		using type
@@ -45,6 +52,10 @@ namespace query {
 		using type = QueryStableHash;
 	};
 
+	/**
+	 * @brief Type alias for the perfect hash type of a given key type.
+	 * If stable perfect hash is available, uses the type returned by queryStablePerfectHash.
+	 */
 	template<typename KeyType>
 	using KHash = typename KHashSelector<KeyType>::type;
 

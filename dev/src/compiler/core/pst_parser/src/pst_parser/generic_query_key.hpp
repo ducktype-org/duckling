@@ -33,8 +33,6 @@ namespace pst {
 			return element.illegalAccess().value()->getID().asInt();
 		}
 
-		auto queryStablePerfectHash() const {
-			return element.illegalAccess().value()->getHash();
-		}
+		auto queryStablePerfectHash() const { return element.illegalAccess().value()->getHash(); }
 	};
 }
