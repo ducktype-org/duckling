@@ -36,7 +36,7 @@ namespace pst::expr {
 			return KeywordLiteral::parse(state, length);
 		} else if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state, length);
-		} else if (state[0].isNumLiteral()) {
+		} else if (state[0].isNumLiteralGroup()) {
 			return ExprValue::parse(state, length);
 		} else if (state[0].isString()) {
 			return ExprStrValue::parse(state, length);

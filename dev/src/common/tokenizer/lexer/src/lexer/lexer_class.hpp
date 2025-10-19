@@ -81,13 +81,14 @@ namespace lexer {
 		void binLiteralHandler(Tokens& output);
 		void octLiteralHandler(Tokens& output);
 		void hexLiteralHandler(Tokens& output);
-		/**@}*/
 
 		/**
 		 * @brief Consumes a numeric literal type suffix (e.g., i32, f64).
 		 * @return The suffix token or an empty optional if no suffix exists.
 		 */
-		base::Optional<Token> tryParseNumericLiteralTypeSuffix();
+		base::Optional<Token> typeSpecifierHandler();
+		/**@}*/
+
 
 		/**
 		 * @name helper functions checking for patterns ahead

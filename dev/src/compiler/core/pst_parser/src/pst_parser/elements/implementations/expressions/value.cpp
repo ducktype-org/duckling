@@ -44,7 +44,7 @@ namespace pst::expr {
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
-		if (!state[0].is(lexer::Token::Type::NumLiteral)) {
+		if (!state[0].is(lexer::Token::Type::NumLiteralGroup)) {
 			// This should (probably) never happen with how it's called by the parser
 			state.log(makeBox<BadValueError>(pos));
 			fastForward(state, length);
@@ -55,26 +55,10 @@ namespace pst::expr {
 		base::StrID                 value;
 		base::Optional<base::StrID> type_specifier;
 
+		const auto& sub_tokens = token.getRecursive();
 
-		if (!token.getRecursive().empty()) {  // Type specifier exists.
-			const auto& sub_tokens = token.getRecursive();
-			CORE_ASSERT(
-				sub_tokens.size() == 2, "Complex numeric literals should have two subtokens"
-			);
-			const auto& value_token     = sub_tokens[0];
-			const auto& specifier_token = sub_tokens[1];
-			CORE_ASSERT(value_token.isNumLiteral(), "First sub-token must be a numLiteral");
-			CORE_ASSERT(
-				specifier_token.isTypeSpecifier(), "Second sub-token must be a typeSpecifier"
-			);
-
-			value          = sub_tokens[0].getValue();
-			type_specifier = sub_tokens[1].getValue();
-		} else {
-			value          = token.getValue();
-			type_specifier = {};
-		}
-
+		value = sub_tokens[0].getValue();
+		if (sub_tokens.size() > 1) type_specifier = sub_tokens[1].getValue();
 
 		auto out = makeBox<ExprValue>(pos, value, type_specifier.map([](const base::StrID& val) {
 			return lexer::Value(val);

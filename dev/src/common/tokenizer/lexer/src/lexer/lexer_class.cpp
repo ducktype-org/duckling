@@ -399,7 +399,7 @@ namespace lexer {
 		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), source_position));
 	}
 
-	base::Optional<Token> Lexer::tryParseNumericLiteralTypeSuffix() {
+	base::Optional<Token> Lexer::typeSpecifierHandler() {
 		if (isEOF() || !peek().is(Class::name_start)) return {};
 		usize suffix_begin     = where;
 		auto  suffix_start_pos = currentPosition();
@@ -434,26 +434,27 @@ namespace lexer {
 		dia::SourcePosition number_pos(source_start, number_end);
 		auto                value_token
 			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
-		addTokenMsg(begin, number_end, "numLiteralValue");
+		addTokenMsg(begin, number_end, "numLiteral");
 
-		auto opt_type_specifier_token = tryParseNumericLiteralTypeSuffix();
+		auto opt_type_specifier_token = typeSpecifierHandler();
 
-		if_opt_some(opt_type_specifier_token, specifier) {
-			usize               full_group_end = where - 1;
-			dia::SourcePosition full_pos(source_start, full_group_end);
-			auto                num_literal_group = Token::makeNumLiteralGroup(
-                file->getCharRange(begin, full_group_end + 1),
-                std::move(value_token),
-                std::move(specifier),
-                full_pos
-            );
-
-			output.push_back(num_literal_group);
-			addTokenMsg(begin, full_group_end, "numLiteralGroup");
-			return;
+		usize               full_group_end = where - 1;
+		dia::SourcePosition full_pos(source_start, full_group_end);
+		auto                full_view = file->getCharRange(begin, full_group_end + 1);
+		match_optional(opt_type_specifier_token) {
+			opt_some_move(specifier) {
+				output.push_back(Token::makeNumLiteralGroup(
+					full_view, std::move(value_token), std::move(specifier), full_pos
+				));
+			}
+			opt_none {
+				output.push_back(
+					Token::makeNumLiteralGroup(full_view, std::move(value_token), full_pos)
+				);
+			}
 		}
 
-		output.push_back(std::move(value_token));
+		addTokenMsg(begin, full_group_end, "numLiteralGroup");
 		return;
 	}
 

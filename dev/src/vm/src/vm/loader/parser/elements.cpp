@@ -124,7 +124,7 @@ namespace vm::loader::parser {
 			}
 
 			const auto& token = state.tokens().peek();
-			if (!token.isNumLiteral()) {
+			if (!token.isNumLiteralGroup()) {
 				state.log(makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
 				);
 				return { T{ 0 }, 0 };
@@ -132,28 +132,12 @@ namespace vm::loader::parser {
 			state.tokens().next();
 			literal_length += token.getValue().strView().length();
 
-
 			std::string_view number;
 			std::string_view suffix;
 
-			if (token.getRecursive().empty()) {  // No suffix
-				number = token.getValue().strView();
-				suffix = "";
-			} else {
-				const auto& sub_tokens = token.getRecursive();
-				CORE_ASSERT(
-					sub_tokens.size() == 2, "Complex numeric literal should have 2 subtokens"
-				);
-				CORE_ASSERT(
-					sub_tokens[0].isNumLiteral(), "First sub-token should be a numeric literal"
-				);
-				CORE_ASSERT(
-					sub_tokens[1].isTypeSpecifier(), "Second sub-token should be a type specifier"
-				);
-
-				number = sub_tokens[0].getValue().strView();
-				suffix = sub_tokens[1].getValue().strView();
-			}
+			const auto& sub_tokens = token.getRecursive();
+			number                 = sub_tokens[0].getValue().strView();
+			suffix = sub_tokens.size() > 1 ? sub_tokens[1].getValue().strView() : "";
 
 			int base = 10;
 			// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
@@ -556,7 +540,7 @@ namespace vm::loader::parser {
 		switch (type) {
 		case lang_def::Keyword::BCPrimitive: {
 			lexer::Token value = state.tokens().next();
-			if (!value.isNumLiteral()) {
+			if (!value.isNumLiteralGroup()) {
 				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
@@ -582,7 +566,7 @@ namespace vm::loader::parser {
 				state.err->failAndLog(state.getPosition(), "expected identifier");
 			} else {
 				auto size = state.tokens().next();
-				if (!size.isNumLiteral()) {
+				if (!size.isNumLiteralGroup()) {
 					state.err->failAndLog(state.getPosition(), "expected number");
 				} else {
 					auto tp         = FixedSizeTableType{ name,
@@ -669,7 +653,7 @@ namespace vm::loader::parser {
 		}
 		case lang_def::Keyword::BCOpaque: {
 			lexer::Token value = state.tokens().next();
-			if (!value.isNumLiteral()) {
+			if (!value.isNumLiteralGroup()) {
 				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
