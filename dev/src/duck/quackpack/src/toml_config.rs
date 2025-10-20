@@ -44,6 +44,7 @@ macro_rules! delegate_getter {
 }
 
 #[cfg(feature = "test_utils")]
+#[doc(hidden)]
 macro_rules! delegate_setter {
     (
         $(
@@ -121,17 +122,7 @@ impl TomlConfig {
         let mut current: &Table = &self.content;
         for (i, &part) in parts.iter().enumerate() {
             if part.is_empty() {
-                let i = i + 1;
-                let last_two = i % 100;
-                let digit = last_two % 10;
-                let decimal = last_two - digit;
-                let suffix = match digit {
-                    1 if decimal != 10 => "st",
-                    2 if decimal != 10 => "nd",
-                    3 if decimal != 10 => "rd",
-                    _ => "th",
-                };
-                bail!("{i}{suffix} part of key `{key}` is empty")
+                Self::error_empty_key_fragment(i, key)?
             }
             let Some(next) = current.get(part) else {
                 debug!(
@@ -157,10 +148,8 @@ impl TomlConfig {
     }
 
     #[cfg(feature = "test_utils")]
+    #[doc(hidden)]
     fn _set(&mut self, key: String, value: Value) -> QuackResult<()> {
-        if key.is_empty() {
-            bail!("empty key");
-        }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
             unreachable!(
@@ -168,23 +157,48 @@ impl TomlConfig {
             )
         };
         let mut current = &mut self.content;
-        for (_, &part) in parts.iter().enumerate() {
+        for (i, &part) in parts.iter().enumerate() {
             if part.is_empty() {
-                bail!("One of the keys is empty")
+                Self::error_empty_key_fragment(i, &key)?
             }
             if !current.contains_key(part) {
                 current.insert(part.to_string(), Value::Table(Table::new()));
             }
-            let next_val = current.get_mut(part).unwrap();
-            current = next_val.as_table_mut().unwrap();
+            let Some(next) = current.get_mut(part) else {
+                unreachable!("We've just inserted part into current");
+            };
+            let next_type = next.type_str();
+            let Some(next) = next.as_table_mut() else {
+                bail!(
+                    "in chain `{}` expected table, not a {}",
+                    parts[0..=i].join("."),
+                    next_type
+                )
+            };
+            current = next;
         }
         let _ = current.insert(last.to_string(), value);
         Ok(())
     }
 
     #[cfg(feature = "test_utils")]
+    #[doc(hidden)]
     fn set(&mut self, key: String, value: Value) {
         let _ = self._set(key, value);
+    }
+
+    fn error_empty_key_fragment(i: usize, key: &str) -> QuackResult<()> {
+        let i = i + 1;
+        let last_two = i % 100;
+        let digit = last_two % 10;
+        let decimal = last_two - digit;
+        let suffix = match digit {
+            1 if decimal != 10 => "st",
+            2 if decimal != 10 => "nd",
+            3 if decimal != 10 => "rd",
+            _ => "th",
+        };
+        bail!("{i}{suffix} part of key `{key}` is empty")
     }
 
     delegate_getter! {

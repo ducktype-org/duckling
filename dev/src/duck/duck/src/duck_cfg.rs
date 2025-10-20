@@ -73,16 +73,19 @@ mod test_utils {
     use super::DuckCfg;
 
     impl DuckCfg {
+        #[doc(hidden)]
         pub fn set_max_fix_dist(&mut self, new_val: i64) {
             self.inner
                 .set_int(String::from("security.typos.max_distance"), new_val);
         }
 
+        #[doc(hidden)]
         pub fn set_fixes_enabled(&mut self, new_val: bool) {
             self.inner
                 .set_bool(String::from("security.typos.enabled"), new_val);
         }
 
+        #[doc(hidden)]
         pub fn set_aliases(&mut self, new_val: HashMap<String, String>) {
             let val: Table = new_val
                 .into_iter()
