@@ -132,32 +132,13 @@ mod tests {
     ))]
 
     use super::*;
-    use injectorpp::interface::injector::*;
 
     #[test]
     fn test_fixes() {
-        use crate::duck_cfg::DuckCfg;
-
-        let mut injector = InjectorPP::new();
-        injector
-            .when_called(
-                injectorpp::func!(fn (DuckCfg::fixes_enabled)(&DuckCfg) -> QuackResult<bool>),
-            )
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCfg) -> QuackResult<bool>,
-                returns: Ok(true)
-            ));
-        injector
-            .when_called(
-                injectorpp::func!(fn (DuckCfg::max_fix_dist)(&DuckCfg) -> QuackResult<u32>),
-            )
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCfg) -> QuackResult<u32>,
-                returns: Ok(1)
-            ));
-
         let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
-        let ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_fixes_enabled(true);
+        ctx.duck_cfg_mut().set_max_fix_dist(1);
         let external_cmds = HashMap::new();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("search"));

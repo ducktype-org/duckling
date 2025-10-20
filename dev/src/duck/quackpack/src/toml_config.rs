@@ -43,6 +43,24 @@ macro_rules! delegate_getter {
     };
 }
 
+#[cfg(feature = "test_utils")]
+macro_rules! delegate_setter {
+    (
+        $(
+            $name:ident, $value_type:ty $(,)?
+        ),*
+    ) => {
+        item! {
+            $(
+                pub fn [<set_ $name>](&mut self, key: String, value: $value_type) {
+                    let wrapped_value = Value::try_from(value).unwrap();
+                    let _ = self.set(key.clone(), wrapped_value);
+                }
+            )*
+        }
+    };
+}
+
 impl TomlConfig {
     pub fn new(path: PathBuf) -> QuackResult<Self> {
         let content = match path.as_path().read_to_string() {
@@ -138,6 +156,37 @@ impl TomlConfig {
         self._get(key).with_context(|| self.make_location_error())
     }
 
+    #[cfg(feature = "test_utils")]
+    fn _set(&mut self, key: String, value: Value) -> QuackResult<()> {
+        if key.is_empty() {
+            bail!("empty key");
+        }
+        let parts = key.split('.').collect::<Vec<_>>();
+        let [ref parts @ .., last] = parts[..] else {
+            unreachable!(
+                "we asserted that key is not empty, so split should return at least one element"
+            )
+        };
+        let mut current = &mut self.content;
+        for (_, &part) in parts.iter().enumerate() {
+            if part.is_empty() {
+                bail!("One of the keys is empty")
+            }
+            if !current.contains_key(part) {
+                current.insert(part.to_string(), Value::Table(Table::new()));
+            }
+            let next_val = current.get_mut(part).unwrap();
+            current = next_val.as_table_mut().unwrap();
+        }
+        let _ = current.insert(last.to_string(), value);
+        Ok(())
+    }
+
+    #[cfg(feature = "test_utils")]
+    fn set(&mut self, key: String, value: Value) {
+        let _ = self._set(key, value);
+    }
+
     delegate_getter! {
         str => str -> &str,
         array => array -> &Array,
@@ -146,6 +195,17 @@ impl TomlConfig {
         int => integer -> i64,
         float => float -> f64,
         bool => bool -> bool,
+    }
+
+    #[cfg(feature = "test_utils")]
+    delegate_setter! {
+        str, &str,
+        array, &Array,
+        table, &Table,
+        date, &Datetime,
+        int, i64,
+        float, f64,
+        bool, bool,
     }
 
     pub fn get_root_table(&self) -> &Table {

@@ -17,21 +17,12 @@ toml = "0.9.8"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
-[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dev-dependencies]
-injectorpp = "0.4.0"
-
-[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dev-dependencies]
-injectorpp = "0.4.0"
-
-[target.'cfg(all(target_os = "windows", target_arch = "aarch64"))'.dev-dependencies]
-injectorpp = "0.4.0"
-
-[target.'cfg(all(target_os = "windows", target_arch = "x86_64"))'.dev-dependencies]
-injectorpp = "0.4.0"
-
 [profile.test]
 opt-level = 0
 debug = true
 lto = false
 codegen-units = 1
 incremental = false
+
+[dev-dependencies]
+quackpack = { version = "0.1.0", path = "../quackpack", features = ["test_utils"] }

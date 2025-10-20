@@ -136,7 +136,6 @@ dependencies = [
  "clap",
  "clap_complete",
  "console",
- "injectorpp",
  "itertools",
  "paste",
  "quackpack",
@@ -179,15 +178,6 @@ checksum = "6717a8d2a5a929a1a2eb43a12812498ed141a0bcfb7e8f7844fbdbe4303bba9f"
 dependencies = [
  "equivalent",
  "hashbrown",
-]
-
-[[package]]
-name = "injectorpp"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d377a64bbe42f7a086ed630fbc66d84b43944f278ef42de53af79aaec6c21687"
-dependencies = [
- "libc",
 ]
 
 [[package]]

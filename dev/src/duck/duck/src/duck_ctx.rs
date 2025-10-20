@@ -51,3 +51,14 @@ impl DuckCtx {
         &mut self.env
     }
 }
+
+#[cfg(test)]
+mod test_utils {
+    use super::{DuckCfg, DuckCtx};
+
+    impl DuckCtx {
+        pub fn duck_cfg_mut(&mut self) -> &mut DuckCfg {
+            &mut self.duck_cfg
+        }
+    }
+}

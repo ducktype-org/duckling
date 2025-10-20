@@ -130,38 +130,24 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
 
 #[cfg(test)]
 mod tests {
-    #![cfg(any(
-        all(target_os = "linux", target_arch = "aarch64"),
-        all(target_os = "linux", target_arch = "x86_64"),
-        all(target_os = "windows", target_arch = "aarch64"),
-        all(target_os = "windows", target_arch = "x86_64")
-    ))]
-    use super::*;
-    use injectorpp::interface::injector::*;
+    use std::collections::HashMap;
+
+    use crate::{
+        DuckCtx,
+        driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
+    };
 
     #[test]
     fn test_cycles() {
-        use crate::duck_cfg::DuckCfg;
-
-        fn fake_alias_for(name: &str) -> Option<&'static str> {
-            match name {
-                "x" => Some("y --a"),
-                "y" => Some("z --b xd"),
-                "z" => Some("x"),
-                _ => None,
-            }
-        }
-
-        let mut injector = InjectorPP::new();
-        injector
-            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<&str>>))
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<&str>>,
-                returns: Ok(fake_alias_for(name))
-            ));
+        let fake_aliases = HashMap::from([
+            (String::from("x"), String::from("y --a")),
+            (String::from("y"), String::from("z --b xd")),
+            (String::from("z"), String::from("x")),
+        ]);
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
-        let ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();
         let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
@@ -178,27 +164,15 @@ mod tests {
 
     #[test]
     fn test_expands_ok() {
-        use crate::duck_cfg::DuckCfg;
-
-        fn fake_alias_for(name: &str) -> Option<&'static str> {
-            match name {
-                "x" => Some("y"),
-                "y" => Some("z --all-features"),
-                "z" => Some("build"),
-                _ => None,
-            }
-        }
-
-        let mut injector = InjectorPP::new();
-        injector
-            .when_called(injectorpp::func!(fn (DuckCfg::alias_for)(&DuckCfg, &str) -> QuackResult<Option<&str>>))
-            .will_execute(injectorpp::fake!(
-                func_type: fn(_x: &DuckCfg, name: &str) -> QuackResult<Option<&str>>,
-                returns: Ok(fake_alias_for(name))
-            ));
+        let fake_aliases = HashMap::from([
+            (String::from("x"), String::from("y")),
+            (String::from("y"), String::from("z --all-features")),
+            (String::from("z"), String::from("build")),
+        ]);
 
         let args_matches = cli().try_get_matches_from(["duck", "x"]).unwrap();
-        let ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();
         let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
