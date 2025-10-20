@@ -1,17 +1,37 @@
-# @todo Get rid of the relative paths (also duck target folder will probably change), maybe this test can also be done simpler.
+# @todo Get rid of the relative paths (also duck target folder will probably change), maybe this tests can also be done simpler.
 cwd_duck_root: "cd ../../src/duck/duck"
 build_duck: "cargo build"
+create_duck_echo: "echo '#!/bin/sh' > duck-echo && echo 'echo \"$@\"' >> duck-echo && chmod +x duck-echo"
+add_cwd_to_path: "PATH=$PATH:./"
+duck_exe_path: "../../src/duck/duck/target/debug/duck"
+create_test_exe: "echo '#!/bin/sh' > test && echo '@{test_cmd}' > test && chmod +x test"
+
+PreTest: "@{create_test_exe} && @{create_duck_echo} && @{cwd_duck_root} && @{build_duck}"
 
 Tests:
   test-run-external-subcmd:
-    create_duck_echo: "echo '#!/bin/sh' > duck-echo && echo 'echo \"$@\"' >> duck-echo && chmod +x duck-echo"
-
-    add_cwd_to_path: "PATH=$PATH:./"
-    duck_exe_path: "../../src/duck/duck/target/debug/duck"
     test_cmd: "@{add_cwd_to_path} && @{duck_exe_path} echo External subcmd"
-    create_test_exe: "echo '#!/bin/sh' > test && echo '@{test_cmd}' > test && chmod +x test"
 
-    PreTest: "@{create_test_exe} && @{create_duck_echo} && @{cwd_duck_root} && @{build_duck}"
+    Run: "./test"
+    PostTest: "rm ./duck-echo && rm ./test"
+    Cases:
+      echo:
+        Output:
+          String: "\"External subcmd\"\n"
+  test-fixes-to-external:
+    change_qp_config_env: "QP_CONFIG=\"./\""
+    test_cmd: "@{add_cwd_to_path} && env @{change_qp_config_env} @{duck_exe_path} ecjo External subcmd"
+
+    Run: "./test"
+    PostTest: "rm ./duck-echo && rm ./test"
+    Cases:
+      echo:
+        Output:
+          String: "\"External subcmd\"\n"
+  test-fixes-to-external-subcmd:
+    change_qp_config_env: "QP_CONFIG=\"./\""
+    test_cmd: "@{add_cwd_to_path} && env @{change_qp_config_env} @{duck_exe_path} abababq External subcmd"
+
     Run: "./test"
     PostTest: "rm ./duck-echo && rm ./test"
     Cases:
