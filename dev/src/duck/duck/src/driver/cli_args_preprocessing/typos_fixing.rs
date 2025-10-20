@@ -80,15 +80,40 @@ fn find_closest_targets<'a>(
 ) -> Vec<&'a str> {
     targets
         .iter()
-        .filter_map(|target| {
-            let distance = levenshtein::distance(target, bad_cmd);
-            if distance <= max_fix_dist {
-                Some(target.as_str())
-            } else {
-                None
-            }
+        .fold(Vec::new(), |acc, target| {
+            update_closest_targets(acc, target, bad_cmd, max_fix_dist)
         })
-        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|(target, _)| target)
+        .collect()
+}
+
+fn update_closest_targets<'a>(
+    mut acc: Vec<(&'a str, u32)>,
+    target: &'a str,
+    bad_cmd: &str,
+    max_fix_dist: u32,
+) -> Vec<(&'a str, u32)> {
+    let dist = levenshtein::distance(bad_cmd, target);
+    if dist > max_fix_dist {
+        return acc;
+    }
+    match acc.len() {
+        0 => {
+            acc.push((target, dist));
+        }
+        _ => match (dist < acc[0].1, dist == acc[0].1) {
+            (true, false) => {
+                acc.clear();
+                acc.push((target, dist));
+            }
+            (false, true) => {
+                acc.push((target, dist));
+            }
+            _ => {}
+        },
+    }
+    acc
 }
 
 fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String {
