@@ -73,17 +73,29 @@ class MyCustomHashMap final {
 			}
 		}
 
+		CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash: ", all_nodes.size(), " vs ", element_count);
+
 		buckets.clear();
 		buckets.resize(new_bucket_count);
+
+		std::vector<Ref<MRef<Node>>> bucket_ends;
+		bucket_ends.reserve(new_bucket_count);
+		for (auto& bucket: buckets) {
+			bucket_ends.emplace_back(&bucket);
+		}
 
 		// @opt: keep bucket ends -- pointers to nullptr MRef nexts
 		// can be used here and in addToBucket to avoid traversing the whole bucket
 		// when adding new nodes
 
-		CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash: ", all_nodes.size(), " vs ", element_count);
+		for (const Ref<Node>& node: all_nodes) {
+			auto bucket_index = keyToBucket(node->key);
 
-		for (const auto& node: all_nodes) {
-			addToBucket(keyToBucket(node->key), node);
+			Ref<MRef<Node>> where_to_place = bucket_ends[bucket_index];
+			bucket_ends[bucket_index] = &node->next;
+			*where_to_place = node;
+
+			// addToBucket(keyToBucket(node->key), node);
 		}
 	}
 
