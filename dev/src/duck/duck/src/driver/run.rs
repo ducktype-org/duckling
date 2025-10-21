@@ -9,12 +9,15 @@ use crate::{
     driver::{
         cli,
         cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
-        global_cli_options::GlobalCliOptions,
+        cli_no_help,
+        global_cli_options::{Color, GlobalCliOptions},
+        styles::get_styles,
         subcommands::exec_for,
     },
 };
 use anyhow::{Context, bail};
-use clap::ArgMatches;
+use clap::{ArgMatches, Command, error::ErrorKind};
+use console::WithoutAnsi;
 use quackpack::QuackResult;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
@@ -26,7 +29,14 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
         external.keys().cloned().collect::<Vec<_>>().join(", ")
     );
     let cli = cli();
-    let matches = cli.try_get_matches()?;
+    let matches_ = cli.try_get_matches();
+    if let Err(err) = &matches_
+        && err.kind() == ErrorKind::DisplayHelp
+    {
+        return run_help(ctx);
+    }
+    let matches = matches_?;
+
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
         std::env::set_current_dir(chdir)
             .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
@@ -75,14 +85,13 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
 }
 
 fn run_subcmd(
-    ctx: &DuckCtx,
+    ctx: &mut DuckCtx,
     args: ArgMatches,
     external: &HashMap<String, PathBuf>,
 ) -> QuackResult<()> {
     let Some((sub_cmd, sub_args)) = args.subcommand() else {
         // No subcommand provided.
-        print_parser_help(ctx);
-        return Ok(());
+        return run_help(ctx);
     };
     match (exec_for(sub_cmd), external.get(sub_cmd)) {
         (Some(exec_fn), Some(_)) => {
@@ -121,8 +130,48 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     Err(command.exec_replace().into())
 }
 
-fn print_parser_help(ctx: &DuckCtx) {
-    let mut parser = cli();
+fn run_help(ctx: &mut DuckCtx) -> QuackResult<()> {
+    let cli_nh = cli_no_help();
+    let mut cli_real = cli();
+    let matches = cli_nh.try_get_matches()?;
+    let global_opts = GlobalCliOptions::from_matches(&matches)?;
+    global_opts.update_context(ctx);
+    let name = matches.subcommand_name();
+    match name {
+        None => match global_opts.color() {
+            Color::Never => print_parser_help(ctx, &mut cli_real, true),
+            _ => print_parser_help(ctx, &mut cli_real, false),
+        },
+        Some(subcmd_name) => {
+            let mut found_subcmd = false;
+            for subcmd in cli().get_subcommands_mut() {
+                let mut subcmd_ = subcmd.clone().styles(get_styles());
+                if subcmd.get_name() == subcmd_name {
+                    found_subcmd = true;
+                    match global_opts.color() {
+                        Color::Never => print_parser_help(ctx, &mut subcmd_, true),
+                        _ => print_parser_help(ctx, &mut subcmd_, false),
+                    }
+                }
+            }
+            if !found_subcmd {
+                match global_opts.color() {
+                    Color::Never => print_parser_help(ctx, &mut cli_real, true),
+                    _ => print_parser_help(ctx, &mut cli_real, false),
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_parser_help(ctx: &DuckCtx, parser: &mut Command, colors_disabled: bool) {
     let help = parser.render_help();
-    ctx.console().print_no_nl(help.ansi());
+    if colors_disabled {
+        ctx.console()
+            .print_no_nl(WithoutAnsi::new(&help.to_string()));
+    } else {
+        ctx.console().print_no_nl(help.ansi());
+    }
 }
