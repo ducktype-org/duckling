@@ -1,6 +1,6 @@
 #include "utils.hpp"
-#include "base/exceptions.hpp"
-#include "base/str_utils.hpp"
+#include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 #include "filesystem/file.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
@@ -55,7 +55,7 @@ namespace lsp {
 			return;
 		}
 
-		CORE_UNREACHABLE()
+		CORE_UNREACHABLE();
 	}
 
 	void initModules(const fs::FilePath& path) {
@@ -76,6 +76,6 @@ namespace lsp {
 			return;
 		}
 
-		CORE_UNREACHABLE()
+		CORE_UNREACHABLE();
 	}
 }
