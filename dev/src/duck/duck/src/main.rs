@@ -30,14 +30,15 @@ fn setup_logger() {
         prelude::*,
         registry,
     };
+    // TODO: Something like `DUCK_DEBUG`? On the other hand it also affects loggers in quackpack (the library),
+    //       but the cli tool is called duck...
     let subscriber = EnvFilter::from_env("QP_DEBUG");
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)
         .with_filter(subscriber);
 
-    let registry = registry().with(layer);
-    registry.init();
+    registry().with(layer).init();
     debug!("start = {:#?}", std::time::SystemTime::now());
 }
 

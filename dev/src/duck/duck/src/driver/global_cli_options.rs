@@ -21,9 +21,8 @@ impl FromStr for Color {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            // TODO: Introduce our own `Internal` error type.
-            //       Then also update `main::print_error_and_exit`, to check for internal errors,
-            //       in error chain.
+            // TODO: Introduce our own `Internal` error type. Then also update
+            // `main::print_error_and_exit`, to check for internal errors in error chain.
             _ => bail!(
                 "`{}` is not a valid color. This should be guarded by parser",
                 s
