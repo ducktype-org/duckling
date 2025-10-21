@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     io::ErrorKind,
     path::{Path, PathBuf},
 };
@@ -12,7 +13,9 @@ use crate::QuackResult;
 use paste::item;
 use toml::value::{Array, Datetime};
 
-#[derive(Default, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct TomlConfig {
     content: Table,
     source: Option<PathBuf>,
@@ -43,19 +46,17 @@ macro_rules! delegate_getter {
     };
 }
 
-#[cfg(feature = "test_utils")]
-#[doc(hidden)]
 macro_rules! delegate_setter {
     (
         $(
-            $name:ident, $value_type:ty $(,)?
+            $name:ident => $toml_value_enum:ident -> $value:ty $(,)?
         ),*
     ) => {
         item! {
             $(
-                pub fn [<set_ $name>](&mut self, key: String, value: $value_type) {
-                    let wrapped_value = Value::try_from(value).unwrap();
-                    let _ = self.set(key.clone(), wrapped_value);
+                pub fn [<set_ $name>](&mut self, key: &str, value: $value) -> QuackResult<()> {
+                    let value = Value::$toml_value_enum(value);
+                    self.set(key, value)
                 }
             )*
         }
@@ -102,7 +103,7 @@ impl TomlConfig {
     }
 
     #[track_caller]
-    fn _get<'a>(&'a self, key: &str) -> QuackResult<Option<&'a Value>> {
+    fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(
             "getting key `{key}` from config at `{}`",
             self.source
@@ -122,7 +123,7 @@ impl TomlConfig {
         let mut current: &Table = &self.content;
         for (i, &part) in parts.iter().enumerate() {
             if part.is_empty() {
-                Self::error_empty_key_fragment(i, key)?
+                return Err(Self::make_empty_key_fragment_error(i, key));
             }
             let Some(next) = current.get(part) else {
                 debug!(
@@ -143,13 +144,15 @@ impl TomlConfig {
         Ok(current.get(last))
     }
 
-    fn get<'a>(&'a self, key: &str) -> QuackResult<Option<&'a Value>> {
+    fn get(&self, key: &str) -> QuackResult<Option<&Value>> {
         self._get(key).with_context(|| self.make_location_error())
     }
 
-    #[cfg(feature = "test_utils")]
-    #[doc(hidden)]
-    fn _set(&mut self, key: String, value: Value) -> QuackResult<()> {
+    #[track_caller]
+    fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
+        if key.is_empty() {
+            bail!("empty key")
+        }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
             unreachable!(
@@ -159,13 +162,13 @@ impl TomlConfig {
         let mut current = &mut self.content;
         for (i, &part) in parts.iter().enumerate() {
             if part.is_empty() {
-                Self::error_empty_key_fragment(i, &key)?
+                return Err(Self::make_empty_key_fragment_error(i, key));
             }
             if !current.contains_key(part) {
                 current.insert(part.to_string(), Value::Table(Table::new()));
             }
             let Some(next) = current.get_mut(part) else {
-                unreachable!("We've just inserted part into current");
+                unreachable!("we've just inserted part into current");
             };
             let next_type = next.type_str();
             let Some(next) = next.as_table_mut() else {
@@ -181,13 +184,12 @@ impl TomlConfig {
         Ok(())
     }
 
-    #[cfg(feature = "test_utils")]
-    #[doc(hidden)]
-    fn set(&mut self, key: String, value: Value) {
-        let _ = self._set(key, value);
+    fn set(&mut self, key: &str, value: Value) -> QuackResult<()> {
+        self._set(key, value)
+            .with_context(|| self.make_location_error())
     }
 
-    fn error_empty_key_fragment(i: usize, key: &str) -> QuackResult<()> {
+    fn make_empty_key_fragment_error(i: usize, key: &str) -> anyhow::Error {
         let i = i + 1;
         let last_two = i % 100;
         let digit = last_two % 10;
@@ -198,7 +200,7 @@ impl TomlConfig {
             3 if decimal != 10 => "rd",
             _ => "th",
         };
-        bail!("{i}{suffix} part of key `{key}` is empty")
+        anyhow!("{i}{suffix} part of key `{key}` is empty")
     }
 
     delegate_getter! {
@@ -211,19 +213,24 @@ impl TomlConfig {
         bool => bool -> bool,
     }
 
-    #[cfg(feature = "test_utils")]
     delegate_setter! {
-        str, &str,
-        array, &Array,
-        table, &Table,
-        date, &Datetime,
-        int, i64,
-        float, f64,
-        bool, bool,
+        str => String -> String,
+        array => Array -> Array,
+        table => Table -> Table,
+        date => Datetime -> Datetime,
+        int => Integer -> i64,
+        float => Float -> f64,
+        bool => Boolean -> bool,
     }
 
     pub fn get_root_table(&self) -> &Table {
         &self.content
+    }
+}
+
+impl Display for TomlConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.content.fmt(f)
     }
 }
 
@@ -289,6 +296,50 @@ mod tests {
                 .unwrap()
                 .as_str(),
             Some("c")
+        );
+    }
+
+    #[test]
+    fn basic_set() {
+        let file = prepare_file(
+            r#"
+        a = 1
+        b = 1.2
+        c = "xd"
+        d = "dx"
+        [foo]
+        bar = "xd"
+        xd = "c"
+        [foo.a]
+        a = 1
+        "#,
+        );
+        let mut config = TomlConfig::new(file.as_ref().to_path_buf()).unwrap();
+        config.set_bool("a", true).unwrap();
+        config.set_int("b", 2137).unwrap();
+        config.set_table("c", Table::new()).unwrap();
+        config.set_array("foo", Array::new()).unwrap();
+        config
+            .set_table(
+                "e.bar.xd",
+                Table::from_iter([(String::from("a"), Value::Integer(1))]),
+            )
+            .unwrap();
+        config
+            .set_int("foo.a", 1)
+            .expect_err("we shouldn't be able to set int in array");
+        assert_eq!(
+            config.to_string(),
+            r#"a = true
+b = 2137
+d = "dx"
+foo = []
+
+[c]
+
+[e.bar.xd]
+a = 1
+"#
         );
     }
 }
