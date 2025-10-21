@@ -31,8 +31,11 @@ namespace compiler::frontend {
 		HashAlg  partial;
 		HashType hash;
 
+		using ElementsType
+			= std::conditional_t<base::IS_BUILD_TYPE_DEV, std::vector<std::string>, base::Ignore>;
+
 		[[no_unique_address]]
-		std::conditional_t<base::IS_BUILD_TYPE_DEV, std::vector<std::string>, base::Ignore> elements;
+		ElementsType elements;
 
 		// Default constructible so containers holding ComponentHash can be value-initialized
 		constexpr ComponentHash() noexcept = default;
@@ -59,7 +62,11 @@ namespace compiler::frontend {
 			  partial(parent.partial),
 			  elements(parent.elements) {
 			if (!ext.empty()) {
-				if constexpr (base::IS_BUILD_TYPE_DEV) elements.emplace_back(ext);
+#ifdef BUILD_TYPE_DEV
+				// this has to be inside the ifdef, not if-constexpr because of C++ rules about
+				// if-constexpr errors
+				elements.emplace_back(ext);
+#endif
 
 				// add extra fragment to partial hash
 				hashing::addToHash(partial, std::string_view(ext));
