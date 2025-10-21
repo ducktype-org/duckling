@@ -4,6 +4,7 @@ use crate::driver::subcommands::exec_for;
 
 // TODO(Stas): We can either hardcode theme here, all collect them from cli() function.
 //             But it's low priority for now.
+// (Tymek): I think hardcoding is actually better, because otherwise it would be much harder to detect that a builtin alias shadows external subcmd for example.
 const BUILTIN_ALIASES: [(&str, &str); 2] = [("b", "build"), ("r", "run")];
 
 pub fn get_builtin_alias(name: &str) -> Option<&'static str> {
