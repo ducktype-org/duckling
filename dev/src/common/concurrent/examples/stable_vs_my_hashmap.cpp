@@ -53,7 +53,9 @@ class MyCustomHashMap final {
 
 	[[nodiscard]]
 	u64 keyToBucket(const Key& key) const NOEXCEPT {
-		return key % buckets.size();
+		auto res = key % buckets.size();
+		CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
+		return res;
 	}
 
 	void rehash() NOEXCEPT{
@@ -79,6 +81,8 @@ class MyCustomHashMap final {
 		// can be used here and in addToBucket to avoid traversing the whole bucket
 		// when adding new nodes
 
+		CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash");
+
 		for (const auto& node: all_nodes) {
 			auto bucket = buckets[keyToBucket(node->key)];
 			if (bucket)
@@ -94,6 +98,8 @@ class MyCustomHashMap final {
 	 * Checks if a node with the same key already exists - if so, throws logic_error.
 	 */
 	void addToBucket(Ref<Node> bucket, Ref<Node> new_node) NOEXCEPT {
+		CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
+
 		Ref current_node = bucket;
 		Key key          = new_node->key;
 
