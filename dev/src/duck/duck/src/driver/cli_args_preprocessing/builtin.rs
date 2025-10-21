@@ -17,6 +17,13 @@ pub fn get_builtin_alias(name: &str) -> Option<&'static str> {
     })
 }
 
+pub fn get_builtin_aliases_keys() -> Vec<String> {
+    BUILTIN_ALIASES
+        .iter()
+        .map(|(k, _)| String::from(*k))
+        .collect()
+}
+
 pub fn is_builtin_subcommand(name: &str) -> bool {
     exec_for(name).is_some()
 }

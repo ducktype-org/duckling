@@ -10,7 +10,10 @@ use crate::{
     DuckCtx,
     driver::{
         cli,
-        cli_args_preprocessing::{builtin::is_builtin_subcommand, levenshtein},
+        cli_args_preprocessing::{
+            builtin::{get_builtin_alias, get_builtin_aliases_keys, is_builtin_subcommand},
+            levenshtein,
+        },
         subcommands::subcommands,
     },
 };
@@ -54,6 +57,7 @@ fn is_valid_subcmd(
     external_cmds: &HashMap<String, PathBuf>,
 ) -> QuackResult<bool> {
     Ok(is_builtin_subcommand(name)
+        || get_builtin_alias(name).is_some()
         || ctx.duck_cfg().alias_for(name)?.is_some()
         || external_cmds.contains_key(name))
 }
@@ -70,6 +74,7 @@ fn possible_targets(
         targets.extend(iter.cloned());
     }
     targets.extend(external_cmds.keys().cloned());
+    targets.extend(get_builtin_aliases_keys());
     Ok(targets)
 }
 
@@ -167,5 +172,78 @@ mod tests {
         let external_cmds = HashMap::new();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("search"));
+    }
+
+    #[test]
+    fn test_multiple_targets() {
+        let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_fixes_enabled(true);
+        ctx.duck_cfg_mut().set_max_fix_dist(100);
+        let external_cmds = HashMap::new();
+        let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
+            "There are two equally distant targets (`info` and `init`), so fixing should fail.",
+        );
+        assert_eq!(
+            result.to_string(),
+            "No such command as `inaa`. Did you mean:\n  - `info`\n  - `init`?"
+        );
+    }
+
+    #[test]
+    fn test_single_closest_target() {
+        let args_matches = cli().try_get_matches_from(["duck", "searcg"]).unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_fixes_enabled(true);
+        ctx.duck_cfg_mut().set_max_fix_dist(100);
+        let external_cmds = HashMap::new();
+        let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
+        assert_eq!(result.subcommand_name(), Some("search"));
+    }
+
+    #[test]
+    fn test_fixes_to_alias() {
+        let fake_aliases = HashMap::from([(
+            String::from("my_alias"),
+            String::from("expands to something -a --b c"),
+        )]);
+
+        let args_matches = cli().try_get_matches_from(["duck", "ny_aias"]).unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_fixes_enabled(true);
+        ctx.duck_cfg_mut().set_max_fix_dist(2);
+        ctx.duck_cfg_mut().set_aliases(fake_aliases);
+        let external_cmds = HashMap::new();
+        let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
+        assert_eq!(result.subcommand_name(), Some("my_alias"));
+    }
+
+    #[test]
+    fn test_fixes_to_external() {
+        let args_matches = cli()
+            .try_get_matches_from(["duck", "my_external_xmd"])
+            .unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_fixes_enabled(true);
+        ctx.duck_cfg_mut().set_max_fix_dist(1);
+        let external_cmds = HashMap::from([(String::from("my_external_cmd"), PathBuf::new())]);
+        let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
+        assert_eq!(result.subcommand_name(), Some("my_external_cmd"));
+    }
+
+    #[test]
+    fn test_tries_fixing_to_builtin_alias() {
+        let args_matches = cli().try_get_matches_from(["duck", "a"]).unwrap();
+        let mut ctx = DuckCtx::new().unwrap();
+        ctx.duck_cfg_mut().set_fixes_enabled(true);
+        ctx.duck_cfg_mut().set_max_fix_dist(1);
+        let external_cmds = HashMap::new();
+        let result = fix_typos(args_matches, &ctx, &external_cmds).expect_err(
+            "There are two equally distant targets (`b` and `r`), so fixing should fail.",
+        );
+        assert_eq!(
+            result.to_string(),
+            "No such command as `a`. Did you mean:\n  - `b`\n  - `r`?"
+        );
     }
 }
