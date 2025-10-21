@@ -84,11 +84,7 @@ class MyCustomHashMap final {
 		CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash");
 
 		for (const auto& node: all_nodes) {
-			auto bucket = buckets[keyToBucket(node->key)];
-			if (bucket)
-				addToBucket(bucket.toOpt().value(), node);
-			else
-				buckets[keyToBucket(node->key)] = node;
+			addToBucket(keyToBucket(node->key), node);
 		}
 	}
 
@@ -97,7 +93,7 @@ class MyCustomHashMap final {
 	 * Returns new size of the bucket.
 	 * Checks if a node with the same key already exists - if so, throws logic_error.
 	 */
-	void addToBucket(Ref<Node> bucket, Ref<Node> new_node) NOEXCEPT {
+	void addToBucketNode(Ref<Node> bucket, Ref<Node> new_node) NOEXCEPT {
 		CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
 
 		Ref current_node = bucket;
@@ -118,6 +114,14 @@ class MyCustomHashMap final {
 		current_node->next = new_node;
 	}
 
+	void addToBucket(u64 bucket_index, Ref<Node> new_node) NOEXCEPT {
+		MRef maybe_initial_node = buckets.at(bucket_index);
+		if (maybe_initial_node)
+			addToBucketNode(maybe_initial_node.toOpt().value(), new_node);
+		else
+			buckets.at(bucket_index) = new_node;
+	}
+
 	void maybeRehash() NOEXCEPT {
 		if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) rehash();
 	}
@@ -126,14 +130,10 @@ public:
 	MyCustomHashMap(): buckets(INITIAL_BUCKETS) {}
 
 	void put(const Key& key, const T& value) NOEXCEPT {
-		MRef maybe_initial_node = buckets[keyToBucket(key)];
 		auto new_node
 			= node_allocator.allocateEmplace(Node{ nullptr, key, value });
 
-		if (maybe_initial_node)
-			addToBucket(maybe_initial_node.toOpt().value(), new_node);
-		else
-			buckets.at(keyToBucket(key)) = new_node;
+		addToBucket(keyToBucket(key), new_node);
 
 		element_count++;
 		maybeRehash();
@@ -177,9 +177,9 @@ auto testHashMap() {
 }
 
 int main() {
-	auto count = testHashMap<base::StableHashMap<u64, u64>>();
+	// auto count = testHashMap<base::StableHashMap<u64, u64>>();
 	// auto count = testHashMap<MyHashMap<u64, u64>>();
-	// auto count = testHashMap<MyCustomHashMap<u64>>();
+	auto count = testHashMap<MyCustomHashMap<u64>>();
 	std::cout << "Number of elements found: " << count << "\n";
 	return 0;
 }
