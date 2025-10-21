@@ -1,7 +1,5 @@
 use clap::builder::styling::{AnsiColor, Color, Style, Styles};
 
-// TODO: Cook up prettier styles.
-
 pub const fn get_styles() -> Styles {
     Styles::styled()
         .usage(
@@ -14,9 +12,9 @@ pub const fn get_styles() -> Styles {
             Style::new()
                 .bold()
                 .underline()
-                .fg_color(Some(Color::Ansi(AnsiColor::Yellow))),
+                .fg_color(Some(Color::Ansi(AnsiColor::Magenta))),
         )
-        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan))))
+        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightCyan))))
         .invalid(
             Style::new()
                 .bold()
@@ -33,7 +31,7 @@ pub const fn get_styles() -> Styles {
                 .underline()
                 .fg_color(Some(Color::Ansi(AnsiColor::Green))),
         )
-        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan))))
-        .context(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Magenta))))
-        .context_value(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green))))
+        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightCyan))))
+        .context(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Blue))))
+        .context_value(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightBlue))))
 }
