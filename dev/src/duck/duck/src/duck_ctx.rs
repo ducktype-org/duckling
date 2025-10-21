@@ -14,10 +14,11 @@ impl DuckCtx {
     pub fn new() -> QuackResult<Self> {
         let env = Env::default();
         let console = Terminal::stdout();
-        let config = DuckCfg::new(&env, &console)?;
+        let error_console = Terminal::stderr();
+        let config = DuckCfg::new(&env, &error_console)?;
         Ok(Self {
             console,
-            error_console: Terminal::stderr(),
+            error_console,
             duck_cfg: config,
             env,
         })

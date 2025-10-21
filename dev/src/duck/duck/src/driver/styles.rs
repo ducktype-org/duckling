@@ -2,7 +2,7 @@ use clap::builder::styling::{AnsiColor, Color, Style, Styles};
 
 // TODO: Cook up prettier styles.
 
-pub fn get_styles() -> Styles {
+pub const fn get_styles() -> Styles {
     Styles::styled()
         .usage(
             Style::new()
@@ -33,7 +33,7 @@ pub fn get_styles() -> Styles {
                 .underline()
                 .fg_color(Some(Color::Ansi(AnsiColor::Green))),
         )
-        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightBlack))))
+        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan))))
         .context(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Magenta))))
         .context_value(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green))))
 }
