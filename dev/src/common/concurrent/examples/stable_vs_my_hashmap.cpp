@@ -58,19 +58,18 @@ class MyCustomHashMap final {
 		return res;
 	}
 
-	void rehash() NOEXCEPT{
+	void rehash() NOEXCEPT {
 		usize                  new_bucket_count = buckets.size() * 4;
 		
 		std::vector<Ref<Node>> all_nodes;
 		all_nodes.reserve(element_count);
 
 		for (const auto& bucket: buckets) {
-			auto current_node = bucket;
+			MRef<Node> current_node = bucket;
 			while (current_node) {
 				all_nodes.emplace_back(current_node.toOpt().value());
-				all_nodes.back()->next = nullptr;
-
 				current_node = current_node.toOpt().value()->next;
+				all_nodes.back()->next = nullptr;
 			}
 		}
 
@@ -81,7 +80,7 @@ class MyCustomHashMap final {
 		// can be used here and in addToBucket to avoid traversing the whole bucket
 		// when adding new nodes
 
-		CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash");
+		CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash: ", all_nodes.size(), " vs ", element_count);
 
 		for (const auto& node: all_nodes) {
 			addToBucket(keyToBucket(node->key), node);
