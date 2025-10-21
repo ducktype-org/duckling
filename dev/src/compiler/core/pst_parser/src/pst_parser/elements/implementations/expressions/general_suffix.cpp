@@ -3,7 +3,7 @@
 #include "../../hierarchy/expressions/general_prefix.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 
 namespace pst::expr {
 	MBox<ExprElement> GeneralSuffix::parseRecursive(LangParserState& state, i64 length, u64 iter) {

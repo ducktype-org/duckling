@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/logger.hpp>
 

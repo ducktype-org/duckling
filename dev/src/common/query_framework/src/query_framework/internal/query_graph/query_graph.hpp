@@ -2,7 +2,7 @@
 
 #include "node_id.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 #include <ostream>
 #include <vector>
@@ -11,7 +11,7 @@ namespace query::internal {
 
 	class QueryState;
 
-	class QueryGraph {
+	class QueryGraph final {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 		/*
 		 * for direct acces to node_deps

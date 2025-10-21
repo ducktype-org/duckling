@@ -2,6 +2,8 @@
 
 #include "status.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <vm/core/process/type_metadata/type.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
@@ -49,6 +51,8 @@ namespace vm::api {
 			u64 instr_number;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
 		};
+
+		using Boolean = bool;
 	}
 
 	using Response = std::variant<
@@ -58,5 +62,6 @@ namespace vm::api {
 		response::Empty,
 		response::CodePosition,
 		response::VmValue,
+		response::Boolean,
 		ExitValue>;
 }

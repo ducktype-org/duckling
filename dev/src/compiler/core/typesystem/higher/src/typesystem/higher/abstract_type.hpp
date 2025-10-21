@@ -10,7 +10,7 @@
 
 #include "kind.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/context_fd.hpp>
 
@@ -107,7 +107,7 @@ namespace tsh {
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
 		 *
-		 * It is needed to determine if createing a lifetime flag is needed during LIR lowering.
+		 * Used to determine if creating a lifetime flag is needed during LIR lowering.
 		 *
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
@@ -135,6 +135,16 @@ namespace tsh {
 		template<std::derived_from<AbstractType> ABSTRACT_TYPE>
 		explicit AbstractType(const ABSTRACT_TYPE& other): pimpl(other.pimpl) {
 			checkDynamicCast<AbstractType>(other.pimpl);
+		}
+
+		/**
+		 * @brief Cast the object to another type from the AbstractType hierarchy in an OOP way.
+		 * @note OOP-style method provided for convenience. It is equivalent to a manual conversion.
+		 * @tparam ABSTRACT_TYPE The target type from the AbstractType hierarchy.
+		 */
+		template<std::derived_from<AbstractType> ABSTRACT_TYPE>
+		ABSTRACT_TYPE as() const {
+			return ABSTRACT_TYPE(*this);
 		}
 
 		/**
@@ -186,6 +196,14 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
+
+		/**
+		 * @brief Whether the type carries any information, in an information-theoretic sense. For
+		 * example, the unit and void types does not carry any information, while other types do.
+		 * @return Whether the type carries information.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const;
 
 		/**
 		 * @brief Get the text representation of this type.

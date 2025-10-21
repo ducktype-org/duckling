@@ -1,11 +1,11 @@
-# generated with duck using --dvm-backend flag
-# from compiler/driver/tests/globals_initialization
+# generated with duckc compile_module --dvm-backend
+# from compiler/driver/driver/tests/modules/globals_initialization/
 
 global_data _Q_M22globals_initializationG1g i64 {
-    constructor: _ctor_GLOBAL__Q_M22globals_initializationG1g,
+    constructor: _Q_M22globals_initializationG1ggc,
 };
 
-function _ctor_GLOBAL__Q_M22globals_initializationG1g {} -> void {
+function _Q_M22globals_initializationG1ggc {  } -> void {
     label                   label_0;
     # Operation: Assign
     mov_g64_imm            _Q_M22globals_initializationG1g,       5;

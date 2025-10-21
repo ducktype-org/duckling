@@ -3,8 +3,8 @@
 #include "access.hpp"
 #include "elements/elements_list.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/visitor.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/visitor.hpp>
 
 namespace pst {
 	MAKE_ACCESS_VISITOR(

@@ -1,4 +1,4 @@
-#include <base/ok_bad.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <tester/tester.hpp>
 

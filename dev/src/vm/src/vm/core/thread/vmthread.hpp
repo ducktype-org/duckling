@@ -4,9 +4,8 @@
 #include "low_program/instruction.hpp"
 #include "vmvalue.hpp"
 
-#include <base/box.hpp>
-#include <base/ints.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
@@ -252,7 +251,7 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Function to be called when the VMProcess is destroyed. Call GlobalData's
+		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
 		 * destructor functions.
 		 */
 		void execGlobalDestructors(CRef<low::LowVMProgram> program);

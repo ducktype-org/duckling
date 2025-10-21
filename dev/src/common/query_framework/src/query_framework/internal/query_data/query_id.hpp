@@ -6,7 +6,7 @@
 
 #include "query_data.hpp"
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 namespace query::internal {
 	/**

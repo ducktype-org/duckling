@@ -4,9 +4,11 @@
 
 #include <typesystem/higher/type_interface.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
+
+#include <sstream>
 
 using base::bytes2bits;
 
@@ -282,7 +284,7 @@ namespace tsl {
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(const tsh::TypeInterface&
 		                                                                   interface) {
-			const auto&                        elements = interface.getElements();
+			const auto&                        elements = interface.getElementsByName();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
 

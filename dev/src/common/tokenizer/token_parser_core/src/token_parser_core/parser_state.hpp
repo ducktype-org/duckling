@@ -1,7 +1,5 @@
 #pragma once
 
-#include "base_element.hpp"
-#include "common_elements.hpp"
 #include "token_stream.hpp"
 
 #include <diagnostic/logger.hpp>
@@ -29,7 +27,7 @@ namespace tpc {
 
 		// clang-format off
 		[[nodiscard]]
-		inline const Token& operator[](i64 fwd) const {
+		const Token& operator[](i64 fwd) const {
 			return ctokens().peek(fwd);
 		}
 

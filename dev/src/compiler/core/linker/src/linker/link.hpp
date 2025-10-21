@@ -4,9 +4,21 @@
 
 #include <vector>
 
-namespace compiler::driver {
-	struct LinkOptions final {
-		bool link_c_standard_library = true;  // Whether to link the C standard library.
+namespace compiler::linker {
+	/**
+	 * Linking options for external libraries and linker configuration.
+	 * These are set during compiler initialization and used during linking phase.
+	 */
+	struct LinkingOptions final {
+		/**
+		 * Paths to external static libraries to link against.
+		 */
+		std::vector<fs::FilePath> external_static_libraries;
+
+		/**
+		 * @brief Whether to link the C standard library.
+		 */
+		bool link_c_standard_library;
 	};
 
 	/**
@@ -17,6 +29,7 @@ namespace compiler::driver {
 	void link(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
-		LinkOptions                                 options
+		const LinkingOptions&                       options
 	);
+
 }

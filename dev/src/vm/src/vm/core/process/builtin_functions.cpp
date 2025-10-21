@@ -1,13 +1,12 @@
 #include "builtin_functions.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <base/macros/for_each.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/opcode_definitions.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>

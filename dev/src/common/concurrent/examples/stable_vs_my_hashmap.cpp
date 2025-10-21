@@ -34,7 +34,7 @@ public:
 template<class T>
 class MyCustomHashMap final {
 	static constexpr usize  INITIAL_BUCKETS = 256;
-	static constexpr double MAX_LOAD_FACTOR = 0.7;
+	static constexpr double MAX_LOAD_FACTOR = 0.6;
 
 	using Key = u64;
 
@@ -108,6 +108,7 @@ class MyCustomHashMap final {
 			else
 				break;
 		}
+		CORE_ASSERT(current_node->next == nullptr, "this must be the last node in the bucket");
 		current_node->next = new_node;
 	}
 
@@ -147,7 +148,7 @@ std::minstd_rand rng(42);
 
 template<class Map>
 auto testHashMap() {
-	constexpr usize  NUM_ELEMENTS = 2'000'000;
+	constexpr static usize  NUM_ELEMENTS = 2'000'000;
 
 	Map map;
 	for (u64 i = 0; i < NUM_ELEMENTS; i++) {
@@ -162,9 +163,9 @@ auto testHashMap() {
 }
 
 int main() {
-	auto count = testHashMap<base::StableHashMap<u64, u64>>();
+	// auto count = testHashMap<base::StableHashMap<u64, u64>>();
 	// auto count = testHashMap<MyHashMap<u64, u64>>();
-	// auto count = testHashMap<MyCustomHashMap<u64>>();
+	auto count = testHashMap<MyCustomHashMap<u64>>();
 	std::cout << "Number of elements found: " << count << "\n";
 	return 0;
 }

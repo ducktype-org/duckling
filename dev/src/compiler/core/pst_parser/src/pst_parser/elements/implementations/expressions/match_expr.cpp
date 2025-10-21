@@ -114,11 +114,18 @@ namespace pst::expr {
 		out << "]}";
 	}
 
+	LangElement::HashAlg& MatchExpr::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, cases.size());
+		return partial_hash;
+	}
+
 	void MatchExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitMatchExpr(*this);
 	}
 
-	void MatchExpr::calcElementPathsRecursive() {
-		calcIndexedListChildPath<MatchCase>({ cases }, getElementPath());
+	void MatchExpr::calcElementPathHashRecursive() {
+		calcNamedChildPath(value_to_match, getElementPathHash());
+		auto path = getElementPathHash();
+		calcIndexedListChildPath<MatchCase>({ cases }, { path, "cases" });
 	}
 }

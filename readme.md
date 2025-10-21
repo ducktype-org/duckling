@@ -12,7 +12,7 @@ The documentation for the project can be found at [https://internal.ducktype.org
 
 ## Repo setup and build instructions
 
-Instructions for building the project are in the [Developer Guide - Building the project](https://internal.ducktype.org/docs/sphinx/source-doc/dev-guides/build-guidelines/index.html) section of the documentation.
+Instructions for building the project are in the [Developer Guide - Building the project](https://internal.ducktype.org/docs/doxygen/html/md__2home_2runner_2work_2duckling_2duckling_2dev_2docs_2developer-guides_2building-the-repo.html) section of the documentation.
 
 ## File structure
 

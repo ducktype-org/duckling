@@ -18,6 +18,9 @@ namespace pst::expr {
 		NAMED_CHILD(value_to_match, CommaExprHolder);
 		std::vector<AccessInternalAnonymous<MatchCase>> cases;
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
 	public:
 		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 810) {
 			this->element_kind = ElementKind::Match;
@@ -45,6 +48,6 @@ namespace pst::expr {
 			return std::ranges::ref_view(cases) | transform(give_one);
 		}
 
-		void calcElementPathsRecursive() override;
+		void calcElementPathHashRecursive() override;
 	};
 }

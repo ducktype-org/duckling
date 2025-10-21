@@ -34,7 +34,8 @@ namespace pst {
 		static MBox<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -46,6 +47,6 @@ namespace pst {
 			return true;
 		}
 
-		void calcElementPathsRecursive() override;
+		void calcElementPathHashRecursive() override;
 	};
 }

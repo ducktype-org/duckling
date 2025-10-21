@@ -1,9 +1,9 @@
 #pragma once
 
-#include <base/int_conv.hpp>
-#include <base/ints.hpp>
-#include <base/raw_view.hpp>
-#include <base/ref.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 
@@ -38,6 +38,12 @@ namespace vm {
 			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
 		}
 
+		Pointer movedPointer(i64 move_by) {
+			Pointer cpy(*this);
+			cpy.movePointer(move_by);
+			return cpy;
+		}
+
 		[[nodiscard]]
 		auto getBlock() -> Ref<Block> {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
@@ -45,16 +51,20 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		auto getOffset() {
+		auto getOffset() const {
 			return offset;
 		}
 
 		[[nodiscard]]
-		auto isNull() -> bool {
+		auto isNull() const -> bool {
 			return block == nullptr;
 		}
 
+		operator bool() const { return !isNull(); }
+
 		static Pointer null() { return {}; }
+
+		constexpr bool operator==(const Pointer&) const = default;
 	};
 
 	static_assert(sizeof(Pointer) == 16);

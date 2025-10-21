@@ -12,6 +12,8 @@ namespace pst {
 	class NonClassStmt: public ClassStmt {
 		NAMED_CHILD(inner_stmt, Stmt);
 
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
 		CLASS_STMT_PARSE(NonClassStmt);

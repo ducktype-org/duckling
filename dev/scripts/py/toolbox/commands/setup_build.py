@@ -94,6 +94,22 @@ from click import Choice, option, command
     default=False,
     is_flag=True,
 )
+@option(
+    "--disable-unity-compilation",
+    prompt="Disable unity compilation",
+    help="Unity compilation (used only in parser) speeds up the build time significantly, but makes debugging harder (related linker errors lack information).",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--enable-link-time-optimization",
+    prompt="Enable link time optimization (LTO), requires a lot of resources",
+    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires a lot of resources.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)

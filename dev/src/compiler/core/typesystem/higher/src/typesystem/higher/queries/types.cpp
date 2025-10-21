@@ -202,9 +202,10 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto pointer_pimpl = new internal::PointerAbstractTypeImpl{ key };
-			pushType(Box<internal::PointerAbstractTypeImpl>::fromPointer(pointer_pimpl));
-			return pointer_pimpl;
+			auto pointer_pimpl = makeBox<internal::PointerAbstractTypeImpl>(key);
+			auto ref           = pointer_pimpl.refMut().get();
+			pushType(std::move(pointer_pimpl));
+			return ref;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT
@@ -225,9 +226,10 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto dynamic_array_pimpl = new internal::DynamicArrayAbstractTypeImpl{ key };
-			pushType(Box<internal::DynamicArrayAbstractTypeImpl>::fromPointer(dynamic_array_pimpl));
-			return dynamic_array_pimpl;
+			auto dynamic_array_pimpl = makeBox<internal::DynamicArrayAbstractTypeImpl>(key);
+			auto ref                 = dynamic_array_pimpl.refMut().get();
+			pushType(std::move(dynamic_array_pimpl));
+			return ref;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT
@@ -237,9 +239,10 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto tuple_pimpl = new internal::TupleAbstractTypeImpl{ key.components };
-			pushType(Box<internal::TupleAbstractTypeImpl>::fromPointer(tuple_pimpl));
-			return tuple_pimpl;
+			auto tuple_pimpl = makeBox<internal::TupleAbstractTypeImpl>(key.components);
+			auto ref         = tuple_pimpl.refMut().get();
+			pushType(std::move(tuple_pimpl));
+			return ref;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT
@@ -249,10 +252,10 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto variant_pimpl
-				= new internal::VariantAbstractTypeImpl{ key.underlying_types };
-			pushType(Box<internal::VariantAbstractTypeImpl>::fromPointer(variant_pimpl));
-			return variant_pimpl;
+			auto variant_pimpl = makeBox<internal::VariantAbstractTypeImpl>(key.underlying_types);
+			auto ref           = variant_pimpl.refMut().get();
+			pushType(std::move(variant_pimpl));
+			return ref;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT
@@ -263,10 +266,11 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
-			const auto function_pimpl
-				= new internal::FunctionAbstractTypeImpl{ params, result, pure, free };
-			pushType(Box<internal::FunctionAbstractTypeImpl>::fromPointer(function_pimpl));
-			return function_pimpl;
+			auto function_pimpl
+				= makeBox<internal::FunctionAbstractTypeImpl>(params, result, pure, free);
+			auto ref = function_pimpl.refMut().get();
+			pushType(std::move(function_pimpl));
+			return ref;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT
@@ -276,9 +280,10 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto class_pimpl = new internal::ClassAbstractTypeImpl{ key };
-			pushType(Box<internal::ClassAbstractTypeImpl>::fromPointer(class_pimpl));
-			return class_pimpl;
+			auto class_pimpl = makeBox<internal::ClassAbstractTypeImpl>(key);
+			auto ref         = class_pimpl.refMut().get();
+			pushType(std::move(class_pimpl));
+			return ref;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT

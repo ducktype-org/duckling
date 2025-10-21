@@ -1,9 +1,9 @@
 #include "key_spec_op.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/init_guard.hpp>
-#include <base/maps.hpp>
-#include <base/raw_view.hpp>
+#include <base/collections/maps.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/init_guard.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <array>
 

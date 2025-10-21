@@ -2,9 +2,9 @@
 
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -18,6 +18,9 @@ namespace compiler::driver {
 		globals.reserve(hout_unit->glob_data.size());
 
 		for (const auto& hout_global: hout_unit->glob_data) {
+			// Discard information-less globals.
+			if (not hout_global.type.getType().carriesInformation()) continue;
+
 			auto lir_global = lir::LirGlobal::fromHOUT(ctx, hout_global);
 
 			variant_match(hout_global.value) {

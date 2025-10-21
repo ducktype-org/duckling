@@ -36,5 +36,11 @@ namespace pst {
 		out << "}}";
 	}
 
+	LangElement::HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, name);
+		addToHash(partial_hash, initial.has_value());
+		return partial_hash;
+	}
+
 	void Param::acceptVisitor(PstVisitor& visitor) const { visitor.visitParam(*this); }
 }

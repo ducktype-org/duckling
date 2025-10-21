@@ -6,8 +6,8 @@
 #include "../includes/basic.hpp"        // IWYU pragma: export
 #include "../parser_common_errors.hpp"  // IWYU pragma: export
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
@@ -16,7 +16,6 @@
 #include <unicode_classification/classifications.hpp>
 
 #include <functional>  // IWYU pragma: export
-#include <ostream>
 
 namespace pst {
 	using lang_def::Keyword;

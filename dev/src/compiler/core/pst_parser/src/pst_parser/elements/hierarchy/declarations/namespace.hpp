@@ -7,6 +7,9 @@ namespace pst {
 		tpc::Identifier name;
 		NAMED_CHILD(body, CodeBlock);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace, ElementKind::Namespace);
 

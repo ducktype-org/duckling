@@ -1,8 +1,7 @@
 // Prints n (n is optional) times contents of a given file(s) to stdin.
 // Usage:   cat <file> [file...]
 // Example: cat foo.txt -n 5
-
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>

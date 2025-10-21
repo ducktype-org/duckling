@@ -14,6 +14,11 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	LangElement::HashAlg& SuffixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, op);
+		return partial_hash;
+	}
+
 	void SuffixOperator::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitSuffixOperator(*this);
 	}

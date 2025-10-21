@@ -2,7 +2,7 @@
 
 clean_cmd: "rm -rf build"
 Clean: "@{clean_cmd}"
-PreTest: "@{clean_cmd} && mkdir build && @{duck_path} compile_package -a build duck_modules/@{Name}"
+PreTest: "@{clean_cmd} && mkdir build && @{duckc_path} compile_package -a build duck_modules/@{Name}"
 Run: "./build/package_llvm.exe"
 
 Tests:
@@ -17,6 +17,7 @@ Tests:
 
 SubDirs:
   - expressions
+  - ffi
   - samples
   - statements
   - functions

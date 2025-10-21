@@ -18,8 +18,9 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 		~Access() override = default;
-		void dprint(std::ostream& out) const final;
-		void acceptExprVisitor(PstExprVisitor& visitor) const final;
+		void     dprint(std::ostream& out) const final;
+		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

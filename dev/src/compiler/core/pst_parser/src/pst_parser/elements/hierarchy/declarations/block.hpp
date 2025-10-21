@@ -10,6 +10,9 @@ namespace pst {
 		tpc::OptionalIdentifier optional_name;
 		NAMED_CHILD(code_block, CodeBlock);
 
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {
 			element_kind = ElementKind::Block;

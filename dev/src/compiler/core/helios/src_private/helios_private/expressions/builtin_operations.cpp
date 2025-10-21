@@ -1,7 +1,7 @@
 
 #include "builtin_operations.hpp"
 
-#include <typesystem/higher/queries.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 
@@ -80,6 +80,7 @@ namespace compiler::helios::code {
 			// Meta
 			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
 			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
+			{ { keywordToStr(lang_def::Keyword::Const), tsh::Kind::Meta }, BuiltinUnary::Const },
 		};
 
 		// Single lookup

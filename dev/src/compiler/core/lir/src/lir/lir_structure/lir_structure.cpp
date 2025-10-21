@@ -2,8 +2,8 @@
 
 #include <helios/symbols/simple.hpp>
 
-#include <base/maps.hpp>
-#include <base/variant.hpp>
+#include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <iomanip>
 #include <set>
@@ -180,5 +180,15 @@ namespace compiler::lir {
 
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
 		LirPrinter{ ctx, output }.debugPrint(*this);
+	}
+
+	FunctionLiteral FunctionLiteral::fromFunction(const Function& function) {
+		return FunctionLiteral{
+			.mangled_name = function.mangled_name,
+			.abi          = function.abi,
+			.parameter_layouts
+			= std::make_shared<std::vector<tsl::TypeLayout>>(function.parameter_layouts),
+			.return_type_layout = std::make_shared<tsl::TypeLayout>(function.return_type_layout)
+		};
 	}
 }

@@ -5,10 +5,9 @@
 
 #include <pst_parser/pst.hpp>
 
-#include <base/maps.hpp>
-#include <base/ref.hpp>
+#include <base/collections/maps.hpp>
+#include <base/pointers/ref.hpp>
 
-#include <filesystem/file.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {

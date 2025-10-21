@@ -44,4 +44,10 @@ namespace pst {
 
 		out << "]}";
 	}
+
+	LangElement::HashAlg& DottedName::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, names);
+		addToHash(partial_hash, star);
+		return partial_hash;
+	}
 }

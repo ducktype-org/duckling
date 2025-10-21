@@ -4,17 +4,16 @@
  */
 #pragma once
 
+#include "generated_symbol_data.hpp"
+
 #include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/generic_query_key.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
 
-#include <base/bit256.hpp>
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
+#include <base/types/bit256.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -30,7 +29,7 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
-	 * @brief Query symbols associated with given element in PST
+	 * @brief Query symbol associated with given element in PST
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID);
 
@@ -83,5 +82,30 @@ namespace compiler::helios {
 		 * @note Non-global builtins will likely exist, for example: `i64.max`.
 		 */
 		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
+	}
+
+	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
+
+	/**
+	 * @brief Query stmt specifiers associated with given symbol in HELIOS
+	 */
+	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>);
+
+	namespace houtgen {
+		struct KeyFor_QueryGeneratedSymbol {
+			base::StrID         name;
+			GeneratedSymbolData generated_symbol_data;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * @brief Query a compiler-generated symbol ID, given its identifying parameters.
+		 *
+		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
+		 * SymIDs are returned for the same parameters.
+		 */
+		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID);
 	}
 }

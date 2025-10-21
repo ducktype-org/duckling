@@ -1,6 +1,6 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
@@ -128,6 +128,7 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
 
 		runAndCheckExitCode(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void injectCode() {
@@ -138,6 +139,7 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 
 		runAndCheckExitCode(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void runNoArgFunction() {
@@ -146,6 +148,7 @@ private:
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 
 		runAndCheckExitCode(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void runVoidFunction() {
@@ -156,6 +159,7 @@ private:
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
 		freeArguments(owned_arguments);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void runNonVoidFunction() {
@@ -166,6 +170,7 @@ private:
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
 		freeArguments(owned_arguments);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void doubleRunFunction() {
@@ -179,6 +184,7 @@ private:
 		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 24);
 		freeArguments(owned_arguments);
 		freeArguments(owned_arguments2);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void manyRunFunctions() {
@@ -191,6 +197,7 @@ private:
 			runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments), {}, {}, i * i);
 			freeArguments(owned_arguments);
 		}
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void repl() {
@@ -207,6 +214,7 @@ private:
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckExitCode(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
 		freeArguments(owned_arguments2);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void replWithGlobals() {
@@ -218,6 +226,7 @@ private:
 		fs::File file2(path("repl_with_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void cyclicRepl() {
@@ -234,6 +243,7 @@ private:
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
 		runAndCheckExitCode(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
 		freeArguments(owned_arguments2);
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void separateGlobals() {
@@ -244,6 +254,7 @@ private:
 		fs::File file2(path("separate_globals_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
+		vm::api::deinitAndValidate(pid);
 	}
 
 	void injectExistingFunction() {
@@ -251,6 +262,7 @@ private:
 		fs::File file(path("inject_code_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 		ASSERT_TRUE(!vm::api::loadFiles(pid, { file }).has_value());
+		vm::api::deinitAndValidate(pid);
 	}
 };
 

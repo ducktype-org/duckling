@@ -5,4 +5,4 @@ __pychace__/
 
 results/*
 build/*
-rift_vm_bins/*
+vm_bins/*
