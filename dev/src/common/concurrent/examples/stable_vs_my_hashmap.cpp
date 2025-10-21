@@ -7,7 +7,7 @@
 #include <iostream>
 
 template<class K, class T>
-class MyHashMap {
+class MyHashMap final {
 	// @EH: this still perform alloc per element (argh!)
 	base::HashMap<K, Ref<T>>                      map;
 	concurrent::SingleThreadedAllocator<T, 2'048> allocator;
@@ -34,7 +34,7 @@ public:
 template<class T>
 class MyCustomHashMap final {
 	static constexpr usize  INITIAL_BUCKETS = 256;
-	static constexpr double MAX_LOAD_FACTOR = 0.6;
+	static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 	using Key = u64;
 
@@ -142,6 +142,11 @@ public:
 		}
 		return {};
 	}
+
+	[[nodiscard]]
+	bool contains(const Key& key) const NOEXCEPT {
+		return atMaybe(key).has_value();
+	}
 };
 
 std::minstd_rand rng(42);
@@ -152,7 +157,10 @@ auto testHashMap() {
 
 	Map map;
 	for (u64 i = 0; i < NUM_ELEMENTS; i++) {
-		map.put(rng()%NUM_ELEMENTS, rng());
+		auto key = rng()%NUM_ELEMENTS;
+		if (not map.contains(key)) {
+			map.put(key, rng());
+		}
 	}
 	u64 count = 0;
 	for (u64 i = 0; i < NUM_ELEMENTS; i++) {
@@ -163,9 +171,9 @@ auto testHashMap() {
 }
 
 int main() {
-	// auto count = testHashMap<base::StableHashMap<u64, u64>>();
+	auto count = testHashMap<base::StableHashMap<u64, u64>>();
 	// auto count = testHashMap<MyHashMap<u64, u64>>();
-	auto count = testHashMap<MyCustomHashMap<u64>>();
+	// auto count = testHashMap<MyCustomHashMap<u64>>();
 	std::cout << "Number of elements found: " << count << "\n";
 	return 0;
 }
