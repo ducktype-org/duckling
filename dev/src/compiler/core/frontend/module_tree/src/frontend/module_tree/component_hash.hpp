@@ -1,11 +1,12 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
-#include <base/str/string_id.hpp>
 #include <base/config/build_type.hpp>
 #include <base/misc/ignore.hpp>
+#include <base/str/string_id.hpp>
 
 #include <hashing/hash.hpp>
+
 #include <type_traits>
 
 namespace compiler::frontend {
@@ -27,12 +28,11 @@ namespace compiler::frontend {
 		using HashAlg  = hashing::StatefulHash<hashing::SHA256, void>;
 		using HashType = HashAlg::result_type;
 
-		HashAlg                  partial;
-		HashType                 hash;
+		HashAlg  partial;
+		HashType hash;
 
 		[[no_unique_address]]
-		std::conditional_t<base::IS_BUILD_TYPE_DEV, std::vector<std::string>, base::Ignore>
-		    elements;
+		std::conditional_t<base::IS_BUILD_TYPE_DEV, std::vector<std::string>, base::Ignore> elements;
 
 		// Default constructible so containers holding ComponentHash can be value-initialized
 		constexpr ComponentHash() noexcept = default;
@@ -43,7 +43,7 @@ namespace compiler::frontend {
 		) noexcept {
 			if (parent.has_value()) {
 				// elements = parent->elements;
-				partial  = parent->partial;
+				partial = parent->partial;
 			}
 			if (name.isGood()) {
 				// elements.emplace_back(name.strView());
@@ -59,8 +59,7 @@ namespace compiler::frontend {
 			  partial(parent.partial),
 			  elements(parent.elements) {
 			if (!ext.empty()) {
-				if constexpr (base::IS_BUILD_TYPE_DEV)
-					elements.emplace_back(ext);
+				if constexpr (base::IS_BUILD_TYPE_DEV) elements.emplace_back(ext);
 
 				// add extra fragment to partial hash
 				hashing::addToHash(partial, std::string_view(ext));
@@ -71,16 +70,16 @@ namespace compiler::frontend {
 		explicit ComponentHash(base::StrID name) noexcept: ComponentHash({}, name) {}
 
 		// Construct directly from a vector of path elements
-		explicit ComponentHash(const std::vector<std::string>& elems) noexcept : elements(elems) {
+		explicit ComponentHash(const std::vector<std::string>& elems) noexcept: elements(elems) {
 			// build partial by hashing all elements in order
 			for (const auto& e: elems) hashing::addToHash(partial, std::string_view(e));
 			hash = partial.finalize();
 		}
 
-		/** 
+		/**
 		 * Return elements joined by '.' (represents the hierarchical path).
 		 * Works only in Dev builds.
-	  	 */
+		 */
 		[[nodiscard]] std::string str() const;
 	};
 }

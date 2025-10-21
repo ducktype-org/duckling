@@ -12,8 +12,7 @@ namespace compiler::frontend {
 				first = false;
 			}
 			return out;
-		}
-		else {
+		} else {
 			// .str is not available in Release build
 			std::terminate();
 		}
