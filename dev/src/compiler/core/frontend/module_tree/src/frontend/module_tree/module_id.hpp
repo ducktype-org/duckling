@@ -15,7 +15,8 @@ namespace compiler::frontend {
 	 * create instances.
 	 */
 	struct ModuleID final {
-		// @TODO: #1389 queryUnstablePerfectHash and `==` are inconsistent with the module tree stable hash. For now it should work, but might break in the future. Decide what to do about it.
+		// @TODO: #1389 queryUnstablePerfectHash and `==` are inconsistent with the module tree stable
+		// hash. For now it should work, but might break in the future. Decide what to do about it.
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
