@@ -21,7 +21,7 @@
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
-		auto module = compiler::frontend::createModuleTree(path);
+		auto module = compiler::frontend::createModuleTreeWithRandomPackageID(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
 			return queryRootScopeOfMainModuleFile(ctx, module);

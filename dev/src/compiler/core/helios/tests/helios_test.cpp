@@ -394,10 +394,13 @@ private:
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout.functions) {
-				std::cerr << fun.declaration->original_name.str() << " i dependent on\n";
+				std::cerr << fun.declaration->original_name.str() << " is dependent on\n";
+				std::cerr << " Original symbol: "
+						  << fun.declaration->original_symbol.queryUnstablePerfectHash() << "\n";
 				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.declaration->original_symbol
 				);
+				std::cerr << "Tokens:\n";
 
 				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.declaration->original_symbol
@@ -413,9 +416,9 @@ private:
 	}
 
 	void testHoutVisitor() {
-		auto module
-			= compiler::frontend::createModuleTree(fs::File(path("test_modules/visitor_test_module")
-		    ));
+		auto module = compiler::frontend::createModuleTreeWithRandomPackageID(
+			fs::File(path("test_modules/visitor_test_module"))
+		);
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
