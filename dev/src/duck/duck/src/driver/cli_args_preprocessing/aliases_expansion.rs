@@ -4,7 +4,7 @@ use crate::{
     DuckCtx,
     driver::{
         cli,
-        cli_args_preprocessing::builtin::{get_builtin_alias, is_builtin_subcommand},
+        cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
     },
 };
 use anyhow::bail;
@@ -25,7 +25,7 @@ pub fn expand_aliases(
     let is_builtin = is_builtin_subcommand(subcmd);
     let alias = ctx.duck_cfg().alias_for(subcmd)?;
     let is_external = external_cmds.contains_key(subcmd);
-    let builtin_alias = get_builtin_alias(subcmd);
+    let builtin_alias = get_builtin_alias_expansion(subcmd);
     match (is_builtin, &alias, is_external, builtin_alias) {
         (false, None, true, Some(builtin)) => {
             ctx.error_console().warning(format!(

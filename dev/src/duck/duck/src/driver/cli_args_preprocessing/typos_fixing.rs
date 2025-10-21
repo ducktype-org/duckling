@@ -11,7 +11,7 @@ use crate::{
     driver::{
         cli,
         cli_args_preprocessing::{
-            builtin::{get_builtin_alias, get_builtin_aliases_keys, is_builtin_subcommand},
+            builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},
             levenshtein,
         },
         subcommands::subcommands,
@@ -57,7 +57,7 @@ fn is_valid_subcmd(
     external_cmds: &HashMap<String, PathBuf>,
 ) -> QuackResult<bool> {
     Ok(is_builtin_subcommand(name)
-        || get_builtin_alias(name).is_some()
+        || get_builtin_alias_expansion(name).is_some()
         || ctx.duck_cfg().alias_for(name)?.is_some()
         || external_cmds.contains_key(name))
 }
@@ -74,7 +74,7 @@ fn possible_targets(
         targets.extend(iter.cloned());
     }
     targets.extend(external_cmds.keys().cloned());
-    targets.extend(get_builtin_aliases_keys());
+    targets.extend(get_builtin_aliases().map(str::to_string));
     Ok(targets)
 }
 
