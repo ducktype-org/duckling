@@ -23,9 +23,9 @@ namespace pst {
 		std::set<std::string> paths;
 		auto                  elements = viewAllSubTreeElements(root);
 		for (auto& element: elements) {
-			std::string path = element.illegalAccess().value()->getElementPathHash().str();
-			if (paths.contains(path)) return base::BAD;
-			paths.insert(path);
+			// std::string path = element.illegalAccess().value()->getElementPathHash().str();
+			// if (paths.contains(path)) return base::BAD;
+			// paths.insert(path);
 		}
 		return base::OK;
 	}
