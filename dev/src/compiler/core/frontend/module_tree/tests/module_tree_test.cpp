@@ -394,6 +394,28 @@ private:
 			ModuleTreeModifier::removeModule(removable_sub_mod);
 			ASSERT_EQUAL(false, mt->getSubmodules().contains(base::StrID("removable")));
 		}
+
+		{
+			// Test changePackageID
+			root_dir      = fs::FileManager::createRandomVirtualDirectory();
+			auto root_mod = ModuleTreeBuilder::create(root_dir, "original_package_id");
+			sub_dir       = root_dir.createSubDirectory("submod");
+			sub_mod       = ModuleTreeBuilder::create(sub_dir, "original_package_id");
+			ModuleTreeModifier::addSubmodule(root_mod, sub_mod);
+
+			// Attempt to change package ID for non-root module (should throw)
+			bool exception_thrown = false;
+			try {
+				ModuleTreeModifier::changePackageID(sub_mod, "new_package_id");
+			} catch (const std::exception&) { exception_thrown = true; }
+			ASSERT_TRUE(exception_thrown);
+
+			// std::cout << root_mod->getParentModule().value()->getName().strView() << '\n';
+			//  Change package ID for root module
+			ModuleTreeModifier::changePackageID(root_mod, "new_package_id");
+			ASSERT_EQUAL("new_package_id", root_mod->getPackageID().strView());
+			ASSERT_EQUAL("new_package_id", sub_mod->getPackageID().strView());
+		}
 	}
 
 	void testManualModuleTreeBuilder() {

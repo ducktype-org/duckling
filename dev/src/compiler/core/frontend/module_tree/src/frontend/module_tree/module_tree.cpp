@@ -599,16 +599,29 @@ namespace compiler::frontend {
 		base::Ref<ModuleTree> module, std::string_view new_package_id
 	) {
 		CORE_ASSERT(
-			!module->m_parent.has_value(), "Only root modules can have their package ID changed"
+			!module->m_parent.has_value(),
+			base::strConcat(
+				"Only root modules can have their package ID changed, the parent is: ",
+				module->m_parent.value()->getName().strView()
+			)
 		);
-		CORE_ASSERT(module->m_package_id.isGood(), "Module does not have a valid package ID");
-		module->m_package_id = base::StrID(std::string(new_package_id).c_str());
 
-		// Change the package ID for all submodules recursively
-		for (auto& [_, submodule]: module->m_submodules) changePackageID(submodule, new_package_id);
+		std::function<void(base::Ref<ModuleTree>, std::string_view)> change_package_id =
+			[&](base::Ref<ModuleTree> internal, std::string_view internal_new_package_id) {
+				CORE_ASSERT(
+					internal->m_package_id.isGood(), "Module does not have a valid package ID"
+				);
+				internal->m_package_id = base::StrID(std::string(internal_new_package_id).c_str());
 
-		// Invalidate component hash for the module and its children as the package ID changed
-		module->invalidateComponentHash();
+				// Change the package ID for all submodules recursively
+				for (auto& [_, submodule]: internal->m_submodules)
+					change_package_id(submodule, internal_new_package_id);
+
+				// Invalidate component hash for the module and its children as the package ID changed
+				internal->invalidateComponentHash();
+			};
+
+		change_package_id(module, new_package_id);
 	}
 
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
