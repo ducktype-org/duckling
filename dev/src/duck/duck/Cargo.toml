@@ -16,10 +16,3 @@ thiserror = "2.0.17"
 toml = "0.9.8"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
-
-[profile.test]
-opt-level = 0
-debug = true
-lto = false
-codegen-units = 1
-incremental = false
