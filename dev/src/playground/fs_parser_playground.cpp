@@ -50,7 +50,7 @@ int main(int argc, const char* argv[]) {
 		std::cout << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 	}
 
-	auto module_tree = compiler::frontend::ModuleTreeBuilder::create(
+	auto module_tree = compiler::frontend::ModuleTreeBuilder::createWithRandomPackageID(
 		res.getValue<fs::File>('p').copyValueOr(fs::File(".")),
 		std::regex(res.getValue<std::string>("fileregex").copyValueOr("\\.*")),
 		std::regex(res.getValue<std::string>("dirregex").copyValueOr("\\..*"))

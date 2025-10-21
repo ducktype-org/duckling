@@ -60,6 +60,8 @@ namespace compiler::frontend {
 			hash = partial.finalize();
 		}
 
+		explicit ComponentHash(base::StrID name) noexcept: ComponentHash({}, name) {}
+
 		// Construct directly from a vector of path elements
 		explicit ComponentHash(const std::vector<std::string>& elems) noexcept: elements(elems) {
 			// build partial by hashing all elements in order

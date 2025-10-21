@@ -66,7 +66,11 @@ namespace pst {
 		friend class ClassStmt;
 
 	protected:
-		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
+		/**
+		 * @brief Map from stable hash to lang element for all created elements.
+		 * @note Used to view dependent tokens of node in the query graph.
+		 */
+		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
 		using InternalChild = Ref<LangElement>;
 
@@ -89,9 +93,7 @@ namespace pst {
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
-			  id(PstID::next()) {
-			pst_id_map.emplace(id, AccessLocked<LangElement>(CRef<LangElement>(this)));
-		}
+			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;
 		LangElement(LangElement&&)      = delete;
@@ -103,10 +105,12 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 		/**
-		 * @brief Get pst node the by id. Throws on non-existent id.
+		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
+		 * @note should not be used in query, currently used by by `queryPositionDependencies`
+		 * machinery for test/insight purposes.
 		 */
 		[[nodiscard]]
-		static AccessLocked<LangElement> getByID(u64);
+		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
 
 	protected:
 		void dprintPrefix(std::ostream& out) const override {

@@ -52,7 +52,7 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = frontend::createModuleTree(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	defer(printContextErrors());
 
