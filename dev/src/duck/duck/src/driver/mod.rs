@@ -4,9 +4,12 @@ pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
 pub mod global_cli_options;
 pub mod run;
+pub mod styles;
 pub mod subcommands;
 
 use cli_ext::CommandExt;
+
+use crate::driver::styles::get_styles;
 
 fn cli() -> Command {
     Command::new(crate_name!())
@@ -17,6 +20,7 @@ fn cli() -> Command {
         .add_color()
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
+        .styles(get_styles())
 }
 
 #[cfg(test)]
