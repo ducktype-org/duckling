@@ -23,45 +23,42 @@ pub fn expand_aliases(
         return Ok(args);
     };
     let is_builtin = is_builtin_subcommand(subcmd);
-    // TODO: We are silently ignoring errors in user configuration
-    let alias = ctx.duck_cfg().alias_for(subcmd);
+    let alias = ctx.duck_cfg().alias_for(subcmd)?;
     let is_external = external_cmds.contains_key(subcmd);
     let builtin_alias = get_builtin_alias(subcmd);
     match (is_builtin, &alias, is_external, builtin_alias) {
-        (false, Ok(None) | Err(_), true, Some(builtin)) => {
+        (false, None, true, Some(builtin)) => {
             ctx.error_console().warning(format!(
                 "builtin alias `{subcmd}` shadows external subcommand"
             ));
             expand_builtin_alias(builtin, subcmd_args)
         }
-        (false, Ok(Some(_)), false, Some(builtin)) => {
+        (false, Some(_), false, Some(builtin)) => {
             ctx.error_console().warning(format!(
                 "builtin alias `{subcmd}` shadows user-defined alias"
             ));
             expand_builtin_alias(builtin, subcmd_args)
         }
-        (false, Ok(Some(_)), true, Some(builtin)) => {
+        (false, Some(_), true, Some(builtin)) => {
             ctx.error_console().warning(format!(
                 "builtin alias `{subcmd}` shadows user-defined alias and external subcommand"
             ));
             expand_builtin_alias(builtin, subcmd_args)
         }
-        (false, Ok(None) | Err(_), false, Some(builtin)) => {
-            expand_builtin_alias(builtin, subcmd_args)
-        }
-        (true, Ok(Some(_)), false, None) => {
+        (false, None, false, Some(builtin)) => expand_builtin_alias(builtin, subcmd_args),
+        (true, Some(_), false, None) => {
             ctx.error_console().warning(format!(
                 "builtin subcommand `{subcmd}` shadows user-defined alias"
             ));
             Ok(args)
         }
-        (false, Ok(Some(_)), true, None) => {
+        (false, Some(_), true, None) => {
             ctx.error_console().warning(format!(
                 "external subcommand `{subcmd}` shadows user-defined alias"
             ));
             Ok(args)
         }
-        (false, Ok(Some(new)), false, None) => {
+        (false, Some(new), false, None) => {
             // This is the actually interesting part.
             let new_args = expand_single_alias(subcmd, subcmd_args, new, &mut visited)?;
             expand_aliases(new_args, ctx, external_cmds, visited)
