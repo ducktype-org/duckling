@@ -307,7 +307,7 @@ namespace compiler::frontend {
 		 * This is a helper function used when creating module tree from fs::File.
 		 * @param file The file to handle.
 		 */
-		void handleNewFile(const fs::File& file, std::string_view package_id);
+		void handleNewFile(const fs::File& file);
 
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;

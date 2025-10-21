@@ -105,7 +105,7 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 		/**
-		 * @brief Get pst node the by id. Throws on non-existent id.
+		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
 		 * @note should not be used in query, currently used by by `queryPositionDependencies`
 		 * machinery for test/insight purposes.
 		 */

@@ -768,7 +768,6 @@ private:
 		);
 	}
 
-	// New test: ensure perfectHashKey uses stable hash when CACHE_ON_DISK is set
 	void stableHashTest() {
 		KeyStable key{ .unstable = 0x12'34u,
 			           .stable   = query::QueryStableHash{ 0x11'11u, 0x22'22u } };

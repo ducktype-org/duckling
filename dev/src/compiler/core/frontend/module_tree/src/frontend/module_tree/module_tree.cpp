@@ -253,7 +253,7 @@ namespace compiler::frontend {
 			} else {
 				// Handle regular file
 				if (!isFileNameValid(file.name(), file_reject)) continue;
-				handleNewFile(file, package_id);
+				handleNewFile(file);
 			}
 		}
 	}
@@ -270,7 +270,7 @@ namespace compiler::frontend {
 		setMainSourceFile(file);
 	}
 
-	void ModuleTreeBuilder::handleNewFile(const fs::File& file, std::string_view package_id) {
+	void ModuleTreeBuilder::handleNewFile(const fs::File& file) {
 		CORE_ASSERT(
 			file.isFile(),
 			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
@@ -289,7 +289,7 @@ namespace compiler::frontend {
 				setMainSourceFile(file);
 			} else {
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
-				submodule_builder->buildFromSingleFile(file, package_id);
+				submodule_builder->buildFromSingleFile(file, this->m_package_id.strView());
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
@@ -600,10 +600,8 @@ namespace compiler::frontend {
 	) {
 		CORE_ASSERT(
 			!module->m_parent.has_value(),
-			base::strConcat(
-				"Only root modules can have their package ID changed, the parent is: ",
-				module->m_parent.value()->getName().strView()
-			)
+			"Only root modules can have their package ID changed, the parent is: ",
+			module->m_parent.value()->getName().strView()
 		);
 
 		std::function<void(base::Ref<ModuleTree>, std::string_view)> change_package_id =

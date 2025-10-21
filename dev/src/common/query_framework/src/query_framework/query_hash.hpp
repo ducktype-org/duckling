@@ -32,18 +32,18 @@ namespace query {
 	 * If stable perfect hash is available, uses it.
 	 */
 	template<typename KeyType>
-	struct KHashSelector {
+	struct KHashSelector final {
 		using type
 			= decltype(std::declval<std::remove_cvref_t<KeyType>>().queryUnstablePerfectHash());
 	};
 
 	template<>
-	struct KHashSelector<u64> {
+	struct KHashSelector<u64> final {
 		using type = u64;
 	};
 
 	template<>
-	struct KHashSelector<bool> {
+	struct KHashSelector<bool> final {
 		using type = u64;
 	};
 
