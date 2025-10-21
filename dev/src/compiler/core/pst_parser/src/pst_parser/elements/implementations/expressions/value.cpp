@@ -51,19 +51,8 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		const auto&                 token = state[0];
-		base::StrID                 value;
-		base::Optional<base::StrID> type_specifier;
-
-		const auto& sub_tokens = token.getRecursive();
-
-		value = sub_tokens[0].getValue();
-		if (sub_tokens.size() > 1) type_specifier = sub_tokens[1].getValue();
-
-		auto out = makeBox<ExprValue>(pos, value, type_specifier.map([](const base::StrID& val) {
-			return lexer::Value(val);
-		}));
-		state.parse(out).eatOne();
+		auto out = makeBox<ExprValue>(state.getPosition());
+		state.parse(out).one(&out->value);
 
 		if (length > 1) {
 			state.log(makeBox<MoreThanValueError>(pos));
@@ -76,16 +65,16 @@ namespace pst::expr {
 	void ExprValue::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("number": ")" << number.str() << "\"";
+		out << R"("number": ")" << value.value.str() << "\"";
 
-		if (type_specifier) out << R"(, "type_specifier": ")" << type_specifier->str() << "\"";
+		if (value.type_specifier.has_value())
+			out << R"(, "type_specifier": ")" << value.type_specifier->str() << "\"";
 
 		out << "}";
 	}
 
 	LangElement::HashAlg& ExprValue::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, number);
-		if (type_specifier) addToHash(partial_hash, *type_specifier);
+		addToHash(partial_hash, value);
 		return partial_hash;
 	}
 
