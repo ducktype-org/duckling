@@ -65,7 +65,8 @@ namespace pst {
 	namespace internal {
 		/**
 		 * @brief Notification to context About the access to an element.
-		 * @note It is using the stable hash of the element since
+		 * @note It relies on the element's stable hash, which is essential for incremental
+		 * compilation.
 		 */
 		void notifyContext(query::Context& ctx, query::QueryStableHash stable_hash);
 		/**

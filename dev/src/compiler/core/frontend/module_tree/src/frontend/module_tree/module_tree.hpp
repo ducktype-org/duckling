@@ -199,10 +199,10 @@ namespace compiler::frontend {
 		 * @return A valid pointer with the root.
 		 */
 		static Ref<ModuleTree> create(
-			const fs::File&         root,
-			const std::string_view& package_id,
-			const std::regex&       file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex&       dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+			const fs::File&   root,
+			std::string_view  package_id,
+			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**
@@ -254,7 +254,7 @@ namespace compiler::frontend {
 		 * The package ID must be set for every module tree
 		 * @param package_id The package ID to set.
 		 */
-		void setPackageID(const std::string_view& package_id);
+		void setPackageID(std::string_view package_id);
 
 		/**
 		 * Sets the parent module.
@@ -266,7 +266,7 @@ namespace compiler::frontend {
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
-		void buildFromSingleFile(const fs::File& file, const std::string_view& package_id);
+		void buildFromSingleFile(const fs::File& file, std::string_view package_id);
 
 		/**
 		 * Checks if the builder is finalized.
@@ -296,17 +296,18 @@ namespace compiler::frontend {
 		 * @param dir_reject Regex for rejecting directories.
 		 */
 		void buildFromDirectory(
-			const fs::File&         directory,
-			const std::string_view& package_id,
-			const std::regex&       file_reject = DEFAULT_REJECT_FILE_REGEX,
-			const std::regex&       dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+			const fs::File&   directory,
+			std::string_view  package_id,
+			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**
 		 * Handles a new file found during directory traversal.
+		 * This is a helper function used when creating module tree from fs::File.
 		 * @param file The file to handle.
 		 */
-		void handleNewFile(const fs::File& file, const std::string_view& package_id);
+		void handleNewFile(const fs::File& file, std::string_view package_id);
 
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
@@ -396,12 +397,12 @@ namespace compiler::frontend {
 
 		/**
 		 * Changes the package ID of the given module and ALL its submodules recursively.
+		 * All modules in the same module tree must have the same package ID.
+		 * @note This can only be done on root modules (modules without a parent).
 		 * @param module The module to modify.
 		 * @param new_package_id The new package ID to set.
 		 */
-		static void changePackageID(
-			base::Ref<ModuleTree> module, const std::string_view& new_package_id
-		);
+		static void changePackageID(base::Ref<ModuleTree> module, std::string_view new_package_id);
 
 		/**
 		 * Removes the module with the given ModuleID from the module map.
@@ -431,7 +432,7 @@ namespace compiler::frontend {
 	 * @param package_id The package ID to associate with the module tree
 	 * for more details see ModuleTreeBuilder::create
 	 */
-	ModuleID createModuleTree(const fs::File& file, const std::string_view& package_id);
+	ModuleID createModuleTree(const fs::File& file, std::string_view package_id);
 
 	/*
 	 * Creates a completely new module tree with a random package ID from the given file.

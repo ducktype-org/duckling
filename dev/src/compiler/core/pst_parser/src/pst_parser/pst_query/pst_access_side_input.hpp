@@ -6,7 +6,7 @@
 #include <query_framework/query_input.hpp>
 
 namespace pst::internal {
-	struct PSTAccessKey {
+	struct PSTAccessKey final {
 		query::QueryStableHash hash;
 
 		PSTAccessKey(query::QueryStableHash stable_hash): hash(stable_hash) {}

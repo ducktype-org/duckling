@@ -58,15 +58,15 @@ namespace {
 	 * @return A random alphanumeric string.
 	 */
 	std::string generateRandomString(size_t length) {
-		static const std::string chars
+		static constexpr std::string_view CHARS
 			= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 		static std::random_device                    rd;
 		static std::mt19937                          generator(rd());
-		static std::uniform_int_distribution<size_t> distribution(0, chars.size() - 1);
+		static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
 
 		std::string random_string;
 		random_string.reserve(length);
-		for (size_t i = 0; i < length; ++i) random_string += chars[distribution(generator)];
+		for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
 		return random_string;
 	}
 }
@@ -94,10 +94,10 @@ namespace compiler::frontend {
 	}
 
 	Ref<ModuleTree> ModuleTreeBuilder::create(
-		const fs::File&         root,
-		const std::string_view& package_id,
-		const std::regex&       file_reject,
-		const std::regex&       dir_reject
+		const fs::File&   root,
+		std::string_view  package_id,
+		const std::regex& file_reject,
+		const std::regex& dir_reject
 	) {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
@@ -112,7 +112,7 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, generateRandomString(16), file_reject, dir_reject);
+		return create(root, generateRandomString(32), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree() = default;
@@ -214,10 +214,10 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
-		const fs::File&         directory,
-		const std::string_view& package_id,
-		const std::regex&       file_reject,
-		const std::regex&       dir_reject
+		const fs::File&   directory,
+		std::string_view  package_id,
+		const std::regex& file_reject,
+		const std::regex& dir_reject
 	) {
 		CORE_ASSERT(
 			directory.isDirectory(),
@@ -258,9 +258,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	void ModuleTreeBuilder::buildFromSingleFile(
-		const fs::File& file, const std::string_view& package_id
-	) {
+	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, std::string_view package_id) {
 		std::string stem      = file.stem();
 		std::string extension = file.extension();
 		CORE_ASSERT(
@@ -272,7 +270,7 @@ namespace compiler::frontend {
 		setMainSourceFile(file);
 	}
 
-	void ModuleTreeBuilder::handleNewFile(const fs::File& file, const std::string_view& package_id) {
+	void ModuleTreeBuilder::handleNewFile(const fs::File& file, std::string_view package_id) {
 		CORE_ASSERT(
 			file.isFile(),
 			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
@@ -314,7 +312,7 @@ namespace compiler::frontend {
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
-		builder->setPackageID(generateRandomString(16));
+		builder->setPackageID(generateRandomString(32));
 		return builder;
 	}
 
@@ -358,7 +356,7 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
-	void ModuleTreeBuilder::setPackageID(const std::string_view& package_id) {
+	void ModuleTreeBuilder::setPackageID(std::string_view package_id) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
 		m_package_id = base::StrID(std::string(package_id).c_str());
@@ -382,9 +380,7 @@ namespace compiler::frontend {
 		module_ref->m_name        = m_name;
 		module_ref->m_other_files = std::move(m_other_files);
 
-		CORE_ASSERT(
-			m_package_id.isGood(), "Package ID is must be set for every module tree without parent"
-		);
+		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
 		module_ref->m_package_id = m_package_id;
 
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
@@ -600,8 +596,11 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::changePackageID(
-		base::Ref<ModuleTree> module, const std::string_view& new_package_id
+		base::Ref<ModuleTree> module, std::string_view new_package_id
 	) {
+		CORE_ASSERT(
+			!module->m_parent.has_value(), "Only root modules can have their package ID changed"
+		);
 		CORE_ASSERT(module->m_package_id.isGood(), "Module does not have a valid package ID");
 		module->m_package_id = base::StrID(std::string(new_package_id).c_str());
 
@@ -655,7 +654,7 @@ namespace compiler::frontend {
 		return GetModuleID_Functor::get(module)->prettyPrint();
 	}
 
-	ModuleID createModuleTree(const fs::File& file, const std::string_view& package_id) {
+	ModuleID createModuleTree(const fs::File& file, std::string_view package_id) {
 		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
 	}
 

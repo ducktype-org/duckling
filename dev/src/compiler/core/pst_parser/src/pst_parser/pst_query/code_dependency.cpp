@@ -29,8 +29,7 @@ namespace pst {
 				id, internal::PSTAccessSideInput::getID()
 			);
 
-			// We can retrieve the LangElement ID from the NodeId hash, because
-			// LangElement ID is used as the first element of the unstable hash value.
+			// We can get LangElement from NodeID's stable hash
 			static auto get_pst_node = [](query::internal::NodeID lid) {
 				return LangElement::getByStableHash(lid.hash.val);
 			};

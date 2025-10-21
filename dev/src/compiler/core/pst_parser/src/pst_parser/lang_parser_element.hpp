@@ -66,7 +66,11 @@ namespace pst {
 		friend class ClassStmt;
 
 	protected:
-		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_id_map;
+		/**
+		 * @brief Map from stable hash to lang element for all created elements.
+		 * @note Used to view dependent tokens of node in the query graph.
+		 */
+		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
 		using InternalChild = Ref<LangElement>;
 
@@ -102,6 +106,8 @@ namespace pst {
 
 		/**
 		 * @brief Get pst node the by id. Throws on non-existent id.
+		 * @note should not be used in query, currently used by by `queryPositionDependencies`
+		 * machinery for test/insight purposes.
 		 */
 		[[nodiscard]]
 		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
