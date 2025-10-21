@@ -1,0 +1,7 @@
+# Call builtin function which may return unit
+# (but at the time of writing returns i64).
+
+fun foo() = {
+    builtin_output_i64(0);
+    return;
+}

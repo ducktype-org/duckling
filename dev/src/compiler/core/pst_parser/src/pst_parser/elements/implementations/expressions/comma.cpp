@@ -47,9 +47,14 @@ namespace pst::expr {
 		out << "}";
 	}
 
+	LangElement::HashAlg& Comma::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, expressions.size());
+		return partial_hash;
+	}
+
 	void Comma::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitComma(*this); }
 
-	void Comma::calcElementPathsRecursive() {
-		calcIndexedListChildPath<ExprElement>({ expressions }, getElementPath());
+	void Comma::calcElementPathHashRecursive() {
+		calcIndexedListChildPath<ExprElement>({ expressions }, getElementPathHash());
 	}
 }

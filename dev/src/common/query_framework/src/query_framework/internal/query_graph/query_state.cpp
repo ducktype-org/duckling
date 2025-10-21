@@ -24,7 +24,7 @@ namespace query::internal {
 				throw base::NotYetImplemented("Query Cycle!");
 			}
 		}
-		node_data.insert_or_assign(node, NodeData{ .color = Color::Visiting, .parent = from });
+		node_data.insert_or_assign(node, NodeData(Color::Visiting, from));
 		query_graph.node_deps.insert_or_assign(node, std::vector<NodeID>{});
 	}
 

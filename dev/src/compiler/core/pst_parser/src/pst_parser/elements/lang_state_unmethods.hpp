@@ -4,6 +4,8 @@
 #include "../pst_state_forward.hpp"
 #include "elements_list.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <diagnostic/source_position.hpp>
 
 namespace pst {

@@ -1,7 +1,10 @@
 #include "../../hierarchy/statements/stmt_specifier.hpp"
 
+#include "../../hierarchy/lists/call_list.hpp"
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
+
+#include <diagnostic/message.hpp>
 
 namespace pst {
 	class BadCallError final: public dia::Error {
@@ -59,6 +62,22 @@ namespace pst {
 				.withDef(&out->code_block_or_stmt, CodeBlock::CodeBlockType::Unordered);
 		}
 
+		// Check if only legal elements are present in the extern block or statement
+		// (for example "print();" is illegal, only function and classes are allowed)
+		if (out->specifier == Keyword::Extern) {
+			for (auto&& stmt: *out->code_block_or_stmt.internal()) {
+				auto kind = stmt.illegalAccess().value()->getStmtKind();
+				if (kind != StmtKind::Fun && kind != StmtKind::Class && kind != StmtKind::FunDecl) {
+					state.log(
+						makeBox<dia::PlaceholderMessage<dia::Warning, dia::Message::Domain::Parser>>(
+							stmt.illegalAccess().value()->getSourcePosition(),
+							"Only function and class declarations are allowed inside extern()"
+						)
+					);
+				}
+			}
+		}
+
 		return out;
 	}
 
@@ -78,6 +97,11 @@ namespace pst {
 		nullAwareDprint(code_block_or_stmt, out);
 
 		out << "}";
+	}
+
+	LangElement::HashAlg& StmtSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, lang_def::keywordToStr(specifier));
+		return partial_hash;
 	}
 
 	bool StmtSpecifier::trailingSemicolon() { return false; }

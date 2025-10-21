@@ -6,5 +6,5 @@
 #pragma once
 
 namespace fs {
-	enum Encoding { UTF8, UTF16, US_ASCII };
+	enum Encoding { UTF8, UTF16, UsAscii };
 }

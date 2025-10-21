@@ -44,10 +44,12 @@
 #include "diagnostic_converters.hpp"
 #include "message.hpp"
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <printer/stream_printer.hpp>
+
+#include <iostream>
 
 namespace dia {
 	/**

@@ -1,16 +1,11 @@
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <pst_parser/pst.hpp>
-#include <pst_parser/pst_visitor.hpp>
 
-#include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
-#include <tester/testing_utils.hpp>
 
 #include <sstream>
 #include <utility>
@@ -59,8 +54,8 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithContext(
-				code, pst::CodeBlock::CodeBlockType::Ordered
+			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
+				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -80,8 +75,8 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithContext(
-				code, pst::CodeBlock::CodeBlockType::Ordered
+			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
+				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -106,14 +101,16 @@ class PSTErrorTests: public tester::TestSuite {
 
 		ClassStmtExample(std::string code):
 			  GenExample(std::move(code)),
-			  context{ base::StrID("unnamed"), {} } {}
+			  context{ .name = base::StrID("unnamed"), .specifiers = {} } {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ base::StrID(class_name.c_str()), {} } {}
+			  context{ .name = base::StrID(class_name.c_str()), .specifiers = {} } {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
+			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
+				this->code, compiler::frontend::ComponentHash{}, context
+			);
 			return parsed.getLogger()->good() == good;
 		}
 
@@ -178,6 +175,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_expr{ "x + y" };
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  block_expr{ "x + {return 2 * x;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  unit_expr{ "()" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };

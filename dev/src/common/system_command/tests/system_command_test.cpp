@@ -1,5 +1,4 @@
 
-#include <base/string_id.hpp>
 
 #include <system_command/system_command.hpp>
 #include <tester/tester.hpp>

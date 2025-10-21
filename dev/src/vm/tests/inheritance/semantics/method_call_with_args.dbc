@@ -40,6 +40,8 @@ function main { i64, ptr_argv } -> i64 {
 
     output_l64 ret;
 
+    free_lptr a_obj;
+
     deinit; # ret
     deinit; # a_obj
     ret;

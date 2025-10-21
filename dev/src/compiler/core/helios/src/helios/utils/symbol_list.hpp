@@ -11,7 +11,7 @@ namespace compiler::helios {
 	 * HELIOS uses it in some places, especially in the lookup and
 	 * dealiasing process.
 	 */
-	struct SymbolList {
+	struct SymbolList final {
 		/**
 		 * The list of symbols.
 		 */

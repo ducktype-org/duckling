@@ -13,4 +13,4 @@ DECLARE_QUERY(CyclicQuery, uint64_t, uint64_t)
 /**
  * @brief Simple query extension
  */
-u64 SquareValue(query::Context&, u64);
+u64 squareValue(query::Context&, u64);

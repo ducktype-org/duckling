@@ -41,6 +41,14 @@ namespace pst {
 		out << "}";
 	}
 
+	LangElement::HashAlg& Variable::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, name);
+		addToHash(partial_hash, type.has_value());
+		addToHash(partial_hash, value.has_value());
+		addToHash(partial_hash, is_const);
+		return partial_hash;
+	}
+
 	void Variable::acceptVisitor(PstVisitor& visitor) const { visitor.visitVariable(*this); }
 
 	bool Variable::trailingSemicolon() { return true; }

@@ -1,8 +1,7 @@
-#include <base/anycast.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
@@ -668,8 +667,8 @@ private:
 		ASSERT_TRUE(!hr1.hasError());
 		ASSERT_EQUAL(1, hr1.value());
 
-		int                            temp_val = hr1.value();
-		base::Optional<base::Ref<int>> opt1     = base::Ref<int>(&temp_val);
+		int                      temp_val = hr1.value();
+		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 

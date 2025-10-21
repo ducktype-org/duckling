@@ -12,7 +12,9 @@ namespace pst {
 		tpc::Identifier name;
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlock);
+		NAMED_CHILD(body, CodeBlockOrStmt);
+
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
@@ -29,6 +31,24 @@ namespace pst {
 		[[nodiscard]]
 		base::StrID getName() const {
 			return name.value;
+		}
+
+		[[nodiscard]]
+		AccessLocked<ParamList> getParams() const {
+			return params.give();
+		}
+
+		/**
+		 * @note Optional of MCRef here is intentional
+		 */
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getRet() const {
+			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
+		}
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getBody() const {
+			return body.give();
 		}
 
 		[[nodiscard]]

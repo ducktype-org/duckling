@@ -2,8 +2,9 @@
 
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <linker/link.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>

@@ -5,8 +5,8 @@
 
 #include "operator_precedence.hpp"
 
-#include <base/init_guard.hpp>
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
+#include <base/misc/init_guard.hpp>
 
 namespace lang_def {
 
@@ -76,37 +76,37 @@ namespace lang_def {
 		SIMPLE_INIT_GUARD_END;
 	}
 
-	i64 operatorPrecedence([[maybe_unused]] base::StrID operator_, OperatorType operator_type) {
-		CORE_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
+	i64 operatorPrecedence([[maybe_unused]] base::StrID operatorr, OperatorType operator_type) {
+		CORE_ASSERT(operatorr.isGood(), "Bad string passed to operator precedence");
 
-		if (precedence.contains({ strAsOperator(operator_), operator_type }))
-			return precedence[{ strAsOperator(operator_), operator_type }];
+		if (precedence.contains({ strAsOperator(operatorr), operator_type }))
+			return precedence[{ strAsOperator(operatorr), operator_type }];
 
 		// generic rules:
-		base::RawView str_view = operator_.view();
+		base::RawView str_view = operatorr.view();
 		CORE_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
 
 		throw base::NotYetImplemented(base::strConcat(
-			"Generic rules for operator precedence dont yet exist for operator: ", operator_
+			"Generic rules for operator precedence dont yet exist for operator: ", operatorr
 		));
 	}
 
-	i64 operatorPrecedence(NamedOperator operator_, OperatorType operator_type) {
-		return operatorPrecedence(operatorToStr(operator_), operator_type);
+	i64 operatorPrecedence(NamedOperator operatorr, OperatorType operator_type) {
+		return operatorPrecedence(operatorToStr(operatorr), operator_type);
 	}
 
-	OperatorAssociativity operatorAssociativity(base::StrID operator_, OperatorType operator_type) {
-		CORE_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
+	OperatorAssociativity operatorAssociativity(base::StrID operatorr, OperatorType operator_type) {
+		CORE_ASSERT(operatorr.isGood(), "Bad string passed to operator precedence");
 
-		if (associativity.contains({ strAsOperator(operator_), operator_type }))
-			return associativity[{ strAsOperator(operator_), operator_type }];
+		if (associativity.contains({ strAsOperator(operatorr), operator_type }))
+			return associativity[{ strAsOperator(operatorr), operator_type }];
 
 		// generic rules:
-		base::RawView str_view = operator_.view();
+		base::RawView str_view = operatorr.view();
 		CORE_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
 
 		throw base::NotYetImplemented(base::strConcat(
-			"Generic rules for operator associativity dont yet exist for operator: ", operator_
+			"Generic rules for operator associativity dont yet exist for operator: ", operatorr
 		));
 	}
 

@@ -35,6 +35,10 @@ namespace pst {
 		return out;
 	}
 
+	LangElement::HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
 	void Attribute::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\" : ";

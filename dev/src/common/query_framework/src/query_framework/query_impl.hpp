@@ -9,17 +9,18 @@
 #include "internal/context_access.hpp"
 #include "internal/query_graph/node_making.hpp"
 #include "internal/utils/logs.hpp"
+#include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_hash.hpp"
 #include "query_int.hpp"
 
-#include <base/defer.hpp>
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>
@@ -40,6 +41,12 @@ namespace query::internal {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
 		const auto unstable_hash = unstableHashKey(key);
+
+		[[maybe_unused]]
+		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{
+			QueryImplType::QueryType::getID()
+		};
+
 
 		if (auto v = QueryImplType::load(unstable_hash)) {
 			// @FUTURE: Add ACD check here...
@@ -70,6 +77,8 @@ namespace query::internal {
 
 			// epilog:
 			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
+
+			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
@@ -108,6 +117,12 @@ namespace query::internal {
 		 *  static auto load(UKHash key_hash) -> LoadResult;
 		 *  static auto store(UKHash key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
+		 */
+
+		/**
+		 * Whether query is cached on disk.
+		 * Queries cached on disk must use stable hashing.
+		 * @note not used yet
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
 	};

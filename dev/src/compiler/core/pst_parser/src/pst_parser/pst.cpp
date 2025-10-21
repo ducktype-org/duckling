@@ -3,8 +3,6 @@
 #include "lang_parser_state.hpp"
 
 namespace pst::internal {
-	void deleteState(LangParserState* ptr) { delete ptr; }
-
 	Box<LangParserState> makeState(tpc::TokenStream&& token_stream, Ref<dia::Logger> logger) {
 		return base::makeBox<LangParserState>(std::move(token_stream), logger);
 	}
@@ -13,3 +11,5 @@ namespace pst::internal {
 		return std::move(*state_ptr).extractState();
 	}
 }
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(pst::LangParserState)

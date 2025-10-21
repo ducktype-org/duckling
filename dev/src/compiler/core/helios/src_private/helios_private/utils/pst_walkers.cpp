@@ -5,7 +5,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
 

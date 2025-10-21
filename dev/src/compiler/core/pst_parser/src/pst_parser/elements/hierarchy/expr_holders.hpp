@@ -3,7 +3,7 @@
 #include "../lang_state_unmethods.hpp"
 #include "meta.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -30,7 +30,8 @@ namespace pst {
 			return "Top Level Expression";
 		}
 
-		void dprint(std::ostream& out) const final;
+		void     dprint(std::ostream& out) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
 		AccessLocked<ExprElement> getExpr() const {

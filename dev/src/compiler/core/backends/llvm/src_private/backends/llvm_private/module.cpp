@@ -6,17 +6,9 @@
 
 #include <backends/llvm/llvm_backend.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <iostream>
-
-namespace base::extend {
-	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
-		compiler::backend_llvm::ModuleImpl* ptr
-	) {
-		delete ptr;
-	}
-}
 
 namespace compiler::backend_llvm {
 	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
@@ -77,3 +69,5 @@ namespace compiler::backend_llvm {
 
 	Module::~Module() = default;
 }
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_llvm::ModuleImpl)

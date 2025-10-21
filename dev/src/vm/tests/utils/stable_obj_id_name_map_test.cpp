@@ -1,5 +1,4 @@
-#include <base/int_conv.hpp>
-#include <base/str_utils.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <tester/tester.hpp>
 
@@ -60,14 +59,14 @@ public:
 	}
 
 	void testStable() {
-		constexpr u32 overload_size = 100;
+		constexpr u32 OVERLOAD_SIZE = 100;
 
 		vm::StableObjIdNameMap<u32> stable_map;
-		assertTrue(0 == stable_map.insert(2 * overload_size, getId(0)), "insert to stable map(0)");
+		assertTrue(0 == stable_map.insert(2 * OVERLOAD_SIZE, getId(0)), "insert to stable map(0)");
 		u32* ptr = stable_map.at(0).get();
-		assertTrue(*ptr == 2 * overload_size, "access through a pointer(0)");
+		assertTrue(*ptr == 2 * OVERLOAD_SIZE, "access through a pointer(0)");
 
-		for (u32 i = 1; i < overload_size; ++i) {
+		for (u32 i = 1; i < OVERLOAD_SIZE; ++i) {
 			stable_map.insert(i, getId(i));
 			std::string msg = "pointer equality(" + std::to_string(i) + ")";
 			assertTrue(ptr == stable_map.at(0).get(), msg);
@@ -76,14 +75,14 @@ public:
 
 	// Testing if unstable map is actually unstable and cannot be used in place of stable map.
 	void testUnstable() {
-		constexpr u32 overload_size = 100;
+		constexpr u32 OVERLOAD_SIZE = 100;
 
 		vm::ObjIdNameMap<u32> unstable_map;
-		assertTrue(0 == unstable_map.insert(2 * overload_size, getId(0)), "insert to stable map(0)");
+		assertTrue(0 == unstable_map.insert(2 * OVERLOAD_SIZE, getId(0)), "insert to stable map(0)");
 		u32* ptr = unstable_map.at(0).get();
-		assertTrue(*ptr == 2 * overload_size, "access through a pointer(0)");
+		assertTrue(*ptr == 2 * OVERLOAD_SIZE, "access through a pointer(0)");
 
-		for (u32 i = 1; i < overload_size; ++i) unstable_map.insert(i, getId(i));
+		for (u32 i = 1; i < OVERLOAD_SIZE; ++i) unstable_map.insert(i, getId(i));
 		assertTrue(ptr != unstable_map.at(0).get(), "pointer inequality(0)");
 	}
 };

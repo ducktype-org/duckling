@@ -3,12 +3,15 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
+#include <driver_private/statistics_private/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
+#include <timer/timer.hpp>
 
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -61,9 +64,15 @@ namespace compiler::driver {
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
 				auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
-				llvm_module.compile(
-					output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
-				);
+				{
+					// compileLIRModuleToLLVM time is added on its own,
+					// but tracking time of the actual compilation to object file is done here
+					timer::AddToTime _(&backend_compilation_time);
+					llvm_module.compile(
+						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
+					);
+				}
+
 
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
 					base::StrID llvm_ir_path
@@ -97,7 +106,11 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackage(const fs::File& package_location, BackendType backend) {
+	void compilerEntirePackage(
+		const fs::File&               package_location,
+		BackendType                   backend,
+		const linker::LinkingOptions& linking_options
+	) {
 		auto root = frontend::createModuleTree(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
@@ -118,7 +131,8 @@ namespace compiler::driver {
 			);
 
 			objects.push_back(emitBuiltinLLVMObjectFile());
-			link(output_file, objects, LinkOptions{ .link_c_standard_library = true });
+
+			linker::link(output_file, objects, linking_options);
 		}
 	}
 

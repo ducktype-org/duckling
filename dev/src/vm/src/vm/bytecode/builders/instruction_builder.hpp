@@ -2,11 +2,7 @@
 
 #include "../instructions.hpp"
 
-#include <base/maps.hpp>
-#include <base/ref.hpp>
-#include <base/string_id.hpp>
-#include <base/stringifyable_enum.hpp>
-#include <base/strongly_typed_id.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/box.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <filesystem>
 #include <map>

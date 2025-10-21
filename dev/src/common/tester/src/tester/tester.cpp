@@ -1,6 +1,6 @@
 #include "tester.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <cctype>
 #include <chrono>
@@ -143,8 +143,8 @@ namespace tester {
 		printer::StreamPrinter::print({ {
 			test.name,
 			": ",
-			res.success ? printer::PrinterContent("OK", printer::Color::GREEN)
-						: printer::PrinterContent("FAIL", printer::Color::RED),
+			res.success ? printer::PrinterContent("OK", printer::Color::Green)
+						: printer::PrinterContent("FAIL", printer::Color::Red),
 			"\n",
 		} });
 		for (auto& mess: res.output) printer::StreamPrinter::print(mess);
@@ -173,10 +173,10 @@ namespace tester {
 			"Elapsed time: ",
 			std::to_string(time),
 			" s",
-			{ "\nPassed:       ", printer::Color::GREEN },
-			{ std::to_string(passed), printer::Color::GREEN },
-			{ "\nFailed:       ", failed ? printer::Color::RED : printer::Color::DEFAULT },
-			{ std::to_string(failed), failed ? printer::Color::RED : printer::Color::DEFAULT },
+			{ "\nPassed:       ", printer::Color::Green },
+			{ std::to_string(passed), printer::Color::Green },
+			{ "\nFailed:       ", failed ? printer::Color::Red : printer::Color::Default },
+			{ std::to_string(failed), failed ? printer::Color::Red : printer::Color::Default },
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",

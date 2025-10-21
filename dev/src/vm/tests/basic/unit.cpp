@@ -10,13 +10,13 @@ class VmUnitTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(pointerTest);
-		TESTER_ADD_TEST(commandLineArguments);
-		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);

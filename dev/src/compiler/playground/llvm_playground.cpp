@@ -1,15 +1,15 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -90,12 +90,14 @@ int main(int argc, const char* argv[]) {
 	// Add module ctors and dtors to module CTOR and DTOR functions
 	if (!ctors.empty()) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// @TODO: fix this: add proper module global ctor mangling
-			auto module_ctor = lir::fromLIRFunctions(
+			auto module_ctor = lir::createFunctionInvoker(
 				ctx,
 				ctors,
-				base::StrID(
-					base::strConcat("_MODULE_CTOR_", frontend::moduleName(root).str()).c_str()
+				compiler::helios::mangler::getSpecialMangledName<
+					compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+					ctx,
+					compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						frontend::moduleName(root) }
 				)
 			);
 
@@ -109,13 +111,15 @@ int main(int argc, const char* argv[]) {
 			else
 				std::cerr << "LLVM verification failed\n\n";
 
-			// @TODO: fix this: add proper module global dtor mangling
 			// @TODO: add legit dtors
-			auto module_dtor = lir::fromLIRFunctions(
+			auto module_dtor = lir::createFunctionInvoker(
 				ctx,
 				{},
-				base::StrID(
-					base::strConcat("_MODULE_DTOR_", frontend::moduleName(root).str()).c_str()
+				compiler::helios::mangler::getSpecialMangledName<
+					compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+					ctx,
+					compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						frontend::moduleName(root) }
 				)
 			);
 

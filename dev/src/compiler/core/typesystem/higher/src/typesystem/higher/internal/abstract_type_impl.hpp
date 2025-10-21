@@ -7,7 +7,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <query_framework/context_fd.hpp>
 
@@ -118,6 +118,16 @@ namespace tsh::internal {
 			return false;
 		}
 
+		/**
+		 * @brief Whether the type carries any information, in an information-theoretic sense. For
+		 * example, the unit and void types does not carry any information, while other types do.
+		 * @return Whether the type carries information.
+		 */
+		[[nodiscard]]
+		virtual bool carriesInformation() const {
+			return true;
+		}
+
 		[[nodiscard]]
 		AbstractType toAbstractType() const {
 			return this;
@@ -154,9 +164,11 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Unit;
 
-		UnitAbstractTypeImpl() { representation = "unit"; }
+		UnitAbstractTypeImpl() { representation = "()"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool carriesInformation() const override { return false; }
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -174,6 +186,8 @@ namespace tsh::internal {
 		VoidAbstractTypeImpl() { representation = "void"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool carriesInformation() const override { return false; }
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {
@@ -612,7 +626,8 @@ namespace tsh::internal {
 
 		[[nodiscard]]
 		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
-			const auto& elements_with_same_name = getInterface(ctx).getElements().at(name(sym));
+			const auto& elements_with_same_name
+				= getInterface(ctx).getElementsByName().at(name(sym));
 			for (const auto& element: elements_with_same_name)
 				if (element.getSymbol() == sym) return element.getType(ctx);
 			CORE_PANIC("Element not found.");
