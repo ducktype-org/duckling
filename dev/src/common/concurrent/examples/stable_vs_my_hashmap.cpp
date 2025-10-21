@@ -1,8 +1,8 @@
 #include <concurrent/concurrent_allocator_take_2.hpp>
 
-#include <base/maps.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/noexcept.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/misc/noexcept.hpp>
 
 #include <iostream>
 

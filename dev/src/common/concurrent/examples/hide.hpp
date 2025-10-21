@@ -2,7 +2,7 @@
 
 #include <concurrent/worker.hpp>
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 constexpr int NUM_THREADS = 8;
 

@@ -3,10 +3,10 @@
 #include "atomic_u64.hpp"
 #include "rw_spinlock.hpp"
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/ref.hpp>
+#include <base/pointers/box.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/types/ints.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <array>
 #include <optional>
