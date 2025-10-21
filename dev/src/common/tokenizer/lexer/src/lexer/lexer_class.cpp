@@ -154,6 +154,22 @@ namespace lexer {
 		MultiCharacterCharError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class UnknownLiteralTypeSpecifierError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Numeric literal with an unknown type specifier.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnknownLiteralTypeSpecifierError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	class UnmatchedBracketError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -420,6 +436,7 @@ namespace lexer {
 				file->getCharRange(suffix_begin, suffix_end + 1), source_position
 			);
 		}
+		logger->log(makeBox<UnknownLiteralTypeSpecifierError>(suffix_start_pos));
 		return {};
 	}
 
@@ -492,9 +509,7 @@ namespace lexer {
 					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
 						was_e   = true;
 						was_dot = true;
-						next();
-						// '+'/'-' an appear only straight after 'e'/'E'
-						if (peek().is('+') or peek().is('-')) next();
+						next();  // 'e'
 					} else {
 						break;
 					}
