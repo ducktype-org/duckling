@@ -45,11 +45,15 @@ namespace compiler::frontend {
 			const base::Optional<ComponentHash>& parent, base::StrID name
 		) noexcept {
 			if (parent.has_value()) {
-				// elements = parent->elements;
-				partial = parent->partial;
+				elements = parent->elements;
+				partial  = parent->partial;
 			}
 			if (name.isGood()) {
-				// elements.emplace_back(name.strView());
+#ifdef BUILD_TYPE_DEV
+				// this has to be inside the ifdef, not if-constexpr because of C++ rules about
+				// if-constexpr errors
+				elements.emplace_back(name.strView());
+#endif
 				// add component identifier to partial hash
 				hashing::addToHash(partial, name);
 			}
