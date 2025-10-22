@@ -150,6 +150,9 @@ namespace base {
 			KEY_T      key;
 			DATA_T     value;
 
+			Node(MRef<Node> next, const KEY_T& key, const DATA_T& value) noexcept
+				: next(next), key(key), value(value) {}
+
 			Node(MRef<Node> next, KEY_T&& key, DATA_T&& value) noexcept
 				: next(next), key(std::move(key)), value(std::move(value)) {}
 		};

@@ -60,6 +60,8 @@ duck_add_test(base bit256 tests/bit256_test.cpp USES Base)
 
 duck_add_test(base memory tests/memory_test.cpp USES Base)
 
+duck_add_test(base map tests/map_test.cpp USES Base)
+
 add_example(anycast_example examples/anycast_example.cpp
         USES Base)
 
