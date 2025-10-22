@@ -41,22 +41,31 @@ public:
 	void basicTest() {
         std::minstd_rand rng(42);
 
-        // base::StableHashMap20<BigObject<13>, BigObject<16>> map;
-        base::HashMap<BigObject<13>, BigObject<16>> map;
-        
+        base::StableHashMap20<BigObject<13>, BigObject<16>> map;
+        // base::HashMap<BigObject<13>, BigObject<16>> map;
+
+        u64 base_result = 0;
+
         for (u64 i = 0; i < count; i++) {
-            map.put(rng(), rng() * 10);
+            auto v = rng();
+            map.put(v, v * 10);
+
+            BigObject<16> val(0);
+            auto maybe_val = map.atMaybe(rng());
+            if (maybe_val.has_value()) {
+                val = **maybe_val;
+                base_result += val.data[0];
+            }
         }
 
         u64 loop_count = 0;
         for (auto& [key, value]: map) {
             loop_count++;
             ASSERT_EQUAL(value.data[0], key.data[0] * 10);
-
-            if (loop_count > 1000) break;
         }
         // ASSERT_TRUE(loop_count == count);
         std::cerr << "loop_count" << loop_count << "\n";
+        std::cerr << "base_result" << base_result << "\n";
 	}
 };
 
