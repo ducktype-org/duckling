@@ -11,6 +11,8 @@
 
 #include <iterator>
 #include <type_traits>
+#include <utility>
+
 
 namespace base {
 	/**
@@ -140,6 +142,20 @@ namespace base {
 	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
 	class StableHashMap20 final {
 
+	public:
+		struct KeyValuePair final {
+			const KEY_T key;
+			DATA_T     value;
+
+			KeyValuePair(const KEY_T& key, const DATA_T& value) noexcept
+				: key(key), value(value) {}
+			
+			KeyValuePair(KEY_T&& key, DATA_T&& value) noexcept
+				: key(std::move(key)), value(std::move(value)) {}
+		};
+
+	private:
+
 		static constexpr usize  INITIAL_BUCKETS = 256;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
@@ -147,14 +163,14 @@ namespace base {
 
 		struct Node final {
 			MRef<Node> next;
-			KEY_T      key;
-			DATA_T     value;
+
+			KeyValuePair key_value;
 
 			Node(MRef<Node> next, const KEY_T& key, const DATA_T& value) noexcept
-				: next(next), key(key), value(value) {}
+				: next(next), key_value(key, value) {}
 
 			Node(MRef<Node> next, KEY_T&& key, DATA_T&& value) noexcept
-				: next(next), key(std::move(key)), value(std::move(value)) {}
+				: next(next), key_value(std::move(key), std::move(value)) {}
 		};
 
 		std::vector<MRef<Node>>              buckets;
@@ -195,7 +211,7 @@ namespace base {
 			buckets.resize(new_bucket_count);
 
 			for (const Ref<Node>& node: all_nodes) {
-				addToBucket(keyToBucket(node->key), node);
+				addToBucket(keyToBucket(node->key_value.key), node);
 			}
 		}
 
@@ -207,10 +223,10 @@ namespace base {
 			CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
 
 			Ref current_node = bucket;
-			const KEY_T& key = new_node->key;
+			const KEY_T& key = new_node->key_value.key;
 
 			while (true) {
-				if (current_node->key == key) {
+				if (current_node->key_value.key == key) {
 					// this can be changed to an assertion:
 					CORE_PANIC("Duplicate key insertion in MyCustomHashMap");
 				}
@@ -283,10 +299,10 @@ namespace base {
 			Iterator& operator=(Iterator&&) = default;
 
 			reference operator*() const {
-				return current_node->value;
+				return current_node->key_value;
 			}
 			pointer operator->() const {
-				return &current_node->value;
+				return &current_node->key_value;
 			}
 
 			Iterator& operator++() {
@@ -317,8 +333,8 @@ namespace base {
 
 		};
 
-		using IteratorT = Iterator<DATA_T>;
-		using ConstIteratorT = Iterator<const DATA_T>;
+		using IteratorT = Iterator<KeyValuePair>;
+		using ConstIteratorT = Iterator<const KeyValuePair>;
 
 
 
@@ -337,7 +353,7 @@ namespace base {
 		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(keyToBucket(key));
 			while (current_node) {
-				if (current_node->key == key) return &current_node->value;
+				if (current_node->key_value.key == key) return &current_node->key_value.value;
 				current_node = current_node->next;
 			}
 			return {};

@@ -14,8 +14,11 @@ public:
         map.put(1, 10);
         map.put(2, 20);
 
+        for (auto& [key, value]: map) {
+            
+        }
 
-        
+
 	}
 };
 
