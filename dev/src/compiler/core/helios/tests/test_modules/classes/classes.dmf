@@ -44,11 +44,9 @@ let b = a;
 
 # Nested classes
 
-# @TODO: #1420 Support nested classes in PST
-# class OuterClass {
-#     class InnerClass {
-#         x: i32 = 0;
-#     };
-# }
-#
-# let inner: OuterClass.InnerClass = OuterClass.InnerClass(3);
+class OuterClass {
+    class InnerClass {
+        x: i32 = 0;
+    }
+}
+let inner: OuterClass.InnerClass = OuterClass.InnerClass(3);
