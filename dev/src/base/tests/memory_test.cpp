@@ -18,6 +18,20 @@ struct Derived: public Base {
     virtual ~Derived() = default;
 };
 
+struct DestructionTracker final {
+    inline static u64 destroyed_count = 0;
+
+    DestructionTracker() = default;
+    DestructionTracker(const DestructionTracker&) = delete;
+    DestructionTracker(DestructionTracker&&) = delete;
+    DestructionTracker& operator=(const DestructionTracker&) = delete;
+    DestructionTracker& operator=(DestructionTracker&&) = delete;
+
+    ~DestructionTracker() {
+        destroyed_count++;
+    }
+};
+
 class MemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS MemoryTest
@@ -39,6 +53,34 @@ public:
 
         t_allocator.deallocateDestroy(ref);
 	}
+
+    void destructorIsCalledTest() {
+        auto allocator = base::SingleTypeMemoryPoolAllocator<DestructionTracker>{};
+        
+        auto ptr_1 = allocator.allocateEmplace();
+        auto ptr_2 = allocator.allocateEmplace();
+        auto ptr_3 = allocator.allocateEmplace();
+
+
+        {
+            auto ptr_4 = allocator.allocateEmplace();
+            auto ptr_5 = allocator.allocateEmplace();
+
+            ASSERT_EQUAL(DestructionTracker::destroyed_count, 0);
+
+            allocator.deallocateDestroy(ptr_4);
+            allocator.deallocateDestroy(ptr_5);
+
+            ASSERT_EQUAL(DestructionTracker::destroyed_count, 2);
+        }
+
+        allocator.deallocateDestroy(ptr_1);
+        allocator.deallocateDestroy(ptr_2);
+        allocator.deallocateDestroy(ptr_3);
+
+        ASSERT_EQUAL(DestructionTracker::destroyed_count, 4);
+
+    }
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");
