@@ -7,6 +7,8 @@
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
+#include <base/memory/single_type_memory_pool_allocator.hpp>
+
 
 #include <type_traits>
 
@@ -132,5 +134,130 @@ namespace base {
 
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;
+	};
+
+
+	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
+	class StableHashMap20 final {
+
+		static constexpr usize  INITIAL_BUCKETS = 256;
+		static constexpr double MAX_LOAD_FACTOR = 0.7;
+
+		using KeyHash = u64;
+
+		struct Node final {
+			MRef<Node> next;
+			KEY_T      key;
+			DATA_T     value;
+
+			Node(MRef<Node> next, KEY_T&& key, DATA_T&& value) noexcept
+				: next(next), key(std::move(key)), value(std::move(value)) {}
+		};
+
+		std::vector<MRef<Node>>              buckets;
+		SingleTypeMemoryPoolAllocator<Node>  node_allocator;
+		u64                                  element_count = 0;
+
+		[[nodiscard]]
+		static auto keyHash(const KEY_T& key) {
+			return HASH_T{}(key);
+		}
+
+		[[nodiscard]]
+		u64 keyToBucket(const KEY_T& key) const RELEASE_NOEXCEPT {
+			u64 hash = keyHash(key);
+			auto res = hash % buckets.size();
+			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
+			return res;
+		}
+
+		void rehash() RELEASE_NOEXCEPT {
+			usize                  new_bucket_count = buckets.size() * 2;
+			
+			std::vector<Ref<Node>> all_nodes;
+			all_nodes.reserve(element_count);
+
+			for (const auto& bucket: buckets) {
+				MRef<Node> current_node = bucket;
+				while (current_node) {
+					all_nodes.emplace_back(current_node.toOpt().value());
+					current_node = current_node.toOpt().value()->next;
+					all_nodes.back()->next = nullptr;
+				}
+			}
+
+			CORE_ASSERT(all_nodes.size() == element_count, "Node count mismatch during rehash: ", all_nodes.size(), " vs ", element_count);
+
+			buckets.clear();
+			buckets.resize(new_bucket_count);
+
+			for (const Ref<Node>& node: all_nodes) {
+				addToBucket(keyToBucket(node->key), node);
+			}
+		}
+
+		/**
+		* Appends new node to the bucket identified by node reference.
+		* Panics if node with the same key already exists.
+		*/
+		void addToBucketNode(Ref<Node> bucket, Ref<Node> new_node) RELEASE_NOEXCEPT {
+			CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
+
+			Ref current_node = bucket;
+			const KEY_T& key = new_node->key;
+
+			while (true) {
+				if (current_node->key == key) {
+					// this can be changed to an assertion:
+					CORE_PANIC("Duplicate key insertion in MyCustomHashMap");
+				}
+				if (current_node->next)
+					current_node = current_node->next.toOpt().value();
+				else
+					break;
+			}
+			CORE_ASSERT(current_node->next == nullptr, "this must be the last node in the bucket");
+			current_node->next = new_node;
+		}
+
+		void addToBucket(u64 bucket_index, Ref<Node> new_node) RELEASE_NOEXCEPT {
+			MRef maybe_initial_node = buckets.at(bucket_index);
+			if (maybe_initial_node)
+				addToBucketNode(maybe_initial_node.toOpt().value(), new_node);
+			else
+				buckets.at(bucket_index) = new_node;
+		}
+
+		void maybeRehash() RELEASE_NOEXCEPT {
+			if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) rehash();
+		}
+
+	public:
+		StableHashMap20(): buckets(INITIAL_BUCKETS) {}
+
+		void put(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
+			auto new_node
+				= node_allocator.allocateEmplace(Node{ nullptr, key, value });
+
+			addToBucket(keyToBucket(key), new_node);
+
+			element_count++;
+			maybeRehash();
+		}
+
+		[[nodiscard]]
+		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(keyToBucket(key));
+			while (current_node) {
+				if (current_node->key == key) return &current_node->value;
+				current_node = current_node->next;
+			}
+			return {};
+		}
+
+		[[nodiscard]]
+		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
+			return atMaybe(key).has_value();
+		}
 	};
 }
