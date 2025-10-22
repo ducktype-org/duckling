@@ -157,7 +157,7 @@ namespace base {
 	private:
 
 		static constexpr usize  INITIAL_BUCKETS = 256;
-		static constexpr double MAX_LOAD_FACTOR = 1.3;
+		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 		using KeyHash = u64;
 
@@ -174,7 +174,7 @@ namespace base {
 		};
 
 		std::vector<MRef<Node>>              buckets;
-		SingleTypeMemoryPoolAllocator<Node, 2*4096>  node_allocator;
+		SingleTypeMemoryPoolAllocator<Node, 1024>  node_allocator;
 		u64                                  element_count = 0;
 
 		[[nodiscard]]
@@ -261,7 +261,7 @@ namespace base {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
 					MRef<Node> next_node = current_node->next;
-					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					node_allocator.justDestroy(current_node.toOpt().value());
 					current_node = next_node;
 				}
 			}

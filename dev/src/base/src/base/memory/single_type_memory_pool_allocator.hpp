@@ -88,6 +88,12 @@ namespace base {
             return new_storage->get();
 		}
 
+        void justDestroy(Ref<T> obj_ref) {
+            allocated_count--;
+            Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
+            obj_storage->destroy();
+        }
+
         /**
          * Deallocates and destroys the given object.
          * @note If object pointed to by obj_ref was not allocated by this allocator,
@@ -95,10 +101,6 @@ namespace base {
          */
         void deallocateDestroy(Ref<T> obj_ref) {
             allocated_count--;
-
-            // note: 
-            // offsetof is conditionally supported for non-standard-layout types since C++17.
-            // If this breaks, figure it out. 
 
             Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
 

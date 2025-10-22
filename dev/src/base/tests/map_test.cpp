@@ -2,6 +2,26 @@
 
 #include <tester/tester.hpp>
 
+template<usize Size>
+struct BigObject final {
+    u64 data[Size] = {};
+    BigObject(u64 a): data{a} {}
+
+    bool operator==(const BigObject& other) const {
+        for (usize i = 0; i < Size; i++) {
+            if (data[i] != other.data[i]) return false;
+        }
+        return true;
+    }
+};
+template<usize N>
+struct std::hash<BigObject<N>> {
+    size_t operator()(const BigObject<N>& obj) const noexcept {
+        return obj.data[0];
+    }
+};
+
+
 class MapTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS MapTest
@@ -18,16 +38,17 @@ public:
 
     template<u64 count>
 	void basicTest() {
-        base::StableHashMap20<int, int> map;
-
-        for (int i = 0; i < count; i++) {
-            map.put(i, i * 10);
+        base::StableHashMap20<BigObject<13>, BigObject<16>> map;
+        // base::HashMap<BigObject<13>, BigObject<16>> map;
+        
+        for (u64 i = 0; i < count; i++) {
+            map.put(i*17, i * 10);
         }
 
         u64 loop_count = 0;
         for (auto& [key, value]: map) {
             loop_count++;
-            ASSERT_EQUAL(value, key * 10);
+            ASSERT_EQUAL(value.data[0], key.data[0] * 10);
 
             if (loop_count > 1000) break;
         }
