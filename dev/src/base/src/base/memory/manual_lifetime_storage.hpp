@@ -6,7 +6,7 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
-namespace concurrent {
+namespace base {
 
 	/**
 	 * Explicit lifetime management for a single object.
