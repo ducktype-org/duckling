@@ -121,8 +121,8 @@ The data flow is initiated by an API request to load code — `loadFiles` or `lo
     `TypeValidator` and `FunctionValidator` modules (see [bytecode validation](../bytecode/validator/readme.md)), 
     and tries to inject it into its internal state (`ValidProgram`).
 3.  If the operation succeeds, the `Loader` updates its state, and passes the 
-    updated high-level program into the `Compiler` compiles newly added functions, 
-    globals, types expands its internal state with the low-level representations. After
+    updated high-level program to the `Compiler`. The `Compiler` compiles newly added functions, 
+    globals, types expands its internal state with their low-level representations. After
     this step, the compiler returns an updated `LowVMProgram` structure to `VMProcess`.
 4.  `VMProcess` replaces its old version of the executable code with the new one.
 5.  If an error occurs at any stage of loading or verification, the `Loader`

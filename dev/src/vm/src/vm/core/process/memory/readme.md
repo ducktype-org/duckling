@@ -66,10 +66,10 @@ structure is what enables safe implementation of complex types like variants, ar
         // Sets the type of variant to `bool` and its value to false. 
         // `data_ref` should now be considered invalid.
         v = false; 
-        data_ref = 3; // This is an UB
+        data_ref = 3; // This is a UB
     }
     ``` 
-    The above code is considered an UBs in C++, but we want to detect this kind of memory errors in the VM deterministically.
+    The above code is considered a UB in C++, but we want to detect this kind of memory errors in the VM deterministically.
     The nested block structure would enable us doing that as in the following way:
     1.  When you set the variant to hold an `int`, a child `Block` of type `int` would be created, viewing the parent's data. 
         Pointers to the inner value will point to this `int` child block (in this case `data_ref` would point to the child block of `v`).
@@ -91,7 +91,7 @@ The `Memory` class is the memory manager for a single `VMProcess`, orchestrating
     when they are no longer needed.
 
 *   **Data Integrity:** 
-    When data is copied from one pointer to another (`vm::Memory::copyPointedData()`), the `Memory` module doesn't just perform a `std::memcpy`. It traverses the nested block hierarchy of the source, recreating the same structure at the destination which is crucial for detecting memory errors.
+    When data is copied from one pointer to another (`vm::Memory::copyPointedData()`), the `Memory` module doesn't just perform an `std::memcpy`. It traverses the nested block hierarchy of the source, recreating the same structure at the destination which is crucial for detecting memory errors.
 
 *   **Safety Enforcement and Validation:** 
     The centralized design of the `Memory` module is what enables the VM's powerful safety guarantees:

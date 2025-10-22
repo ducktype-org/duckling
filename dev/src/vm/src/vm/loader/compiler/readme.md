@@ -56,7 +56,7 @@ a new function is injected.
         internally uses `std::vector`/`std::deque`. This means the order of functions/globals/types
         in these structures is important.
         - Translation of instructions is performed. Each instruction stored in the high representation 
-        (fat-bytecode) is translated in their micro-bytecode equivalent. This step in the currently is
+        (fat-bytecode) is translated in their micro-bytecode equivalent. This step currently is
         implemented trivially, with each high-instruction having a micro-instruction equivalent, but in the
         future, once the MicroBytecode set gets minified, some high-instructions will be ommited (like `cast_X_X`, which is
         only needed in the static verification phase, will be gone at runtime), some may be split into more than one 

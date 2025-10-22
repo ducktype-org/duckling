@@ -1,14 +1,15 @@
 # DVM — VMProcess module
 ## [`VMProcess`](./vmprocess.hpp)
-The `VMProcess` is the core component that represents a single, isolated execution environment for a program 
-running within the virtual machine. While the `Supervisor` manages multiple processes, the `VMProcess` is 
-concerned with everything needed to run *one* specific program from start to finish. It does not execute 
-bytecode directly, instead it orchestrates all the necessary resources and delegates the actual execution 
+The `VMProcess` is the core component that represents a single, isolated execution environment for a program
+running within the virtual machine. While the `Supervisor` manages multiple processes, the `VMProcess` is
+concerned with everything needed to run *one* specific program from start to finish. It does not execute
+bytecode directly, instead it orchestrates all the necessary resources and delegates the actual execution
 to one or more `VMThread`s.
 
-All management operations on a `VMProcess` (like loading code or requesting output) are performed in the 
-context of the caller's thread (e.g., the Supervisor's), ensuring that the core program logic runs without 
-interruption.
+All management operations on a `VMProcess` (like loading code or requesting output) are performed in the
+caller's thread (e.g., the Supervisor's thread or a CLI's main thread). This ensures that the `VMThread` 
+(which is ran on a separate thread) dedicated to running the program's bytecode is not blocked or 
+interrupted by these administrative tasks.
 
 ### Core Responsibilities
 
