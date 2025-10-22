@@ -39,36 +39,63 @@ public:
 
     template<u64 count>
 	void basicTest() {
-        std::minstd_rand rng(42);
-
-        base::StableHashMap20<BigObject<13>, BigObject<16>> map;
-        // base::HashMap<BigObject<13>, BigObject<16>> map;
-        // base::StableHashMap<BigObject<13>, BigObject<16>> map;
-
+        u64 base_loop_count = 0;
         u64 base_result = 0;
+        {
+            std::minstd_rand rng(42);
 
-        for (u64 i = 0; i < count; i++) {
-            auto v = rng();
-            map.put(v, v * 10);
-        
-            for (int j = 0; j < 1; j++) {
-                BigObject<16> val(0);
-                auto maybe_val = map.atMaybe(rng());
-                if (maybe_val.has_value()) {
-                    val = **maybe_val;
-                    base_result += val.data[0];
+            base::StableHashMap20<BigObject<13>, BigObject<16>> map;
+
+            for (u64 i = 0; i < count; i++) {
+                auto v = rng();
+                map.put(v, v * 10);
+            
+                for (int j = 0; j < 3; j++) {
+                    auto maybe_val = map.atMaybe(rng());
+                    if (maybe_val.has_value()) {
+                        auto val = **maybe_val;
+                        base_result += val.data[0];
+                    }
                 }
+            }
+
+            
+            for (auto& [key, value]: map) {
+                base_loop_count++;
+                ASSERT_EQUAL(value.data[0], key.data[0] * 10);
             }
         }
 
-        u64 loop_count = 0;
-        for (auto& [key, value]: map) {
-            loop_count++;
-            ASSERT_EQUAL(value.data[0], key.data[0] * 10);
+        u64 std_loop_count = 0;
+        u64 std_result = 0;
+        {
+            std::minstd_rand rng(42);
+
+            std::unordered_map<BigObject<13>, BigObject<16>> map;
+
+            for (u64 i = 0; i < count; i++) {
+                auto v = rng();
+                map.emplace(BigObject<13>(v), BigObject<16>(v * 10));
+            
+                for (int j = 0; j < 3; j++) {
+                    auto it = map.find(BigObject<13>(rng()));
+                    if (it != map.end()) {
+                        auto val = it->second;
+                        std_result += val.data[0];
+                    }
+                }
+            }
+
+            
+            for (auto& [key, value]: map) {
+                std_loop_count++;
+                ASSERT_EQUAL(value.data[0], key.data[0] * 10);
+            }
         }
-        // ASSERT_TRUE(loop_count == count);
-        std::cerr << "loop_count: " << loop_count << "\n";
-        std::cerr << "base_result: " << base_result << "\n";
+
+        ASSERT_EQUAL(base_loop_count, std_loop_count);
+        ASSERT_EQUAL(base_result, std_result);
+        
 	}
 };
 
