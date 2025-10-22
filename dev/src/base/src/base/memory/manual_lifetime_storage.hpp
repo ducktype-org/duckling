@@ -58,15 +58,18 @@ namespace base {
 
 		void destroy() {
             IF_BUILD_TYPE_DEV({
-                CORE_ASSERT(state == State::Constructed, "Object is not constructed");
-                state = State::Empty;
+                CORE_ASSERT(state == State::Constructed, "Object is not constructed (destroy)");
             })
             this->get()->~T();
+            // this has to be after destruction, so we can also assert in get():
+            IF_BUILD_TYPE_DEV({
+                state = State::Empty;
+            })
         }
 
 		T* get() { 
             IF_BUILD_TYPE_DEV({
-                CORE_ASSERT(state == State::Constructed, "Object is not constructed");
+                CORE_ASSERT(state == State::Constructed, "Object is not constructed (get)");
             })
             return std::launder(reinterpret_cast<T*>(&data));
         }

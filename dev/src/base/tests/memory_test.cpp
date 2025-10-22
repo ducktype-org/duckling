@@ -78,8 +78,29 @@ public:
         allocator.deallocateDestroy(ptr_2);
         allocator.deallocateDestroy(ptr_3);
 
-        ASSERT_EQUAL(DestructionTracker::destroyed_count, 4);
+        ASSERT_EQUAL(DestructionTracker::destroyed_count, 5);
+    }
 
+    void stressTest() {
+        constexpr u64 ALLOCATION_COUNT = 1'000'000;
+
+        auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};
+
+        std::vector<base::Ref<u64>> allocated_ptrs;
+        allocated_ptrs.reserve(ALLOCATION_COUNT);
+
+        for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
+            auto ptr = allocator.allocateEmplace(static_cast<int>(i));
+            allocated_ptrs.push_back(ptr);
+        }
+
+        for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
+            ASSERT_TRUE(*allocated_ptrs[i] == i);
+        }
+
+        for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
+            allocator.deallocateDestroy(allocated_ptrs[i]);
+        }
     }
 };
 
