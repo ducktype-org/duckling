@@ -1,6 +1,8 @@
 #include <base/memory/manual_lifetime_storage.hpp>
 #include <base/pointers/box.hpp>
 #include <base/misc/noexcept.hpp>
+#include <cstddef>
+#include <new>
 
 namespace base {
 
@@ -26,8 +28,7 @@ namespace base {
 			std::array<StorageT, BLOCK_SIZE> items;
 		};
 
-        constexpr static u64 BUFFER_SIZE_BYTES = sizeof(Buffer);
-
+    
         /**
          * Simple helper type that wraps index of a buffer and index of an item within that buffer.
          */
@@ -89,17 +90,24 @@ namespace base {
 
         /**
          * Deallocates and destroys the given object.
+         * @note If object pointed to by obj_ref was not allocated by this allocator,
+         * behavior is undefined, EVEN IN DEV BUILDS.
          */
         void deallocateDestroy(Ref<T> obj_ref) {
             allocated_count--;
+
+            Ref<StorageT> obj_storage = std::launder(reinterpret_cast<StorageT*>(
+                reinterpret_cast<std::byte*>(obj_ref.get()) - offsetof(StorageT, data)
+            ));
 
             // idx, in which the object is stored:
             BufferIndex deallocation_idx;
 
             // naively find the buffer and the index within the buffer:
             for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
-                // Ref<Buffer> buffer = buffers[buffer_idx].ref();
-                // void* buffer_start = reinterpret_cast<void*>(buffers[buffer_idx]->items.data());                
+                StorageT* buffer_pointer_start = buffers[buffer_idx]->items.data();
+                StorageT* buffer_pointer_end = buffers[buffer_idx]->items.data() + buffers[buffer_idx]->items.size();
+
             }
         }
         
