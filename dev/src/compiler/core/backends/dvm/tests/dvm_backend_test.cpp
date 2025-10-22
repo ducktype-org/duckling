@@ -46,7 +46,8 @@ private:
 		vm::code::CodeCollection                  code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
+			auto module
+				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 

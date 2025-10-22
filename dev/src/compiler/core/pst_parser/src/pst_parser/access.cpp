@@ -8,7 +8,9 @@ namespace pst::internal {
 
 	IMPLEMENT_QUERY_SIDE_INPUT(PSTAccessSideInput);
 
-	void notifyContext(query::Context& ctx, PstID id) { ctx.query<PSTAccessSideInput>({ id }); }
+	void notifyContext(query::Context& ctx, query::QueryStableHash stable_hash) {
+		ctx.query<PSTAccessSideInput>({ stable_hash });
+	}
 
 	void notifyBadAccess(query::Context&) { CORE_PANIC("PST-Access to a nullptr."); }
 }

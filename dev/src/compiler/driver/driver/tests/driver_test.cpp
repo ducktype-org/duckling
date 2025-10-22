@@ -43,7 +43,8 @@ private:
 	void objFileGenerated() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_1")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_1")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -63,7 +64,8 @@ private:
 		defer(global_state::getDynamicDebugOptions()->llvm_dump_ir  = false;
 		      global_state::getDynamicDebugOptions()->llvm_dump_asm = false;);
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_2")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_2")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -86,7 +88,8 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_3")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_3")));
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -123,7 +126,8 @@ private:
 	void globalsTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/globals")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -151,7 +155,9 @@ private:
 	void globalsInitializationTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals_initialization")));
+		auto module = frontend::createModuleTreeWithRandomPackageID(
+			fs::File(path("modules/globals_initialization"))
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto run_result = driver::runModuleOnDVM(ctx, module);

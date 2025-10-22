@@ -84,35 +84,35 @@ private:
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst = prepare(path(filename));
 		{
-			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
-			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
+			auto panicky_visitor = PstVisitorTester<pst::PstVisitorPanicky>();
+			auto empty_visitor   = PstVisitorTester<pst::PstVisitorEmpty>();
 			for (const auto& stmt_locked:
 			     pst.getRootElement().illegalAccess().value()->getStatements()) {
 				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
-					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
+					[&] { stmt->acceptVisitor(panicky_visitor); }, "Stmt did not call it\'s visitor"
 				);
-				stmt->acceptVisitor(empty_vistor);
+				stmt->acceptVisitor(empty_visitor);
 			}
-			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
-			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
+			ASSERT_EQUAL(expected_counter, panicky_visitor.counter);
+			ASSERT_EQUAL(expected_counter, empty_visitor.counter);
 		}
 
 		// check that is also works when called from LangElement:
 		{
-			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
-			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
+			auto panicky_visitor = PstVisitorTester<pst::PstVisitorPanicky>();
+			auto empty_visitor   = PstVisitorTester<pst::PstVisitorEmpty>();
 			for (const auto& stmt_locked:
 			     pst.getRootElement().illegalAccess().value()->getStatements()) {
 				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
-					[&] { stmt->acceptVisitor(panicky_vistor); },
+					[&] { stmt->acceptVisitor(panicky_visitor); },
 					"LangElement did not call it\'s visitor"
 				);
-				stmt->acceptVisitor(empty_vistor);
+				stmt->acceptVisitor(empty_visitor);
 			}
-			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
-			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
+			ASSERT_EQUAL(expected_counter, panicky_visitor.counter);
+			ASSERT_EQUAL(expected_counter, empty_visitor.counter);
 		}
 	}
 
@@ -182,6 +182,10 @@ private:
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
 	void testFunDecl() { testJsonRelativePath("ffi.duck", "ffi.json"); }
+
+	void testNumericLiteralParsing() {
+		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");
+	}
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
