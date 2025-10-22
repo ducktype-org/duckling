@@ -49,11 +49,8 @@ namespace compiler::frontend {
 				partial  = parent->partial;
 			}
 			if (name.isGood()) {
-#ifdef BUILD_TYPE_DEV
-				// this has to be inside the ifdef, not if-constexpr because of C++ rules about
-				// if-constexpr errors
-				elements.emplace_back(name.strView());
-#endif
+				IF_BUILD_TYPE_DEV(elements.emplace_back(name.strView()));
+				
 				// add component identifier to partial hash
 				hashing::addToHash(partial, name);
 			}
@@ -66,11 +63,7 @@ namespace compiler::frontend {
 			  partial(parent.partial),
 			  elements(parent.elements) {
 			if (!ext.empty()) {
-#ifdef BUILD_TYPE_DEV
-				// this has to be inside the ifdef, not if-constexpr because of C++ rules about
-				// if-constexpr errors
-				elements.emplace_back(ext);
-#endif
+				IF_BUILD_TYPE_DEV(elements.emplace_back(ext));
 
 				// add extra fragment to partial hash
 				hashing::addToHash(partial, std::string_view(ext));
