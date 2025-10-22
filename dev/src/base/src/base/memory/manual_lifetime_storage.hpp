@@ -81,7 +81,7 @@ namespace base {
          *
          * @note I'm not 100% sure the function is well defined here.
          */
-        static Ref<ManualLifetimeStorage> getSelf(CRef<T> obj_ref) {
+        static Ref<ManualLifetimeStorage> getSelf(Ref<T> obj_ref) {
             constexpr auto OFFSET = offsetof(ManualLifetimeStorage, data);
             static_assert(OFFSET == 0, "This might not hold actually, but should. Is left here for clarity, and with it I'm more confident this is UB free.");
 

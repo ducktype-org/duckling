@@ -2,21 +2,42 @@
 
 #include <tester/tester.hpp>
 
+struct Base {
+    int x;
+    Base(int a): x(a) {}
+    virtual ~Base() = default;
+};
+struct Derived: public Base {
+    int y;
+
+    Derived(int a): Base{a}, y(a * 2) {}
+    bool operator==(int a) const {
+        return x == a and y == a * 2;
+    }
+
+    virtual ~Derived() = default;
+};
+
 class MemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS MemoryTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+        TESTER_ADD_TEST(basicCompilationTest<u64 COMMA 42>);
+        TESTER_ADD_TEST(basicCompilationTest<bool COMMA true>);
+        TESTER_ADD_TEST(basicCompilationTest<unsigned char COMMA 'A'>);
+        TESTER_ADD_TEST(basicCompilationTest<Derived COMMA 123>);
+    }
 
-	void basicTest() {
-        base::SingleTypeMemoryPoolAllocator<u64> u64_allocator;
+    template<class T, auto initial_value>
+	void basicCompilationTest() {
+        base::SingleTypeMemoryPoolAllocator<T> t_allocator;
 
-        auto ref = u64_allocator.allocateEmplace(42);
-       
-        ASSERT_EQUAL(*ref, 42);
+        auto ref = t_allocator.allocateEmplace(initial_value);
+        ASSERT_EQUAL(*ref, initial_value);
 
-        u64_allocator.deallocateDestroy(ref);
+        t_allocator.deallocateDestroy(ref);
 	}
 };
 
