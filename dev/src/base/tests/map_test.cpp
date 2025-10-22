@@ -7,26 +7,29 @@ class MapTest: public tester::TestSuite {
 #define TESTER_CLASS MapTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+        TESTER_ADD_TEST(basicTest<0>);
+        TESTER_ADD_TEST(basicTest<2>);
+        TESTER_ADD_TEST(basicTest<10>);
+        TESTER_ADD_TEST(basicTest<100>);
+        TESTER_ADD_TEST(basicTest<10000>);
+        TESTER_ADD_TEST(basicTest<1000000>);
+    }
 
+    template<u64 count>
 	void basicTest() {
         base::StableHashMap20<int, int> map;
 
-        map.put(1, 10);
-        map.put(2, 20);
+        for (int i = 0; i < count; i++) {
+            map.put(i, i * 10);
+        }
 
         u64 loop_count = 0;
         for (auto& [key, value]: map) {
             loop_count++;
-            if (key == 1) {
-                ASSERT_EQUAL(value, 10);
-            } else if (key == 2) {
-                ASSERT_EQUAL(value, 20);
-            } else {
-                fail("Unexpected key in map iteration");
-            }
+            ASSERT_EQUAL(value, key * 10);
         }
-        ASSERT_EQUAL(loop_count, 2);
+        ASSERT_EQUAL(loop_count, count);
 	}
 };
 
