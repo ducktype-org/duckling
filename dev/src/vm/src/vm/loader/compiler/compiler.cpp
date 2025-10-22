@@ -2,8 +2,8 @@
 
 #include "instruction_lowering.hpp"
 
-#include <base/except/exceptions.hpp>
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>

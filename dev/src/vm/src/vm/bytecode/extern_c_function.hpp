@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/box.hpp>
-#include <base/macros/for_each.hpp>
+#include <base/pointers/box.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <utility>
 
