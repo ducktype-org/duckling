@@ -42,6 +42,8 @@ public:
         TESTER_ADD_TEST(basicCompilationTest<bool COMMA true>);
         TESTER_ADD_TEST(basicCompilationTest<unsigned char COMMA 'A'>);
         TESTER_ADD_TEST(basicCompilationTest<Derived COMMA 123>);
+        TESTER_ADD_TEST(destructorIsCalledTest);
+        TESTER_ADD_TEST(stressTest);
     }
 
     template<class T, auto initial_value>
@@ -90,7 +92,7 @@ public:
         allocated_ptrs.reserve(ALLOCATION_COUNT);
 
         for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
-            auto ptr = allocator.allocateEmplace(static_cast<int>(i));
+            auto ptr = allocator.allocateEmplace(i);
             allocated_ptrs.push_back(ptr);
         }
 
