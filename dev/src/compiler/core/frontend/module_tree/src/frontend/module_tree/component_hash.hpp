@@ -50,7 +50,7 @@ namespace compiler::frontend {
 			}
 			if (name.isGood()) {
 				IF_BUILD_TYPE_DEV(elements.emplace_back(name.strView()));
-				
+
 				// add component identifier to partial hash
 				hashing::addToHash(partial, name);
 			}

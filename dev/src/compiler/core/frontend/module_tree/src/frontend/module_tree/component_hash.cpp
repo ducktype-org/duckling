@@ -1,4 +1,5 @@
 #include "component_hash.hpp"
+
 #include <base/config/build_type.hpp>
 
 namespace compiler::frontend {

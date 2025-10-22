@@ -3,19 +3,19 @@
 
 #if defined(BUILD_TYPE_DEV)
 	/**
-	 * @brief Macro to include code only in DEV builds.
-	 * @note if-constexpr not always works, see:
-	 * https://www.reddit.com/r/cpp/comments/139b5wt/code_in_ifconstexpr_branch_not_taken_causing/
-	 */
+     * @brief Macro to include code only in DEV builds.
+     * @note if-constexpr not always works, see:
+     * https://www.reddit.com/r/cpp/comments/139b5wt/code_in_ifconstexpr_branch_not_taken_causing/
+     */
 	#define IF_BUILD_TYPE_DEV(code) code
 
 	/**
-	 * @brief Macro to include code only in RELEASE builds.
-	 * @note if-constexpr not always works, see:
-	 * https://www.reddit.com/r/cpp/comments/139b5wt/code_in_ifconstexpr_branch_not_taken_causing/
-	 */
+     * @brief Macro to include code only in RELEASE builds.
+     * @note if-constexpr not always works, see:
+     * https://www.reddit.com/r/cpp/comments/139b5wt/code_in_ifconstexpr_branch_not_taken_causing/
+     */
 	#define IF_BUILD_TYPE_RELEASE(code)
-	
+
 #elif defined(BUILD_TYPE_RELEASE)
 	#define IF_BUILD_TYPE_DEV(code)
 	#define IF_BUILD_TYPE_RELEASE(code) code
