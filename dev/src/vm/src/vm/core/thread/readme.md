@@ -49,7 +49,7 @@ memory regions provided by the `Memory` module owned by its parent `VMProcess`:
         *   `frame`: A pointer to the current function's `Frame` on the call stack.
         *   `local_stack`: A pointer to the base of the current function's variable space within the larger local data stack.
         *   `thread`: A reference to the `VMThread` instance, used to access process-level services like using 
-            the using memory blocks, creating `VmValue` objects or interacting with built-in functions.
+            memory blocks, creating `VmValue` objects or interacting with built-in functions.
 
 This design ensures that when an opcode like `call_func` is executed, it can efficiently push a new `Frame`, 
 advance the `local_stack` pointer, and jump the `instr` pointer to the first instruction of the new function. 

@@ -99,7 +99,7 @@ virtual machine's execution module - `VMProcess`.
 ### Representation of Types
 During loading, the way types are represented in the program also changes.
 Initially, in the `ParsedFile` structure, types are represented by the
-`TypeOfData` variant. Each DVM type (a member of the mentioned variant) contains only the information read from the file (e.g., names of base types and subtypes, method names, field names, etc. are represented as a `string`). The full set of `TypeOfData` types is stored in the `TypeContext` type set, which serves as the entry point for static verification and is later translated in to a low level type set called `TypeMetadata`.
+`TypeOfData` variant. Each DVM type (a member of the mentioned variant) contains only the information read from the file (e.g., names of base types and subtypes, method names, field names, etc. are represented as a `string`). The full set of `TypeOfData` types is stored in the `TypeContext` type set, which serves as the entry point for static verification and is later translated into a low level type set called `TypeMetadata`.
 
 After passing through the [type validator](../bytecode/validator/readme.md), 
 the `TypeContext` set is translated into `TypeMetadata`. Each type is translated to a corresponding `vm::Type` - fully expanded objects, enriched with all
@@ -115,7 +115,7 @@ Each `VMProcess` has its own `Loader` module object, which in turn maintains a
 consistent, high-level representation of the same code in the form of a
 `ValidProgram` object.
 
-The data flow is initiated by an API request to load code - `loadFiles/loadCode`.
+The data flow is initiated by an API request to load code — `loadFiles` or `loadCode`.
 1.  `VMProcess` receives the request and passes it to its `Loader` object.
 2.  The `Loader` processes the file(s), verifies the code through the
     `TypeValidator` and `FunctionValidator` modules (see [bytecode validation](../bytecode/validator/readme.md)), 
@@ -131,7 +131,7 @@ The data flow is initiated by an API request to load code - `loadFiles/loadCode`
     passed to `VMProcess`, which in turn is passed to the user via an API response.
     The executable state in `VMProcess` also does not change.
 
-Basically, executing `loadFiles/loadCode` tries to "inject" new code to the current
+Basically, executing `loadFiles` or `loadCode` tries to "inject" new code into the current
 `VMProcess` state and succeeds only if the whole state (the old state + the
 newly injected code) represents a valid program. If this fails, one of the
 errors is thrown and the state is not updated. When `VMProcess` receives an 
@@ -155,7 +155,7 @@ handling `loadFiles/loadCode` requests coming from the external API (through the
     responsible for loading the code of this process.
 
 If the `loadFile` request comes from a user, it contains a list of paths to files with
-a text representation of the bytecode, otherwise, if the request comes from 
+a text representation of the bytecode. Otherwise, if the request comes from 
 the compiler, it contains code provided immediately in the form of a `vm::code::CodeCollection` 
 structure, which allows to skip the tokenization and parsing stage. The contents of this request are passed to `VMProcess` loader module which tries to inject the given code into the current state.
 
@@ -168,7 +168,7 @@ request works as follows:
 
 1.  It receives a list of files or a ready `CodeCollection` structure from
     `VMProcess` (in case the bytecode comes directly from the compiler).
-2.  If files where received, it runs a `Tokenizer` and a `Parser` to obtain a
+2.  If files were received, it runs a `Tokenizer` and a `Parser` to obtain a
     `CodeCollection` representation. Syntax errors are detected at this stage
     and errors are thrown in that case.
 3.  Having `CodeCollection`, it tries to inject the new code into its internal
