@@ -34,7 +34,7 @@ macro_rules! delegate_getter {
                     let Some(value) = value else { return Ok(None); };
                     match value.[<as_ $toml_value_fn>]() {
                         Some(x) => Ok(Some(x)),
-                        // TODO: Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
+                        // @TODO: #1353 Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
                         None => Err(anyhow!(self.make_location_error()))
                                     .context(
                                         format!("when getting key `{key}` expected {}, not a {}", stringify!($toml_value_fn), value.type_str())

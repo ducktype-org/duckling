@@ -21,7 +21,7 @@ impl FromStr for Color {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            // TODO: Introduce our own `Internal` error type. Then also update
+            // @TODO: #1353 Introduce our own `Internal` error type. Then also update
             // `main::print_error_and_exit`, to check for internal errors in error chain.
             _ => bail!(
                 "`{}` is not a valid color. This should be guarded by parser",
@@ -63,7 +63,7 @@ impl GlobalCliOptions {
         }
 
         if matches!(self.color, Color::Never) {
-            // TODO: We might also want to this (somehow) as a wrapper to consoles.
+            // @TODO: #1353 We might also want to this (somehow) as a wrapper to consoles.
             //       https://docs.rs/console/latest/console/struct.WithoutAnsi.html
             console::set_colors_enabled(false);
             console::set_colors_enabled_stderr(false);

@@ -1,4 +1,4 @@
-# @todo Get rid of the relative paths (also duck target folder will probably change), maybe this tests can also be done simpler.
+# @TODO: #1353 Get rid of the relative paths (also duck target folder will probably change), maybe this tests can also be done simpler.
 cwd_duck_root: "cd ../../src/duck/duck"
 build_duck: "cargo build"
 create_duck_echo: "echo '#!/bin/sh' > duck-echo && echo 'echo \"$@\"' >> duck-echo && chmod +x duck-echo"
