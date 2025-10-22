@@ -17,7 +17,7 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
-	 * @return The response containing the PID of the newly created process or an API error is the
+	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
 	std::expected<ProcessInfo, ApiError> spawn();
@@ -29,7 +29,7 @@ namespace vm::api {
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid);
 
 	/**
-	 * @brief Loads the code from given files into a specified process on DVM.
+	 * @brief Load the code from given files into a specified process on DVM.
 	 * @note This endpoint can be called multiple times and used to load code in separate requests.
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
@@ -37,7 +37,7 @@ namespace vm::api {
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& path);
 
 	/**
-	 * @brief Loads the code from given code collection into a specified process on DVM.
+	 * @brief Load the code from given code collection into a specified process on DVM.
 	 * @note This endpoint can be called multiple times and used to load code in separate requests.
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
@@ -45,21 +45,21 @@ namespace vm::api {
 	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code);
 
 	/**
-	 * @brief Runs a program on DVM. It is expected that a 'main' function was loaded into the
+	 * @brief Run a program on DVM. It is expected that a 'main' function was loaded into the
 	 * process before this endpoint is called.
 	 * @note The exit value of the program can be retrieved by the `getExitValue` endpoint.
 	 *
-	 * @param pid The identified of the process to run the program on.
+	 * @param pid The identifier of the process to run the program on.
 	 * @param args A list of string arguments passed to the main function (argv).
 	 * @return Nothing if the program was run successfully or an API error otherwise.
 	 */
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 
 	/**
-	 * @brief Runs a function with a given name on DVM.
+	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
-	 * @param pid The identified of the process to run the program on.
+	 * @param pid The identifier of the process to run the program on.
 	 * @param func_name Name of the function to run.
 	 * @param args A list of arguments passed to the called function represented by the VmValue
 	 * class.
@@ -70,9 +70,9 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Returns a VmValue containing the return value of the last ran function on DVM.
+	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
 	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
-	 * will be automatically freed when the process is destructed.
+	 * will be automatically freed when the process is destroyed.
 	 * @return The VmValue containing the return value of the last called function.
 	 */
 	std::expected<ExitValue, ApiError> getExitValue(PID pid);
@@ -92,8 +92,8 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 
 	/**
-	 * @brief Deinitializes and validates processes memory state.
-	 * It also removes the process from the internal structures.
+	 * @brief Deinitialize and validate processes memory state.
+	 * Also, remove the process from the internal structures.
 	 * @TODO: #1354 After 1354 it should be required that the process is stopped/finished
 	 * when this endpoint is called.
 	 */
@@ -101,7 +101,7 @@ namespace vm::api {
 
 	/// DEBUGGER REQUESTS ///
 	/**
-	 * @brief Pauses the execution of the program.
+	 * @brief Pause the execution of the program.
 	 * The program will be paused at the next nearest safe point and can be resumed by using the
 	 * `resume` endpoint.
 	 * @return Code position of the next instruction to execute after the program is paused or an
@@ -110,22 +110,22 @@ namespace vm::api {
 	std::expected<response::CodePosition, ApiError> pause(PID pid);
 
 	/**
-	 * @brief Resumes the execution of the program.
+	 * @brief Resume the execution of the program.
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
 	std::expected<void, ApiError> resume(PID pid);
 
 	/**
-	 * @brief Performs one instruction of the program and pauses.
+	 * @brief Perform one instruction of the program and pause.
 	 * @return Nothing if the program successfully stepped and paused or an API error otherwise, in
 	 * which case the state is undefined.
 	 */
 	std::expected<void, ApiError> step(PID pid);
 
 	/**
-	 * @brief Forces the main execution thread of the given process to stop running and kills the
-	 * execution thread. The process itself isn't killed.
+	 * @brief Force the main execution thread of the given process to stop running and kill the
+	 * execution thread. Don't kill the process itself.
 	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
@@ -137,9 +137,9 @@ namespace vm::api {
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
 	/**
-	 * @brief Returns the code position of the next line of bytecode to be executed on the specified
+	 * @brief Get the code position of the next line of bytecode to be executed on the specified
 	 * process of the DVM.
-	 * @return The response containing code position or an API error .
+	 * @return The response containing code position or an API error.
 	 */
 	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid);
 
@@ -170,15 +170,16 @@ namespace vm::api {
 
 	/// DATA REQUESTS ///
 	/**
-	 * @brief Returns a DVM Type representation of the type specified by the name.
-	 * @return The response containing a constant 'Type' reference or an API error .
+	 * @brief Get a DVM Type representation of the type specified by the name.
+	 * @return The response containing a constant 'Type' reference or an API error.
 	 */
 	std::expected<response::Type, ApiError> getType(PID pid, const std::string& type_name);
 
 	/**
-	 * @brief Returns an empty VmValue (initialized by zero bytes) of the given type.
+	 * @brief Get an empty VmValue (initialized by zero bytes) of the given type.
 	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
-	 * responsibility to call `VmValue::freeData()` on the VmValue.
+	 * responsibility to call `VmValue::freeData()` on the VmValue. For more information
+	 * on why this is necessary, see documentation of `vm::VmValue::freeData()`.
 	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
