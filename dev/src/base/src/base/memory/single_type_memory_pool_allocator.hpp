@@ -1,5 +1,6 @@
 #include <base/memory/manual_lifetime_storage.hpp>
 #include <base/pointers/box.hpp>
+#include <base/misc/noexcept.hpp>
 
 namespace base {
 
@@ -81,7 +82,7 @@ namespace base {
             CORE_ASSERT(allocation_idx.buffer_idx < buffers.size(), "Buffer index out of bounds");
             CORE_ASSERT(allocation_idx.item_idx < BLOCK_SIZE, "Item index out of bounds");
 
-            Ref<StorageT> new_storage = buffers[allocation_idx.buffer_idx]->items[allocation_idx.item_idx];
+            Ref<StorageT> new_storage = &buffers[allocation_idx.buffer_idx]->items[allocation_idx.item_idx];
             new_storage->construct(std::forward<decltype(args)>(args)...);
             return new_storage->get();
 		}
@@ -97,12 +98,12 @@ namespace base {
 
             // naively find the buffer and the index within the buffer:
             for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
-                Ref<Buffer> buffer = buffers[buffer_idx].ref();
+                // Ref<Buffer> buffer = buffers[buffer_idx].ref();
                 // void* buffer_start = reinterpret_cast<void*>(buffers[buffer_idx]->items.data());                
             }
         }
         
-        ~SingleTypeMemoryPoolAllocator() {
+        ~SingleTypeMemoryPoolAllocator() RELEASE_NOEXCEPT {
             CORE_ASSERT(allocated_count == 0, "Not all allocated objects were deallocated before destruction of the allocator");
         }
     private:

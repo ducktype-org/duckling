@@ -5,6 +5,7 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/misc/noexcept.hpp>
 
 namespace base {
 
@@ -36,10 +37,10 @@ namespace base {
 
         // We set it explicitly, to make sure that in release builds destructor is trivial:
         IF_BUILD_TYPE_RELEASE(
-            ~ManualLifetimeStorage() = default;
+            ~ManualLifetimeStorage() noexcept = default;
         )
         IF_BUILD_TYPE_DEV(
-            ~ManualLifetimeStorage() {
+            ~ManualLifetimeStorage() RELEASE_NOEXCEPT {
                 CORE_ASSERT(state == State::Empty, "Object is still constructed during destruction of ManualLifetimeStorage");
             }
         )
