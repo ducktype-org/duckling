@@ -285,7 +285,7 @@ namespace base {
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
-			using difference_type   = u64;
+			using difference_type   = std::ptrdiff_t;
 			using value_type        = ValueT;
 			using pointer           = value_type*;
 			using reference         = value_type&;
@@ -294,9 +294,9 @@ namespace base {
 				: bucket_index(bucket_index), current_node(current_node), buckets_array_ptr(buckets_array_ptr), buckets_size(buckets_size) {}
 
 			Iterator(const Iterator&) = default;
-			Iterator(Iterator&&) = default;
+			// Iterator(Iterator&&) = default;
 			Iterator& operator=(const Iterator&) = default;
-			Iterator& operator=(Iterator&&) = default;
+			// Iterator& operator=(Iterator&&) = default;
 
 			reference operator*() const {
 				return current_node->key_value;
@@ -322,7 +322,13 @@ namespace base {
 					}
 				}
 				return *this;
-			}  
+			}
+
+			Iterator operator++(int) {
+				Iterator temp = *this;
+				++(*this);
+				return temp;
+			}
 
 			friend bool operator== (const Iterator& a, const Iterator& b) { 
 				return std::tie(a.bucket_index, a.current_node, a.buckets_array_ptr, a.buckets_size) ==
@@ -337,7 +343,8 @@ namespace base {
 		using IteratorT = Iterator<KeyValuePair>;
 		using ConstIteratorT = Iterator<const KeyValuePair>;
 
-
+		static_assert(std::forward_iterator<IteratorT>, "IteratorT must be a forward iterator");
+		static_assert(std::forward_iterator<ConstIteratorT>, "ConstIteratorT must be a forward iterator");
 
 
 		void put(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
