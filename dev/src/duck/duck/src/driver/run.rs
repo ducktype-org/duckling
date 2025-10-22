@@ -20,7 +20,7 @@ use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
-    // @TODO: 1353 help, -h or --help always displays with colours, even with --color never.
+    // @TODO: #1353 help, -h or --help always displays with colours, even with --color never.
     // This is extremely minor and cargo does the same, but it's still a bug.
     let external = gather_external_subcmds(ctx);
     debug!(
