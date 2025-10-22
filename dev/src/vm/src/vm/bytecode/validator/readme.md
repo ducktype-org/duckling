@@ -1,7 +1,7 @@
 # Bytecode Validation
 
-Files in this directory implement static verification of bytecode functions, globals
-and types, which gives us more assumptions for runtime, which in turn allows
+Files in this directory implement static verification of bytecode functions, globals, and types.
+This gives us better guarantees for runtime, which in turn allows
 for faster execution omitting many runtime checks.
 
 ## ValidProgram
@@ -23,25 +23,25 @@ working copy. The verification process works as follows:
 
 
 
-1.  **Forward declare functions:** All functions added to the program state 
-    saved in a map which stores a mapping from function name to the functions signature. These serves as a map of forward declarations which are needed 
-    for type validation. For types like instantiable classes (non-abstract) we want to statically verify that all virtual methods which were declared are implemented which is done by looking up if a function declared as an implementation exist in the forward declaration map.
+1.  **Forward declare functions:** All functions added to the program state are
+    saved in a map which stores a mapping from function name to the function's signature. This serves as a map of forward declarations which are needed 
+    for type validation. For types such as instantiable (non-abstract) classes we want to statically verify that all of their declared virtual methods are  implemented, which is done by looking up if a function declared as an implementation exist in the forward declaration map.
 2.  **Injecting types:** New type definitions are added to the set of types
     already existing in the program. Potential duplicate type names are detected.
 3.  **Validating types:** 
     All types in the program (both old and newly added)
     are analyzed by [`TypeValidator`](type_validator.hpp) (which is described below). This allows for
     the detection of errors that arise from injecting new types (e.g. introducing
-    a type that closes a cycle **in** the inheritance hierarchy or injecting an invalid type).
-4.  **Validating and injecting global variables:** All new global are inserted
+    a type that closes a cycle in the inheritance hierarchy or injecting an invalid type).
+4.  **Validating and injecting global variables:** All new globals are inserted
     into the program state and verified for correctness. This involves:
-    - Checking for duplicate names of global variables,
-    - Whether the types of declared global variables exist in the program,
-    - If a global variable was declared with a constructor or deconstructor we check if the specified function (which serves as a constructor/deconstructor) exists in the program.
-1.  **Validating and injecting functions:** 
-    At the beginning of this stage a high level set of types `TypeContext` is translated into a **temporary** low level type representation called `TypeMetadata`. This representation is crucial for function verification as it contains the built v-tables for object and interface types which are needed for statically verifying method calls on objects (`virtual_call_lptr_method`). 
+    - checking for duplicate names of global variables,
+    - checking whether the types of declared global variables exist in the program,
+    - if a global variable was declared with a constructor or destructor, we check if the specified function (which serves as a constructor/destructor) exists in the program.
+5.  **Validating and injecting functions:** 
+    This stage consists of two steps. First, the `TypeContext` — a high level set of types — is translated into a **temporary** low level type representation called `TypeMetadata`. This representation is crucial for function verification as it contains the built v-tables for object and interface types which are needed for statically verifying method calls on objects (`virtual_call_lptr_method`). 
 
-    [One important note is that the `TypeMetadata` used for verification is built from scratch and used only for verification purposes. After the verification phase the built `TypeMetadata` is thrown away and rebuilt again in the `Compiler` module. This is a temporary approach which will change in the future. For more info on why its done like this please refer to #1306]
+    Notably, the `TypeMetadata` used for verification is built from scratch and used only for verification purposes. After the verification phase the built `TypeMetadata` is thrown away and rebuilt again in the `Compiler` module. This is a temporary approach which will change in the future. For more info on why it's done like this please refer to #1306.
     
     The second step is statically verifying functions. Each function is individually analyzed by `FunctionValidator` in the full context of the program's types (including the newly injected ones). If the
     verification is successful, the new function is added to the program state.
@@ -138,9 +138,9 @@ such that `S` holds a field named `field` of type `T`.
 ## Type Validator 
 
 The `type_validator.hpp` and its corresponding `.cpp` file implement the validation 
-of DVM type system. The validation is handled by the `ValidProgram` class 
+of the DVM type system. The validation is handled by the `ValidProgram` class.
 The main entry point is the `TypeContext` class, which aggregates a 
-collection of high-level type definitions (`TypeOfData`). Any errors found during validation result in a `vm::code::ValidationError` subclass being thrown. The checks are can be broadly categorized into hierarchy checks and individual type check. 
+collection of high-level type definitions (`TypeOfData`). Any errors found during validation result in a `vm::code::ValidationError` subclass being thrown. The checks can be broadly categorized into hierarchy checks and type-specific checks. 
 #### Hierarchy Checks
 
 These checks validate the relationships between types, primarily focusing on
@@ -153,7 +153,7 @@ inheritance and implementation structures.
     `implements` clause must correspond to an existing type definition within
     the context. The validator ensures there are no references to non-existent
     parent classes or interfaces.
-This is done by `vm::code::detail::validateTypesIntegrity()` function which expects a whole set of VM program types (`TypeContext`).
+The hierarchy checks are run by the `vm::code::detail::validateTypesIntegrity()` function, which expects a whole set of VM program types (`TypeContext`).
 
 #### Type-Specific Checks
 
@@ -167,13 +167,13 @@ individually against a set of rules.
     A pointer can't reference a type which doesn't exist.
 *   **Fixed size table type**
     *   **Non-existing subtype**: 
-    A static table can't store a type that don't exist.
+    A static table can't store a type that doesn't exist.
 *   **Dynamic size table type**
     *   **Non-existing subtype**: 
-    A dynamic table can't store a type that don't exist.
+    A dynamic table can't store a type that doesn't exist.
 *   **Function Type**
     *   **Non-existing subtype**: 
-    All parameter types and the return type declared by the function exist in the program.
+    All parameter types and the return type declared by the function must exist in the program.
 *   **Variant Types**:
     *   **Non-existing subtype**: 
     All parameter types and the return type declared by the function exist in the program.
@@ -211,11 +211,11 @@ individually against a set of rules.
     from this rule.
 *   **Opaque types**:
     Nothing is verified with opaque types.
-This step is done by the `vm::code::detail::validateType()` which verifies a single type in the full context of types.
+This step is done by the `vm::code::detail::validateType()` function, which verifies a single type in the full context of types.
 
 ### Type builder 
 
-Once the verification step is done the last step before the types reach the execution engine(`VMThread`) is the type building phase. This phase assumes correctness of the type set and  translates the set of high-level types `TypeContext` (which stores `vm::code::TypeOfData` objects) into the low level representation `TypeMetadata` (which stores `vm::Type` objects). This translation has a few important steps:
+Once the verification step is done, the last step before the types reach the execution engine (`VMThread`) is the type building phase. This phase assumes correctness of the type set and translates the set of high-level types `TypeContext` (which stores `vm::code::TypeOfData` objects) into the low level representation `TypeMetadata` (which stores `vm::Type` objects). This translation has a few important steps:
 *   **Type Resolution**:
     All type names are resolved to direct references (`TypeRef` or `TypeCRef`).
     Previously, component types (e.g. types of fields in a data type) were held
@@ -234,5 +234,7 @@ Once the verification step is done the last step before the types reach the exec
 Building of the low-level type set can be done in two ways:
 `vm::code::detail::buildTypeMetadata()` builds the whole `TypeMetadata` object from the `TypeContext`. It assumes the `TypeContext` was verified beforehand.
 - `vm::code::detail::rebuildTypeMetadata()` on the other hand acts as an incremental builder
-of the `TypeMetadata`. It provides the functionality of "adding new types" to the existing `TypeMetadata`. This functionality is important, because we don't won't to lose the already used type metadata on every code injection, since the `vm::Block` used in runtime references the types which are stored in `TypeMetadata`. Rebuilding the whole type metadata from scratch on every injection would mean, that all blocks created before the injection would store dangling references and become invalid. Because of that, during code injection we expand the existing context instead of replacing it completely to ensure the valid state of the blocks.
+of the `TypeMetadata`. It provides the functionality of "adding new types" to the existing `TypeMetadata`.
+
+The second, incremental method is important, because we don't want to lose the already used type metadata on every code injection, since the `vm::Block` used in runtime references the types which are stored in `TypeMetadata`. Rebuilding the whole type metadata from scratch on every injection would mean that all blocks created before the injection would store dangling references and become invalid. Because of that, during code injection we expand the existing context instead of replacing it completely to ensure the valid state of the blocks.
 
