@@ -25,7 +25,7 @@ working copy. The verification process works as follows:
 
 1.  **Forward declare functions:** All functions added to the program state are
     saved in a map which stores a mapping from function name to the function's signature. This serves as a map of forward declarations which are needed 
-    for type validation. For types such as instantiable (non-abstract) classes we want to statically verify that all of their declared virtual methods are  implemented, which is done by looking up if a function declared as an implementation exist in the forward declaration map.
+    for type validation. For types such as instantiable (non-abstract) classes we want to statically verify that all of their declared virtual methods are implemented, which is done by looking up if a function declared as an implementation exist in the forward declaration map.
 2.  **Injecting types:** New type definitions are added to the set of types
     already existing in the program. Potential duplicate type names are detected.
 3.  **Validating types:** 
