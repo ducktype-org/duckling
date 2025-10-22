@@ -29,11 +29,11 @@ A part of the loader module responsible for static analysis that verifies byteco
 It enforces correctness rules, such as valid instruction arguments and control flow correctness, to ensure that
 only safe code is passed to the execution engine.
 
-1.  **[`Memory Module`](./src/vm/core/process/memory/readme.md):** The safe memory governor. Each `VMProcess` has 
+7.  **[`Memory Module`](./src/vm/core/process/memory/readme.md):** The safe memory governor. Each `VMProcess` has 
 its own dedicated Memory Module that manages all allocations, enforces memory safety (preventing use-after-free,
 buffer overflows, etc.).
 
-1.  **[`VMValue`](./src/vm/core/thread/readme.md#vmvalue):** A data transfer object that acts as the bridge for 
+8.  **[`VMValue`](./src/vm/core/thread/readme.md#vmvalue):** A data transfer object that acts as the bridge for 
 moving data into and out of the VM's environment. It is the primary mechanism for passing arguments to functions
 and retrieving their return values.
 
