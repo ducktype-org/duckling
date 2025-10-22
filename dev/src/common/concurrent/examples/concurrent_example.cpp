@@ -3,7 +3,7 @@
 #include <concurrent/manual_object_storage.hpp>
 #include <concurrent/worker.hpp>
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <iostream>
 #include <thread>

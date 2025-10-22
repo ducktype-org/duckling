@@ -4,7 +4,7 @@
 
 #include <base/pointers/ref.hpp>
 
-constexpr int NUM_THREADS = 8;
+constexpr int NUM_THREADS = 1;
 
 struct THide final {
 	long long x;
