@@ -9,7 +9,7 @@
 #include <base/pointers/box.hpp>
 #include <base/memory/single_type_memory_pool_allocator.hpp>
 
-
+#include <iterator>
 #include <type_traits>
 
 namespace base {
@@ -234,6 +234,62 @@ namespace base {
 
 	public:
 		StableHashMap20(): buckets(INITIAL_BUCKETS) {}
+		StableHashMap20(const StableHashMap20&) = delete;
+		StableHashMap20(StableHashMap20&&) = default;
+
+		~StableHashMap20() = default;
+
+		class Iterator final {
+			// end is represented by bucket_index == buckets.size(), and current_node == nullptr
+
+			u64 bucket_index = 0;
+
+			// mref, since we have to represent "end" iterator.
+			MRef<Node> current_node;
+
+		public:
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type   = u64;
+			using value_type        = DATA_T;
+			using pointer           = value_type*;
+			using reference         = value_type&;
+
+			Iterator(u64 bucket_index, Ref<Node> current_node) noexcept
+				: bucket_index(bucket_index), current_node(current_node) {}
+
+			Iterator(const Iterator&) = default;
+			Iterator(Iterator&&) = default;
+			Iterator& operator=(const Iterator&) = default;
+			Iterator& operator=(Iterator&&) = default;
+
+			reference operator*() const {
+				return current_node->value;
+			}
+			pointer operator->() const {
+				return &current_node->value;
+			}
+
+			Iterator& operator++() {
+				if (current_node->next != nullptr) {
+					current_node = current_node->next.toOpt().value();
+				}
+				else {
+					bucket_index++;
+					current_node = nullptr;
+
+					while (bucket_index < buckets.size() and !buckets[bucket_index]) {
+						bucket_index++;
+					}
+
+				}
+				return *this;
+			}  
+
+		};
+
+
+
+
 
 		void put(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
 			auto new_node
