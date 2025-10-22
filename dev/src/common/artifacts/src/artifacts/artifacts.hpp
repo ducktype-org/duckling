@@ -1,9 +1,9 @@
 #pragma once
 
-#include <base/box.hpp>
-#include <base/optional.hpp>
-#include <base/raw_view.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/optional.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/box.hpp>
+#include <base/str/string_id.hpp>
 
 #include <filesystem/file.hpp>
 

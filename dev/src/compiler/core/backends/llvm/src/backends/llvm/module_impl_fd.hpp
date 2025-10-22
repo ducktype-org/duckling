@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;

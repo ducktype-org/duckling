@@ -14,6 +14,7 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -162,6 +163,9 @@ namespace compiler::helios {
 					return tsh::SymbolType<>(
 						builtin_data.type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
+				}
+				variant_case(houtgen::GeneratedSymbolData, generated_data) {
+					return generated_data.getType(ctx);
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }
 			}

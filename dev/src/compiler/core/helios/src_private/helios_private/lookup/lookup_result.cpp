@@ -2,7 +2,7 @@
 
 #include <helios/helios_errors.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
 

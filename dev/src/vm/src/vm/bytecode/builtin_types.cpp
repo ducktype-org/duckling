@@ -1,6 +1,6 @@
 #include "builtin_types.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
 

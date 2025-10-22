@@ -484,7 +484,7 @@ private:
 				ValueCategory(PrimaryCategory::Local),
 			};
 			fail("Created IntegralDesc for Void type.");
-		} catch (const base::LogicError&) {
+		} catch (const base::Panic&) {
 			// expected
 		}
 

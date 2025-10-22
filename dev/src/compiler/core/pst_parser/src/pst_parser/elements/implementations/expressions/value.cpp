@@ -44,15 +44,15 @@ namespace pst::expr {
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
-		if (!state[0].is(lexer::Token::Type::NumLiteral)) {
+		if (!state[0].is(lexer::Token::Type::NumLiteralGroup)) {
 			// This should (probably) never happen with how it's called by the parser
 			state.log(makeBox<BadValueError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprValue>(pos, state[0].getValue());
-		state.parse(out).eatOne();
+		auto out = makeBox<ExprValue>(state.getPosition());
+		state.parse(out).one(&out->value);
 
 		if (length > 1) {
 			state.log(makeBox<MoreThanValueError>(pos));
@@ -65,13 +65,16 @@ namespace pst::expr {
 	void ExprValue::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("number": ")" << number.str() << "\"";
+		out << R"("number": ")" << value.value.str() << "\"";
+
+		if (value.type_specifier.has_value())
+			out << R"(, "type_specifier": ")" << value.type_specifier->str() << "\"";
 
 		out << "}";
 	}
 
 	LangElement::HashAlg& ExprValue::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, number);
+		addToHash(partial_hash, value);
 		return partial_hash;
 	}
 

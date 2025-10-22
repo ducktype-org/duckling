@@ -6,7 +6,7 @@
 
 #include <backends/llvm/llvm_backend.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <iostream>
 

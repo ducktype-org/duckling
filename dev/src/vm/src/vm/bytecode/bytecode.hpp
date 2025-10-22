@@ -2,7 +2,7 @@
 
 #include "instructions.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <token_parser_core/common_elements.hpp>
 

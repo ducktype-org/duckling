@@ -4,8 +4,8 @@
 #include "low_program/instruction.hpp"
 #include "vmvalue.hpp"
 
-#include <base/ints.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
@@ -157,8 +157,6 @@ namespace vm {
 		/**
 		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
 		 * stack and perform a call to `func`.
-		 * @note `func_args` should be changed to a vector of arguments of any VM type.
-		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
 		 */
 		[[nodiscard]] low::LowFuncData createStartFunctionFor(
 			const low::LowFuncData& func, const FunctionRunArguments& func_args

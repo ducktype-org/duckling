@@ -1,7 +1,7 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>

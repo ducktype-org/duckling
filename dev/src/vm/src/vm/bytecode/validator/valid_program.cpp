@@ -2,7 +2,7 @@
 
 #include "errors.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
@@ -26,7 +26,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
-	// @TODO: #1306
+	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;

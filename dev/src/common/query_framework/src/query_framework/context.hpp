@@ -9,7 +9,7 @@
 #include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
 #include "internal/query_graph/query_state.hpp"
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>

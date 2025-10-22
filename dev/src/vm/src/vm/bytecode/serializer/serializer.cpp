@@ -1,7 +1,7 @@
 #include "serializer.hpp"
 
-#include <base/int_conv.hpp>
-#include <base/macros/for_each.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 
@@ -73,23 +73,23 @@ namespace vm::code {
 			writeComment(comment.comment.strView(), out);
 		}
 
-#define HANDLE_OPCODE_0ARGS(opcode) \
+#define HANDLE_INSTR_0ARGS(opcode) \
 	void operator()(VM_INSTR_FROM_NAME(opcode)) const { write0ArgOpcodeTemplate(#opcode, out); }
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                 \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                  \
 	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const { \
 		write1ArgOpcodeTemplate(#opcode, opcode.arg0, out);    \
 	}
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                 \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                  \
 	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const {            \
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 	};
 
 	void writeInstruction(Instruction instruction, std::ostream& out) {

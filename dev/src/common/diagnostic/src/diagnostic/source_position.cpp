@@ -6,7 +6,7 @@
 
 #include "location.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <printer/printer_content.hpp>
 #include <printer/stream_printer.hpp>

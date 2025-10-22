@@ -1,3 +1,5 @@
+# Simple classes
+
 class FirstClassEver {
     a: i32 = 0;
     b: f32 = 0;
@@ -5,12 +7,13 @@ class FirstClassEver {
     fun getA() -> i32 = {
         return a;
     }
+
     fun setA(new_a: i32) = {
         a = new_a;
     }
 
     private {
-        FirstClassEver.copy(FirstClassEver: other) = {
+        FirstClassEver.copy(other: FirstClassEver) = {
             a = other.a;
             b = other.b;
         }
@@ -20,3 +23,32 @@ class FirstClassEver {
 }
 
 class SecondClass extends FirstClassEver {}
+
+let a: FirstClassEver = FirstClassEver(1, 2.0);
+let b = a;
+
+# @TODO: #520 Support lookup in types; type interfaces
+# Classes as members
+
+# class ClassWithMember {
+#     member: FirstClassEver = FirstClassEver(3, 4.0);
+#
+#     fun getMemberA() -> i32 = {
+#         return member.getA();
+#     }
+# }
+
+# let c: ClassWithMember = ClassWithMember(FirstClassEver(5, 6.0));
+# let c_member: FirstClassEver = c.member;
+# let c_member_a: i32 = c.getMemberA();
+
+# Nested classes
+
+# @TODO: #1420 Support nested classes in PST
+# class OuterClass {
+#     class InnerClass {
+#         x: i32 = 0;
+#     };
+# }
+#
+# let inner: OuterClass.InnerClass = OuterClass.InnerClass(3);

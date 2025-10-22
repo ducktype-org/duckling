@@ -1,4 +1,4 @@
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hash.hpp>

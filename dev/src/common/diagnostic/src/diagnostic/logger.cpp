@@ -2,7 +2,7 @@
 
 #include "diagnostic_converters.hpp"
 
-#include <base/int_conv.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <ranges>
 

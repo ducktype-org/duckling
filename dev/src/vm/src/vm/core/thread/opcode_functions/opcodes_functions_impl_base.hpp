@@ -29,11 +29,11 @@
 
 #include "opcodes_functions_utils.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <base/ints.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/for_each.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
@@ -948,7 +948,7 @@ namespace vm {
 			if (new_elem_count == 0) {
 				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
 				// null. This is one of two possible approaches:
-				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to
+				// 1. Current approach: treat 0-sized arrays as non-existent, and set the pointer to
 				// null-pointer (what we do here)
 				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
 				// C-nullptr as their data, but on DVM level we would still allow pointer
@@ -999,10 +999,6 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		FUNCTION_CONT(0);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(label)(FUNCTION_ARGS) {
-		CORE_PANIC("Handling label should not be possible");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
