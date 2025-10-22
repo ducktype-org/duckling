@@ -28,12 +28,12 @@ namespace compiler::helios::code {
 		addIndent(out, indent);
 		out << "return ";
 		this->value->debugPrint(out);
-		out << "\n";
+		out << ";\n";
 	}
 
 	void VoidReturnStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
-		out << "void return\n";
+		out << "void return;\n";
 	}
 
 	void ExprStmt::debugPrint(std::ostream& out, usize indent) const {
@@ -89,6 +89,6 @@ namespace compiler::helios::code {
 		location_expr->debugPrint(out);
 		out << " = ";
 		new_value_expr->debugPrint(out);
+		out << ";\n";
 	}
-
 }

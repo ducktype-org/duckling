@@ -1,7 +1,7 @@
 
 #include "options.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace global_state {
 

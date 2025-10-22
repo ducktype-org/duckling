@@ -3,9 +3,9 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>

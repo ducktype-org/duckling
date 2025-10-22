@@ -3,7 +3,7 @@
 #include "../symbol_type.hpp"
 #include "../types.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 #include <query_framework/query_int.hpp>
 

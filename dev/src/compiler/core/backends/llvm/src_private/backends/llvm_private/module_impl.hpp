@@ -10,7 +10,7 @@ LLVM_INCLUDE_END()
 
 #include <backends/llvm/module_impl_fd.hpp>
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 namespace compiler::backend_llvm {
 

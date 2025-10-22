@@ -2,10 +2,10 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
-#include <base/exceptions.hpp>
-#include <base/macros/utils.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/utils.hpp>
 
 #include <expected>
 #include <type_traits>

@@ -4,6 +4,7 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
+#include <frontend/module_tree/component_hash.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -28,6 +29,13 @@ namespace compiler::driver {
 		return { module_id.queryUnstablePerfectHash(), std::to_underlying(backend_type) };
 	}
 
+	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
+		auto component_hash = compiler::frontend::ModuleTree::getComponentHash(module_id);
+		auto partial        = component_hash.partial;
+		hashing::addToHash(partial, std::to_underlying(backend_type));
+		return partial.finalize();
+	}
+
 	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
@@ -46,11 +54,8 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
-			// Note: #939 in the future it should use stable hashing for incremental
-			// compilation. For now its ok.
-			// Also deal with module id (it is unstable).
 			auto output_name
-				= key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
@@ -72,7 +77,6 @@ namespace compiler::driver {
 						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
-
 
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
 					base::StrID llvm_ir_path
@@ -111,7 +115,7 @@ namespace compiler::driver {
 		BackendType                   backend,
 		const linker::LinkingOptions& linking_options
 	) {
-		auto root = frontend::createModuleTree(package_location);
+		auto root = frontend::createModuleTreeWithRandomPackageID(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
 

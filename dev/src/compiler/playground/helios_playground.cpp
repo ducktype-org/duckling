@@ -3,7 +3,7 @@
 #include <helios/queries.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
@@ -52,7 +52,7 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = frontend::createModuleTree(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	defer(printContextErrors());
 
@@ -71,7 +71,7 @@ int notMain(int argc, const char* const* argv) {
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.declaration->original_name.strView() << "\n";
 		auto i_deps
-			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOFFun>(
+			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOfFun>(
 				i.declaration->original_symbol, pst_access_id
 			);
 		printQueryDeps(i_deps);

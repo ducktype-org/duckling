@@ -2,7 +2,7 @@
 
 #include "node_id.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 #include <ostream>
 #include <vector>

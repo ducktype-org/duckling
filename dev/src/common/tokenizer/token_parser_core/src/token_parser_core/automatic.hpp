@@ -285,4 +285,20 @@ namespace tpc {
 
 		NoStringError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
+
+	class NoNumericValueError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected a numeric value.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoNumericValueError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
 }

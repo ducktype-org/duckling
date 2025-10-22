@@ -21,7 +21,6 @@ namespace pst {
 	class CodeBlock;
 	class CodeBlockOrStmt;
 	class ClassBlock;
-	class ClassBlockOrStmt;
 	class RoundGroupExpr;
 	class ExprElement;
 	class FlowPattern;

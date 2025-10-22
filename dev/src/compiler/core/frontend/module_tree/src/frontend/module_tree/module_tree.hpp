@@ -3,10 +3,10 @@
 #include "component_hash.hpp"
 #include "source_file.hpp"
 
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -110,6 +110,8 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		base::StrID getName() const;
 
+		base::StrID getPackageID() const { return m_package_id; }
+
 		/**
 		 * Returns ComponentHash of the module.
 		 * it is calculated from module logical path
@@ -161,6 +163,11 @@ namespace compiler::frontend {
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 		base::Optional<ComponentHash>                     m_component_hash;
+		/**
+		 * Package ID associated with this module tree.
+		 * Used for component hash calculation.
+		 */
+		base::StrID m_package_id;
 	};
 
 	/**
@@ -178,6 +185,13 @@ namespace compiler::frontend {
 		static base::Box<ModuleTreeBuilder> create();
 
 		/**
+		 * Creates a new builder instance with a random package ID.
+		 * This is used for testing purposes.
+		 * @return Boxed ModuleTreeBuilder.
+		 */
+		static base::Box<ModuleTreeBuilder> createWithRandomPackageID();
+
+		/**
 		 * Factory method to create ModuleTree from filesystem tree.
 		 * @param root Pre-constructed fs::File with a module structure.
 		 * @param file_reject Regex for rejecting files.
@@ -185,6 +199,21 @@ namespace compiler::frontend {
 		 * @return A valid pointer with the root.
 		 */
 		static Ref<ModuleTree> create(
+			const fs::File&   root,
+			std::string_view  package_id,
+			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
+			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
+		);
+
+		/**
+		 * Factory method to create ModuleTree from filesystem tree with random package ID.
+		 * This is used for testing purposes.
+		 * @param root Pre-constructed fs::File with a module structure.
+		 * @param file_reject Regex for rejecting files.
+		 * @param dir_reject Regex for rejecting directories.
+		 * @return A valid pointer with the root.
+		 */
+		static Ref<ModuleTree> createWithRandomPackageID(
 			const fs::File&   root,
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
@@ -221,6 +250,13 @@ namespace compiler::frontend {
 		void setName(base::StrID name);
 
 		/**
+		 * Sets the package ID for the module tree.
+		 * The package ID must be set for every module tree
+		 * @param package_id The package ID to set.
+		 */
+		void setPackageID(std::string_view package_id);
+
+		/**
 		 * Sets the parent module.
 		 * @param parent The parent module.
 		 */
@@ -230,7 +266,7 @@ namespace compiler::frontend {
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
-		void buildFromSingleFile(const fs::File& file);
+		void buildFromSingleFile(const fs::File& file, std::string_view package_id);
 
 		/**
 		 * Checks if the builder is finalized.
@@ -261,12 +297,14 @@ namespace compiler::frontend {
 		 */
 		void buildFromDirectory(
 			const fs::File&   directory,
+			std::string_view  package_id,
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
 
 		/**
 		 * Handles a new file found during directory traversal.
+		 * This is a helper function used when creating module tree from fs::File.
 		 * @param file The file to handle.
 		 */
 		void handleNewFile(const fs::File& file);
@@ -274,6 +312,7 @@ namespace compiler::frontend {
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
 		std::vector<fs::File>                             m_source_file_paths;
+		base::StrID                                       m_package_id;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
@@ -357,6 +396,15 @@ namespace compiler::frontend {
 		static void removeParent(base::Ref<ModuleTree> module);
 
 		/**
+		 * Changes the package ID of the given module and ALL its submodules recursively.
+		 * All modules in the same module tree must have the same package ID.
+		 * @note This can only be done on root modules (modules without a parent).
+		 * @param module The module to modify.
+		 * @param new_package_id The new package ID to set.
+		 */
+		static void changePackageID(base::Ref<ModuleTree> module, std::string_view new_package_id);
+
+		/**
 		 * Removes the module with the given ModuleID from the module map.
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param module_id The ModuleID to remove.
@@ -380,7 +428,17 @@ namespace compiler::frontend {
 	 * Creates a completely new module tree from the given file and returns the ModuleID
 	 * created ModuleTree contains independent submodules, source files and PSTs
 	 * it is created recursively based on the Duckling module structure
+	 * @param file File representing the root of the module tree
+	 * @param package_id The package ID to associate with the module tree
 	 * for more details see ModuleTreeBuilder::create
 	 */
-	ModuleID createModuleTree(const fs::File& file);
+	ModuleID createModuleTree(const fs::File& file, std::string_view package_id);
+
+	/*
+	 * Creates a completely new module tree with a random package ID from the given file.
+	 * @note This is used mostly for tests.
+	 * @param file File representing the root of the module tree
+	 * @return The ModuleID of the created module tree
+	 */
+	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file);
 }

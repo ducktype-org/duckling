@@ -2,9 +2,9 @@
 #include "allocator.hpp"
 #include "block_data.hpp"
 
-#include <base/ints.hpp>
-#include <base/raw_view.hpp>
-#include <base/ref.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>

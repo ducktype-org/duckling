@@ -16,16 +16,18 @@ namespace tsh::internal {
 			                       .members;
 			// @TODO: Add methods to the interface, when obtaining their signature is supported.
 
-			std::set<InterfaceElement> elements;
+			std::vector<InterfaceElement> elements;
 
+			u32 declaration_order = 0;
 			for (const compiler::helios::QueryTypeOfSymbol::QKey field_sym: field_syms) {
 				const SymbolType<> field_type
 					= ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym)->expect(
 						"Handling ERRORS in TS is not supported yet..."
 					);
-				elements.insert(
-					InterfaceElement(field_sym, key.value->toAbstractType(), {}, field_type, {})
-				);
+				elements.push_back(InterfaceElement(
+					field_sym, key.value->toAbstractType(), declaration_order, {}, field_type, {}
+				));
+				declaration_order++;
 			}
 
 			return TypeInterface(elements);

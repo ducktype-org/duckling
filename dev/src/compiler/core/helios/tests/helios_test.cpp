@@ -13,6 +13,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -22,10 +23,10 @@
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
@@ -45,7 +46,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testError);
 		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
@@ -69,6 +69,10 @@ public:
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
+
+		// error tests
+		TESTER_ADD_TEST(testErrorBadExpr);
+		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -121,7 +125,7 @@ private:
 	}
 
 	void testClassSymbolData() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/classes")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes")));
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
@@ -129,7 +133,8 @@ private:
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
 		          ->valueOrThrow()
-		          .getType();
+		          .getType()
+		          .as<tsh::ClassAbstractType>();
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -138,6 +143,12 @@ private:
 		ASSERT_TRUE(not first_class_info.base.has_value());
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
+
+		const auto first_ctor
+			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+				first_class_abstract_type
+			);
+		ASSERT_EQUAL(first_ctor->declaration->return_type.getType(), first_class_abstract_type);
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
@@ -150,6 +161,8 @@ private:
 		ASSERT_TRUE(second_class_info.base.has_value());
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
+
+		query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
 	}
 
 	void testTypeOf() {
@@ -381,12 +394,15 @@ private:
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout.functions) {
-				std::cerr << fun.declaration->original_name.str() << " i dependent on\n";
-				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOFFun>(
+				std::cerr << fun.declaration->original_name.str() << " is dependent on\n";
+				std::cerr << " Original symbol: "
+						  << fun.declaration->original_symbol.queryUnstablePerfectHash() << "\n";
+				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.declaration->original_symbol
 				);
+				std::cerr << "Tokens:\n";
 
-				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOFFun>(
+				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.declaration->original_symbol
 				);
 
@@ -400,9 +416,9 @@ private:
 	}
 
 	void testHoutVisitor() {
-		auto module
-			= compiler::frontend::createModuleTree(fs::File(path("test_modules/visitor_test_module")
-		    ));
+		auto module = compiler::frontend::createModuleTreeWithRandomPackageID(
+			fs::File(path("test_modules/visitor_test_module"))
+		);
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -611,53 +627,6 @@ private:
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
-	}
-
-	void testError() {
-		using namespace compiler::helios;
-
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
-
-
-		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-
-		try {
-			getConstValueAs<i64>("InvalidExpr", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (base::NotYetImplemented& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("InvalidSym", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("C", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<bool>("InvalidCompFirst", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
 	}
 
 	void testHoutVariables() {
@@ -1019,62 +988,11 @@ private:
 			= compiler::helios::getIdentifierExprSymID(call_expr_2->callee.ref()).value();
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2_callee));
 		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
-	}
-
-	void testScopeParentsAndDepth() {
-		auto all_scopes = compiler::helios::getAllHeliosScopes();
-		message(base::strConcat("Scope count: ", all_scopes.size()));
-		for (auto scope: all_scopes) {
-			auto depth = scopeDepth(scope);
-			while (depth != 0) {
-				scope = parent(scope).value();
-				ASSERT_TRUE(depth > 0);
-				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
-				depth = scopeDepth(scope);
-
-				// it is just for cov mostly
-
-				// we redirect cerr to a stringstream to avoid printing a lot of stuff to console
-				// here:
-				std::cerr.flush();
-				std::stringstream buffer;
-				std::streambuf*   org_buffer = std::cerr.rdbuf(buffer.rdbuf());
-				defer(std::cerr.rdbuf(org_buffer));
-
-				// @TODO: make it not print to cerr, but to ostream or string:
-				scope.debugPrintScopeAndParents();
-
-				std::cerr.flush();
-			}
-			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
-		}
-	}
-
-	/**
-	 * This checks for all symbols that if a given
-	 * symbol `s` is in the scope `N`, then it is also in the
-	 * output of QuerySymbolsInScope(N).
-	 */
-	void testScopeSymbolsConsistency() {
-		auto all_symbols = compiler::helios::getAllHeliosSymbols();
-
-		// this is quadratic in theory, if it ever get too slow,
-		// we can optimize it with some maps.
-		for (auto symbol: all_symbols) {
-			auto maybe_scope = compiler::helios::maybeScope(symbol);
-			if (maybe_scope.empty()) continue;
-			auto scope            = maybe_scope.value();
-			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
-
-			auto found = false;
-			for (auto s: *symbols_in_scope) {
-				if (s == symbol) {
-					found = true;
-					break;
-				}
-			}
-			assertTrue(found, "Symbol was not fount in its scope");
-		}
+		auto builtin_output_decl
+			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee);
+		ASSERT_EQUAL(
+			builtin_output_decl->parameters.at(0).type.getType().getKind(), tsh::Kind::Integral
+		);
 	}
 
 	void testMangler() {
@@ -1504,6 +1422,120 @@ private:
 				// Expected failure for invalid ABI
 			}
 		});
+	}
+
+	void testErrorBadExpr() {
+		using namespace compiler::helios;
+
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
+
+
+		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+
+		try {
+			getConstValueAs<i64>("InvalidExpr", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (base::NotYetImplemented& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<i64>("InvalidSym", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<i64>("C", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		// This fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		try {
+			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("InvalidCompFirst", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+	}
+
+	void testErrorAmbiguousCallableCandidates() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_callable_candidates")
+		    ));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
+			assertThrows<std::exception>(
+				[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
+				"Expected ambiguous callable candidates error"
+			);
+
+			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+			std::stringstream non_detailed_log;
+			ctx.logger.dumpLog(false, non_detailed_log);
+			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testScopeParentsAndDepth() {
+		auto all_scopes = compiler::helios::getAllHeliosScopes();
+		message(base::strConcat("Scope count: ", all_scopes.size()));
+		for (auto scope: all_scopes) {
+			auto depth = scopeDepth(scope);
+			while (depth != 0) {
+				scope = parent(scope).value();
+				ASSERT_TRUE(depth > 0);
+				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
+				depth = scopeDepth(scope);
+
+				// it is just for cov mostly
+
+				std::stringstream buffer;
+				scope.debugPrintScopeAndParents(buffer);
+			}
+			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
+		}
+	}
+
+	/**
+	 * This checks for all symbols that if a given
+	 * symbol `s` is in the scope `N`, then it is also in the
+	 * output of QuerySymbolsInScope(N).
+	 */
+	void testScopeSymbolsConsistency() {
+		auto all_symbols = compiler::helios::getAllHeliosSymbols();
+
+		// this is quadratic in theory, if it ever get too slow,
+		// we can optimize it with some maps.
+		for (auto symbol: all_symbols) {
+			auto maybe_scope = compiler::helios::maybeScope(symbol);
+			if (maybe_scope.empty()) continue;
+			auto scope            = maybe_scope.value();
+			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
+
+			auto found = false;
+			for (auto s: *symbols_in_scope) {
+				if (s == symbol) {
+					found = true;
+					break;
+				}
+			}
+			assertTrue(found, "Symbol was not fount in its scope");
+		}
 	}
 };
 

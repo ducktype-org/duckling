@@ -4,7 +4,7 @@
 #include "pst_automatic.hpp"
 #include "pst_state_forward.hpp"  // IWYU pragma: keep
 
-#include <base/strongly_typed_id.hpp>
+#include <base/extend_cpp/strongly_typed_id.hpp>
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>

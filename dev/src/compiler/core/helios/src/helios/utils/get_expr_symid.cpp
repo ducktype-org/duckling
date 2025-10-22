@@ -2,7 +2,7 @@
 
 #include <helios/hout/visitors.hpp>
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
 namespace compiler::helios {
 

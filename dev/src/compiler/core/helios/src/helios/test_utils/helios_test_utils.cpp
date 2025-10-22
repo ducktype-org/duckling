@@ -13,7 +13,7 @@
 #include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
-#include <base/anycast.hpp>
+#include <base/misc/anycast.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -21,7 +21,7 @@
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
-		auto module = compiler::frontend::createModuleTree(path);
+		auto module = compiler::frontend::createModuleTreeWithRandomPackageID(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
 			return queryRootScopeOfMainModuleFile(ctx, module);

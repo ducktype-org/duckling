@@ -14,13 +14,13 @@
 #include "query_hash.hpp"
 #include "query_int.hpp"
 
-#include <base/defer.hpp>
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>
@@ -40,7 +40,7 @@ namespace query::internal {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		const auto unstable_hash = unstableHashKey(key);
+		const auto perfect_hash = perfectHashKey(key);
 
 		[[maybe_unused]]
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{
@@ -48,7 +48,7 @@ namespace query::internal {
 		};
 
 
-		if (auto v = QueryImplType::load(unstable_hash)) {
+		if (auto v = QueryImplType::load(perfect_hash)) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
@@ -82,7 +82,7 @@ namespace query::internal {
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(unstable_hash, QueryImplType::provide(context, key), acd);
+			return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
 		}
 	}
 
@@ -107,26 +107,26 @@ namespace query::internal {
 		/**
 		 * Unstable key hash type
 		 */
-		using UKHash = query::UKHash<QKey>;
+		using KHash = query::KHash<QKey>;
 
 		using Context = ::query::Context;
 
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(UKHash key_hash) -> LoadResult;
-		 *  static auto store(UKHash key_hash, PResult res, query::ACD acd) ->
+		 *  static auto load(KHash key_hash) -> LoadResult;
+		 *  static auto store(KHash key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
 		 */
 
+		// @TODO: #1433 implement proper tags for cache-on-disk queries
 		/**
 		 * Whether query is cached on disk.
 		 * Queries cached on disk must use stable hashing.
-		 * @note not used yet
+		 * @note Currently this is not used. It is waiting for query-tags
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
 	};
-
 }
 
 /**
@@ -164,7 +164,7 @@ namespace query::internal {
 		std::is_same_v<                                                                           \
 			std::invoke_result_t<                                                                 \
 				decltype(type::store),                                                            \
-				query::UKHash<type::QKey>,                                                        \
+				query::KHash<type::QKey>,                                                         \
 				type::PResult,                                                                    \
 				::query::ACD>,                                                                    \
 			type::QResult>,                                                                       \
@@ -190,7 +190,7 @@ namespace query::internal {
 		"(QueryStableHash)."                                                                      \
 	);                                                                                            \
 	static_assert(                                                                                \
-		std::is_invocable_v<decltype(type::load), query::UKHash<type::QKey>>,                     \
+		std::is_invocable_v<decltype(type::load), query::KHash<type::QKey>>,                      \
 		"Load function must be callable with hash of QKey"                                        \
 	);
 

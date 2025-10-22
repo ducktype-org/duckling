@@ -4,7 +4,7 @@
 
 namespace pst {
 	MBox<ValuePattern> ValuePattern::parse(LangParserState& state) {
-		if (!state[0].isNumLiteral() && !state[0].isString() && !state[0].is(Keyword::True)
+		if (!state[0].isNumLiteralGroup() && !state[0].isString() && !state[0].is(Keyword::True)
 		    && !state[0].is(Keyword::False)
 		    && !state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			return nullptr;

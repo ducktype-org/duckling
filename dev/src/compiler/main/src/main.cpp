@@ -17,8 +17,8 @@
 #include <pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
@@ -186,10 +186,12 @@ clah::Clah getClahForMain() {
 
 							   // @TODO: error handling
 							   using namespace compiler;
-							   auto root = frontend::createModuleTree(path_to_compile);
-							   auto top_level
-								   = query::entryPoint<helios::QueryTopLevelEntities>(root);
-							   std::cout << top_level->debugPrint();
+							   auto root
+								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
+							   auto hout_units
+								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+							   for (const auto& hout_unit: hout_units)
+								   std::cout << hout_unit.debugPrint();
 
 							   return exit_code;
 						   }))
@@ -228,7 +230,7 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = frontend::createModuleTree(path_to_compile);
+					auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
@@ -347,7 +349,8 @@ clah::Clah getClahForMain() {
 			}
 		);
 
-							   auto root = frontend::createModuleTree(path_to_compile);
+							   auto root
+								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {

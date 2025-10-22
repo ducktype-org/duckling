@@ -146,6 +146,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::CodeBlock, false> no_code_block{ "x=y;" };
 	Example<pst::CodeBlock, false> no_code_block_eof{ "" };
 
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> typed_literal1{ "100i32" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> typed_literal4{ "3.14" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> typed_literal7{ "1e-12f64" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> typed_literal8{ "0b101001" };
+
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
 	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
 	Example<pst::Const, true>  type_const{ "const x: i32" };

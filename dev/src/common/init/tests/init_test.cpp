@@ -3,7 +3,7 @@
  * we are not using Tester framework here.
  */
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <init/init.hpp>
 

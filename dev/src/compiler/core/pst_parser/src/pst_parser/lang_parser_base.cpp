@@ -3,10 +3,8 @@
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
-
-#include <ranges>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 namespace pst {
 
@@ -90,7 +88,7 @@ namespace pst {
 
 	void LangElement::calcHash() {
 		hash = calcStableHash().finalize();
-
+		pst_hash_map.emplace(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}
@@ -147,7 +145,10 @@ namespace pst {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}
 
-	base::HashMap<u64, AccessLocked<LangElement>> LangElement::pst_id_map{};
+	base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> LangElement::pst_hash_map{};
 
-	AccessLocked<LangElement> LangElement::getByID(u64 id) { return pst_id_map.at(id); }
+	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
+		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
+		return pst_hash_map.at(stable_hash);
+	}
 }

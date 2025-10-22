@@ -29,10 +29,9 @@ namespace pst {
 				id, internal::PSTAccessSideInput::getID()
 			);
 
-			// We can retrieve the LangElement ID from the NodeId hash, because
-			// LangElement ID is used as the first element of the unstable hash value.
+			// We can get LangElement from NodeID's stable hash
 			static auto get_pst_node = [](query::internal::NodeID lid) {
-				return LangElement::getByID(lid.hash.val.data.at(0));
+				return LangElement::getByStableHash(lid.hash.val);
 			};
 			static auto get_tokens = [](AccessLocked<LangElement> locked) {
 				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
@@ -53,13 +52,19 @@ namespace pst {
 
 		static auto get_token_pos = [](CRef<lexer::Token> tok) { return tok->getPosition(); };
 
+		std::cout << "Querying position dependencies for node id: " << id.q_id.asInt() << "\n";
+
 		auto x = viewDependentTokens(id) | transform(get_token_pos);
+
+		std::cout << "Found " << std::ranges::distance(x) << " token positions\n";
 
 		// Merge the overlapping/adjacent positions
 		// Might be made into a separate function in the future.
 
 		std::set<dia::SourcePosition> positions;
 		for (auto el: x) positions.insert(el);
+
+		std::cout << "After unique: " << positions.size() << " token positions\n";
 
 		if (positions.size() == 0) return {};
 		dia::SourcePosition              cur = *positions.begin();
@@ -75,6 +80,7 @@ namespace pst {
 			cur = dia::SourcePosition(cur, pos.getEnd());
 		}
 		merged_positions.push_back(cur);
+		std::cout << "After merging: " << merged_positions.size() << " source positions\n";
 
 		return merged_positions;
 	}

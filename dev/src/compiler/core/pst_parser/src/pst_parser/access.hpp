@@ -2,12 +2,13 @@
 
 #include "pst_id.hpp"
 
-#include <base/box.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/template_string.hpp>
+#include <base/collections/optional.hpp>
+#include <base/comptime/template_string.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <query_framework/context_fd.hpp>
+#include <query_framework/query_hash.hpp>
 #include <token_parser_core/debug_print.hpp>
 
 namespace pst {
@@ -64,10 +65,10 @@ namespace pst {
 	namespace internal {
 		/**
 		 * @brief Notification to context About the access to an element.
-		 * @note For now we keep PstID as the key, but in the future it will likely be changed to
-		 * hash based on hash-framework.
+		 * @note It relies on the element's stable hash, which is essential for incremental
+		 * compilation.
 		 */
-		void notifyContext(query::Context& ctx, PstID id);
+		void notifyContext(query::Context& ctx, query::QueryStableHash stable_hash);
 		/**
 		 * @brief Some smart throw about bad access(unsafe access of non-null) based on context.
 		 */
@@ -131,7 +132,7 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			if (ref.toOpt().has_value()) internal::notifyContext(ctx, this->ref->getID());
+			if (ref.toOpt().has_value()) internal::notifyContext(ctx, this->ref->getHash());
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
@@ -141,7 +142,7 @@ namespace pst {
 		 */
 		Access<Element> unlock(query::Context& ctx) const {
 			if (!ref.toOpt()) internal::notifyBadAccess(ctx);
-			internal::notifyContext(ctx, this->ref->getID());
+			internal::notifyContext(ctx, this->ref->getHash());
 			return { ref.toOpt().value() };
 		}
 
