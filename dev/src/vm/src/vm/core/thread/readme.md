@@ -1,4 +1,4 @@
-# DVM - VMThread and VMValue module
+# DVM — VMThread and VMValue module
 ## [`VMThread`](./vmthread.hpp)
 The `VMThread` is the primary execution engine of DVM. While a `VMProcess` manages the overall environment 
 for a program, the `VMThread` is the component that actually interprets and executes the 
@@ -19,7 +19,7 @@ provides a few execution strategies:
   straightforward but can be slower due to branch prediction overhead.
   *   **Computed Gotos (CG) Mode:** In this mode, each instruction is identified by a numerical opcode, 
   but the big `switch` statement is replaced with a single `goto` to the function implementing the next opcode. 
-  *   **Tail-Call (TC) Mode:** In this mode, each instruction in contains a direct pointer to the function 
+  *   **Tail-Call (TC) Mode:** In this mode, each instruction contains a direct pointer to the function 
   that implements it. This replaces the `switch` statement with an jump to the function which implements 
   the next opcode, which is significantly faster.
 
@@ -95,7 +95,7 @@ It operates based on an "execution strategy" that can be one of several modes:
   *   **Paused:** Halts execution and waits for an external command (like `Step` or `Resume`) before proceeding.
   *   **Stopped:** Completely terminates the execution loop.
   
-Before each instruction it's checked whether the execution strategy has changed.
+Before each instruction, it's checked whether the execution strategy has changed.
 
 #### Handling Blocking Operations
 When a program needs to perform a blocking operation, such as waiting for user input, it is the `VMThread` that
@@ -107,7 +107,7 @@ The [`VmValue`](./vmvalue.hpp) class is the key mechanism for bidirectional comm
 external world (e.g the compiler or other C++ code) and the virtual machine's internal environment. It 
 functions as a data Transfer Object designed to safely package, transfer, and unpack data across in DVM.
 
-Its primary purpose is to enable the transfer of values that may have complex, hierarchical structures, 
+The `VmValue`'s primary purpose is to enable the transfer of values that may have complex, hierarchical structures, 
 not just simple byte streams.
 
 ### Key Aspects
@@ -125,13 +125,12 @@ not just simple byte streams.
         are first packaged into `VmValue` objects. The execution engine (`VMThread`) then treats these as 
         source memory blocks from which to read the input data. Typically the argument values are created 
         with the `vm::api::getVmValue()` endpoint, filled in with the appropriate data and passed to the 
-        `vm::api::runFunction()` endpoint. An important note is that all the `VmValue` object created by the
+        `vm::api::runFunction()` endpoint. An important note is that all the `VmValue` objects created by the
         `getVmValue()` endpoint are owned by the caller. This means they are expected to be freed by the caller.
-        If not freed they will be counted as memory leaks when calling `vm::api::deinitAndValidate()`.
+        If not freed, they will be counted as memory leaks when calling `vm::api::deinitAndValidate()`.
     *   **Receiving Results:** After execution completes, the function's return value (or the entire program's 
         exit code) is packaged into a `VmValue` which can be read with the `vm::api::getExitCode()` endpoint 
         and interpreted. Note that `VmValues` returned by the `vm::api::getExitCode()` are owned by the
-        `VMProcess` and are automatically freed when the process in destructed.
-    Some may ask, why not all `VMValue` objects are owned by the process. This is done from the performance
-    standpoint. When calling functions in the VM multiple times we want to avoid the memory bloat which we 
+        `VMProcess` and are automatically freed when the process is destroyed.
+    Some may ask: why aren't all `VMValue` objects owned by the process. This is done to improve performance. When calling functions in the VM multiple times we want to avoid the memory bloat which we 
     may encounter by creating many function arguments.

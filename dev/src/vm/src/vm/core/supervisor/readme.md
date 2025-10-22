@@ -1,4 +1,4 @@
-# DVM - Supervisor module
+# DVM — Supervisor module
 ## [`Supervisor`](./supervisor.hpp)
 The `Supervisor` is the central, high-level management component of the virtual machine's architecture. 
 It acts as the primary dispatcher, mediating all communication between the outside world (e.g., via an API) 

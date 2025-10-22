@@ -1,4 +1,4 @@
-# DVM - Memory module
+# DVM — Memory module
 
 ## Safe memory module
 
@@ -10,7 +10,7 @@ a three-tiered system: the [`Pointer`](./pointer.hpp), the [`Block`](./block.hpp
 
 ### [`Pointer`](./pointer.hpp)
 
-In this VM, a pointer is not a raw memory address. Instead, it's a "fat pointer"—a 16-byte smart
+In this VM, a pointer is not a raw memory address. Instead, it's a "fat pointer" — a 16-byte smart
 handle that provides safe, managed access to data.
 
 *   **Structure:** A `Pointer` consists of two parts:
@@ -25,7 +25,7 @@ handle that provides safe, managed access to data.
 ### [`Block`](./block.hpp)
 
 A `Block` is the fundamental unit of memory ownership. It is not the raw data itself, but rather a 
-metadata - rich "handle" that describes a region of memory. Every piece of data allocated on the heap, 
+metadata-rich "handle" that describes a region of memory. Every piece of data allocated on the heap, 
 on the stack, or even within a [`VmValue`](../../thread/vmvalue.hpp) is managed by a corresponding `Block`.
 
 *   **Core Attributes:** Each `Block` contains:
@@ -37,12 +37,12 @@ on the stack, or even within a [`VmValue`](../../thread/vmvalue.hpp) is managed 
         subsequent attempt to access data through a pointer to this block will result in a runtime
         error (a `VMUseAfterFreeException`), preventing silent memory corruption.
     *   **Child blocks:** For correctly handling memory errors in more complex structures (like an array, 
-        struct or a variant) each block is enriched with a list of it's children blocks, which reference a 
-        sub-region of the data view handled by it's parent. More on the the nested block structure can be read 
+        struct or a variant) each block is enriched with a list of its children blocks, which reference a 
+        sub-region of the data view handled by their parent. More on the the nested block structure is written 
         below.
 
 #### The Nested Block Structure
-One of the key memory module features is ability for blocks to have a parent-child relationship. This hierarchical
+One of the key memory module features is the ability for blocks to have a parent-child relationship. This hierarchical
 structure is what enables safe implementation of complex types like variants, arrays and structs.
 
 *   **How It Works:**
@@ -59,11 +59,11 @@ structure is what enables safe implementation of complex types like variants, ar
     #include <variant>
     int main() {
         std::variant<int, bool> v;
-        // Sets the type of variant to `int` and it's value to 5.
+        // Sets the type of variant to `int` and its value to 5.
         v = 5; 
         // Take the reference of the inner data of the variant.
         int& data_ref = std::get<int>(v); 
-        // Sets the type of variant to `bool` and it's value to false. 
+        // Sets the type of variant to `bool` and its value to false. 
         // `data_ref` should now be considered invalid.
         v = false; 
         data_ref = 3; // This is an UB
@@ -79,7 +79,7 @@ structure is what enables safe implementation of complex types like variants, ar
         attempts to use them, the memory module will detect this at access time and throw an exception, preventing
         a type confusion bug or use-after-free error.
         
-We could imagine an even more complicated example where an array could store structs, which store variants and we take a pointer to one of the variant elements and then deallocate the outer array. With the nested block structure any incorrect usages of this kind will be detected.
+We could imagine an even more complicated example where an array could store structs, which store variants and we take a pointer to one of the variant elements and then deallocate the outer array. With the nested block structure, any incorrect usages of this kind will be detected.
 
 ### [`Memory`](./memory.hpp)
 
