@@ -520,6 +520,7 @@ private:
 		auto mt1 = ModuleTreeBuilder::create(root, "root_package_id11e3");
 		auto mt2 = ModuleTreeBuilder::create(root, "root_package_id11e4");
 
+#if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
 			(ModuleTree::getComponentHash(mt1->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "root" })
@@ -528,6 +529,7 @@ private:
 			(ModuleTree::getComponentHash(mt2->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e4", "root" })
 		);
+#endif
 		ASSERT_TRUE(
 			ModuleTree::getComponentHash(mt1->getModuleID()).hash
 			!= ModuleTree::getComponentHash(mt2->getModuleID()).hash
@@ -538,6 +540,7 @@ private:
 		auto sub2   = mt1->getSubmodules().at(base::StrID("sub2"));
 		auto subsub = sub1->getSubmodules().at(base::StrID("subsub"));
 
+#if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
 			(ModuleTree::getComponentHash(sub1->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1" })
@@ -550,6 +553,7 @@ private:
 			(ModuleTree::getComponentHash(subsub->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1", "subsub" })
 		);
+#endif
 
 		ASSERT_TRUE(
 			(ModuleTree::getComponentHash(sub1->getModuleID()).hash
@@ -566,6 +570,7 @@ private:
 
 		ModuleTreeModifier::removeParent(sub1);
 
+#if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
 			(ModuleTree::getComponentHash(subsub->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub" })
@@ -579,6 +584,7 @@ private:
 			(ModuleTree::getComponentHash(mt2->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e4", "root" })
 		);
+#endif
 	}
 };
 
