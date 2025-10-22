@@ -96,19 +96,34 @@ namespace base {
         void deallocateDestroy(Ref<T> obj_ref) {
             allocated_count--;
 
-            Ref<StorageT> obj_storage = std::launder(reinterpret_cast<StorageT*>(
-                reinterpret_cast<std::byte*>(obj_ref.get()) - offsetof(StorageT, data)
-            ));
+            // note: 
+            // offsetof is conditionally supported for non-standard-layout types since C++17.
+            // If this breaks, figure it out. 
+
+            Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
 
             // idx, in which the object is stored:
             BufferIndex deallocation_idx;
+
+            bool found = false;
 
             // naively find the buffer and the index within the buffer:
             for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
                 StorageT* buffer_pointer_start = buffers[buffer_idx]->items.data();
                 StorageT* buffer_pointer_end = buffers[buffer_idx]->items.data() + buffers[buffer_idx]->items.size();
-
+                if (buffer_pointer_start <= obj_storage.get() and obj_storage.get() < buffer_pointer_end) {
+                    deallocation_idx.buffer_idx = buffer_idx;
+                    deallocation_idx.item_idx = static_cast<u64>(obj_storage.get() - buffer_pointer_start);
+                    found = true;
+                    break;
+                }
             }
+
+            CORE_ASSERT(found, "Object to deallocate was not allocated by this allocator");
+
+            // actually destroy and deallocate the object:
+            obj_storage->destroy();
+            free_list.push_back(deallocation_idx);
         }
         
         ~SingleTypeMemoryPoolAllocator() RELEASE_NOEXCEPT {

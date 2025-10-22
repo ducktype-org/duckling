@@ -6,6 +6,7 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/misc/noexcept.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace base {
 
@@ -68,6 +69,25 @@ namespace base {
                 CORE_ASSERT(state == State::Constructed, "Object is not constructed");
             })
             return std::launder(reinterpret_cast<T*>(&data));
+        }
+
+        /**
+         * Obtains pointer to the ManualLifetimeStorage from the object reference.
+         * @note Behavior is undefined if obj_ref was not constructed in ManualLifetimeStorage.
+         * Use with caution.
+         * 
+         * @note offsetof is conditionally supported for non-standard-layout types since C++17.
+         * If this breaks, figure it out. 
+         *
+         * @note I'm not 100% sure the function is well defined here.
+         */
+        static Ref<ManualLifetimeStorage> getSelf(CRef<T> obj_ref) {
+            constexpr auto OFFSET = offsetof(ManualLifetimeStorage, data);
+            static_assert(OFFSET == 0, "This might not hold actually, but should. Is left here for clarity, and with it I'm more confident this is UB free.");
+
+            return std::launder(reinterpret_cast<ManualLifetimeStorage*>(
+                reinterpret_cast<std::byte*>(obj_ref.get()) - OFFSET
+            ));
         }
 	};
 
