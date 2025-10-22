@@ -290,7 +290,7 @@ namespace base {
 			using pointer           = value_type*;
 			using reference         = value_type&;
 
-			Iterator(u64 bucket_index, Ref<Node> current_node, MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
+			Iterator(u64 bucket_index, MRef<Node> current_node, MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
 				: bucket_index(bucket_index), current_node(current_node), buckets_array_ptr(buckets_array_ptr), buckets_size(buckets_size) {}
 
 			Iterator(const Iterator&) = default;
@@ -325,7 +325,8 @@ namespace base {
 			}  
 
 			friend bool operator== (const Iterator& a, const Iterator& b) { 
-				return std::tie(a.bucket_index, a.current_node.get()) == std::tie(b.bucket_index, b.current_node.get());
+				return std::tie(a.bucket_index, a.current_node, a.buckets_array_ptr, a.buckets_size) ==
+				 std::tie(b.bucket_index, b.current_node, b.buckets_array_ptr, b.buckets_size);
 			};
 			friend bool operator!= (const Iterator& a, const Iterator& b) { 
 				return !(a == b);
@@ -374,11 +375,11 @@ namespace base {
 				bucket_index++;
 			}
 
-			return Iterator(bucket_index, current_node.toOpt().copyValueOr(nullptr), buckets.data(), buckets.size());	
+			return IteratorT(bucket_index, current_node, buckets.data(), buckets.size());	
 		}
 
 		IteratorT end() RELEASE_NOEXCEPT {
-			return Iterator(buckets.size(), nullptr, buckets.data(), buckets.size());
+			return IteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 
 		ConstIteratorT begin() const RELEASE_NOEXCEPT {
@@ -391,11 +392,11 @@ namespace base {
 				bucket_index++;
 			}
 
-			return ConstIterator(bucket_index, current_node.toOpt().copyValueOr(nullptr), buckets.data(), buckets.size());	
+			return ConstIteratorT(bucket_index, current_node.toOpt().copyValueOr(nullptr), buckets.data(), buckets.size());	
 		}
 
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
-			return ConstIterator(buckets.size(), nullptr, buckets.data(), buckets.size());
+			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 	};
 }

@@ -15,6 +15,8 @@ public:
         map.put(2, 20);
 
         for (auto& [key, value]: map) {
+
+            std::cerr << "Key: " << key << ", Value: " << value << "\n";
             
         }
 
