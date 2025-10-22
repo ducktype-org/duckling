@@ -437,6 +437,7 @@ namespace lexer {
 			);
 		}
 		logger->log(makeBox<UnknownLiteralTypeSpecifierError>(suffix_start_pos));
+		skip(lookahead);
 		return {};
 	}
 
