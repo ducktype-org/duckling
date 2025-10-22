@@ -22,7 +22,6 @@ namespace lexer {
 	class Token;
 	/**
 	 * @brief Type representing a list of tokens
-	 *
 	 */
 	using Tokens = std::vector<lexer::Token>;
 
@@ -38,6 +37,7 @@ namespace lexer {
 			Keyword,
 			Identifier,
 			NumLiteral,
+			NumLiteralGroup,  ///< group storing a numeric literal token and the type specifier token
 			TypeSpecifier,
 			String,
 			Char,
@@ -83,6 +83,9 @@ namespace lexer {
 		static Token makeSpecial(base::RawView identifier, const dia::SourcePosition&);
 		static Token makeNumLiteral(base::RawView literal, const dia::SourcePosition&);
 		static Token makeTypeSpecifier(base::RawView literal, const dia::SourcePosition&);
+		static Token
+			makeNumLiteralGroup(base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition&);
+		static Token makeNumLiteralGroup(base::RawView full_view, Token&& value, const dia::SourcePosition&);
 		/**@}*/
 
 		virtual ~Token() = default;
@@ -99,6 +102,10 @@ namespace lexer {
 			const dia::SourcePosition& position,
 			BracketType                bracket
 		);
+		Token(
+			Type type, base::RawView value, Tokens&& recursive, const dia::SourcePosition& position
+		);
+
 		friend void swap(Token& first, Token& second) noexcept;
 		Token&      operator=(Token&& other) noexcept;
 
@@ -175,6 +182,8 @@ namespace lexer {
 		bool isIdentifier() const;
 		[[nodiscard]]
 		bool isNumLiteral() const;
+		[[nodiscard]]
+		bool isNumLiteralGroup() const;
 		[[nodiscard]]
 		bool isTypeSpecifier() const;
 		[[nodiscard]]

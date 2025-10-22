@@ -1,5 +1,5 @@
 /**
- * @file lexerContext.hpp
+ * @file lexer.cpp
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 

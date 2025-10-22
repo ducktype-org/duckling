@@ -30,6 +30,8 @@ namespace lexer {
 		[[nodiscard]]
 		bool isBinDigit() const;
 		[[nodiscard]]
+		bool isOctDigit() const;
+		[[nodiscard]]
 		bool isDigit() const;
 		[[nodiscard]]
 		bool isHexDigit() const;
