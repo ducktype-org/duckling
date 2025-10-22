@@ -9,7 +9,7 @@ pub mod subcommands;
 
 use cli_ext::CommandExt;
 
-use crate::driver::{cli_ext::flag, styles::get_styles};
+use crate::driver::styles::get_styles;
 
 fn cli() -> Command {
     Command::new(crate_name!())
@@ -21,20 +21,6 @@ fn cli() -> Command {
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
         .styles(get_styles())
-}
-
-fn cli_no_help() -> Command {
-    Command::new(crate_name!())
-        .disable_help_flag(true)
-        .disable_help_subcommand(true)
-        .version(crate_version!())
-        .add_verbose()
-        .add_quiet()
-        .add_chdir()
-        .add_color()
-        .allow_external_subcommands(true)
-        .subcommands(subcommands::subcommands())
-        ._arg_impl(flag("help", "Print help").short('h').global(true))
 }
 
 #[cfg(test)]

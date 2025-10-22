@@ -6,8 +6,8 @@ use quackpack::QuackResult;
 
 use crate::{DuckCtx, terminal::Verbosity};
 
-#[derive(Debug, Clone, Copy)]
-pub enum Color {
+#[derive(Debug)]
+enum Color {
     Always,
     Never,
     Auto,
@@ -51,10 +51,6 @@ impl GlobalCliOptions {
             quiet,
             color,
         })
-    }
-
-    pub fn color(&self) -> Color {
-        self.color
     }
 
     pub fn update_context(&self, ctx: &mut DuckCtx) {
