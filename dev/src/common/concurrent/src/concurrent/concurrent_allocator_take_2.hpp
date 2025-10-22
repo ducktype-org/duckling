@@ -25,6 +25,8 @@ namespace concurrent {
 			std::array<StorageT, BLOCK_SIZE> items;
 		};
 
+		// static_assert(sizeof(Buffer) == 4096, "aa");
+
 		struct BufferIndex final {
 			u64 buffer_idx = 0;
 			u64 item_idx   = 0;

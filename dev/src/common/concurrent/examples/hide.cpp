@@ -4,7 +4,7 @@
 #include <concurrent/concurrent_allocator_take_2.hpp>
 
 // concurrent::ConcurrentSingleTypeAllocator<THide, 1'024 * 8> allocator;
-concurrent::SingleThreadedAllocator<THide, 1'024ull * 8> allocator;
+concurrent::SingleThreadedAllocator<THide, 80> allocator;
 
 // IMPORTANT NOTE: 2048 is best for performance with THide beeing 4x u64
 // it has an impact of about 3x performance over bad sizes
