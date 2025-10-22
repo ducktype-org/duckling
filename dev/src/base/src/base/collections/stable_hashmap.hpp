@@ -156,7 +156,7 @@ namespace base {
 
 	private:
 
-		static constexpr usize  INITIAL_BUCKETS = 256;
+		static constexpr usize  INITIAL_BUCKETS = 16;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 		using KeyHash = u64;
@@ -174,7 +174,7 @@ namespace base {
 		};
 
 		std::vector<MRef<Node>>              buckets;
-		SingleTypeMemoryPoolAllocator<Node, 1024>  node_allocator;
+		SingleTypeMemoryPoolAllocator<Node, 64>  node_allocator;
 		u64                                  element_count = 0;
 
 		[[nodiscard]]

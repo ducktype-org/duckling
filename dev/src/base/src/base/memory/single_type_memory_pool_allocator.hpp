@@ -88,6 +88,12 @@ namespace base {
             return new_storage->get();
 		}
 
+        /**
+         * Destroys the given object without deallocating its memory.
+         * The allocator will treat the memory as still allocated.
+         * @note If object pointed to by obj_ref was not allocated by this allocator,
+         * behavior is undefined, EVEN IN DEV BUILDS.
+         */
         void justDestroy(Ref<T> obj_ref) {
             allocated_count--;
             Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);

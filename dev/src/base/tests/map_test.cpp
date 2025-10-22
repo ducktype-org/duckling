@@ -1,6 +1,7 @@
 #include <base/collections/stable_hashmap.hpp>
 
 #include <tester/tester.hpp>
+#include <random>
 
 template<usize Size>
 struct BigObject final {
@@ -38,11 +39,13 @@ public:
 
     template<u64 count>
 	void basicTest() {
-        base::StableHashMap20<BigObject<13>, BigObject<16>> map;
-        // base::HashMap<BigObject<13>, BigObject<16>> map;
+        std::minstd_rand rng(42);
+
+        // base::StableHashMap20<BigObject<13>, BigObject<16>> map;
+        base::HashMap<BigObject<13>, BigObject<16>> map;
         
         for (u64 i = 0; i < count; i++) {
-            map.put(i*17, i * 10);
+            map.put(rng(), rng() * 10);
         }
 
         u64 loop_count = 0;
