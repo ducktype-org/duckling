@@ -43,18 +43,21 @@ public:
 
         base::StableHashMap20<BigObject<13>, BigObject<16>> map;
         // base::HashMap<BigObject<13>, BigObject<16>> map;
+        // base::StableHashMap<BigObject<13>, BigObject<16>> map;
 
         u64 base_result = 0;
 
         for (u64 i = 0; i < count; i++) {
             auto v = rng();
             map.put(v, v * 10);
-
-            BigObject<16> val(0);
-            auto maybe_val = map.atMaybe(rng());
-            if (maybe_val.has_value()) {
-                val = **maybe_val;
-                base_result += val.data[0];
+        
+            for (int j = 0; j < 1; j++) {
+                BigObject<16> val(0);
+                auto maybe_val = map.atMaybe(rng());
+                if (maybe_val.has_value()) {
+                    val = **maybe_val;
+                    base_result += val.data[0];
+                }
             }
         }
 
@@ -64,8 +67,8 @@ public:
             ASSERT_EQUAL(value.data[0], key.data[0] * 10);
         }
         // ASSERT_TRUE(loop_count == count);
-        std::cerr << "loop_count" << loop_count << "\n";
-        std::cerr << "base_result" << base_result << "\n";
+        std::cerr << "loop_count: " << loop_count << "\n";
+        std::cerr << "base_result: " << base_result << "\n";
 	}
 };
 
