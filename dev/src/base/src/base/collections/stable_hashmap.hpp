@@ -239,6 +239,10 @@ namespace base {
 
 		~StableHashMap20() = default;
 
+		/**
+		 * This is a template, so we can can have const and non-const versions.
+		 */
+		template<class ValueT>
 		class Iterator final {
 			// end is represented by bucket_index == buckets.size(), and current_node == nullptr
 
@@ -247,15 +251,19 @@ namespace base {
 			// mref, since we have to represent "end" iterator.
 			MRef<Node> current_node;
 
+			MRef<Node>* buckets_array_ptr;
+
+			u64 buckets_size;
+
 		public:
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type   = u64;
-			using value_type        = DATA_T;
+			using value_type        = ValueT;
 			using pointer           = value_type*;
 			using reference         = value_type&;
 
-			Iterator(u64 bucket_index, Ref<Node> current_node) noexcept
-				: bucket_index(bucket_index), current_node(current_node) {}
+			Iterator(u64 bucket_index, Ref<Node> current_node, MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
+				: bucket_index(bucket_index), current_node(current_node), buckets_array_ptr(buckets_array_ptr), buckets_size(buckets_size) {}
 
 			Iterator(const Iterator&) = default;
 			Iterator(Iterator&&) = default;
@@ -277,16 +285,28 @@ namespace base {
 					bucket_index++;
 					current_node = nullptr;
 
-					while (bucket_index < buckets.size() and !buckets[bucket_index]) {
+					while (bucket_index < buckets_size and buckets_array_ptr[bucket_index] == nullptr) {
 						bucket_index++;
 					}
 
+					if (bucket_index < buckets_size) {
+						current_node = buckets_array_ptr[bucket_index].toOpt().value();
+					}
 				}
 				return *this;
 			}  
 
+			friend bool operator== (const Iterator& a, const Iterator& b) { 
+				return std::tie(a.bucket_index, a.current_node.get()) == std::tie(b.bucket_index, b.current_node.get());
+			};
+			friend bool operator!= (const Iterator& a, const Iterator& b) { 
+				return !(a == b);
+			};
+
 		};
 
+		using IteratorT = Iterator<DATA_T>;
+		using ConstIteratorT = Iterator<const DATA_T>;
 
 
 
@@ -314,6 +334,40 @@ namespace base {
 		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
 			return atMaybe(key).has_value();
+		}
+
+		IteratorT begin() RELEASE_NOEXCEPT {
+			u64 bucket_index = 0;
+			MRef<Node> current_node = nullptr;
+
+			while (bucket_index < buckets.size()) {
+				current_node = buckets[bucket_index];
+				if (current_node != nullptr) break;
+				bucket_index++;
+			}
+
+			return Iterator(bucket_index, current_node.toOpt().copyValueOr(nullptr), buckets.data(), buckets.size());	
+		}
+
+		IteratorT end() RELEASE_NOEXCEPT {
+			return Iterator(buckets.size(), nullptr, buckets.data(), buckets.size());
+		}
+
+		ConstIteratorT begin() const RELEASE_NOEXCEPT {
+			u64 bucket_index = 0;
+			MRef<Node> current_node = nullptr;
+
+			while (bucket_index < buckets.size()) {
+				current_node = buckets[bucket_index];
+				if (current_node != nullptr) break;
+				bucket_index++;
+			}
+
+			return ConstIterator(bucket_index, current_node.toOpt().copyValueOr(nullptr), buckets.data(), buckets.size());	
+		}
+
+		ConstIteratorT end() const RELEASE_NOEXCEPT {
+			return ConstIterator(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 	};
 }
