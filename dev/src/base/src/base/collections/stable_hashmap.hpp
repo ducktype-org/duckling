@@ -240,7 +240,16 @@ namespace base {
 		StableHashMap20(const StableHashMap20&) = delete;
 		StableHashMap20(StableHashMap20&&) = default;
 
-		~StableHashMap20() = default;
+		~StableHashMap20() {
+			for (auto& bucket: buckets) {
+				MRef<Node> current_node = bucket;
+				while (current_node) {
+					MRef<Node> next_node = current_node->next;
+					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					current_node = next_node;
+				}
+			}
+		};
 
 		/**
 		 * This is a template, so we can can have const and non-const versions.
