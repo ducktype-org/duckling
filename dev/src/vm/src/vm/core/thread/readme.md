@@ -105,7 +105,7 @@ pauses its execution loop and waits for the necessary data to become available b
 ## VmValue
 The [`VmValue`](./vmvalue.hpp) class is the key mechanism for bidirectional communication between the 
 external world (e.g the compiler or other C++ code) and the virtual machine's internal environment. It 
-functions as a data Transfer Object designed to safely package, transfer, and unpack data across in DVM.
+functions as a data transfer object designed to safely package, transfer, and unpack data across in DVM.
 
 The `VmValue`'s primary purpose is to enable the transfer of values that may have complex, hierarchical structures, 
 not just simple byte streams.

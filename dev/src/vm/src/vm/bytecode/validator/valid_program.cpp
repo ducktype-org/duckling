@@ -25,7 +25,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
-	// @TODO: #1306 We could get of copying of the whole program.
+	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
 	copy.insertCode(collection);
 	return copy;

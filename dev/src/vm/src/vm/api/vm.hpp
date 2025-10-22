@@ -49,8 +49,6 @@ namespace vm::api {
 	 * process before this endpoint is called.
 	 * @note The exit value of the program can be retrieved by the `getExitValue` endpoint.
 	 *
-	 * @param pid The identifier of the process to run the program on.
-	 * @param args A list of string arguments passed to the main function (argv).
 	 * @return Nothing if the program was run successfully or an API error otherwise.
 	 */
 	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
@@ -59,10 +57,6 @@ namespace vm::api {
 	 * @brief Run a function with a given name on DVM.
 	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
 	 *
-	 * @param pid The identifier of the process to run the program on.
-	 * @param func_name Name of the function to run.
-	 * @param args A list of arguments passed to the called function represented by the VmValue
-	 * class.
 	 * @return Nothing if the function was run successfully or an API error otherwise.
 	 */
 	std::expected<void, ApiError> runFunction(
@@ -73,7 +67,8 @@ namespace vm::api {
 	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
 	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
 	 * will be automatically freed when the process is destroyed.
-	 * @return The VmValue containing the return value of the last called function.
+	 * @return The VmValue containing the return value of the last called function or an API error
+	 * if no function was run or the execution didn't complete yet.
 	 */
 	std::expected<ExitValue, ApiError> getExitValue(PID pid);
 

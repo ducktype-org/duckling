@@ -59,7 +59,7 @@ endpoint which allows for skipping the lexing and parsing stage. In
 [builders](../bytecode/builders/readme.md) you can read more about a module which 
 helps in building the `CodeCollection` directly.
 
-This structure stores the program in the fat bytecode form and may contain bytecode which is considered invalid. Is serves as a simple container for DVMs code.
+This structure stores the program in the fat bytecode form and may contain bytecode which is considered invalid. It serves as a simple container for DVMs code.
 
 The key difference compared to `ParsedFile` is the representation of instructions —
 instead of raw strings, a variant (`std::variant`) is used here, which encloses
@@ -71,9 +71,9 @@ The types of arguments passed to instructions are represented in a similar way
 ### Valid Program ([`vm::code::ValidProgram`](../bytecode/validator/valid_program.hpp))
 `ValidProgram` is the main, high-level representation of the program maintained
 within the `Loader` module. Its invariant is the guarantee that the state stored
-in it is always correct. It's state can be expanded with the `tryInsertCode` function. This structure similarly to `CodeCollection` stores the program in the fat bytecode
-form, with the difference being that the program state is guaranteed to be valid. All functions/globals and types store here had to pass through the static verification phase
-The additional feature is that functions stored in valid program store only the reachable code. Any dead code that could exist in `CodeCollection` function is removed in the validation phase.
+in it is always correct. Its state can be expanded with the `tryInsertCode` function. This structure, similarly to `CodeCollection`, stores the program in the fat bytecode
+form, with the difference being that the program state is guaranteed to be valid. All functions/globals and types stored here had to pass through the static verification phase.
+An additional feature is that functions stored in valid program store only the reachable code. Any dead code that could exist in a `CodeCollection` function is removed in the validation phase.
 For more detailed explanation see [Bytecode Validation](../bytecode/validator/readme.md).
 
 ### Low-level machine program ([`vm::code::LowVMProgram`](../core/thread/low_program/low_program.hpp))
@@ -94,18 +94,18 @@ module:
     tables) that allow access at runtime.
 
 This form is the final product of the loading pipeline, and it is passed to the
-virtual machine's execution module - `VMProcess`.
+virtual machine's execution module — `VMProcess`.
 
 ### Representation of Types
 During loading, the way types are represented in the program also changes.
 Initially, in the `ParsedFile` structure, types are represented by the
-`TypeOfData` variant. Each DVM type (a member of the mentioned variant) contains only the information read from the file (e.g., names of base types and subtypes, method names, field names, etc. are represented as a `string`). The full set of `TypeOfData` types is stored in the `TypeContext` type set, which serves as the entry point for static verification and is later translated into a low level type set called `TypeMetadata`.
+`TypeOfData` variant. Each DVM type (a member of the mentioned variant) contains only the information read from the file (e.g., names of base types and component types, method names, field names, etc. are represented as a `string`). The full set of `TypeOfData` types is stored in the `TypeContext` type set, which serves as the entry point for static verification and is later translated into a low level type set called `TypeMetadata`.
 
 After passing through the [type validator](../bytecode/validator/readme.md), 
 the `TypeContext` set is translated into `TypeMetadata`. Each type is translated to a corresponding `vm::Type` - fully expanded objects, enriched with all
 the information needed at runtime, such as built virtual method tables
 (v-tables), fields inherited from superclasses, and direct references to
-subtypes (other `Type` objects) instead of their names.
+component types (other `Type` objects) instead of their names.
 
 ## High-Level Data Flow Architecture
 
@@ -124,8 +124,8 @@ The data flow is initiated by an API request to load code — `loadFiles` or `lo
     updated high-level program into the `Compiler` compiles newly added functions, 
     globals, types expands its internal state with the low-level representations. After
     this step, the compiler returns an updated `LowVMProgram` structure to `VMProcess`.
-6.  `VMProcess` replaces its old version of the executable code with the new one.
-7.  If an error occurs at any stage of loading or verification, the `Loader`
+4.  `VMProcess` replaces its old version of the executable code with the new one.
+5.  If an error occurs at any stage of loading or verification, the `Loader`
     interrupts the operation, its state remains unchanged, and a detailed
     description of the error (errors are defined `vm/loader/errors.hpp`) is
     passed to `VMProcess`, which in turn is passed to the user via an API response.
@@ -145,8 +145,8 @@ of the key modules involved in the loading process.
 
 ### VMProcess
 
-`VMProcess` is the main module for managing the loading and execution of code,
-handling `loadFiles/loadCode` requests coming from the external API (through the supervisor) which may come either from a user or the duckling compiler itself. 
+`VMProcess` is the main module for managing the loading and execution of code.
+It handles `loadFiles` and `loadCode` requests coming from the external API (through the supervisor) which may come either from a user or the duckling compiler itself. 
 
 -   `VMProcess` keeps the current state of the `LowVMProgram` which is the current
     low level representation (executable on the machine) of the code. It's

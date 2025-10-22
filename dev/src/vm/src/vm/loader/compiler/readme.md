@@ -27,13 +27,13 @@ a new function is injected.
     translate the method names to their IDs when lowering `virtual_call_lptr_method` instructions
     to micro bytecode.
     
-1.  **"Compiling" new globals:**
+2.  **"Compiling" new globals:**
     - New global variables from the fat-bytecode program are added to the global data set. 
     The order of globals in this structure is important. The index in the `std::vector` used 
     internally by the `ObjIdNameMap` is the value of the micro bytecode instruction argument
     in opcodes operating on global variables. 
     
-2.  **Compiling new functions:**
+3.  **Compiling new functions:**
     - New functions from the high-level `ValidProgram` are translated to their micro bytecode form and added to
     the LowProgram. This process is split into two steps;
       - **Preprocessing:** 

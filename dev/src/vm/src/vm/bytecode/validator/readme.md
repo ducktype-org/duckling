@@ -163,20 +163,20 @@ individually against a set of rules.
     *   **Invalid size**:
     A primitive can't have a size of zero.
 *   **Pointer**
-    *   **Non-existing subtype**: 
+    *   **Non-existent component type**: 
     A pointer can't reference a type which doesn't exist.
 *   **Fixed size table type**
-    *   **Non-existing subtype**: 
+    *   **Non-existent component type**: 
     A static table can't store a type that doesn't exist.
 *   **Dynamic size table type**
-    *   **Non-existing subtype**: 
+    *   **Non-existent component type**: 
     A dynamic table can't store a type that doesn't exist.
 *   **Function Type**
-    *   **Non-existing subtype**: 
+    *   **Non-existent component type**: 
     All parameter types and the return type declared by the function must exist in the program.
 *   **Variant Types**:
-    *   **Non-existing subtype**: 
-    All parameter types and the return type declared by the function exist in the program.
+    *   **Non-existent component type**: 
+    All types defined as alternatives in the variant must exist in the program.
     *   **Emptiness of variant alternatives**: 
     A variant type must not be empty; it must define at least one possible
     alternative type.
@@ -232,7 +232,7 @@ Once the verification step is done, the last step before the types reach the exe
     attached to the type's metadata, enabling dynamic dispatch at runtime.
 
 Building of the low-level type set can be done in two ways:
-`vm::code::detail::buildTypeMetadata()` builds the whole `TypeMetadata` object from the `TypeContext`. It assumes the `TypeContext` was verified beforehand.
+- `vm::code::detail::buildTypeMetadata()` builds the whole `TypeMetadata` object from the `TypeContext`. It assumes the `TypeContext` was verified beforehand.
 - `vm::code::detail::rebuildTypeMetadata()` on the other hand acts as an incremental builder
 of the `TypeMetadata`. It provides the functionality of "adding new types" to the existing `TypeMetadata`.
 
