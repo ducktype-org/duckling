@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "hashmap2.hpp"
+
 template<class K, class T>
 class MyHashMap final {
 	// @EH: this still perform alloc per element (argh!)
@@ -189,8 +191,10 @@ auto testHashMap() {
 
 int main() {
 	// auto count = testHashMap<base::StableHashMap<u64, u64>>();
+	// auto count = testHashMap<base::HashMap<u64, u64>>();
 	// auto count = testHashMap<MyHashMap<u64, u64>>();
-	auto count = testHashMap<MyCustomHashMap<u64>>();
+	// auto count = testHashMap<MyCustomHashMap<u64>>();
+	auto count = testHashMap<base::StableHashMap20<u64, u64>>();
 	std::cout << "Number of elements found: " << count << "\n";
 	return 0;
 }

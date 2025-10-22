@@ -5,4 +5,5 @@
 /**
  * @brief Function will not throw in Release build
  */
-#define NOEXCEPT noexcept(::base::BUILD_TYPE_RELEASE)
+#define NOEXCEPT noexcept(::base::IS_BUILD_TYPE_RELEASE)
+#define RELEASE_NOEXCEPT noexcept(::base::IS_BUILD_TYPE_RELEASE)
