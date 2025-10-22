@@ -2,6 +2,8 @@
 
 #include <base/config/build_type.hpp>
 
+#include <stdexcept>
+
 namespace compiler::frontend {
 
 	std::string ComponentHash::str() const {
@@ -18,7 +20,7 @@ namespace compiler::frontend {
 
 		IF_BUILD_TYPE_RELEASE({
 			// .str is not available in Release build
-			std::terminate();
+			throw std::logic_error("ComponentHash::str() is not available in Release build");
 		})
 	}
 }
