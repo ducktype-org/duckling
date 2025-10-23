@@ -7,6 +7,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 

@@ -97,7 +97,7 @@ namespace vm::code::builders {
 	 * Some operations support more arguments than their corresponding opcodes:
 	 * * In case of `load` and `store`, third argument gets its own `ext` opcode.
 	 */
-	class InstructionBuilder {
+	class InstructionBuilder final {
 		std::vector<vm::opargs::OpCodeArg> args;
 		OpKind                             kind{};
 		bool                               kind_set = false;

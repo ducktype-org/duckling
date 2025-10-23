@@ -8,7 +8,7 @@ namespace vm::code {
 	 * @brief A simple container for types which doesn't allow duplicates. This structure is the
 	 * main entry point for type verification and building.
 	 */
-	class TypeContext {
+	class TypeContext final {
 	public:
 		/**
 		 * @brief Inserts a new type. If a type is duplicated throws DuplicatedTypeError.
