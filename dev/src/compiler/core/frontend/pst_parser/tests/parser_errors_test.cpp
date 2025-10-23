@@ -420,4 +420,4 @@ public:
 
 std::vector<PSTErrorTests::GenExample*> PSTErrorTests::examples = {};
 
-TESTER_COMMON_MAIN("/src/compiler/core/pst_parser/tests/");
+TESTER_COMMON_MAIN("/src/compiler/core/frontend/pst_parser/tests/");
