@@ -177,9 +177,9 @@ namespace base {
 				: next(next), key_value(std::move(key), std::move(value)) {}
 		};
 
-		std::vector<MRef<Node>>              buckets;
+		std::vector<MRef<Node>>                  buckets;
 		SingleTypeMemoryPoolAllocator<Node, 64>  node_allocator;
-		u64                                  element_count = 0;
+		u64                                      element_count = 0;
 
 		[[nodiscard]]
 		static auto keyHash(const KEY_T& key) {
@@ -258,7 +258,12 @@ namespace base {
 	public:
 		StableHashMap20(): buckets(INITIAL_BUCKETS) {}
 		StableHashMap20(const StableHashMap20&) = delete;
-		StableHashMap20(StableHashMap20&&) = default;
+		StableHashMap20(StableHashMap20&& other) noexcept:
+			buckets(std::move(other.buckets)),
+			node_allocator(std::move(other.node_allocator)),
+			element_count(other.element_count) {
+			other.element_count = 0;
+		}
 
 		~StableHashMap20() {
 			for (auto& bucket: buckets) {

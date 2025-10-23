@@ -50,10 +50,18 @@ namespace base {
     public:
         SingleTypeMemoryPoolAllocator() = default;
         SingleTypeMemoryPoolAllocator(const SingleTypeMemoryPoolAllocator&) = delete;
-        SingleTypeMemoryPoolAllocator(SingleTypeMemoryPoolAllocator&&) = default;
+        SingleTypeMemoryPoolAllocator(SingleTypeMemoryPoolAllocator&& other) noexcept:
+            buffers(std::move(other.buffers)),
+            free_list(std::move(other.free_list)),
+            allocated_count(other.allocated_count),
+            next_buffer_idx(other.next_buffer_idx) {
+  
+            other.allocated_count = 0;
+            other.next_buffer_idx = BufferIndex{};
+        }
 
         SingleTypeMemoryPoolAllocator& operator=(const SingleTypeMemoryPoolAllocator&) = delete;
-        SingleTypeMemoryPoolAllocator& operator=(SingleTypeMemoryPoolAllocator&&) = default;
+        SingleTypeMemoryPoolAllocator& operator=(SingleTypeMemoryPoolAllocator&&) = delete;
 
 
         /**
