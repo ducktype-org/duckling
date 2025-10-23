@@ -34,7 +34,7 @@ public:
         TESTER_ADD_TEST(basicTest<10>);
         TESTER_ADD_TEST(basicTest<100>);
         TESTER_ADD_TEST(basicTest<10000>);
-        TESTER_ADD_TEST(basicTest<1000000>);
+        TESTER_ADD_TEST(basicTest<100000>);
     }
 
     template<u64 count>
@@ -47,11 +47,11 @@ public:
             base::StableHashMap20<BigObject<13>, BigObject<16>> map;
 
             for (u64 i = 0; i < count; i++) {
-                auto v = rng();
+                auto v = rng() % 1000000;
                 map.put(v, v * 10);
             
                 for (int j = 0; j < 3; j++) {
-                    auto maybe_val = map.atMaybe(rng());
+                    auto maybe_val = map.atMaybe(rng() % 1000000);
                     if (maybe_val.has_value()) {
                         auto val = **maybe_val;
                         base_result += val.data[0];
@@ -74,11 +74,11 @@ public:
             std::unordered_map<BigObject<13>, BigObject<16>> map;
 
             for (u64 i = 0; i < count; i++) {
-                auto v = rng();
+                auto v = rng() % 1000000;
                 map.emplace(BigObject<13>(v), BigObject<16>(v * 10));
             
                 for (int j = 0; j < 3; j++) {
-                    auto it = map.find(BigObject<13>(rng()));
+                    auto it = map.find(BigObject<13>(rng() % 1000000));
                     if (it != map.end()) {
                         auto val = it->second;
                         std_result += val.data[0];

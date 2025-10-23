@@ -287,6 +287,12 @@ namespace base {
 
 			u64 buckets_size;
 
+			Iterator(u64 bucket_index, MRef<Node> current_node, MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
+				: bucket_index(bucket_index), current_node(current_node), buckets_array_ptr(buckets_array_ptr), buckets_size(buckets_size) {}
+
+
+			friend class StableHashMap20;
+
 		public:
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type   = std::ptrdiff_t;
@@ -294,9 +300,8 @@ namespace base {
 			using pointer           = value_type*;
 			using reference         = value_type&;
 
-			Iterator(u64 bucket_index, MRef<Node> current_node, MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
-				: bucket_index(bucket_index), current_node(current_node), buckets_array_ptr(buckets_array_ptr), buckets_size(buckets_size) {}
-
+			Iterator(): bucket_index(u64(-1)), current_node(nullptr), buckets_array_ptr(nullptr), buckets_size(0) {}
+			
 			Iterator(const Iterator&) = default;
 			// Iterator(Iterator&&) = default;
 			Iterator& operator=(const Iterator&) = default;
@@ -372,6 +377,8 @@ namespace base {
 
 			element_count++;
 			maybeRehash();
+
+			return true;
 		}
 
 		[[nodiscard]]
