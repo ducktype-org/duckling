@@ -163,7 +163,5 @@ namespace base {
         u64 allocated_count = 0;
 
         BufferIndex next_buffer_idx = {0, 0};
-
-
     };
 }

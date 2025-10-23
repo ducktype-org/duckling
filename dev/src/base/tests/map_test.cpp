@@ -152,15 +152,25 @@ public:
 
         base::StableHashMap20<u64, u64> moved_map = std::move(map);
 
+        std::cerr << "1\n";
+
         ASSERT_EQUAL(map.size(), 0);
+
+        std::cerr << "1.1\n";
+        
         ASSERT_TRUE(not map.contains(1));
         ASSERT_TRUE(not map.contains(2));
         ASSERT_TRUE(not map.contains(3));
+
+        std::cerr << "2\n";
 
         ASSERT_EQUAL(moved_map.size(), 3);
         ASSERT_TRUE(moved_map.contains(1));
         ASSERT_TRUE(moved_map.contains(2));
         ASSERT_TRUE(moved_map.contains(3));
+
+        std::cerr << "3\n";
+
 
         ASSERT_EQUAL(moved_map[1], 10ull);
         ASSERT_EQUAL(moved_map[2], 20ull);
