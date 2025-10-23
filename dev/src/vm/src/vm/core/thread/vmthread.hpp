@@ -10,6 +10,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
