@@ -1,8 +1,5 @@
 #include "instruction.hpp"
 
-#include "../config.hpp"  // IWYU pragma: keep
-
-#include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 
 namespace vm {

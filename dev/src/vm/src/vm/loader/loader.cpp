@@ -10,25 +10,18 @@
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 
-#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
+// #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
 
 #include <expected>
-#include <variant>
 #include <vector>
 
 using namespace vm::loader;
