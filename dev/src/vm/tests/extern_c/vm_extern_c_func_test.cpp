@@ -48,7 +48,8 @@ private:
 								.functions   = {},
 								.types       = {},
 								.global_data = {},
-								.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
+								.external_c_functions
+								= { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
 							}
 			)
 			                .has_value());
