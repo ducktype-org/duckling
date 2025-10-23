@@ -48,7 +48,7 @@ private:
 								.functions   = {},
 								.types       = {},
 								.global_data = {},
-								.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(simple::add, pid) },
+								.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
 							}
 			)
 			                .has_value());
@@ -70,9 +70,9 @@ private:
 			          .types                = {},
 			          .global_data          = {},
 			          .external_c_functions = {
-						  VM_INSTANCE_EXT_C_FUNC(cpp_vector::vecSpawn, pid),
-						  VM_INSTANCE_EXT_C_FUNC(cpp_vector::vecPushBack, pid),
-						  VM_INSTANCE_EXT_C_FUNC(cpp_vector::vecSize, pid),
+						  VM_INSTANCE_EXT_C_FUNC(vecSpawn, cpp_vector::vecSpawn, pid),
+						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, cpp_vector::vecPushBack, pid),
+						  VM_INSTANCE_EXT_C_FUNC(vecSize, cpp_vector::vecSize, pid),
 					  } }
 				).has_value()
 			);
