@@ -4,7 +4,6 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
-#include <frontend/module_tree/component_hash.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -14,6 +13,7 @@
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
+#include <hashing/component_hash.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>

@@ -10,7 +10,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <pst_parser/elements/includes/basic.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>

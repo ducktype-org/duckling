@@ -1,6 +1,5 @@
 #pragma once
 
-#include "component_hash.hpp"
 #include "source_file.hpp"
 
 #include <base/collections/maps.hpp>
@@ -9,6 +8,7 @@
 #include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
+#include <hashing/component_hash.hpp>
 
 #include <regex>
 #include <string>
@@ -123,7 +123,7 @@ namespace compiler::frontend {
 		 * @param module_id ModuleID of the module to get the component hash for.
 		 */
 		[[nodiscard]]
-		static const ComponentHash& getComponentHash(ModuleID module_id);
+		static const hashing::ComponentHash& getComponentHash(ModuleID module_id);
 
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
@@ -162,7 +162,7 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-		base::Optional<ComponentHash>                     m_component_hash;
+		base::Optional<hashing::ComponentHash>            m_component_hash;
 		/**
 		 * Package ID associated with this module tree.
 		 * Used for component hash calculation.

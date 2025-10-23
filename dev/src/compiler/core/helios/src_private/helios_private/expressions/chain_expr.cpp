@@ -16,10 +16,10 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

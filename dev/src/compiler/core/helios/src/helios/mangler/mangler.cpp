@@ -7,9 +7,9 @@
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <pst_parser/element_kind.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/element_kind.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/except/exceptions.hpp>

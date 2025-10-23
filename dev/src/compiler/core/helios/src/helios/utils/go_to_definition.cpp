@@ -4,7 +4,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <pst_parser/elements/includes/basic.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <query_framework/context.hpp>
 
