@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/ctv/ctv.hpp>
+#include <ctv/ctv.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 

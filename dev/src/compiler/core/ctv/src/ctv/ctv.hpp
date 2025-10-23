@@ -19,12 +19,20 @@ namespace compiler::ctv {
 		class UnitCTV {};
 
 	private:
+		// @TODO: Add Support for 128 bit integers
+		// TODOP: Add issue?
 		using Storage
-			= std::variant<UnitCTV, i16, i32, i64, i128, f16, f32, f64, f128, bool, tsh::SymbolType<>>;
+			= std::variant<UnitCTV, i16, i32, i64, f16, f32, f64, f128, bool, tsh::SymbolType<>>;
 		Storage value;
 
 	public:
 		CompileTimeValue();
+
+		/**
+		 * @brief Template constructor of CTV for all types which exist in the Storage variant.
+		 */
+		template<typename T>
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) CompileTimeValue(T val): value(val) {}
 
 		/**
 		 * @brief Returns a constant reference to the CTVs internal value storage.
@@ -63,11 +71,12 @@ namespace compiler::ctv {
 		 */
 		[[nodiscard]] base::Optional<i64> getI64() const;
 
-		/**
-		 * @brief Retrieves the integer value from the CTV, converting smaller integers if necessary.
-		 * @return A i128 value or an empty optional if the CTV didn't store an integer.
-		 */
-		[[nodiscard]] base::Optional<i128> getI128() const;
+		// /**
+		//  * @brief Retrieves the integer value from the CTV, converting smaller integers if
+		//  necessary.
+		//  * @return A i128 value or an empty optional if the CTV didn't store an integer.
+		//  */
+		// [[nodiscard]] base::Optional<i128> getI128() const;
 
 		/**
 		 * @brief Retrieves the float value from the CTV.
@@ -90,7 +99,7 @@ namespace compiler::ctv {
 		/**
 		 * @brief Retrieves the float value from the CTV.
 		 * @return A f80 value or an empty optional if the CTV didn't store a float.
-         * TODOP: Needed?
+		 * TODOP: Needed?
 		 */
 		[[nodiscard]] base::Optional<f80> getF80() const;
 
@@ -121,18 +130,18 @@ namespace compiler::ctv {
 		 */
 		[[nodiscard]] base::Optional<i64> asI64() const;
 
-		/**
-		 * @brief Retrieves the float value from the CTV.
-		 * @return A i128 value or an empty optional if the CTV didn't store a float.
-		 */
-		[[nodiscard]] base::Optional<i128> asI128() const;
+		// /**
+		//  * @brief Retrieves the float value from the CTV.
+		//  * @return A i128 value or an empty optional if the CTV didn't store a float.
+		//  */
+		// [[nodiscard]] base::Optional<i128> asI128() const;
 	};
 
 	/**
 	 * @brief Creates a CompileTimeValue with the smallest possible integer type to hold the value.
 	 */
 	// TODOP: Maybe this should be a class member.
-	inline CompileTimeValue makeMinimizedCTV(i128 val) {
+	inline CompileTimeValue makeMinimizedCTV(i64 val) {
 		if (val >= std::numeric_limits<i16>::min() && val <= std::numeric_limits<i16>::max())
 			return CompileTimeValue{ static_cast<i16>(val) };
 		else if (val >= std::numeric_limits<i32>::min() && val <= std::numeric_limits<i32>::max())

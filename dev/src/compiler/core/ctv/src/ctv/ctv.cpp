@@ -62,7 +62,6 @@ namespace compiler::ctv {
 	DEFINE_DEFAULT_CTV_GETTER(I16, i16);
 	DEFINE_DEFAULT_CTV_GETTER(I32, i32);
 	DEFINE_DEFAULT_CTV_GETTER(I64, i64);
-	DEFINE_DEFAULT_CTV_GETTER(I128, i128);
 	DEFINE_DEFAULT_CTV_GETTER(F16, f16);
 	DEFINE_DEFAULT_CTV_GETTER(F32, f32);
 	DEFINE_DEFAULT_CTV_GETTER(F64, f64);
@@ -108,7 +107,7 @@ namespace compiler::ctv {
 		);
 	}
 
-	base::Optional<i128> CompileTimeValue::asI128() const {
+	base::Optional<i64> CompileTimeValue::asI64() const {
 		return std::visit(
 			[](auto&& val) -> base::Optional<i128> {
 				using T = std::decay_t<decltype(val)>;

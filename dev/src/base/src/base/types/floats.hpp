@@ -8,17 +8,34 @@
 #pragma once
 
 #include <stdfloat>
-#if defined(__STDCPP_FLOAT64_T__)
+#if defined(__STDCPP_FLOAT16_T__) && defined(__STDCPP_FLOAT32_T__) \
+	&& defined(__STDCPP_FLOAT64_T__) && defined(__STDCPP_FLOAT_128_T__)
 using f16  = std::float16_t;
 using f32  = std::float32_t;
 using f64  = std::float64_t;
 using f128 = std::float128_t;
 #else
-	#include <cstdint>
+	#warning "Using fallback floating_point types. C++23 <stdfloat> support is not detected"
+
 // Fallbacks if types aren't defined
-// TODOP: Why can't we use float16_tc
-using f16  = uint16_t;  // nothing better for that
-using f32  = float;
-using f64  = double;
+using f16 = float;  // Float is 32-bit, but theres nothing better for that without `std::float16_t`.
+using f32 = float;
+using f64 = double;
 using f128 = long double;
+
+#endif
+using f80 = long double;
+
+#if defined(__STDCPP_FLOAT16_T__) 
+	#warning "Hello"
+#endif
+
+#if defined(__STDCPP_FLOAT32_T__) 
+	#warning "Hello"
+#endif
+#if defined(__STDCPP_FLOAT64_T__) 
+	#warning "Hello"
+#endif
+#if defined(__STDCPP_FLOAT128_T__) 
+	#warning "Hello"
 #endif

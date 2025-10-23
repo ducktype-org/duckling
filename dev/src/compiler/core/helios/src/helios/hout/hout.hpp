@@ -10,7 +10,7 @@
 #include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
 #include "hout_fd.hpp"        // IWYU pragma: keep
 
-#include <helios/ctv/ctv.hpp>
+#include <ctv/ctv.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/str/string_id.hpp>

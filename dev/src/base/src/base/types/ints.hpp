@@ -28,6 +28,15 @@ using uchar = unsigned char;
 using byte  = std::byte;
 using usize = std::size_t;
 
+// #if defined (__GNUC__) || defined (__clang__)
+//     // TODOP: Possible extension?
+//     using u128 = unsigned __int128;
+//     using i128 = __int128;
+// #endif
+
+
+
+
 // Code might break if following does not hold:
 static_assert(sizeof(byte) == sizeof(char));
 static_assert(sizeof(byte) == sizeof(u8));

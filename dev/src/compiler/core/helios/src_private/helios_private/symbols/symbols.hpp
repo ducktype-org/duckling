@@ -6,7 +6,7 @@
 
 #include "generated_symbol_data.hpp"
 
-#include <helios/ctv/ctv.hpp>
+#include <ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>

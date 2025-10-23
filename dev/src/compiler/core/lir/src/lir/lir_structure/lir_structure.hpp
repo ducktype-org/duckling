@@ -2,7 +2,7 @@
 
 #include "function_forward.hpp"  // IWYU pragma: keep
 
-#include <helios/ctv/ctv.hpp>
+#include <ctv/ctv.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -111,7 +111,7 @@ namespace compiler::lir {
 
 		LirGlobalType type;
 
-		base::Optional<helios::CompileTimeValue> initial_value;
+		base::Optional<ctv::CompileTimeValue> initial_value;
 
 	private:
 		LirGlobal(
@@ -119,7 +119,7 @@ namespace compiler::lir {
 			const tsl::TypeLayout&                   layout,
 			const base::StrID&                       mangled_name,
 			const LirGlobalType                      type          = LirGlobalType::Variable,
-			base::Optional<helios::CompileTimeValue> initial_value = {}
+			base::Optional<ctv::CompileTimeValue> initial_value = {}
 		):
 			  helios_id(helios_id),
 			  layout(std::make_shared<tsl::TypeLayout>(layout)),

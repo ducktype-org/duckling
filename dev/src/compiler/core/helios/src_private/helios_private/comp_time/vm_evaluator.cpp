@@ -14,7 +14,7 @@ namespace {
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
-		vm::PID pid, const compiler::helios::CompileTimeValue& ctv
+		vm::PID pid, const compiler::ctv::CompileTimeValue& ctv
 	) {
 		variant_match(ctv.getStorage()) {
 			variant_case(i64, val) {

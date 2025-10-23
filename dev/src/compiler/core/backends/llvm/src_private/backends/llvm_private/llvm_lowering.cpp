@@ -42,7 +42,7 @@ namespace {
 	 * @param llvm_type The expected type.
 	 * @return The created llvm::Constant*.
 	 */
-	auto ctvToLLVMConstant(const compiler::helios::CompileTimeValue& ctv, llvm::Type* llvm_type) {
+	auto ctvToLLVMConstant(const compiler::ctv::CompileTimeValue& ctv, llvm::Type* llvm_type) {
 		variant_match(ctv.getStorage()) {
 			variant_case(i64, val) {
 				if (!llvm_type->isIntegerTy()) {

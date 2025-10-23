@@ -1,7 +1,7 @@
 #include "comp_time.hpp"
 
 #include <backends/dvm/backend.hpp>
-#include <helios/ctv/ctv.hpp>
+#include <ctv/ctv.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
