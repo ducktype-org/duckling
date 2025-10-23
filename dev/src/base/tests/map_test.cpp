@@ -35,6 +35,9 @@ public:
         TESTER_ADD_TEST(basicTest<100>);
         TESTER_ADD_TEST(basicTest<10000>);
         TESTER_ADD_TEST(basicTest<100000>);
+        TESTER_ADD_TEST(containsTest);
+        TESTER_ADD_TEST(clearTest);
+        TESTER_ADD_TEST(moveTest);
     }
 
     template<u64 count>
@@ -51,7 +54,11 @@ public:
                 map.put(v, v * 10);
             
                 for (int j = 0; j < 3; j++) {
-                    auto maybe_val = map.atMaybe(rng() % 1000000);
+                    auto new_v = rng() % 1000000;
+                    auto maybe_val = map.atMaybe(new_v);
+
+                    ASSERT_EQUAL(maybe_val.has_value(), map.contains(new_v));
+
                     if (maybe_val.has_value()) {
                         auto val = **maybe_val;
                         base_result += val.data[0];
@@ -62,6 +69,11 @@ public:
             
             for (auto& [key, value]: map) {
                 base_loop_count++;
+                ASSERT_EQUAL(value.data[0], key.data[0] * 10);
+            }
+
+            const auto& const_map = map;
+            for (auto& [key, value]: const_map) {
                 ASSERT_EQUAL(value.data[0], key.data[0] * 10);
             }
         }
@@ -97,6 +109,63 @@ public:
         ASSERT_EQUAL(base_result, std_result);
         
 	}
+
+    void containsTest() {
+        base::StableHashMap20<u64, u64> map;
+        map.put(1ull, 10ull);
+
+        ASSERT_TRUE(map.contains(1ull));
+        ASSERT_TRUE(not map.contains(2ull));
+        ASSERT_TRUE(not map.contains(3ull));
+
+
+        map.put(2ull, 20ull);
+        map.put(3ull, 30ull);
+
+        ASSERT_TRUE(map.contains(1ull));
+        ASSERT_TRUE(map.contains(2ull));
+        ASSERT_TRUE(map.contains(3ull));
+        ASSERT_TRUE(not map.contains(4ull));
+    }
+
+    void clearTest() {
+        base::StableHashMap20<u64, u64> map;
+        map.put(1ull, 10ull);
+        map.put(2ull, 20ull);
+        map.put(3ull, 30ull);
+
+        ASSERT_EQUAL(map.size(), 3);
+
+        map.clear();
+
+        ASSERT_EQUAL(map.size(), 0);
+        ASSERT_TRUE(not map.contains(1));
+        ASSERT_TRUE(not map.contains(2));
+        ASSERT_TRUE(not map.contains(3));
+    }
+
+    void moveTest() {
+        base::StableHashMap20<u64, u64> map;
+        map.put(1ull, 10ull);
+        map.put(2ull, 20ull);
+        map.put(3ull, 30ull);
+
+        base::StableHashMap20<u64, u64> moved_map = std::move(map);
+
+        ASSERT_EQUAL(map.size(), 0);
+        ASSERT_TRUE(not map.contains(1));
+        ASSERT_TRUE(not map.contains(2));
+        ASSERT_TRUE(not map.contains(3));
+
+        ASSERT_EQUAL(moved_map.size(), 3);
+        ASSERT_TRUE(moved_map.contains(1));
+        ASSERT_TRUE(moved_map.contains(2));
+        ASSERT_TRUE(moved_map.contains(3));
+
+        ASSERT_EQUAL(moved_map[1], 10ull);
+        ASSERT_EQUAL(moved_map[2], 20ull);
+        ASSERT_EQUAL(moved_map[3], 30ull);
+    }
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");

@@ -283,11 +283,11 @@ namespace base {
 			// mref, since we have to represent "end" iterator.
 			MRef<Node> current_node;
 
-			MRef<Node>* buckets_array_ptr;
+			const MRef<Node>* buckets_array_ptr;
 
 			u64 buckets_size;
 
-			Iterator(u64 bucket_index, MRef<Node> current_node, MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
+			Iterator(u64 bucket_index, MRef<Node> current_node, const MRef<Node>* buckets_array_ptr, u64 buckets_size) noexcept
 				: bucket_index(bucket_index), current_node(current_node), buckets_array_ptr(buckets_array_ptr), buckets_size(buckets_size) {}
 
 
@@ -411,8 +411,8 @@ namespace base {
 			return {};
 		}
 
-		DATA_T& operator[](const KEY_T& key) { return *atMaybe(key); }
-		const DATA_T& operator[](const KEY_T& key) const { return *atMaybe(key); }
+		DATA_T& operator[](const KEY_T& key) { return * *atMaybe(key); }
+		const DATA_T& operator[](const KEY_T& key) const { return * *atMaybe(key); }
 
 		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
@@ -498,7 +498,7 @@ namespace base {
 				bucket_index++;
 			}
 
-			return ConstIteratorT(bucket_index, current_node.toOpt().copyValueOr(nullptr), buckets.data(), buckets.size());	
+			return ConstIteratorT(bucket_index, current_node, buckets.data(), buckets.size());	
 		}
 
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
