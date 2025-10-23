@@ -21,38 +21,68 @@ namespace vm::code {
 	 * @brief `instructions` namespace encapsulates available VM instructions.
 	 */
 	namespace instructions {
-#define HANDLE_INSTR_0ARGS(opcode)                                                    \
-	struct Op_##opcode final: ElementBase {                                           \
-		using ArgTypes = std::tuple<>;                                                \
-		constexpr bool operator==(const Op_##opcode&) const noexcept { return true; } \
-	};
+#define DECLARE_0ARGS()
+#define DECLARE_1ARGS(ARG0) ARG0 arg0;
+#define DECLARE_2ARGS(ARG0, ARG1) \
+	ARG0 arg0;                    \
+	ARG1 arg1;
+#define DECLARE_3ARGS(ARG0, ARG1, ARG2) \
+	ARG0 arg0;                          \
+	ARG1 arg1;                          \
+	ARG2 arg2;
+#define DECLARE_4ARGS(ARG0, ARG1, ARG2, ARG3) \
+	ARG0 arg0;                                \
+	ARG1 arg1;                                \
+	ARG2 arg2;                                \
+	ARG3 arg3;
+#define GET_MACRO(_1, _2, _3, _4, NAME, ...) NAME
+#define DECLARE_ARGS(...)                         \
+	GET_MACRO(                                    \
+		__VA_ARGS__ __VA_OPT__(, ) DECLARE_4ARGS, \
+		DECLARE_3ARGS,                            \
+		DECLARE_2ARGS,                            \
+		DECLARE_1ARGS,                            \
+		DECLARE_0ARGS                             \
+	)                                             \
+	(__VA_ARGS__)
 
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                \
-	struct Op_##opcode final: ElementBase {                                  \
-		Op_##opcode(arg0_type arg0): arg0(arg0) {}                           \
-		using ArgTypes = std::tuple<arg0_type>;                              \
-		arg0_type      arg0;                                                 \
-		constexpr bool operator==(const Op_##opcode& other) const noexcept { \
-			return arg0 == other.arg0;                                       \
-		}                                                                    \
-	};
+		namespace detail {
+			template<typename T>
+			struct InstructionArgs;
+		}
 
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                       \
-	struct Op_##opcode final: ElementBase {                                    \
-		Op_##opcode(arg0_type arg0, arg1_type arg1): arg0(arg0), arg1(arg1) {} \
-		using ArgTypes = std::tuple<arg0_type, arg1_type>;                     \
-		arg0_type      arg0;                                                   \
-		arg1_type      arg1;                                                   \
-		constexpr bool operator==(const Op_##opcode& other) const noexcept {   \
-			return arg0 == other.arg0 && arg1 == other.arg1;                   \
-		}                                                                      \
+#define HANDLE_INSTR_ARGS(NAME, ...)                                                         \
+	struct Op_##NAME;                                                                        \
+	namespace detail {                                                                       \
+		template<>                                                                           \
+		struct InstructionArgs<Op_##NAME> {                                                  \
+			DECLARE_ARGS(__VA_ARGS__)                                                        \
+			constexpr bool operator==(const InstructionArgs<Op_##NAME>&) const = default;    \
+		};                                                                                   \
+	}                                                                                        \
+	struct Op_##NAME final: ElementBase, detail::InstructionArgs<Op_##NAME> {                \
+		using ArgTypes        = std::tuple<__VA_ARGS__>;                                     \
+		using ArgsWrapperType = detail::InstructionArgs<Op_##NAME>;                          \
+		template<typename... Args>                                                           \
+		requires std::is_constructible_v<ArgsWrapperType, Args...>                           \
+		      && (sizeof...(Args) == std::tuple_size_v<ArgTypes>) Op_##NAME(Args&&... args): \
+			  ArgsWrapperType{ std::forward<Args>(args)... } {}                              \
+		constexpr bool operator==(const Op_##NAME& other) const noexcept {                   \
+			return static_cast<const ArgsWrapperType&>(*this)                                \
+			    == static_cast<const ArgsWrapperType&>(other);                               \
+		}                                                                                    \
 	};
 
 #include <vm/bytecode/instruction_definitions.hpp>
 
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
+#undef DECLARE_0ARGS
+#undef DECLARE_1ARGS
+#undef DECLARE_2ARGS
+#undef DECLARE_3ARGS
+#undef DECLARE_4ARGS
+#undef GET_MACRO
+#undef DECLARE_ARGS
+#undef HANDLE_INSTR_ARGS
 
 		/**
 		 * @brief An extra instruction that represents a comment.
