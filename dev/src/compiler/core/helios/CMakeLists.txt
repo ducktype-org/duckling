@@ -29,10 +29,9 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
-	src/helios/ctv/ctv.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher LibVM MIR LIR DVMBackend)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp
 	USES Base TypeSystemHigher PstParser HELIOS
