@@ -1,6 +1,6 @@
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>

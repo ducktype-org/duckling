@@ -7,8 +7,8 @@
 
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
-#include <pst_parser/lang_parser_element.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <base/collections/optional.hpp>
 

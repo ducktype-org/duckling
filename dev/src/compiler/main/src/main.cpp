@@ -14,7 +14,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
 #include <base/except/exceptions.hpp>

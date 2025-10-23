@@ -2,7 +2,7 @@
 #include "query_type_from_definition.hpp"
 
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/query_impl.hpp>
