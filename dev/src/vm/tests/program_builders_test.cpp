@@ -1,7 +1,7 @@
 /**
  * @file dvm_backend_unit_tests.cpp
  */
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <tester/tester.hpp>
 

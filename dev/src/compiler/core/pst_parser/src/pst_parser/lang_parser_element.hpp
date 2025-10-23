@@ -5,9 +5,11 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
-#include <base/box.hpp>
-#include <base/ref.hpp>
-#include <base/variant.hpp>
+#include <frontend/module_tree/component_hash.hpp>
+
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <hashing/hash.hpp>
 #include <lexer/token.hpp>
@@ -25,44 +27,7 @@ namespace pst {
 
 	class PstVisitor;
 
-	/**
-	 * @brief This is a simple text implementation of element path that might still have some
-	 * conflicts
-	 *
-	 * It's supposed to uniquely identify elements in a parsed tree while ignoring some
-	 * changes(mostly symbols with different names changing).
-	 *
-	 * The path is constructed from words periods and brackets:
-	 *  - Capitalized words signify element type
-	 *  - lowercase words signify accessors such as left, right, block
-	 *  - numbers in brackets signify which element it signifies
-	 *
-	 * @note The current implementation is non-optimal but for now it should suffice. Currently it
-	 * does a lot of copying strings that might get better with some references or something similar.
-	 *
-	 * @todo Add source file/path information
-	 */
-	struct ElementPath final {
-		ElementPath() = default;
-
-		ElementPath(const ElementPath& parent, std::string_view ext):
-			  elements(parent.elements.begin(), parent.elements.end()) {
-			elements.emplace_back(ext);
-		}
-
-		friend constexpr auto hashDecompose(const ElementPath& t) noexcept {
-			return std::tie(t.elements);
-		}
-
-		/**
-		 * @brief Return the path as a string by joining with '.'
-		 */
-		[[nodiscard]]
-		std::string str() const;
-
-	private:
-		std::vector<std::string> elements;
-	};
+	using ComponentHash = compiler::frontend::ComponentHash;
 
 	/**
 	 * @brief Base Element for all of the PST elements.
@@ -101,7 +66,11 @@ namespace pst {
 		friend class ClassStmt;
 
 	protected:
-		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
+		/**
+		 * @brief Map from stable hash to lang element for all created elements.
+		 * @note Used to view dependent tokens of node in the query graph.
+		 */
+		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
 		using InternalChild = Ref<LangElement>;
 
@@ -124,9 +93,7 @@ namespace pst {
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
-			  id(PstID::next()) {
-			pst_id_map.emplace(id, AccessLocked<LangElement>(CRef<LangElement>(this)));
-		}
+			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;
 		LangElement(LangElement&&)      = delete;
@@ -138,10 +105,12 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 		/**
-		 * @brief Get pst node the by id. Throws on non-existent id.
+		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
+		 * @note should not be used in query, currently used by by `queryPositionDependencies`
+		 * machinery for test/insight purposes.
 		 */
 		[[nodiscard]]
-		static AccessLocked<LangElement> getByID(u64);
+		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
 
 	protected:
 		void dprintPrefix(std::ostream& out) const override {
@@ -155,14 +124,15 @@ namespace pst {
 		 * @brief Calculates the Element paths for children of this element, has to be overriden for
 		 * elements that have unnamed children.
 		 */
-		virtual void calcElementPathsRecursive();
+		virtual void calcElementPathHashRecursive();
 
 		/**
 		 * @brief Calculates Element paths for this Element and children.
 		 */
-		void calcElementPaths(const ElementPath& path) {
-			element_path = { path, elementType() };
-			calcElementPathsRecursive();
+		void calcElementPathHash(const ComponentHash& path) {
+			// append element type to incoming ComponentHash path
+			element_path_hash = compiler::frontend::ComponentHash(path, elementType());
+			calcElementPathHashRecursive();
 		}
 
 		/**
@@ -170,9 +140,9 @@ namespace pst {
 		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
 		template<typename Element>
-		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ElementPath& path)
+		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ComponentHash& path)
 			const {
-			if (auto ref = access_ref.internalMut()) ref->calcElementPaths(path);
+			if (auto ref = access_ref.internalMut()) ref->calcElementPathHash(path);
 		}
 
 		/**
@@ -180,10 +150,13 @@ namespace pst {
 		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
 		template<typename Element, base::TemplateStringLiteral name>
-		void calcNamedChildPath(AccessInternal<Element, name>& access_ref, const ElementPath& path)
-			const {
+		void calcNamedChildPath(
+			AccessInternal<Element, name>& access_ref, const ComponentHash& path
+		) const {
 			if (auto ref = access_ref.internalMut())
-				ref->calcElementPaths({ path, std::string(name.value) });
+				ref->calcElementPathHash(
+					compiler::frontend::ComponentHash(path, std::string_view(name.value))
+				);
 		}
 
 		/**
@@ -192,10 +165,10 @@ namespace pst {
 		 */
 		template<typename Element>
 		void calcIndexedListChildPath(
-			std::span<AccessInternalAnonymous<Element>> vec, const ElementPath& path
+			std::span<AccessInternalAnonymous<Element>> vec, const ComponentHash& path
 		) const {
 			for (usize i = 0; i < vec.size(); i++) {
-				ElementPath child_path(path, std::format("[{}]", i));
+				ComponentHash child_path(path, std::format("[{}]", i));
 				calcChildPath(vec[i], child_path);
 			}
 		}
@@ -203,7 +176,7 @@ namespace pst {
 		/**
 		 * @brief Calculates Element paths for a completely ordered list of statements.
 		 */
-		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ElementPath&);
+		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ComponentHash&);
 
 	protected:
 		/**
@@ -354,11 +327,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const ElementPath& getElementPath() const {
+		const ComponentHash& getElementPathHash() const {
 			CORE_ASSERT(
-				element_path.has_value(), "element path not calculated for this " + elementType()
+				element_path_hash.has_value(),
+				"element path not calculated for this " + elementType()
 			);
-			return element_path.value();
+			return element_path_hash.value();
 		}
 
 		virtual void acceptVisitor(PstVisitor& visitor) const;
@@ -371,11 +345,11 @@ namespace pst {
 		std::vector<InternalSubElement>
 			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
 		base::Optional<AccessLocked<LangElement>>
-									parent;  ///< Parent element in PST if element is not root.
-		base::Optional<ElementPath> element_path;  ///< The Path that uniquely identifies the
-		                                           ///< element and allows to conserve some
-		                                           ///< information between compilations. Has no
-		                                           ///< value if it's incalculable.
+									  parent;  ///< Parent element in PST if element is not root.
+		base::Optional<ComponentHash> element_path_hash;  ///< The Path that uniquely identifies the
+		                                                  ///< element and allows to conserve some
+		                                                  ///< information between compilations. Has
+		                                                  ///< no value if it's incalculable.
 		base::Optional<HashType>
 			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
 		           ///< information between compilations. Has no value if it's incalculable.

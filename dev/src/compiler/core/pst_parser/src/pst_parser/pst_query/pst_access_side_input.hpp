@@ -1,18 +1,25 @@
 #pragma once
 
-#include "../pst_id.hpp"
+#include <base/except/exceptions.hpp>
 
+#include <query_framework/query_hash.hpp>
 #include <query_framework/query_input.hpp>
 
 namespace pst::internal {
-	struct PSTAccessKey {
-		PstID pst_id;
+	struct PSTAccessKey final {
+		query::QueryStableHash hash;
 
-		PSTAccessKey(PstID pst_id): pst_id(pst_id) {}
+		PSTAccessKey(query::QueryStableHash stable_hash): hash(stable_hash) {}
 
+		// @TODO: #1433 remove this method
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return pst_id.asInt();
+			CORE_PANIC("Unstable hash should not be used for PST access side input");
+		}
+
+		[[nodiscard]]
+		query::QueryStableHash queryStablePerfectHash() const {
+			return hash;
 		}
 	};
 

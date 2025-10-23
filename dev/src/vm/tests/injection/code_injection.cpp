@@ -1,6 +1,6 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
 #include <string>
 #include <vector>

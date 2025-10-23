@@ -6,8 +6,8 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
@@ -42,7 +42,8 @@ private:
 		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
+			auto module
+				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {

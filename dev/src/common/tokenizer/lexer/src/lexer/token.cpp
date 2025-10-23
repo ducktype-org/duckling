@@ -18,6 +18,19 @@ namespace lexer {
 		  source_position(position) {}
 
 	Token::Token(
+		Type type, base::RawView value, Tokens&& recursive, const dia::SourcePosition& position
+	):
+		  type(type),
+		  str_id(value),
+		  recursive(std::move(recursive)),
+		  source_position(position) {
+		CORE_ASSERT(
+			type == Type::NumLiteralGroup || type == Type::FormattedString,
+			"Recursive token constructor called on non recursive token type"
+		);
+	}
+
+	Token::Token(
 		Token::Type                type,
 		Tokens&&                   recursive,
 		Token&&                    sentinel_begin,
@@ -88,8 +101,26 @@ namespace lexer {
 		return { Type::NumLiteral, literal, position };
 	}
 
-	Token Token::makeTypeSpecifier(base::RawView literal, const dia::SourcePosition& position) {
+	Token Token::makeTypeSpecifier(const base::RawView literal, const dia::SourcePosition& position) {
 		return { Type::TypeSpecifier, literal, position };
+	}
+
+	Token Token::makeNumLiteralGroup(
+		base::RawView full_view, Token&& value, Token&& specifier, const dia::SourcePosition& position
+	) {
+		CORE_ASSERT(value.isNumLiteral(), "Value in literal group has to be a NumLiteral");
+		CORE_ASSERT(
+			specifier.isTypeSpecifier(), "Specifier in literal group has to be a TypeSpecifier"
+		);
+		Tokens sub_tokens{ std::move(value), std::move(specifier) };
+		return { Type::NumLiteralGroup, full_view, std::move(sub_tokens), position };
+	}
+
+	Token Token::makeNumLiteralGroup(
+		base::RawView full_view, Token&& value, const dia::SourcePosition& position
+	) {
+		CORE_ASSERT(value.isNumLiteral(), "Value in literal group has to be a NumLiteral");
+		return { Type::NumLiteralGroup, full_view, { std::move(value) }, position };
 	}
 
 	Token Token::makeString(const base::RawView string, const dia::SourcePosition& position) {
@@ -165,7 +196,8 @@ namespace lexer {
 	}
 
 	bool Token::isRecursive() const {
-		return type == Type::BracketGroup || type == Type::FormattedString;
+		return type == Type::BracketGroup || type == Type::FormattedString
+		    || type == Type::NumLiteralGroup;
 	}
 
 	bool Token::isSpecial() const { return type == Type::Special; }
@@ -209,6 +241,8 @@ namespace lexer {
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
+
+	bool Token::isNumLiteralGroup() const { return type == Type::NumLiteralGroup; }
 
 	bool Token::isTypeSpecifier() const { return type == Type::TypeSpecifier; }
 

@@ -1,0 +1,291 @@
+{
+    "position": {
+        "sourceStart": 0,
+        "sourceEnd": 127
+    },
+    "Top Level": [
+        {
+            "position": {
+                "sourceStart": 0,
+                "sourceEnd": 127
+            },
+            "Expr Stmt": {
+                "position": {
+                    "sourceStart": 0,
+                    "sourceEnd": 126
+                },
+                "Top Level Expression": {
+                    "expr": {
+                        "position": {
+                            "sourceStart": 0,
+                            "sourceEnd": 126
+                        },
+                        "Binary Operator": {
+                            "left_expr": {
+                                "position": {
+                                    "sourceStart": 0,
+                                    "sourceEnd": 111
+                                },
+                                "Binary Operator": {
+                                    "left_expr": {
+                                        "position": {
+                                            "sourceStart": 0,
+                                            "sourceEnd": 100
+                                        },
+                                        "Binary Operator": {
+                                            "left_expr": {
+                                                "position": {
+                                                    "sourceStart": 0,
+                                                    "sourceEnd": 86
+                                                },
+                                                "Binary Operator": {
+                                                    "left_expr": {
+                                                        "position": {
+                                                            "sourceStart": 0,
+                                                            "sourceEnd": 76
+                                                        },
+                                                        "Binary Operator": {
+                                                            "left_expr": {
+                                                                "position": {
+                                                                    "sourceStart": 0,
+                                                                    "sourceEnd": 65
+                                                                },
+                                                                "Binary Operator": {
+                                                                    "left_expr": {
+                                                                        "position": {
+                                                                            "sourceStart": 0,
+                                                                            "sourceEnd": 54
+                                                                        },
+                                                                        "Binary Operator": {
+                                                                            "left_expr": {
+                                                                                "position": {
+                                                                                    "sourceStart": 0,
+                                                                                    "sourceEnd": 41
+                                                                                },
+                                                                                "Binary Operator": {
+                                                                                    "left_expr": {
+                                                                                        "position": {
+                                                                                            "sourceStart": 0,
+                                                                                            "sourceEnd": 29
+                                                                                        },
+                                                                                        "Binary Operator": {
+                                                                                            "left_expr": {
+                                                                                                "position": {
+                                                                                                    "sourceStart": 0,
+                                                                                                    "sourceEnd": 20
+                                                                                                },
+                                                                                                "Binary Operator": {
+                                                                                                    "left_expr": {
+                                                                                                        "position": {
+                                                                                                            "sourceStart": 0,
+                                                                                                            "sourceEnd": 11
+                                                                                                        },
+                                                                                                        "Binary Operator": {
+                                                                                                            "left_expr": {
+                                                                                                                "position": {
+                                                                                                                    "sourceStart": 0,
+                                                                                                                    "sourceEnd": 2
+                                                                                                                },
+                                                                                                                "Value Expr": {
+                                                                                                                    "number": "100"
+                                                                                                                }
+                                                                                                            },
+                                                                                                            "operator": "+",
+                                                                                                            "right_expr": {
+                                                                                                                "position": {
+                                                                                                                    "sourceStart": 6,
+                                                                                                                    "sourceEnd": 11
+                                                                                                                },
+                                                                                                                "Value Expr": {
+                                                                                                                    "number": "123",
+                                                                                                                    "type_specifier": "i32"
+                                                                                                                }
+                                                                                                            }
+                                                                                                        }
+                                                                                                    },
+                                                                                                    "operator": "+",
+                                                                                                    "right_expr": {
+                                                                                                        "position": {
+                                                                                                            "sourceStart": 15,
+                                                                                                            "sourceEnd": 20
+                                                                                                        },
+                                                                                                        "Value Expr": {
+                                                                                                            "number": "987",
+                                                                                                            "type_specifier": "i64"
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            },
+                                                                                            "operator": "+",
+                                                                                            "right_expr": {
+                                                                                                "position": {
+                                                                                                    "sourceStart": 24,
+                                                                                                    "sourceEnd": 29
+                                                                                                },
+                                                                                                "Value Expr": {
+                                                                                                    "number": "100",
+                                                                                                    "type_specifier": "u64"
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    },
+                                                                                    "operator": "+",
+                                                                                    "right_expr": {
+                                                                                        "position": {
+                                                                                            "sourceStart": 33,
+                                                                                            "sourceEnd": 41
+                                                                                        },
+                                                                                        "Value Expr": {
+                                                                                            "number": "0b1010",
+                                                                                            "type_specifier": "i32"
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            },
+                                                                            "operator": "+",
+                                                                            "right_expr": {
+                                                                                "position": {
+                                                                                    "sourceStart": 45,
+                                                                                    "sourceEnd": 54
+                                                                                },
+                                                                                "Value Expr": {
+                                                                                    "number": "0o23423",
+                                                                                    "type_specifier": "u32"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    "operator": "+",
+                                                                    "right_expr": {
+                                                                        "position": {
+                                                                            "sourceStart": 59,
+                                                                            "sourceEnd": 65
+                                                                        },
+                                                                        "Value Expr": {
+                                                                            "number": "0xFF",
+                                                                            "type_specifier": "i64"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "operator": "+",
+                                                            "right_expr": {
+                                                                "position": {
+                                                                    "sourceStart": 69,
+                                                                    "sourceEnd": 76
+                                                                },
+                                                                "Round Group Expression": {
+                                                                    "inner_expr": {
+                                                                        "position": {
+                                                                            "sourceStart": 70,
+                                                                            "sourceEnd": 75
+                                                                        },
+                                                                        "Prefix Operator": {
+                                                                            "operator": "-",
+                                                                            "expression": {
+                                                                                "position": {
+                                                                                    "sourceStart": 71,
+                                                                                    "sourceEnd": 75
+                                                                                },
+                                                                                "Value Expr": {
+                                                                                    "number": "42",
+                                                                                    "type_specifier": "i32"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "operator": "+",
+                                                    "right_expr": {
+                                                        "position": {
+                                                            "sourceStart": 80,
+                                                            "sourceEnd": 86
+                                                        },
+                                                        "Value Expr": {
+                                                            "number": "3.14",
+                                                            "type_specifier": "f32"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "operator": "+",
+                                            "right_expr": {
+                                                "position": {
+                                                    "sourceStart": 90,
+                                                    "sourceEnd": 100
+                                                },
+                                                "Round Group Expression": {
+                                                    "inner_expr": {
+                                                        "position": {
+                                                            "sourceStart": 91,
+                                                            "sourceEnd": 99
+                                                        },
+                                                        "Prefix Operator": {
+                                                            "operator": "-",
+                                                            "expression": {
+                                                                "position": {
+                                                                    "sourceStart": 92,
+                                                                    "sourceEnd": 99
+                                                                },
+                                                                "Value Expr": {
+                                                                    "number": "2.718",
+                                                                    "type_specifier": "f64"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "operator": "+",
+                                    "right_expr": {
+                                        "position": {
+                                            "sourceStart": 103,
+                                            "sourceEnd": 111
+                                        },
+                                        "Value Expr": {
+                                            "number": "1.23e2",
+                                            "type_specifier": "f32"
+                                        }
+                                    }
+                                }
+                            },
+                            "operator": "+",
+                            "right_expr": {
+                                "position": {
+                                    "sourceStart": 115,
+                                    "sourceEnd": 126
+                                },
+                                "Round Group Expression": {
+                                    "inner_expr": {
+                                        "position": {
+                                            "sourceStart": 116,
+                                            "sourceEnd": 125
+                                        },
+                                        "Prefix Operator": {
+                                            "operator": "-",
+                                            "expression": {
+                                                "position": {
+                                                    "sourceStart": 117,
+                                                    "sourceEnd": 125
+                                                },
+                                                "Value Expr": {
+                                                    "number": "4.5e-1",
+                                                    "type_specifier": "f64"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    ]
+}

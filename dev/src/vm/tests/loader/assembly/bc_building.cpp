@@ -1,6 +1,6 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/str_utils.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>

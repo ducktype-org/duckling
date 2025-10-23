@@ -24,7 +24,7 @@
 #pragma once
 
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/thread/vmvalue.hpp>

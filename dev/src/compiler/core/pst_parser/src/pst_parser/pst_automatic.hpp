@@ -164,6 +164,33 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Parses a numeric value (with an optional type specifier) to @p result. Skips on
+		 * success, does nothing on failure.
+		 * @param result The place to store the parsed string.
+		 */
+		PSTAutomatic& one(tpc::NumericValue* result, [[maybe_unused]] bool ignorable = false) {
+			if (!state.ctokens().peek().is(lexer::Token::Type::NumLiteralGroup)) {
+				state.log(makeBox<tpc::NoNumericValueError>(state.getPosition()));
+				result->value = base::StrID("<error>");
+				result->type_specifier.reset();
+				if (!ignorable) skipNotSemicolon();
+				return *this;
+			}
+
+			el->addToken(state[0]);
+			const auto& token      = state.tokens().next();
+			const auto& sub_tokens = token.getRecursive();
+
+			result->value = sub_tokens[0].getValue();
+			if (sub_tokens.size() > 1)
+				result->type_specifier = sub_tokens[1].getValue();
+			else
+				result->type_specifier.reset();
+
+			return *this;
+		}
+
+		/**
 		 * @brief Parses an Element. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed element.
 		 */

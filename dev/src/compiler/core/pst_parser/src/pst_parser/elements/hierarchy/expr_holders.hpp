@@ -3,7 +3,7 @@
 #include "../lang_state_unmethods.hpp"
 #include "meta.hpp"
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>

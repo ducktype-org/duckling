@@ -32,7 +32,7 @@ int main(int argc, const char* argv[]) {
 	using compiler::frontend::ModuleTree;
 
 	base::Ref<ModuleTree> module_tree
-		= compiler::frontend::ModuleTreeBuilder::create(path_to_compile);
+		= compiler::frontend::ModuleTreeBuilder::createWithRandomPackageID(path_to_compile);
 
 	std::cerr << module_tree->prettyPrint();
 

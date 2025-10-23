@@ -5,12 +5,12 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <base/ints.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/str/string_id.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
@@ -29,16 +29,8 @@
 #include <vector>
 
 namespace vm {
-#ifdef USE_TAIL_CALLS
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		MicroInstruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                           \
-		MicroInstruction {                                                                 \
-			.nontc_opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, \
-			.arg1 = ARG_1                                                                  \
-		}
-#endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
@@ -87,11 +79,7 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
 
-#ifdef USE_TAIL_CALLS
-		auto opcode = OpFuns::getOpcodeFromOpFun(instr->tc_opfun);
-#else
-		auto opcode = static_cast<u16>(instr->nontc_opcode);
-#endif
+		auto opcode = std::to_underlying(getInstructionOpcode(*instr));
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
@@ -369,16 +357,16 @@ namespace vm {
 			opcode_label = {
 
 
-	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/bytecode/opcode_definitions.hpp>
+	#define HANDLE_MICRO_INSTR(opcode) (&&LABEL_##opcode),
+	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-	#undef HANDLE_OPCODE
+	#undef HANDLE_MICRO_INSTR
 			};
 
 		goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];
 
-	#define HANDLE_OPCODE(opcode_name)                                          \
+	#define HANDLE_MICRO_INSTR(opcode_name)                                     \
 		LABEL_##opcode_name: {                                                  \
 			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
 			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
@@ -388,19 +376,19 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];      \
 			}                                                                   \
 		}
-	#include <vm/bytecode/opcode_definitions.hpp>
+	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-	#undef HANDLE_OPCODE
+	#undef HANDLE_MICRO_INSTR
 
 	End:
 
 		POP_DIAGNOSTIC
 #elif defined(USE_SWITCH_CASE)
 		while (true) {
-			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
-	#define HANDLE_OPCODE(opcode_name)                                                              \
-	case low::OpcodeFix8::opcode_name: {                                                            \
+			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
+	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
+	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		DEBUG_LOG("Executed opcode: " << #opcode_name);                                             \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
@@ -409,8 +397,8 @@ namespace vm {
 			break;                                                                                  \
 		}                                                                                           \
 	}
-	#include <vm/bytecode/opcode_definitions.hpp>
-	#undef HANDLE_OPCODE
+	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+	#undef HANDLE_MICRO_INSTR
 
 			default: {
 				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));

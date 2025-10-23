@@ -1,7 +1,7 @@
 #include "server.hpp"
 
-#include <base/int_conv.hpp>
-#include <base/macros/diagnostics.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/preproc/diagnostics.hpp>
 
 #include <vm/api/api.hpp>
 

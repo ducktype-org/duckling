@@ -53,8 +53,8 @@ namespace pst {
 		/**
 		 * @brief A default override for lists that adds the index.
 		 */
-		void calcElementPathsRecursive() override {
-			calcIndexedListChildPath<ListElements>({ elements }, getElementPath());
+		void calcElementPathHashRecursive() override {
+			calcIndexedListChildPath<ListElements>({ elements }, getElementPathHash());
 		}
 	};
 }

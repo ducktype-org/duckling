@@ -13,10 +13,10 @@
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include <base/box.hpp>
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -25,15 +25,15 @@
 namespace compiler::helios::code {
 
 	/**
-	 * @brief Attemps to use given normal and named arguments as arguments for given function.
-	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
-	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated. Requires #1309.
+	 * @brief Attempts to use given positional and named arguments as arguments for given function.
+	 * @note invalidates positional and named_arguments (moves boxes and leaves them empty).
+	 * @TODO: #1029 in order to handle overloads, make positional_arguments and named_arguments not
+	 * get invalidated. Requires #1309.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
 		SymID                                  fun,
-		std::vector<Box<Expr>>&                normal_arguments,
+		std::vector<Box<Expr>>&                positional_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
 		auto decl = ctx.query<QueryDeclOfFun>(fun);
@@ -47,8 +47,8 @@ namespace compiler::helios::code {
 				if (named_arguments.contains(param.name)) {
 					used_named_args++;
 					return std::move(named_arguments.at(param.name));
-				} else if (normal_args_position < normal_arguments.size())
-					return std::move(normal_arguments.at(normal_args_position++));
+				} else if (normal_args_position < positional_arguments.size())
+					return std::move(positional_arguments.at(normal_args_position++));
 				else if (param.initial_value.has_value()) {
 					return param.initial_value->ref()->clone();
 				} else
@@ -68,7 +68,7 @@ namespace compiler::helios::code {
 			}
 		}
 
-		if (normal_args_position != normal_arguments.size()  // All arguments must be used.
+		if (normal_args_position != positional_arguments.size()  // All arguments must be used.
 		    or used_named_args != named_arguments.size())
 			return std::nullopt;
 
@@ -77,15 +77,16 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Attemps to use given normal and named arguments as arguments for given builtin function.
-	 * @note invalidates normal and named_arguments (may move expr from boxes and leave them empty).
-	 * @TODO: #1029 in order to handle overloads, make normal_arguments and named_arguments not get
-	 * invalidated.
+	 * @brief Attempts to use given positional and named arguments as arguments for given builtin
+	 * function.
+	 * @note invalidates positional and named_arguments (moves boxes and leaves them empty).
+	 * @TODO: #1029 in order to handle overloads, make positional_arguments and named_arguments not
+	 * get invalidated.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingBuiltin(
 		query::Context&                        ctx,
 		SymID                                  fun,
-		std::vector<Box<Expr>>&                normal_arguments,
+		std::vector<Box<Expr>>&                positional_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
 		auto call_type_result = ctx.query<QueryTypeOfSymbol>({ fun });
@@ -93,7 +94,7 @@ namespace compiler::helios::code {
 
 		tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
 
-		if (call_type.getType().getParameterTypes().size() != normal_arguments.size()
+		if (call_type.getType().getParameterTypes().size() != positional_arguments.size()
 		    || !named_arguments.empty())
 			return std::nullopt;  // Builtin functions don't support named arguments (for now).
 
@@ -101,7 +102,7 @@ namespace compiler::helios::code {
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
 			// @TODO: #1300 (for consideration)
 			auto coerced = coerceExpression(
-				std::move(normal_arguments[i]), call_type.getType().getParameterTypes()[i]
+				std::move(positional_arguments[i]), call_type.getType().getParameterTypes()[i]
 			);
 			if (coerced.hasError()) return std::nullopt;
 			coerced_arguments.emplace_back(std::move(coerced.value()));
@@ -112,22 +113,26 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Attemps to use given normal and named arguments as arguments for given function.
+	 * @brief Attempts to use given normal and named arguments as arguments for given function.
 	 */
 	base::Optional<Box<CallExpr>> attemptFitting(
 		query::Context&                        ctx,
 		SymID                                  fun,
-		std::vector<Box<Expr>>&                normal_arguments,
+		std::vector<Box<Expr>>&                positional_arguments,
 		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
 		switch (kind(fun)) {
 		case SymbolKind::Function:
 		case SymbolKind::FunctionDeclaration:
-			return attemptFittingFun(ctx, fun, normal_arguments, named_arguments);
+			return attemptFittingFun(ctx, fun, positional_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
-			return attemptFittingBuiltin(ctx, fun, normal_arguments, named_arguments);
+			return attemptFittingBuiltin(ctx, fun, positional_arguments, named_arguments);
 		default:
-			CORE_PANIC("Function candidate is neither a function nor a builtin function");
+			CORE_PANIC(base::strConcat(
+				"Function candidate \"",
+				name(fun),
+				"\" is not a function, builtin function, or class"
+			));
 		}
 	}
 
@@ -136,11 +141,12 @@ namespace compiler::helios::code {
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	) {
+		// @TODO: #1029 handle overloads
 		if (candidates.size() != 1)
 			throw base::NotYetImplemented("Overloading is not implemented yet");
 
 		// Unwrap and validate call arguments.
-		std::vector<Box<Expr>>                normal_arguments;
+		std::vector<Box<Expr>>                positional_arguments;
 		base::HashMap<base::StrID, Box<Expr>> named_arguments;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
@@ -154,13 +160,13 @@ namespace compiler::helios::code {
 			} else {
 				if (!named_arguments.empty())
 					return query::QError(errors::Failed());  // Normal argument after named one.
-				normal_arguments.emplace_back(std::move(arg_expr.value()));
+				positional_arguments.emplace_back(std::move(arg_expr.value()));
 			}
 		}
 
 		base::Optional<Box<CallExpr>> result;
 		for (const auto& fun: candidates) {
-			match_optional(attemptFitting(ctx, fun, normal_arguments, named_arguments)) {
+			match_optional(attemptFitting(ctx, fun, positional_arguments, named_arguments)) {
 				opt_some(call_res) {
 					if (result.has_value())
 						// @TODO: #1029 add proper diagnostic here

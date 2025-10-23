@@ -47,6 +47,6 @@ namespace pst {
 			return true;
 		}
 
-		void calcElementPathsRecursive() override;
+		void calcElementPathHashRecursive() override;
 	};
 }

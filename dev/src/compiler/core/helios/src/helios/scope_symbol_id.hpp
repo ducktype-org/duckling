@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace compiler::helios {
 	// Forward:
@@ -31,10 +31,10 @@ namespace compiler::helios {
 	private:
 		CRef<SymbolData> ref;
 
-		SymID(CRef<SymbolData> ref): ref(ref) {}
+		SymID(const CRef<SymbolData> ref): ref(ref) {}
+		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct ImplementationOf_QueryLookupInSymbol;
-		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;
 	};
@@ -55,21 +55,20 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Debug function to print scope and its parents IDs.
-		 * Usefull for debugging weird scope bugs.
-		 * @note: not used right now
-		 * @param scope
+		 * Useful for debugging weird scope bugs.
+		 * @param os The stream to print to.
 		 */
-		void debugPrintScopeAndParents();
+		void debugPrintScopeAndParents(std::ostream& os) const;
 
 	private:
 		Ref<ScopeData> ref;
 
-		ScopeID(Ref<ScopeData> ref): ref(ref) {}
+		ScopeID(const Ref<ScopeData> ref): ref(ref) {}
+		friend struct ScopeAccess_Functor;
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
 		friend struct ImplementationOf_QueryLookupInScopeAndParents;
-		friend struct ScopeAccess_Functor;
 	};
 
 }

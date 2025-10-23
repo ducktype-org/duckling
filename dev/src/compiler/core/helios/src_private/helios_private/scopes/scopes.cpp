@@ -7,6 +7,7 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
+#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
@@ -17,11 +18,11 @@
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/stable_container.hpp>
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
@@ -160,6 +161,7 @@ namespace compiler::helios {
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ClassConstructor:
@@ -421,6 +423,30 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
+			void visitMethod(pst::Access<pst::Method> meth) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *meth->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
+			void visitDestructor(pst::Access<pst::Destructor>) override {
+				output(std::vector<SymID>{});
+			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *cctor->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
 			void visitIf(pst::Access<pst::If>) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
@@ -436,7 +462,7 @@ namespace compiler::helios {
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
-				output(std::vector<SymID>());
+				output(std::vector<SymID>{});
 			}
 		};
 
@@ -553,7 +579,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<UKHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
+		static inline base::HashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// In the future calculate resulting string in comp time
@@ -578,13 +604,13 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto load(UKHash key) -> LoadResult {
+		static auto load(KHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
 				return QResWithACD{ extractResult(value.value()->data), (value.value())->acd };
 			return {};
 		}
 
-		static auto store(UKHash key, PResult res, query::ACD acd) -> QResult {
+		static auto store(KHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}
@@ -635,22 +661,22 @@ namespace compiler::helios {
 		return main_file_root_scope;
 	}
 
-	void ScopeID::debugPrintScopeAndParents() {
+	void ScopeID::debugPrintScopeAndParents(std::ostream& os) const {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.queryUnstablePerfectHash() << "("
-					  << (iter_scope.ref->related_pst_element.has_value()
-			                  ? iter_scope.ref->related_pst_element.value()
-			                        .illegalAccess()
-			                        .value()
-			                        ->elementType()
-			                  : "ROOT")
-					  << ")" << " -> ";
+			os << iter_scope.queryUnstablePerfectHash() << "("
+			   << (iter_scope.ref->related_pst_element.has_value()
+			           ? iter_scope.ref->related_pst_element.value()
+			                 .illegalAccess()
+			                 .value()
+			                 ->elementType()
+			           : "ROOT")
+			   << ")" << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();
 		}
-		std::cerr << "\n";
+		os << "\n";
 	}
 }

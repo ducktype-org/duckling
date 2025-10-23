@@ -2,8 +2,8 @@
 
 #include <helios/symbols/simple.hpp>
 
-#include <base/maps.hpp>
-#include <base/variant.hpp>
+#include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <iomanip>
 #include <set>

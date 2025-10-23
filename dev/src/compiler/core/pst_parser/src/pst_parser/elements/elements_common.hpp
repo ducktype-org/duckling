@@ -4,7 +4,7 @@
 #include "../pst_state_forward.hpp"
 #include "elements_list.hpp"  // IWYU pragma: export
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 namespace pst {
 	using lang_def::Keyword;

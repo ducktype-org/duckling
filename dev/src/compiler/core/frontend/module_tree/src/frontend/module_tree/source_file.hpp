@@ -1,12 +1,14 @@
 #pragma once
 
+#include "component_hash.hpp"
+
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/pst.hpp>
 
-#include <base/optional.hpp>
-#include <base/raw_view.hpp>
-#include <base/ref.hpp>
+#include <base/collections/optional.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -25,6 +27,8 @@ namespace compiler::frontend {
 		base::Optional<pst::PST<>> parse_tree;
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
+		base::Optional<ComponentHash>
+			component_hash;  //< Logical path hash for this file (module path + file name)
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
@@ -41,6 +45,11 @@ namespace compiler::frontend {
 		 *       The file content is reloaded from disk and the parse tree is cleared.
 		 */
 		void update();
+
+		/**
+		 * Invalidate the component hash for this source file.
+		 */
+		void invalidateComponentHash();
 
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
@@ -112,6 +121,8 @@ namespace compiler::frontend {
 		 * @throws Panics if the content is not found in the cache.
 		 */
 		[[nodiscard]] base::SharedView getCachedContent();
+
+		[[nodiscard]] const ComponentHash& getComponentHash();
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;

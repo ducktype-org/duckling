@@ -7,7 +7,7 @@
 #include "../../query_hash.hpp"
 #include "node_id.hpp"
 
-#include <base/bit256.hpp>
+#include <base/types/bit256.hpp>
 
 #include <query_framework/internal/query_data/query_id.hpp>
 
@@ -18,6 +18,6 @@ namespace query::internal {
 	 */
 	template<typename KeyType>
 	internal::NodeID makeNodeID(QueryID id, const KeyType& key) {
-		return NodeID(id, { .val = unstableHashKey(key) });
+		return NodeID(id, { .val = perfectHashKey(key) });
 	}
 }
