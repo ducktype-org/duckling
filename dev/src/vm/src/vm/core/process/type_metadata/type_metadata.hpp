@@ -2,7 +2,6 @@
 
 #include "type.hpp"
 
-#include <vm/bytecode/type_of_data.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm {
