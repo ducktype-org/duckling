@@ -8,8 +8,6 @@
 #include <token_source/source.hpp>
 
 namespace pst {
-	//@TODO: #1406 move pst_parser to frontend
-
 	// Used to not include full state definition
 	namespace internal {
 		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger);
