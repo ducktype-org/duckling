@@ -139,6 +139,10 @@ namespace base {
 	};
 
 
+	/**
+	 * Custom, Stable hash map implementation.
+	 * Its performance is similar or better then std::unordered_map, while keeping references always stable. 
+	 */
 	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
 	class StableHashMap20 final {
 
@@ -346,19 +350,32 @@ namespace base {
 		static_assert(std::forward_iterator<IteratorT>, "IteratorT must be a forward iterator");
 		static_assert(std::forward_iterator<ConstIteratorT>, "ConstIteratorT must be a forward iterator");
 
-
-		void put(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
+		/**
+		 * If the container doesn't store the key yet, then inserts value identified by the key.
+		 * @param key Data key
+		 * @param value The data
+		 * @returns true if a new key was inserted, false if the key already existed.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		bool put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto new_node
-				= node_allocator.allocateEmplace(Node{ nullptr, key, value });
+				= node_allocator.allocateEmplace(Node{ nullptr, std::forward<K>(key), std::forward<D>(value) });
 
-			addToBucket(keyToBucket(key), new_node);
+			// @TODO: PR: optimize it with contains+find as one pass:
+			// also.. this is a weird semantics, see if it breaks without it.
+			if (contains(new_node->key_value.key)) {
+				node_allocator.deallocateDestroy(new_node);
+				return false;
+			}
+
+			addToBucket(keyToBucket(new_node->key_value.key), new_node);
 
 			element_count++;
 			maybeRehash();
 		}
 
 		[[nodiscard]]
-		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
+		base::Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(keyToBucket(key));
 			while (current_node) {
 				if (current_node->key_value.key == key) return &current_node->key_value.value;
@@ -368,9 +385,84 @@ namespace base {
 		}
 
 		[[nodiscard]]
+		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(keyToBucket(key));
+			while (current_node) {
+				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			return {};
+		}
+
+		[[nodiscard]]
+		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(keyToBucket(key));
+			while (current_node) {
+				if (current_node->key_value.key == key) return current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			return {};
+		}
+
+		DATA_T& operator[](const KEY_T& key) { return *atMaybe(key); }
+		const DATA_T& operator[](const KEY_T& key) const { return *atMaybe(key); }
+
+		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
 			return atMaybe(key).has_value();
 		}
+
+		/**
+		 * @brief Erases value at @p key position if it exists.
+		 * The references to the erased value are invalidated.
+		 * @returns Whether a value was erased.
+		 */
+		bool erase(const KEY_T& key) RELEASE_NOEXCEPT {
+			u64 bucket_index = keyToBucket(key);
+			MRef<Node> current_node = buckets.at(bucket_index);
+			MRef<Node> previous_node = nullptr;
+
+			while (current_node) {
+				if (current_node->key_value.key == key) {
+					// found the node to erase
+					if (previous_node) {
+						previous_node->next = current_node->next;
+					}
+					else {
+						// erasing first node in bucket
+						buckets.at(bucket_index) = current_node->next;
+					}
+					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					element_count--;
+					return true;
+				}
+				previous_node = current_node;
+				current_node = current_node->next;
+			}
+			return false;
+		}
+
+		void clear() RELEASE_NOEXCEPT {
+			for (auto& bucket: buckets) {
+				MRef<Node> current_node = bucket;
+				while (current_node) {
+					node_allocator.justDestroy(current_node.toOpt().value());
+					current_node = current_node->next;
+				}
+				bucket = nullptr;
+			}
+			element_count = 0;
+		}
+
+		/**
+		 * Query the number of pairs stored in the container.
+		 * @return Number of pairs
+		 */
+		[[nodiscard]]
+		usize size() const {
+			return element_count;
+		}
+
 
 		IteratorT begin() RELEASE_NOEXCEPT {
 			u64 bucket_index = 0;
