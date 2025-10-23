@@ -73,7 +73,7 @@ namespace {
 
 namespace compiler::frontend {
 
-	const ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
+	const hashing::ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
 		Ref<ModuleTree> module = module_id.ref;
 		if (!module->m_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
@@ -199,7 +199,7 @@ namespace compiler::frontend {
 
 	void ModuleTree::updateComponentHash() {
 		// Get parent component hash if existsS
-		base::Optional<ComponentHash> parent_hash;
+		base::Optional<hashing::ComponentHash> parent_hash;
 		if (m_parent.has_value()) {
 			CORE_ASSERT(
 				m_parent.value()->m_component_hash.has_value(),
@@ -209,7 +209,7 @@ namespace compiler::frontend {
 		} else {
 			// root module tree, use package id as base
 			CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for module tree!");
-			m_component_hash.emplace(ComponentHash(m_package_id), m_name);
+			m_component_hash.emplace(hashing::ComponentHash(m_package_id), m_name);
 		}
 	}
 

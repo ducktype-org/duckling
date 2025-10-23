@@ -55,7 +55,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -76,7 +76,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -109,7 +109,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, compiler::frontend::ComponentHash{}, context
+				this->code, hashing::ComponentHash{}, context
 			);
 			return parsed.getLogger()->good() == good;
 		}
