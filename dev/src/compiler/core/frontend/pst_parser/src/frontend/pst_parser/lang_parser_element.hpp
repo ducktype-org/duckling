@@ -5,12 +5,11 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
-#include <frontend/module_tree/component_hash.hpp>
-
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <hashing/component_hash.hpp>
 #include <hashing/hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -26,8 +25,6 @@ namespace pst {
 	class PSTAutomatic;
 
 	class PstVisitor;
-
-	using ComponentHash = compiler::frontend::ComponentHash;
 
 	/**
 	 * @brief Base Element for all of the PST elements.
@@ -129,9 +126,9 @@ namespace pst {
 		/**
 		 * @brief Calculates Element paths for this Element and children.
 		 */
-		void calcElementPathHash(const ComponentHash& path) {
+		void calcElementPathHash(const hashing::ComponentHash& path) {
 			// append element type to incoming ComponentHash path
-			element_path_hash = compiler::frontend::ComponentHash(path, elementType());
+			element_path_hash = hashing::ComponentHash(path, elementType());
 			calcElementPathHashRecursive();
 		}
 
@@ -140,8 +137,9 @@ namespace pst {
 		 * from other elements (otherwise it would need each element would need to be a friend)
 		 */
 		template<typename Element>
-		void calcChildPath(AccessInternalAnonymous<Element>& access_ref, const ComponentHash& path)
-			const {
+		void calcChildPath(
+			AccessInternalAnonymous<Element>& access_ref, const hashing::ComponentHash& path
+		) const {
 			if (auto ref = access_ref.internalMut()) ref->calcElementPathHash(path);
 		}
 
@@ -151,12 +149,10 @@ namespace pst {
 		 */
 		template<typename Element, base::TemplateStringLiteral name>
 		void calcNamedChildPath(
-			AccessInternal<Element, name>& access_ref, const ComponentHash& path
+			AccessInternal<Element, name>& access_ref, const hashing::ComponentHash& path
 		) const {
 			if (auto ref = access_ref.internalMut())
-				ref->calcElementPathHash(
-					compiler::frontend::ComponentHash(path, std::string_view(name.value))
-				);
+				ref->calcElementPathHash(hashing::ComponentHash(path, std::string_view(name.value)));
 		}
 
 		/**
@@ -165,10 +161,10 @@ namespace pst {
 		 */
 		template<typename Element>
 		void calcIndexedListChildPath(
-			std::span<AccessInternalAnonymous<Element>> vec, const ComponentHash& path
+			std::span<AccessInternalAnonymous<Element>> vec, const hashing::ComponentHash& path
 		) const {
 			for (usize i = 0; i < vec.size(); i++) {
-				ComponentHash child_path(path, std::format("[{}]", i));
+				hashing::ComponentHash child_path(path, std::format("[{}]", i));
 				calcChildPath(vec[i], child_path);
 			}
 		}
@@ -176,7 +172,7 @@ namespace pst {
 		/**
 		 * @brief Calculates Element paths for a completely ordered list of statements.
 		 */
-		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const ComponentHash&);
+		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&);
 
 	protected:
 		/**
@@ -327,7 +323,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const ComponentHash& getElementPathHash() const {
+		const hashing::ComponentHash& getElementPathHash() const {
 			CORE_ASSERT(
 				element_path_hash.has_value(),
 				"element path not calculated for this " + elementType()
@@ -345,11 +341,12 @@ namespace pst {
 		std::vector<InternalSubElement>
 			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
 		base::Optional<AccessLocked<LangElement>>
-									  parent;  ///< Parent element in PST if element is not root.
-		base::Optional<ComponentHash> element_path_hash;  ///< The Path that uniquely identifies the
-		                                                  ///< element and allows to conserve some
-		                                                  ///< information between compilations. Has
-		                                                  ///< no value if it's incalculable.
+			parent;        ///< Parent element in PST if element is not root.
+		base::Optional<hashing::ComponentHash>
+			element_path_hash;  ///< The Path that uniquely identifies the
+		                        ///< element and allows to conserve some
+		                        ///< information between compilations. Has
+		                        ///< no value if it's incalculable.
 		base::Optional<HashType>
 			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
 		           ///< information between compilations. Has no value if it's incalculable.

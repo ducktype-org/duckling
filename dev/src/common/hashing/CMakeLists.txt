@@ -1,5 +1,6 @@
 add_library(Hashing
     src/hashing/type_unique_code.cpp
+	src/hashing/component_hash.cpp
 )
 
 make_module(Hashing USES Base)

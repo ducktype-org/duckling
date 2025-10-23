@@ -8,8 +8,8 @@
 #include "symbol_kind.hpp"
 
 #include <helios/scope_symbol_id.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/elements_list.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/elements_list.hpp>
 
 #include <base/str/string_id.hpp>
 

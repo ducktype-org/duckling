@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <pst_parser/access.hpp>
-#include <pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 
 #include <string>
 #include <utility>

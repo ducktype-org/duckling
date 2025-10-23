@@ -1,15 +1,15 @@
 #pragma once
 
+#include "hash.hpp"
+
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/misc/ignore.hpp>
 #include <base/str/string_id.hpp>
 
-#include <hashing/hash.hpp>
-
 #include <type_traits>
 
-namespace compiler::frontend {
+namespace hashing {
 	/**
 	 * ComponentHash - stores both the streaming (partial) hash state for a
 	 * hierarchical component path and the finalized hash value. The constructor
@@ -25,7 +25,7 @@ namespace compiler::frontend {
 	 */
 	struct ComponentHash final {
 		// Hash algorithm and result type used for hierarchical path hashing
-		using HashAlg  = hashing::StatefulHash<hashing::SHA256, void>;
+		using HashAlg  = StatefulHash<hashing::SHA256, void>;
 		using HashType = HashAlg::result_type;
 
 		HashAlg  partial;

@@ -4,8 +4,6 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/string_id.hpp>
 
-#include <vm/api/api.hpp>
-
 class VmInheritanceLoadingTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceLoadingTest
