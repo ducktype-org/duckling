@@ -188,6 +188,8 @@ namespace base {
 
 		[[nodiscard]]
 		u64 keyToBucket(const KEY_T& key) const RELEASE_NOEXCEPT {
+			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap20");
+
 			u64 hash = keyHash(key);
 			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
@@ -262,7 +264,9 @@ namespace base {
 			buckets(std::move(other.buckets)),
 			node_allocator(std::move(other.node_allocator)),
 			element_count(other.element_count) {
+			
 			other.element_count = 0;
+			other.buckets.resize(INITIAL_BUCKETS, nullptr);
 		}
 
 		~StableHashMap20() {
