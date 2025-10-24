@@ -1,5 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
+#include "ctv/ctv.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
@@ -10,11 +12,22 @@
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
+#include "base/str/str_utils.hpp"
+#include "base/str/string_id.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include "diagnostic/source_position.hpp"
+#include "lang_definitions/key_spec_op.hpp"
+#include "query_framework/context.hpp"
 #include <query_framework/query_impl.hpp>
+
+#include <charconv>
+#include <limits>
+#include <string>
+#include <string_view>
+#include <system_error>
 
 namespace compiler::helios::code {
 	namespace {
@@ -58,6 +71,116 @@ namespace compiler::helios::code {
 			return sub_exprs;
 		}
 
+		/// NUMERIC LITERAL PARSING ///
+		template<typename TargetInt>
+		base::Optional<ctv::CompileTimeValue> parseSignedInteger(
+			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+		) {
+			// TODOP: i128 potentially?
+			i64  parsed_value = 0;
+			auto result
+				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
+
+			if (result.ec != std::errc()
+			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
+				// TODOP: Log error.
+				return {};
+			}
+			if (parsed_value < std::numeric_limits<TargetInt>::min()
+			    || parsed_value
+			           > std::numeric_limits<TargetInt>::max()) {  // Literal out of bounds.
+				                                                   // TODOP: Add comment
+				// TODOP: Log error.
+				return {};
+			}
+			return ctv::CompileTimeValue(static_cast<TargetInt>(parsed_value));
+		}
+
+		template<typename TargetUInt>
+		base::Optional<ctv::CompileTimeValue> parseUnsignedInteger(
+			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+		) {
+			// TODOP: u128 potentially?
+			u64  parsed_value = 0;
+			auto result
+				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
+
+			if (result.ec != std::errc()
+			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
+				// TODOP: Log error.
+				return {};
+			}
+			if (parsed_value < std::numeric_limits<TargetUInt>::min()
+			    || parsed_value
+			           > std::numeric_limits<TargetUInt>::max()) {  // Literal out of bounds. TODOP:
+				                                                    // Add comment
+				// TODOP: Log error.
+				return {};
+			}
+			return ctv::CompileTimeValue(static_cast<TargetUInt>(parsed_value));
+		}
+
+		template<typename TargetFloat>
+		base::Optional<ctv::CompileTimeValue> parseFloat(
+			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+		) {
+			f128 parsed_value = 0;
+			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
+
+			if (result.ec != std::errc()
+			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
+				// TODOP: Log error.
+				return {};
+			}
+			return ctv::CompileTimeValue(static_cast<TargetFloat>(parsed_value));
+		}
+
+		base::Optional<ctv::CompileTimeValue> deduceIntegerType(
+			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+		) {
+			i64  parsed_value = 0;
+			auto result
+				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
+			if (result.ec != std::errc()
+			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
+				// TODOP: Log error.
+				return {};
+			}
+
+			if (parsed_value <= std::numeric_limits<i8>::max())
+				return ctv::CompileTimeValue{ static_cast<i8>(parsed_value) };
+			else if (parsed_value <= std::numeric_limits<i16>::max())
+				return ctv::CompileTimeValue{ static_cast<i16>(parsed_value) };
+			else if (parsed_value <= std::numeric_limits<i32>::max())
+				return ctv::CompileTimeValue{ static_cast<i32>(parsed_value) };
+			else if (parsed_value <= std::numeric_limits<i64>::max())
+				return ctv::CompileTimeValue{ static_cast<i64>(parsed_value) };
+			// @TODOP: Add handling for i128
+
+			// TODOP: Log error
+			return {};
+		}
+
+		base::Optional<ctv::CompileTimeValue> deduceFloatType(
+			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
+		) {
+			f128 parsed_value = 0;
+			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
+			if (result.ec != std::errc()
+			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
+				// TODOP: Log error.
+				return {};
+			}
+
+			if (static_cast<f128>(static_cast<f16>(parsed_value)) == parsed_value)
+				return ctv::CompileTimeValue{ static_cast<f16>(parsed_value) };
+			if (static_cast<f128>(static_cast<f32>(parsed_value)) == parsed_value)
+				return ctv::CompileTimeValue{ static_cast<f32>(parsed_value) };
+			else if (static_cast<f128>(static_cast<f64>(parsed_value)) == parsed_value)
+				return ctv::CompileTimeValue{ static_cast<f64>(parsed_value) };
+			return ctv::CompileTimeValue{ parsed_value };  // Full precision needed
+		}
+
 		/**
 		 * Visitor that implements logic of creation of HOUT expressions from PST expressions.
 		 */
@@ -76,8 +199,85 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+				auto value = stmt->getValue().value.strView();
+				auto type_specifier_strid
+					= stmt->getValue().type_specifier.copyValueOr(base::StrID(""));
+				auto type_specifier
+					= lang_def::strAsNumericLiteralTypeSpecifier(type_specifier_strid);
+				auto position = stmt->getSourcePosition();
+
+				int base = 10;
+				if (value.starts_with("0b") || value.starts_with("0B")) {
+					base = 16;
+					value.remove_prefix(2);
+				} else if (value.starts_with("0o") || value.starts_with("0O")) {
+					base = 16;
+					value.remove_prefix(2);
+				} else if (value.starts_with("0x") || value.starts_with("0X")) {
+					base = 16;
+					value.remove_prefix(2);
+				}
+
+				base::Optional<ctv::CompileTimeValue> parsed_ctv;
+
+				// TODOP: For each?
+				switch (type_specifier) {
+				case lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier: {
+					bool is_float = value.find_first_of(".eE") != std::string_view::npos;
+					parsed_ctv    = is_float ? deduceFloatType(value, position, ctx)
+					                         : deduceIntegerType(value, base, position, ctx);
+				}
+				case lang_def::NumericLiteralTypeSpecifier::i8:
+					parsed_ctv = parseSignedInteger<i8>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::i16:
+					parsed_ctv = parseSignedInteger<i16>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::i32:
+					parsed_ctv = parseSignedInteger<i32>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::i64:
+					parsed_ctv = parseSignedInteger<i64>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::u8:
+					parsed_ctv = parseUnsignedInteger<u8>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::u16:
+					parsed_ctv = parseUnsignedInteger<u16>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::u32:
+					parsed_ctv = parseUnsignedInteger<u32>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::u64:
+					parsed_ctv = parseUnsignedInteger<u64>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::f16:
+					parsed_ctv = parseFloat<f16>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::f32:
+					parsed_ctv = parseFloat<f32>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::f64:
+					parsed_ctv = parseFloat<f64>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::f80:
+					// TODOP: ???
+					parsed_ctv = parseFloat<f80>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::f128:
+					parsed_ctv = parseFloat<f128>(value, base, position, ctx);
+					break;
+				case lang_def::NumericLiteralTypeSpecifier::u128:
+				case lang_def::NumericLiteralTypeSpecifier::i128:
+					throw base::NotYetImplemented(base::strConcat(
+						"Unhandled type specifier in hout of expr: ",
+						lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+					));
+				}
+
+				if (parsed_ctv.has_value())  // If failed the error is logged.
+					node = makeBox<LiteralCTVExpr>(ctx, parsed_ctv.value());
+				return;
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {

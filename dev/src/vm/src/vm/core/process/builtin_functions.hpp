@@ -1,12 +1,12 @@
 /**
  * @file builtin_functions.hpp
  * @author Wojciech Rzepliński
- * @brief The implemention of the builtin functions in the VM.
+ * @brief The implementation of the builtin functions in the VM.
  *
  * The builtin functions have custom C++ implementation that can interact with the outside world
  * but also with the VM's thread and process (like set thread status to "waitingForInput").
  *
- * This module has two seperate parts:
+ * This module has two separate parts:
  * - low level implementations, handling the VMThread calls to the builtin functions,
      and compiling the call_builtin_func opcode
  * - high level builtin "stdlib" module with DBC code to better interact with the loader

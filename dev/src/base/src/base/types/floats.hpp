@@ -27,6 +27,6 @@ using f16  = f16_placeholder;
 using f32  = float;
 using f64  = double;
 using f128 = long double;
-
-
+// The size of long double is not guaranteed. On some architectures it might be 80-bits in size.
+// Although in out case when using gcc we should always use std::float128_t anyways.
 #endif

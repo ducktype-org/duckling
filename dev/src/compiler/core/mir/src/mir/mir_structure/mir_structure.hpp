@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ctv/ctv.hpp"
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
@@ -14,6 +15,7 @@
 #include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -98,8 +100,21 @@ namespace compiler::mir {
 
 	struct MirUnitConst final {};
 
-	struct MirIntegerConst final {
-		i64 value;
+	struct MirConstant final {
+		ctv::CompileTimeValue value;
+
+		MirConstant(ctv::CompileTimeValue ctv) {
+			this->value = std::visit(
+				[](auto&& val) -> ctv::CompileTimeValue {
+					using T = std::decay_t<decltype(val)>;
+					if constexpr (std::is_integral_v<T>)
+						return ctv::CompileTimeValue{ static_cast<i64>(val) };
+					else
+						return val;
+				},
+				ctv.getStorage()
+			);
+		}
 	};
 
 	struct MirBoolConst final {
@@ -264,7 +279,7 @@ namespace compiler::mir {
 		// "GlobalAccess" a.b.c
 		using ValueType = std::variant<
 			MirUnitConst,
-			MirIntegerConst,
+			MirConstant,
 			MirBoolConst,
 			LocalRef,
 			BlockID,
@@ -276,7 +291,7 @@ namespace compiler::mir {
 	public:
 		MIRValue(MirUnitConst value): value(value) {}
 
-		MIRValue(MirIntegerConst value): value(value) {}
+		MIRValue(MirConstant value): value(value) {}
 
 		MIRValue(MirBoolConst value): value(value) {}
 
@@ -511,7 +526,7 @@ namespace compiler::mir {
 		ScopeRef no_lifetime_scope;
 
 		/**
-		 * HELIOS SymID releted to the function.
+		 * HELIOS SymID related to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
 		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;

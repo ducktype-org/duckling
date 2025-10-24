@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -68,8 +70,8 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MirUnitConst{} });
 		}
 
-		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MirIntegerConst{ expr.value } });
+		void visitLiteralCTVExpr(const helios::code::LiteralCTVExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MirConstant{ expr.value } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../scope_symbol_id.hpp"
+#include "ctv/ctv.hpp"
 
 #include <typesystem/higher/expression_type.hpp>
 
@@ -89,6 +90,25 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
+	};
+
+	/**
+	 * @brief Represents an integer literal value written in the expression.
+	 */
+	struct LiteralCTVExpr final: public Expr {
+		ctv::CompileTimeValue value;
+
+		LiteralCTVExpr(query::Context& ctx, ctv::CompileTimeValue ctv);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralCTVExpr(tsh::ExpressionType<> expression_type, ctv::CompileTimeValue ctv);
 	};
 
 	/**
@@ -218,6 +238,13 @@ namespace compiler::helios::code {
 		IntegerMod,
 		IntegerPow,
 
+		FloatAdd,
+		FloatSub,
+		FloatMul,
+		FloatDiv,
+		FloatMod,
+		FloatPow,
+
 		// Comparison operators
 		IntegerLt,    // Less then
 		IntegerLteq,  // Less then or equal to
@@ -225,6 +252,13 @@ namespace compiler::helios::code {
 		IntegerGteq,  // Greater then or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
+
+		FloatLt,      // Less then
+		FloatLteq,    // Less then or equal to
+		FloatGt,      // Greater then
+		FloatGteq,    // Greater then or equal to
+		FloatEq,      // Equal
+		FloatNeq,     // Not equal
 
 		BooleanAnd,
 		BooleanOr,
@@ -267,6 +301,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		FloatNegation,
 		BooleanNot,
 		Ref,
 		Box,

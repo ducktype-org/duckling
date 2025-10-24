@@ -128,7 +128,7 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
 
 		/**
-		 * The temporaty buffor for the currently built value from left to current place of
+		 * The temporary buffor for the currently built value from left to current place of
 		 the chain. So for example after processing "a.b.c" it will contain hout expr:
 		 "access(access(a, field=b), field=c))"".
 		 */
@@ -523,7 +523,7 @@ namespace compiler::helios::code {
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
-		 * Perform a procesing step on the current element of the chain.
+		 * Perform a processing step on the current element of the chain.
 		 * @warning It assumes that the current element exist.
 		 */
 		template<typename T>
@@ -546,7 +546,7 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Perform a procesing step on current element of the chain and next one.
+		 * Perform a processing step on current element of the chain and next one.
 		 * @warning It assumes that the current element and next one exist.
 		 */
 		template<typename T1, typename T2>

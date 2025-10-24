@@ -6,12 +6,19 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "ctv/ctv.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+#include "typesystem/higher/value_category.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries.hpp>
 
+#include "base/extend_cpp/variant_match.hpp"
+
 #include <query_framework/context.hpp>
+
+#include <type_traits>
 
 namespace compiler::helios::code {
 
@@ -23,6 +30,10 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
+
+	EXPR_VISITOR(LiteralCTVExpr)
+
+
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
@@ -79,6 +90,63 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiteralIntExpr::clone() const {
 		return makeBox<LiteralIntExpr>(expression_type, value);
+	}
+
+	LiteralCTVExpr::LiteralCTVExpr(query::Context& ctx, ctv::CompileTimeValue ctv):
+		  Expr(tsh::ExpressionType<>(
+			  [&]() -> tsh::SymbolType<> {
+				  using namespace tsh;
+				  return std::visit(
+					  [&](auto&& actual_value) -> SymbolType<> {
+						  // TODOP: VARIANT_VISIT?
+						  using T = std::decay_t<decltype(actual_value)>;
+
+						  if constexpr (std::is_same_v<T, bool>) {
+							  return SymbolType{
+								  ctx.query<QueryBoolType>({}),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else if constexpr (std::is_integral_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryIntegralType>({ sizeof(T) * 8 }),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else if constexpr (std::is_floating_point_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
+							  return SymbolType{
+								  ctx.query<QueryMetaType>({}),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else {
+							  CORE_PANIC("Unsupported CTV type");
+						  }
+					  },
+					  ctv.getStorage()
+				  );
+			  }(),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+
+		  )),
+		  value(ctv) {}
+
+	LiteralCTVExpr::LiteralCTVExpr(
+		tsh::ExpressionType<> expression_type, ctv::CompileTimeValue value
+	):
+		  Expr(expression_type),
+		  value(value) {}
+
+	void LiteralCTVExpr::debugPrint(std::ostream& out) const { out << value.toString(); }
+
+	Box<Expr> LiteralCTVExpr::clone() const {
+		return makeBox<LiteralCTVExpr>(expression_type, value);
 	}
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
@@ -196,6 +264,12 @@ namespace compiler::helios::code {
 		case IntegerDiv:
 		case IntegerMod:
 		case IntegerPow:
+		case FloatAdd:
+		case FloatSub:
+		case FloatMul:
+		case FloatDiv:
+		case FloatMod:
+		case FloatPow:
 			return argument_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -203,6 +277,12 @@ namespace compiler::helios::code {
 		case IntegerGteq:
 		case IntegerEq:
 		case IntegerNeq:
+		case FloatLt:
+		case FloatGt:
+		case FloatLteq:
+		case FloatGteq:
+		case FloatEq:
+		case FloatNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -250,21 +330,26 @@ namespace compiler::helios::code {
 		using enum BuiltinBinary;
 		switch (operation) {
 		case IntegerAdd:
+		case FloatAdd:
 			out << "+";
 			break;
 		case IntegerSub:
+		case FloatSub:
 			out << "-";
 			break;
 		case IntegerMul:
+		case FloatMul:
 			out << "*";
 			break;
 		case IntegerDiv:
+		case FloatDiv:
 			out << "/";
 			break;
 		case IntegerMod:
 			out << "%";
 			break;
 		case IntegerPow:
+		case FloatPow:
 			out << "**";
 			break;
 		case BooleanAnd:
@@ -428,6 +513,7 @@ namespace compiler::helios::code {
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
 		switch (operation) {
 		case BuiltinUnary::IntegerNegation:
+		case BuiltinUnary::FloatNegation:
 			out << "-";
 			expr->debugPrint(out);
 			break;
@@ -581,16 +667,22 @@ namespace compiler::helios::code {
 			using enum BuiltinBinary;
 			switch (comp) {
 			case IntegerLt:
+			case FloatLt:
 				return "<";
 			case IntegerLteq:
+			case FloatLteq:
 				return "<=";
 			case IntegerGt:
+			case FloatGt:
 				return ">";
 			case IntegerGteq:
+			case FloatGteq:
 				return ">=";
 			case IntegerEq:
+			case FloatEq:
 				return "==";
 			case IntegerNeq:
+			case FloatNeq:
 				return "!=";
 			default:
 				CORE_UNREACHABLE();
