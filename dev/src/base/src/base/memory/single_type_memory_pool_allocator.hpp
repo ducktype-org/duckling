@@ -61,7 +61,7 @@ namespace base {
             BufferIndex next() const {
                 BufferIndex next_idx = *this;
                 next_idx.item_idx++;
-                if (next_idx.item_idx >= BLOCK_ELEMENT_COUNT) {
+                if (next_idx.item_idx >= BLOCK_ELEMENT_COUNT) [[unlikely]] {
                     next_idx.buffer_idx++;
                     next_idx.item_idx = 0;
                 }
@@ -95,7 +95,8 @@ namespace base {
             // idx, in which we will allocate the new object:
             BufferIndex allocation_idx;
 
-            if (not free_list.empty()) {
+            // this will be unlikely in non-lsp scenarios:
+            if (not free_list.empty()) [[unlikely]] {
                 allocation_idx = free_list.back();
                 free_list.pop_back();
             }
