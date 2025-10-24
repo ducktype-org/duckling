@@ -150,10 +150,7 @@ namespace base {
 		struct KeyValuePair final {
 			const KEY_T key;
 			DATA_T     value;
-
-			// KeyValuePair(const KEY_T& key, const DATA_T& value) noexcept
-			// 	: key(key), value(value) {}
-			
+	
 			template<class K = KEY_T, class D = DATA_T>
 			KeyValuePair(K&& key, D&& value) noexcept
 				: key(std::forward<K>(key)), value(std::forward<D>(value)) {}
@@ -161,7 +158,7 @@ namespace base {
 
 	private:
 
-		static constexpr usize  INITIAL_BUCKETS = 16;
+		static constexpr usize  INITIAL_BUCKETS = 64;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 		using KeyHash = u64;
@@ -171,16 +168,13 @@ namespace base {
 
 			KeyValuePair key_value;
 
-			// Node(MRef<Node> next, const KEY_T& key, const DATA_T& value) noexcept
-			// 	: next(next), key_value(key, value) {}
-
 			template<class K = KEY_T, class D = DATA_T>
 			Node(MRef<Node> next, K&& key, D&& value) noexcept
 				: next(next), key_value(std::forward<K>(key), std::forward<D>(value)) {}
 		};
 
 		std::vector<MRef<Node>>                  buckets;
-		SingleTypeMemoryPoolAllocator<Node, 64>  node_allocator;
+		SingleTypeMemoryPoolAllocator<Node, 128>  node_allocator;
 		u64                                      element_count = 0;
 
 		[[nodiscard]]
@@ -380,6 +374,7 @@ namespace base {
 			// @TODO: PR: optimize it with contains+find as one pass:
 			// also.. this is a weird semantics, see if it breaks without it.
 			if (contains(new_node->key_value.key)) {
+				CORE_UNREACHABLE();
 				node_allocator.deallocateDestroy(new_node);
 				return false;
 			}
