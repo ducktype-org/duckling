@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include "../config.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -13,6 +12,8 @@
 #include <vm/core/thread/low_program/utils.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/core/thread/vmthread.hpp>
+
+#include <iostream>
 
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS
