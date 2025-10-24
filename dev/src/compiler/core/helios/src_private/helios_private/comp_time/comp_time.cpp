@@ -22,6 +22,8 @@
 #include <ranges>
 
 namespace compiler::helios {
+	using namespace ctv;
+
 	struct IMPLEMENT_QUERY(QueryEvaluateExpression, CompTimeEvalResult) {
 		/**
 		 * @brief Error indicating that an expression was to complex for a simple tree evaluation.

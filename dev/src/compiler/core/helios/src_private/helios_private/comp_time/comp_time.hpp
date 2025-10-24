@@ -14,7 +14,7 @@
  * evaluates it on DVM.
  */
 namespace compiler::helios {
-	using CompTimeEvalResult = query::QResult<CompileTimeValue, errors::Failed>;
+	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue, errors::Failed>;
 
 	DECLARE_QUERY(
 		QueryEvaluateExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult

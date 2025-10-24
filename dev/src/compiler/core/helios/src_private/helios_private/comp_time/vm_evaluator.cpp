@@ -8,13 +8,14 @@
 
 namespace {
 	using namespace compiler::helios;
+	using namespace compiler::ctv;
 
 	/**
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
-		vm::PID pid, const compiler::ctv::CompileTimeValue& ctv
+		vm::PID pid, const CompileTimeValue& ctv
 	) {
 		variant_match(ctv.getStorage()) {
 			variant_case(i64, val) {
@@ -113,11 +114,11 @@ namespace {
 }
 
 namespace compiler::helios {
-	std::expected<CompileTimeValue, VmEvaluationError> executeInVm(
-		const std::string&                   func_name,
-		const vm::code::CodeCollection&      code,
-		const std::vector<CompileTimeValue>& args,
-		const tsh::SymbolType<>&             return_type
+	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
+		const std::string&                        func_name,
+		const vm::code::CodeCollection&           code,
+		const std::vector<ctv::CompileTimeValue>& args,
+		const tsh::SymbolType<>&                  return_type
 	) {
 		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process) once
 		// upon the first call to executeInVm and its lifetime extends for the duration of the

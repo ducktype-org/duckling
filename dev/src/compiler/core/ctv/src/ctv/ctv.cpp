@@ -24,19 +24,8 @@ namespace compiler::ctv {
 
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
-	// std::string CompileTimeValue::toString2() const {
-	// 	VARIANT_VISIT(
-	// 		value,
-	// 		VISIT_CASE(bool, val, { return val ? "true" : "false"; })
-	// 			VISIT_CASE(tsh::SymbolType<>, val, { return val.toString(); })
-	// 				VISIT_CASE(auto, val, code)
-    //                 // TODOP: Can we do betteR?
-
-
-	// 	);
-	// }
-
 	std::string CompileTimeValue::toString() const {
+		// TODOP: Try to use visit here.
 		return std::visit(
 			[](auto&& val) -> std::string {
 				using T = std::decay_t<decltype(val)>;
@@ -47,8 +36,8 @@ namespace compiler::ctv {
 				else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
 					return val.toString();
 				else if constexpr (std::is_floating_point_v<T>)
-					// Casting to float since no overload for f16 exists in std::to_string()
-					return base::toString(static_cast<float>(val));
+					// Casting to long double since no overload for f16 and f128 exists in std::to_string()
+					return base::toString(static_cast<long double>(val));
 				else if constexpr (std::is_integral_v<T>)
 					return base::toString(val);
 				else
@@ -101,18 +90,6 @@ namespace compiler::ctv {
 				using T = std::decay_t<decltype(val)>;
 				if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>)
 					return static_cast<i64>(val);
-				return {};
-			},
-			value
-		);
-	}
-
-	base::Optional<i64> CompileTimeValue::asI64() const {
-		return std::visit(
-			[](auto&& val) -> base::Optional<i128> {
-				using T = std::decay_t<decltype(val)>;
-				if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>)
-					return static_cast<i128>(val);
 				return {};
 			},
 			value

@@ -99,13 +99,6 @@ namespace compiler::ctv {
 		/**
 		 * @brief Retrieves the float value from the CTV.
 		 * @return A f80 value or an empty optional if the CTV didn't store a float.
-		 * TODOP: Needed?
-		 */
-		[[nodiscard]] base::Optional<f80> getF80() const;
-
-		/**
-		 * @brief Retrieves the float value from the CTV.
-		 * @return A f80 value or an empty optional if the CTV didn't store a float.
 		 * TODOP: This approach is temporary. Write about that.
 		 */
 		[[nodiscard]] base::Optional<f128> getF128() const;
@@ -125,16 +118,16 @@ namespace compiler::ctv {
 		[[nodiscard]] base::Optional<tsh::SymbolType<>> getType(query::Context& ctx) const;
 
 		/**
-		 * @brief Retrieves the float value from the CTV.
+		 * @brief Retrieves the int value from the CTV.
 		 * @return A i64 value or an empty optional if the CTV didn't store a float.
 		 */
 		[[nodiscard]] base::Optional<i64> asI64() const;
 
-		// /**
-		//  * @brief Retrieves the float value from the CTV.
-		//  * @return A i128 value or an empty optional if the CTV didn't store a float.
-		//  */
-		// [[nodiscard]] base::Optional<i128> asI128() const;
+		/**
+		 * @brief Retrieves the float value from the CTV.
+		 * @return A f128 value or an empty optional if the CTV didn't store a float.
+		 */
+		[[nodiscard]] base::Optional<f128> asF128() const;
 	};
 
 	/**

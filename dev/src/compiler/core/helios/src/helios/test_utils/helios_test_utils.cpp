@@ -53,7 +53,7 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope) {
+	ctv::CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 

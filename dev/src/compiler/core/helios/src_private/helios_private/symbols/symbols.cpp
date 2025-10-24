@@ -54,7 +54,7 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_contex
+		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_context
 			= [&](const pst::Access<pst::LangElement>& el) -> bool {
 			switch (el->getElementKind()) {
 			case pst::ElementKind::TopLevel:
@@ -72,14 +72,14 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
 				// we panic if there is no parent:
-				return global_variable_pst_contex(el->getParent().value().unlock(ctx));
+				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 
 			default:
 				CORE_PANIC("Unexpected pst path of variable");
 			}
 		};
 
-		return global_variable_pst_contex(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
+		return global_variable_pst_context(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
@@ -374,7 +374,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
-		 * @note This has to be consistant with QuerySymbolsInScope
+		 * @note This has to be consistent with QuerySymbolsInScope
 		 */
 		static ScopeID getPSTElementParentScope(
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
@@ -613,7 +613,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 

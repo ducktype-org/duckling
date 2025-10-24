@@ -1,7 +1,7 @@
 #pragma once
 
-#include <frontend/module_tree/module_id.hpp>
 #include <ctv/ctv.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
@@ -36,7 +36,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The CTV value of the last symbol in the chain.
 	 */
-	CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope);
+	ctv::CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the value of type T of the last symbol in a symbol chain in a given scope.
@@ -50,15 +50,15 @@ namespace compiler::helios::test_utils {
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
-		if constexpr (std::is_same_v<T, CompileTimeValue::UnitCTV>)
-			maybe_value = ctv_result.asUnit();
+		if constexpr (std::is_same_v<T, ctv::CompileTimeValue::UnitCTV>)
+			maybe_value = ctv_result.getUnit();
 		else if constexpr (std::is_same_v<T, i64>)
 			maybe_value = ctv_result.asI64();
 		else if constexpr (std::is_same_v<T, bool>)
-			maybe_value = ctv_result.asBool();
+			maybe_value = ctv_result.getBool();
 		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
 			query::utils::withContextDo([&](query::Context& ctx) {
-				maybe_value = ctv_result.asType(ctx);
+				maybe_value = ctv_result.getType(ctx);
 			});
 		else
 			static_assert(false, "Unsupported type for getConstValueAs");

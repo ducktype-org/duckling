@@ -108,7 +108,7 @@ namespace compiler::helios {
 	enum class HOUTGlobalDataType { Constant, Variable };
 
 	struct HOUTGlobalConst final {
-		CompileTimeValue value;
+		ctv::CompileTimeValue value;
 	};
 
 	struct HOUTGlobalVariable final {

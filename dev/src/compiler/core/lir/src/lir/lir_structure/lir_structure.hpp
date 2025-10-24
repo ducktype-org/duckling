@@ -115,10 +115,10 @@ namespace compiler::lir {
 
 	private:
 		LirGlobal(
-			const helios::SymID                      helios_id,
-			const tsl::TypeLayout&                   layout,
-			const base::StrID&                       mangled_name,
-			const LirGlobalType                      type          = LirGlobalType::Variable,
+			const helios::SymID                   helios_id,
+			const tsl::TypeLayout&                layout,
+			const base::StrID&                    mangled_name,
+			const LirGlobalType                   type          = LirGlobalType::Variable,
 			base::Optional<ctv::CompileTimeValue> initial_value = {}
 		):
 			  helios_id(helios_id),
