@@ -6,7 +6,7 @@
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_COPY                                                   \
-	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;       \
+	static inline base::StableHashMap20<KHash, query::CacheEntry<PResult>, std::hash<KHash>, 1024*64> cache;       \
 	static auto load(KHash key_hash) -> LoadResult {                             \
 		if (auto value = cache.atMaybe(key_hash)) {                              \
 			return QResWithACD{ (*value)->data, (*value)->acd };                       \
@@ -58,7 +58,7 @@
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_REF                                                     \
-	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;  \
+	static inline base::StableHashMap20<KHash, query::CacheEntry<PResult>, std::hash<KHash>, 1024*64> cache;  \
 	static auto load(KHash key_hash) -> LoadResult {                             \
 		if (auto value = cache.atMaybe(key_hash)) {                              \
 			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd }; \

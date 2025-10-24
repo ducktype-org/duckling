@@ -143,7 +143,7 @@ namespace base {
 	 * Custom, Stable hash map implementation.
 	 * Its performance is similar or better then std::unordered_map, while keeping references always stable. 
 	 */
-	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
+	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>, u64 ALLOCATOR_BLOCK_SIZE = 4096>
 	class StableHashMap20 final {
 
 	public:
@@ -174,7 +174,7 @@ namespace base {
 		};
 
 		std::vector<MRef<Node>>                  buckets;
-		SingleTypeMemoryPoolAllocator<Node>  node_allocator;
+		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE>  node_allocator;
 		u64                                      element_count = 0;
 
 		[[nodiscard]]
