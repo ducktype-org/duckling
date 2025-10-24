@@ -553,7 +553,7 @@ private:
 		auto safe_content_after_delete = test_file.getContentSafe();
 		assertTrue(
 			!safe_content_after_delete.has_value(),
-			"getContentSafe should fail for non-existing file"
+			"getContentSafe should fail for non-existent file"
 		);
 
 		// Test getModifyTime for non-virtual file

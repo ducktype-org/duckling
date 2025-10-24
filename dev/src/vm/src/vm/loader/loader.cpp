@@ -3,34 +3,25 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/str/string_id.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 
-#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
+// #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
 
 #include <expected>
-#include <variant>
 #include <vector>
 
 using namespace vm::loader;
@@ -39,7 +30,7 @@ namespace {
 	template<class Instruction>
 	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
 
-#define HANDLE_OPCODE_0ARGS(opcode)                                       \
+#define HANDLE_INSTR_0ARGS(opcode)                                        \
 	template<>                                                            \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
 		const parser::OpCode& opcode                                      \
@@ -50,7 +41,7 @@ namespace {
 		return instr;                                                     \
 	}
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                 \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                  \
 	template<>                                                                                 \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
 		const parser::OpCode& opcode                                                           \
@@ -64,7 +55,7 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                              \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                               \
 	template<>                                                                                         \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
 		const parser::OpCode& opcode                                                                   \
@@ -80,20 +71,20 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
 	}
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 
-#define HANDLE_OPCODE(opcode) \
+#define HANDLE_INSTR(opcode) \
 	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 	std::unordered_map instr_to_factory{
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 	};
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 
 	/**
 	 * @brief Translates a parsed opcode (`parser::OpCode`) into a high-level bytecode instruction

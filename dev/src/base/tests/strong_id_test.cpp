@@ -1,4 +1,4 @@
-#include <base/strongly_typed_id.hpp>
+#include <base/extend_cpp/strongly_typed_id.hpp>
 
 #include <tester/tester.hpp>
 

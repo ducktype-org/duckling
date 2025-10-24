@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lir/lir_structure/lir_structure.hpp>  // @TODO #404 relax it
+#include <lir/lir_structure/lir_structure.hpp>  // @TODO: #404 relax it
 
 #include <query_framework/context_fd.hpp>
 

@@ -5,6 +5,8 @@
 
 #include "instruction.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -52,7 +54,7 @@ namespace vm::low {
 	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
 	 * GlobalDataID>` - global data.
 	 */
-	class LowVMProgram {
+	class LowVMProgram final {
 	public:
 		friend class vm::loader::compiler::Compiler;
 

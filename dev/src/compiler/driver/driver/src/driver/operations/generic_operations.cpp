@@ -8,10 +8,12 @@
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
+#include <hashing/component_hash.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
@@ -25,6 +27,13 @@
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
 		return { module_id.queryUnstablePerfectHash(), std::to_underlying(backend_type) };
+	}
+
+	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
+		auto component_hash = compiler::frontend::ModuleTree::getComponentHash(module_id);
+		auto partial        = component_hash.partial;
+		hashing::addToHash(partial, std::to_underlying(backend_type));
+		return partial.finalize();
 	}
 
 	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
@@ -45,11 +54,8 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
-			// Note: #939 in the future it should use stable hashing for incremental
-			// compilation. For now its ok.
-			// Also deal with module id (it is unstable).
 			auto output_name
-				= key.queryUnstablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
@@ -71,7 +77,6 @@ namespace compiler::driver {
 						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
-
 
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
 					base::StrID llvm_ir_path
@@ -110,7 +115,7 @@ namespace compiler::driver {
 		BackendType                   backend,
 		const linker::LinkingOptions& linking_options
 	) {
-		auto root = frontend::createModuleTree(package_location);
+		auto root = frontend::createModuleTreeWithRandomPackageID(package_location);
 
 		std::vector<artifacts::FileArtifact> objects;
 

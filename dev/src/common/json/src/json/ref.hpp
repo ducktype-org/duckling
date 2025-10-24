@@ -3,8 +3,8 @@
 #include "empty_struct.hpp"
 #include "type_parse.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/ref.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <nlohmann/json.hpp>
 

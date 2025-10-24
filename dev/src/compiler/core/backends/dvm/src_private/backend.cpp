@@ -2,25 +2,21 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/preproc/for_each.hpp>
+#include <base/str/string_id.hpp>
 
 #include <query_framework/context.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/memory/memory.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <algorithm>
 #include <iostream>
 #include <ranges>
 #include <string>

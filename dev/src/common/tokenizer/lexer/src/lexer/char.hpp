@@ -1,6 +1,7 @@
 #pragma once
 
-#include <base/raw_view.hpp>
+
+#include <base/types/ints.hpp>
 
 #include <unicode_classification/classifications.hpp>
 
@@ -28,6 +29,8 @@ namespace lexer {
 
 		[[nodiscard]]
 		bool isBinDigit() const;
+		[[nodiscard]]
+		bool isOctDigit() const;
 		[[nodiscard]]
 		bool isDigit() const;
 		[[nodiscard]]

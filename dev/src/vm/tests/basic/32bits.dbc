@@ -118,29 +118,29 @@ function floats {} -> i32 {
 	init_lany_type	c, i32;
 
 	# ======== Arithmetic =========
-	mov_l32_imm 	b, 0.5f;	# b = 0.5
+	mov_l32_imm 	b, 0.5f32;	# b = 0.5
 	mov_l32_l32 	a, b;		# a = 0.5
 
 	fadd_l32_l32 	a, b;		# a = 1.0
-	fadd_l32_imm	a, 1.0f;	# a = 2.0
+	fadd_l32_imm	a, 1.0f32;	# a = 2.0
 
-	fcmpEq_l32_imm 	a, 2.0f;	# a == 2.0
+	fcmpEq_l32_imm 	a, 2.0f32;	# a == 2.0
 	jmpIfNot_label 	fail;
 
 	fsub_l32_l32 	a, b;		# a = 1.5
-	fsub_l32_imm 	a, 0.5f;	# a = 1.0
+	fsub_l32_imm 	a, 0.5f32;	# a = 1.0
 
-	fcmpEq_l32_imm 	a, 1.0f;	# a == 1.0
+	fcmpEq_l32_imm 	a, 1.0f32;	# a == 1.0
 	jmpIfNot_label 	fail;
 
 	fmul_l32_l32 	a, b;		# a = 0.5
-	fmul_l32_imm 	a, 0.5f;	# a = 0.25
+	fmul_l32_imm 	a, 0.5f32;	# a = 0.25
 
-	fcmpEq_l32_imm 	a, 0.25f;	# a == 0.25
+	fcmpEq_l32_imm 	a, 0.25f32;	# a == 0.25
 	jmpIfNot_label 	fail;
 
 	fdiv_l32_l32 	a, b;		# a = 0.5
-	fdiv_l32_imm 	a, 1.0f;	# a = 0.5
+	fdiv_l32_imm 	a, 1.0f32;	# a = 0.5
 
 	fneg_l32 		a;			# a = -0.5
 	fneg_l32		b;			# b = -0.5
@@ -150,42 +150,42 @@ function floats {} -> i32 {
 
 	
 	# ======== Comparison tests =========
-	mov_l32_imm		a, 20.0f;		# a = 20.0
-	mov_l32_imm		b, 10.0f;		# b = 10.0
+	mov_l32_imm		a, 20.0f32;		# a = 20.0
+	mov_l32_imm		b, 10.0f32;		# b = 10.0
 	mov_l32_l32		c, b;			# c = 10.0
 
 	fcmpG_l32_l32	a, b;			# 20.0 > 10.0
 	jmpIfNot_label	fail;
-	fcmpG_l32_imm	b, 20.0f;		# 10.0 > 20.0
+	fcmpG_l32_imm	b, 20.0f32;		# 10.0 > 20.0
 	jmpIf_label		fail;
 
 	fcmpL_l32_l32	b, a;			# 10.0 < 20.0
 	jmpIfNot_label	fail;
-	fcmpL_l32_imm	a, 10.0f;		# 20.0 < 10.0
+	fcmpL_l32_imm	a, 10.0f32;		# 20.0 < 10.0
 	jmpIf_label		fail;
 
 	fcmpGe_l32_l32	a, b;			# 20.0 >= 10.0
 	jmpIfNot_label	fail;
 	fcmpGe_l32_l32	b, c;			# 10.0 >= 10.0
 	jmpIfNot_label	fail;
-	fcmpGe_l32_imm	b, 20.0f;		# 10.0 >= 20.0
+	fcmpGe_l32_imm	b, 20.0f32;		# 10.0 >= 20.0
 	jmpIf_label		fail;
 
 	fcmpLe_l32_l32	b, a;			# 10.0 <= 20.0
 	jmpIfNot_label	fail;
 	fcmpLe_l32_l32	b, c;			# 10.0 <= 10.0
 	jmpIfNot_label	fail;
-	fcmpLe_l32_imm	a, 10.0f;		# 20.0 <= 10.0
+	fcmpLe_l32_imm	a, 10.0f32;		# 20.0 <= 10.0
 	jmpIf_label		fail;
 
 	fcmpNeq_l32_l32	a, b;			# 20.0 != 10.0
 	jmpIfNot_label	fail;
-	fcmpNeq_l32_imm	b, 10.0f;		# 10.0 != 10.0
+	fcmpNeq_l32_imm	b, 10.0f32;		# 10.0 != 10.0
 	jmpIf_label		fail;
 
 	fcmpEq_l32_l32	b, c;			# 10.0 == 10.0
 	jmpIfNot_label	fail;
-	fcmpEq_l32_imm	a, 10.0f;		# 20.0 == 10.0
+	fcmpEq_l32_imm	a, 10.0f32;		# 20.0 == 10.0
 	jmpIf_label		fail;
 
 	mov_l32_imm 	ret_val, 1;

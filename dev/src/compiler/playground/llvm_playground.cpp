@@ -6,11 +6,10 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -42,7 +41,7 @@ int main(int argc, const char* argv[]) {
 
 	using namespace compiler;
 
-	auto root = frontend::createModuleTree(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 

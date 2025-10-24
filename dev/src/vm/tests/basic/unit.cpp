@@ -82,8 +82,8 @@ private:
 	}
 
 	void literalsTest() {
-		runTestOnVm("literals_test_32.dbc", "", "3", {});
-		runTestOnVm("literals_test_64.dbc", "", "3", {});
+		runTestOnVm("literals_test_32.dbc", "", "1", {});
+		runTestOnVm("literals_test_64.dbc", "", "1", {});
 	}
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "1235", {}); }
@@ -102,9 +102,16 @@ private:
 	}
 
 	void checkLiteralErrorHandling() {
-		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
-		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
-		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
+		loadInvalidDbc(
+			"invalid_literal.dbc",
+			{
+				"Invalid literal: Numeric literal overflows a 32-bit signed integer",
+				"Invalid literal: Numeric literal underflows a 32-bit signed integer",
+				"Invalid literal: Numeric literal overflows a 32-bit unsigned integer",
+				"Invalid literal: Numeric literal overflows a 64-bit signed integer",
+				"Invalid literal: Floating-point literals must be in decimal base for",
+			}
+		);
 	}
 
 	void invalidPrimitiveTypes() {

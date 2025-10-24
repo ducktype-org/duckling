@@ -1,8 +1,8 @@
 #pragma once
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
-#include <string>
+#include <string_view>
 
 namespace testing_utils {
 	inline usize nextChar(std::string_view s, usize i) {

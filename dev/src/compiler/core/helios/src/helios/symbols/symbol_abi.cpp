@@ -4,17 +4,17 @@
 
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/expressions/string_value.hpp>
-#include <pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/call_argument.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
-#include <pst_parser/lang_parser_element.hpp>
-#include <pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/call_argument.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
 

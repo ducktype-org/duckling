@@ -1,12 +1,11 @@
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/elements_list.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/elements_list.hpp>
 
-#include <base/optional.hpp>
-
-#include <query_framework/query_int.hpp>
+#include <base/collections/optional.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace compiler::helios {
 	/**

@@ -1,6 +1,5 @@
 #include <typesystem/higher/all.hpp>
 
-#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
@@ -485,7 +484,7 @@ private:
 				ValueCategory(PrimaryCategory::Local),
 			};
 			fail("Created IntegralDesc for Void type.");
-		} catch (const base::LogicError&) {
+		} catch (const base::Panic&) {
 			// expected
 		}
 

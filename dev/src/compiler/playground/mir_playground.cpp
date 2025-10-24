@@ -1,11 +1,9 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -44,7 +42,7 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = frontend::createModuleTree(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 

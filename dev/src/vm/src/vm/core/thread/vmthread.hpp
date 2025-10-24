@@ -1,25 +1,22 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include "low_program/instruction.hpp"
 #include "vmvalue.hpp"
 
-#include <base/box.hpp>
-#include <base/ints.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
-#include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
 #include <atomic>
 #include <condition_variable>
+#include <expected>
 #include <mutex>
 
 /**
@@ -32,7 +29,6 @@ namespace vm {
 		class FunctionHandlers;
 	}
 
-	struct Frame;
 
 	class VMProcess;
 
@@ -158,8 +154,6 @@ namespace vm {
 		/**
 		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
 		 * stack and perform a call to `func`.
-		 * @note `func_args` should be changed to a vector of arguments of any VM type.
-		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
 		 */
 		[[nodiscard]] low::LowFuncData createStartFunctionFor(
 			const low::LowFuncData& func, const FunctionRunArguments& func_args

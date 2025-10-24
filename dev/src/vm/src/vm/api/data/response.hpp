@@ -2,6 +2,8 @@
 
 #include "status.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <vm/core/process/type_metadata/type.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)

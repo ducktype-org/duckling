@@ -25,6 +25,7 @@ env:
 
 jobs:
   determine-runners:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
     with:
       self-hosted-labels: '["debug", "release"]'
