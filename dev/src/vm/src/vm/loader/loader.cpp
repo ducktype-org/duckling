@@ -34,55 +34,19 @@
 using namespace vm::loader;
 
 namespace {
-	template<class Instruction>
-	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
+	template<vm::code::IsInstruction Instruction>
+	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode) {
+		using ArgTypes        = typename Instruction::ArgTypes;
+		constexpr usize ARITY = std::tuple_size_v<ArgTypes>;
 
-#define HANDLE_INSTR_0ARGS(opcode)                                        \
-	template<>                                                            \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
-		const parser::OpCode& opcode                                      \
-	) {                                                                   \
-		CORE_ASSERT(opcode.args.size() == 0, "Invalid number of args");   \
-		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = opcode.position;                             \
-		return instr;                                                     \
+		CORE_ASSERT(opcode.args.size() == ARITY, "Invalid number of args");
+
+		return [&]<usize... Indices>(std::index_sequence<Indices...>) {
+			return Instruction{
+				std::get<std::tuple_element_t<Indices, ArgTypes>>(opcode.args.at(Indices))...
+			};
+		}(std::make_index_sequence<ARITY>{});
 	}
-
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                  \
-	template<>                                                                                 \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
-		const parser::OpCode& opcode                                                           \
-	) {                                                                                        \
-		CORE_ASSERT(opcode.args.size() == 1, "Invalid number of args");                        \
-		if (std::holds_alternative<arg0_type>(opcode.args.at(0))) {                            \
-			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)) }; \
-			instr.bytecode_pos = opcode.position;                                              \
-			return instr;                                                                      \
-		}                                                                                      \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
-	}
-
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                               \
-	template<>                                                                                         \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
-		const parser::OpCode& opcode                                                                   \
-	) {                                                                                                \
-		CORE_ASSERT(opcode.args.size() == 2, "Invalid number of args");                                \
-		if (std::holds_alternative<arg0_type>(opcode.args.at(0))                                       \
-		    && std::holds_alternative<arg1_type>(opcode.args.at(1))) {                                 \
-			auto instr         = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)),   \
-				                                             std::get<arg1_type>(opcode.args.at(1)) }; \
-			instr.bytecode_pos = opcode.position;                                                      \
-			return instr;                                                                              \
-		}                                                                                              \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
-	}
-
-#include <vm/bytecode/instruction_definitions.hpp>
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
 
 #define HANDLE_INSTR(opcode) \
 	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
