@@ -307,37 +307,26 @@ namespace vm::loader::parser {
 
 #undef HANDLE_STR_ARG
 
-		std::vector<opargs::OpCodeArg> parseOpCode0Args(F8ParserState&) { return {}; }
-
-		template<IsOpCodeArg Arg0>
-		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
-			return { parseArg<Arg0>(state) };
+		template<typename ArgsHead = void, typename... ArgsTail>
+		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
+			// @TODOB docs
+			if constexpr (std::same_as<ArgsHead, void>) {
+				return {};
+			} else {
+				return { parseArg<ArgsHead>(state),
+					     (state.parse().one(lang_def::Special::Comma),
+					      parseArg<ArgsTail>(state))... };
+			}
 		}
 
-		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
-		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
-			auto arg0 = parseArg<Arg0>(state);
-			state.parse().one(lang_def::Special::Comma);
-			auto arg1 = parseArg<Arg1>(state);
-			return { arg0, arg1 };
-		}
-
-#define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
-
-#define HANDLE_INSTR_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
-	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
+#define HANDLE_INSTR_ARGS(NAME, ...) \
+	std::make_pair( std::string{ #NAME }, parseOpCodeArgs<__VA_ARGS__> ),
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
 #include <vm/bytecode/instruction_definitions.hpp>
-
 		};
 
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-#undef MAKE_LINK
+#undef HANDLE_INSTR_ARGS
 	}
 
 	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
