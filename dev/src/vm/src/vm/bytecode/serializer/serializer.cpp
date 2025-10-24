@@ -43,54 +43,30 @@ namespace vm::code {
 		out << '#' << ' ' << comment_content;
 	}
 
-	void write0ArgOpcodeTemplate(const std::string_view opcode_name, std::ostream& out) {
-		out << opcode_name;
-		out << ";";
-	}
-
-	void write1ArgOpcodeTemplate(const std::string_view opcode_name, auto arg1, std::ostream& out) {
-		out << std::setw(22) << std::left << opcode_name << " ";
-		out << std::setw(8) << std::right << toString(arg1);
-		out << ";";
-	}
-
-	void write2ArgsOpcodeTemplate(
-		const std::string_view opcode_name, auto arg1, auto arg2, std::ostream& out
-	) {
-		out << std::setw(22) << std::left << opcode_name << " ";
-		out << std::setw(8) << std::right << toString(arg1) << ",";
-		out << std::setw(8) << std::right << toString(arg2);
-		out << ";";
-	}
-
-	struct InstructionSerializerVisitor final {
-		std::ostream& out;
-
-		void operator()(const instructions::Comment& comment) const {
-			writeComment(comment.comment.strView(), out);
+	namespace {
+		void writeOpcodeArgs(std::ostream& out, const auto& head, const auto&... tail) {
+			out << std::setw(8) << std::right << toString(head);
+			((out << ", " << std::setw(8) << std::right << toString(tail)), ...);
 		}
-
-#define HANDLE_INSTR_0ARGS(opcode) \
-	void operator()(VM_INSTR_FROM_NAME(opcode)) const { write0ArgOpcodeTemplate(#opcode, out); }
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                  \
-	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const { \
-		write1ArgOpcodeTemplate(#opcode, opcode.arg0, out);    \
-	}
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                  \
-	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const {            \
-		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include <vm/bytecode/instruction_definitions.hpp>
-
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-	};
+	template<IsInstruction I>
+	void writeOpcode(const I& instruction, std::ostream& out) {
+		out << std::setw(22) << std::left << I::NAME;
+		std::apply(
+			[&](const auto&... args) {
+				if constexpr (sizeof...(args) > 0) {
+					out << " ";
+					writeOpcodeArgs(out, opargs::Immediate{ 42 }, opargs::Immediate{ 43 });
+				}
+			},
+			instruction.argsAsTuple()
+		);
+		out << ";";
+	}
 
 	void writeInstruction(Instruction instruction, std::ostream& out) {
-		std::visit(InstructionSerializerVisitor{ out }, instruction);
+		VISIT(instruction, i, writeOpcode(i, out));
 	}
 
 	class FunctionSerializer final {
