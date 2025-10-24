@@ -250,7 +250,7 @@ namespace base {
 		}
 
 		void maybeRehash() RELEASE_NOEXCEPT {
-			if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) rehash();
+			if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) [[unlikely]] rehash();
 		}
 
 	public:
@@ -361,22 +361,40 @@ namespace base {
 		static_assert(std::forward_iterator<ConstIteratorT>, "ConstIteratorT must be a forward iterator");
 
 		/**
-		 * If the container doesn't store the key yet, then inserts value identified by the key.
+		 * Inserts key->value into the container.
+		 * Panics if key already exists.
 		 * @param key Data key
 		 * @param value The data
-		 * @returns true if a new key was inserted, false if the key already existed.
+		 * @returns A reference to the inserted key-value pair.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		bool put(K&& key, D&& value) RELEASE_NOEXCEPT {
+		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto new_node
 				= node_allocator.allocateEmplace(Node{ nullptr, std::forward<K>(key), std::forward<D>(value) });
 
-			// @TODO: PR: optimize it with contains+find as one pass:
-			// also.. this is a weird semantics, see if it breaks without it.
-			if (contains(new_node->key_value.key)) {
-				CORE_UNREACHABLE();
+			addToBucket(keyToBucket(new_node->key_value.key), new_node);
+
+			element_count++;
+			maybeRehash();
+
+			return &new_node->key_value;
+		}
+
+		/**
+		 * If key is not in the container, inserts key->value into the container.
+		 * @param key Data key
+		 * @param value The data
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key already existed.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
+			auto new_node
+				= node_allocator.allocateEmplace(Node{ nullptr, std::forward<K>(key), std::forward<D>(value) });
+
+			// @TODO: make this more efficient, by direct, one-pass implementation
+			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
-				return false;
+				return nullptr;
 			}
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
@@ -384,7 +402,7 @@ namespace base {
 			element_count++;
 			maybeRehash();
 
-			return true;
+			return &new_node->key_value;
 		}
 
 		[[nodiscard]]

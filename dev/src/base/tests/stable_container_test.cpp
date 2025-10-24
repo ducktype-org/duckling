@@ -127,9 +127,9 @@ private:
 		map.put("lol", "test 1");
 		map.put("a", "test 2");
 		map.put("b", "test 3");
-		auto put_res = map.put("lol", "test");
+		auto put_res = map.maybePut("lol", "test");
 
-		assertTrue(put_res == false, "Value was wrongly inserted");
+		assertTrue(put_res == nullptr, "Value was wrongly inserted");
 
 		ASSERT_EQUAL(3, map.size());
 		ASSERT_EQUAL(map["a"], "test 2");

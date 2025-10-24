@@ -51,7 +51,12 @@ public:
 
             for (u64 i = 0; i < count; i++) {
                 auto v = rng() % 1000000;
-                map.put(v, v * 10);
+                auto put_res = map.maybePut(v, v * 10);
+
+                if (put_res != nullptr) {
+                    ASSERT_EQUAL(put_res->key, v);
+                    ASSERT_EQUAL(put_res->value, v * 10);
+                }
             
                 for (int j = 0; j < 3; j++) {
                     auto new_v = rng() % 1000000;
