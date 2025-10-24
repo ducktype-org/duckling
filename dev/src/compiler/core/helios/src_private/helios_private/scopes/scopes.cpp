@@ -1,5 +1,6 @@
 #include "scopes.hpp"
 
+#include <algorithm>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -296,10 +297,10 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets scopes in a module.
 		 */
-		struct ScopeGrabPseudoVisitor {
+		struct ScopeGrabPseudoVisitor final {
 			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
 
-			std::set<ScopeID> out;
+			std::vector<ScopeID> out;
 			Context&          ctx;
 
 			template<class T>
@@ -315,12 +316,12 @@ namespace compiler::helios {
 				// @todo
 				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out.insert(scopeOf(element));
+					out.emplace_back(scopeOf(element));
 				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
 			}
 		};
 
-		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
+		static auto getScopes(Context& ctx, frontend::FileID file) -> std::vector<ScopeID> {
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
 			ScopeGrabPseudoVisitor scope_grab(ctx);
@@ -332,14 +333,19 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
 			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-			std::set<ScopeID> output    = getScopes(ctx, main_file);
+			std::vector<ScopeID> output    = getScopes(ctx, main_file);
 
 			// fetch scopes from other module files
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
 			for (auto file: *source_files) {
 				auto scopes = getScopes(ctx, file);
-				output.merge(scopes);
+				output.insert(output.end(), scopes.begin(), scopes.end());
 			}
+
+			// eliminate duplicates with sort:
+			std::sort(output.begin(), output.end());
+			auto last = std::unique(output.begin(), output.end());
+			output.erase(last, output.end());
 
 			// validate output:
 			for (auto scope: output)
