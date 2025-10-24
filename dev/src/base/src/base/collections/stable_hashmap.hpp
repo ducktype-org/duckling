@@ -22,9 +22,9 @@ namespace base {
 	 * @tparam HASH_T Hash functor for hashing keys
 	 */
 	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
-	class StableHashMap final {
+	class StableHashMapOLD final {
 	public:
-		StableHashMap() = default;
+		StableHashMapOLD() = default;
 
 		/**
 		 * Returns the data identified by the key.
@@ -151,11 +151,12 @@ namespace base {
 			const KEY_T key;
 			DATA_T     value;
 
-			KeyValuePair(const KEY_T& key, const DATA_T& value) noexcept
-				: key(key), value(value) {}
+			// KeyValuePair(const KEY_T& key, const DATA_T& value) noexcept
+			// 	: key(key), value(value) {}
 			
-			KeyValuePair(KEY_T&& key, DATA_T&& value) noexcept
-				: key(std::move(key)), value(std::move(value)) {}
+			template<class K = KEY_T, class D = DATA_T>
+			KeyValuePair(K&& key, D&& value) noexcept
+				: key(std::forward<K>(key)), value(std::forward<D>(value)) {}
 		};
 
 	private:
@@ -170,11 +171,12 @@ namespace base {
 
 			KeyValuePair key_value;
 
-			Node(MRef<Node> next, const KEY_T& key, const DATA_T& value) noexcept
-				: next(next), key_value(key, value) {}
+			// Node(MRef<Node> next, const KEY_T& key, const DATA_T& value) noexcept
+			// 	: next(next), key_value(key, value) {}
 
-			Node(MRef<Node> next, KEY_T&& key, DATA_T&& value) noexcept
-				: next(next), key_value(std::move(key), std::move(value)) {}
+			template<class K = KEY_T, class D = DATA_T>
+			Node(MRef<Node> next, K&& key, D&& value) noexcept
+				: next(next), key_value(std::forward<K>(key), std::forward<D>(value)) {}
 		};
 
 		std::vector<MRef<Node>>                  buckets;
@@ -514,4 +516,8 @@ namespace base {
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 	};
+
+
+	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
+	using StableHashMap = StableHashMap20<KEY_T, DATA_T, HASH_T>;
 }
