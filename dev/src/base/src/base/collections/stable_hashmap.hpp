@@ -262,7 +262,7 @@ namespace base {
 			element_count(other.element_count) {
 			
 			other.element_count = 0;
-			other.buckets.resize(INITIAL_BUCKETS, nullptr);
+			other.buckets.resize(1, nullptr);
 		}
 
 		~StableHashMap20() {

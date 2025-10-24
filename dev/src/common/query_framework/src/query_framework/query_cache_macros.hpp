@@ -6,17 +6,17 @@
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_COPY                                                   \
-	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;       \
-	static auto load(KHash key_hash) -> LoadResult {                            \
-		if (const auto& value = cache.atMaybe(key_hash)) {                      \
-			return QResWithACD{ (*value)->data, (*value)->acd };                \
-		}                                                                       \
-		return {};                                                              \
-	}                                                                           \
-	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult { \
-		cache.put(key_hash, { std::move(res), acd });                           \
-		return cache.at(key_hash).data;                                         \
-	}                                                                           \
+	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;       \
+	static auto load(KHash key_hash) -> LoadResult {                             \
+		if (auto value = cache.atMaybe(key_hash)) {                              \
+			return QResWithACD{ (*value)->data, (*value)->acd };                       \
+		}                                                                        \
+		return {};                                                               \
+	}                                                                            \
+	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {  \
+		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });  \
+		return ref->value.data;                             \
+	}                                                                            \
 	static_assert(                                                              \
 		std::is_same_v<PResult, QResult>,                                       \
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"         \
@@ -66,8 +66,8 @@
 		return {};                                                               \
 	}                                                                            \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {  \
-		cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });  \
-		return CRef<PResult>(&cache[key_hash].data);                             \
+		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });  \
+		return CRef<PResult>(&ref->value.data);                             \
 	}                                                                            \
 	static_assert(                                                               \
 		std::is_same_v<CRef<PResult>, QResult>,                                  \
