@@ -6,6 +6,38 @@
 
 namespace base {
 
+    // struct BlockSize final {
+    //     enum class Tag { ByteBlockSizeTag, ItemBlockSizeTag  };
+    //     u64 value;
+    //     Tag tag;
+    // };
+
+    // namespace internal {
+    //     struct BlockSizeOutput {
+    //         u64 element_count;
+    //         u64 size_in_bytes;
+    //         u64 padding;
+    //     };
+    //     consteval BlockSizeOutput getBlockSizeOutput(BlockSize block_size, u64 item_size) {
+    //         switch (block_size.tag) {
+    //             case BlockSize::Tag::ByteBlockSizeTag:
+    //                 return BlockSizeOutput{
+    //                     .element_count = 0,
+    //                     .size_in_bytes = block_size.value,
+    //                     .padding = 0
+    //                 };
+    //             case BlockSize::Tag::ItemBlockSizeTag:
+    //                 return BlockSizeOutput{
+    //                     .element_count = block_size.value,
+    //                     .size_in_bytes = 0,
+    //                     .padding = 0
+    //                 };
+    //         }
+    //         CORE_UNREACHABLE();
+            
+    //     }
+    // }
+
     /**
      * A memory pool object of a single type allocator.
      * It manages objects, not memory.
@@ -15,20 +47,42 @@ namespace base {
      * This might be less time efficient, but it greatly simplifies the api and
      * lowers memory usage and can be made in logarithmic time if needed in the future.
      */
-    template<class T, u64 BLOCK_SIZE = 2'048>
+    template<class T, u64 BYTE_BLOCK_SIZE = 4096>
     requires base::IsPlainType<T>
 	class SingleTypeMemoryPoolAllocator final {
     private:
         using StorageT = ManualLifetimeStorage<T>;
 
+        constexpr static u64 BLOCK_ELEMENT_COUNT = BYTE_BLOCK_SIZE / sizeof(StorageT);
+        using ItemArray = std::array<StorageT, BLOCK_ELEMENT_COUNT>;
+
+        static_assert(BLOCK_ELEMENT_COUNT > 0, "BYTE_BLOCK_SIZE is too small for type T");
+
+        constexpr static u64 PADDING_BYTES_COUNT = BYTE_BLOCK_SIZE - sizeof(ItemArray);
+
         /**
          * A single buffer (i.e. "pool") of objects.
          */
-        struct Buffer final {
-			std::array<StorageT, BLOCK_SIZE> items;
+        struct BufferNoPadding final {
+			ItemArray items;
 		};
 
-    
+        template<u64 N>
+        struct BufferWithPadding final {
+			ItemArray items;
+
+            [[maybe_unused]]
+            char padding[N]; // NOLINT
+		};
+
+        using Buffer = std::conditional_t<
+            PADDING_BYTES_COUNT == 0,
+            BufferNoPadding,
+            BufferWithPadding<PADDING_BYTES_COUNT>
+        >;
+
+        static_assert(sizeof(Buffer) == BYTE_BLOCK_SIZE, "Buffer size must be equal to BYTE_BLOCK_SIZE");
+
         /**
          * Simple helper type that wraps index of a buffer and index of an item within that buffer.
          */
@@ -39,7 +93,7 @@ namespace base {
             BufferIndex next() const {
                 BufferIndex next_idx = *this;
                 next_idx.item_idx++;
-                if (next_idx.item_idx >= BLOCK_SIZE) {
+                if (next_idx.item_idx >= BLOCK_ELEMENT_COUNT) {
                     next_idx.buffer_idx++;
                     next_idx.item_idx = 0;
                 }
@@ -89,7 +143,7 @@ namespace base {
             }
 
             CORE_ASSERT(allocation_idx.buffer_idx < buffers.size(), "Buffer index out of bounds");
-            CORE_ASSERT(allocation_idx.item_idx < BLOCK_SIZE, "Item index out of bounds");
+            CORE_ASSERT(allocation_idx.item_idx < BLOCK_ELEMENT_COUNT, "Item index out of bounds");
 
             Ref<StorageT> new_storage = &buffers[allocation_idx.buffer_idx]->items[allocation_idx.item_idx];
             new_storage->construct(std::forward<decltype(args)>(args)...);

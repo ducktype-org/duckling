@@ -174,7 +174,7 @@ namespace base {
 		};
 
 		std::vector<MRef<Node>>                  buckets;
-		SingleTypeMemoryPoolAllocator<Node, 128>  node_allocator;
+		SingleTypeMemoryPoolAllocator<Node>  node_allocator;
 		u64                                      element_count = 0;
 
 		[[nodiscard]]
