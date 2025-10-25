@@ -9,14 +9,14 @@ function main { i64, ptr_argv } -> i64 {
     input_l64 value;
 
     init_lany_type ptr, ptr_i64;
-    variantGetInner_lptr_lvnt ptr, v1, i64;
+    variantGetInner_lptr_lvnt_type ptr, v1, i64;
 
     store_lptr_lany ptr, value;
 
     deinit; # ptr
 
     init_lany_type new_ptr, ptr_i64;
-    variantGetInner_lptr_lvnt new_ptr, v1, i64;
+    variantGetInner_lptr_lvnt_type new_ptr, v1, i64;
 
     mov_l64_imm value, 0;
     load_lany_lptr value, new_ptr;

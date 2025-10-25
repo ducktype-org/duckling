@@ -14,7 +14,7 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type inner_ptr, ptr_sv;
 
     # inner_ptr = v0.getData<variant<i64, i8>>();
-    variantGetInner_lptr_lvnt inner_ptr, v0, simple_variant;
+    variantGetInner_lptr_lvnt_type inner_ptr, v0, simple_variant;
 
     # inner_ptr->setType<i64>();
     variantSetInner_lptr_type inner_ptr, i64;
@@ -23,7 +23,7 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type ptr, ptr_i64;
 
     # ptr = inner_ptr->getData<i64>();
-    variantGetInner_lptr_lptr ptr, inner_ptr, i64;
+    variantGetInner_lptr_lptr_type ptr, inner_ptr, i64;
 
     # let value: i64 = input();
     init_lany_type value, i64;

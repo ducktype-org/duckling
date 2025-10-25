@@ -36,17 +36,17 @@ function main { i64, ptr_argv } -> i64 {
     # table_ptr = &MyStruct[0];
 
     init_lany_type struct_ptr, MyStructPtr;
-    fixedSizeTableLea_lptr_lptr struct_ptr, table_ptr, ret_val;  # ret_val == 0
+    fixedSizeTableLea_lptr_lptr_l64 struct_ptr, table_ptr, ret_val;  # ret_val == 0
     # struct_ptr = &MyStruct[0];
 
     init_lany_type variant_ptr, MyVariantPtr;
-    structLea_lptr_lptr variant_ptr, struct_ptr, MyStruct.field1;
+    structLea_lptr_lptr_field variant_ptr, struct_ptr, MyStruct.field1;
     # variant_ptr = &struct_ptr->field1;
 
     variantSetInner_lptr_type variant_ptr, ptr_i64;
     # (*variant_ptr).setType<ptr_i64>();
 
-    variantGetInner_lptr_lptr int_ptr_ptr, variant_ptr, ptr_i64;
+    variantGetInner_lptr_lptr_type int_ptr_ptr, variant_ptr, ptr_i64;
     # int_ptr_ptr = variant_ptr->asPtr<ptr_i64>();
 
     store_lptr_lany int_ptr_ptr, int_ptr;

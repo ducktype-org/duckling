@@ -11,7 +11,7 @@ function main { i64, ptr_argv } -> i64 {
 
 	mov_l64_imm         z, 1;
 	ref_lptr_lany        x, z;  # x = &z
-	fixedSizeTableLoad_lany_lptr       y, x, y;  # y = *x
+	fixedSizeTableLoad_lany_lptr_l64       y, x, y;  # y = *x
 
 	deinit; # z
 	deinit; # y

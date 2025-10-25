@@ -13,8 +13,8 @@ function main { i64, ptr_argv } -> i64 {
     mov_l64_imm test_val, 42;
     mov_l64_imm test_idx, 2;
 
-    fixedSizeTableStore_lptr_lany arr_ptr, test_val, test_idx;
-    fixedSizeTableLea_lptr_lptr test_ptr, arr_ptr, test_idx;
+    fixedSizeTableStore_lptr_lany_l64 arr_ptr, test_val, test_idx;
+    fixedSizeTableLea_lptr_lptr_l64 test_ptr, arr_ptr, test_idx;
 
     load_lany_lptr test_idx, test_ptr;
     output_l64 test_idx;
