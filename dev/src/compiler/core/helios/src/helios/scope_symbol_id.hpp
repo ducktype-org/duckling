@@ -53,6 +53,8 @@ namespace compiler::helios {
 
 		bool operator<(const ScopeID& other) const { return ref < other.ref; }
 
+		auto operator<=>(const ScopeID& other) const { return ref.get() <=> other.ref.get(); }
+
 		/**
 		 * @brief Debug function to print scope and its parents IDs.
 		 * Useful for debugging weird scope bugs.
