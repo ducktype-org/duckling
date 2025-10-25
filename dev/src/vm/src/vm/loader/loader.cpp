@@ -10,13 +10,13 @@
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 
+#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-// #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
