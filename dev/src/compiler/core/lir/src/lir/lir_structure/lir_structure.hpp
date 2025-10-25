@@ -146,13 +146,15 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
+		using ValueType = std::variant<ctv::CompileTimeValue, i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
 		ValueType value;
 
 	public:
 		LIRValue(i64 value): value(value) {}
 
 		LIRValue(bool value): value(value) {}
+
+		LIRValue(ctv::CompileTimeValue value): value(value) {}
 
 		LIRValue(LocalRef value): value(value) {}
 

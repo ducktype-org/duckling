@@ -28,6 +28,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 
 namespace compiler::helios::code {
 	namespace {
@@ -72,6 +73,19 @@ namespace compiler::helios::code {
 		}
 
 		/// NUMERIC LITERAL PARSING ///
+		template<typename TargetType, typename SourceType>
+		bool fitsIn(SourceType value) {
+			if constexpr (std::is_signed_v<TargetType> == std::is_signed_v<SourceType>) {
+				return value >= static_cast<SourceType>(std::numeric_limits<TargetType>::min())
+				    && value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
+			} else if constexpr (std::is_unsigned_v<SourceType> && std::is_unsigned_v<TargetType>) {
+				return value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
+			} else {
+				return value >= 0
+				    && static_cast<SourceType>(value) <= std::numeric_limits<TargetType>::max();
+			}
+		}
+
 		template<typename TargetInt>
 		base::Optional<ctv::CompileTimeValue> parseSignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
@@ -86,13 +100,12 @@ namespace compiler::helios::code {
 				// TODOP: Log error.
 				return {};
 			}
-			if (parsed_value < std::numeric_limits<TargetInt>::min()
-			    || parsed_value
-			           > std::numeric_limits<TargetInt>::max()) {  // Literal out of bounds.
-				                                                   // TODOP: Add comment
+
+			if (!fitsIn<TargetInt>(parsed_value)) {
 				// TODOP: Log error.
 				return {};
 			}
+
 			return ctv::CompileTimeValue(static_cast<TargetInt>(parsed_value));
 		}
 
@@ -110,10 +123,7 @@ namespace compiler::helios::code {
 				// TODOP: Log error.
 				return {};
 			}
-			if (parsed_value < std::numeric_limits<TargetUInt>::min()
-			    || parsed_value
-			           > std::numeric_limits<TargetUInt>::max()) {  // Literal out of bounds. TODOP:
-				                                                    // Add comment
+			if (!fitsIn<TargetUInt>(parsed_value)) {
 				// TODOP: Log error.
 				return {};
 			}
@@ -122,7 +132,7 @@ namespace compiler::helios::code {
 
 		template<typename TargetFloat>
 		base::Optional<ctv::CompileTimeValue> parseFloat(
-			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
@@ -147,15 +157,13 @@ namespace compiler::helios::code {
 				return {};
 			}
 
-			if (parsed_value <= std::numeric_limits<i8>::max())
-				return ctv::CompileTimeValue{ static_cast<i8>(parsed_value) };
-			else if (parsed_value <= std::numeric_limits<i16>::max())
+			// TODOP: issue, add support for i8 and i128 types
+			if (parsed_value <= std::numeric_limits<i16>::max())
 				return ctv::CompileTimeValue{ static_cast<i16>(parsed_value) };
 			else if (parsed_value <= std::numeric_limits<i32>::max())
 				return ctv::CompileTimeValue{ static_cast<i32>(parsed_value) };
 			else if (parsed_value <= std::numeric_limits<i64>::max())
 				return ctv::CompileTimeValue{ static_cast<i64>(parsed_value) };
-			// @TODOP: Add handling for i128
 
 			// TODOP: Log error
 			return {};
@@ -172,8 +180,7 @@ namespace compiler::helios::code {
 				return {};
 			}
 
-			if (static_cast<f128>(static_cast<f16>(parsed_value)) == parsed_value)
-				return ctv::CompileTimeValue{ static_cast<f16>(parsed_value) };
+			// TODOP: Issue, add support for f16.
 			if (static_cast<f128>(static_cast<f32>(parsed_value)) == parsed_value)
 				return ctv::CompileTimeValue{ static_cast<f32>(parsed_value) };
 			else if (static_cast<f128>(static_cast<f64>(parsed_value)) == parsed_value)
@@ -208,10 +215,10 @@ namespace compiler::helios::code {
 
 				int base = 10;
 				if (value.starts_with("0b") || value.starts_with("0B")) {
-					base = 16;
+					base = 2;
 					value.remove_prefix(2);
 				} else if (value.starts_with("0o") || value.starts_with("0O")) {
-					base = 16;
+					base = 8;
 					value.remove_prefix(2);
 				} else if (value.starts_with("0x") || value.starts_with("0X")) {
 					base = 16;
@@ -226,10 +233,8 @@ namespace compiler::helios::code {
 					bool is_float = value.find_first_of(".eE") != std::string_view::npos;
 					parsed_ctv    = is_float ? deduceFloatType(value, position, ctx)
 					                         : deduceIntegerType(value, base, position, ctx);
-				}
-				case lang_def::NumericLiteralTypeSpecifier::i8:
-					parsed_ctv = parseSignedInteger<i8>(value, base, position, ctx);
 					break;
+				}
 				case lang_def::NumericLiteralTypeSpecifier::i16:
 					parsed_ctv = parseSignedInteger<i16>(value, base, position, ctx);
 					break;
@@ -238,9 +243,6 @@ namespace compiler::helios::code {
 					break;
 				case lang_def::NumericLiteralTypeSpecifier::i64:
 					parsed_ctv = parseSignedInteger<i64>(value, base, position, ctx);
-					break;
-				case lang_def::NumericLiteralTypeSpecifier::u8:
-					parsed_ctv = parseUnsignedInteger<u8>(value, base, position, ctx);
 					break;
 				case lang_def::NumericLiteralTypeSpecifier::u16:
 					parsed_ctv = parseUnsignedInteger<u16>(value, base, position, ctx);
@@ -251,31 +253,30 @@ namespace compiler::helios::code {
 				case lang_def::NumericLiteralTypeSpecifier::u64:
 					parsed_ctv = parseUnsignedInteger<u64>(value, base, position, ctx);
 					break;
-				case lang_def::NumericLiteralTypeSpecifier::f16:
-					parsed_ctv = parseFloat<f16>(value, base, position, ctx);
-					break;
 				case lang_def::NumericLiteralTypeSpecifier::f32:
-					parsed_ctv = parseFloat<f32>(value, base, position, ctx);
+					parsed_ctv = parseFloat<f32>(value, position, ctx);
 					break;
 				case lang_def::NumericLiteralTypeSpecifier::f64:
-					parsed_ctv = parseFloat<f64>(value, base, position, ctx);
-					break;
-				case lang_def::NumericLiteralTypeSpecifier::f80:
-					// TODOP: ???
-					parsed_ctv = parseFloat<f80>(value, base, position, ctx);
+					parsed_ctv = parseFloat<f64>(value, position, ctx);
 					break;
 				case lang_def::NumericLiteralTypeSpecifier::f128:
-					parsed_ctv = parseFloat<f128>(value, base, position, ctx);
+					parsed_ctv = parseFloat<f128>(value, position, ctx);
 					break;
+				case lang_def::NumericLiteralTypeSpecifier::i8:
+				case lang_def::NumericLiteralTypeSpecifier::u8:
+				case lang_def::NumericLiteralTypeSpecifier::f16:
+				case lang_def::NumericLiteralTypeSpecifier::f80:
 				case lang_def::NumericLiteralTypeSpecifier::u128:
 				case lang_def::NumericLiteralTypeSpecifier::i128:
-					throw base::NotYetImplemented(base::strConcat(
-						"Unhandled type specifier in hout of expr: ",
-						lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"Unhandled type specifier in hout of expr: ",
+							lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+						)
+					);
 				}
 
-				if (parsed_ctv.has_value())  // If failed the error is logged.
+				if (parsed_ctv.has_value())  // If failed, the error is logged.
 					node = makeBox<LiteralCTVExpr>(ctx, parsed_ctv.value());
 				return;
 			}
@@ -605,10 +606,12 @@ namespace compiler::helios::code {
 					)) {
 						opt_some(op) { operators.push_back(op); }
 						opt_none {
-							ctx.log(makeBox<
+							ctx.log(
+								makeBox<
 									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-								stmt->getSourcePosition(), "No builtin operator found"
-							));
+									stmt->getSourcePosition(), "No builtin operator found"
+								)
+							);
 							return;
 						}
 					}

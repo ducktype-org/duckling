@@ -17,6 +17,7 @@
 #include <query_framework/query_impl.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include "helios/hout/elements/expr.hpp"
 
 #include <cmath>
 #include <ranges>
@@ -51,6 +52,10 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
+				result = CompileTimeValue{ expr.value };
+			}
+
+			void visitLiteralCTVExpr(const code::LiteralCTVExpr& expr) final {
 				result = CompileTimeValue{ expr.value };
 			}
 

@@ -31,7 +31,6 @@ namespace compiler::ctv {
 			u16,
 			u32,
 			u64,
-			f16,
 			f32,
 			f64,
 			f128,
@@ -114,19 +113,6 @@ namespace compiler::ctv {
 		 * @return A i64 value or an empty optional if the CTV didn't store an integer.
 		 */
 		[[nodiscard]] base::Optional<u64> getU64() const;
-
-		// /**
-		//  * @brief Retrieves the integer value from the CTV, converting smaller integers if
-		//  necessary.
-		//  * @return A i128 value or an empty optional if the CTV didn't store an integer.
-		//  */
-		// [[nodiscard]] base::Optional<i128> getI128() const;
-
-		/**
-		 * @brief Retrieves the float value from the CTV.
-		 * @return A f80 value or an empty optional if the CTV didn't store a float.
-		 */
-		[[nodiscard]] base::Optional<f16> getF16() const;
 
 		/**
 		 * @brief Retrieves the float value from the CTV.
