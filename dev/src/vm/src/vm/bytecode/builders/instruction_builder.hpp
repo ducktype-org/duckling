@@ -4,15 +4,9 @@
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 
@@ -106,7 +100,7 @@ namespace vm::code::builders {
 	 * Some operations support more arguments than their corresponding opcodes:
 	 * * In case of `load` and `store`, third argument gets its own `ext` opcode.
 	 */
-	class InstructionBuilder {
+	class InstructionBuilder final {
 		std::vector<vm::opargs::OpCodeArg> args;
 		OpKind                             kind{};
 		bool                               kind_set = false;

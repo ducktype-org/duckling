@@ -7,8 +7,8 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/declarations/variable.hpp>
-#include <pst_parser/elements/includes/basic.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <query_framework/context.hpp>
 

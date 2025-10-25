@@ -2,58 +2,60 @@
 # and group them into unity build groups.
 # See https://cmake.org/cmake/help/latest/prop_tgt/UNITY_BUILD.html for more details.
 
+set(PST_SRC "src/frontend/pst_parser")
+
 file(GLOB StatementElementsImplementationFiles CONFIGURE_DEPENDS
-	"src/pst_parser/elements/implementations/statements/*.cpp"	
+	"${PST_SRC}/elements/implementations/statements/*.cpp"	
 )
 set_source_files_properties(${StatementElementsImplementationFiles}
 	PROPERTIES UNITY_GROUP "pst_statements"
 )
 
 file(GLOB DeclarationsElementsImplementationFiles CONFIGURE_DEPENDS
-	"src/pst_parser/elements/implementations/declarations/*.cpp"
+	"${PST_SRC}/elements/implementations/declarations/*.cpp"
 )
 set_source_files_properties(${DeclarationsElementsImplementationFiles}
 	PROPERTIES UNITY_GROUP "pst_declarations"
 )
 
 file(GLOB ExpressionElementsImplementationFiles CONFIGURE_DEPENDS
-	"src/pst_parser/elements/implementations/expressions/*.cpp"
+	"${PST_SRC}/elements/implementations/expressions/*.cpp"
 )
 set_source_files_properties(${ExpressionElementsImplementationFiles}
 	PROPERTIES UNITY_GROUP "pst_expressions"
 )
 
 file(GLOB ClassElementsImplementationFiles CONFIGURE_DEPENDS
-	"src/pst_parser/elements/implementations/class_elements/*.cpp"
+	"${PST_SRC}/elements/implementations/class_elements/*.cpp"
 )
 set_source_files_properties(${ClassElementsImplementationFiles}
 	PROPERTIES UNITY_GROUP "pst_class_elements"
 )
 
 file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
-	"src/pst_parser/elements/implementations/meta/*.cpp"
-	"src/pst_parser/elements/implementations/not_statements/*.cpp"
-	"src/pst_parser/elements/implementations/not_statements/patterns/*.cpp"
-	"src/pst_parser/elements/implementations/lists/*.cpp"
+	"${PST_SRC}/elements/implementations/meta/*.cpp"
+	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
+	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"
+	"${PST_SRC}/elements/implementations/lists/*.cpp"
 )
 set_source_files_properties(${OtherElementsImplementationFiles}
 	PROPERTIES UNITY_GROUP "pst_other_elements"
 )
 
 add_library(PstParser
-	src/pst_parser/lang_parser_base.cpp
-	src/pst_parser/test_utils/pst_test_utils.cpp
-	src/pst_parser/access.cpp
-	src/pst_parser/pst.cpp
-	src/pst_parser/pst_query/code_dependency.cpp
-	src/pst_parser/elements/elements_common.cpp
-	src/pst_parser/elements/lang_state_unmethods.cpp
+	${PST_SRC}/lang_parser_base.cpp
+	${PST_SRC}/test_utils/pst_test_utils.cpp
+	${PST_SRC}/access.cpp
+	${PST_SRC}/pst.cpp
+	${PST_SRC}/pst_query/code_dependency.cpp
+	${PST_SRC}/elements/elements_common.cpp
+	${PST_SRC}/elements/lang_state_unmethods.cpp
 	${StatementElementsImplementationFiles}
 	${DeclarationsElementsImplementationFiles}
 	${ExpressionElementsImplementationFiles}
 	${ClassElementsImplementationFiles}
 	${OtherElementsImplementationFiles}
-	src/pst_parser/pst_visitor.hpp
+	${PST_SRC}/pst_visitor.hpp
 )
 
 if (NOT DISABLE_UNITY_COMPILATION)
@@ -64,7 +66,7 @@ else() # Unity compilation is disabled by default.
 	message("-- PstParser will NOT use UNITY compilation, compilation will be longer")
 endif()
 
-make_module(PstParser USES Hashing Lexer UnicodeClassification Printer TPC QueryFramework ModuleTree)
+make_module(PstParser USES Hashing Lexer UnicodeClassification Printer TPC QueryFramework)
 
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)

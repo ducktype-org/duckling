@@ -4,7 +4,7 @@
 
 #include <stdexcept>
 
-namespace compiler::frontend {
+namespace hashing {
 
 	std::string ComponentHash::str() const {
 		IF_BUILD_TYPE_DEV({

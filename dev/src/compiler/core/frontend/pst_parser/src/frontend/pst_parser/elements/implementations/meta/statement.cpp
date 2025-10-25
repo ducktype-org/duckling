@@ -123,8 +123,8 @@ namespace pst {
 	}
 
 	void Stmt::calcElementPathHashRecursive() {
-		auto          path       = getElementPathHash();
-		ComponentHash attrs_path = { path, "attributes" };
+		auto                   path       = getElementPathHash();
+		hashing::ComponentHash attrs_path = { path, "attributes" };
 		calcIndexedListChildPath<Attribute>({ attributes }, attrs_path);
 		for (auto& el: sub_elements) {
 			variant_match(el) {
@@ -137,7 +137,7 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ComponentHash child_path(path, named_child.name);
+					hashing::ComponentHash child_path(path, named_child.name);
 					named_child.element->calcElementPathHash(child_path);
 				}
 			}
