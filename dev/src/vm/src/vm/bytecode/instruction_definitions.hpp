@@ -239,7 +239,7 @@ DEF_INSTR(
  * type information in the implementation.
  */
 DEF_INSTR(
-	variantGetInner_lptr_lvnt,
+	variantGetInner_lptr_lvnt_type,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalVnt /* variant */,
 	vm::opargs::Type /* expected_type */
@@ -262,7 +262,7 @@ DEF_INSTR(
  * type information in the implementation.
  */
 DEF_INSTR(
-	variantGetInner_lptr_lptr,
+	variantGetInner_lptr_lptr_type,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* variant_ptr */,
 	vm::opargs::Type /* expected_type */
@@ -309,7 +309,7 @@ DEF_INSTR(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 // casts pointed object to its superclass
 DEF_INSTR(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass
-DEF_INSTR(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr, vm::opargs::Type)
+DEF_INSTR(downcast_lptr_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr, vm::opargs::Type)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 DEF_INSTR(virtual_call_lptr_method, vm::opargs::StackLocalPtr, vm::opargs::MethodName)
 
@@ -334,21 +334,21 @@ DEF_INSTR(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // expects `ext_field` to be the next instruction
 // loads effective address of struct field
 DEF_INSTR(
-	structLea_lptr_lptr,
+	structLea_lptr_lptr_field,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* source */,
 	vm::opargs::Field /* field */
 )
 // expects `ext_field` to be the next instruction
 DEF_INSTR(
-	structLoad_lany_lptr,
+	structLoad_lany_lptr_field,
 	vm::opargs::StackLocalAny /* destination */,
 	vm::opargs::StackLocalPtr /* data_ptr */,
 	vm::opargs::Field /* field */
 )
 // expects `ext_field` to be the next instruction
 DEF_INSTR(
-	structStore_lptr_lany,
+	structStore_lptr_lany_field,
 	vm::opargs::StackLocalPtr /* data_ptr */,
 	vm::opargs::StackLocalAny /* source */,
 	vm::opargs::Field /*	 field */
@@ -358,14 +358,14 @@ DEF_INSTR(
 
 // expects `ext_l64` to be the next instruction
 DEF_INSTR(
-	fixedSizeTableLea_lptr_lptr,
+	fixedSizeTableLea_lptr_lptr_l64,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::StackLocal64 /* index */
 )
 // expects `ext_l64` to be the next instruction
 DEF_INSTR(
-	fixedSizeTableLoad_lany_lptr,
+	fixedSizeTableLoad_lany_lptr_l64,
 	vm::opargs::StackLocalAny /* destination */,
 	vm::opargs::StackLocalPtr /* table_ptr*/,
 	vm::opargs::StackLocal64 /* index */
@@ -373,7 +373,7 @@ DEF_INSTR(
 
 // expects `ext_l64` to be the next instruction
 DEF_INSTR(
-	fixedSizeTableStore_lptr_lany,
+	fixedSizeTableStore_lptr_lany_l64,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::StackLocalAny /* source*/,
 	vm::opargs::StackLocal64 /* index */
@@ -381,14 +381,14 @@ DEF_INSTR(
 
 // expects `ext_l64` to be the next instruction
 DEF_INSTR(
-	dynTableLea_lptr_lptr,
+	dynTableLea_lptr_lptr_l64,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* table_ptr*/,
 	vm::opargs::StackLocal64 /* index */
 )
 // expects `ext_l64` to be the next instruction
 DEF_INSTR(
-	dynTableLoad_lany_lptr,
+	dynTableLoad_lany_lptr_l64,
 	vm::opargs::StackLocalAny /* destination */,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::StackLocal64 /* index */
@@ -396,7 +396,7 @@ DEF_INSTR(
 
 // expects `ext_l64` to be the next instruction
 DEF_INSTR(
-	dynTableStore_lptr_lany,
+	dynTableStore_lptr_lany_l64,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::StackLocalAny /* source */,
 	vm::opargs::StackLocal64 /* index */
@@ -412,7 +412,7 @@ DEF_INSTR(
  * @note `ext_l64` is required to tell the count of elements
  */
 DEF_INSTR(
-	dynTableReAlloc_lptr_type,
+	dynTableReAlloc_lptr_type_l64,
 	vm::opargs::StackLocalPtr /* table_ptr */,
 	vm::opargs::Type /* table_type */,
 	vm::opargs::StackLocal64 /* new_elem_count */

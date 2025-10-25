@@ -418,10 +418,14 @@ class FunctionValidator {
 		}
 
 		// We assert no cross-type operations on primitive types.
-		if (arg_types.size() == 2) {
-			if (arg_types.at(0).size == arg_types.at(1).size
-			    && arg_types.at(0).name != arg_types.at(1).name)
-				throw ArgumentMismatchError(instruction);
+		if (arg_types.size() >= 2) {
+			bool sizes_match = std::ranges::all_of(arg_types, [&](auto x) {
+				return x.size == arg_types.front().size;
+			});
+			bool names_match = std::ranges::all_of(arg_types, [&](auto x) {
+				return x.name == arg_types.front().name;
+			});
+			if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
 		}
 	}
 
@@ -618,7 +622,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantGetInner_lptr_lvnt, instr) {
+			variant_case(Op_variantGetInner_lptr_lvnt_type, instr) {
 				const auto& variant_type
 					= std::get<VariantType>(*current_stack.at(instr.arg1.var_name));
 				const auto& pointer_type
@@ -641,7 +645,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantGetInner_lptr_lptr, instr) {
+			variant_case(Op_variantGetInner_lptr_lptr_type, instr) {
 				const auto& pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				base::StrID wanted_type = pointer_type.inner;
@@ -703,7 +707,7 @@ class FunctionValidator {
 				if (pointer_type.inner != instr.arg1.type_name)
 					throw VTableTypeMismatchError(instr);
 			}
-			variant_case_novalue(Op_downcast_lptr_lptr) {}
+			variant_case_novalue(Op_downcast_lptr_lptr_type) {}
 			variant_case_novalue(Op_free_lptr) {}
 			variant_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type
@@ -726,7 +730,7 @@ class FunctionValidator {
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
-			variant_case(Op_structLea_lptr_lptr, instr) {
+			variant_case(Op_structLea_lptr_lptr_field, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
@@ -736,7 +740,7 @@ class FunctionValidator {
 
 				validateStructFieldType(ztruct, instr.arg2, destination.inner, instr);
 			}
-			variant_case(Op_structLoad_lany_lptr, instr) {
+			variant_case(Op_structLoad_lany_lptr_field, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& ztruct_pointer
@@ -745,7 +749,7 @@ class FunctionValidator {
 
 				validateStructFieldType(ztruct, instr.arg2, typeName(*destination), instr);
 			}
-			variant_case(Op_structStore_lptr_lany, instr) {
+			variant_case(Op_structStore_lptr_lany_field, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& ztruct_pointer
@@ -754,7 +758,7 @@ class FunctionValidator {
 
 				validateStructFieldType(ztruct, instr.arg2, typeName(*source), instr);
 			}
-			variant_case(Op_fixedSizeTableLea_lptr_lptr, instr) {
+			variant_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
@@ -766,7 +770,7 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLea_lptr_lptr, instr) {
+			variant_case(Op_dynTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
@@ -778,7 +782,7 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
+			variant_case(Op_fixedSizeTableLoad_lany_lptr_l64, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& table_pointer
@@ -789,7 +793,7 @@ class FunctionValidator {
 				if (typeName(*destination) != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLoad_lany_lptr, instr) {
+			variant_case(Op_dynTableLoad_lany_lptr_l64, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
@@ -798,7 +802,7 @@ class FunctionValidator {
 				if (typeName(*destination) != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_fixedSizeTableStore_lptr_lany, instr) {
+			variant_case(Op_fixedSizeTableStore_lptr_lany_l64, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& table_pointer
@@ -809,7 +813,7 @@ class FunctionValidator {
 				if (table_type.inner != typeName(*source))
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableStore_lptr_lany, instr) {
+			variant_case(Op_dynTableStore_lptr_lany_l64, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
@@ -819,7 +823,7 @@ class FunctionValidator {
 				if (table_type.inner != typeName(*source))
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableReAlloc_lptr_type, instr) {
+			variant_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& table_type

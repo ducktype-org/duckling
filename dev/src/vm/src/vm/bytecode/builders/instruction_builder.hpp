@@ -85,11 +85,6 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	variantGetInner,
 	variantSetInner,
 
-	/**
-	 *  Do not use directly. If an instruction supports `ext` opcodes,
-	 *  just push another argument to the instruction builder.
-	 */
-	ext,
 	exit
 )
 // clang-format on

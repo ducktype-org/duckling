@@ -985,7 +985,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_variantGetInner_lptr_lvnt>(
+	void MicroBytecodeBuilder::lower<high::Op_variantGetInner_lptr_lvnt_type>(
 		vm::opargs::StackLocalPtr dst, vm::opargs::StackLocalVnt vnt, vm::opargs::Type expected_type
 	) {
 		addLow<Op_variantGetInner_lptr_lvnt>(dst, vnt);
@@ -1000,7 +1000,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_variantGetInner_lptr_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_variantGetInner_lptr_lptr_type>(
 		vm::opargs::StackLocalPtr dst,
 		vm::opargs::StackLocalPtr vnt_ptr,
 		vm::opargs::Type          expected_type
@@ -1102,7 +1102,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_downcast_lptr_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_downcast_lptr_lptr_type>(
 		vm::opargs::StackLocalPtr dst, vm::opargs::StackLocalPtr src, vm::opargs::Type type
 	) {
 		addLow<Op_downcast_lptr_lptr>(dst, src);
@@ -1154,7 +1154,7 @@ namespace vm::loader::compiler::detail {
 	// ========= STRUCTURE OPERATIONS ========
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_structLea_lptr_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_structLea_lptr_lptr_field>(
 		vm::opargs::StackLocalPtr dst, vm::opargs::StackLocalPtr strukt, vm::opargs::Field field
 	) {
 		addLow<Op_structLea_lptr_lptr>(dst, strukt);
@@ -1162,7 +1162,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_structLoad_lany_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_structLoad_lany_lptr_field>(
 		vm::opargs::StackLocalAny dst, vm::opargs::StackLocalPtr strukt_ptr, vm::opargs::Field field
 	) {
 		addLow<Op_structLoad_lany_lptr>(dst, strukt_ptr);
@@ -1170,7 +1170,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_structStore_lptr_lany>(
+	void MicroBytecodeBuilder::lower<high::Op_structStore_lptr_lany_field>(
 		vm::opargs::StackLocalPtr strukt_ptr, vm::opargs::StackLocalAny src, vm::opargs::Field field
 	) {
 		addLow<Op_structStore_lptr_lany>(strukt_ptr, src);
@@ -1180,7 +1180,7 @@ namespace vm::loader::compiler::detail {
 	// ========= TABLE OPERATIONS ========
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_fixedSizeTableLea_lptr_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_fixedSizeTableLea_lptr_lptr_l64>(
 		vm::opargs::StackLocalPtr dst,
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::StackLocal64  index
@@ -1190,7 +1190,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_fixedSizeTableLoad_lany_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_fixedSizeTableLoad_lany_lptr_l64>(
 		vm::opargs::StackLocalAny dst,
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::StackLocal64  index
@@ -1200,7 +1200,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_fixedSizeTableStore_lptr_lany>(
+	void MicroBytecodeBuilder::lower<high::Op_fixedSizeTableStore_lptr_lany_l64>(
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::StackLocalAny src,
 		vm::opargs::StackLocal64  index
@@ -1210,7 +1210,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_dynTableLea_lptr_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_dynTableLea_lptr_lptr_l64>(
 		vm::opargs::StackLocalPtr dst,
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::StackLocal64  index
@@ -1220,7 +1220,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_dynTableLoad_lany_lptr>(
+	void MicroBytecodeBuilder::lower<high::Op_dynTableLoad_lany_lptr_l64>(
 		vm::opargs::StackLocalAny dst,
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::StackLocal64  index
@@ -1230,7 +1230,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_dynTableStore_lptr_lany>(
+	void MicroBytecodeBuilder::lower<high::Op_dynTableStore_lptr_lany_l64>(
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::StackLocalAny src,
 		vm::opargs::StackLocal64  index
@@ -1240,7 +1240,7 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_dynTableReAlloc_lptr_type>(
+	void MicroBytecodeBuilder::lower<high::Op_dynTableReAlloc_lptr_type_l64>(
 		vm::opargs::StackLocalPtr table_ptr,
 		vm::opargs::Type          table_type,
 		vm::opargs::StackLocal64  new_elem_count

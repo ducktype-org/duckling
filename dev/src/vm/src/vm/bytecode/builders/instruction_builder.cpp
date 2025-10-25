@@ -89,37 +89,17 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 
 	std::vector<vm::code::Instruction> result;
 
-	std::vector new_args = args;
-
-	// Transforms arguments.
-	if (args.size() > 2) {
-		InstructionBuilder base_instr(kind);
-		base_instr.pushArgs(new_args[0], new_args[1]);
-		auto built = base_instr.build();
-		result.insert(result.end(), built.begin(), built.end());
-
-		InstructionBuilder ext(OpKind::ext);
-		for (usize i = 2; i < new_args.size(); i++) ext.pushArg(new_args[i]);
-		auto built2 = ext.build();
-		result.insert(result.end(), built2.begin(), built2.end());
-		return { result.begin(), result.end() };
-	}
-
-	CORE_ASSERT(new_args.size() <= 2, "Cannot handle more than 2 args here");
-
-	usize             arg_count = new_args.size();
+	usize             arg_count = args.size();
 	std::stringstream name_stream;
 	pushOpcodeKind(kind, name_stream);
 	for (usize i = 0; i < arg_count; i++) {
 		name_stream << "_";
-		pushOpcodeArg(new_args[i], name_stream);
+		pushOpcodeArg(args[i], name_stream);
 	}
 
 	auto instr_name = base::StrID{ name_stream.str().c_str() };
+	result.emplace_back(makeInstructionFromUntypedArgs(instr_name, args));
 
-	result.emplace_back(makeInstructionFromUntypedArgs(instr_name, new_args));
-
-	// @TODOB what's this for?
 	CORE_ASSERT(!result.empty(), "No instructions were created.");
 	return { result.begin(), result.end() };
 }

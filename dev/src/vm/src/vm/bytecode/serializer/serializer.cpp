@@ -57,7 +57,7 @@ namespace vm::code {
 			[&](const auto&... args) {
 				if constexpr (sizeof...(args) > 0) {
 					out << " ";
-					writeOpcodeArgs(out, opargs::Immediate{ 42 }, opargs::Immediate{ 43 });
+					writeOpcodeArgs(out, args...);
 				}
 			},
 			instruction.argsAsTuple()
