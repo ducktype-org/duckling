@@ -1,5 +1,8 @@
 #pragma once
 
+
+
+
 #ifdef BUILD_TYPE_DEV_DEBUG
 namespace config {
 	inline bool debug_mode = false;
