@@ -309,7 +309,9 @@ DEF_INSTR(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 // casts pointed object to its superclass
 DEF_INSTR(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass
-DEF_INSTR(downcast_lptr_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr, vm::opargs::Type)
+DEF_INSTR(
+	downcast_lptr_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr, vm::opargs::Type
+)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 DEF_INSTR(virtual_call_lptr_method, vm::opargs::StackLocalPtr, vm::opargs::MethodName)
 

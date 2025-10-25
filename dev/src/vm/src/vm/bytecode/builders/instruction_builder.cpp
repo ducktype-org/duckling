@@ -24,6 +24,7 @@ namespace vm::code::builders {
 			out << base::enumToStr(kind).strView();
 		}
 
+		/// Helper for makeInstructionFromUntypedArgs
 		template<vm::code::IsInstruction I>
 		vm::code::Instruction fromUntyped(const std::vector<opargs::OpCodeArg>& args) {
 			using ArgTypes        = I::ArgTypes;
