@@ -117,7 +117,7 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 
 	auto instr_name = base::StrID{ name_stream.str().c_str() };
 
-	makeInstructionFromUntypedArgs(instr_name, new_args);
+	result.emplace_back(makeInstructionFromUntypedArgs(instr_name, new_args));
 
 	// @TODOB what's this for?
 	CORE_ASSERT(!result.empty(), "No instructions were created.");

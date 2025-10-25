@@ -93,6 +93,7 @@ namespace vm::code {
 		constexpr static std::string_view NAME = #INSTR;                                      \
 		template<typename... Args>                                                            \
 		requires std::is_constructible_v<ArgsWrapperType, Args...>                            \
+		      && (!std::same_as<std::remove_cvref_t<Args>, Op_##INSTR> && ...)                \
 		      && (sizeof...(Args) == std::tuple_size_v<ArgTypes>) Op_##INSTR(Args&&... args): \
 			  ArgsWrapperType{ std::forward<Args>(args)... } {}                               \
 		constexpr bool operator==(const Op_##INSTR& other) const noexcept {                   \
