@@ -153,14 +153,4 @@ namespace vm::code {
 
 	template<typename T>
 	concept IsInstruction = base::IS_VARIANT_MEMBER_V<std::remove_cvref_t<T>, Instruction>;
-
-	// @TODOB remove me
-	template<typename T>
-	concept TwoArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 2;
-
-	template<typename T>
-	concept OneArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 1;
-
-	template<typename T>
-	concept ZeroArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 0;
 }
