@@ -430,13 +430,10 @@ class FunctionValidator {
 	}
 
 	/**
-	 * @TODOB make this up to date
 	 * @brief Validates instruction's arguments non-trivially - using specific logic for each
 	 * instruction. For instance, an instruction may expect type `T` as arg0, a `Pointer<T>` as
-	 * arg1 and another `Pointer<T>` as an extension. This is the place to express such logic.
+	 * arg1 and another `Pointer<T>` as arg2. This is the place to express such logic.
 	 * @param instruction Instruction that is validated.
-	 * @param next_instruction Optional next instruction. Used when expecting e.g. `ext_*`.
-	 * @note Presence of extensions is checked by different function: `validateExtension`.
 	 */
 	void validateArgTypesNonTrivially(
 		const Instruction& instruction, const LocalStack& current_stack

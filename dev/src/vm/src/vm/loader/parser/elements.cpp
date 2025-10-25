@@ -309,7 +309,8 @@ namespace vm::loader::parser {
 
 		template<typename ArgsHead = void, typename... ArgsTail>
 		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
-			// @TODOB docs
+			// Seperate case for no args passed (first arg defaulted)
+			// to avoid a trailing comma.
 			if constexpr (std::same_as<ArgsHead, void>) {
 				return {};
 			} else {
@@ -320,7 +321,7 @@ namespace vm::loader::parser {
 		}
 
 #define HANDLE_INSTR_ARGS(NAME, ...) \
-	std::make_pair( std::string{ #NAME }, parseOpCodeArgs<__VA_ARGS__> ),
+	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<__VA_ARGS__>),
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
 #include <vm/bytecode/instruction_definitions.hpp>
