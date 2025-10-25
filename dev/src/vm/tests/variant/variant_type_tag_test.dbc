@@ -784,8 +784,7 @@ function getCustomVariant8TypeTag0 { i64 } -> CustomVariant8 {
     variantSetInner_lvnt_type ret_val, CustomInt0;
 
     init_lany_type ptr, ptr_CustomInt0;
-    variantGetInner_lptr_lvnt ptr, ret_val;
-    ext_type CustomInt0;
+    variantGetInner_lptr_lvnt ptr, ret_val, CustomInt0;
 
     cast_l64_type arg0, CustomInt0;
     store_lptr_lany ptr, arg0;
@@ -797,8 +796,7 @@ function getCustomVariant8TypeTag1 { i64 } -> CustomVariant8 {
     variantSetInner_lvnt_type ret_val, CustomInt1;
 
     init_lany_type ptr, ptr_CustomInt1;
-    variantGetInner_lptr_lvnt ptr, ret_val;
-    ext_type CustomInt1;
+    variantGetInner_lptr_lvnt ptr, ret_val, CustomInt1;
 
     cast_l64_type arg0, CustomInt1;
     store_lptr_lany ptr, arg0;
@@ -809,8 +807,7 @@ function getCustomVariant16TypeTag0 { i64 } -> CustomVariant16 {
     variantSetInner_lvnt_type ret_val, CustomInt0;
 
     init_lany_type ptr, ptr_CustomInt0;
-    variantGetInner_lptr_lvnt ptr, ret_val;
-    ext_type CustomInt0;
+    variantGetInner_lptr_lvnt ptr, ret_val, CustomInt0;
 
     cast_l64_type arg0, CustomInt0;
     store_lptr_lany ptr, arg0;
@@ -823,8 +820,7 @@ function getCustomVariant16TypeTag1 { i64 } -> CustomVariant16 {
     variantSetInner_lvnt_type ret_val, CustomInt1;
 
     init_lany_type ptr, ptr_CustomInt1;
-    variantGetInner_lptr_lvnt ptr, ret_val;
-    ext_type CustomInt1;
+    variantGetInner_lptr_lvnt ptr, ret_val, CustomInt1;
 
     cast_l64_type arg0, CustomInt1;
     store_lptr_lany ptr, arg0;
@@ -836,8 +832,7 @@ function getCustomVariant16TypeTag256 { i64 } -> CustomVariant16 {
     variantSetInner_lvnt_type ret_val, CustomInt256;
 
     init_lany_type ptr, ptr_CustomInt256;
-    variantGetInner_lptr_lvnt ptr, ret_val;
-    ext_type CustomInt256;
+    variantGetInner_lptr_lvnt ptr, ret_val, CustomInt256;
 
     cast_l64_type arg0, CustomInt256;
     store_lptr_lany ptr, arg0;

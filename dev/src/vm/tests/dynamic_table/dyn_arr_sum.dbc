@@ -8,27 +8,23 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type val, i64;
     init_lany_type tbl_ptr, ptr_tablei64;
     mov_l64_imm val, 5;
-    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
-    ext_l64 val;
+    dynTableReAlloc_lptr_type tbl_ptr, tablei64, val;
     mov_l64_imm iter, 5;
 
     label Loop1;
         sub_l64_imm iter, 1;
-        dynTableStore_lptr_lany tbl_ptr, val;
-        ext_l64 iter;
+        dynTableStore_lptr_lany tbl_ptr, val, iter;
         sub_l64_imm val, 1;
         cmpEq_l64_imm iter, 0;
         jmpIfNot_label Loop1;
     
     mov_l64_imm val, 10;
-    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
-    ext_l64 val;
+    dynTableReAlloc_lptr_type tbl_ptr, tablei64, val;
 
     mov_l64_imm iter, 10;
     label Loop2;
         sub_l64_imm iter, 1;
-        dynTableStore_lptr_lany tbl_ptr, val;
-        ext_l64 iter;
+        dynTableStore_lptr_lany tbl_ptr, val, iter;
         sub_l64_imm val, 1;
         cmpEq_l64_imm iter, 5;
         jmpIfNot_label Loop2;
@@ -37,8 +33,7 @@ function main { i64, ptr_argv } -> i64 {
     mov_l64_imm iter, 10;
     label Loop3;
         sub_l64_imm iter, 1;
-        dynTableLoad_lany_lptr val, tbl_ptr;
-        ext_l64 iter;
+        dynTableLoad_lany_lptr val, tbl_ptr, iter;
         add_l64_l64 aggr, val;
         cmpEq_l64_imm iter, 0;
         jmpIfNot_label Loop3;

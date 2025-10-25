@@ -15,19 +15,16 @@ function cons { i64, LinkedList } -> LinkedList {
     # ret_val = new Node()
     alloc_lptr_type ret_val, Node;
 
-    structStore_lptr_lany ret_val, arg0;
-    ext_field Node.head;
+    structStore_lptr_lany ret_val, arg0, Node.head;
 
-    structStore_lptr_lany ret_val, arg1;
-    ext_field Node.tail;
+    structStore_lptr_lany ret_val, arg1, Node.tail;
 
     ret;
 }
 
 # OPTIMISED!!!
 function tail {} -> LinkedList {
-    structLoad_lany_lptr ret_val, ret_val;
-    ext_field Node.tail;
+    structLoad_lany_lptr ret_val, ret_val, Node.tail;
 
     ret;
 }
@@ -43,8 +40,7 @@ label non_empty;
     init_lany_type curr, i64;
 
     # curr = arg0->x
-    structLoad_lany_lptr curr, arg0;
-    ext_field Node.head;
+    structLoad_lany_lptr curr, arg0, Node.head;
 
     output_l64 curr;
 

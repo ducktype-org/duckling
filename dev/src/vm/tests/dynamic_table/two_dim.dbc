@@ -11,22 +11,16 @@ function main { i64, ptr_argv } -> i64 {
 
     mov_l64_imm val, 1235;
     mov_l64_imm size, 5;
-    dynTableReAlloc_lptr_type inner_ptr, dtable_i64;
-    ext_l64 size;
+    dynTableReAlloc_lptr_type inner_ptr, dtable_i64, size;
     mov_l64_imm size, 3;
-    dynTableStore_lptr_lany inner_ptr, val;
-    ext_l64 size;
+    dynTableStore_lptr_lany inner_ptr, val, size;
     mov_l64_imm val, 0;
-    dynTableReAlloc_lptr_type outer_ptr, dtable_ptr;
-    ext_l64 size;
+    dynTableReAlloc_lptr_type outer_ptr, dtable_ptr, size;
     mov_l64_imm size, 2;
-    dynTableStore_lptr_lany outer_ptr, inner_ptr;
-    ext_l64 size;
-    dynTableLoad_lany_lptr inner_ptr, outer_ptr;
-    ext_l64 size;
+    dynTableStore_lptr_lany outer_ptr, inner_ptr, size;
+    dynTableLoad_lany_lptr inner_ptr, outer_ptr, size;
     mov_l64_imm size, 3;
-    dynTableLoad_lany_lptr val, inner_ptr;
-    ext_l64 size;
+    dynTableLoad_lany_lptr val, inner_ptr, size;
     output_l64 val;
     free_lptr inner_ptr;
     free_lptr outer_ptr;

@@ -19,16 +19,14 @@ function main { i64, ptr_argv } -> i64 {
 
     # let ptr_second: ptr<variant<i64, i8>> = &ptr_a->second;
     init_lany_type ptr_second, ptr_variant;
-    structLea_lptr_lptr ptr_second, ptr_a;
-    ext_field VariantStruct.second;
+    structLea_lptr_lptr ptr_second, ptr_a, VariantStruct.second;
 
     # ptr_second->setType<i64>();
     variantSetInner_lptr_type ptr_second, i64;
 
     # let int_ptr: ptr<i64> = ptr_second->getData<i64>();
     init_lany_type int_ptr, ptr_i64;
-    variantGetInner_lptr_lptr int_ptr, ptr_second;
-    ext_type i64;
+    variantGetInner_lptr_lptr int_ptr, ptr_second, i64;
 
     # let value: i64 = 5;
     init_lany_type value, i64;
@@ -39,8 +37,7 @@ function main { i64, ptr_argv } -> i64 {
 
     # let var = ptr_a->second;
     init_lany_type var, simple_variant;
-    structLoad_lany_lptr var, ptr_a;
-    ext_field VariantStruct.second;
+    structLoad_lany_lptr var, ptr_a, VariantStruct.second;
 
     # let var_ptr: ptr<variant<i64, i8>> = &var;
     init_lany_type var_ptr, ptr_variant;
@@ -48,8 +45,7 @@ function main { i64, ptr_argv } -> i64 {
 
     # let read_ptr: ptr<i64> = var_ptr->getData<i64>();
     init_lany_type read_ptr, ptr_i64;
-    variantGetInner_lptr_lptr read_ptr, var_ptr;           # <- To ustawia read_ptr na null
-    ext_type i64;
+    variantGetInner_lptr_lptr read_ptr, var_ptr, i64;           # <- This sets read_ptr to null
 
     # let read_value: i64 = *read_ptr;
     init_lany_type read_value, i64;

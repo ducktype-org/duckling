@@ -15,8 +15,7 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type ptr, ptr_i64;
 
     # ptr = v0.getData<i64>();
-    variantGetInner_lptr_lvnt ptr, v0;
-    ext_type i64;
+    variantGetInner_lptr_lvnt ptr, v0, i64;
 
     # let value: i64 = input();
     init_lany_type value, i64;
