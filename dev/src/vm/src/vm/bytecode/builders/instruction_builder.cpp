@@ -84,10 +84,8 @@ void vm::code::builders::InstructionBuilder::setKind(OpKind kind) {
 	kind_set   = true;
 }
 
-std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build() const {
+vm::code::Instruction vm::code::builders::InstructionBuilder::build() const {
 	CORE_ASSERT(kind_set, "InstructionBuilder::build: kind_set = false");
-
-	std::vector<vm::code::Instruction> result;
 
 	usize             arg_count = args.size();
 	std::stringstream name_stream;
@@ -96,10 +94,7 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 		name_stream << "_";
 		pushOpcodeArg(args[i], name_stream);
 	}
-
 	auto instr_name = base::StrID{ name_stream.str().c_str() };
-	result.emplace_back(makeInstructionFromUntypedArgs(instr_name, args));
 
-	CORE_ASSERT(!result.empty(), "No instructions were created.");
-	return { result.begin(), result.end() };
+	return makeInstructionFromUntypedArgs(instr_name, args);
 }

@@ -45,9 +45,8 @@ private:
 		const auto arg0 = vm::opargs::StackLocal32{ base::StrID("arg0") };
 		const auto arg1 = vm::opargs::StackLocal32{ base::StrID("arg1") };
 		instr_builder.pushArgs(arg0, arg1);
-		std::vector<Instruction> instr = instr_builder.build();
-		ASSERT_TRUE(instr.size() == 1);
-		assertInstructionsEqual(instr[0], Op_mov_l32_l32{ arg0, arg1 });
+		Instruction instr = instr_builder.build();
+		assertInstructionsEqual(instr, Op_mov_l32_l32{ arg0, arg1 });
 
 		// Test `ret_l32_l32` does not exist
 		instr_builder.setKind(vm::code::builders::OpKind::ret);

@@ -124,6 +124,6 @@ namespace vm::code::builders {
 			(pushArg(std::forward<Args>(args)), ...);
 		}
 
-		[[nodiscard]] std::vector<Instruction> build() const;
+		[[nodiscard]] Instruction build() const;
 	};
 }

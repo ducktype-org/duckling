@@ -48,7 +48,7 @@ namespace {
 	}
 
 	void pushInstruction(vm::code::Function& function, const InstructionBuilder& builder) {
-		for (const auto& instruction: builder.build()) pushInstruction(function, instruction);
+		pushInstruction(function, builder.build());
 	}
 }
 
