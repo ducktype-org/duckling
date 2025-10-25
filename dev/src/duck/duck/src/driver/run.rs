@@ -9,26 +9,35 @@ use crate::{
     driver::{
         cli,
         cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
-        global_cli_options::GlobalCliOptions,
+        cli_no_help,
+        global_cli_options::{Color, GlobalCliOptions},
+        styles::get_styles,
         subcommands::exec_for,
     },
 };
 use anyhow::{Context, bail};
-use clap::ArgMatches;
+use clap::{ArgMatches, Command, error::ErrorKind::DisplayHelp};
+use console::WithoutAnsi;
 use quackpack::QuackResult;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
-    // @TODO: #1353 help, -h or --help always displays with colours, even with --color never.
-    // This is extremely minor and cargo does the same, but it's still a bug.
     let external = gather_external_subcmds(ctx);
     debug!(
         "found external subcommands `{}`",
         external.keys().cloned().collect::<Vec<_>>().join(", ")
     );
     let cli = cli();
-    let matches = cli.try_get_matches()?;
+
+    let _matches = cli.try_get_matches();
+    if let Err(e) = &_matches
+        && e.kind() == DisplayHelp
+    {
+        return display_help(ctx);
+    }
+    let matches = _matches?;
+
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
         std::env::set_current_dir(chdir)
             .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
@@ -77,14 +86,13 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
 }
 
 fn run_subcmd(
-    ctx: &DuckCtx,
+    ctx: &mut DuckCtx,
     args: ArgMatches,
     external: &HashMap<String, PathBuf>,
 ) -> QuackResult<()> {
     let Some((sub_cmd, sub_args)) = args.subcommand() else {
         // No subcommand provided.
-        print_parser_help(ctx);
-        return Ok(());
+        return display_help(ctx);
     };
     match (exec_for(sub_cmd), external.get(sub_cmd)) {
         (Some(exec_fn), Some(_)) => {
@@ -123,8 +131,40 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     command.exec_replace().map(|_| ()).map_err(|x| x.into())
 }
 
-fn print_parser_help(ctx: &DuckCtx) {
-    let mut parser = cli();
-    let help = parser.render_help();
-    ctx.console().print_no_nl(help.ansi());
+fn display_help(ctx: &mut DuckCtx) -> QuackResult<()> {
+    // We apply matching to the duck command with disabled help, so that there is no early return on help by clap.
+    // Then we get the true subcommand and manually print help for it
+    //     (or for the whole command if there was no subcommand or it was not recognised).
+    // We do this so that output for `duck --color never help` and similiar commands is not colored.
+
+    let mut true_cli = cli();
+    let no_help_matches = cli_no_help().try_get_matches()?;
+    let global_opts = GlobalCliOptions::from_matches(&no_help_matches)?;
+    global_opts.update_context(ctx);
+    match no_help_matches.subcommand_name() {
+        None => print_command_help(ctx, &mut true_cli, global_opts),
+        Some(subcmd_name) => {
+            if let Some(subcmd) = cli().find_subcommand_mut(subcmd_name) {
+                let mut subcmd = subcmd.clone().styles(get_styles());
+                print_command_help(ctx, &mut subcmd, global_opts);
+            } else {
+                print_command_help(ctx, &mut true_cli, global_opts);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_command_help(ctx: &DuckCtx, command: &mut Command, opts: GlobalCliOptions) {
+    let help = command.render_help();
+    match opts.color() {
+        Color::Never => {
+            ctx.console()
+                .print_no_nl(WithoutAnsi::new(&help.to_string()));
+        }
+        _ => {
+            ctx.console().print_no_nl(help.ansi());
+        }
+    }
 }
