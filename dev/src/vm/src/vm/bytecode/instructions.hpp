@@ -21,14 +21,18 @@ namespace vm::code {
 	 * @brief `instructions` namespace encapsulates available VM instructions.
 	 */
 	namespace instructions {
-#define DECLARE_0ARGS() \
+
+#define DECLARE_0ARGS()                                                \
+	/* used for handling variable arity generically using templates */ \
 	auto argsAsTuple(this auto&&) { return std::forward_as_tuple(); }
+
 #define DECLARE_1ARGS(ARG0)                                          \
 	ARG0 arg0;                                                       \
 	template<typename Self>                                          \
 	auto argsAsTuple(this Self&& self) {                             \
 		return std::forward_as_tuple(std::forward<Self>(self).arg0); \
 	}
+
 #define DECLARE_2ARGS(ARG0, ARG1)                                                                   \
 	ARG0 arg0;                                                                                      \
 	ARG1 arg1;                                                                                      \
@@ -36,6 +40,7 @@ namespace vm::code {
 	auto argsAsTuple(this Self&& self) {                                                            \
 		return std::forward_as_tuple(std::forward<Self>(self).arg0, std::forward<Self>(self).arg1); \
 	}
+
 #define DECLARE_3ARGS(ARG0, ARG1, ARG2)    \
 	ARG0 arg0;                             \
 	ARG1 arg1;                             \
@@ -48,6 +53,7 @@ namespace vm::code {
 			std::forward<Self>(self).arg2  \
 		);                                 \
 	}
+
 #define DECLARE_4ARGS(ARG0, ARG1, ARG2, ARG3) \
 	ARG0 arg0;                                \
 	ARG1 arg1;                                \
@@ -62,6 +68,8 @@ namespace vm::code {
 			std::forward<Self>(self).arg3     \
 		);                                    \
 	}
+
+// Macro "overloading" helper
 #define GET_MACRO(_1, _2, _3, _4, NAME, ...) NAME
 #define DECLARE_ARGS(...)                         \
 	GET_MACRO(                                    \
@@ -74,6 +82,7 @@ namespace vm::code {
 	(__VA_ARGS__)
 
 		namespace detail {
+			// Helper struct, simply a holder for arguments, specialisations use above macros.
 			template<typename T>
 			struct InstructionArgs;
 		}
@@ -91,11 +100,13 @@ namespace vm::code {
 		using ArgTypes                         = std::tuple<__VA_ARGS__>;                     \
 		using ArgsWrapperType                  = detail::InstructionArgs<Op_##INSTR>;         \
 		constexpr static std::string_view NAME = #INSTR;                                      \
+		/* Constructor that simply forwards the arguments to the underlying ArgsWrapperType*/ \
 		template<typename... Args>                                                            \
 		requires std::is_constructible_v<ArgsWrapperType, Args...>                            \
 		      && (!std::same_as<std::remove_cvref_t<Args>, Op_##INSTR> && ...)                \
 		      && (sizeof...(Args) == std::tuple_size_v<ArgTypes>) Op_##INSTR(Args&&... args): \
 			  ArgsWrapperType{ std::forward<Args>(args)... } {}                               \
+		/* Ignores the position */                                                            \
 		constexpr bool operator==(const Op_##INSTR& other) const noexcept {                   \
 			return static_cast<const ArgsWrapperType&>(*this)                                 \
 			    == static_cast<const ArgsWrapperType&>(other);                                \
