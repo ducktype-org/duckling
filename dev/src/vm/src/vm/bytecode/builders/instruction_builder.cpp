@@ -11,74 +11,6 @@
 namespace vm::code::builders {
 	namespace {
 		/**
-		 * @brief Creates code instruction with 2 arguments.
-		 */
-		template<class T, class Arg0Tp, class Arg1Tp>
-		Instruction makeVmOpcode2Args(vm::opargs::OpCodeArg arg0, vm::opargs::OpCodeArg arg1) {
-			CORE_ASSERT(std::holds_alternative<Arg0Tp>(arg0), "Invalid arg0 for opcode");
-			CORE_ASSERT(std::holds_alternative<Arg1Tp>(arg1), "Invalid arg1 for opcode");
-			return T{ std::get<Arg0Tp>(arg0), std::get<Arg1Tp>(arg1) };
-		}
-
-		/**
-		 * @brief Creates code instruction with 1 argument.
-		 */
-		template<class T, class Arg0Tp>
-		Instruction makeVmOpcode1Args(vm::opargs::OpCodeArg arg0) {
-			CORE_ASSERT(std::holds_alternative<Arg0Tp>(arg0), "Invalid arg0 for opcode");
-			return T{ std::get<Arg0Tp>(arg0) };
-		}
-
-		/**
-		 * @brief Creates code instruction with no arguments.
-		 */
-		template<class T>
-		Instruction makeVmOpcode0Args() {
-			return T{};
-		}
-
-#define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
-
-#define HANDLE_INSTR_0ARGS(opcode) MAKE_LINK(opcode, makeVmOpcode0Args<VM_INSTR_FROM_NAME(opcode)>)
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)
-
-		const std::unordered_map OPCODE_TO_0_ARGS_FACTORY = {
-#include <vm/bytecode/instruction_definitions.hpp>
-		};
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-
-#define HANDLE_INSTR_0ARGS(opcode)
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type) \
-	MAKE_LINK(opcode, makeVmOpcode1Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type>)
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)
-
-		const std::unordered_map OPCODE_TO_1_ARGS_FACTORY = {
-#include <vm/bytecode/instruction_definitions.hpp>
-		};
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-
-#define HANDLE_INSTR_0ARGS(opcode)
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
-	MAKE_LINK(opcode, makeVmOpcode2Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type COMMA arg1_type>)
-
-		const std::unordered_map OPCODE_TO_2_ARGS_FACTORY = {
-#include <vm/bytecode/instruction_definitions.hpp>
-		};
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-#undef MAKE_LINK
-
-		/**
 		 * @brief Appends opcode argument as string to a to a stream.
 		 */
 		void pushOpcodeArg(const opargs::OpCodeArg& arg, std::ostream& out) {
@@ -91,6 +23,53 @@ namespace vm::code::builders {
 		void pushOpcodeKind(const OpKind& kind, std::stringstream& out) {
 			out << base::enumToStr(kind).strView();
 		}
+
+		template<vm::code::IsInstruction I>
+		vm::code::Instruction fromUntyped(const std::vector<opargs::OpCodeArg>& args) {
+			using ArgTypes        = I::ArgTypes;
+			constexpr usize ARITY = std::tuple_size_v<ArgTypes>;
+
+			CORE_ASSERT(
+				args.size() == ARITY, base::strConcat("Invalid number of args for ", I::NAME)
+			);
+
+			return [&]<usize... Indices>(std::index_sequence<Indices...>) {
+				(
+					// Lambda is required since CORE_ASSERT is a stament (not an expression),
+				    // so it can't be used in a fold expression as-is.
+					[&] {
+						CORE_ASSERT(
+							std::holds_alternative<std::tuple_element_t<Indices COMMA ArgTypes>>(
+								args.at(Indices)
+							),
+							base::strConcat(
+								"Invalid argument type for arg", Indices, " in ", I::NAME
+							)
+						);
+					}(),
+					...
+				);
+
+				return I{ std::get<std::tuple_element_t<Indices, ArgTypes>>(args.at(Indices))... };
+			}(std::make_index_sequence<ARITY>{});
+		}
+	}
+
+	vm::code::Instruction makeInstructionFromUntypedArgs(
+		base::StrID name, const std::vector<opargs::OpCodeArg>& args
+	) {
+#define HANDLE_INSTR(opcode) \
+	std::make_pair(base::StrID(#opcode), fromUntyped<VM_INSTR_FROM_NAME(opcode)>),
+		static std::unordered_map name_to_factory{
+#include <vm/bytecode/instruction_definitions.hpp>
+		};
+#undef HANDLE_INSTR
+
+		CORE_ASSERT(
+			name_to_factory.contains(name), base::strConcat("Instruction ", name, " does not exist")
+		);
+
+		return name_to_factory.at(name)(args);
 	}
 }
 
@@ -136,17 +115,11 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 		pushOpcodeArg(new_args[i], name_stream);
 	}
 
-	std::string opcode_name = name_stream.str();
+	auto instr_name = base::StrID{ name_stream.str().c_str() };
 
-	try {
-		if (arg_count == 0)
-			result.emplace_back(OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)());
-		else if (arg_count == 1)
-			result.emplace_back(OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(new_args[0]));
-		else
-			result.emplace_back(OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(new_args[0], new_args[1]));
-	} catch (std::out_of_range&) { CORE_PANIC("Opcode: ", opcode_name, " does not exist!"); }
+	makeInstructionFromUntypedArgs(instr_name, new_args);
 
+	// @TODOB what's this for?
 	CORE_ASSERT(!result.empty(), "No instructions were created.");
 	return { result.begin(), result.end() };
 }

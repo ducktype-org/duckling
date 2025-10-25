@@ -96,6 +96,9 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 // NOLINTEND
 
 namespace vm::code::builders {
+    // @TODOB document me
+	vm::code::Instruction makeInstructionFromUntypedArgs(base::StrID name, const std::vector<opargs::OpCodeArg>& args);
+
 	/**
 	 * @brief Helper to compose bytecode instructions.
 	 * It supports creating all available opcodes.

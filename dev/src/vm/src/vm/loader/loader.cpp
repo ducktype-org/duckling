@@ -34,35 +34,12 @@
 using namespace vm::loader;
 
 namespace {
-	template<vm::code::IsInstruction Instruction>
-	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode) {
-		using ArgTypes        = typename Instruction::ArgTypes;
-		constexpr usize ARITY = std::tuple_size_v<ArgTypes>;
-
-		CORE_ASSERT(opcode.args.size() == ARITY, "Invalid number of args");
-
-		return [&]<usize... Indices>(std::index_sequence<Indices...>) {
-			return Instruction{
-				std::get<std::tuple_element_t<Indices, ArgTypes>>(opcode.args.at(Indices))...
-			};
-		}(std::make_index_sequence<ARITY>{});
-	}
-
-#define HANDLE_INSTR(opcode) \
-	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
-
-	std::unordered_map instr_to_factory{
-#include <vm/bytecode/instruction_definitions.hpp>
-	};
-
-#undef HANDLE_INSTR
-
 	/**
 	 * @brief Translates a parsed opcode (`parser::OpCode`) into a high-level bytecode instruction
 	 * (`vm::code::Instruction`).
 	 */
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
-		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
+		return vm::code::builders::makeInstructionFromUntypedArgs(opcode.opcode_name, opcode.args);
 	}
 }
 

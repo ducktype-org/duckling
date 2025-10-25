@@ -91,7 +91,6 @@ namespace vm::code {
 		using ArgTypes                         = std::tuple<__VA_ARGS__>;                     \
 		using ArgsWrapperType                  = detail::InstructionArgs<Op_##INSTR>;         \
 		constexpr static std::string_view NAME = #INSTR;                                      \
-		using ArgsWrapperType::argsAsTuple;                                                   \
 		template<typename... Args>                                                            \
 		requires std::is_constructible_v<ArgsWrapperType, Args...>                            \
 		      && (sizeof...(Args) == std::tuple_size_v<ArgTypes>) Op_##INSTR(Args&&... args): \
@@ -134,7 +133,6 @@ namespace vm::code {
 			using ArgTypes                         = std::tuple<>;
 			using ArgsWrapperType                  = detail::InstructionArgs<Comment>;
 			constexpr static std::string_view NAME = "Comment";
-			using ArgsWrapperType::argsAsTuple;
 
 			Comment(base::StrID comment): comment(comment) {}
 
@@ -155,6 +153,7 @@ namespace vm::code {
 	template<typename T>
 	concept IsInstruction = base::IS_VARIANT_MEMBER_V<std::remove_cvref_t<T>, Instruction>;
 
+	// @TODOB remove me
 	template<typename T>
 	concept TwoArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 2;
 
