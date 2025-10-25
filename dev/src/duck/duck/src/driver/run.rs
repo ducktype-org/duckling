@@ -145,6 +145,7 @@ fn display_help(ctx: &mut DuckCtx) -> QuackResult<()> {
         None => print_command_help(ctx, &mut true_cli, global_opts),
         Some(subcmd_name) => {
             if let Some(subcmd) = cli().find_subcommand_mut(subcmd_name) {
+                // I do not understand why applying styles here again is necesseary, but it is.
                 let mut subcmd = subcmd.clone().styles(get_styles());
                 print_command_help(ctx, &mut subcmd, global_opts);
             } else {
