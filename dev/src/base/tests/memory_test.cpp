@@ -3,33 +3,33 @@
 #include <tester/tester.hpp>
 
 struct Base {
-    int x;
-    Base(int a): x(a) {}
-    virtual ~Base() = default;
+	int x;
+
+	Base(int a): x(a) {}
+
+	virtual ~Base() = default;
 };
+
 struct Derived: public Base {
-    int y;
+	int y;
 
-    Derived(int a): Base{a}, y(a * 2) {}
-    bool operator==(int a) const {
-        return x == a and y == a * 2;
-    }
+	Derived(int a): Base{ a }, y(a * 2) {}
 
-    virtual ~Derived() = default;
+	bool operator==(int a) const { return x == a and y == a * 2; }
+
+	virtual ~Derived() = default;
 };
 
 struct DestructionTracker final {
-    inline static u64 destroyed_count = 0;
+	inline static u64 destroyed_count = 0;
 
-    DestructionTracker() = default;
-    DestructionTracker(const DestructionTracker&) = delete;
-    DestructionTracker(DestructionTracker&&) = delete;
-    DestructionTracker& operator=(const DestructionTracker&) = delete;
-    DestructionTracker& operator=(DestructionTracker&&) = delete;
+	DestructionTracker()                                     = default;
+	DestructionTracker(const DestructionTracker&)            = delete;
+	DestructionTracker(DestructionTracker&&)                 = delete;
+	DestructionTracker& operator=(const DestructionTracker&) = delete;
+	DestructionTracker& operator=(DestructionTracker&&)      = delete;
 
-    ~DestructionTracker() {
-        destroyed_count++;
-    }
+	~DestructionTracker() { destroyed_count++; }
 };
 
 class MemoryTest: public tester::TestSuite {
@@ -38,72 +38,68 @@ class MemoryTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-        TESTER_ADD_TEST(basicCompilationTest<u64 COMMA 42>);
-        TESTER_ADD_TEST(basicCompilationTest<bool COMMA true>);
-        TESTER_ADD_TEST(basicCompilationTest<unsigned char COMMA 'A'>);
-        TESTER_ADD_TEST(basicCompilationTest<Derived COMMA 123>);
-        TESTER_ADD_TEST(destructorIsCalledTest);
-        TESTER_ADD_TEST(stressTest);
-    }
-
-    template<class T, auto initial_value>
-	void basicCompilationTest() {
-        base::SingleTypeMemoryPoolAllocator<T> t_allocator;
-
-        auto ref = t_allocator.allocateEmplace(initial_value);
-        ASSERT_EQUAL(*ref, initial_value);
-
-        t_allocator.deallocateDestroy(ref);
+		TESTER_ADD_TEST(basicCompilationTest<u64 COMMA 42>);
+		TESTER_ADD_TEST(basicCompilationTest<bool COMMA true>);
+		TESTER_ADD_TEST(basicCompilationTest<unsigned char COMMA 'A'>);
+		TESTER_ADD_TEST(basicCompilationTest<Derived COMMA 123>);
+		TESTER_ADD_TEST(destructorIsCalledTest);
+		TESTER_ADD_TEST(stressTest);
 	}
 
-    void destructorIsCalledTest() {
-        auto allocator = base::SingleTypeMemoryPoolAllocator<DestructionTracker>{};
-        
-        auto ptr_1 = allocator.allocateEmplace();
-        auto ptr_2 = allocator.allocateEmplace();
-        auto ptr_3 = allocator.allocateEmplace();
+	template<class T, auto initial_value>
+	void basicCompilationTest() {
+		base::SingleTypeMemoryPoolAllocator<T> t_allocator;
+
+		auto ref = t_allocator.allocateEmplace(initial_value);
+		ASSERT_EQUAL(*ref, initial_value);
+
+		t_allocator.deallocateDestroy(ref);
+	}
+
+	void destructorIsCalledTest() {
+		auto allocator = base::SingleTypeMemoryPoolAllocator<DestructionTracker>{};
+
+		auto ptr_1 = allocator.allocateEmplace();
+		auto ptr_2 = allocator.allocateEmplace();
+		auto ptr_3 = allocator.allocateEmplace();
 
 
-        {
-            auto ptr_4 = allocator.allocateEmplace();
-            auto ptr_5 = allocator.allocateEmplace();
+		{
+			auto ptr_4 = allocator.allocateEmplace();
+			auto ptr_5 = allocator.allocateEmplace();
 
-            ASSERT_EQUAL(DestructionTracker::destroyed_count, 0);
+			ASSERT_EQUAL(DestructionTracker::destroyed_count, 0);
 
-            allocator.deallocateDestroy(ptr_4);
-            allocator.deallocateDestroy(ptr_5);
+			allocator.deallocateDestroy(ptr_4);
+			allocator.deallocateDestroy(ptr_5);
 
-            ASSERT_EQUAL(DestructionTracker::destroyed_count, 2);
-        }
+			ASSERT_EQUAL(DestructionTracker::destroyed_count, 2);
+		}
 
-        allocator.deallocateDestroy(ptr_1);
-        allocator.deallocateDestroy(ptr_2);
-        allocator.deallocateDestroy(ptr_3);
+		allocator.deallocateDestroy(ptr_1);
+		allocator.deallocateDestroy(ptr_2);
+		allocator.deallocateDestroy(ptr_3);
 
-        ASSERT_EQUAL(DestructionTracker::destroyed_count, 5);
-    }
+		ASSERT_EQUAL(DestructionTracker::destroyed_count, 5);
+	}
 
-    void stressTest() {
-        constexpr u64 ALLOCATION_COUNT = 1'000'000;
+	void stressTest() {
+		constexpr u64 ALLOCATION_COUNT = 1'000'000;
 
-        auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};
+		auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};
 
-        std::vector<base::Ref<u64>> allocated_ptrs;
-        allocated_ptrs.reserve(ALLOCATION_COUNT);
+		std::vector<base::Ref<u64>> allocated_ptrs;
+		allocated_ptrs.reserve(ALLOCATION_COUNT);
 
-        for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
-            auto ptr = allocator.allocateEmplace(i);
-            allocated_ptrs.push_back(ptr);
-        }
+		for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
+			auto ptr = allocator.allocateEmplace(i);
+			allocated_ptrs.push_back(ptr);
+		}
 
-        for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
-            ASSERT_TRUE(*allocated_ptrs[i] == i);
-        }
+		for (u64 i = 0; i < ALLOCATION_COUNT; i++) ASSERT_TRUE(*allocated_ptrs[i] == i);
 
-        for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
-            allocator.deallocateDestroy(allocated_ptrs[i]);
-        }
-    }
+		for (u64 i = 0; i < ALLOCATION_COUNT; i++) allocator.deallocateDestroy(allocated_ptrs[i]);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");

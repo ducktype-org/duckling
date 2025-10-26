@@ -46,11 +46,12 @@ namespace compiler::mir {
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value()
 				    && std::holds_alternative<LocalRef>(instr.output.value())) {
-					used_variables.at(block.key)
-						.insert(std::get<LocalRef>(instr.output.value())->id);
+					used_variables.at(block.key).insert(std::get<LocalRef>(instr.output.value())->id
+					);
 
-					if (moved_variables.at(block.key)
-					        .contains(std::get<LocalRef>(instr.output.value())->id))
+					if (moved_variables.at(block.key).contains(
+							std::get<LocalRef>(instr.output.value())->id
+						))
 						return false;  // It is already moved.
 				}
 

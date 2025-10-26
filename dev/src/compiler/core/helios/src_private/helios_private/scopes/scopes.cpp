@@ -1,13 +1,6 @@
 #include "scopes.hpp"
 
-#include <algorithm>
 #include <frontend/module_tree/queries.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
-#include <helios_private/scopes/scope_data.hpp>
-#include <helios_private/symbols/symbols.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -18,6 +11,12 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/scopes/scope_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -28,6 +27,7 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <algorithm>
 #include <set>
 
 namespace compiler::helios {
@@ -298,10 +298,12 @@ namespace compiler::helios {
 		 * @brief Gets scopes in a module.
 		 */
 		struct ScopeGrabPseudoVisitor final {
-			ScopeGrabPseudoVisitor(Ref<std::vector<ScopeID>> out, Context& ctx): out(out), ctx(ctx) {}
+			ScopeGrabPseudoVisitor(Ref<std::vector<ScopeID>> out, Context& ctx):
+				  out(out),
+				  ctx(ctx) {}
 
 			Ref<std::vector<ScopeID>> out;
-			Context&          ctx;
+			Context&                  ctx;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -330,7 +332,6 @@ namespace compiler::helios {
 							this->visit(named_child.element.unlock(ctx));
 						}
 					}
-
 				}
 			}
 		};
@@ -344,18 +345,16 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
-			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-			
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+
 			std::vector<ScopeID> output;
-			output.reserve(1024); // there will usually be a lot of scopes
+			output.reserve(1'024);  // there will usually be a lot of scopes
 
 			getScopes(ctx, main_file, &output);
 
 			// fetch scopes from other module files
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) {
-				getScopes(ctx, file, &output);
-			}
+			for (auto file: *source_files) getScopes(ctx, file, &output);
 
 			// eliminate duplicates with sort:
 			std::sort(output.begin(), output.end());
