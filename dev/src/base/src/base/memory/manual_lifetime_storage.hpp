@@ -21,7 +21,7 @@ namespace base {
 	 * See also: https://en.cppreference.com/w/cpp/utility/launder.html
 	 */
 	template<class T>
-	requires base::IsPlainType<T> struct ManualLifetimeStorage final {
+	requires base::IsPlainType<T> struct ManualLifetimeStorage final { // NOLINT (non-initialization od data in constructor)
 	private:
 		alignas(T) std::byte data[sizeof(T)] = {};  // NOLINT
 
