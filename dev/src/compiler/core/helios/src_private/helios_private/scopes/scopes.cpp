@@ -1,6 +1,12 @@
 #include "scopes.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/scopes/scope_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -11,12 +17,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
-#include <helios_private/scopes/scope_data.hpp>
-#include <helios_private/symbols/symbols.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -27,7 +27,6 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
-#include <algorithm>
 #include <set>
 
 namespace compiler::helios {
@@ -297,13 +296,11 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets scopes in a module.
 		 */
-		struct ScopeGrabPseudoVisitor final {
-			ScopeGrabPseudoVisitor(Ref<std::vector<ScopeID>> out, Context& ctx):
-				  out(out),
-				  ctx(ctx) {}
+		struct ScopeGrabPseudoVisitor {
+			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
 
-			Ref<std::vector<ScopeID>> out;
-			Context&                  ctx;
+			std::set<ScopeID> out;
+			Context&          ctx;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -318,54 +315,37 @@ namespace compiler::helios {
 				// @todo
 				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out->emplace_back(scopeOf(element));
-				// for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
-				for (auto sub_element: element->viewSubElements()) {
-					variant_match(sub_element) {
-						variant_case(pst::LangElement::SubToken, token) {
-							// do nothing
-						}
-						variant_case(pst::LangElement::Child, child) {
-							this->visit(child.unlock(ctx));
-						}
-						variant_case(pst::LangElement::NamedChild, named_child) {
-							this->visit(named_child.element.unlock(ctx));
-						}
-					}
-				}
+					out.insert(scopeOf(element));
+				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
 			}
 		};
 
-		static auto getScopes(Context& ctx, frontend::FileID file, Ref<std::vector<ScopeID>> out) {
+		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
-			ScopeGrabPseudoVisitor scope_grab(out, ctx);
+			ScopeGrabPseudoVisitor scope_grab(ctx);
 			scope_grab.visit(root);
+
+			return std::move(scope_grab.out);
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
-			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-
-			std::vector<ScopeID> output;
-			output.reserve(1'024);  // there will usually be a lot of scopes
-
-			getScopes(ctx, main_file, &output);
+			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			std::set<ScopeID> output    = getScopes(ctx, main_file);
 
 			// fetch scopes from other module files
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) getScopes(ctx, file, &output);
-
-			// eliminate duplicates with sort:
-			std::sort(output.begin(), output.end());
-			auto last = std::unique(output.begin(), output.end());
-			output.erase(last, output.end());
+			for (auto file: *source_files) {
+				auto scopes = getScopes(ctx, file);
+				output.merge(scopes);
+			}
 
 			// validate output:
 			for (auto scope: output)
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
-			return output;
+			return { output.begin(), output.end() };
 		}
 
 		QUERY_AUTO_CACHE_REF
