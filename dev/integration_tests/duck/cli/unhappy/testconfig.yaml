@@ -13,7 +13,7 @@ Tests:
       invalid-subcmd:
         test_cmd: not-a-subcmd
         ExitCode: 1
-        Err: Error: No such command: `not-a-subcmd`
+        Err: 'Error: No such command: `not-a-subcmd`'
       
       invalid-config:
         prepare: export QP_CONFIG=./

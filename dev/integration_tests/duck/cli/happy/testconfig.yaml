@@ -43,18 +43,18 @@ Tests:
       runs-builtin-command:
         test_cmd: build
         ExitCode: 1
-        Err: Error: implement build
+        Err: 'Error: implement build'
       runs-builtin-alias:
         test_cmd: b
         ExitCode: 1
-        Err: Error: implement build
+        Err: 'Error: implement build'
       runs-user-alias:
         test_cmd: my-custom-build-alias
         ExitCode: 1
-        Err: Error: implement build
+        Err: 'Error: implement build'
       autofix-success:
         prepare: export QP_CONFIG=./
         test_cmd: buil
         ExitCode: 1
-        Err: Error: implement build
+        Err: 'Error: implement build'
 
