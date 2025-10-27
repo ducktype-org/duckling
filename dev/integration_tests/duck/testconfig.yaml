@@ -1,36 +1,12 @@
-# @TODO: #1353 Get rid of the relative paths (also duck target folder will probably change).
-load_cargo: ". $HOME/.cargo/env"
-cwd_duck_root: "cd ../../src/duck/duck"
-build_duck: "cargo build"
-create_duck_echo: "echo '#!/bin/sh' > duck-echo && echo 'echo \"$@\"' >> duck-echo && chmod +x duck-echo"
-add_cwd_to_path: "PATH=$PATH:./"
-duck_exe_path: "../../src/duck/duck/target/debug/duck"
+load_cargo: . $HOME/.cargo/env
+cwd_duck_root: cd ../../src/duck/duck
+build_duck: cargo build
+duck_exe_path: ../../src/duck/duck/target/debug/duck
+color: never
+prepare: "true"
 
-PreTest: "@{load_cargo} && @{create_duck_echo} && @{cwd_duck_root} && @{build_duck}"
-Run: "bash -c \"@{test_cmd}\""
-PostTest: "rm ./duck-echo"
+PreTest: "@{load_cargo} && @{cwd_duck_root} && @{build_duck} && @{prepare}"
+Run: bash -c "@{duck_exe_path} --color=@{color} @{test_cmd}"
 
-Tests:
-  test-run-external-subcmd:
-    test_cmd: "@{add_cwd_to_path} && @{duck_exe_path} echo External subcmd"
-
-    Cases:
-      echo:
-        Output:
-          String: "\"External subcmd\"\n"
-  test-fixes-to-external:
-    change_qp_config_env: "QP_CONFIG=\"./\""
-    test_cmd: "@{add_cwd_to_path} && env @{change_qp_config_env} @{duck_exe_path} ecjo External subcmd"
-
-    Cases:
-      echo:
-        Output:
-          String: "\"External subcmd\"\n"
-  test-fixes-to-alias_to_external:
-    change_qp_config_env: "QP_CONFIG=\"./\""
-    test_cmd: "@{add_cwd_to_path} && env @{change_qp_config_env} @{duck_exe_path} abababq External subcmd"
-
-    Cases:
-      echo:
-        Output:
-          String: "\"External subcmd\"\n"
+SubDirs:
+  - cli

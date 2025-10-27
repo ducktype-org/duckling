@@ -1,0 +1,60 @@
+# NOTE: 'EOF' needs to be quoted, so $@ is not expanded by the shell.
+prepare: |
+  cat <<'EOF' > duck-echo
+  #!/bin/sh
+  echo "$@"
+  EOF
+  chmod +x duck-echo
+
+PostTest: rm ./duck-echo
+
+Tests:
+  test-run-external-subcmd:
+    Description: Finds external subcommands
+    test_cmd: echo External subcmd
+
+    Cases:
+      echo:
+        Output:
+          String: External subcmd\n
+
+  test-fixes-to-external:
+    Description: Can fix typo in external subcommand
+    prepare: export QP_CONFIG=./
+    test_cmd: ecjo External subcmd
+
+    Cases:
+      echo:
+        Output:
+          String: External subcmd\n
+  test-fixes-to-alias_to_external:
+    Description: Aliases can expand to external subcommands
+    prepare: export QP_CONFIG=./
+    test_cmd: abababq External subcmd
+
+    Cases:
+      echo:
+        Output:
+          String: External subcmd\n
+
+  test-basic-flow:
+    Description: Checks a lot of basic flows: happy, builtin alias, auto fix...
+    Cases:
+      runs-builtin-command:
+        test_cmd: build
+        ExitCode: 1
+        Err: Error: implement build
+      runs-builtin-alias:
+        test_cmd: b
+        ExitCode: 1
+        Err: Error: implement build
+      runs-user-alias:
+        test_cmd: my-custom-build-alias
+        ExitCode: 1
+        Err: Error: implement build
+      autofix-success:
+        prepare: export QP_CONFIG=./
+        test_cmd: buil
+        ExitCode: 1
+        Err: Error: implement build
+
