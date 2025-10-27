@@ -11,15 +11,16 @@
 #include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/pst.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <frontend/pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 
+#include "filesystem/file_path.hpp"
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -29,8 +30,10 @@
 #include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include "global_state/packages.hpp"
 
 #include <iostream>
+#include <random>
 
 /**
  * Simple function for showing compilation errors.
@@ -98,6 +101,24 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	};
 }
 
+	/**
+	 * @brief Generates a random alphanumeric string of the specified length.
+	 * @param length The length of the random string to generate.
+	 * @return A random alphanumeric string.
+	 */
+	std::string generateRandomString(size_t length) {
+		static constexpr std::string_view CHARS
+			= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		static std::random_device                    rd;
+		static std::mt19937                          generator(rd());
+		static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
+
+		std::string random_string;
+		random_string.reserve(length);
+		for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
+		return random_string;
+	}
+	
 /**
  * @brief Generate Clah instance with all standard "main" parameters.
  * @return clah::Clah
@@ -198,6 +219,12 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("compile_module", "Compile given module into a binary.")
 				.addPositional(clah::FileParser::make("module"))
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
+	                     .addShortName('n')
+	                     .addLongName("name")
+	                     .addShortDesc("Name of the package the module belongs to.")
+	                     .optional()
+	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dump-llvm-ir")
 	                     .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
@@ -213,8 +240,16 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+
+					auto path_to_compile = options.getPositional<fs::FilePath>(0);
+					auto package_name = options.getValue<std::string>("name").copyValueOr(generateRandomString(32));
+
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.main_package_info = {
+								.package_name = package_name,
+								.package_path = path_to_compile,
+							},
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
@@ -222,15 +257,13 @@ clah::Clah getClahForMain() {
 						}
 					);
 
-					auto path_to_compile = options.getPositional<fs::File>(0);
-
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
 
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
+					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
@@ -241,6 +274,12 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
 				.addPositional(clah::FileParser::make("module"))
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
+	                     .addShortName('n')
+	                     .addLongName("name")
+	                     .addShortDesc("Name of the package the module belongs to.")
+	                     .required()
+	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
@@ -271,8 +310,17 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+
+					auto path_to_compile = options.getPositional<fs::FilePath>(0);
+					auto package_name = options.getValue<std::string>("name").copyValueOr("");
+					CORE_ASSERT(package_name != "", "Package name must be specified");
+
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.main_package_info = {
+								.package_name = package_name,
+								.package_path = path_to_compile,
+							},
 							.compilation_artifacts = {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
@@ -288,7 +336,7 @@ clah::Clah getClahForMain() {
 					total_compilation_time.startMeasurement();
 
 
-					auto path_to_compile = options.getPositional<fs::File>(0);
+					
 					auto backend_type    = options.isFlag("dvm-backend")
 		                                     ? compiler::driver::BackendType::DVM
 		                                     : compiler::driver::BackendType::LLVM;
@@ -296,7 +344,7 @@ clah::Clah getClahForMain() {
 					defer(printContextErrors());
 
 					compiler::driver::compilerEntirePackage(
-						path_to_compile, backend_type, linking_options
+						global_state::getMainPackage(), backend_type, linking_options
 					);
 
 					total_compilation_time.endMeasurement();
@@ -332,16 +380,27 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(clah::Clah("dvm_run", "Compile given module to DVM (in-memory) and run it")
 	                       .addPositional(clah::FileParser::make("module"))
+						    .add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
+								.addShortName('n')
+								.addLongName("name")
+								.addShortDesc("Name of the package the module belongs to.")
+								.optional()
+								.build())
 	                       .add(clah::ParamBuilder::ofFlag()
 	                                .addLongName("add-builtin-library")
 	                                .addShortDesc("Links builtin library into the final executable.")
 	                                .build())
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   auto path_to_compile = options.getPositional<fs::File>(0);
+							   auto path_to_compile = options.getPositional<fs::FilePath>(0);
+							   auto package_name = options.getValue<std::string>("name").copyValueOr(generateRandomString(32));
 							   using namespace compiler;
 
 							   compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = package_name,
+					.package_path = path_to_compile,
+				},
 				.compilation_artifacts = {
 					.artifacts_path = fs::FilePath("./duck_build/"),
 				},
@@ -350,7 +409,7 @@ clah::Clah getClahForMain() {
 		);
 
 							   auto root
-								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
+								   = frontend::createModuleTree(path_to_compile, package_name);
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {

@@ -5,6 +5,7 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
+#include "filesystem/file_path.hpp"
 #include <filesystem/file.hpp>
 
 #include <string>
@@ -73,7 +74,7 @@ namespace compiler::driver {
 
 		struct PackageInfo final {
 			std::string package_name;
-			std::string package_path;
+			fs::FilePath package_path;
 		};
 
 		// struct DependencyInfo {
@@ -114,7 +115,7 @@ namespace compiler::driver {
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode final {
-			// options_types::PackageInfo      main_package_info;
+			options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
 			// options_types::CompilationOptions compilation_options;

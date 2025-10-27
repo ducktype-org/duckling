@@ -20,6 +20,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include "global_state/packages.hpp"
 
 #include <fstream>
 #include <utility>
@@ -111,11 +112,11 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	void compilerEntirePackage(
-		const fs::File&               package_location,
+		const global_state::PackageInfo&               package_info,
 		BackendType                   backend,
 		const linker::LinkingOptions& linking_options
 	) {
-		auto root = frontend::createModuleTreeWithRandomPackageID(package_location);
+		auto root = frontend::createModuleTree(package_info.package_path, package_info.package_name.strView());
 
 		std::vector<artifacts::FileArtifact> objects;
 

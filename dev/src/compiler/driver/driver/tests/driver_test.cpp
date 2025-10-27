@@ -5,11 +5,17 @@
 
 #include <base/str/string_id.hpp>
 
+#include "filesystem/file_path.hpp"
 #include <artifacts/artifacts.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include "global_state/packages.hpp"
 
 #include <filesystem>
+
+namespace {
+	std::string package_name = "driver_test_package";
+}
 
 class DriverTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -31,6 +37,10 @@ public:
 
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = package_name,
+					.package_path = fs::FilePath("./"),
+				},
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
 				},
@@ -44,7 +54,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_1")));
+			= frontend::createModuleTree(fs::File(path("modules/functions_1")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -65,7 +75,7 @@ private:
 		      global_state::getDynamicDebugOptions()->llvm_dump_asm = false;);
 
 		auto module
-			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_2")));
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -89,7 +99,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_3")));
+			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -104,8 +114,14 @@ private:
 		using namespace compiler;
 
 		// this also checks if llvm IR lib compile and link into the executable:
+
+		global_state::PackageInfo package_info{
+			.package_name = base::StrID(package_name.c_str()),
+			.package_path = fs::FilePath(path("modules/functions_4")),
+		};
+
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")),
+			package_info,
 			driver::BackendType::LLVM,
 			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
@@ -117,7 +133,7 @@ private:
 		);
 
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")),
+			package_info,
 			driver::BackendType::DVM,
 			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
@@ -127,7 +143,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/globals")));
+			= frontend::createModuleTree(fs::File(path("modules/globals")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -155,9 +171,7 @@ private:
 	void globalsInitializationTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTreeWithRandomPackageID(
-			fs::File(path("modules/globals_initialization"))
-		);
+		auto module = frontend::createModuleTree(fs::File(path("modules/globals_initialization")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto run_result = driver::runModuleOnDVM(ctx, module);

@@ -1,6 +1,7 @@
 #include "comp_time.hpp"
 
 #include <backends/dvm/backend.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
@@ -10,7 +11,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>

@@ -2,6 +2,7 @@
 
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <global_state/packages.hpp>
 #include <linker/link.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -45,6 +46,13 @@ namespace compiler::driver {
 				makeBox<artifacts::ArtifactCollection>(artifacts_options.artifacts_path.getPath())
 			);
 		}
+
+		void handlePackageOptions(const options_types::PackageInfo& package_info) {
+			// Add package name and path to global state
+			global_state::setters::addPackage(
+				package_info.package_name, fs::FilePath(package_info.package_path)
+			);
+		}
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
@@ -63,6 +71,7 @@ namespace compiler::driver {
 			variant_case(CompilerModeOfOperationAndOptions::PackageCompilationMode, options) {
 				handleDebugOptions(options.debug_options);
 				handleArtifactsOptions(options.compilation_artifacts);
+				handlePackageOptions(options.main_package_info);
 			}
 
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }

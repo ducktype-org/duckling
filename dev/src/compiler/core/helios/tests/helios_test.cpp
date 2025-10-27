@@ -1,5 +1,10 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/pst_query/code_dependency.hpp>
+#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
@@ -16,11 +21,6 @@
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
-#include <frontend/pst_parser/pst_query/code_dependency.hpp>
-#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/optional.hpp>

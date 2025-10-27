@@ -1,12 +1,6 @@
 #include "scopes.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
-#include <helios_private/scopes/scope_data.hpp>
-#include <helios_private/symbols/symbols.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -17,6 +11,12 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/scopes/scope_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
