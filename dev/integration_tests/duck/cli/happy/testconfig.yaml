@@ -38,7 +38,7 @@ Tests:
           String: External subcmd\n
 
   test-basic-flow:
-    Description: Checks a lot of basic flows: happy, builtin alias, auto fix...
+    Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
     Cases:
       runs-builtin-command:
         test_cmd: build
