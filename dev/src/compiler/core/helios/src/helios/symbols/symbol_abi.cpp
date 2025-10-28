@@ -2,8 +2,6 @@
 
 #include "symbol_abi.hpp"
 
-#include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/symbols/symbols.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -12,6 +10,8 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>

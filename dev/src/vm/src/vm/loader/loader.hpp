@@ -44,22 +44,25 @@ namespace vm::loader {
 		);
 
 	public:
-		explicit Loader() = default;
+		explicit Loader();
 
 		/**
-		 * @brief Injects new code from given file paths to the current program state and
-		 * returns a low-level program representation of the current loader state.
+		 * @brief Returns a pointer to the low-level program representation of the current loader
+		 * state.
+		 * @note The reference will be valid as long as the Loader itself and it's value updates on
+		 * loads calls.
 		 */
-		std::expected<CRef<vm::low::LowVMProgram>, LoaderLogger> loadAndCompile(
-			const std::vector<fs::File>& file_path
-		);
+		CRef<vm::low::LowVMProgram> getProgram() const;
 
 		/**
-		 * @brief Injects new code from a given high-level code representation, returns a
-		 * low-level program representation of the current loader state.
+		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		std::expected<CRef<vm::low::LowVMProgram>, LoaderLogger> loadAndCompile(
-			const code::CodeCollection& code_collection
+		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
+
+		/**
+		 * @brief Injects new code from a given high-level code representation.
+		 */
+		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
 	};
 }

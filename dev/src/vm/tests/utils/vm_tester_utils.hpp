@@ -23,14 +23,6 @@ protected:
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
 
-private:
-	TestResult runTestImpl(
-		vm::PID                            pid,
-		const base::Optional<std::string>& optional_input,
-		const base::Optional<std::string>& optional_output,
-		const std::vector<std::string>&    args
-	);
-
 protected:
 	vm::PID initProcess();
 
@@ -58,6 +50,14 @@ protected:
 		i64                                exit_code       = 0
 	);
 
+	void runTestOnVm(
+		vm::PID                            pid,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0
+	);
+
 	TestResult runTestOnVmGetResult(
 		const std::string&                 dbc_filename,
 		const base::Optional<std::string>& optional_input  = {},
@@ -67,6 +67,13 @@ protected:
 
 	TestResult runTestOnVmGetResult(
 		const vm::code::CodeCollection&    code,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {}
+	);
+
+	TestResult runTestOnVmGetResult(
+		vm::PID                            pid,
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
 		const std::vector<std::string>&    args            = {}
