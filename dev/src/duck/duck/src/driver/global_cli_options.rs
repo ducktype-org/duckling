@@ -70,11 +70,13 @@ impl GlobalCliOptions {
         if matches!(self.color, Color::Never) {
             console::set_colors_enabled(false);
             console::set_colors_enabled_stderr(false);
+            ctx.console_mut().set_color(false);
+            ctx.error_console_mut().set_color(false);
         } else if matches!(self.color, Color::Always) {
             console::set_colors_enabled(true);
             console::set_colors_enabled_stderr(true);
+            ctx.console_mut().set_color(true);
+            ctx.error_console_mut().set_color(true);
         }
-        ctx.console_mut().set_color(self.color);
-        ctx.error_console_mut().set_color(self.color);
     }
 }
