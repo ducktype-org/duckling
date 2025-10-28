@@ -1,0 +1,27 @@
+before_cmd: export QP_CONFIG=.
+
+Tests:
+  test-basic-flow:
+    Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
+    Cases:
+      runs-builtin-command:
+        test_cmd: build
+        ExitCode: 1
+        Err:
+          String: 'Error: implement build\n'
+      runs-builtin-alias:
+        test_cmd: b
+        ExitCode: 1
+        Err:
+          String: 'Error: implement build\n'
+      runs-user-alias:
+        test_cmd: my-custom-build-alias
+        ExitCode: 1
+        Err:
+          String: 'Error: implement build\n'
+      autofix-success:
+        test_cmd: buil
+        ExitCode: 1
+        Err:
+          String: 'Error: implement build\n'
+
