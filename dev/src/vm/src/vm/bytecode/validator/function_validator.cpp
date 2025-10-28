@@ -8,13 +8,11 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -232,9 +230,9 @@ class FunctionValidator {
 		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
             if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
-			if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
-				return &ext_c_signatures.at(instr.arg0.function_name)->signature;
-			return &signatures.at(instr.arg0.function_name);
+            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
+                return &ext_c_signatures.at(instr.arg0.function_name)->signature;
+            return &signatures.at(instr.arg0.function_name);
 		}();
 
 		bool check_ret_val = signature->result_type.str != base::StrID("void");

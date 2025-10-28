@@ -20,8 +20,8 @@ namespace pst {
 	}
 
 	base::OkBad checkUniqueComponentHashs(AccessLocked<pst::LangElement> root) {
-		std::set<std::string>                                 paths;
-		std::set<compiler::frontend::ComponentHash::HashType> hashes;
+		std::set<std::string>                      paths;
+		std::set<hashing::ComponentHash::HashType> hashes;
 
 		auto elements = viewAllSubTreeElements(root);
 		for (auto& element: elements) {

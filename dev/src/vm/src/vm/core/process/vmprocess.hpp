@@ -4,11 +4,9 @@
 
 #include <base/collections/optional.hpp>
 
-#include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -22,10 +20,6 @@
 #include <string>
 #include <variant>
 #include <vector>
-
-namespace vm::loader {
-	class Loader;
-}
 
 namespace vm {
 

@@ -1,22 +1,13 @@
 #include "type.hpp"
 
-#include <bits/ranges_algo.h>
-
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/process/type_metadata/kinds/function.hpp>
-#include <vm/core/process/type_metadata/kinds/opaque.hpp>
-#include <vm/core/process/type_metadata/kinds/pointer.hpp>
-#include <vm/core/process/type_metadata/kinds/primitive.hpp>
-#include <vm/core/process/type_metadata/kinds/variant.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
-#include <utility>
 
 namespace vm {
 

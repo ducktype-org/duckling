@@ -2,7 +2,6 @@
 
 #include <base/collections/optional.hpp>
 
-#include <vm/api/api.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
 class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {

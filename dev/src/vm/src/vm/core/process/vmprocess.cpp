@@ -8,9 +8,6 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>

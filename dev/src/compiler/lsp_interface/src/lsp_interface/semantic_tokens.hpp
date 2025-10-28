@@ -6,7 +6,7 @@
 #pragma once
 
 #include <frontend/module_tree/source_file.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/pointers/ref.hpp>

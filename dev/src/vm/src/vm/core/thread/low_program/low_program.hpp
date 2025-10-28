@@ -66,7 +66,7 @@ namespace vm::low {
 	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
 	 * GlobalDataID>` - global data.
 	 */
-	class LowVMProgram {
+	class LowVMProgram final {
 	public:
 		friend class vm::loader::compiler::Compiler;
 

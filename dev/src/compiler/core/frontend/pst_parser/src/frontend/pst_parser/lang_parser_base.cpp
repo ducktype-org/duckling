@@ -25,7 +25,7 @@ namespace pst {
 					);
 				}
 				variant_case(InternalNamedChild, named_child) {
-					ComponentHash child_path(getElementPathHash(), named_child.name);
+					hashing::ComponentHash child_path(getElementPathHash(), named_child.name);
 					named_child.element->calcElementPathHash(child_path);
 				}
 			}
@@ -33,23 +33,24 @@ namespace pst {
 	}
 
 	void LangElement::calcOrderedListChildPath(
-		std::vector<AccessInternalAnonymous<Stmt>>& statements, const ComponentHash& path
+		std::vector<AccessInternalAnonymous<Stmt>>& statements, const hashing::ComponentHash& path
 	) {
-		auto                          no_symbol_path  = ComponentHash(path, "no_symbol");
+		auto                          no_symbol_path  = hashing::ComponentHash(path, "no_symbol");
 		usize                         no_symbol_count = 0;
-		auto                          by_symbol_path  = ComponentHash(path, "by_symbol");
+		auto                          by_symbol_path  = hashing::ComponentHash(path, "by_symbol");
 		base::Map<base::StrID, usize> by_symbol_count;
-		usize                         symbol_count      = 0;
-		auto                          transparent_path  = ComponentHash(path, "transparent");
-		usize                         transparent_count = 0;
+		usize                         symbol_count = 0;
+		auto  transparent_path                     = hashing::ComponentHash(path, "transparent");
+		usize transparent_count                    = 0;
 
-		ComponentHash id_path = no_symbol_path;
+		hashing::ComponentHash id_path = no_symbol_path;
 
 		for (auto& stmt: statements) {
 			base::StrID symbol;
 			switch (stmt.internal()->isDeclaration()) {
 			case DeclKind::None:
-				id_path = ComponentHash(no_symbol_path, std::format("[{}]", no_symbol_count));
+				id_path
+					= hashing::ComponentHash(no_symbol_path, std::format("[{}]", no_symbol_count));
 				calcChildPath(stmt, id_path);
 				no_symbol_count++;
 				break;
@@ -61,14 +62,16 @@ namespace pst {
 					by_symbol_count.put(symbol);
 					symbol_count = 0;
 				}
-				id_path = ComponentHash(
+				id_path = hashing::ComponentHash(
 					by_symbol_path, std::format("{}[{}]", symbol.str(), symbol_count)
 				);
 				calcChildPath(stmt, id_path);
 				by_symbol_count[symbol]++;
 				break;
 			case DeclKind::Transparent:
-				id_path = ComponentHash(transparent_path, std::format("[{}]", transparent_count));
+				id_path = hashing::ComponentHash(
+					transparent_path, std::format("[{}]", transparent_count)
+				);
 				calcChildPath(stmt, id_path);
 				transparent_count++;
 				break;

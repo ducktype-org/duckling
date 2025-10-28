@@ -1,9 +1,9 @@
-#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <tester/tester.hpp>
 
@@ -55,7 +55,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -76,7 +76,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, compiler::frontend::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -109,7 +109,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, compiler::frontend::ComponentHash{}, context
+				this->code, hashing::ComponentHash{}, context
 			);
 			return parsed.getLogger()->good() == good;
 		}
@@ -420,4 +420,4 @@ public:
 
 std::vector<PSTErrorTests::GenExample*> PSTErrorTests::examples = {};
 
-TESTER_COMMON_MAIN("/src/compiler/core/pst_parser/tests/");
+TESTER_COMMON_MAIN("/src/compiler/core/frontend/pst_parser/tests/");

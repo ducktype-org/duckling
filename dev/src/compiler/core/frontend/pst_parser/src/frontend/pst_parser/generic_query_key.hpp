@@ -2,7 +2,7 @@
 
 #include "lang_parser_element.hpp"
 
-#include <pst_parser/access.hpp>
+#include <frontend/pst_parser/access.hpp>
 
 #include <base/pointers/ref.hpp>
 

@@ -3,6 +3,7 @@
 #include <base/str/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
 	const SpecialTypes& SpecialTypes::get() {
