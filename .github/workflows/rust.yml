@@ -46,13 +46,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Rust toolchain
-        run: . ${{ CARGO_DIR }}/env
+      - name: Add Rust components to PATH
+        run: echo "${{ env.CARGO_DIR}}/bin" >> $GITHUB_PATH
 
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
-          path: ${{ CARGO_DIR }}/registry
+          path: ${{ env.CARGO_DIR }}/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-registry-
@@ -60,7 +60,7 @@ jobs:
       - name: Cache cargo index
         uses: actions/cache@v4
         with:
-          path: ${{ CARGO_DIR }}/git
+          path: ${{ env.CARGO_DIR }}/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-index-
