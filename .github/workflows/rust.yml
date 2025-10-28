@@ -65,18 +65,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-index-
 
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: ${{ matrix.project.path }}/target
-          key: ${{ runner.os }}-cargo-build-${{ matrix.project.name }}-${{ hashFiles(format('{0}/Cargo.lock', matrix.project.path)) }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-build-${{ matrix.project.name }}-
-
-      - name: Remove target/ on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        run: rm -rf ${{ matrix.project.path }}/target
-
       - name: Run cargo fmt
         working-directory: ${{ matrix.project.path }}
         run: cargo fmt --check
@@ -88,3 +76,8 @@ jobs:
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}
         run: cargo test
+
+      - name: Remove target/ on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        run: rm -rf ${{ matrix.project.path }}/target
+
