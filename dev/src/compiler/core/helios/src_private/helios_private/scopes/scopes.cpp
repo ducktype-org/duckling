@@ -27,7 +27,7 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
-#include <set>
+#include <algorithm>
 
 namespace compiler::helios {
 
@@ -296,11 +296,13 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets scopes in a module.
 		 */
-		struct ScopeGrabPseudoVisitor {
-			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
+		struct ScopeGrabPseudoVisitor final {
+			ScopeGrabPseudoVisitor(Ref<std::vector<ScopeID>> out, Context& ctx):
+				  out(out),
+				  ctx(ctx) {}
 
-			std::set<ScopeID> out;
-			Context&          ctx;
+			Ref<std::vector<ScopeID>> out;
+			Context&                  ctx;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -315,37 +317,41 @@ namespace compiler::helios {
 				// @todo
 				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out.insert(scopeOf(element));
+					out->emplace_back(scopeOf(element));
 				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
 			}
 		};
 
-		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
+		static auto getScopes(Context& ctx, frontend::FileID file, Ref<std::vector<ScopeID>> out) {
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
-			ScopeGrabPseudoVisitor scope_grab(ctx);
+			ScopeGrabPseudoVisitor scope_grab(out, ctx);
 			scope_grab.visit(root);
-
-			return std::move(scope_grab.out);
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
-			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-			std::set<ScopeID> output    = getScopes(ctx, main_file);
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+
+			std::vector<ScopeID> output;
+			output.reserve(1'024);  // there will usually be a lot of scopes
+
+			getScopes(ctx, main_file, &output);
 
 			// fetch scopes from other module files
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) {
-				auto scopes = getScopes(ctx, file);
-				output.merge(scopes);
-			}
+			for (auto file: *source_files) getScopes(ctx, file, &output);
+
+			// eliminate duplicates with sort:
+			std::ranges::sort(output);
+			auto [unique_end, unique_last] = std::ranges::unique(output);
+			output.erase(unique_end, output.end());
 
 			// validate output:
 			for (auto scope: output)
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
-			return { output.begin(), output.end() };
+			return output;
 		}
 
 		QUERY_AUTO_CACHE_REF
