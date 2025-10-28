@@ -7,18 +7,18 @@ Tests:
         ExitCode: 1
         Err:
           String: |
-            Error: No such command as `x`. Did you mean:
-              - `b`
-              - `r`?
+            Error: No such command as \`x\`. Did you mean:
+              - \`b\`
+              - \`r\`?
 
       invalid-subcmd:
         test_cmd: not-a-subcmd
         ExitCode: 1
         Err:
-          String: 'Error: No such command: `not-a-subcmd`'
+          String: 'Error: No such command: \`not-a-subcmd\`\n'
       
       invalid-config:
-        prepare: export QP_CONFIG=./
+        before_cmd: export QP_CONFIG=.
         test_cmd: "not-a-command 2>&1 | head -n4 " # Get first for lines, but we lose exit code and stderr
         ExitCode: 0
         Output:
@@ -26,4 +26,4 @@ Tests:
             Error: when trying to check maximum typos fixing distance
 
               Caused by:
-                when getting key `security.typos.max_distance` expected integer, not a string
+                when getting key \`security.typos.max_distance\` expected integer, not a string

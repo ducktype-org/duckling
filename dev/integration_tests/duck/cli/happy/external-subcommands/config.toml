@@ -4,4 +4,3 @@ enabled = true
 
 [aliases]
 abababa = "echo"
-my-custom-build-alias = "build -j4"
