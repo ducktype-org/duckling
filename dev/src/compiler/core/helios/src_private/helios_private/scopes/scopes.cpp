@@ -28,7 +28,6 @@
 #include <query_framework/query_result.hpp>
 
 #include <algorithm>
-#include <set>
 
 namespace compiler::helios {
 
