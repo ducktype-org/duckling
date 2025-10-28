@@ -6,10 +6,11 @@ use quackpack::QuackResult;
 
 use crate::{DuckCtx, terminal::Verbosity};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum Color {
     Always,
     Never,
+    #[default]
     Auto,
 }
 
@@ -67,13 +68,13 @@ impl GlobalCliOptions {
         }
 
         if matches!(self.color, Color::Never) {
-            // @TODO: #1353 We might also want to this (somehow) as a wrapper to consoles.
-            //       https://docs.rs/console/latest/console/struct.WithoutAnsi.html
             console::set_colors_enabled(false);
             console::set_colors_enabled_stderr(false);
         } else if matches!(self.color, Color::Always) {
             console::set_colors_enabled(true);
             console::set_colors_enabled_stderr(true);
         }
+        ctx.console_mut().set_color(self.color);
+        ctx.error_console_mut().set_color(self.color);
     }
 }

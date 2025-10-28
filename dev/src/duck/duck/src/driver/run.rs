@@ -10,14 +10,13 @@ use crate::{
         cli,
         cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
         cli_no_help,
-        global_cli_options::{Color, GlobalCliOptions},
+        global_cli_options::GlobalCliOptions,
         styles::get_styles,
         subcommands::exec_for,
     },
 };
 use anyhow::{Context, bail};
 use clap::{ArgMatches, Command, error::ErrorKind::DisplayHelp};
-use console::WithoutAnsi;
 use quackpack::QuackResult;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
@@ -142,14 +141,14 @@ fn display_help(ctx: &mut DuckCtx) -> QuackResult<()> {
     let global_opts = GlobalCliOptions::from_matches(&no_help_matches)?;
     global_opts.update_context(ctx);
     match no_help_matches.subcommand_name() {
-        None => print_command_help(ctx, &mut true_cli, global_opts),
+        None => print_command_help(ctx, &mut true_cli),
         Some(subcmd_name) => {
             if let Some(subcmd) = cli().find_subcommand_mut(subcmd_name) {
                 // I do not understand why applying styles here again is necesseary, but it is.
                 let mut subcmd = subcmd.clone().styles(get_styles());
-                print_command_help(ctx, &mut subcmd, global_opts);
+                print_command_help(ctx, &mut subcmd);
             } else {
-                print_command_help(ctx, &mut true_cli, global_opts);
+                print_command_help(ctx, &mut true_cli);
             }
         }
     }
@@ -157,15 +156,7 @@ fn display_help(ctx: &mut DuckCtx) -> QuackResult<()> {
     Ok(())
 }
 
-fn print_command_help(ctx: &DuckCtx, command: &mut Command, opts: GlobalCliOptions) {
+fn print_command_help(ctx: &DuckCtx, command: &mut Command) {
     let help = command.render_help();
-    match opts.color() {
-        Color::Never => {
-            ctx.console()
-                .print_no_nl(WithoutAnsi::new(&help.to_string()));
-        }
-        _ => {
-            ctx.console().print_no_nl(help.ansi());
-        }
-    }
+    ctx.console().print_no_nl(help.ansi());
 }

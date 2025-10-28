@@ -1,14 +1,17 @@
 use std::fmt::Display;
 use std::io::Write;
 
-use console::{Term, style};
+use console::{Term, WithoutAnsi, style};
 use paste::item;
 use quackpack::QuackResult;
+
+use crate::driver::global_cli_options::Color;
 
 #[derive(Debug)]
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
+    color: Color,
 }
 
 #[derive(Debug, Default)]
@@ -65,10 +68,15 @@ impl Terminal {
         self.verbosity = verbosity;
     }
 
+    pub fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
+
     pub fn stdout() -> Terminal {
         Terminal {
             term: Term::stdout(),
             verbosity: Verbosity::Default,
+            color: Color::default(),
         }
     }
 
@@ -76,6 +84,7 @@ impl Terminal {
         Terminal {
             term: Term::stderr(),
             verbosity: Verbosity::Default,
+            color: Color::default(),
         }
     }
 
@@ -90,7 +99,14 @@ impl Terminal {
         if verbose_only && !self.verbosity.is_verbose() {
             return;
         };
-        drop(self.term.write_line(&text()));
+        if let Color::Never = self.color {
+            drop(
+                self.term
+                    .write_line(WithoutAnsi::new(&text()).to_string().as_str()),
+            );
+        } else {
+            drop(self.term.write_line(&text()));
+        }
     }
 
     fn print_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
@@ -101,7 +117,11 @@ impl Terminal {
             return;
         };
         let mut term = &self.term;
-        drop(term.write_all(text().as_bytes()));
+        if let Color::Never = self.color {
+            drop(term.write_all(WithoutAnsi::new(&text()).to_string().as_bytes()));
+        } else {
+            drop(term.write_all(text().as_bytes()));
+        }
     }
 
     pub fn print(&self, text: impl Display) {
