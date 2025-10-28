@@ -140,7 +140,7 @@ namespace fs {
 
 		/**
 		 * @brief Converts this path to a virtual path.
-		 * @note The path is first converted to absolute since virtual paths are always absolute.
+		 * @note Only physical paths can be converted to virtual paths.
 		 * @return FilePath representing the virtual path.
 		 * @throws CORE_PANIC if the path is already virtual or conversion fails.
 		 */
@@ -173,20 +173,22 @@ namespace fs {
 
 		/**
 		 * @brief Makes this path absolute without canonicalization.
+		 * @note the RelativePath type will be changed to Physical.
+		 * This will affect only Relative paths; other types remain unchanged.
 		 * @return FilePath representing the absolute path.
 		 */
 		[[nodiscard]] FilePath absolute() const;
 
 		/**
 		 * @brief Checks if the path is absolute.
-		 * @note Virtual Path are always considered absolute.
+		 * @note Virtual/Relative/Temporary paths are always considered absolute.
 		 * @return True if the path is absolute, false otherwise.
 		 */
 		[[nodiscard]] bool isAbsolute() const noexcept;
 
 		/**
 		 * @brief Checks if the path is relative.
-		 * @note Virtual Path are never considered relative.
+		 * @note Virtual/Relative/Temporary paths are never considered relative.
 		 * @return True if the path is relative, false otherwise.
 		 */
 		[[nodiscard]] bool isRelative() const noexcept { return !isAbsolute(); }
