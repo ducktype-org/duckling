@@ -29,13 +29,13 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     );
     let cli = cli();
 
-    let _matches = cli.try_get_matches();
-    if let Err(e) = &_matches
+    let matches = cli.try_get_matches();
+    if let Err(ref e) = matches
         && e.kind() == DisplayHelp
     {
         return display_help(ctx);
     }
-    let matches = _matches?;
+    let matches = matches?;
 
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
         std::env::set_current_dir(chdir)
