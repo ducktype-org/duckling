@@ -46,8 +46,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup Rust toolchain
-        run: . ${{ env.CARGO_DIR }}/env
+      - name: Add Rust components to PATH
+        run: echo "${{ env.CARGO_DIR}}/bin" >> $GITHUB_PATH
 
       - name: Cache cargo registry
         uses: actions/cache@v4
