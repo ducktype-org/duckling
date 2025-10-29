@@ -220,20 +220,35 @@ void server(i32 port) {
 			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 			std::vector<std::string> out;
 
-			for (auto& source_file: file_vector) {
-				auto pst = source_file->getPST();
-				// @TODO figure out logging strategy
-				if (pst->getLogger()->bad()) {
-					std::stringstream ss;
-					pst->getLogger()->dumpLog(true, ss);
-					std::cerr << ss.str() << "\n";
-					continue;
-				};
-				auto pst_root = pst->getRootElement();
-				auto element    = lsp::findElement(pst_root, offset);
-				auto definition = lsp::findDefinition(element);
-				if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
-			}
+			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
+				std::cout << "withcontextdo\n";
+				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+				std::cout << "src_files.size() = " << src_files.size() << "\n";
+				for (auto& src_file : src_files) {
+					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+					auto pst_root = pst->getRootElement();
+					std::cout << "pst_id = " << pst_root.unlock(ctx)->getID().queryUnstablePerfectHash() << "\n";
+					auto element    = lsp::findElement(pst_root, offset);
+					auto definition = lsp::findDefinition(element, ctx);
+					if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
+				}
+			});
+
+			// for (auto& source_file: file_vector) {
+			// 	std::cout << source_file->getFileID().queryUnstablePerfectHash() << "\n";
+			// 	auto pst = source_file->getPST();
+			// 	// @TODO figure out logging strategy
+			// 	if (pst->getLogger()->bad()) {
+			// 		std::stringstream ss;
+			// 		pst->getLogger()->dumpLog(true, ss);
+			// 		std::cerr << ss.str() << "\n";
+			// 		continue;
+			// 	};
+			// 	auto pst_root = pst->getRootElement();
+			// 	auto element    = lsp::findElement(pst_root, offset);
+			// 	auto definition = lsp::findDefinition(element);
+			// 	if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
+			// }
 
 
 			// TODO: fix PST definition to enable definition finding

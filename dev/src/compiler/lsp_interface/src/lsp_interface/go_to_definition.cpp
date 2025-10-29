@@ -79,17 +79,16 @@ namespace lsp {
 		return element;
 	}
 
-	base::Optional<Definition> findDefinition(pst::AccessLocked<pst::LangElement> element) {
+	base::Optional<Definition> findDefinition(pst::AccessLocked<pst::LangElement> element, query::Context & ctx) {
 		auto pst_expr = element.dynamicCast<pst::ExprElement>();
 
 		base::Optional<Definition> result;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
-			if (sym_id.has_value()) {
-				auto stmt = compiler::helios::stmt(ctx, sym_id.value());
-				result    = Definition{ &*stmt.value() };
-			}
-		});
+		auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
+		if (sym_id.has_value()) {
+			auto stmt = compiler::helios::stmt(ctx, sym_id.value());
+			result    = Definition{ &*stmt.value() };
+		}
+
 
 		return result;
 	}

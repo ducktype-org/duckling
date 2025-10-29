@@ -99,7 +99,9 @@ namespace lsp {
 					std::cout << "withcontextdo\n";
 					auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
 					std::cout << "src_files.size() = " << src_files.size() << "\n";
+					std::cout << "ids for " << vfile.name() << "\n";
 					for (auto& src_file : src_files) {
+						std::cout << src_file->getFileID().queryUnstablePerfectHash() << "\t";
 						ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
 					}
 				});

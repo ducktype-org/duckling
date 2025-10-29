@@ -576,9 +576,17 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
+		printmapdebug();
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
-		for (auto& source_file: source_files) source_file->update();
+		for (auto& source_file: source_files) {
+			std::cout << "old id:\t" << source_file->getPST()->getRootElement().illegalAccess().value()->getID().asInt() << "\n";
+			source_file->update();
+			root_element_file_back_map.put(source_file->getPST()->getRootElement().illegalAccess().value()->getID(), source_file->getFileID());
+			std::cout << "new id:\t" << source_file->getPST()->getRootElement().illegalAccess().value()->getID().asInt() << "\n";
+		}
+		printmapdebug();
+
 	}
 
 	// ----------------------
