@@ -330,12 +330,12 @@ export class CompilerDaemonClient {
 			uri: definition.uri,
 			range: {
 				start: {
-					line: definition.range.start.line,
-					character: definition.range.start.character
+					line: definition.range.start.line-1,
+					character: definition.range.start.character-1
 				},
 				end: {
-					line: definition.range.end.line,
-					character: definition.range.end.character
+					line: definition.range.end.line-1,
+					character: definition.range.end.character-1
 				}
 			}
 		}));

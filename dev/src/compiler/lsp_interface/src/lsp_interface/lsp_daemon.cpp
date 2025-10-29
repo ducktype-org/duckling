@@ -234,40 +234,6 @@ void server(i32 port) {
 				}
 			});
 
-			// for (auto& source_file: file_vector) {
-			// 	std::cout << source_file->getFileID().queryUnstablePerfectHash() << "\n";
-			// 	auto pst = source_file->getPST();
-			// 	// @TODO figure out logging strategy
-			// 	if (pst->getLogger()->bad()) {
-			// 		std::stringstream ss;
-			// 		pst->getLogger()->dumpLog(true, ss);
-			// 		std::cerr << ss.str() << "\n";
-			// 		continue;
-			// 	};
-			// 	auto pst_root = pst->getRootElement();
-			// 	auto element    = lsp::findElement(pst_root, offset);
-			// 	auto definition = lsp::findDefinition(element);
-			// 	if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
-			// }
-
-
-			// TODO: fix PST definition to enable definition finding
-			// auto       tokens = lexer::tokenizeFile(file);
-			// pst::PST<> pst(std::move(tokens));
-
-			// if (pst.getLogger()->bad()) {
-			// 	std::stringstream ss;
-			// 	pst.getLogger()->dumpLog(true, ss);
-			// 	return crow::response(200, ss.str());
-			// }
-
-			// auto pst_root   = pst.getRootElement();
-			// auto element    = lsp::findElement(pst_root, offset);
-			// auto definition = lsp::findDefinition(element);
-
-			// if (!definition.has_value()) return crow::response(200, "[]");
-
-			// std::vector<std::string> out = { definition.value().toJSON() };
 			std::cout << "Definitions found: " << lsp::jsonList(out) << "\n";
 			return crow::response(200, lsp::jsonList(out));
 		} catch (const std::exception& e) {
