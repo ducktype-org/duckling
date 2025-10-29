@@ -9,14 +9,13 @@ use crate::{
     driver::{
         cli,
         cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
-        cli_no_help,
+        cli_no_err,
         global_cli_options::GlobalCliOptions,
-        styles::get_styles,
         subcommands::exec_for,
     },
 };
 use anyhow::{Context, bail};
-use clap::{ArgMatches, Command, error::ErrorKind::DisplayHelp};
+use clap::ArgMatches;
 use quackpack::QuackResult;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
@@ -29,20 +28,15 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     );
     let cli = cli();
 
-    let matches = cli.try_get_matches();
-    if let Err(ref e) = matches
-        && e.kind() == DisplayHelp
-    {
-        return display_help(ctx);
+    if let Some(global_opts) = get_global_options() {
+        global_opts.update_context(ctx);
     }
-    let matches = matches?;
 
+    let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
         std::env::set_current_dir(chdir)
             .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
     }
-    let global_opts = GlobalCliOptions::from_matches(&matches)?;
-    global_opts.update_context(ctx);
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
     debug!(
@@ -50,6 +44,16 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
         args.subcommand_name()
     );
     run_subcmd(ctx, args, &external)
+}
+
+fn get_global_options() -> Option<GlobalCliOptions> {
+    // We get matches without worrying about errors, only to retrieve GlobalCliOptions.
+    // Later matching is done again on the real command, so any errors will be taken care of there.
+    if let Ok(matches) = cli_no_err().try_get_matches() {
+        GlobalCliOptions::from_matches(&matches).ok()
+    } else {
+        None
+    }
 }
 
 fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
@@ -91,7 +95,8 @@ fn run_subcmd(
 ) -> QuackResult<()> {
     let Some((sub_cmd, sub_args)) = args.subcommand() else {
         // No subcommand provided.
-        return display_help(ctx);
+        ctx.console().print_no_nl(cli().render_help().ansi());
+        return Ok(());
     };
     match (exec_for(sub_cmd), external.get(sub_cmd)) {
         (Some(exec_fn), Some(_)) => {
@@ -128,35 +133,4 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
     command.exec_replace().map(|_| ()).map_err(|x| x.into())
-}
-
-fn display_help(ctx: &mut DuckCtx) -> QuackResult<()> {
-    // We apply matching to the duck command with disabled help, so that there is no early return on help by clap.
-    // Then we get the true subcommand and manually print help for it
-    //     (or for the whole command if there was no subcommand or it was not recognised).
-    // We do this so that output for `duck --color never help` and similiar commands is not colored.
-
-    let mut true_cli = cli();
-    let no_help_matches = cli_no_help().try_get_matches()?;
-    let global_opts = GlobalCliOptions::from_matches(&no_help_matches)?;
-    global_opts.update_context(ctx);
-    match no_help_matches.subcommand_name() {
-        None => print_command_help(ctx, &mut true_cli),
-        Some(subcmd_name) => {
-            if let Some(subcmd) = cli().find_subcommand_mut(subcmd_name) {
-                // I do not understand why applying styles here again is necesseary, but it is.
-                let mut subcmd = subcmd.clone().styles(get_styles());
-                print_command_help(ctx, &mut subcmd);
-            } else {
-                print_command_help(ctx, &mut true_cli);
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn print_command_help(ctx: &DuckCtx, command: &mut Command) {
-    let help = command.render_help();
-    ctx.console().print_no_nl(help.ansi());
 }

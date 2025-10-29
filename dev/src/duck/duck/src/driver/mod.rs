@@ -9,7 +9,7 @@ pub mod subcommands;
 
 use cli_ext::CommandExt;
 
-use crate::driver::{cli_ext::flag, styles::get_styles};
+use crate::driver::styles::get_styles;
 
 fn cli() -> Command {
     Command::new(crate_name!())
@@ -23,11 +23,11 @@ fn cli() -> Command {
         .styles(get_styles())
 }
 
-fn cli_no_help() -> Command {
+fn cli_no_err() -> Command {
     cli()
-        .disable_help_flag(true)
         .disable_help_subcommand(true)
-        ._arg_impl(flag("help", "Print help").short('h').global(true))
+        .disable_help_flag(true)
+        .ignore_errors(true)
 }
 
 #[cfg(test)]

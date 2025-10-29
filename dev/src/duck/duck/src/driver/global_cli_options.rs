@@ -24,14 +24,12 @@ impl FromStr for Color {
             "auto" => Ok(Self::Auto),
             // @TODO: #1353 Introduce our own `Internal` error type. Then also update
             // `main::print_error_and_exit`, to check for internal errors in error chain.
-            _ => bail!(
-                "`{}` is not a valid color. This should be guarded by parser",
-                s
-            ),
+            _ => bail!("`{}` is not a valid color.", s),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct GlobalCliOptions {
     verbose: bool,
     quiet: bool,
