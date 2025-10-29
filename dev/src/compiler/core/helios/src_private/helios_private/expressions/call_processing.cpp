@@ -24,8 +24,14 @@
 
 namespace compiler::helios::code {
 
-
-	bool attemptOverloadMatchFun(
+	/**
+	 * Checks if a function can be called with the given arguments for overload resolution
+	 * based on function declaration.
+	 * It has duplicate code with the `attemptFittingFun`, but this function never invalidates the arguments.
+	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible 
+	 * to deduplicate this function with `attemptFittingFun`.
+	 */
+	bool matchOverloadFun(
 		query::Context&                        ctx,
 		SymID                                  fun,
 		std::vector<Box<Expr>>&                positional_arguments,
@@ -67,7 +73,13 @@ namespace compiler::helios::code {
 		return true;
 	}
 
-	bool attemptOverloadMatchBuiltin(
+	/**
+	 * Checks if a builtin function can be called with the given arguments for overload resolution.
+	 * It has duplicate code with the `attemptFittingBuiltin`, but this function never invalidates the arguments.
+	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible 
+	 * to deduplicate this function with `attemptFittingBuiltin`.
+	 */
+	bool matchOverloadBuiltin(
 		query::Context&                        ctx,
 		SymID                                  fun,
 		std::vector<Box<Expr>>&                positional_arguments,
@@ -92,7 +104,13 @@ namespace compiler::helios::code {
 		return true;
 	}
 
-	bool attemptOverloadMatch(
+	/**
+	 * Checks if a function can be called with the given arguments for overload resolution.
+	 * It has duplicate code with the `attemptFitting`, but this function never invalidates the arguments.
+	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible 
+	 * to deduplicate this function with `attemptFitting`.
+	 */
+	bool matchOverload(
 		query::Context&                        ctx,
 		SymID                                  fun,
 		std::vector<Box<Expr>>&                positional_arguments,
@@ -101,9 +119,9 @@ namespace compiler::helios::code {
 		switch (kind(fun)) {
 		case SymbolKind::Function:
 		case SymbolKind::FunctionDeclaration:
-			return attemptOverloadMatchFun(ctx, fun, positional_arguments, named_arguments);
+			return matchOverloadFun(ctx, fun, positional_arguments, named_arguments);
 		case SymbolKind::BuiltinFunction:
-			return attemptOverloadMatchBuiltin(ctx, fun, positional_arguments, named_arguments);
+			return matchOverloadBuiltin(ctx, fun, positional_arguments, named_arguments);
 		default:
 			CORE_PANIC(base::strConcat(
 				"Function candidate \"",
@@ -282,7 +300,7 @@ namespace compiler::helios::code {
 
 		base::Optional<SymID> successful_candidate;
 		for (const auto& fun: candidates) {
-			bool match = attemptOverloadMatch(ctx, fun, positional_arguments, named_arguments);
+			bool match = matchOverload(ctx, fun, positional_arguments, named_arguments);
 			if (match) {
 				if (successful_candidate.has_value())
 					return query::QError(errors::Failed());  // Ambiguous call.

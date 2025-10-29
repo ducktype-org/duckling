@@ -546,7 +546,7 @@ private:
 		// assertTrue(
 		// 	!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, int_2 }),
 		// 	"Bigger int should not be coercible into a smaller one."
-		// ); @TODO
+		// ); @TODO: 1461 Make implicit narrowing conversion illegal
 
 		const auto void_type = query::entryPoint<QueryVoidType>({});
 		assertTrue(
