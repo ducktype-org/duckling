@@ -23,6 +23,13 @@ fn cli() -> Command {
         .styles(get_styles())
 }
 
+fn cli_no_err() -> Command {
+    cli()
+        .disable_help_subcommand(true)
+        .disable_help_flag(true)
+        .ignore_errors(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -6,10 +6,11 @@ use quackpack::QuackResult;
 
 use crate::{DuckCtx, terminal::Verbosity};
 
-#[derive(Debug)]
-enum Color {
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Color {
     Always,
     Never,
+    #[default]
     Auto,
 }
 
@@ -23,14 +24,12 @@ impl FromStr for Color {
             "auto" => Ok(Self::Auto),
             // @TODO: #1353 Introduce our own `Internal` error type. Then also update
             // `main::print_error_and_exit`, to check for internal errors in error chain.
-            _ => bail!(
-                "`{}` is not a valid color. This should be guarded by parser",
-                s
-            ),
+            _ => bail!("`{}` is not a valid color.", s),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct GlobalCliOptions {
     verbose: bool,
     quiet: bool,
@@ -53,6 +52,10 @@ impl GlobalCliOptions {
         })
     }
 
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
     pub fn update_context(&self, ctx: &mut DuckCtx) {
         if self.verbose {
             ctx.console_mut().set_verbosity(Verbosity::Verbose);
@@ -63,13 +66,15 @@ impl GlobalCliOptions {
         }
 
         if matches!(self.color, Color::Never) {
-            // @TODO: #1353 We might also want to this (somehow) as a wrapper to consoles.
-            //       https://docs.rs/console/latest/console/struct.WithoutAnsi.html
             console::set_colors_enabled(false);
             console::set_colors_enabled_stderr(false);
+            ctx.console_mut().set_color(false);
+            ctx.error_console_mut().set_color(false);
         } else if matches!(self.color, Color::Always) {
             console::set_colors_enabled(true);
             console::set_colors_enabled_stderr(true);
+            ctx.console_mut().set_color(true);
+            ctx.error_console_mut().set_color(true);
         }
     }
 }
