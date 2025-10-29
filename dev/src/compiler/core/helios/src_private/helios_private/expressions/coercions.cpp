@@ -2,7 +2,7 @@
 
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
-#include "query_framework/context.hpp"
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
 

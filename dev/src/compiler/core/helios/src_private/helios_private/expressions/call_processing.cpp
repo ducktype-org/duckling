@@ -27,8 +27,9 @@ namespace compiler::helios::code {
 	/**
 	 * Checks if a function can be called with the given arguments for overload resolution
 	 * based on function declaration.
-	 * It has duplicate code with the `attemptFittingFun`, but this function never invalidates the arguments.
-	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible 
+	 * It has duplicate code with the `attemptFittingFun`, but this function never invalidates the
+	 * arguments.
+	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible
 	 * to deduplicate this function with `attemptFittingFun`.
 	 */
 	bool matchOverloadFun(
@@ -75,8 +76,9 @@ namespace compiler::helios::code {
 
 	/**
 	 * Checks if a builtin function can be called with the given arguments for overload resolution.
-	 * It has duplicate code with the `attemptFittingBuiltin`, but this function never invalidates the arguments.
-	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible 
+	 * It has duplicate code with the `attemptFittingBuiltin`, but this function never invalidates
+	 * the arguments.
+	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible
 	 * to deduplicate this function with `attemptFittingBuiltin`.
 	 */
 	bool matchOverloadBuiltin(
@@ -106,8 +108,9 @@ namespace compiler::helios::code {
 
 	/**
 	 * Checks if a function can be called with the given arguments for overload resolution.
-	 * It has duplicate code with the `attemptFitting`, but this function never invalidates the arguments.
-	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible 
+	 * It has duplicate code with the `attemptFitting`, but this function never invalidates the
+	 * arguments.
+	 * @TODO: #1362 After changing QueryHoutOfExpr to return Ref instead of Box it will be possible
 	 * to deduplicate this function with `attemptFitting`.
 	 */
 	bool matchOverload(

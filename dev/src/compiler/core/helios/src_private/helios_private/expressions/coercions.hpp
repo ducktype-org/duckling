@@ -3,7 +3,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include "query_framework/context.hpp"
+#include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
