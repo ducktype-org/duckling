@@ -72,7 +72,9 @@ namespace compiler::helios {
 					));
 					if (parsed.hasValue()) {
 						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+						setTypeOfSymbol(getDeclarationTypeFromExpressionType(
+							expr_type, tsh::Mutability::Immutable
+						));
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "
@@ -94,8 +96,12 @@ namespace compiler::helios {
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					));
 					if (parsed.hasValue()) {
-						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+						const auto& expr_type       = parsed.value()->expression_type;
+						const auto& decl_mutability = stmt->isConst() ? tsh::Mutability::Immutable
+						                                              : tsh::Mutability::Mutable;
+						setTypeOfSymbol(
+							getDeclarationTypeFromExpressionType(expr_type, decl_mutability)
+						);
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "

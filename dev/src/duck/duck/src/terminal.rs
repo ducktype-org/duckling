@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::io::Write;
 
-use console::{Term, style};
+use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 use paste::item;
 use quackpack::QuackResult;
 
@@ -9,6 +9,7 @@ use quackpack::QuackResult;
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
+    colors_enabled: bool,
 }
 
 #[derive(Debug, Default)]
@@ -65,10 +66,15 @@ impl Terminal {
         self.verbosity = verbosity;
     }
 
+    pub fn set_color(&mut self, colors_enabled: bool) {
+        self.colors_enabled = colors_enabled;
+    }
+
     pub fn stdout() -> Terminal {
         Terminal {
             term: Term::stdout(),
             verbosity: Verbosity::Default,
+            colors_enabled: colors_enabled(),
         }
     }
 
@@ -76,6 +82,7 @@ impl Terminal {
         Terminal {
             term: Term::stderr(),
             verbosity: Verbosity::Default,
+            colors_enabled: colors_enabled_stderr(),
         }
     }
 
@@ -90,7 +97,14 @@ impl Terminal {
         if verbose_only && !self.verbosity.is_verbose() {
             return;
         };
-        drop(self.term.write_line(&text()));
+        if !self.colors_enabled {
+            drop(
+                self.term
+                    .write_line(WithoutAnsi::new(&text()).to_string().as_str()),
+            );
+        } else {
+            drop(self.term.write_line(&text()));
+        }
     }
 
     fn print_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
@@ -101,7 +115,11 @@ impl Terminal {
             return;
         };
         let mut term = &self.term;
-        drop(term.write_all(text().as_bytes()));
+        if !self.colors_enabled {
+            drop(term.write_all(WithoutAnsi::new(&text()).to_string().as_bytes()));
+        } else {
+            drop(term.write_all(text().as_bytes()));
+        }
     }
 
     pub fn print(&self, text: impl Display) {
