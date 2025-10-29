@@ -188,8 +188,7 @@ namespace compiler::helios::code {
 	 * @brief Attempts to use given positional and named arguments as arguments for given builtin
 	 * function.
 	 * @note invalidates positional and named_arguments (moves boxes and leaves them empty).
-	 * @TODO: #1029 in order to handle overloads, make positional_arguments and named_arguments not
-	 * get invalidated.
+	 * @TODO: #1362 after Box->Ref migration deduplicate with matchOverloadBuiltin.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingBuiltin(
 		query::Context&                        ctx,
