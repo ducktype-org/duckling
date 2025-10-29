@@ -120,7 +120,7 @@ fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackRe
     );
     let mut command = std::process::Command::new(exec_path);
     command.args(cli_args);
-    Err(command.exec_replace().into())
+    command.exec_replace().map(|_| ()).map_err(|x| x.into())
 }
 
 fn print_parser_help(ctx: &DuckCtx) {

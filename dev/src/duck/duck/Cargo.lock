@@ -311,9 +311,9 @@ checksum = "caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001"
 
 [[package]]
 name = "rustvil"
-version = "0.4.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88588bd00dd426b73fc3974fb878c1ba10be82cfc28df6b88d2962524d4aa9aa"
+checksum = "1b25dd5af80ba6cb450c305719dc5d3ad05237f66af557d4c50746715f559b97"
 dependencies = [
  "libc",
  "thiserror",
