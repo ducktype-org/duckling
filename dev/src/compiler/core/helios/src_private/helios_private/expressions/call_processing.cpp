@@ -2,15 +2,15 @@
 
 #include "coercions.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/maps.hpp>
@@ -24,11 +24,98 @@
 
 namespace compiler::helios::code {
 
+
+	bool attemptOverloadMatchFun(
+		query::Context&                        ctx,
+		SymID                                  fun,
+		std::vector<Box<Expr>>&                positional_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
+	) {
+		auto decl = ctx.query<QueryDeclOfFun>(fun);
+
+		std::vector<base::Box<Expr>> coerced_arguments;
+		usize                        normal_args_position = 0;
+		usize                        used_named_args      = 0;
+
+		for (auto& param: decl->parameters) {
+			auto get_arg = [&]() -> base::Optional<CRef<Expr>> {
+				if (named_arguments.contains(param.name)) {
+					used_named_args++;
+					return named_arguments.at(param.name).ref();
+				} else if (normal_args_position < positional_arguments.size())
+					return positional_arguments.at(normal_args_position++).ref();
+				else if (param.initial_value.has_value()) {
+					return param.initial_value->ref();
+				} else
+					return std::nullopt;
+			};
+
+			match_optional(get_arg()) {
+				opt_some(arg) {
+					// @TODO: #1029 overloads resolution
+					auto coercion = canCoerceExpression(ctx, arg, param.type);
+					if (coercion.hasError()) return false;
+				}
+				opt_none { return false; }
+			}
+		}
+
+		if (normal_args_position != positional_arguments.size()  // All arguments must be used.
+		    or used_named_args != named_arguments.size())
+			return false;
+
+		return true;
+	}
+
+	bool attemptOverloadMatchBuiltin(
+		query::Context&                        ctx,
+		SymID                                  fun,
+		std::vector<Box<Expr>>&                positional_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
+	) {
+		auto call_type_result = ctx.query<QueryTypeOfSymbol>({ fun });
+		if (call_type_result->hasError()) return false;
+
+		tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
+
+		if (call_type.getType().getParameterTypes().size() != positional_arguments.size()
+		    || !named_arguments.empty())
+			return false;  // Builtin functions don't support named arguments (for now).
+
+		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
+			// @TODO: #1300 (for consideration)
+			auto coercion = canCoerceExpression(
+				ctx, positional_arguments[i].ref(), call_type.getType().getParameterTypes()[i]
+			);
+			if (coercion.hasError()) return false;
+		}
+		return true;
+	}
+
+	bool attemptOverloadMatch(
+		query::Context&                        ctx,
+		SymID                                  fun,
+		std::vector<Box<Expr>>&                positional_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
+	) {
+		switch (kind(fun)) {
+		case SymbolKind::Function:
+		case SymbolKind::FunctionDeclaration:
+			return attemptOverloadMatchFun(ctx, fun, positional_arguments, named_arguments);
+		case SymbolKind::BuiltinFunction:
+			return attemptOverloadMatchBuiltin(ctx, fun, positional_arguments, named_arguments);
+		default:
+			CORE_PANIC(base::strConcat(
+				"Function candidate \"",
+				name(fun),
+				"\" is not a function, builtin function, or class"
+			));
+		}
+	}
+
 	/**
 	 * @brief Attempts to use given positional and named arguments as arguments for given function.
 	 * @note invalidates positional and named_arguments (moves boxes and leaves them empty).
-	 * @TODO: #1029 in order to handle overloads, make positional_arguments and named_arguments not
-	 * get invalidated. Requires #1309.
 	 */
 	base::Optional<Box<CallExpr>> attemptFittingFun(
 		query::Context&                        ctx,
@@ -58,11 +145,11 @@ namespace compiler::helios::code {
 			match_optional(get_arg()) {
 				opt_some(arg) {
 					// @TODO: #1029 overloads resolution
-					auto coerced = coerceExpression(std::move(arg), param.type);
-					if (coerced.hasError())
+					auto coercion = canCoerceExpression(ctx, arg.ref(), param.type);
+					if (coercion.hasError())
 						return std::nullopt;
 					else
-						coerced_arguments.push_back(std::move(coerced.value()));
+						coerced_arguments.push_back(coercion.value()(std::move(arg)));
 				}
 				opt_none { return std::nullopt; }
 			}
@@ -101,11 +188,13 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
 			// @TODO: #1300 (for consideration)
-			auto coerced = coerceExpression(
-				std::move(positional_arguments[i]), call_type.getType().getParameterTypes()[i]
+			auto coercion = canCoerceExpression(
+				ctx, positional_arguments[i].ref(), call_type.getType().getParameterTypes()[i]
 			);
-			if (coerced.hasError()) return std::nullopt;
-			coerced_arguments.emplace_back(std::move(coerced.value()));
+			if (coercion.hasError())
+				return std::nullopt;
+			else
+				coerced_arguments.push_back(coercion.value()(std::move(positional_arguments[i])));
 		}
 
 		auto identifier_expr = makeBox<IdentifierExpr>(ctx, fun);
@@ -136,18 +225,22 @@ namespace compiler::helios::code {
 		}
 	}
 
-	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
-		query::Context&              ctx,
-		const std::vector<SymID>&    candidates,
-		pst::Access<pst::expr::Call> call_expr
+	/**
+	 * @brief Unwraps and validates call arguments from PST, populating positional and named
+	 * argument collections.
+	 * @param ctx Query context
+	 * @param call_expr The PST call expression containing arguments
+	 * @param positional_arguments Output vector for positional arguments
+	 * @param named_arguments Output map for named arguments
+	 * @return QError if validation fails (duplicate names, positional after named, or expression
+	 * error)
+	 */
+	query::QResult<std::monostate, errors::Failed> unwrapCallArguments(
+		query::Context&                        ctx,
+		pst::Access<pst::expr::Call>           call_expr,
+		std::vector<Box<Expr>>&                positional_arguments,
+		base::HashMap<base::StrID, Box<Expr>>& named_arguments
 	) {
-		// @TODO: #1029 handle overloads
-		if (candidates.size() != 1)
-			throw base::NotYetImplemented("Overloading is not implemented yet");
-
-		// Unwrap and validate call arguments.
-		std::vector<Box<Expr>>                positional_arguments;
-		base::HashMap<base::StrID, Box<Expr>> named_arguments;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
@@ -163,19 +256,48 @@ namespace compiler::helios::code {
 				positional_arguments.emplace_back(std::move(arg_expr.value()));
 			}
 		}
+		return std::monostate{};
+	}
 
-		base::Optional<Box<CallExpr>> result;
+	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
+		query::Context&              ctx,
+		const std::vector<SymID>&    candidates,
+		pst::Access<pst::expr::Call> call_expr
+	) {
+		// @TODO: #1029 handle overloads
+		if (candidates.size() != 1)
+			throw base::NotYetImplemented("Overloading is not implemented yet");
+
+		// Unwrap and validate call arguments.
+		std::vector<Box<Expr>>                positional_arguments;
+		base::HashMap<base::StrID, Box<Expr>> named_arguments;
+		auto unwrap_result
+			= unwrapCallArguments(ctx, call_expr, positional_arguments, named_arguments);
+		if (unwrap_result.hasError()) return query::QError(errors::Failed());
+
+		if (candidates.size() == 1) {
+			auto call_res
+				= attemptFitting(ctx, candidates[0], positional_arguments, named_arguments);
+			if (call_res.has_value())
+				return std::move(call_res.value());
+			else
+				return query::QError(errors::Failed());
+		}
+
+		base::Optional<SymID> successful_candidate;
 		for (const auto& fun: candidates) {
-			match_optional(attemptFitting(ctx, fun, positional_arguments, named_arguments)) {
-				opt_some(call_res) {
-					if (result.has_value())
-						// @TODO: #1029 add proper diagnostic here
-						return query::QError(errors::Failed());  // At least 2 functions fit.
-					else
-						result = std::move(call_res);
-				}
+			bool match = attemptOverloadMatch(ctx, fun, positional_arguments, named_arguments);
+			if (match) {
+				if (successful_candidate.has_value())
+					return query::QError(errors::Failed());  // Ambiguous call.
+				successful_candidate = fun;
 			}
 		}
+		if (not successful_candidate.has_value())
+			return query::QError(errors::Failed());  // No matching overload.
+		auto result = attemptFitting(
+			ctx, successful_candidate.value(), positional_arguments, named_arguments
+		);
 		if (result.has_value())
 			return std::move(result.value());
 		else
