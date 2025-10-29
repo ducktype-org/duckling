@@ -69,6 +69,7 @@ public:
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
+		TESTER_ADD_TEST(testOverloadResolution);
 
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -1536,6 +1537,53 @@ private:
 			}
 			assertTrue(found, "Symbol was not fount in its scope");
 		}
+	}
+
+	void testOverloadResolution() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/overload_resolution")));
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		// Get all function symbols by name to identify which overload is which
+		// Functions are defined in order: process(bool), process(f64), process(MyClass),
+		// foo(x), foo(y), bar(x), bar(y)
+
+		auto get_function_by_order
+			= [&](usize index) { return hout->functions.at(index).declaration->original_symbol; };
+
+		// Store function symbols for each overload
+		auto process_bool  = get_function_by_order(0);  // process(x: bool)
+		auto process_float = get_function_by_order(1);  // process(x: f64)
+		auto process_class = get_function_by_order(2);  // process(x: MyClass)
+		auto foo_x         = get_function_by_order(3);  // foo(x: i64)
+		auto foo_y         = get_function_by_order(4);  // foo(y: i64)
+
+		// Helper to get the function symbol called in a const expression
+		auto get_called_function = [](auto var_sym) {
+			auto expr      = getExprOfVariable(var_sym);
+			Ref  call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr.ref());
+
+			Ref ident_expr = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+				&*call_expr->callee.ref()
+			);
+			return ident_expr->symbol;
+		};
+
+
+		auto call_with_bool_sym  = getChain("CALL_WITH_BOOL", root_scope).back();
+		auto call_with_float_sym = getChain("CALL_WITH_FLOAT", root_scope).back();
+		auto call_with_class_sym = getChain("CALL_WITH_CLASS", root_scope).back();
+
+		ASSERT_EQUAL(process_bool, get_called_function(call_with_bool_sym));
+		ASSERT_EQUAL(process_float, get_called_function(call_with_float_sym));
+		ASSERT_EQUAL(process_class, get_called_function(call_with_class_sym));
+
+
+		auto named_call_x_sym = getChain("NAMED_CALL_X", root_scope).back();
+		auto named_call_y_sym = getChain("NAMED_CALL_Y", root_scope).back();
+
+		ASSERT_EQUAL(foo_x, get_called_function(named_call_x_sym));
+		ASSERT_EQUAL(foo_y, get_called_function(named_call_y_sym));
 	}
 };
 

@@ -264,14 +264,10 @@ namespace compiler::helios::code {
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
 	) {
-		// @TODO: #1029 handle overloads
-		if (candidates.size() != 1)
-			throw base::NotYetImplemented("Overloading is not implemented yet");
-
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                positional_arguments;
 		base::HashMap<base::StrID, Box<Expr>> named_arguments;
-		auto unwrap_result
+		auto                                  unwrap_result
 			= unwrapCallArguments(ctx, call_expr, positional_arguments, named_arguments);
 		if (unwrap_result.hasError()) return query::QError(errors::Failed());
 
