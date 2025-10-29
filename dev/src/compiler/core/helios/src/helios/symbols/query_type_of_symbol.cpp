@@ -102,13 +102,13 @@ namespace compiler::helios {
 						const auto& expr_type = parsed.value()->expression_type;
 						auto deduced_type = tsh::deduceTypeFromExpressionType(expr_type);
 						
-						// Check if this is a 'var' or 'let' declaration and adjust mutability
-						// 'var' should be Mutable, 'let' should be Immutable
+						// For Variable declarations without explicit type, set mutability based on keyword:
+						// isConst() returns true for 'let' declarations, false for 'var' declarations
 						if (!stmt->isConst()) {
-							// This is a 'var' declaration, ensure it's mutable
+							// 'var' declaration should be Mutable
 							deduced_type = deduced_type.withMutability(tsh::Mutability::Mutable);
 						} else {
-							// This is a 'let' declaration, ensure it's immutable
+							// 'let' declaration should be Immutable
 							deduced_type = deduced_type.withMutability(tsh::Mutability::Immutable);
 						}
 						
