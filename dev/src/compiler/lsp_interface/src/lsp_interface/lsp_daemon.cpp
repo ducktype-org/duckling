@@ -77,6 +77,10 @@ void server(i32 port) {
 
 			lsp::initModules(virtual_path);
 
+			lsp::initPSTs(virtual_path);
+
+			std::cout << "Initialized directory\n";
+
 			return crow::response(200, "OK");
 		}
 		catch (const std::exception& e) { std::cout << e.what(); return crow::response(400, e.what());}
@@ -143,8 +147,10 @@ void server(i32 port) {
 		try {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
-			compiler::frontend::createModuleTree(fs::File(virtual_root.getFilePath().join(path)));
-
+			auto mid = compiler::frontend::createModuleTree(fs::File(virtual_root.getFilePath().join(path)));
+			std::cout << "no break in createmoduletree\n";
+			std::string printModuleTreeVar = printModuleTree(mid);
+			std::cout << "THERE SHOULD BE A MODULE TREE HERE\n" << printModuleTreeVar << "\n";
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});

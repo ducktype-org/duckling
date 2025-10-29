@@ -97,7 +97,7 @@ connection.onInitialized(() => {
 	}
 	if (hasWorkspaceFolderCapability) {
 		compilerDaemonClient.putWorkspace(connection).then(() => {
-			console.log("Workspace files sent to daemon.");
+			// console.log("Workspace files sent to daemon.");
 			// compilerDaemonClient.makeModuleTrees(connection).then(() => {
 			// 	console.log("Module trees created.");
 			// });

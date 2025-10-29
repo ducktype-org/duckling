@@ -24,4 +24,5 @@ namespace lsp {
 
 	void initFiles(const fs::FilePath& path, const fs::File& vRoot);
 	void initModules(const fs::FilePath& path);
+	void initPSTs(const fs::FilePath& path);
 }

@@ -5,6 +5,8 @@
 #include "filesystem/file_path.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #define ext_is_ok(ext) ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift"
 
@@ -45,6 +47,7 @@ namespace lsp {
 		if (file.isFile()) {
 			if (ext_is_ok(path.extension())) {
 				fs::FileManager::createVirtualFile(virtual_path, file.getContent().view().stringView(), true);
+
 				//(void) vRoot.createSubFile(file.getContent().view().stringView(), virtual_path.strView());
 			}
 			return;
@@ -82,7 +85,35 @@ namespace lsp {
 			}
 			return;
 		}
+		std::cout << "UNREACHABLE\n";
+		CORE_UNREACHABLE();
+	}
 
+	void initPSTs(const fs::FilePath& path) {
+		std::cout << "PSTS\n";
+		auto vfile = fs::File(path);
+
+		if (vfile.isFile()) {
+			if (ext_is_ok(path.extension())) {
+				query::utils::withContextDo([&vfile](query::Context& ctx) {
+					std::cout << "withcontextdo\n";
+					auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
+					std::cout << "src_files.size() = " << src_files.size() << "\n";
+					for (auto& src_file : src_files) {
+						ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+					}
+				});
+			}
+			return;
+		}
+
+		if (vfile.isDirectory()) {
+			for (const auto& sub_path: vfile.listFilePaths()) {
+				initPSTs(sub_path);
+			}
+			return;
+		}
+		std::cout << "UNREACHABLE\n";
 		CORE_UNREACHABLE();
 	}
 }
