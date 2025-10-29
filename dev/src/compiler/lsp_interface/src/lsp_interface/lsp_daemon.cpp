@@ -67,10 +67,15 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/init_directory/<string>")
 	([&virtual_root](const std::string& base64_path) {
 		try{
-			const auto path = fs::FilePath("/" + base64::decode_into<std::string>(base64_path));
+			const auto path = fs::FilePath(""+base64::decode_into<std::string>(base64_path));
 			
 			lsp::initFiles(path, virtual_root);
-			lsp::initModules(virtual_root.getFilePath().join(path.uri()));
+
+			const fs::FilePath slash = "/"; 
+			auto file = fs::File(slash / path);
+			auto virtual_path = virtual_root.getFilePath().join(path);
+
+			lsp::initModules(virtual_path);
 
 			return crow::response(200, "OK");
 		}
@@ -91,7 +96,8 @@ void server(i32 port) {
 			const auto content = base64::decode_into<std::string>(base64_content);
 			std::cout << "putfile\n";
 			if (!virtual_root.getFilePath().join(path).exists()) {
-				(void) virtual_root.createSubFile("", path);
+				fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
+				//(void) virtual_root.createSubFile("", path);
 			}
 			std::cout << "file created\n";
 			auto file = fs::File(virtual_root.getFilePath().join(path));
@@ -220,7 +226,7 @@ void server(i32 port) {
 				auto pst_root = pst->getRootElement();
 				auto element    = lsp::findElement(pst_root, offset);
 				auto definition = lsp::findDefinition(element);
-				if (definition.has_value()) out.push_back(definition.value().toJSON());
+				if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
 			}
 
 
@@ -241,6 +247,7 @@ void server(i32 port) {
 			// if (!definition.has_value()) return crow::response(200, "[]");
 
 			// std::vector<std::string> out = { definition.value().toJSON() };
+			std::cout << "Definitions found: " << lsp::jsonList(out) << "\n";
 			return crow::response(200, lsp::jsonList(out));
 		} catch (const std::exception& e) {
 			std::cout << e.what() << "\n";

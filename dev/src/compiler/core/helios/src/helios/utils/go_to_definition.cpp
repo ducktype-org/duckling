@@ -69,7 +69,7 @@ namespace compiler::helios {
 		std::cout << "querySymIDOfPSTExpr\n";
 		std::cout << "Expr is:\n";
 		expr.illegalAccess().value()->debugPrint(std::cout);
-		std::cout << "\n";
+		std::cout << "NO PANIC\n";
 
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 

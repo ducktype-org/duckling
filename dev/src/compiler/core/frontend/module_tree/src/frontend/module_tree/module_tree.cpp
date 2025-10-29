@@ -703,6 +703,10 @@ namespace compiler::frontend {
 		printmapdebug();
 		std::cout << "EQMIDPST 4\n";
 		// this access depends of global state that might become a problem in incremental compilation:
+		std::cout << root_element_file_back_map.size() << " entries in root_element_file_back_map\n";
+		for (const auto& [key, value]: root_element_file_back_map) {
+			std::cout << "  " << key.asInt() << " -> " << value.queryUnstablePerfectHash() << "\n";
+		}
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
 		std::cout << "EQMIDPST 5\n";
 		return GetFileID_Functor::get(file_id)->getModule();

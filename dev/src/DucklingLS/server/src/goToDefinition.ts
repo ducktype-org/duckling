@@ -28,6 +28,7 @@ export async function handleDefinition(
     const text = document.getText();
     const offset = positionToOffset(params.position, text);
     let definition = await compilerDaemonClient.getDefinition(params, offset, connection);
-
+    console.log("Definition received from compiler daemon:", definition);
+    if (!definition) return null;
     return definition;
 }

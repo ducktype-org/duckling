@@ -2,6 +2,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 #include "filesystem/file.hpp"
+#include "filesystem/file_path.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 
@@ -36,21 +37,27 @@ namespace lsp {
 
 	void initFiles(const fs::FilePath& path, const fs::File& vRoot) {
 		std::cout << "PATH: " << path.strView() << "\n";
-
-		auto file = fs::File(path);
-		auto virtual_path = vRoot.getFilePath().join(path.uri());
+		const fs::FilePath slash = "/"; 
+		auto file = fs::File(slash / path);
+		auto virtual_path = vRoot.getFilePath().join(path);
+		std::cout << "VPATH: " << virtual_path.strView() << "\n";
 
 		if (file.isFile()) {
 			if (ext_is_ok(path.extension())) {
-				(void) vRoot.createSubFile(file.getContent().view().stringView(), virtual_path.strView());
+				fs::FileManager::createVirtualFile(virtual_path, file.getContent().view().stringView(), true);
+				//(void) vRoot.createSubFile(file.getContent().view().stringView(), virtual_path.strView());
 			}
 			return;
 		}
 
 		if (file.isDirectory()) {
+			if (!virtual_path.exists())
+				fs::FileManager::createVirtualFolder(virtual_path);
 			for (const auto& sub_path: file.listFilePaths()) {
-				(void) vRoot.createSubDirectory(virtual_path.strView());
-				initFiles(sub_path, vRoot);
+				fs::FilePath relative_sub_path = sub_path.strView().substr(1, sub_path.strView().length());
+				//std::cout << "SUBPATH: " << relative_sub_path.strView() << "\n";
+				//(void) vRoot.createSubDirectory(virtual_path.strView());
+				initFiles(relative_sub_path, vRoot);
 			}
 			return;
 		}
@@ -60,17 +67,17 @@ namespace lsp {
 
 	void initModules(const fs::FilePath& path) {
 		std::cout << "MODULES\n";
-		auto file = fs::File(path);
+		auto vfile = fs::File(path);
 
-		if (file.isFile()) {
+		if (vfile.isFile()) {
 			if (path.extension() == ".dmf") {
-				compiler::frontend::createModuleTree(file);
+				compiler::frontend::createModuleTree(vfile);
 			}
 			return;
 		}
 
-		if (file.isDirectory()) {
-			for (const auto& sub_path: file.listFilePaths()) {
+		if (vfile.isDirectory()) {
+			for (const auto& sub_path: vfile.listFilePaths()) {
 				initModules(sub_path);
 			}
 			return;

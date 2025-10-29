@@ -19,29 +19,45 @@
 #include <string>
 
 namespace lsp {
+
+	std::string cutVfsPrefix(const std::string& uri) {
+		const std::string vfs_prefix = "file://vfs:/";
+		if (uri.starts_with(vfs_prefix)) {
+			// Find the first '/' after "vfs:/<random_string>"
+			size_t pos = uri.find('/', vfs_prefix.length());
+			if (pos != std::string::npos) {
+				// Extract the actual file path and return it as a standard file:// URI
+				return "" + uri.substr(pos + 1);
+			}
+		}
+		return uri; // Return unchanged if it doesn't match the vfs_prefix
+	}
+
 	std::string Definition::toJSON() {
 		constexpr std::string_view JSON_TEMPLATE
-			= "uri: {},\n"
-			  "range: {{\n"
-			  "    start: {{\n"
-			  "        line: {},\n"
-			  "        character: {}\n"
+			= "\"uri\": \"{}\",\n"
+			  "\"range\": {{\n"
+			  "    \"start\": {{\n"
+			  "        \"line\": {},\n"
+			  "        \"character\": {}\n"
 			  "    }},\n"
-			  "    end: {{\n"
-			  "        line: {},\n"
-			  "        character: {}\n"
+			  "    \"end\": {{\n"
+			  "        \"line\": {},\n"
+			  "        \"character\": {}\n"
 			  "    }}\n"
 			  "}}\n";
 
 		return std::format(
 			JSON_TEMPLATE,
-			this->uri,
+			cutVfsPrefix(this->uri),
 			this->start.first,
 			this->start.second,
 			this->end.first,
 			this->end.second
 		);
 	}
+
+
 
 	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
