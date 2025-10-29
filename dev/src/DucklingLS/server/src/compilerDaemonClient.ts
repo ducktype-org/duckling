@@ -87,9 +87,10 @@ export class CompilerDaemonClient {
 
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 
-		function handleResponse(res: Response) {
+		async function handleResponse(res: Response) {
 			if (res.status != 200) {
-				throw new Error(`Error: ${res.status}`);
+				const text = await res.text();
+				throw new Error(`Error: ${res.status} ${text}`);
 			}
 		}
 
@@ -224,7 +225,7 @@ export class CompilerDaemonClient {
 				tokenType: token.tokenType,
 				tokenModifiers: token.tokenModifiers
 			}));
-
+			console.log("Parsed semantic tokens", new Date().toISOString());
 			return tokens;
 		} catch (error) {
 			if (error instanceof Error) {
