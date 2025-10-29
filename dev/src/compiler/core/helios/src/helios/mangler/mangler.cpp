@@ -10,6 +10,7 @@
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -310,14 +311,34 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
-			case SymbolKind::FunctionDeclaration:
-				return path(ctx, symbol_id) + funcType(ctx, symbol_id);
-				break;
+			case SymbolKind::FunctionDeclaration: {
+				variant_match(getSymRef(symbol_id)->other) {
+					variant_case_novalue(PstSymbolData) {
+						// If the symbol originates from the PST, use its path.
+						return path(ctx, symbol_id) + funcType(ctx, symbol_id);
+					}
+					variant_case(houtgen::GeneratedSymbolData, gen_data) {
+						// If the symbol is generated, it has no path.
+						variant_match(gen_data.data) {
+							variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+								const auto path_to_class = path(ctx, ctor.class_symbol);
+								const auto ctor_suffix   = "C" + funcType(ctx, symbol_id) + "E";
+								return path_to_class + ctor_suffix;
+							}
+							// Other cases of generated symbols cannot be functions.
+						}
+					}
+					// The last case is that the symbol is a builtin function, which is handled
+					// in a separate branch of the switch by symbol kind.
+					// @TODO: #1419 Simplify this handling of builtin functions.
+				}
+				CORE_UNREACHABLE();
+			}
 
-			case SymbolKind::Constructor:
-			case SymbolKind::Destructor:
-				return path(ctx, symbol_id, false) + specialMemberType(ctx, symbol_id);
-				break;
+				// case SymbolKind::Constructor:
+				// case SymbolKind::Destructor:
+				// 	return path(ctx, symbol_id, false) + specialMemberType(ctx, symbol_id);
+				// 	break;
 
 			default:
 				throw base::LogicError{ base::strConcat(
