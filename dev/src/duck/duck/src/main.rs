@@ -53,7 +53,11 @@ fn print_error_and_exit(error: anyhow::Error, stdout: &Terminal, stderr: &Termin
         };
         term.print_no_nl(error_msg.ansi());
 
-        let code = 1;
+        let code = if matches!(clap_err.kind(), clap::error::ErrorKind::DisplayHelp) {
+            0
+        } else {
+            1
+        };
         std::process::exit(code)
     }
     print_error(error, stderr);
