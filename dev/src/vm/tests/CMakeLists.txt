@@ -72,6 +72,9 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_variant_test variant/variant_tests.cpp
                 USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_extern_c_func_test extern_c/vm_extern_c_func_test.cpp
+                USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")

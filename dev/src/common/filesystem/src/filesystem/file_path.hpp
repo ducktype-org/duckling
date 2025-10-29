@@ -13,7 +13,8 @@
 MAKE_STRINGIFYABLE_ENUM(fs, u64, PathType,
 	Physical,   ///< Physical path on the filesystem.
 	Virtual,    ///< Virtual path in the virtual filesystem.
-	Temporary   ///< Temporary path in the system's temporary directory.
+	Temporary,   ///< Temporary path in the system's temporary directory.
+	Relative   ///< Relative path.
 );
 
 namespace fs {
@@ -139,6 +140,7 @@ namespace fs {
 
 		/**
 		 * @brief Converts this path to a virtual path.
+		 * @note Only physical paths can be converted to virtual paths.
 		 * @return FilePath representing the virtual path.
 		 * @throws CORE_PANIC if the path is already virtual or conversion fails.
 		 */
@@ -171,21 +173,25 @@ namespace fs {
 
 		/**
 		 * @brief Makes this path absolute without canonicalization.
+		 * @note the RelativePath type will be changed to Physical.
+		 * This will affect only Relative paths; other types remain unchanged.
 		 * @return FilePath representing the absolute path.
 		 */
 		[[nodiscard]] FilePath absolute() const;
 
 		/**
 		 * @brief Checks if the path is absolute.
+		 * @note Virtual/Relative/Temporary paths are always considered absolute.
 		 * @return True if the path is absolute, false otherwise.
 		 */
-		[[nodiscard]] bool isAbsolute() const noexcept { return path.is_absolute(); }
+		[[nodiscard]] bool isAbsolute() const noexcept;
 
 		/**
 		 * @brief Checks if the path is relative.
+		 * @note Virtual/Relative/Temporary paths are never considered relative.
 		 * @return True if the path is relative, false otherwise.
 		 */
-		[[nodiscard]] bool isRelative() const noexcept { return path.is_relative(); }
+		[[nodiscard]] bool isRelative() const noexcept { return !isAbsolute(); }
 
 		/**
 		 * @brief Checks if the path is empty.

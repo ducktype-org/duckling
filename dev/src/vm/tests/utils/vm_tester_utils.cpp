@@ -37,6 +37,16 @@ void VmTestSuite::runTestOnVm(
 	handleTestResult(runTestOnVmGetResult(code, optional_input, optional_output, args), exit_code);
 }
 
+void VmTestSuite::runTestOnVm(
+	vm::PID                            pid,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	i64                                exit_code
+) {
+	handleTestResult(runTestOnVmGetResult(pid, optional_input, optional_output, args), exit_code);
+}
+
 void VmTestSuite::assertExecutionPanickedWith(
 	const TestResult& test_result, std::string_view err_piece
 ) {
@@ -84,7 +94,7 @@ void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
 	if (auto&& result = action; !result.has_value()) \
 		return { .pid = pid, .run_result = std::unexpected(result.error()) };
 
-auto VmTestSuite::runTestImpl(
+auto VmTestSuite::runTestOnVmGetResult(
 	vm::PID                            pid,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
@@ -97,9 +107,9 @@ auto VmTestSuite::runTestImpl(
 	EXPECT_VOID(vm::api::join(pid));
 
 	if_opt_some(optional_output, output) {
-		auto output_response = vm::api::output(pid);
-		EXPECT_VOID(output_response);
-		ASSERT_EQUAL_PRINT(output, output_response->output);
+		auto program_output = vm::api::output(pid);
+		EXPECT_VOID(program_output);
+		ASSERT_EQUAL_PRINT(output, program_output->output);
 	}
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](Ref<vm::VmValue> value) {
 		ASSERT_TRUE(value->type->getName().str() == "i64");
@@ -118,7 +128,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 	auto pid  = initProcess();
 	auto file = fs::File(path(dbc_filename));
 	EXPECT_VOID(vm::api::loadFiles(pid, { file }));
-	return runTestImpl(pid, optional_input, optional_output, args);
+	return runTestOnVmGetResult(pid, optional_input, optional_output, args);
 }
 
 auto VmTestSuite::runTestOnVmGetResult(
@@ -129,7 +139,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 ) -> TestResult {
 	auto pid = initProcess();
 	EXPECT_VOID(vm::api::loadCode(pid, { code }));
-	return runTestImpl(pid, optional_input, optional_output, args);
+	return runTestOnVmGetResult(pid, optional_input, optional_output, args);
 }
 
 #undef EXPECT_VOID

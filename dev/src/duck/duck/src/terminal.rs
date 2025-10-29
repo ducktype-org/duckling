@@ -1,0 +1,129 @@
+use std::fmt::Display;
+use std::io::Write;
+
+use console::{Term, style};
+use paste::item;
+use quackpack::QuackResult;
+
+#[derive(Debug)]
+pub struct Terminal {
+    term: Term,
+    verbosity: Verbosity,
+}
+
+#[derive(Debug, Default)]
+pub enum Verbosity {
+    Quiet,
+    #[default]
+    Default,
+    Verbose,
+}
+
+macro_rules! delegate_styles {
+    (
+        $(
+            $name:ident => $value:literal $(+ $opt:ident )* $(,)?
+        ),*
+    ) => {
+    item! {
+        $(
+            pub fn $name(&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_nl_impl(full_text, false);
+            }
+
+            pub fn [<$name _verbose>](&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_nl_impl(full_text, true);
+            }
+
+            pub fn [<$name _no_nl>](&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_impl(full_text, false);
+            }
+            pub fn [<$name _verbose_no_nl>](&self, text: impl ::std::fmt::Display) {
+                let full_text = || format!("{} {}", style($value)$(.$opt())*, text);
+                self.print_impl(full_text, true);
+            }
+        )*
+    }
+    };
+}
+
+impl Verbosity {
+    pub fn is_quiet(&self) -> bool {
+        matches!(self, Verbosity::Quiet)
+    }
+
+    pub fn is_verbose(&self) -> bool {
+        matches!(self, Verbosity::Verbose)
+    }
+}
+
+impl Terminal {
+    pub fn set_verbosity(&mut self, verbosity: Verbosity) {
+        self.verbosity = verbosity;
+    }
+
+    pub fn stdout() -> Terminal {
+        Terminal {
+            term: Term::stdout(),
+            verbosity: Verbosity::Default,
+        }
+    }
+
+    pub fn stderr() -> Terminal {
+        Terminal {
+            term: Term::stderr(),
+            verbosity: Verbosity::Default,
+        }
+    }
+
+    pub fn flush(&self) -> QuackResult<()> {
+        Ok(self.term.flush()?)
+    }
+
+    fn print_nl_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
+        if self.verbosity.is_quiet() {
+            return;
+        }
+        if verbose_only && !self.verbosity.is_verbose() {
+            return;
+        };
+        drop(self.term.write_line(&text()));
+    }
+
+    fn print_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
+        if self.verbosity.is_quiet() {
+            return;
+        }
+        if verbose_only && !self.verbosity.is_verbose() {
+            return;
+        };
+        let mut term = &self.term;
+        drop(term.write_all(text().as_bytes()));
+    }
+
+    pub fn print(&self, text: impl Display) {
+        self.print_nl_impl(|| format!("{}", text), false);
+    }
+
+    pub fn print_verbose(&self, text: impl Display) {
+        self.print_nl_impl(|| format!("{}", text), true);
+    }
+
+    pub fn print_no_nl(&self, text: impl Display) {
+        self.print_impl(|| format!("{}", text), false);
+    }
+
+    pub fn print_verbose_no_nl(&self, text: impl Display) {
+        self.print_impl(|| format!("{}", text), true);
+    }
+
+    delegate_styles! {
+        error => "Error:" + red + bold,
+        warning => "Warning:" + yellow + bold,
+        info => "Info:" + cyan + bold,
+        critical => "Critical:" + red + reverse + bold,
+    }
+}
