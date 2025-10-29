@@ -97,7 +97,6 @@ namespace compiler::helios::code {
 			return false;  // Builtin functions don't support named arguments (for now).
 
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-			// @TODO: #1300 (for consideration)
 			auto coercion = canCoerceExpression(
 				ctx, positional_arguments[i].ref(), call_type.getType().getParameterTypes()[i]
 			);
@@ -207,7 +206,6 @@ namespace compiler::helios::code {
 
 		std::vector<base::Box<Expr>> coerced_arguments;
 		for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-			// @TODO: #1300 (for consideration)
 			auto coercion = canCoerceExpression(
 				ctx, positional_arguments[i].ref(), call_type.getType().getParameterTypes()[i]
 			);
