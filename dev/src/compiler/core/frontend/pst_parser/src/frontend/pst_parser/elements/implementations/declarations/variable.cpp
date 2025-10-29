@@ -9,13 +9,15 @@ namespace pst {
 		MBox<Variable> out;
 
 		const bool is_var = state[0].is(Keyword::Var);
-		const bool is_let = state[0].is(Keyword::Let);
 
 		if (is_var)
 			out = parseVariableTemplate<Variable, Keyword::Var>(state);
 		else
 			out = parseVariableTemplate<Variable, Keyword::Let>(state);
-		if (is_let) out->is_const = true;
+		
+		// Set is_const based on the keyword: 'var' is mutable (!is_const), 'let' is const
+		out->is_const = !is_var;
+		
 		return out;
 	}
 

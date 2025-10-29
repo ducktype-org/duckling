@@ -72,7 +72,12 @@ namespace compiler::helios {
 					));
 					if (parsed.hasValue()) {
 						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+						auto deduced_type = tsh::deduceTypeFromExpressionType(expr_type);
+						
+						// Const declarations should always be Immutable
+						deduced_type = deduced_type.withMutability(tsh::Mutability::Immutable);
+						
+						setTypeOfSymbol(deduced_type);
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "
@@ -95,7 +100,19 @@ namespace compiler::helios {
 					));
 					if (parsed.hasValue()) {
 						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+						auto deduced_type = tsh::deduceTypeFromExpressionType(expr_type);
+						
+						// Check if this is a 'var' or 'let' declaration and adjust mutability
+						// 'var' should be Mutable, 'let' should be Immutable
+						if (!stmt->isConst()) {
+							// This is a 'var' declaration, ensure it's mutable
+							deduced_type = deduced_type.withMutability(tsh::Mutability::Mutable);
+						} else {
+							// This is a 'let' declaration, ensure it's immutable
+							deduced_type = deduced_type.withMutability(tsh::Mutability::Immutable);
+						}
+						
+						setTypeOfSymbol(deduced_type);
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "

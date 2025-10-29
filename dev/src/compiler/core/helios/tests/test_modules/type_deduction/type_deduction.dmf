@@ -22,3 +22,7 @@ const TupleCII = (6, 7);
 
 const TupleCSI = ("HUH", 14369);
 
+# Test mutability deduction for variables without explicit type
+let deduced_let = 42;
+var deduced_var = 42;
+const deduced_const = 42;

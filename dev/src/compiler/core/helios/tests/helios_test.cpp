@@ -1242,6 +1242,22 @@ private:
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+		// Test mutability deduction for variables without explicit type
+		// let deduced_let = 42 should have Immutable mutability
+		const auto deduced_let_symbol_type = getSymbolTypeOf("deduced_let", root_scope);
+		ASSERT_EQUAL(int64_type, deduced_let_symbol_type.getType());
+		ASSERT_EQUAL(Immutable, deduced_let_symbol_type.getMutability());
+
+		// var deduced_var = 42 should have Mutable mutability
+		const auto deduced_var_symbol_type = getSymbolTypeOf("deduced_var", root_scope);
+		ASSERT_EQUAL(int64_type, deduced_var_symbol_type.getType());
+		ASSERT_EQUAL(Mutable, deduced_var_symbol_type.getMutability());
+
+		// const deduced_const = 42 should have Immutable mutability
+		const auto deduced_const_symbol_type = getSymbolTypeOf("deduced_const", root_scope);
+		ASSERT_EQUAL(int64_type, deduced_const_symbol_type.getType());
+		ASSERT_EQUAL(Immutable, deduced_const_symbol_type.getMutability());
 	}
 
 	void testDebugPrint() {
