@@ -1242,6 +1242,17 @@ private:
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+		// Differences between const, let, and var
+		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
+		const auto let_type   = getSymbolTypeOf("let_no_type", root_scope);
+		const auto var_type   = getSymbolTypeOf("var_no_type", root_scope);
+		ASSERT_EQUAL(const_type.getType(), int64_type);
+		ASSERT_EQUAL(let_type.getType(), int64_type);
+		ASSERT_EQUAL(var_type.getType(), int64_type);
+		ASSERT_EQUAL(const_type.getMutability(), tsh::Mutability::Immutable);
+		ASSERT_EQUAL(let_type.getMutability(), tsh::Mutability::Immutable);
+		ASSERT_EQUAL(var_type.getMutability(), tsh::Mutability::Mutable);
 	}
 
 	void testDebugPrint() {
