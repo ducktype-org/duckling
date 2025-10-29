@@ -3,6 +3,7 @@ import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
+import { initPromise, initComplete } from './server';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -81,6 +82,10 @@ export class CompilerDaemonClient {
 	// This function is called to update the file in the daemon
 	public async putFile(filePath: string, fileContent: string, connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
+		if (!initComplete) {
+			console.log("Waiting for init to complete...");
+			await initPromise;
+		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');

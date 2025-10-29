@@ -39,6 +39,9 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
+export let initComplete = false;
+export let initPromise: Promise<void>;
+
 // Storing LSPT for documents
 
 // Semantic tokens legend
@@ -91,23 +94,26 @@ connection.onInitialize((params: InitializeParams) => {
 });
 
 connection.onInitialized(() => {
-	if (hasConfigurationCapability) {
-		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
-	}
-	if (hasWorkspaceFolderCapability) {
-		compilerDaemonClient.putWorkspace(connection).then(() => {
+	initPromise = (async () => {
+		if (hasConfigurationCapability) {
+			// Register for all configuration changes.
+			connection.client.register(DidChangeConfigurationNotification.type, undefined);
+		}
+		if (hasWorkspaceFolderCapability) {
+			await compilerDaemonClient.putWorkspace(connection);
 			// console.log("Workspace files sent to daemon.");
 			// compilerDaemonClient.makeModuleTrees(connection).then(() => {
 			// 	console.log("Module trees created.");
 			// });
-		});
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			console.log("Workspace folder change event received.");
-		});
-	} else {
-		console.log("NO WORKSPACE CAPABILITY");
-	}
+			connection.workspace.onDidChangeWorkspaceFolders(_event => {
+				console.log("Workspace folder change event received.");
+			});
+		} else {
+			console.log("NO WORKSPACE CAPABILITY");
+		}
+	})().then(() => {
+		initComplete = true;
+	});
 });
 
 // Register the handler for semantic tokens
