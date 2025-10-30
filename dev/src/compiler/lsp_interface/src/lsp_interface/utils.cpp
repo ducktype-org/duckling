@@ -70,7 +70,7 @@ namespace lsp {
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
-			if (path.extension() == ".dmf") compiler::frontend::createModuleTree(vfile);
+			if (path.extension() == ".dmf") compiler::frontend::createModuleTreeWithRandomPackageID(vfile);
 			return;
 		}
 
