@@ -368,7 +368,9 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
-	 * For now it is a mockup, doesn't work.
+	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
+	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
+	 * @TODO: (this PR, @Andrzej) are methods allowed here as well?
 	 */
 	struct AccessExpr final: public Expr {
 		Box<Expr> base;
