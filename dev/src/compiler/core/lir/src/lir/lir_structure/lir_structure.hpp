@@ -6,7 +6,7 @@
 #include <helios/hout/hout_fd.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <mir/mir_structure/mir_local_global_ref.hpp>
+#include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/collections/optional.hpp>

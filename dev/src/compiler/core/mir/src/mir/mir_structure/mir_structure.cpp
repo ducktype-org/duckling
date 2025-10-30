@@ -197,14 +197,15 @@ namespace compiler::mir {
 
 	void MIRValue::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
-			variant_case(MirLocalRef, local) { local->debugPrint(output); }
+			variant_case_novalue(MirUnitConst) { output << "()"; }
 			variant_case(MirIntegerConst, value) { output << value.value; }
 			variant_case(MirBoolConst, value) { output << (value.value ? "true" : "false"); }
+			variant_case(MirLocalRef, local) { local->debugPrint(output); }
+			variant_case(MirGlobal, global) { global.debugPrint(output); }
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
 			variant_case(MirFunctionLiteral, func) {
 				output << "Function(" << name(func.helios_id).strView() << ")";
 			}
-			variant_case(MirGlobal, global) { global.debugPrint(output); }
 			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
 	}

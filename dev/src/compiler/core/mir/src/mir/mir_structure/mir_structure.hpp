@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mir_lifetime_scope.hpp"
-#include "mir_local_global_ref.hpp"
+#include "mir_local_ref.hpp"
 
 #include <typesystem/higher/types.hpp>
 
@@ -262,6 +262,8 @@ namespace compiler::mir {
 		// @TODO: literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
+		// MIR Locals are stored indirectly through MirLocalRef because
+		// they are owned by MIR Function, unlike MIR Globals.
 		using ValueType = std::variant<
 			MirUnitConst,
 			MirIntegerConst,
@@ -284,11 +286,11 @@ namespace compiler::mir {
 
 		MIRValue(MirLocalMutRef value): value(value) {}
 
+		MIRValue(MirGlobal value): value(value) {}
+
 		MIRValue(BlockID value): value(value) {}
 
 		MIRValue(MirFunctionLiteral value): value(value) {}
-
-		MIRValue(MirGlobal value): value(value) {}
 
 		void debugPrint(std::ostream& output) const;
 
@@ -329,8 +331,8 @@ namespace compiler::mir {
 		bool carriesInformation() const {
 			variant_match(value) {
 				variant_case_novalue(MirUnitConst) { return false; }
-				variant_case(MirGlobal, global) { return global.carriesInformation(); }
 				variant_case(MirLocalRef, local) { return local->carriesInformation(); }
+				variant_case(MirGlobal, global) { return global.carriesInformation(); }
 			}
 			return true;
 		}
@@ -345,7 +347,7 @@ namespace compiler::mir {
 	 */
 	struct OperationFlag final {
 		enum class Flag { Construct, Destruct, Move };
-		Flag     flag;
+		Flag        flag;
 		MirLocalRef local;
 
 		void debugPrint(std::ostream& output) const;
