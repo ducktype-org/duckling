@@ -40,20 +40,15 @@ namespace lsp {
 	}
 
 	void initFiles(const fs::FilePath& path, const fs::File& vRoot) {
-		std::cout << "PATH: " << path.strView() << "\n";
 		const fs::FilePath slash        = "/";
 		auto               file         = fs::File(slash / path);
 		auto               virtual_path = vRoot.getFilePath().join(path);
-		std::cout << "VPATH: " << virtual_path.strView() << "\n";
 
 		if (file.isFile()) {
 			if (ext_is_ok(path.extension())) {
 				fs::FileManager::createVirtualFile(
 					virtual_path, file.getContent().view().stringView(), true
 				);
-
-				//(void) vRoot.createSubFile(file.getContent().view().stringView(),
-				//virtual_path.strView());
 			}
 			return;
 		}
@@ -63,8 +58,6 @@ namespace lsp {
 			for (const auto& sub_path: file.listFilePaths()) {
 				fs::FilePath relative_sub_path
 					= sub_path.strView().substr(1, sub_path.strView().length());
-				// std::cout << "SUBPATH: " << relative_sub_path.strView() << "\n";
-				//(void) vRoot.createSubDirectory(virtual_path.strView());
 				initFiles(relative_sub_path, vRoot);
 			}
 			return;
@@ -74,7 +67,6 @@ namespace lsp {
 	}
 
 	void initModules(const fs::FilePath& path) {
-		std::cout << "MODULES\n";
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
@@ -86,25 +78,19 @@ namespace lsp {
 			for (const auto& sub_path: vfile.listFilePaths()) initModules(sub_path);
 			return;
 		}
-		std::cout << "UNREACHABLE\n";
+
 		CORE_UNREACHABLE();
 	}
 
 	void initPSTs(const fs::FilePath& path) {
-		std::cout << "PSTS\n";
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
 			if (ext_is_ok(path.extension())) {
 				query::utils::withContextDo([&vfile](query::Context& ctx) {
-					std::cout << "withcontextdo\n";
 					auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
-					std::cout << "src_files.size() = " << src_files.size() << "\n";
-					std::cout << "ids for " << vfile.name() << "\n";
-					for (auto& src_file: src_files) {
-						std::cout << src_file->getFileID().queryUnstablePerfectHash() << "\t";
+					for (auto& src_file: src_files)
 						ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
-					}
 				});
 			}
 			return;
@@ -114,7 +100,7 @@ namespace lsp {
 			for (const auto& sub_path: vfile.listFilePaths()) initPSTs(sub_path);
 			return;
 		}
-		std::cout << "UNREACHABLE\n";
+
 		CORE_UNREACHABLE();
 	}
 }

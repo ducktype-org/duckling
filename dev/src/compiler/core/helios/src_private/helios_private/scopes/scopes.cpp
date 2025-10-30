@@ -231,12 +231,12 @@ namespace compiler::helios {
 				));
 			}
 
-			std::cout << "element valid\n";
+			ScopeID parent = element->getParent().has_value()
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
+			                   : ctx.query<QueryRootScopeOf>(
+									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
+								 );
 
-
-			ScopeID parent = debug_parent_function(element, ctx, element_key.element);
-
-			std::cout << "Got parent\n";
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
 			// simple parent sanity check:
@@ -321,7 +321,6 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
-			std::cout << "getScopes\n";
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
 			ScopeGrabPseudoVisitor scope_grab(ctx);
@@ -654,8 +653,7 @@ namespace compiler::helios {
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
-		std::cout << "queryRootScopeOfMainModuleFile\n";
-		auto main_source_pst = ctx.query<frontend::QueryFilePST>(main_source_file);
+		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
 		auto main_file_root_scope
 			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
