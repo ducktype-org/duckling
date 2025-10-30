@@ -1,9 +1,9 @@
+#include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
+
 #include <map>
 #include <string>
 #include <vector>
-
-#include <filesystem/file.hpp>
-#include <filesystem/file_path.hpp>
 
 namespace lsp {
 	/**

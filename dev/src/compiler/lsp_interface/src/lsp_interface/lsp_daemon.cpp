@@ -66,14 +66,14 @@ void server(i32 port) {
 	 */
 	CROW_ROUTE(app, "/init_directory/<string>")
 	([&virtual_root](const std::string& base64_path) {
-		try{
-			const auto path = fs::FilePath(""+base64::decode_into<std::string>(base64_path));
-			
+		try {
+			const auto path = fs::FilePath("" + base64::decode_into<std::string>(base64_path));
+
 			lsp::initFiles(path, virtual_root);
 
-			const fs::FilePath slash = "/"; 
-			auto file = fs::File(slash / path);
-			auto virtual_path = virtual_root.getFilePath().join(path);
+			const fs::FilePath slash        = "/";
+			auto               file         = fs::File(slash / path);
+			auto               virtual_path = virtual_root.getFilePath().join(path);
 
 			lsp::initModules(virtual_path);
 
@@ -82,8 +82,10 @@ void server(i32 port) {
 			std::cout << "Initialized directory\n";
 
 			return crow::response(200, "OK");
+		} catch (const std::exception& e) {
+			std::cout << e.what();
+			return crow::response(400, e.what());
 		}
-		catch (const std::exception& e) { std::cout << e.what(); return crow::response(400, e.what());}
 	});
 
 	/**
@@ -114,11 +116,10 @@ void server(i32 port) {
 				std::cout << "withcontextdo\n";
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 				std::cout << "src_files.size() = " << src_files.size() << "\n";
-				for (auto& src_file : src_files) {
+				for (auto& src_file: src_files)
 					ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
-				}
 			});
-			
+
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
@@ -147,7 +148,9 @@ void server(i32 port) {
 		try {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
-			auto mid = compiler::frontend::createModuleTree(fs::File(virtual_root.getFilePath().join(path)));
+			auto mid = compiler::frontend::createModuleTree(
+				fs::File(virtual_root.getFilePath().join(path))
+			);
 			std::cout << "no break in createmoduletree\n";
 			std::string printModuleTreeVar = printModuleTree(mid);
 			std::cout << "THERE SHOULD BE A MODULE TREE HERE\n" << printModuleTreeVar << "\n";
@@ -224,13 +227,15 @@ void server(i32 port) {
 				std::cout << "withcontextdo\n";
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 				std::cout << "src_files.size() = " << src_files.size() << "\n";
-				for (auto& src_file : src_files) {
+				for (auto& src_file: src_files) {
 					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
 					auto pst_root = pst->getRootElement();
-					std::cout << "pst_id = " << pst_root.unlock(ctx)->getID().queryUnstablePerfectHash() << "\n";
+					std::cout << "pst_id = "
+							  << pst_root.unlock(ctx)->getID().queryUnstablePerfectHash() << "\n";
 					auto element    = lsp::findElement(pst_root, offset);
 					auto definition = lsp::findDefinition(element, ctx);
-					if (definition.has_value()) out.push_back("{" + definition.value().toJSON() + "}");
+					if (definition.has_value())
+						out.push_back("{" + definition.value().toJSON() + "}");
 				}
 			});
 

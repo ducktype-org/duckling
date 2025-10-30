@@ -1,11 +1,13 @@
 #include "utils.hpp"
-#include <base/except/exceptions.hpp>
-#include <base/str/str_utils.hpp>
-#include "filesystem/file.hpp"
-#include "filesystem/file_path.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+
+#include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+
+#include "filesystem/file.hpp"
+#include "filesystem/file_path.hpp"
 #include <query_framework/utils/with_context_do.hpp>
 
 #define ext_is_ok(ext) ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift"
@@ -39,26 +41,29 @@ namespace lsp {
 
 	void initFiles(const fs::FilePath& path, const fs::File& vRoot) {
 		std::cout << "PATH: " << path.strView() << "\n";
-		const fs::FilePath slash = "/"; 
-		auto file = fs::File(slash / path);
-		auto virtual_path = vRoot.getFilePath().join(path);
+		const fs::FilePath slash        = "/";
+		auto               file         = fs::File(slash / path);
+		auto               virtual_path = vRoot.getFilePath().join(path);
 		std::cout << "VPATH: " << virtual_path.strView() << "\n";
 
 		if (file.isFile()) {
 			if (ext_is_ok(path.extension())) {
-				fs::FileManager::createVirtualFile(virtual_path, file.getContent().view().stringView(), true);
+				fs::FileManager::createVirtualFile(
+					virtual_path, file.getContent().view().stringView(), true
+				);
 
-				//(void) vRoot.createSubFile(file.getContent().view().stringView(), virtual_path.strView());
+				//(void) vRoot.createSubFile(file.getContent().view().stringView(),
+				//virtual_path.strView());
 			}
 			return;
 		}
 
 		if (file.isDirectory()) {
-			if (!virtual_path.exists())
-				fs::FileManager::createVirtualFolder(virtual_path);
+			if (!virtual_path.exists()) fs::FileManager::createVirtualFolder(virtual_path);
 			for (const auto& sub_path: file.listFilePaths()) {
-				fs::FilePath relative_sub_path = sub_path.strView().substr(1, sub_path.strView().length());
-				//std::cout << "SUBPATH: " << relative_sub_path.strView() << "\n";
+				fs::FilePath relative_sub_path
+					= sub_path.strView().substr(1, sub_path.strView().length());
+				// std::cout << "SUBPATH: " << relative_sub_path.strView() << "\n";
 				//(void) vRoot.createSubDirectory(virtual_path.strView());
 				initFiles(relative_sub_path, vRoot);
 			}
@@ -73,16 +78,12 @@ namespace lsp {
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
-			if (path.extension() == ".dmf") {
-				compiler::frontend::createModuleTree(vfile);
-			}
+			if (path.extension() == ".dmf") compiler::frontend::createModuleTree(vfile);
 			return;
 		}
 
 		if (vfile.isDirectory()) {
-			for (const auto& sub_path: vfile.listFilePaths()) {
-				initModules(sub_path);
-			}
+			for (const auto& sub_path: vfile.listFilePaths()) initModules(sub_path);
 			return;
 		}
 		std::cout << "UNREACHABLE\n";
@@ -100,7 +101,7 @@ namespace lsp {
 					auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
 					std::cout << "src_files.size() = " << src_files.size() << "\n";
 					std::cout << "ids for " << vfile.name() << "\n";
-					for (auto& src_file : src_files) {
+					for (auto& src_file: src_files) {
 						std::cout << src_file->getFileID().queryUnstablePerfectHash() << "\t";
 						ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
 					}
@@ -110,9 +111,7 @@ namespace lsp {
 		}
 
 		if (vfile.isDirectory()) {
-			for (const auto& sub_path: vfile.listFilePaths()) {
-				initPSTs(sub_path);
-			}
+			for (const auto& sub_path: vfile.listFilePaths()) initPSTs(sub_path);
 			return;
 		}
 		std::cout << "UNREACHABLE\n";

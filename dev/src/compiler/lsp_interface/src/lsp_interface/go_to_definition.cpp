@@ -30,7 +30,7 @@ namespace lsp {
 				return "" + uri.substr(pos + 1);
 			}
 		}
-		return uri; // Return unchanged if it doesn't match the vfs_prefix
+		return uri;  // Return unchanged if it doesn't match the vfs_prefix
 	}
 
 	std::string Definition::toJSON() {
@@ -57,8 +57,6 @@ namespace lsp {
 		);
 	}
 
-
-
 	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
 		this->uri            = source_position.getSource()->getFile().getFilePath().uri();
@@ -79,11 +77,13 @@ namespace lsp {
 		return element;
 	}
 
-	base::Optional<Definition> findDefinition(pst::AccessLocked<pst::LangElement> element, query::Context & ctx) {
+	base::Optional<Definition> findDefinition(
+		pst::AccessLocked<pst::LangElement> element, query::Context& ctx
+	) {
 		auto pst_expr = element.dynamicCast<pst::ExprElement>();
 
 		base::Optional<Definition> result;
-		auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
+		auto                       sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
 		if (sym_id.has_value()) {
 			auto stmt = compiler::helios::stmt(ctx, sym_id.value());
 			result    = Definition{ &*stmt.value() };

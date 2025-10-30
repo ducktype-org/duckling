@@ -41,5 +41,7 @@ namespace lsp {
 	 * @return The definition of the element.
 	 * @note The element must be able to be cast to an ExprElement
 	 */
-	base::Optional<Definition> findDefinition(pst::AccessLocked<pst::LangElement> element, query::Context & ctx);
+	base::Optional<Definition> findDefinition(
+		pst::AccessLocked<pst::LangElement> element, query::Context& ctx
+	);
 }

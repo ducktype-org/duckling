@@ -23,7 +23,7 @@ namespace {
 	 * information from this map into PST nodes.
 	 */
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
-	
+
 	/**
 	 * StableVector that stores all ModuleTree instances.
 	 */
@@ -575,8 +575,11 @@ namespace compiler::frontend {
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) {
 			source_file->update();
-			root_element_file_back_map.put(source_file->getPST()->getRootElement().illegalAccess().value()->getID(), source_file->getFileID());
-		} 
+			root_element_file_back_map.put(
+				source_file->getPST()->getRootElement().illegalAccess().value()->getID(),
+				source_file->getFileID()
+			);
+		}
 	}
 
 	// ----------------------
@@ -691,6 +694,7 @@ namespace compiler::frontend {
 	) {
 		// get top-level:
 		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
+
 		// this access depends of global state that might become a problem in incremental compilation:
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
 		return GetFileID_Functor::get(file_id)->getModule();
