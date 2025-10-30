@@ -17,6 +17,7 @@ using f128 = std::float128_t;
 
 // TODOP: Explain why is that here.
 // TODOP: Maybe that should be moved to CTV, not in base.
+// TODOP: Properly assert sized of double and float.
 using f32  = float;
 using f64  = double;
 using f128 = long double;

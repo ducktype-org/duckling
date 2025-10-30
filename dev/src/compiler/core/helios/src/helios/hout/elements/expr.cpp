@@ -6,7 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "ctv/ctv.hpp"
+#include "ctv/numeric_value.hpp"
 #include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/symbol_type.hpp"
 #include "typesystem/higher/value_category.hpp"
@@ -14,8 +14,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries.hpp>
-
-#include "base/extend_cpp/variant_match.hpp"
 
 #include <query_framework/context.hpp>
 
@@ -27,12 +25,10 @@ namespace compiler::helios::code {
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
 	EXPR_VISITOR(LiteralUnitExpr)
-	EXPR_VISITOR(LiteralIntExpr)
+	EXPR_VISITOR(LiteralNumericExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
-
-	EXPR_VISITOR(LiteralCTVExpr)
 
 
 	EXPR_VISITOR(IdentifierExpr)
@@ -70,68 +66,30 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiteralUnitExpr::clone() const { return makeBox<LiteralUnitExpr>(expression_type); }
 
-	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
-		  Expr(
-
-			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on type of literal.
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
-		  value(value) {}
-
-	LiteralIntExpr::LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value):
-		  Expr(expression_type),
-		  value(value) {}
-
-	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
-
-	Box<Expr> LiteralIntExpr::clone() const {
-		return makeBox<LiteralIntExpr>(expression_type, value);
-	}
-
-	LiteralCTVExpr::LiteralCTVExpr(query::Context& ctx, ctv::CompileTimeValue ctv):
+	LiteralNumericExpr::LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue value):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  [&]() -> tsh::SymbolType<> {
 					  using namespace tsh;
 					  return std::visit(
 						  [&](auto&& actual_value) -> SymbolType<> {
-							// TODOP: Variant visit?
+							  // TODOP: Variant visit?
 							  using T = std::decay_t<decltype(actual_value)>;
 
-							  if constexpr (std::is_same_v<T, bool>) {
+							  if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
 								  return SymbolType{
-									  ctx.query<QueryBoolType>({}),
-									  ReferenceKind::Direct,
-									  Mutability::Immutable,
-								  };
-							  } else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
-								  return SymbolType{
-									  ctx.query<QueryMetaType>({}),
-									  ReferenceKind::Direct,
-									  Mutability::Immutable,
-								  };
-							  } else if constexpr (std::is_same_v<T, ctv::CompileTimeValue::UnitCTV>) {
-								  return SymbolType{
-									  ctx.query<QueryUnitType>({}),
-									  ReferenceKind::Direct,
-									  Mutability::Immutable,
-								  };
-							  } else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
-								  return SymbolType{
-									  ctx.query<QueryIntegralType>({ sizeof(T) * 8, IntegralAbstractType::Signedness::Signed }),
+									  ctx.query<QueryIntegralType>(
+										  { sizeof(T) * 8, IntegralAbstractType::Signedness::Signed }
+									  ),
 									  ReferenceKind::Direct,
 									  Mutability::Immutable,
 								  };
 							  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
 								  return SymbolType{
-									  ctx.query<QueryIntegralType>({ sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned }),
+									  ctx.query<QueryIntegralType>(
+										  { sizeof(T) * 8,
+					                        IntegralAbstractType::Signedness::Unsigned }
+									  ),
 									  ReferenceKind::Direct,
 									  Mutability::Immutable,
 								  };
@@ -142,28 +100,28 @@ namespace compiler::helios::code {
 									  Mutability::Immutable,
 								  };
 							  } else {
-								  CORE_PANIC("Unsupported CTV type");
+								  CORE_PANIC("Unsupported numeric value type");
 							  }
 						  },
-						  ctv.getStorage()
+						  value.getStorage()
 					  );
 				  }(),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 
 			  )
 		  ),
-		  value(ctv) {}
+		  value(value) {}
 
-	LiteralCTVExpr::LiteralCTVExpr(
-		tsh::ExpressionType<> expression_type, ctv::CompileTimeValue value
+	LiteralNumericExpr::LiteralNumericExpr(
+		tsh::ExpressionType<> expression_type, numeric_value::NumericValue value
 	):
 		  Expr(expression_type),
 		  value(value) {}
 
-	void LiteralCTVExpr::debugPrint(std::ostream& out) const { out << value.toString(); }
+	void LiteralNumericExpr::debugPrint(std::ostream& out) const { out << value.toString(); }
 
-	Box<Expr> LiteralCTVExpr::clone() const {
-		return makeBox<LiteralCTVExpr>(expression_type, value);
+	Box<Expr> LiteralNumericExpr::clone() const {
+		return makeBox<LiteralNumericExpr>(expression_type, value);
 	}
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):

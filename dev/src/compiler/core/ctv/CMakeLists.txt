@@ -1,5 +1,6 @@
 add_library(CTV STATIC
     src/ctv/ctv.cpp
+    src/ctv/numeric_value.cpp
 )
 
 # TODOP: CTV tests

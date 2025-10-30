@@ -1,5 +1,10 @@
 #include "comp_time.hpp"
 
+#include "ctv/ctv.hpp"
+#include "ctv/numeric_value.hpp"
+#include "helios/helios_errors.hpp"
+#include "helios/hout/elements/expr.hpp"
+
 #include <backends/dvm/backend.hpp>
 #include <ctv/ctv.hpp>
 #include <helios/hout/visitors.hpp>
@@ -13,14 +18,19 @@
 #include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/except/exceptions.hpp"
+#include "base/extend_cpp/variant_match.hpp"
+
+#include "query_framework/query_result.hpp"
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include "helios/hout/elements/expr.hpp"
 
 #include <cmath>
 #include <ranges>
+#include <type_traits>
+#include <variant>
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -51,11 +61,7 @@ namespace compiler::helios {
 				result = CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 			}
 
-			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
-				result = CompileTimeValue{ expr.value };
-			}
-
-			void visitLiteralCTVExpr(const code::LiteralCTVExpr& expr) final {
+			void visitLiteralNumericExpr(const code::LiteralNumericExpr& expr) final {
 				result = CompileTimeValue{ expr.value };
 			}
 
@@ -89,95 +95,109 @@ namespace compiler::helios {
 				} else {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
-					if (const_val_result.hasValue())
-						result = CompileTimeValue{ const_val_result.value() };
-					else
-						result = query::QError(const_val_result.error());
+					result                = const_val_result.hasValue()
+					                          ? CompTimeEvalResult{ const_val_result.value() }
+					                          : query::QError(errors::Failed());
 				}
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
 				if (lhs_result.hasError()) {
-					result = query::QError(errors::Failed(lhs_result.error()));
+					result = query::QError(errors::Failed());
 					return;
 				}
 
 				auto rhs_result = evalHoutExpr(ctx, expr.rhs.ref());
 				if (rhs_result.hasError()) {
-					result = query::QError(errors::Failed(rhs_result.error()));
+					result = query::QError(errors::Failed());
 					return;
 				}
 
 				const auto& lhs_ctv = lhs_result.value();
 				const auto& rhs_ctv = rhs_result.value();
 
-				variant_match(lhs_ctv.getStorage()) {
-					variant_case(i64, lhs_value) {
-						variant_match(rhs_ctv.getStorage()) {
-							variant_case(i64, rhs_value) {
-								switch (expr.operation) {
-								case code::BuiltinBinary::IntegerAdd:
-									result = CompileTimeValue{ lhs_value + rhs_value };
-									break;
-								case code::BuiltinBinary::IntegerSub:
-									result = CompileTimeValue{ lhs_value - rhs_value };
-									break;
-								case code::BuiltinBinary::IntegerMul:
-									result = CompileTimeValue{ lhs_value * rhs_value };
-									break;
-								case code::BuiltinBinary::IntegerDiv:
-									result = CompileTimeValue{ lhs_value / rhs_value };
-									break;
-								case code::BuiltinBinary::IntegerMod:
-									result = CompileTimeValue{ lhs_value % rhs_value };
-									break;
-								case code::BuiltinBinary::IntegerPow:
-									result = CompileTimeValue{
-										static_cast<i64>(std::pow(lhs_value, rhs_value))
-									};
-									break;
-								case code::BuiltinBinary::BooleanAnd:
-									result = CompileTimeValue{ lhs_value and rhs_value };
-									break;
-								case code::BuiltinBinary::BooleanOr:
-									result = CompileTimeValue{ lhs_value or rhs_value };
-									break;
-								default:
-									result = query::QError(errors::Failed());
-									throw base::NotYetImplemented(
-										"Evaluation of different than '+-*/%**' binary operators"
-									);
-								}
-							}
-							variant_default {
-								// Type Mismatch.
-								result = query::QError(errors::Failed());
+				result = std::visit(
+					[&](auto&& lhs, auto&& rhs) -> TreeEvalResult {
+						using LhsT = std::decay_t<decltype(lhs)>;
+						using RhsT = std::decay_t<decltype(rhs)>;
+
+
+						// Binary operation on  numeric literals.
+						if constexpr (std::is_same_v<LhsT, NumericValue>
+					                  && std::is_same_v<RhsT, NumericValue>) {
+							return std::visit(
+								[&](auto&& lhs_val, auto&& rhs_val) -> TreeEvalResult {
+									using LhsNumT     = std::decay_t<decltype(lhs_val)>;
+									using RhsNumT     = std::decay_t<decltype(rhs_val)>;
+									using CommonTypeT = std::common_type_t<LhsNumT, RhsNumT>;
+
+									// TODOP: What the heck.
+									auto lhs_coerced = lhs_val.coerceTo<CommonTypeT>();
+									auto rhs_coerced = rhs_val.coerceTo<CommonTypeT>();
+
+									using enum code::BuiltinBinary;
+									switch (expr.operation) {
+									case IntegerAdd:
+									case FloatAdd:
+										return CompileTimeValue{ NumericValue{ lhs_coerced
+									                                           + rhs_coerced } };
+									case IntegerSub:
+									case FloatSub:
+										return CompileTimeValue{ NumericValue{ lhs_coerced
+									                                           - rhs_coerced } };
+									case IntegerMul:
+									case FloatMul:
+										return CompileTimeValue{ NumericValue{ lhs_coerced
+									                                           * rhs_coerced } };
+									case IntegerDiv:
+									case FloatDiv:
+										if (rhs_coerced == 0)
+											return query::QError(errors::Failed());
+										return CompileTimeValue{ NumericValue{ lhs_coerced
+									                                           / rhs_coerced } };
+									case IntegerMod:
+									case FloatMod:
+										if (rhs_coerced == 0)
+											return query::QError(errors::Failed());
+										if constexpr (std::is_integral_v<CommonTypeT>) {
+											return CompileTimeValue{ NumericValue{
+												lhs_coerced % rhs_coerced } };
+										} else {
+											return CompileTimeValue{ NumericValue{
+												std::fmod(lhs_coerced, rhs_coerced) } };
+										}
+									case IntegerPow:
+									case FloatPow:
+										return CompileTimeValue{ NumericValue{
+											std::pow(lhs_coerced, rhs_coerced) } };
+									default:
+										throw base::NotYetImplemented(
+											"Evaluation of other binary operators in compile time"
+										);
+									}
+								},
+								lhs.getStorage(),
+								rhs.getStorage()
+							);
+						} else if constexpr (std::is_same_v<LhsT, bool>
+					                         && std::is_same_v<RhsT, bool>) {
+							using enum code::BuiltinBinary;
+							switch (expr.operation) {
+							case code::BuiltinBinary::BooleanAnd:
+								return CompileTimeValue{ lhs && rhs };
+							case code::BuiltinBinary::BooleanOr:
+								return CompileTimeValue{ lhs || rhs };
+							default:
+								throw base::NotYetImplemented(
+									"Other binary operators for bool type"
+								);
 							}
 						}
-					}
-					variant_case(bool, lhs_value) {
-						variant_match(rhs_ctv.getStorage()) {
-							variant_case(bool, rhs_value) {
-								switch (expr.operation) {
-								case code::BuiltinBinary::BooleanAnd:
-									result = CompileTimeValue{ lhs_value and rhs_value };
-									break;
-								case code::BuiltinBinary::BooleanOr:
-									result = CompileTimeValue{ lhs_value or rhs_value };
-									break;
-								default:
-									result = query::QError(errors::Failed());
-									throw base::NotYetImplemented(
-										"Evaluation of different than '&&, ||' binary operators "
-										"for booleans is not implemented yet"
-									);
-								}
-							}
-						}
-					}
-					variant_default { result = query::QError(compiler::helios::errors::Failed()); }
-				}
+					},
+					lhs_ctv.getStorage(),
+					rhs_ctv.getStorage()
+				);
 			}
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
@@ -189,58 +209,62 @@ namespace compiler::helios {
 
 				const auto& ctv = expr_result.value();
 
-				variant_match(ctv.getStorage()) {
-					variant_case(i64, val) {
-						switch (expr.operation) {
-						case code::BuiltinUnary::IntegerNegation:
-							result = CompileTimeValue{ -val };
-							break;
-						default:
-							result = query::QError(errors::Failed());
-							break;
-						}
-					}
-					variant_case(bool, val) {
-						switch (expr.operation) {
-						case code::BuiltinUnary::BooleanNot:
-							result = CompileTimeValue{ not val };
-							break;
-						default:
-							result = query::QError(errors::Failed());
-							break;
-						}
-					}
-					variant_case(tsh::SymbolType<>, type_val) {
-						switch (expr.operation) {
-						case code::BuiltinUnary::Ref:
-							result = CompileTimeValue{
-								type_val.withReferenceKind(tsh::ReferenceKind::Ref)
-							};
-							break;
-						case code::BuiltinUnary::Box:
-							result = CompileTimeValue{
-								type_val.withReferenceKind(tsh::ReferenceKind::Box)
-							};
-							break;
-						case code::BuiltinUnary::Const:
-							result = CompileTimeValue{
-								type_val.withMutability(tsh::Mutability::Immutable)
-							};
-							break;
-						default:
-							CORE_PANIC(
-								"TreeEvalVisitor encountered unsupported unary operation: ",
-								static_cast<std::uint8_t>(expr.operation)
+
+				result = std::visit(
+					[&](auto&& val) -> TreeEvalResult {
+						using T = std::decay_t<decltype(val)>;
+
+						if constexpr (std::is_same_v<T, NumericValue>) {
+							switch (expr.operation) {
+							case IntegerNegation:
+							case FloatNegation:
+								return std::visit(
+									[&](auto&& val) {
+										using NumT = std::decay<decltype(val)>;
+										if constexpr (std::is_unsigned_v<T>)
+											return query::QError(errors::Failed());
+										else
+											return CompileTimeValue{ NumericValue{ -val } };
+									},
+									val.getStorage()
+								);
+
+							default:
+								throw base::NotYetImplemented(
+									"Evaluation of other unary operators for arithmetic types "
+									"is not implemented yet"
+								);
+							}
+						} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
+							switch (expr.operation) {
+							case Ref:
+								return ctv::CompileTimeValue{
+									val.withReferenceKind(tsh::ReferenceKind::Ref)
+								};
+							case Box:
+								return ctv::CompileTimeValue{
+									val.withReferenceKind(tsh::ReferenceKind::Box)
+								};
+							case Const:
+								return ctv::CompileTimeValue{
+									val.withMutability(tsh::Mutability::Immutable)
+								};
+							default:
+								throw base::NotYetImplemented(
+									"Evaluation of other unary operators for tsh::SymbolType<> is "
+									"not "
+									"implemented yet"
+								);
+							}
+						} else {
+							throw base::NotYetImplemented(
+								"Evaluation of unary operators for other types is not implemented "
+								"yet"
 							);
 						}
-					}
-					variant_default {
-						result = query::QError(compiler::helios::errors::Failed());
-						throw base::NotYetImplemented(
-							"Evaluation of unary operators for other types."
-						);
-					}
-				}
+					},
+					ctv.getStorage()
+				);
 			}
 
 			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
@@ -254,7 +278,10 @@ namespace compiler::helios {
 				const auto& cond_ctv          = cond_result.value();
 				variant_match(cond_ctv.getStorage()) {
 					variant_case(bool, val) { condition_is_true = val; }
-					variant_case(i64, val) { condition_is_true = (val != 0); }
+					variant_case(NumericValue, val) {
+						condition_is_true
+							= std::visit([&](auto&& val) { return (val != 0); }, val.getStorage());
+					}
 					variant_default {
 						result = query::QError(errors::Failed());
 						return;
@@ -268,20 +295,32 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				auto compare = [](i64 first, i64 second, code::BuiltinBinary operation) {
+				auto compare = [](NumericValue first, NumericValue second, code::BuiltinBinary operation) {
+					
+
+
+
+
+
 					using enum code::BuiltinBinary;
 					switch (operation) {
 					case IntegerLt:
+					case FloatLt:
 						return first < second;
 					case IntegerGt:
+					case FloatGt:
 						return first > second;
 					case IntegerLteq:
+					case FloatLteq:
 						return first <= second;
 					case IntegerGteq:
+					case FloatGteq:
 						return first >= second;
 					case IntegerEq:
+					case FloatEq:
 						return first == second;
 					case IntegerNeq:
+					case FloatNeq:
 						return first != second;
 					default:
 						CORE_UNREACHABLE();
@@ -310,7 +349,7 @@ namespace compiler::helios {
 					}
 
 					auto next_value = next_expr.value();
-					if (!compare(*prev_value.asI64(), *next_value.asI64(), comp)) {
+					if (!compare(*prev_value.get<NumericValue>(), *next_value.get<NumericValue>(), comp)) {
 						result = CompileTimeValue{ false };
 						return;
 					}
@@ -347,8 +386,7 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?

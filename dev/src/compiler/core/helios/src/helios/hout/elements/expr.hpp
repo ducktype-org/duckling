@@ -2,6 +2,7 @@
 
 #include "../../scope_symbol_id.hpp"
 #include "ctv/ctv.hpp"
+#include "ctv/numeric_value.hpp"
 
 #include <typesystem/higher/expression_type.hpp>
 
@@ -72,14 +73,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an integer literal value written in the expression.
+	 * @brief Represents an numeric literal value written in the expression.
+	 * Stores both integer constants and floating point constants.
 	 */
-	struct LiteralIntExpr final: public Expr {
-		// @TODO: ctv + type for consts?
-		// @note: this is a mock
-		i64 value;
+	struct LiteralNumericExpr final: public Expr {
+		numeric_value::NumericValue value;
 
-		LiteralIntExpr(query::Context& ctx, i64 value);
+		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue ctv);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -89,26 +89,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
-	};
-
-	/**
-	 * @brief Represents an integer literal value written in the expression.
-	 */
-	struct LiteralCTVExpr final: public Expr {
-		ctv::CompileTimeValue value;
-
-		LiteralCTVExpr(query::Context& ctx, ctv::CompileTimeValue ctv);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		LiteralCTVExpr(tsh::ExpressionType<> expression_type, ctv::CompileTimeValue ctv);
+		LiteralNumericExpr(tsh::ExpressionType<> expression_type, numeric_value::NumericValue value);
 	};
 
 	/**
