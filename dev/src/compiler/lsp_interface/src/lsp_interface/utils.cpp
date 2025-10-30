@@ -6,8 +6,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
-#include "filesystem/file.hpp"
-#include "filesystem/file_path.hpp"
+#include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
 #define ext_is_ok(ext) ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift"
@@ -70,7 +70,8 @@ namespace lsp {
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
-			if (path.extension() == ".dmf") compiler::frontend::createModuleTreeWithRandomPackageID(vfile);
+			if (path.extension() == ".dmf")
+				compiler::frontend::createModuleTreeWithRandomPackageID(vfile);
 			return;
 		}
 
@@ -104,7 +105,7 @@ namespace lsp {
 		CORE_UNREACHABLE();
 	}
 
-	void putFile(const fs::File& virtual_root, std::string path, std::string content) {
+	void putFile(const fs::File& virtual_root, const std::string& path, const std::string& content) {
 		if (!virtual_root.getFilePath().join(path).exists())
 			fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
 

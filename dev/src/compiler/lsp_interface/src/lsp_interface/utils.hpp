@@ -26,5 +26,5 @@ namespace lsp {
 	void         initModules(const fs::FilePath& path);
 	void         initPSTs(const fs::FilePath& path);
 
-	void putFile(const fs::File& virtual_root, std::string path, std::string content);
+	void putFile(const fs::File& virtual_root, const std::string& path, const std::string& content);
 }
