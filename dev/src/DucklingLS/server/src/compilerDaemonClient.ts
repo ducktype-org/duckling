@@ -158,6 +158,10 @@ export class CompilerDaemonClient {
 	// This function is called to get the semantic tokens from the daemon for a file
 	public async getSemanticTokens(filePath: string, connection: Connection): Promise<Token[]> {
 		await this.waitForReady(connection);
+		if (!initComplete) {
+			console.log("Waiting for init to complete...");
+			await initPromise;
+		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
