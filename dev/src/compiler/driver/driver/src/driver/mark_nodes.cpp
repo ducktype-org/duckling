@@ -113,7 +113,7 @@ namespace compiler::driver {
 				CORE_ASSERT(
 					node.q_id.getData().type == query::internal::QueryType::SideInput,
 					"Now only side input should be leafs, if inputs are added feel free to remove "
-				    "this assert"
+					"this assert"
 				);
 				state->setPrevNodeColor(node, QueryState::PrevColor::Green);
 				std::cout << "Marked node as green: " << node.q_id.getData().name << '\n';

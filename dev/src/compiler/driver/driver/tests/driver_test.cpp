@@ -32,6 +32,7 @@ public:
 		// note: all of those tests have to work on different
 		// modules, since otherwise query will cache the results, and tests
 		// wont test what they are supposed to:
+		TESTER_ADD_TEST(markPreviousLeavesGreenTest);
 		TESTER_ADD_TEST(objFileGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
@@ -41,7 +42,6 @@ public:
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(collectPstHashesTest);
 		TESTER_ADD_TEST(loadPreviousGraphTest);
-		TESTER_ADD_TEST(markPreviousLeavesGreenTest);
 
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
