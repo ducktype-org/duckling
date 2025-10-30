@@ -61,7 +61,7 @@ namespace compiler::mir {
 
 				// Retrieve type: if res is value It is local, otherwise only last instruction is
 				// stored.
-				auto res_type = possible_result.has_value() ? possible_result->get<LocalRef>()->type
+				auto res_type = possible_result.has_value() ? possible_result->get<MirLocalRef>()->type
 				                                            : expr_res.getResultType();
 
 				auto return_value = function.addNoLifetimeTmp(res_type);
@@ -69,7 +69,7 @@ namespace compiler::mir {
 				// Set move flag only if value exists.
 				std::vector<OperationFlag> flags = { flagConstruct(return_value) };
 				if (possible_result.has_value())
-					flags.push_back(flagMove(possible_result->get<LocalRef>()));
+					flags.push_back(flagMove(possible_result->get<MirLocalRef>()));
 
 
 				expr_res.storeResultInGivenVariable(
@@ -139,9 +139,9 @@ namespace compiler::mir {
 				possible_condition_res = function.addNoLifetimeBoolTmp();
 
 				lowered_condition.storeResultInGivenVariable(
-					possible_condition_res->get<LocalRef>(),
+					possible_condition_res->get<MirLocalRef>(),
 					get_condition_return,
-					{ flagConstruct(possible_condition_res->get<LocalRef>()) },
+					{ flagConstruct(possible_condition_res->get<MirLocalRef>()) },
 					condition_scope
 				);
 			}
@@ -194,9 +194,9 @@ namespace compiler::mir {
 				possible_result = function.addNoLifetimeBoolTmp();
 
 				expr_result.storeResultInGivenVariable(
-					possible_result->get<LocalRef>(),
+					possible_result->get<MirLocalRef>(),
 					get_condition_return,
-					{ flagConstruct(possible_result->get<LocalRef>()) },
+					{ flagConstruct(possible_result->get<MirLocalRef>()) },
 					condition_scope
 				);
 			}
@@ -269,7 +269,7 @@ namespace compiler::mir {
 			std::visit(
 				[&](auto&& ref) {
 					using T = std::decay_t<decltype(ref)>;
-					if constexpr (std::is_same_v<T, LocalRef> || std::is_same_v<T, MirGlobal>) {
+					if constexpr (std::is_same_v<T, MirLocalRef> || std::is_same_v<T, MirGlobal>) {
 						right_result.storeResultInGivenVariable(
 							ref, target_construction_hole, {}, assignment_scope
 						);

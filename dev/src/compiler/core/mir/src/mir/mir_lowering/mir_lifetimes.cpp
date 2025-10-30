@@ -59,7 +59,7 @@ namespace compiler::mir {
 		// context is unused, but left since it might be useful in the future.
 		// preserving block order is important, because of how MIR BlockIDs works
 
-		std::map<ScopeRef, std::vector<LocalRef>> locals_by_scope;
+		std::map<ScopeRef, std::vector<MirLocalRef>> locals_by_scope;
 		for (auto& local: function.local_list)
 			if (local.scope.value() != function.no_lifetime_scope)
 				locals_by_scope[local.scope.value()].emplace_back(&local);
@@ -76,7 +76,7 @@ namespace compiler::mir {
 			new_instructions.reserve(block.instructions.size());
 
 			// lambdas used just to not duplicate code:
-			auto add_destructor = [&](ScopeRef instr_scope, LocalRef local) {
+			auto add_destructor = [&](ScopeRef instr_scope, MirLocalRef local) {
 				new_instructions.push_back(Instruction{
 					Operation::DestructIf,
 					{},

@@ -126,7 +126,7 @@ namespace compiler::mir {
 		std::stringstream output_value;
 		if (this->output.has_value()) {
 			variant_match(this->output.value()) {
-				variant_case(LocalRef, local) { local->debugPrint(output_value); }
+				variant_case(MirLocalRef, local) { local->debugPrint(output_value); }
 				variant_case(MirGlobal, global) { global.debugPrint(output_value); }
 				variant_default {
 					CORE_PANIC("MIR debug print: Unexpected Instruction output value alternative");
@@ -197,7 +197,7 @@ namespace compiler::mir {
 
 	void MIRValue::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
-			variant_case(LocalRef, local) { local->debugPrint(output); }
+			variant_case(MirLocalRef, local) { local->debugPrint(output); }
 			variant_case(MirIntegerConst, value) { output << value.value; }
 			variant_case(MirBoolConst, value) { output << (value.value ? "true" : "false"); }
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }

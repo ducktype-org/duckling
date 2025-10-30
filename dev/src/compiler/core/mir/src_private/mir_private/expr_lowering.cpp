@@ -401,7 +401,7 @@ namespace compiler::mir {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(LocalRef, local) { return local->type; }
+				variant_case(MirLocalRef, local) { return local->type; }
 				variant_case(MirGlobal, global) { return global.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}

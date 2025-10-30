@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mir_lifetime_scope.hpp"
-#include "mir_local_ref.hpp"
+#include "mir_local_global_ref.hpp"
 
 #include <typesystem/higher/types.hpp>
 
@@ -194,7 +194,7 @@ namespace compiler::mir {
 		friend struct ExprBlockVisitor;
 		friend struct StmtBlockVisitor;
 		friend struct LocalVarCollectionVisitor;
-		friend LocalRef;
+		friend MirLocalRef;
 
 	public:
 		void debugPrint(std::ostream& output, bool detailed = false) const;
@@ -266,10 +266,10 @@ namespace compiler::mir {
 			MirUnitConst,
 			MirIntegerConst,
 			MirBoolConst,
-			LocalRef,
+			MirLocalRef,
+			MirGlobal,
 			BlockID,
-			MirFunctionLiteral,
-			MirGlobal>;
+			MirFunctionLiteral>;
 
 		ValueType value;
 
@@ -280,9 +280,9 @@ namespace compiler::mir {
 
 		MIRValue(MirBoolConst value): value(value) {}
 
-		MIRValue(LocalRef value): value(value) {}
+		MIRValue(MirLocalRef value): value(value) {}
 
-		MIRValue(MutLocalRef value): value(value) {}
+		MIRValue(MirLocalMutRef value): value(value) {}
 
 		MIRValue(BlockID value): value(value) {}
 
@@ -311,7 +311,7 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		bool isLocal() const {
-			return std::holds_alternative<LocalRef>(value);
+			return std::holds_alternative<MirLocalRef>(value);
 		}
 
 		[[nodiscard]]
@@ -330,7 +330,7 @@ namespace compiler::mir {
 			variant_match(value) {
 				variant_case_novalue(MirUnitConst) { return false; }
 				variant_case(MirGlobal, global) { return global.carriesInformation(); }
-				variant_case(LocalRef, local) { return local->carriesInformation(); }
+				variant_case(MirLocalRef, local) { return local->carriesInformation(); }
 			}
 			return true;
 		}
@@ -346,7 +346,7 @@ namespace compiler::mir {
 	struct OperationFlag final {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
-		LocalRef local;
+		MirLocalRef local;
 
 		void debugPrint(std::ostream& output) const;
 	};
@@ -354,21 +354,21 @@ namespace compiler::mir {
 	/**
 	 * @brief Creates construct flag for given local.
 	 */
-	constexpr OperationFlag flagConstruct(LocalRef local) {
+	constexpr OperationFlag flagConstruct(MirLocalRef local) {
 		return { .flag = OperationFlag::Flag::Construct, .local = local };
 	}
 
 	/**
 	 * @brief Creates destruct flag for given local.
 	 */
-	constexpr OperationFlag flagDestruct(LocalRef local) {
+	constexpr OperationFlag flagDestruct(MirLocalRef local) {
 		return { .flag = OperationFlag::Flag::Destruct, .local = local };
 	}
 
 	/**
 	 * @brief Creates move flag for given local.
 	 */
-	constexpr OperationFlag flagMove(LocalRef local) {
+	constexpr OperationFlag flagMove(MirLocalRef local) {
 		return { .flag = OperationFlag::Flag::Move, .local = local };
 	}
 
@@ -376,7 +376,7 @@ namespace compiler::mir {
 	 * @brief Single instruction of MIR code.
 	 */
 	struct Instruction final {
-		using Output = std::variant<LocalRef, MirGlobal>;
+		using Output = std::variant<MirLocalRef, MirGlobal>;
 
 		Operation operation = Operation::Uninitialized;
 

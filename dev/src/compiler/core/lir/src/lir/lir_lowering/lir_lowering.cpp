@@ -53,7 +53,7 @@ namespace compiler::lir {
 	 * @param mir_local
 	 * @return LirLocal
 	 */
-	LirLocal LirLocal::fromMIR(query::Context& ctx, mir::LocalRef mir_local) {
+	LirLocal LirLocal::fromMIR(query::Context& ctx, mir::MirLocalRef mir_local) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
 		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
@@ -178,8 +178,8 @@ namespace compiler::lir {
 			base::StableVector<LirLocal> locals;
 
 			// locals mapping:
-			base::Map<mir::LocalRef, LocalRef> mir_to_lir_local;
-			base::Map<mir::LocalRef, LocalRef> mir_to_lifetime_flag;
+			base::Map<mir::MirLocalRef, LocalRef> mir_to_lir_local;
+			base::Map<mir::MirLocalRef, LocalRef> mir_to_lifetime_flag;
 
 			base::StableVector<Block> blocks;
 
@@ -196,7 +196,7 @@ namespace compiler::lir {
 			 * @param mir_local
 			 * @return LocalRef
 			 */
-			LocalRef getLocal(mir::LocalRef mir_local) { return mir_to_lir_local.at(mir_local); }
+			LocalRef getLocal(mir::MirLocalRef mir_local) { return mir_to_lir_local.at(mir_local); }
 
 			LirGlobal getGlobal(mir::MirGlobal mir_global) {
 				return LirGlobal::fromMIR(ctx, mir_global);
@@ -209,12 +209,12 @@ namespace compiler::lir {
 			 * @return The corresponding LIR location, possibly empty.
 			 */
 			base::Optional<std::variant<LocalRef, LirGlobal>> getOutput(
-				const base::Optional<std::variant<mir::LocalRef, mir::MirGlobal>>& output
+				const base::Optional<std::variant<mir::MirLocalRef, mir::MirGlobal>>& output
 			) {
 				if (!output.has_value()) return {};
 
 				variant_match(output.value()) {
-					variant_case(mir::LocalRef, local) {
+					variant_case(mir::MirLocalRef, local) {
 						if (!local->carriesInformation()) return {};
 						return getLocal(local);
 					}
@@ -245,7 +245,7 @@ namespace compiler::lir {
 						return LIRValue{ integer.value };
 					}
 					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
-					variant_case(mir::LocalRef, local) { return LIRValue{ getLocal(local) }; }
+					variant_case(mir::MirLocalRef, local) { return LIRValue{ getLocal(local) }; }
 					variant_case(mir::MirGlobal, global) { return LIRValue{ getGlobal(global) }; }
 					variant_case(mir::BlockID, block) {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
@@ -372,7 +372,7 @@ namespace compiler::lir {
 			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
-					variant_case(mir::LocalRef, local) {
+					variant_case(mir::MirLocalRef, local) {
 						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralAbstractType(arg_type).getSignedness()
