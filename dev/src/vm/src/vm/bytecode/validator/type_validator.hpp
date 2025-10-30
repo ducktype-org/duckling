@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 

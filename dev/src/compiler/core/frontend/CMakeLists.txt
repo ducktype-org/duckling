@@ -1,1 +1,2 @@
 add_subdirectory(module_tree)
+add_subdirectory(pst_parser)

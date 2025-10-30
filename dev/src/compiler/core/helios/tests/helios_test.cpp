@@ -1,5 +1,10 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/pst_query/code_dependency.hpp>
+#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
@@ -16,11 +21,6 @@
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
-#include <pst_parser/pst_query/code_dependency.hpp>
-#include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
@@ -394,10 +394,13 @@ private:
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout.functions) {
-				std::cerr << fun.declaration->original_name.str() << " i dependent on\n";
+				std::cerr << fun.declaration->original_name.str() << " is dependent on\n";
+				std::cerr << " Original symbol: "
+						  << fun.declaration->original_symbol.queryUnstablePerfectHash() << "\n";
 				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.declaration->original_symbol
 				);
+				std::cerr << "Tokens:\n";
 
 				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOfFun>(
 					fun.declaration->original_symbol
@@ -413,9 +416,9 @@ private:
 	}
 
 	void testHoutVisitor() {
-		auto module
-			= compiler::frontend::createModuleTree(fs::File(path("test_modules/visitor_test_module")
-		    ));
+		auto module = compiler::frontend::createModuleTreeWithRandomPackageID(
+			fs::File(path("test_modules/visitor_test_module"))
+		);
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -1239,6 +1242,17 @@ private:
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+		// Differences between const, let, and var
+		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
+		const auto let_type   = getSymbolTypeOf("let_no_type", root_scope);
+		const auto var_type   = getSymbolTypeOf("var_no_type", root_scope);
+		ASSERT_EQUAL(const_type.getType(), int64_type);
+		ASSERT_EQUAL(let_type.getType(), int64_type);
+		ASSERT_EQUAL(var_type.getType(), int64_type);
+		ASSERT_EQUAL(const_type.getMutability(), tsh::Mutability::Immutable);
+		ASSERT_EQUAL(let_type.getMutability(), tsh::Mutability::Immutable);
+		ASSERT_EQUAL(var_type.getMutability(), tsh::Mutability::Mutable);
 	}
 
 	void testDebugPrint() {

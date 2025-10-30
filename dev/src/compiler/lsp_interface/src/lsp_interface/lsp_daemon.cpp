@@ -22,7 +22,7 @@ POP_DIAGNOSTIC;
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>

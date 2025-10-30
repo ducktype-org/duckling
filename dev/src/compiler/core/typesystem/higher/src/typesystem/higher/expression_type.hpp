@@ -127,9 +127,13 @@ namespace tsh {
 	};
 
 	/**
-	 * @brief Deduces the symbol type from an ExpressionType.
-	 * @param expr_type The ExpressionType object describing the value of an expression.
-	 * @return The deduced symbol type.
+	 * @brief Gets the symbol type of a declaration from the expression type of its value, taking
+	 * into account the mutability expected by the declaration's kind (var / let / const).
+	 * @param expr_type The type of the expression on the right of the declaration.
+	 * @param expected_mutability The expected mutability of the declared symbol based on var / let.
+	 * @return The symbol type of the declared symbol, with the appropriate mutability.
 	 */
-	SymbolType<> deduceTypeFromExpressionType(const ExpressionType<>& expr_type);
+	SymbolType<> getDeclarationTypeFromExpressionType(
+		const ExpressionType<>& expr_type, Mutability expected_mutability
+	);
 }

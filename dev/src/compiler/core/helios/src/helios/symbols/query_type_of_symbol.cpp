@@ -1,5 +1,9 @@
 #include "query_type_of_symbol.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
@@ -8,10 +12,6 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/elements/hierarchy/class_elements/field.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
@@ -72,7 +72,9 @@ namespace compiler::helios {
 					));
 					if (parsed.hasValue()) {
 						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+						setTypeOfSymbol(getDeclarationTypeFromExpressionType(
+							expr_type, tsh::Mutability::Immutable
+						));
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "
@@ -94,8 +96,12 @@ namespace compiler::helios {
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					));
 					if (parsed.hasValue()) {
-						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(tsh::deduceTypeFromExpressionType(expr_type));
+						const auto& expr_type       = parsed.value()->expression_type;
+						const auto& decl_mutability = stmt->isConst() ? tsh::Mutability::Immutable
+						                                              : tsh::Mutability::Mutable;
+						setTypeOfSymbol(
+							getDeclarationTypeFromExpressionType(expr_type, decl_mutability)
+						);
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "

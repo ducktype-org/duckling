@@ -94,6 +94,7 @@ namespace lang_def {
 		i32,
 		i64,
 		i128,
+
 		u8,
 		u16,
 		u32,
@@ -228,6 +229,29 @@ namespace lang_def {
 		Remainder,
 		Exponentiate,
 	};
+
+	enum class NumericLiteralTypeSpecifier {
+		NotATypeSpecifier,
+		// NOLINTBEGIN
+		i8,
+		i16,
+		i32,
+		i64,
+		i128,
+		isize,
+		u8,
+		u16,
+		u32,
+		u64,
+		u128,
+		usize,
+		f16,
+		f32,
+		f64,
+		f80,
+		f128
+		// NOLINTEND
+	};
 }
 
 MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp)
@@ -247,17 +271,20 @@ namespace lang_def {
 
 	void setKeywordMode(KeywordMode mode);
 
-	Special       strAsSpecial(base::StrID id);
-	Keyword       strAsKeyword(base::StrID id);
-	NamedOperator strAsOperator(base::StrID id);
+	Special                     strAsSpecial(base::StrID id);
+	Keyword                     strAsKeyword(base::StrID id);
+	NamedOperator               strAsOperator(base::StrID id);
+	NumericLiteralTypeSpecifier strAsNumericLiteralTypeSpecifier(base::StrID id);
 
 	base::StrID keywordToStr(Keyword key);
 	base::StrID specialToStr(Special spec);
 	base::StrID operatorToStr(NamedOperator oper);
+	base::StrID numericLiteralTypeSpecifierToStr(NumericLiteralTypeSpecifier oper);
 
 	KeywordFlags keywordFlags(Keyword key);
 
-	std::vector<Keyword>       getKeywords();
-	std::vector<Special>       getSpecials();
-	std::vector<NamedOperator> getOperators();
+	std::vector<Keyword>                     getKeywords();
+	std::vector<Special>                     getSpecials();
+	std::vector<NamedOperator>               getOperators();
+	std::vector<NumericLiteralTypeSpecifier> getNumericTypeSpecifiers();
 }
