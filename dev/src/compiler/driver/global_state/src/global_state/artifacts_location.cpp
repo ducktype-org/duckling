@@ -19,5 +19,10 @@ namespace global_state {
 			CORE_ASSERT(root_collection.toOpt().empty(), "Root collection is already set!");
 			root_collection = std::move(collection);
 		}
+
+		void clearRootCollectionForTests() {
+			// Reset the MBox to empty so tests can call setRootCollection again.
+			root_collection = MBox<artifacts::ArtifactCollection>{};
+		}
 	}
 }

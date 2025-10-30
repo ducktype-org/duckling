@@ -9,6 +9,8 @@ add_library(Driver
 	src/driver/backend_type.cpp
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
+	src/driver/exit.cpp
+	src/driver/mark_nodes.cpp
 )
 
 make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker Timer)

@@ -12,6 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
@@ -20,17 +21,16 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 
-#include "filesystem/file_path.hpp"
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include "global_state/packages.hpp"
 
 #include <iostream>
 #include <random>
@@ -101,24 +101,24 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	};
 }
 
-	/**
-	 * @brief Generates a random alphanumeric string of the specified length.
-	 * @param length The length of the random string to generate.
-	 * @return A random alphanumeric string.
-	 */
-	std::string generateRandomString(size_t length) {
-		static constexpr std::string_view CHARS
-			= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-		static std::random_device                    rd;
-		static std::mt19937                          generator(rd());
-		static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
+/**
+ * @brief Generates a random alphanumeric string of the specified length.
+ * @param length The length of the random string to generate.
+ * @return A random alphanumeric string.
+ */
+std::string generateRandomString(size_t length) {
+	static constexpr std::string_view CHARS
+		= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	static std::random_device                    rd;
+	static std::mt19937                          generator(rd());
+	static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
 
-		std::string random_string;
-		random_string.reserve(length);
-		for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
-		return random_string;
-	}
-	
+	std::string random_string;
+	random_string.reserve(length);
+	for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
+	return random_string;
+}
+
 /**
  * @brief Generate Clah instance with all standard "main" parameters.
  * @return clah::Clah
@@ -240,15 +240,16 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-
-					auto path_to_compile = options.getPositional<fs::FilePath>(0);
-					auto package_name = options.getValue<std::string>("name").copyValueOr(generateRandomString(32));
+					auto path_to_compile = options.getPositional<fs::File>(0);
+					auto package_name
+						= options.getValue<std::string>("name").copyValueOr(generateRandomString(32)
+		                );
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
-								.package_path = path_to_compile,
+								.package_path = path_to_compile.getFilePath(),
 							},
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
@@ -310,16 +311,15 @@ clah::Clah getClahForMain() {
 						 )
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-
-					auto path_to_compile = options.getPositional<fs::FilePath>(0);
-					auto package_name = options.getValue<std::string>("name").copyValueOr("");
+					auto path_to_compile = options.getPositional<fs::File>(0);
+					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
-								.package_path = path_to_compile,
+								.package_path = path_to_compile.getFilePath(),
 							},
 							.compilation_artifacts = {
 								.artifacts_path =
@@ -336,10 +336,9 @@ clah::Clah getClahForMain() {
 					total_compilation_time.startMeasurement();
 
 
-					
-					auto backend_type    = options.isFlag("dvm-backend")
-		                                     ? compiler::driver::BackendType::DVM
-		                                     : compiler::driver::BackendType::LLVM;
+					auto backend_type = options.isFlag("dvm-backend")
+		                                  ? compiler::driver::BackendType::DVM
+		                                  : compiler::driver::BackendType::LLVM;
 
 					defer(printContextErrors());
 
@@ -378,28 +377,31 @@ clah::Clah getClahForMain() {
 					return 0;
 				})
 		)
-	    .addSubcommand(clah::Clah("dvm_run", "Compile given module to DVM (in-memory) and run it")
-	                       .addPositional(clah::FileParser::make("module"))
-						    .add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
-								.addShortName('n')
-								.addLongName("name")
-								.addShortDesc("Name of the package the module belongs to.")
-								.optional()
-								.build())
-	                       .add(clah::ParamBuilder::ofFlag()
-	                                .addLongName("add-builtin-library")
-	                                .addShortDesc("Links builtin library into the final executable.")
-	                                .build())
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   auto path_to_compile = options.getPositional<fs::FilePath>(0);
-							   auto package_name = options.getValue<std::string>("name").copyValueOr(generateRandomString(32));
-							   using namespace compiler;
+	    .addSubcommand(
+			clah::Clah("dvm_run", "Compile given module to DVM (in-memory) and run it")
+				.addPositional(clah::FileParser::make("module"))
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
+	                     .addShortName('n')
+	                     .addLongName("name")
+	                     .addShortDesc("Name of the package the module belongs to.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("add-builtin-library")
+	                     .addShortDesc("Links builtin library into the final executable.")
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto path_to_compile = options.getPositional<fs::File>(0);
+					auto package_name
+						= options.getValue<std::string>("name").copyValueOr(generateRandomString(32)
+		                );
+					using namespace compiler;
 
-							   compiler::driver::initializeTheCompiler(
+					compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
-					.package_path = path_to_compile,
+					.package_path = path_to_compile.getFilePath(),
 				},
 				.compilation_artifacts = {
 					.artifacts_path = fs::FilePath("./duck_build/"),
@@ -408,22 +410,22 @@ clah::Clah getClahForMain() {
 			}
 		);
 
-							   auto root
-								   = frontend::createModuleTree(path_to_compile, package_name);
+					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
-							   int exit_code = 0;
-							   query::utils::withContextDo([&](query::Context& ctx) {
-								   auto run_result = driver::runModuleOnDVM(ctx, root);
-								   if (run_result.has_value()) {
-									   exit_code = run_result.value().exit_code;
-								   } else {
-									   std::cerr << "Error: " << run_result.error() << "\n";
-									   exit_code = 1;
-								   }
-							   });
+					int exit_code = 0;
+					query::utils::withContextDo([&](query::Context& ctx) {
+						auto run_result = driver::runModuleOnDVM(ctx, root);
+						if (run_result.has_value()) {
+							exit_code = run_result.value().exit_code;
+						} else {
+							std::cerr << "Error: " << run_result.error() << "\n";
+							exit_code = 1;
+						}
+					});
 
-							   return exit_code;
-						   }))
+					return exit_code;
+				})
+		)
 	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   throw base::LogicError("Command `throw` thrown successfully!");

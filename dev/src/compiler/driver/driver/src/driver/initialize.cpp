@@ -7,8 +7,11 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <artifacts/artifacts.hpp>
 #include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>
+#include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 
 namespace compiler::driver {
 
@@ -53,6 +56,39 @@ namespace compiler::driver {
 				package_info.package_name, fs::FilePath(package_info.package_path)
 			);
 		}
+
+		void loadPreviousQueryGraphIfExists() {
+			auto root            = global_state::getRootCollection();
+			auto maybe_query_col = root->subCollectionAtMaybe(base::StrID("query"));
+
+			if (maybe_query_col.has_value()) {
+				auto query_col  = maybe_query_col.value();
+				auto maybe_blob = query_col->blobArtifactAtMaybe(base::StrID("query_graph"));
+				if (maybe_blob.has_value()) {
+					auto                  view = maybe_blob.value()->getDataView();
+					std::span<const byte> span(view.getBegin(), view.size());
+					auto                  graph = query::internal::QueryGraph::deserialize(span);
+					query::internal::ContextAccess::getState()->setPreviousGraph(std::move(graph));
+				}
+			}
+		}
+	}
+
+	void resetInitializationForTests() {
+		using query::internal::ContextAccess;
+		using query::internal::QueryState;
+
+		// Clear root collection and packages so setRootCollection can be called again
+		global_state::setters::clearRootCollectionForTests();
+		global_state::setters::clearPackagesForTests();
+
+		// Reset main query state in-place
+		QueryState* state_raw = &*ContextAccess::getState();
+		state_raw->~QueryState();
+		new (state_raw) QueryState();
+
+		// Reset initialization flag so initializeTheCompiler can run again
+		is_initialized = false;
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
@@ -72,8 +108,8 @@ namespace compiler::driver {
 				handleDebugOptions(options.debug_options);
 				handleArtifactsOptions(options.compilation_artifacts);
 				handlePackageOptions(options.main_package_info);
+				loadPreviousQueryGraphIfExists();
 			}
-
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 	}

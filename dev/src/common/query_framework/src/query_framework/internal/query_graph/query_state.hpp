@@ -33,6 +33,10 @@ namespace query::internal {
 
 			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
+		/**
+		 * @brief Color of a node in graph from previous compilation.
+		 */
+		enum class PrevColor { Red, Green };
 
 		/**
 		 * Amount of actively calculating queries.
@@ -45,9 +49,22 @@ namespace query::internal {
 		base::HashMap<NodeID, NodeData> node_data;
 
 		/**
+		 * The colors of nodes from previous compilation.
+		 * Green - node is up to date
+		 * Red   - node is outdated
+		 */
+		base::HashMap<NodeID, PrevColor> previous_node_colors;
+
+		/**
 		 * The query graph that holds the dependencies and structure of the queries.
 		 */
 		QueryGraph query_graph;
+
+		/**
+		 * The immutable graph that hold the state from previous compilation.
+		 * This is used for incremental compilation.
+		 */
+		base::Optional<QueryGraph> previous;
 
 	public:
 		QueryState()                             = default;
@@ -70,6 +87,15 @@ namespace query::internal {
 		}
 
 		/**
+		 * @brief Returns the graph from previous compilation.
+		 */
+		[[nodiscard]]
+		const QueryGraph& getPreviousGraph() const {
+			CORE_ASSERT(previous.has_value(), "Previous graph is not set");
+			return *previous;
+		}
+
+		/**
 		 * @brief Returns the current size of the query stack.
 		 */
 		[[nodiscard]]
@@ -89,5 +115,24 @@ namespace query::internal {
 		 * @brief Marks exit of a query calculation.
 		 */
 		void setExit(internal::NodeID node);
+
+		/**
+		 * @brief Sets the color of a node from the previous compilation.
+		 */
+		void setPrevNodeColor(internal::NodeID node, PrevColor color) {
+			previous_node_colors.insert_or_assign(node, color);
+		}
+
+		/**
+		 * @brief Sets the previous query graph.
+		 */
+		void setPreviousGraph(QueryGraph&& graph) {
+			CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
+			// Store the previous graph and mark all its nodes as Red (outdated)
+			previous.emplace(std::move(graph));
+			// previous is friend of QueryGraph so we can access node_deps directly
+			for (const auto& [node, _deps]: previous->node_deps)
+				previous_node_colors.insert_or_assign(node, PrevColor::Red);
+		}
 	};
 }

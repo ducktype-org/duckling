@@ -93,6 +93,16 @@ namespace query::internal {
 		 */
 		[[nodiscard]] bool compare(const QueryGraph& other) const;
 
+		/**
+		 * @brief Checks if a node exists in the graph.
+		 * @param node_id The NodeID to check.
+		 * @return True if the node exists, false otherwise.
+		 */
+		[[nodiscard]]
+		bool nodeExists(const NodeID& node_id) const {
+			return node_deps.contains(node_id);
+		}
+
 		~QueryGraph() = default;
 	};
 }

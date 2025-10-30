@@ -5,8 +5,8 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
-#include "filesystem/file_path.hpp"
 #include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
 
 #include <string>
 #include <variant>
@@ -73,7 +73,7 @@ namespace compiler::driver {
 		};
 
 		struct PackageInfo final {
-			std::string package_name;
+			std::string  package_name;
 			fs::FilePath package_path;
 		};
 
