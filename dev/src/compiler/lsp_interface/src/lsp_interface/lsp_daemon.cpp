@@ -61,29 +61,21 @@ void server(i32 port) {
 
 	/** @brief Route to init a directory contents recursively in the virtual file system.
 	 * * URL: /init_directory/[base64 relative path]
-	 * @param base64_path The base64 encoded relative path of the rott directory of the workspace.
+	 * @param base64_path The base64 encoded relative path of the root directory of the workspace.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
 	CROW_ROUTE(app, "/init_directory/<string>")
 	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto path = fs::FilePath("" + base64::decode_into<std::string>(base64_path));
+			const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
 
-			lsp::initFiles(path, virtual_root);
-
-			const fs::FilePath slash        = "/";
-			auto               file         = fs::File(slash / path);
-			auto               virtual_path = virtual_root.getFilePath().join(path);
-
+			auto virtual_path = lsp::initFiles(path, virtual_root);
 			lsp::initModules(virtual_path);
-
 			lsp::initPSTs(virtual_path);
-
-			std::cout << "Initialized directory\n";
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) {
-			std::cout << e.what();
+			std::cerr << e.what();
 			return crow::response(400, e.what());
 		}
 	});
@@ -100,18 +92,14 @@ void server(i32 port) {
 		try {
 			const auto path    = base64::decode_into<std::string>(base64_path);
 			const auto content = base64::decode_into<std::string>(base64_content);
-			std::cout << "putfile\n";
-			if (!virtual_root.getFilePath().join(path).exists()) {
+
+			if (!virtual_root.getFilePath().join(path).exists())
 				fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
-				//(void) virtual_root.createSubFile("", path);
-			}
-			std::cout << "file created\n";
+
 			auto file = fs::File(virtual_root.getFilePath().join(path));
-			std::cout << "path collected\n";
 			file.writeToFile(content);
-			std::cout << "file written\n";
+
 			compiler::frontend::ModuleTreeModifier::fileModified(file);
-			std::cout << "file modified\n";
 			query::utils::withContextDo([&file](query::Context& ctx) {
 				std::cout << "withcontextdo\n";
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);

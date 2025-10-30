@@ -39,7 +39,7 @@ namespace lsp {
 		return result;
 	}
 
-	void initFiles(const fs::FilePath& path, const fs::File& vRoot) {
+	fs::FilePath initFiles(const fs::FilePath& path, const fs::File& vRoot) {
 		const fs::FilePath slash        = "/";
 		auto               file         = fs::File(slash / path);
 		auto               virtual_path = vRoot.getFilePath().join(path);
@@ -50,7 +50,7 @@ namespace lsp {
 					virtual_path, file.getContent().view().stringView(), true
 				);
 			}
-			return;
+			return virtual_path;
 		}
 
 		if (file.isDirectory()) {
@@ -60,7 +60,7 @@ namespace lsp {
 					= sub_path.strView().substr(1, sub_path.strView().length());
 				initFiles(relative_sub_path, vRoot);
 			}
-			return;
+			return virtual_path;
 		}
 
 		CORE_UNREACHABLE();
