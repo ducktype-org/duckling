@@ -39,10 +39,10 @@ namespace lsp {
 		return result;
 	}
 
-	fs::FilePath initFiles(const fs::FilePath& path, const fs::File& vRoot) {
+	fs::FilePath initFiles(const fs::FilePath& path, const fs::File& virtual_root) {
 		const fs::FilePath slash        = "/";
 		auto               file         = fs::File(slash / path);
-		auto               virtual_path = vRoot.getFilePath().join(path);
+		auto               virtual_path = virtual_root.getFilePath().join(path);
 
 		if (file.isFile()) {
 			if (ext_is_ok(path.extension())) {
@@ -58,7 +58,7 @@ namespace lsp {
 			for (const auto& sub_path: file.listFilePaths()) {
 				fs::FilePath relative_sub_path
 					= sub_path.strView().substr(1, sub_path.strView().length());
-				initFiles(relative_sub_path, vRoot);
+				initFiles(relative_sub_path, virtual_root);
 			}
 			return virtual_path;
 		}
@@ -102,5 +102,20 @@ namespace lsp {
 		}
 
 		CORE_UNREACHABLE();
+	}
+
+	void putFile(const fs::File& virtual_root, std::string path, std::string content) {
+		if (!virtual_root.getFilePath().join(path).exists())
+			fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
+
+		auto file = fs::File(virtual_root.getFilePath().join(path));
+		file.writeToFile(content);
+
+		compiler::frontend::ModuleTreeModifier::fileModified(file);
+		query::utils::withContextDo([&file](query::Context& ctx) {
+			auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+			for (auto& src_file: src_files)
+				ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+		});
 	}
 }

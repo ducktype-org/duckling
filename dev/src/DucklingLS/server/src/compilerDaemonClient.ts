@@ -155,31 +155,6 @@ export class CompilerDaemonClient {
 		return;
 	}
 
-	// This function is called to update the module trees inside of the daemon
-	public async makeModuleTrees(connection: Connection): Promise<void> {
-		await this.waitForReady(connection);
-		const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
-		
-		for (let i = 0; i < files.length; i++) {
-			try {
-				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
-
-				var response = fetch(`${DAEMON_ADRESS}/make_module_tree/${base64FilePath}`);
-				var res = await response;
-				if (res.status != 200) {
-					throw new Error(`Error: ${res.status}`);
-				}
-			} catch (error) {
-				if (error instanceof Error) {
-					console.error(`Error building tree from path ${files[i].path}: ${error.message}`);
-				} else {
-					console.error(`Error processing file ${files[i].path}: ${String(error)}`);
-				}
-			}
-		}
-		return;
-	}
-
 	// This function is called to get the semantic tokens from the daemon for a file
 	public async getSemanticTokens(filePath: string, connection: Connection): Promise<Token[]> {
 		await this.waitForReady(connection);

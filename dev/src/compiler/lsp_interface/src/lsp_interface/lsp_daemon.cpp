@@ -93,21 +93,7 @@ void server(i32 port) {
 			const auto path    = base64::decode_into<std::string>(base64_path);
 			const auto content = base64::decode_into<std::string>(base64_content);
 
-			if (!virtual_root.getFilePath().join(path).exists())
-				fs::FileManager::createVirtualFile(virtual_root.getFilePath().join(path), "");
-
-			auto file = fs::File(virtual_root.getFilePath().join(path));
-			file.writeToFile(content);
-
-			compiler::frontend::ModuleTreeModifier::fileModified(file);
-			query::utils::withContextDo([&file](query::Context& ctx) {
-				std::cout << "withcontextdo\n";
-				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
-				std::cout << "src_files.size() = " << src_files.size() << "\n";
-				for (auto& src_file: src_files)
-					ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
-			});
-
+			lsp::putFile(virtual_root, path, content);
 
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
@@ -118,30 +104,8 @@ void server(i32 port) {
 		try {
 			const auto path = base64::decode_into<std::string>(base64_path);
 
-			if (!virtual_root.getFilePath().join(path).exists()) {
-				(void) virtual_root.createSubFile("", path);
-			} else {
-				auto file = fs::File(virtual_root.getFilePath().join(path));
-				file.writeToFile("");
-				compiler::frontend::ModuleTreeModifier::fileModified(file);
-			}
+			lsp::putFile(virtual_root, path, "");
 
-			return crow::response(200, "OK");
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
-	});
-
-
-	CROW_ROUTE(app, "/make_module_tree/<string>")
-	([&virtual_root](const std::string& base64_path) {
-		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
-
-			auto mid = compiler::frontend::createModuleTree(
-				fs::File(virtual_root.getFilePath().join(path))
-			);
-			std::cout << "no break in createmoduletree\n";
-			std::string printModuleTreeVar = printModuleTree(mid);
-			std::cout << "THERE SHOULD BE A MODULE TREE HERE\n" << printModuleTreeVar << "\n";
 			return crow::response(200, "OK");
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
@@ -212,14 +176,10 @@ void server(i32 port) {
 			std::vector<std::string> out;
 
 			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
-				std::cout << "withcontextdo\n";
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
-				std::cout << "src_files.size() = " << src_files.size() << "\n";
 				for (auto& src_file: src_files) {
 					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
-					auto pst_root = pst->getRootElement();
-					std::cout << "pst_id = "
-							  << pst_root.unlock(ctx)->getID().queryUnstablePerfectHash() << "\n";
+					auto pst_root   = pst->getRootElement();
 					auto element    = lsp::findElement(pst_root, offset);
 					auto definition = lsp::findDefinition(element, ctx);
 					if (definition.has_value())
@@ -227,12 +187,8 @@ void server(i32 port) {
 				}
 			});
 
-			std::cout << "Definitions found: " << lsp::jsonList(out) << "\n";
 			return crow::response(200, lsp::jsonList(out));
-		} catch (const std::exception& e) {
-			std::cout << e.what() << "\n";
-			return crow::response(400, e.what());
-		}
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 
@@ -250,10 +206,7 @@ void server(i32 port) {
 			std::cerr << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
 			return crow::response(200, "OK");
-		} catch (const std::exception& e) {
-			std::cout << e.what() << "\n";
-			return crow::response(400, e.what());
-		}
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 	app.port(base::safeIntConv<u16>(port)).run();

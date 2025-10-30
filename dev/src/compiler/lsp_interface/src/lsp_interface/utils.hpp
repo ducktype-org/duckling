@@ -22,7 +22,9 @@ namespace lsp {
 	 */
 	std::string jsonDict(const std::map<std::string, std::string>& dict);
 
-	fs::FilePath initFiles(const fs::FilePath& path, const fs::File& vRoot);
+	fs::FilePath initFiles(const fs::FilePath& path, const fs::File& virtual_root);
 	void         initModules(const fs::FilePath& path);
 	void         initPSTs(const fs::FilePath& path);
+
+	void putFile(const fs::File& virtual_root, std::string path, std::string content);
 }
