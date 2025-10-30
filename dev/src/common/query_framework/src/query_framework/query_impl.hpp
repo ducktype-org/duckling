@@ -150,8 +150,6 @@ namespace query::internal {
 		-> type::QResult {                                                                        \
 		return ::query::internal::standardQueryEntry<type>(key, from);                            \
 	}                                                                                             \
-	decltype(type::QueryType::id) type::QueryType::id                                             \
-		= ::query::internal::registerQuery(type::QueryType::getData());                           \
 	static_assert(                                                                                \
 		not std::is_reference_v<type::QResult>,                                                   \
 		"Query result type should not be a reference (use CRef instead)"                          \
@@ -192,6 +190,10 @@ namespace query::internal {
 	static_assert(                                                                                \
 		std::is_invocable_v<decltype(type::load), query::KHash<type::QKey>>,                      \
 		"Load function must be callable with hash of QKey"                                        \
+	);                                                                                            \
+	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::registerQuery(         \
+		type::QueryType::getData(),                                                               \
+		std::bool_constant<::query::HasStablePerfectHash<type::QKey>>::value                      \
 	);
 
 /**

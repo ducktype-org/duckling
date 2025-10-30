@@ -7,6 +7,8 @@
 #include <global_state/packages.hpp>
 
 #include <filesystem/file.hpp>
+#include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 
 namespace compiler::driver {
 
@@ -64,6 +66,63 @@ namespace compiler::driver {
 		}
 
 		return result;
+	}
+
+	void markPreviousGraphNodesGreenForPstHashes() {
+		using namespace query::internal;
+
+		// Get query state
+		auto state = ContextAccess::getState();
+
+		// Attempt to fetch previous graph
+		auto maybe_prev = state->getPreviousGraph();
+		if (!maybe_prev.has_value()) return;  // nothing to do
+
+		// Collect PST element hashes from global packages
+		auto hashes = collectAllPstElementHashesFromGlobalPackages();
+
+		auto prev_graph = maybe_prev.value();
+
+		// Get all nodes from the previous graph
+		auto nodes = prev_graph->getAllNodes();
+
+		for (const auto& node: nodes) {
+			// CORE_ASSERT(prev_graph->getNodeDeps(node).size() >= 1, "Node has no dependencies: ",
+			// node.q_id.getData().name);
+			//  @TODO: #1433 use tags
+			if (node.q_id.hasStableHash() == false) {
+				CORE_ASSERT(
+					!hashes.contains(node.hash.val),
+					"Node with unstable hash found in PST hashes: ",
+					node.q_id.getData().name,
+					" with hash ",
+					node.hash.val.toStringHex()
+				);
+				continue;
+			}
+
+			// We mark only leaf nodes
+			if (prev_graph->hasDependencies(node)) continue;
+
+			// Queries in tsh have no stable hash and they are leafs so we will ignore them
+			// CORE_ASSERT(node.q_id.hasStableHash(), "Leafs in previous graph must have stable
+			// hashes: ", node.q_id.getData().name);
+
+			// node.hash.val and LangElement::HashType are both base::Bit256 — compare directly
+			if (hashes.contains(node.hash.val)) {
+				CORE_ASSERT(
+					node.q_id.getData().type == query::internal::QueryType::SideInput,
+					"Now only side input should be leafs, if inputs are added feel free to remove "
+				    "this assert"
+				);
+				state->setPrevNodeColor(node, QueryState::PrevColor::Green);
+				std::cout << "Marked node as green: " << node.q_id.getData().name << '\n';
+			} else {
+				// Mark node as red
+				state->setPrevNodeColor(node, QueryState::PrevColor::Red);
+				std::cout << "Marked node as red: " << node.q_id.getData().name << '\n';
+			}
+		}
 	}
 
 }  // namespace compiler::driver

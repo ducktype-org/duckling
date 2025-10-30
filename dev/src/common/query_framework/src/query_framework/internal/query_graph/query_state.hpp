@@ -8,6 +8,18 @@
 
 namespace query::internal {
 	class QueryState final {
+	public:
+		/**
+		 * @brief Color of a node in graph from previous compilation.
+		 * Red   - node is outdated
+		 * Green - node is up to date
+		 * Blue  - node hash is correct but dependencies need to be checked
+		 * (for example QuerySymbolOfSTMT it has its own stable hash, but also depends on lookup
+		 * queries)
+		 */
+		enum class PrevColor { Red, Green, Blue };
+
+	private:
 		/**
 		 * @brief Color of a node in the graph that is used for cycle detection.
 		 */
@@ -33,10 +45,6 @@ namespace query::internal {
 
 			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
-		/**
-		 * @brief Color of a node in graph from previous compilation.
-		 */
-		enum class PrevColor { Red, Green };
 
 		/**
 		 * Amount of actively calculating queries.
@@ -90,9 +98,9 @@ namespace query::internal {
 		 * @brief Returns the graph from previous compilation.
 		 */
 		[[nodiscard]]
-		const QueryGraph& getPreviousGraph() const {
-			CORE_ASSERT(previous.has_value(), "Previous graph is not set");
-			return *previous;
+		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const {
+			if (!previous.has_value()) return base::Optional<base::CRef<QueryGraph>>{};
+			return &previous.value();
 		}
 
 		/**
@@ -124,15 +132,21 @@ namespace query::internal {
 		}
 
 		/**
+		 * @brief Returns previous_node_colors map use this for Tests.
+		 */
+		[[nodiscard]]
+		base::Optional<base::CRef<base::HashMap<NodeID, PrevColor>>> getPreviousNodeColors() const {
+			if (previous_node_colors.empty())
+				return base::Optional<base::CRef<base::HashMap<NodeID, PrevColor>>>{};
+			return &previous_node_colors;
+		}
+
+		/**
 		 * @brief Sets the previous query graph.
 		 */
 		void setPreviousGraph(QueryGraph&& graph) {
 			CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
-			// Store the previous graph and mark all its nodes as Red (outdated)
 			previous.emplace(std::move(graph));
-			// previous is friend of QueryGraph so we can access node_deps directly
-			for (const auto& [node, _deps]: previous->node_deps)
-				previous_node_colors.insert_or_assign(node, PrevColor::Red);
 		}
 	};
 }

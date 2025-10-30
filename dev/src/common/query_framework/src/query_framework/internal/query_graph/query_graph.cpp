@@ -42,6 +42,14 @@ namespace query::internal {
 			if (visited.contains(visited_node_id)) continue;
 			visited.insert(visited_node_id);
 
+			CORE_ASSERT(
+				node_deps.contains(visited_node_id),
+				"Node not found in dep graph. Node ID: ",
+				visited_node_id.q_id.getData().name,
+				" Key: ",
+				visited_node_id.hash.val.toStringHex()
+			);
+
 			const auto& node = node_deps.at(visited_node_id);
 			for (auto& dep: node)
 				if (!visited.contains(dep)) queue.push(dep);

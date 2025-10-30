@@ -41,6 +41,7 @@ public:
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(collectPstHashesTest);
 		TESTER_ADD_TEST(loadPreviousGraphTest);
+		TESTER_ADD_TEST(markPreviousLeavesGreenTest);
 
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -274,9 +275,94 @@ private:
 		);
 
 		// Verify previous graph is present and equals the original
-		const auto& prev = query::internal::ContextAccess::getState()->getPreviousGraph();
-		ASSERT_TRUE(prev.compare(original_graph));
-		ASSERT_TRUE(original_graph.compare(prev));
+		auto prev = query::internal::ContextAccess::getState()->getPreviousGraph().value();
+		ASSERT_TRUE(prev->compare(original_graph));
+		ASSERT_TRUE(original_graph.compare(*prev));
+	}
+
+	void markPreviousLeavesGreenTest() {
+		using namespace compiler;
+
+		// Reset initialization so we can re-initialize and load previous graph
+		driver::resetInitializationForTests();
+
+		// Re-initialize compiler which will load the previous graph from artifacts
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = std::string("mark_nodes_test_package"),
+					.package_path = fs::FilePath(path("modules/functions_1")),
+				},
+				.compilation_artifacts = {.artifacts_path = artifacts_path},
+				.debug_options         = {}
+			}
+		);
+
+		// Compile the same module twice (first compile to produce previous graph,
+		// save artifacts, reinit and then mark previous leaves green)
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_1")), "mark_nodes_test_package"
+		);
+
+		// First compilation
+		query::utils::withContextDo([&](query::Context& ctx) {
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+		});
+
+		// Serialize the graph from first compile (previous graph to be saved)
+		auto original_bytes
+			= query::internal::ContextAccess::getState()->getGraphMutable()->serialize();
+		auto original_graph = query::internal::QueryGraph::deserialize(
+			std::span<const byte>(original_bytes.data(), original_bytes.size())
+		);
+
+		// Persist artifacts (this writes the previous graph)
+		driver::saveArtifacts();
+
+		// Reset initialization so we can re-initialize and load previous graph
+		driver::resetInitializationForTests();
+
+		// Re-initialize compiler which will load the previous graph from artifacts
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = std::string("mark_nodes_test_package"),
+					.package_path = fs::FilePath(path("modules/functions_1")),
+				},
+				.compilation_artifacts = {.artifacts_path = artifacts_path},
+				.debug_options         = {}
+			}
+		);
+
+		// Get previous graph and previous node colors map
+		auto prev = query::internal::ContextAccess::getState()->getPreviousGraph().value();
+		ASSERT_TRUE(prev->compare(original_graph));
+		ASSERT_TRUE(original_graph.compare(*prev));
+
+		auto prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(!prev_colors_opt.has_value());
+
+		// Call the marking function to set PrevColor::Green on previous nodes that
+		// correspond to PST element hashes (only leafs should end up green)
+		compiler::driver::markPreviousGraphNodesGreenForPstHashes();
+
+		prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(prev_colors_opt.has_value());
+		auto prev_colors = prev_colors_opt.value();
+
+		// For each node: if it is a leaf in the previous graph (no outgoing deps),
+		// it should be present in prev_colors and be Green. If it is not a leaf,
+		// it should NOT be present in prev_colors (because it is not input hash)
+		for (const auto& node: prev->getAllNodes()) {
+			if (prev_colors->contains(node)) {
+				// leaf -> must be colored green
+				// this is weird but node deps contains the node itself
+				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
+				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
+			} else {
+				ASSERT_TRUE(!node.q_id.hasStableHash() || prev->getNodeDeps(node).size() > 1);
+			}
+		}
 	}
 };
 
