@@ -23,12 +23,7 @@ namespace {
 	 * information from this map into PST nodes.
 	 */
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
-	static void printmapdebug() {
-		std::cout << "Root element file back map:\n";
-		for (const auto& [key, value]: root_element_file_back_map) {
-			std::cout << "  " << key.asInt() << " -> " << value.queryUnstablePerfectHash() << "\n";
-		}
-	}
+	
 	/**
 	 * StableVector that stores all ModuleTree instances.
 	 */
@@ -576,17 +571,12 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		printmapdebug();
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) {
-			std::cout << "old id:\t" << source_file->getPST()->getRootElement().illegalAccess().value()->getID().asInt() << "\n";
 			source_file->update();
 			root_element_file_back_map.put(source_file->getPST()->getRootElement().illegalAccess().value()->getID(), source_file->getFileID());
-			std::cout << "new id:\t" << source_file->getPST()->getRootElement().illegalAccess().value()->getID().asInt() << "\n";
-		}
-		printmapdebug();
-
+		} 
 	}
 
 	// ----------------------
@@ -672,13 +662,11 @@ namespace compiler::frontend {
 	 ****************/
 	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cout << "starting QueryFilePST\n";
 			Ref<SourceFile> file
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					key
 				);
 			auto pst = file->getPST();
-			std::cout << "element put\n";
 			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 			// @todo modify it, when making proper helios errors
@@ -701,22 +689,10 @@ namespace compiler::frontend {
 	ModuleID extendQueryModuleIDOfPST(
 		[[maybe_unused]] query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 	) {
-		std::cout << "EQMIDPST 1\n";
 		// get top-level:
-		while (element.unlock(ctx)->getParent()) {
-			std::cout << "EQMIDPST 2\n";
-			element = element.unlock(ctx)->getParent().value();
-		}
-		std::cout << "EQMIDPST 3\n";
-		printmapdebug();
-		std::cout << "EQMIDPST 4\n";
+		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
 		// this access depends of global state that might become a problem in incremental compilation:
-		std::cout << root_element_file_back_map.size() << " entries in root_element_file_back_map\n";
-		for (const auto& [key, value]: root_element_file_back_map) {
-			std::cout << "  " << key.asInt() << " -> " << value.queryUnstablePerfectHash() << "\n";
-		}
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-		std::cout << "EQMIDPST 5\n";
 		return GetFileID_Functor::get(file_id)->getModule();
 	}
 }

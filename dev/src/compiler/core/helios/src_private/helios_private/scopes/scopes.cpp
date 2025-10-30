@@ -26,10 +26,8 @@
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
-#include "pst_parser/access.hpp"
 
 #include <set>
-#include <iostream>
 
 namespace compiler::helios {
 
@@ -202,21 +200,6 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	ScopeID debug_parent_function(pst::Access<pst::LangElement> elementarg, query::Context& ctxarg, pst::AccessLocked<pst::LangElement> elementarg_locked) {
-		if (elementarg->getParent().has_value()) {
-			std::cout << "1\n";
-			return ctxarg.query<QueryPrimaryCodeScopeFor>(elementarg->getParent().value());
-		} else {
-			std::cout << "2\n";
-			// AFTER THIS PRINT WE HAVE A BUG
-			auto module_id_debug = frontend::extendQueryModuleIDOfPST(ctxarg, elementarg_locked);
-			std::cout << "3\n";
-			return ctxarg.query<QueryRootScopeOf>(
-				{ module_id_debug }
-			);
-		}
-	}
-
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
@@ -231,19 +214,15 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_COPY
 	};
 
-
-
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
-			std::cout << "QueryPrimaryCodeScopeFor\n";
 			auto element            = element_key.element.unlock(ctx);
 			auto element_scope_kind = getScopeKind(ctx, element_key.element);
 
-			std::cout << "Got element scope kind\t" << (int)element_scope_kind << "\n";
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(

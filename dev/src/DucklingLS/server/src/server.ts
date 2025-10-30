@@ -101,11 +101,9 @@ connection.onInitialized(() => {
 		}
 		if (hasWorkspaceFolderCapability) {
 			await compilerDaemonClient.putWorkspace(connection);
-			// console.log("Workspace files sent to daemon.");
-			// compilerDaemonClient.makeModuleTrees(connection).then(() => {
-			// 	console.log("Module trees created.");
-			// });
-			connection.workspace.onDidChangeWorkspaceFolders(_event => {
+			
+			connection.workspace.onDidChangeWorkspaceFolders(async _event => {
+				await compilerDaemonClient.putWorkspace(connection);
 				console.log("Workspace folder change event received.");
 			});
 		} else {
