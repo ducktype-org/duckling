@@ -1,30 +1,32 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use clap::ArgMatches;
 use quackpack::QuackResult;
 
+use crate::InternalError;
 use crate::{DuckCtx, terminal::Verbosity};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Color {
     Always,
     Never,
-    #[default]
     Auto,
 }
 
 impl FromStr for Color {
-    type Err = anyhow::Error;
+    type Err = crate::InternalError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            // @TODO: #1353 Introduce our own `Internal` error type. Then also update
-            // `main::print_error_and_exit`, to check for internal errors in error chain.
-            _ => bail!("`{}` is not a valid color.", s),
+            _ => Err(anyhow!(
+                "`{}` is not a valid color. This should be guarded by a parser",
+                s
+            )
+            .into()),
         }
     }
 }
@@ -40,20 +42,16 @@ impl GlobalCliOptions {
     pub fn from_matches(matches: &ArgMatches) -> QuackResult<Self> {
         let quiet = matches.get_flag("quiet");
         let verbose = matches.get_flag("verbose");
-        let color = Color::from_str(
-            matches
-                .get_one::<String>("color")
-                .ok_or_else(|| anyhow!("this should be guarded by default color in parser"))?,
-        )?;
+        let color = Color::from_str(matches.get_one::<String>("color").ok_or_else(|| {
+            InternalError::from(anyhow!(
+                "this should be guarded by a default color in parser"
+            ))
+        })?)?;
         Ok(Self {
             verbose,
             quiet,
             color,
         })
-    }
-
-    pub fn color(&self) -> Color {
-        self.color
     }
 
     pub fn update_context(&self, ctx: &mut DuckCtx) {

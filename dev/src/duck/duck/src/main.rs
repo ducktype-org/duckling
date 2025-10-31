@@ -7,6 +7,7 @@ pub mod indent;
 mod terminal;
 
 pub use duck_ctx::DuckCtx;
+pub use quackpack::InternalError;
 use tracing::debug;
 
 fn main() {
@@ -74,5 +75,18 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
             term.print_no_nl(indent("Caused by:", 2));
             term.print_no_nl(indent(&e.to_string(), 4));
         }
+    }
+
+    let mut has_internal_errors = false;
+    for e in error
+        .chain()
+        .flat_map(|e| e.downcast_ref::<InternalError>())
+    {
+        has_internal_errors = true;
+        term.print("");
+        term.critical(format!("got internal error: {e}"));
+    }
+    if has_internal_errors {
+        term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
     }
 }
