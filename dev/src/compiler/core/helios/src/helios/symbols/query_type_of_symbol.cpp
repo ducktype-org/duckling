@@ -25,56 +25,59 @@ namespace compiler::helios {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
-			// @TODO: make failure more explicit
+			void setError(const errors::Failed& error) {
+				symbol_type_qresult = query::QError(error);
+			}
 
 			void setTypeOfSymbol(const tsh::SymbolType<>& type) {
-				if (symbol_type.has_value())
+				if (symbol_type_qresult.hasValue())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type = type;
+				symbol_type_qresult = type;
 			}
 
 			void setTypeOfSymbolByAbstractType(const tsh::AbstractType& type) {
-				if (symbol_type.has_value())
+				if (symbol_type_qresult.hasValue())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type = tsh::SymbolType{
+				symbol_type_qresult = tsh::SymbolType{
 					type,
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
 			}
 
-			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
-				if (auto ctv
-				    = ctx.query<QueryEvaluateExpression>(pst::AccessLocked<pst::ExprElement>(expr)
-				    )) {
-					if (auto maybe_type = ctv.value().asType(ctx))
-						setTypeOfSymbol(maybe_type.value());
-					else
-						CORE_PANIC("QueryEvaluateExpressionCT returned not a type");
-					return;
-				} else {
-					// We just fail here, because we can't continue without type.
-					return;
-				}
+			void setSymbolTypeByTypeExpr(
+				const pst::Access<pst::ExprElement> expr, const tsh::Mutability expected_mutability
+			) {
+				const auto locked = pst::AccessLocked<pst::ExprElement>(expr);
+				if (auto ctv = ctx.query<QueryEvaluateExpression>(locked))
+					setTypeOfSymbol(
+						ctv.value().asType(ctx).value().withMutability(expected_mutability)
+					);
+				else
+					setError(ctv.error());
 			}
 
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			base::Optional<tsh::SymbolType<>> symbol_type;
+			query::QResult<tsh::SymbolType<>, errors::Failed> symbol_type_qresult
+				= query::QError(errors::Failed());
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {
-					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+					setSymbolTypeByTypeExpr(
+						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx),
+						tsh::Mutability::Immutable
+					);
 				} else if (stmt->getValue().has_value()) {
-					auto parsed = (ctx.query<QueryHoutOfExpr>(
+					auto parsed = ctx.query<QueryHoutOfExpr>(
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
-					));
+					);
 					if (parsed.hasValue()) {
 						const auto& expr_type = parsed.value()->expression_type;
-						setTypeOfSymbol(getDeclarationTypeFromExpressionType(
-							expr_type, tsh::Mutability::Immutable
-						));
+						setTypeOfSymbol(
+							expr_type.getSymbolType().withMutability(tsh::Mutability::Immutable)
+						);
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "
@@ -89,19 +92,19 @@ namespace compiler::helios {
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) final {
+				const auto& decl_mutability
+					= stmt->isConst() ? tsh::Mutability::Immutable : tsh::Mutability::Mutable;
 				if (stmt->getType().has_value()) {
-					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+					setSymbolTypeByTypeExpr(
+						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
+					);
 				} else if (stmt->getValue().has_value()) {
-					auto parsed = (ctx.query<QueryHoutOfExpr>(
+					auto parsed = ctx.query<QueryHoutOfExpr>(
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
-					));
+					);
 					if (parsed.hasValue()) {
-						const auto& expr_type       = parsed.value()->expression_type;
-						const auto& decl_mutability = stmt->isConst() ? tsh::Mutability::Immutable
-						                                              : tsh::Mutability::Mutable;
-						setTypeOfSymbol(
-							getDeclarationTypeFromExpressionType(expr_type, decl_mutability)
-						);
+						const auto& expr_type = parsed.value()->expression_type;
+						setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
 					} else
 						throw base::NotYetImplemented(
 							"Const declaration with value that does not evaluate to a type. This "
@@ -116,7 +119,11 @@ namespace compiler::helios {
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
-				setTypeOfSymbol(field->getType().unlock(ctx)->getExpr().unlock(ctx));
+				const auto decl_mutability
+					= field->isMutable() ? tsh::Mutability::Mutable : tsh::Mutability::Immutable;
+				setSymbolTypeByTypeExpr(
+					field->getType().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
+				);
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
@@ -132,7 +139,10 @@ namespace compiler::helios {
 			}
 
 			void visitParam(pst::Access<pst::Param> param) final {
-				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
+				// @TODO: #1396 Handle parameter mutability.
+				setSymbolTypeByTypeExpr(
+					param->getType().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Mutable
+				);
 			}
 		};
 
@@ -162,8 +172,10 @@ namespace compiler::helios {
 
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
-					if_opt_some(visitor.symbol_type, type) { return type; }
-					return query::QError(errors::Failed());
+
+					if (visitor.symbol_type_qresult.hasError())
+						return query::QError(visitor.symbol_type_qresult.error());
+					return visitor.symbol_type_qresult.value();
 				}
 				variant_case(builtin::BuiltinFunctionData, builtin_data) {
 					return tsh::SymbolType<>(

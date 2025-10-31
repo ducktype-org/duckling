@@ -8,7 +8,7 @@
 
 
 fun localVariableAsCondition() -> i64 = {
-    let a: bool = true;
+    var a: bool = true;
     let sub1: i64 = if a then 1   else 2; # sub1 = 1
 
     a = false;
@@ -25,7 +25,7 @@ fun literalAsCondition() -> i64 = {
 }
 
 fun localVariableAsValue() -> i64 = {
-    let b: i64 = 1;
+    var b: i64 = 1;
     let sub1: i64 = if true  then b   else 2; # sub1 = 1
     b = 4;
     let sub2: i64 = if false then b   else 8; # sub2 = 8
