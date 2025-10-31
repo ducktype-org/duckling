@@ -13,11 +13,8 @@ namespace query::internal {
 		 * @brief Color of a node in graph from previous compilation.
 		 * Red   - node is outdated
 		 * Green - node is up to date
-		 * Blue  - node hash is correct but dependencies need to be checked
-		 * (for example QuerySymbolOfSTMT it has its own stable hash, but also depends on lookup
-		 * queries)
 		 */
-		enum class PrevColor { Red, Green, Blue };
+		enum class PrevColor { Red, Green };
 
 	private:
 		/**

@@ -474,4 +474,5 @@ namespace base {
 	constexpr bool operator>=(const T& value, const Optional<U>& opt) {
 		return !opt.has_value() || opt.value() <= value;
 	}
+
 }  // base
