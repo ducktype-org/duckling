@@ -16,7 +16,7 @@ namespace compiler::driver {
 	// in the set of PST element hashes collected from global packages.
 	// Leaves non-matching nodes untouched.
 
-	void markPreviousGraphNodesGreenForPstHashes();
+	void markPreviousGraphNodesInputs();
 
 
 }  // namespace compiler::driver

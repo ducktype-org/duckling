@@ -68,15 +68,14 @@ namespace compiler::driver {
 		return result;
 	}
 
-	void markPreviousGraphNodesGreenForPstHashes() {
+	void markPreviousGraphNodesInputs() {
 		using namespace query::internal;
 
-		// Get query state
 		auto state = ContextAccess::getState();
 
 		// Attempt to fetch previous graph
 		auto maybe_prev = state->getPreviousGraph();
-		if (!maybe_prev.has_value()) return;  // nothing to do
+		if (!maybe_prev.has_value()) return;
 
 		// Collect PST element hashes from global packages
 		auto hashes = collectAllPstElementHashesFromGlobalPackages();
@@ -87,34 +86,25 @@ namespace compiler::driver {
 		auto nodes = prev_graph->getAllNodes();
 
 		for (const auto& node: nodes) {
-			// CORE_ASSERT(prev_graph->getNodeDeps(node).size() >= 1, "Node has no dependencies: ",
-			// node.q_id.getData().name);
-			//  @TODO: #1433 use tags
-			if (node.q_id.hasStableHash() == false) {
-				CORE_ASSERT(
-					!hashes.contains(node.hash.val),
-					"Node with unstable hash found in PST hashes: ",
-					node.q_id.getData().name,
-					" with hash ",
-					node.hash.val.toStringHex()
-				);
+			if (node.q_id.getData().type != query::internal::QueryType::SideInput
+			    && node.q_id.getData().type != query::internal::QueryType::Input) {
 				continue;
 			}
 
-			// We mark only leaf nodes
-			if (prev_graph->hasDependencies(node)) continue;
+			//  @TODO: #1433 use tags
+			CORE_ASSERT(
+				node.q_id.hasStableHash(),
+				"Side Input nodes must have stable hashes: ",
+				node.q_id.getData().name
+			);
 
-			// Queries in tsh have no stable hash and they are leafs so we will ignore them
-			// CORE_ASSERT(node.q_id.hasStableHash(), "Leafs in previous graph must have stable
-			// hashes: ", node.q_id.getData().name);
+			CORE_ASSERT(
+				!prev_graph->hasDependencies(node),
+				"Input nodes should not have dependencies: ",
+				node.q_id.getData().name
+			);
 
-			// node.hash.val and LangElement::HashType are both base::Bit256 — compare directly
 			if (hashes.contains(node.hash.val)) {
-				CORE_ASSERT(
-					node.q_id.getData().type == query::internal::QueryType::SideInput,
-					"Now only side input should be leafs, if inputs are added feel free to remove "
-					"this assert"
-				);
 				state->setPrevNodeColor(node, QueryState::PrevColor::Green);
 				std::cout << "Marked node as green: " << node.q_id.getData().name << '\n';
 			} else {

@@ -1,5 +1,7 @@
 #include "initialize.hpp"
 
+#include "mark_nodes.hpp"
+
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
@@ -109,6 +111,7 @@ namespace compiler::driver {
 				handleArtifactsOptions(options.compilation_artifacts);
 				handlePackageOptions(options.main_package_info);
 				loadPreviousQueryGraphIfExists();
+				markPreviousGraphNodesInputs();
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

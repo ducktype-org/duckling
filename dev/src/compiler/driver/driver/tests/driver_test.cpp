@@ -322,6 +322,7 @@ private:
 		// Reset initialization so we can re-initialize and load previous graph
 		driver::resetInitializationForTests();
 
+		std::cout << "Re-initializing compiler to load previous graph and mark leaves green\n";
 		// Re-initialize compiler which will load the previous graph from artifacts
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -334,28 +335,19 @@ private:
 			}
 		);
 
+		std::cout << "Checking that previous graph nodes are marked correctly\n";
+
 		// Get previous graph and previous node colors map
 		auto prev = query::internal::ContextAccess::getState()->getPreviousGraph().value();
 		ASSERT_TRUE(prev->compare(original_graph));
 		ASSERT_TRUE(original_graph.compare(*prev));
 
 		auto prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(!prev_colors_opt.has_value());
-
-		// Call the marking function to set PrevColor::Green on previous nodes that
-		// correspond to PST element hashes (only leafs should end up green)
-		compiler::driver::markPreviousGraphNodesGreenForPstHashes();
-
-		prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
 		ASSERT_TRUE(prev_colors_opt.has_value());
 		auto prev_colors = prev_colors_opt.value();
 
-		// For each node: if it is a leaf in the previous graph (no outgoing deps),
-		// it should be present in prev_colors and be Green. If it is not a leaf,
-		// it should NOT be present in prev_colors (because it is not input hash)
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
-				// leaf -> must be colored green
 				// this is weird but node deps contains the node itself
 				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
 				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
@@ -363,6 +355,76 @@ private:
 				ASSERT_TRUE(!node.q_id.hasStableHash() || prev->getNodeDeps(node).size() > 1);
 			}
 		}
+
+		driver::resetInitializationForTests();
+
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = std::string("mark_nodes_test_package2"),
+					.package_path = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
+				},
+				.compilation_artifacts = {.artifacts_path = artifacts_path},
+				.debug_options         = {}
+			}
+		);
+
+		// all nodes should be red because the name of package changed
+
+		ASSERT_TRUE(query::internal::ContextAccess::getState()->getPreviousGraph().has_value());
+		prev            = query::internal::ContextAccess::getState()->getPreviousGraph().value();
+		prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(prev_colors_opt.has_value());
+		prev_colors = prev_colors_opt.value();
+		for (const auto& node: prev->getAllNodes())
+			if (prev_colors->contains(node))
+				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Red);
+
+		// compile the entire package to obtain new graph
+
+		compiler::driver::compilerEntirePackage(
+			global_state::getMainPackage(),
+			driver::BackendType::LLVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
+		);
+
+		// save new graph
+		driver::saveArtifacts();
+
+		driver::resetInitializationForTests();
+
+		// we need the ComponentHash to be the same to simulate the change in the files
+		compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = std::string("mark_nodes_test_package2"),
+					.package_path = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),
+				},
+				.compilation_artifacts = {.artifacts_path = artifacts_path},
+				.debug_options         = {}
+			}
+		);
+
+		prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(prev_colors_opt.has_value());
+		prev_colors = prev_colors_opt.value();
+
+		int green_count = 0;
+		int red_count   = 0;
+		for (const auto& node: prev->getAllNodes()) {
+			if (prev_colors->contains(node)) {
+				if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Green)
+					green_count++;
+				else if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Red)
+					red_count++;
+				else
+					ASSERT_TRUE(false);
+			}
+		}
+		std::cerr << "Green nodes: " << green_count << ", Red nodes: " << red_count << '\n';
+		ASSERT_TRUE(green_count > 0);
+		// only one element should be red (variable name a, changed to c)
+		ASSERT_TRUE(red_count == 1);
 	}
 };
 
