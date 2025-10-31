@@ -173,9 +173,7 @@ namespace compiler::helios {
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
 
-					if (visitor.symbol_type_qresult.hasError())
-						return query::QError(visitor.symbol_type_qresult.error());
-					return visitor.symbol_type_qresult.value();
+					return visitor.symbol_type_qresult;
 				}
 				variant_case(builtin::BuiltinFunctionData, builtin_data) {
 					return tsh::SymbolType<>(
