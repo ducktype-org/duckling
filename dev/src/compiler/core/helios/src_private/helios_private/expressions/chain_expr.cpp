@@ -406,18 +406,19 @@ namespace compiler::helios::code {
 			const auto& looked_up_symbols = lookup_result->getAsSingle();
 
 			if (looked_up_symbols.hasError()) {
-				auto node = makeBox<AccessExpr>(
-					query_ctx, std::move(current_expr), expr_access->getName().value
-				);
-				return ChainState::ofExpr(std::move(node));
-			} else {
-				auto sym = looked_up_symbols.value().back();
-				if (kind(sym) == SymbolKind::Namespace) {
-					result_sequence.push_back(std::move(current_expr));
-					return ChainState::ofNamespaceLike(sym);
-				}
+				// @TODO: #1472 Handle dynamic field/method names.
 				return query::QError(errors::Failed());
 			}
+
+			const auto sym = looked_up_symbols.value().back();
+			if (kind(sym) == SymbolKind::Field) {
+				auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
+				return ChainState::ofExpr(std::move(node));
+			} else if (kind(sym) == SymbolKind::Namespace) {
+				result_sequence.push_back(std::move(current_expr));
+				return ChainState::ofNamespaceLike(sym);
+			}
+			return query::QError(errors::Failed());
 		}
 
 		/**

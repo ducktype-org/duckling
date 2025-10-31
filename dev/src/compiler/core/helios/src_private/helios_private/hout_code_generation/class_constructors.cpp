@@ -62,7 +62,7 @@ namespace compiler::helios::houtgen {
 					makeBox<code::AccessExpr>(
 						ctx,
 						makeBox<code::IdentifierExpr>(ctx, result_symbol),
-						name(fields.at(i).getSymbol())
+						fields.at(i).getSymbol()
 					),
 					makeBox<code::IdentifierExpr>(ctx, ctor_decl->parameters.at(i).helios_symbol)
 				));

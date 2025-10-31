@@ -295,10 +295,10 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
-		auto [_, root_scope]           = getModule(fs::File(path("test_modules/expressions")));
-		auto [func_module, func_scope] = getModule(fs::File(path("test_modules/function_calls")));
-		auto sym_v1                    = getChain("V1", root_scope).back();
-		auto square_sym                = getChain("square", func_scope).back();
+		const auto [_, root_scope]           = getModule(fs::File(path("test_modules/expressions")));
+		const auto [func_module, func_scope] = getModule(fs::File(path("test_modules/function_calls")));
+		const auto sym_v1                    = getChain("V1", root_scope).back();
+		const auto square_sym                = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto int_type = ctx.query<tsh::QueryIntegralType>({ 64 });
@@ -325,7 +325,9 @@ private:
 			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
 				ctx,
 				makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1),
-				base::StrID("field")
+				sym_v1
+				// @TODO: This PR — V1 had no field "field" and since we are testing clones,
+				// I just changed the string to a symbol ID of V1 itself. Is this OK?
 			));
 
 			// Build sequence expressions

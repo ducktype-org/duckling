@@ -506,13 +506,13 @@ namespace compiler::helios::code {
 		return makeBox<CallExpr>(expression_type, callee->clone(), std::move(arguments_cloned));
 	}
 
-	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, base::StrID field):
+	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, const SymID field):
 		  Expr(base->expression_type),
 		  base(std::move(base)),
 		  field(field) {}
 
 	AccessExpr::AccessExpr(
-		tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field
+		const tsh::ExpressionType<>& expression_type, Box<Expr> base, const SymID field
 	):
 		  Expr(expression_type),
 		  base(std::move(base)),
@@ -520,7 +520,7 @@ namespace compiler::helios::code {
 
 	void AccessExpr::debugPrint(std::ostream& out) const {
 		base->debugPrint(out);
-		out << "." << field.str();
+		out << "." << name(field).str();
 	}
 
 	Box<Expr> AccessExpr::clone() const {
