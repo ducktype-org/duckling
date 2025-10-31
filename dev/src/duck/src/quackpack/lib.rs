@@ -1,5 +1,7 @@
 use anyhow::Result;
+
 pub type QuackResult<T> = Result<T>;
+pub mod core;
 mod error;
 pub mod paths;
 pub mod schemas;

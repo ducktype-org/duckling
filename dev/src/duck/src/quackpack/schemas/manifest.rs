@@ -1,3 +1,4 @@
+use crate::core::Version;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -20,12 +21,12 @@ pub struct Manifest {
 
 #[derive(Debug, Deserialize)]
 pub struct Metadata {
-    pub version: Option<semver::Version>,
+    pub version: Option<Version>,
     pub authors: Option<Vec<String>>,
     pub license: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub language: Option<semver::Version>,
+    pub language: Option<Version>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,7 +39,7 @@ pub struct Dependency {
 }
 
 #[derive(Debug)]
-pub struct OredSemver(pub Vec<semver::Version>);
+pub struct OredSemver(pub Vec<Version>);
 
 impl<'de> Deserialize<'de> for OredSemver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -47,7 +48,7 @@ impl<'de> Deserialize<'de> for OredSemver {
     {
         struct SeqOrSplit;
         impl<'de> de::Visitor<'de> for SeqOrSplit {
-            type Value = Vec<semver::Version>;
+            type Value = Vec<Version>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a string or a sequence of strings")
@@ -58,7 +59,7 @@ impl<'de> Deserialize<'de> for OredSemver {
                 E: de::Error,
             {
                 v.split(" or ")
-                    .map(|x| semver::Version::parse(x.trim()))
+                    .map(|x| x.trim().parse())
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|e| de::Error::custom(e))
             }
@@ -68,7 +69,7 @@ impl<'de> Deserialize<'de> for OredSemver {
                 A: de::SeqAccess<'de>,
             {
                 let mut values = vec![];
-                while let Some(next) = seq.next_element::<semver::Version>()? {
+                while let Some(next) = seq.next_element::<Version>()? {
                     values.push(next);
                 }
                 Ok(values)
@@ -151,15 +152,15 @@ mod tests {
     #[test]
     fn test_ored_semver_deserialization() {
         let x = serde_json::from_str::<OredSemver>(r#""1.0.0""#).unwrap();
-        assert_eq!(x.0, [semver::Version::new(1, 0, 0)]);
+        assert_eq!(x.0, [Version::new(1, 0, 0)]);
 
         let x = serde_json::from_str::<OredSemver>(r#"" 1.0.0 or  1.1.0 or  2.0.0  ""#).unwrap();
         assert_eq!(
             x.0,
             [
-                semver::Version::new(1, 0, 0),
-                semver::Version::new(1, 1, 0),
-                semver::Version::new(2, 0, 0)
+                Version::new(1, 0, 0),
+                Version::new(1, 1, 0),
+                Version::new(2, 0, 0)
             ]
         );
 

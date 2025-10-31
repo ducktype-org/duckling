@@ -1,3 +1,4 @@
+use crate::core::Version;
 use std::collections::BTreeMap;
 
 use serde::Serialize;
@@ -14,7 +15,7 @@ pub struct Manifest {
 
 #[derive(Debug, Serialize)]
 pub struct Metadata {
-    pub version: semver::Version,
+    pub version: Version,
     pub authors: Vec<String>,
     pub license: String,
     pub name: String,
@@ -23,7 +24,7 @@ pub struct Metadata {
 
 #[derive(Debug, Serialize)]
 pub struct Dependency {
-    pub version: Vec<semver::Version>,
+    pub version: Vec<Version>,
     pub source: DependencySource,
     pub features: Vec<DependencyFeature>,
     pub pinned: bool,
