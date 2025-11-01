@@ -5,35 +5,60 @@ class MyClass {
     value: i32;
 }
 
-fun process(x: bool) -> i32 = {
+fun foo(x: bool) -> i32 = {
     return 1;
 }
 
-fun process(x: f64) -> i32 = {
+fun foo(x: f64) -> i32 = {
     return 2;
 }
 
-fun process(x: MyClass) -> i32 = {
+fun foo(x: MyClass) -> i32 = {
     return 3;
 }
 
-var CALL_WITH_BOOL: i32 = process(true);
-var CALL_WITH_FLOAT: i32 = process(get_f64());
-var CALL_WITH_CLASS: i32 = process(MyClass(42));
-
 fun foo(x: i64) -> i32 = {
+    return 3;
+}
+
+var CALL_FOO_BOOL: i32 = foo(true);
+var CALL_FOO_FLOAT: i32 = foo(get_f64());
+var CALL_FOO_CLASS: i32 = foo(MyClass(42));
+var CALL_FOO_I64: i32 = foo(42);
+
+fun goo(x: i64) -> i32 = {
     return 10;
 }
 
-fun foo(y: i64) -> i32 = {
+fun goo(y: i64) -> i32 = {
     return 20;
 }
 
 # Named parameter disambiguates which function to call
-var NAMED_CALL_X: i32 = foo(x = 30);
-var NAMED_CALL_Y: i32 = foo(y = 40);
+var CALL_GOO_X: i32 = goo(x = 30);
+var CALL_GOO_Y: i32 = goo(y = 40);
+
+
+fun goo(x: f64, y: bool) -> i64 = {
+    return 42;
+}
+
+fun goo(x: i64, y: bool) -> i64 = {
+    return 42;
+}
+
+# Float is not implicitely convertible to int, so the f64 is closer than i64
+var CALL_GOO_F64 = goo(get_f32(), true);
 
 
 fun get_f64() -> f64 = {
+    return 3;
+}
+
+fun get_f32() -> f64 = {
+    return 3;
+}
+
+fun get_i64() -> i64 = {
     return 3;
 }

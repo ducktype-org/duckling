@@ -118,7 +118,11 @@ namespace compiler::helios::code {
 			tsh::SymbolType provided_type
 				= positional_arguments[i]->expression_type.getSymbolType();
 			tsh::SymbolType expected_type = decl->parameters[i].type;
-			if (provided_type != expected_type) {
+
+			// Currently comparing by abstract type and not symbol type,
+			// becasue things get annoying quckly with const / not const
+			// (int literal is a const i64, but function might expect i64).
+			if (provided_type.getType() != expected_type.getType()) {
 				if (auto coercion = canCoerce(ctx, provided_type, expected_type);
 				    coercion.hasValue()) {
 					coercion_present = true;
@@ -366,7 +370,7 @@ namespace compiler::helios::code {
 		}
 
 		if (exact_match.size() > 1) {
-			ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));
+			ctx.log(makeBox<AmbiguousExactMatches>(call_expr->getSourcePosition()));
 			return query::QError(errors::Failed());
 		}
 		if (exact_match.size() == 1) {
@@ -381,7 +385,7 @@ namespace compiler::helios::code {
 		}
 
 		if (coercion_match.size() > 1) {
-			ctx.log(makeBox<AmbiguousExactMatches>(call_expr->getSourcePosition()));
+			ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));
 			return query::QError(errors::Failed());
 		}
 		if (coercion_match.size() == 1) {

@@ -303,8 +303,8 @@ namespace compiler::helios::code {
 			if (res.hasError()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						ident->getName().position,
-						base::strConcat("Failed to find correct function: ", ident->getName().value)
+						ident->getSourcePosition(),
+						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
 					)
 				);
 				return query::QError(errors::Failed());
@@ -483,9 +483,7 @@ namespace compiler::helios::code {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 						expr_access->getName().position,
-						base::strConcat(
-							"Failed to find correct function: '", expr_access->getName().value
-						)
+						base::strConcat("Failed to call: \"", expr_access->getName().value, "\"")
 					)
 				);
 				return query::QError(errors::Failed());
