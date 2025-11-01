@@ -378,7 +378,7 @@ namespace compiler::helios {
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
-				if (not stmt_maker.empty)
+				if (stmt_maker.out.has_value())
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
 			return block;
@@ -418,7 +418,6 @@ namespace compiler::helios {
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 			query::Context&                 ctx;
-			bool                            empty = false;
 			base::Optional<Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
@@ -447,9 +446,9 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitAlias(pst::Access<pst::Alias>) override { empty = true; }
+			void visitAlias(pst::Access<pst::Alias>) override {}
 
-			void visitUsing(pst::Access<pst::Using>) override { empty = true; }
+			void visitUsing(pst::Access<pst::Using>) override {}
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 				CORE_ASSERT(
@@ -596,7 +595,6 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt({}, symbol_type, symbol));
-					return;
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
@@ -631,7 +629,7 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const>) override { empty = true; }
+			void visitConst(pst::Access<pst::Const>) override {}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

@@ -87,6 +87,9 @@ private:
 	using enum tsh::Mutability;
 	using enum tsh::IntegralAbstractType::Signedness;
 
+	/**
+	 * Shorthand to create a mutable symbol type from an abstract type.
+	 */
 	static tsh::SymbolType<> st(const tsh::AbstractType abstract_type) {
 		return tsh::SymbolType{
 			abstract_type,
@@ -177,7 +180,13 @@ private:
 		const auto meta_type  = query::entryPoint<tsh::QueryMetaType>({});
 		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
 
-		ASSERT_EQUAL(int32_type, getTypeOf("SimpleInt", root_scope));
+		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
+		const auto int32_immut_symbol_type = st(int32_type).withMutability(Immutable);
+
+		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
+		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
+		ASSERT_EQUAL(int32_mut_symbol_type, getSymbolTypeOf("SimpleIntVar", root_scope));
+
 		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
@@ -606,18 +615,20 @@ private:
 		auto              tree_vref = getExprOfConst(sym_vref);
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
-		const auto int32_type    = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
-		const auto int32ref_type = st(int32_type).withReferenceKind(tsh::ReferenceKind::Ref);
-		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		const auto int32ref_type
+			= st(int32_type).withReferenceKind(tsh::ReferenceKind::Ref).withMutability(Immutable);
+		const auto vref_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
 		auto              sym_vbox  = getChain("VBOX", root_scope).back();
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
-		const auto f16_type    = query::entryPoint<tsh::QueryFloatType>(16);
-		const auto f16box_type = st(f16_type).withReferenceKind(tsh::ReferenceKind::Box);
-		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
+		const auto f16_type = query::entryPoint<tsh::QueryFloatType>(16);
+		const auto f16box_type
+			= st(f16_type).withReferenceKind(tsh::ReferenceKind::Box).withMutability(Immutable);
+		const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f16box_type, vbox_type->valueOrThrow());
 
 		auto              sym_vconst  = getChain("VCONST", root_scope).back();
