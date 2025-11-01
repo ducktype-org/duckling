@@ -44,4 +44,20 @@ namespace compiler::helios {
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 */
 	DECLARE_QUERY(QueryCodeOfFun, SymID, HOUTFunction);
+
+	/**
+	 * @brief Query all function dependencies of a function (e.g. for a given function SymID, return
+	 * all SymID-s of this function.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 */
+	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, std::vector<SymID>);
+
+	/**
+	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
+	 * this function or all functions called by the called functions).
+	 * @note This query is used to determine all other functions that have to be compiled when
+	 * compile time evaluating a function.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 */
+	DECLARE_QUERY(QueryTransitiveFunctionCalls, SymID, std::vector<SymID>);
 }

@@ -9,6 +9,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -689,4 +690,164 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOfFun);
+
+	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, std::vector<SymID>) {
+		struct HoutFunctionCallCollector final:
+			  public code::HoutStmtVisitor,
+			  public code::HoutExprVisitor {
+		public:
+			std::set<SymID> called_functions;
+
+			void visitReturnStmt(const code::ReturnStmt& stmt) override {
+				stmt.value->acceptVisitor(*this);
+			}
+
+			void visitVoidReturnStmt(const code::VoidReturnStmt&) override {}
+
+			void visitExprStmt(const code::ExprStmt& stmt) override {
+				stmt.expr->acceptVisitor(*this);
+			}
+
+			void visitIfStmt(const code::IfStmt& stmt) override {
+				stmt.condition->acceptVisitor(*this);
+
+				for (const auto& sub_stmt: stmt.then_body.statements)
+					sub_stmt->acceptVisitor(*this);
+				for (const auto& sub_stmt: stmt.else_body.statements)
+					sub_stmt->acceptVisitor(*this);
+			}
+
+			void visitWhileStmt(const code::WhileStmt& stmt) override {
+				stmt.condition->acceptVisitor(*this);
+				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
+			}
+
+			void visitVariableStmt(const code::VariableStmt& stmt) override {
+				if (stmt.initial_value) stmt.initial_value.value()->acceptVisitor(*this);
+			}
+
+			void visitAssignmentStmt(const code::AssignmentStmt& stmt) override {
+				stmt.location_expr->acceptVisitor(*this);
+				stmt.new_value_expr->acceptVisitor(*this);
+			}
+
+			void visitCallExpr(const code::CallExpr& expr) override {
+				if (const auto* callee_ident
+				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.operator->())) {
+					if (callee_ident->expression_type.getType().getKind() == tsh::Kind::Function)
+						called_functions.insert(callee_ident->symbol);
+				}
+
+				expr.callee->acceptVisitor(*this);
+				for (const auto& arg: expr.arguments) arg->acceptVisitor(*this);
+			}
+
+			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
+				expr.lhs->acceptVisitor(*this);
+				expr.rhs->acceptVisitor(*this);
+			}
+
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+				expr.expr->acceptVisitor(*this);
+			}
+
+			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) override {
+				expr.condition->acceptVisitor(*this);
+				expr.if_true->acceptVisitor(*this);
+				expr.if_false->acceptVisitor(*this);
+			}
+
+			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+				expr.inner->acceptVisitor(*this);
+			}
+
+			void visitSequenceExpr(const code::SequenceExpr& expr) override {
+				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitAccessExpr(const code::AccessExpr& expr) override {
+				expr.base->acceptVisitor(*this);
+			}
+
+			void visitLiteralUnitExpr(const code::LiteralUnitExpr&) override {}
+
+			void visitLiteralIntExpr(const code::LiteralIntExpr&) override {}
+
+			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) override {}
+
+			void visitLiteralStringExpr(const code::LiteralStringExpr&) override {}
+
+			void visitLiteralTypeExpr(const code::LiteralTypeExpr&) override {}
+
+			void visitIdentifierExpr(const code::IdentifierExpr&) override {}
+
+			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
+				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) override {
+				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function,
+				"Query function dependencies called on non-function symbol"
+			);
+
+			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key);
+			const auto& function_body   = fun_hout_result.body;
+
+			HoutFunctionCallCollector visitor;
+			for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
+
+	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, std::vector<SymID>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function,
+				"Query transitive function dependencies called on non-function symbol"
+			);
+
+			std::vector<SymID> worklist;
+			std::set<SymID>    visited_functions;
+			std::vector<SymID> all_dependencies;
+
+			worklist.push_back(key);  // Insert root function SymID.
+			visited_functions.insert(key);
+
+			while (!worklist.empty()) {
+				SymID current_func = worklist.back();
+				worklist.pop_back();
+
+				all_dependencies.push_back(current_func);
+
+				auto direct_dependencies = ctx.query<QueryDirectFunctionCalls>(current_func);
+
+				for (const SymID& dependency: direct_dependencies) {
+					if (!visited_functions.contains(dependency)) {
+						visited_functions.insert(dependency);
+						worklist.push_back(dependency);
+					}
+				}
+			}
+			return all_dependencies;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);
 }
