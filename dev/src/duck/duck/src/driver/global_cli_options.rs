@@ -42,11 +42,14 @@ impl GlobalCliOptions {
     pub fn from_matches(matches: &ArgMatches) -> QuackResult<Self> {
         let quiet = matches.get_flag("quiet");
         let verbose = matches.get_flag("verbose");
-        let color = Color::from_str(matches.get_one::<String>("color").ok_or_else(|| {
-            InternalError::from(anyhow!(
-                "this should be guarded by a default color in parser"
-            ))
-        })?)?;
+        let color = matches
+            .get_one::<String>("color")
+            .ok_or_else(|| {
+                InternalError::from(anyhow!(
+                    "this should be guarded by a default color in parser"
+                ))
+            })
+            .and_then(|color| Color::from_str(color))?;
         Ok(Self {
             verbose,
             quiet,
