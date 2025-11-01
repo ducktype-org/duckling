@@ -497,7 +497,8 @@ namespace compiler::helios {
 					return;  // fail
 				}
 
-				auto coercion = canCoerceExpression(ctx, new_value_expr.ref(), location_type);
+				auto coercion
+					= canCoerce(ctx, new_value_expr->expression_type.getSymbolType(), location_type);
 
 				if (coercion.hasError()) {
 					ctx.log(
@@ -516,7 +517,7 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
-				auto new_value_coerced = coercion.value()(std::move(new_value_expr));
+				auto new_value_coerced = coercion.value().coerce(std::move(new_value_expr));
 
 				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
@@ -604,7 +605,9 @@ namespace compiler::helios {
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 
-					auto coercion = canCoerceExpression(ctx, initial_value.ref(), symbol_type);
+					auto coercion = canCoerce(
+						ctx, initial_value->expression_type.getSymbolType(), symbol_type
+					);
 					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -623,7 +626,7 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						coercion.value()(std::move(initial_value)), symbol_type, symbol
+						coercion.value().coerce(std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}

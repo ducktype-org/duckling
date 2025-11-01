@@ -5,8 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "call_processing.hpp"
-
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
@@ -15,6 +13,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>

@@ -1,5 +1,6 @@
 #include "coercions.hpp"
 
+#include <typesystem/higher/mutability.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
 #include <query_framework/context.hpp>
@@ -7,7 +8,7 @@
 namespace compiler::helios {
 
 
-	Box<code::Expr> Coercion::operator()(Box<code::Expr> from) const {
+	Box<code::Expr> Coercion::coerce(Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
 		auto expected = from->expression_type.getSymbolType().getType();
@@ -28,14 +29,16 @@ namespace compiler::helios {
 		}
 	}
 
-	query::QResult<Coercion, InvalidCoercion> canCoerceExpression(
-		query::Context& ctx, CRef<code::Expr> from, tsh::SymbolType<> to
+	query::QResult<Coercion, InvalidCoercion> canCoerce(
+		query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
 	) {
-		if (not ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>(
-				{ from->expression_type.getType(), to.getType() }
-			))
-			return query::QError{ InvalidCoercion{} };
+		if (from == to) return Coercion(from, to);
 
-		return Coercion(from, to);
+		if (ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>({ from.getType(), to.getType() }
+		    )) {
+			return Coercion(from, to);
+		}
+		return query::QError{ InvalidCoercion{} };
 	}
+
 }
