@@ -103,18 +103,7 @@ namespace compiler::mir {
 	struct MirConstant final {
 		ctv::CompileTimeValue value;
 
-		MirConstant(ctv::CompileTimeValue ctv) {
-			this->value = std::visit(
-				[](auto&& val) -> ctv::CompileTimeValue {
-					using T = std::decay_t<decltype(val)>;
-					if constexpr (std::is_integral_v<T>)
-						return ctv::CompileTimeValue{ static_cast<i64>(val) };
-					else
-						return val;
-				},
-				ctv.getStorage()
-			);
-		}
+		MirConstant(ctv::CompileTimeValue ctv): value(ctv) {}
 	};
 
 	struct MirBoolConst final {

@@ -1,10 +1,19 @@
 #include "vm_evaluator.hpp"
 
+#include "ctv/numeric_value.hpp"
+#include "typesystem/higher/types.hpp"
+
+#include "base/except/exceptions.hpp"
+#include "base/str/str_utils.hpp"
+#include "base/str/string_id.hpp"
+#include "base/types/bits_and_bytes.hpp"
+
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <expected>
+#include <type_traits>
 
 namespace {
 	using namespace compiler::helios;
@@ -18,17 +27,42 @@ namespace {
 		vm::PID pid, const CompileTimeValue& ctv
 	) {
 		variant_match(ctv.getStorage()) {
-			variant_case(i64, val) {
-				auto vm_value_response = vm::api::getVmValue(pid, "i64");
-				if (!vm_value_response.has_value())
-					return std::unexpected(VmEvaluationError(
-						VmEvaluationError::Kind::ArgConversionFailed,
-						"Failed to get VM value for 'i64' type."
-					));
+			variant_case(NumericValue, val) {
+				return std::visit(
+					[&](auto&& num_val) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
+						using NumT = std::decay_t<decltype(num_val)>;
 
-				auto res = std::move(vm_value_response->vm_value);
-				res->writeBytes<i64>(val);
-				return res;
+						base::StrID dvm_type_name;
+						if constexpr (sizeof(NumT) <= 2)
+							dvm_type_name = base::StrID("i16");
+						else if constexpr (sizeof(NumT) <= 4)
+							dvm_type_name = base::StrID("i32");
+						else if constexpr (sizeof(NumT) <= 8)
+							dvm_type_name = base::StrID("i64");
+						else if constexpr (sizeof(NumT) <= 16)
+							dvm_type_name = base::StrID("i128");
+						else {
+							throw base::NotYetImplemented(
+								"Conversion from CTV to VmValue for bigger numeric sizes"
+							);
+						}
+
+						auto vm_value_response = vm::api::getVmValue(pid, dvm_type_name.str());
+						if (!vm_value_response.has_value())
+							return std::unexpected(VmEvaluationError(
+								VmEvaluationError::Kind::ArgConversionFailed,
+								base::strConcat(
+									"Failed to get VM value for '",
+									dvm_type_name.strView(),
+									"' type."
+								)
+							));
+						auto res = std::move(vm_value_response->vm_value);
+						res->writeBytes<NumT>(num_val);
+						return res;
+					},
+					val.getStorage()
+				);
 			}
 			variant_case(bool, val) {
 				auto vm_value_response = vm::api::getVmValue(pid, "byte");
@@ -65,13 +99,50 @@ namespace {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
 		case tsh::Kind::Integral: {
-			if (vm_value->type->getName() != base::StrID("i64"))
-				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::ReturnConversionFailed,
-					"Expected i64 VM value but received type: " + vm_value->type->getName().str()
-				));
-			return CompileTimeValue{ vm_value->readBytes<i64>() };
+			tsh::IntegralAbstractType int_type(type.getType());
+			auto                      bit_size     = int_type.getSize();
+			base::StrID               vm_type_name = vm_value->type->getName();
+
+			if (int_type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed) {
+				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i16>() } };
+				else if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i32>() } };
+				else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i64>() } };
+			} else {
+				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u16>() } };
+				if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u32>() } };
+				if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u64>() } };
+			}
+
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				"Expected an integer VM value (i16/i32/i64), but received: " + vm_type_name.str()
+			));
 		}
+		case tsh::Kind::Float: {
+			tsh::FloatAbstractType float_type(type.getType());
+			auto                   bit_size     = float_type.getSize();
+			base::StrID            vm_type_name = vm_value->type->getName();
+
+			if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
+				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f32>() } };
+			else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
+				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f64>() } };
+			else if (bit_size <= Bits{ 128 } && vm_type_name == "i128")
+				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f128>() } };
+
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				"Mismatched VM value type for float return. Expected size "
+					+ base::toString(bit_size) + " bits, but got VM type: " + vm_type_name.str()
+			));
+		}
+
 		case tsh::Kind::Bool: {
 			if (vm_value->type->getName() != base::StrID("byte"))
 				return std::unexpected(VmEvaluationError(
@@ -102,8 +173,8 @@ namespace {
 			if (spawn_result) pid = spawn_result->pid;
 		}
 
-		// @todo: Kill the CompTime VM process in the destructor once we get rid of the deadlock.
-		// This should happen after #1222.
+		// @todo: Kill the CompTime VM process in the destructor once we get rid of the
+		// deadlock. This should happen after #1222.
 		~VmManager() = default;
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
@@ -120,9 +191,9 @@ namespace compiler::helios {
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {
-		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process) once
-		// upon the first call to executeInVm and its lifetime extends for the duration of the
-		// program. When deinitialized, it kills the spawned process.
+		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process)
+		// once upon the first call to executeInVm and its lifetime extends for the duration of
+		// the program. When deinitialized, it kills the spawned process.
 		static VmManager vm_manager;
 		auto             maybe_pid = vm_manager.getPID();
 		if (!maybe_pid)

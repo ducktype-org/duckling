@@ -1,4 +1,8 @@
+#include "ctv/numeric_value.hpp"
+
 #include <llvm_helpers/llvm_helpers.hpp>
+
+#include <type_traits>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -44,13 +48,41 @@ namespace {
 	 */
 	auto ctvToLLVMConstant(const compiler::ctv::CompileTimeValue& ctv, llvm::Type* llvm_type) {
 		variant_match(ctv.getStorage()) {
-			variant_case(i64, val) {
+			variant_case(compiler::numeric_value::NumericValue, val) {
 				if (!llvm_type->isIntegerTy()) {
 					CORE_PANIC(
 						"LLVM lowering : Type mismatch. CTV is an integer, but LLVM type is not"
 					);
 				}
-				return llvm::ConstantInt::getSigned(llvm_type, val);
+
+				return std::visit(
+					[&](auto&& num_val) -> llvm::Constant* {
+						using NumT = std::decay<decltype(num_val)>;
+
+						if constexpr (std::is_integral_v<NumT>) {
+							if (!llvm_type->isIntegerTy()) {
+								CORE_PANIC(
+									"LLVM lowering : Type mismatch. CTV is an integer, but LLVM "
+							        "type is not"
+								);
+							}
+							// TODO: Do that properly
+							return llvm::ConstantInt::get(llvm_type, static_cast<i64>(num_val), std::is_signed_v<NumT>);
+						} else if (std::is_floating_point_v<NumT>){
+							if (!llvm_type->isFloatingPointTy()) {
+								CORE_PANIC(
+									"LLVM lowering : Type mismatch. CTV is an integer, but LLVM "
+							        "type is not"
+								);
+							}
+							// TODO: Do that properly
+							return llvm::ConstantFP::get(llvm_type, static_cast<f64>(num_val));
+						} else {
+							CORE_UNREACHABLE();
+						}
+					},
+					val.getStorage()
+				);
 			}
 			variant_case(bool, val) {
 				if (!llvm_type->isIntegerTy(1)) {
@@ -144,7 +176,8 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_default {
-				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				CORE_PANIC(
+					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
 				);
 			}
 		}

@@ -72,12 +72,8 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MirUnitConst{} });
 		}
 
-		void visitLiteralIntExpr(const helios::code::LiteralIntExpr& value) override {
+		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
 			valueOutput(continuation, MIRValue{ MirConstant{ value.value } });
-		}
-
-		void visitLiteralCTVExpr(const helios::code::LiteralCTVExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MirConstant{ expr.value } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {

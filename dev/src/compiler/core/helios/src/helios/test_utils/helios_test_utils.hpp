@@ -8,6 +8,7 @@
 
 #include <filesystem/file.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include "ctv/numeric_value.hpp"
 
 namespace compiler::helios::test_utils {
 	/**
@@ -51,11 +52,12 @@ namespace compiler::helios::test_utils {
 
 		base::Optional<T> maybe_value{};
 		if constexpr (std::is_same_v<T, ctv::CompileTimeValue::UnitCTV>)
-			maybe_value = ctv_result.getUnit();
+			maybe_value = ctv_result.get<ctv::CompileTimeValue::UnitCTV>();
 		else if constexpr (std::is_same_v<T, i64>)
-			maybe_value = ctv_result.asI64();
+			//TODOP: Fix that
+			maybe_value = ctv_result.get<numeric_value::NumericValue>().value().coerceTo<i64>();
 		else if constexpr (std::is_same_v<T, bool>)
-			maybe_value = ctv_result.getBool();
+			maybe_value = ctv_result.get<bool>();
 		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
 			query::utils::withContextDo([&](query::Context& ctx) {
 				maybe_value = ctv_result.getType(ctx);

@@ -18,6 +18,7 @@
 #include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
 #include "base/extend_cpp/variant_match.hpp"
 
@@ -122,20 +123,26 @@ namespace compiler::helios {
 						using LhsT = std::decay_t<decltype(lhs)>;
 						using RhsT = std::decay_t<decltype(rhs)>;
 
-
 						// Binary operation on  numeric literals.
 						if constexpr (std::is_same_v<LhsT, NumericValue>
 					                  && std::is_same_v<RhsT, NumericValue>) {
 							return std::visit(
 								[&](auto&& lhs_val, auto&& rhs_val) -> TreeEvalResult {
-									using LhsNumT     = std::decay_t<decltype(lhs_val)>;
-									using RhsNumT     = std::decay_t<decltype(rhs_val)>;
+									using LhsNumT = std::decay_t<decltype(lhs_val)>;
+									using RhsNumT = std::decay_t<decltype(rhs_val)>;
+									// Find a common type for those literals.
 									using CommonTypeT = std::common_type_t<LhsNumT, RhsNumT>;
 
-									// TODOP: What the heck.
-									auto lhs_coerced = lhs_val.coerceTo<CommonTypeT>();
-									auto rhs_coerced = rhs_val.coerceTo<CommonTypeT>();
+									auto maybe_lhs_coerced = lhs.template coerceTo<CommonTypeT>();
+									auto maybe_rhs_coerced = rhs.template coerceTo<CommonTypeT>();
 
+									// Failed to coerce.
+									if (!maybe_lhs_coerced || !maybe_rhs_coerced)
+										return query::QError(errors::Failed());
+									auto lhs_coerced = maybe_lhs_coerced.value();
+									auto rhs_coerced = maybe_rhs_coerced.value();
+
+									// TODOP: Check for over/underflows?
 									using enum code::BuiltinBinary;
 									switch (expr.operation) {
 									case IntegerAdd:
@@ -170,7 +177,7 @@ namespace compiler::helios {
 									case IntegerPow:
 									case FloatPow:
 										return CompileTimeValue{ NumericValue{
-											std::pow(lhs_coerced, rhs_coerced) } };
+											static_cast<CommonTypeT>(std::pow(lhs_coerced, rhs_coerced)) } };
 									default:
 										throw base::NotYetImplemented(
 											"Evaluation of other binary operators in compile time"
@@ -193,6 +200,9 @@ namespace compiler::helios {
 									"Other binary operators for bool type"
 								);
 							}
+						} else {
+							// Unsupported type for binary operator.
+							return query::QError(errors::Failed());
 						}
 					},
 					lhs_ctv.getStorage(),
@@ -213,18 +223,19 @@ namespace compiler::helios {
 				result = std::visit(
 					[&](auto&& val) -> TreeEvalResult {
 						using T = std::decay_t<decltype(val)>;
+						using enum code::BuiltinUnary;
 
 						if constexpr (std::is_same_v<T, NumericValue>) {
 							switch (expr.operation) {
 							case IntegerNegation:
 							case FloatNegation:
 								return std::visit(
-									[&](auto&& val) {
-										using NumT = std::decay<decltype(val)>;
-										if constexpr (std::is_unsigned_v<T>)
+									[&](auto&& num_val) {
+										using NumT = std::decay<decltype(num_val)>;
+										if constexpr (std::is_unsigned_v<NumT>)
 											return query::QError(errors::Failed());
 										else
-											return CompileTimeValue{ NumericValue{ -val } };
+											return CompileTimeValue{ NumericValue{ -num_val } };
 									},
 									val.getStorage()
 								);
@@ -280,7 +291,7 @@ namespace compiler::helios {
 					variant_case(bool, val) { condition_is_true = val; }
 					variant_case(NumericValue, val) {
 						condition_is_true
-							= std::visit([&](auto&& val) { return (val != 0); }, val.getStorage());
+							= std::visit([&](auto&& num_val) { return (num_val != 0); }, val.getStorage());
 					}
 					variant_default {
 						result = query::QError(errors::Failed());
@@ -295,36 +306,46 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				auto compare = [](NumericValue first, NumericValue second, code::BuiltinBinary operation) {
-					
+				auto compare = [](const NumericValue& first,
+				                  const NumericValue& second,
+				                  code::BuiltinBinary operation) {
+					return std::visit(
+						[&](auto&& lhs, auto&& rhs) -> bool {
+							using LhsNumT = std::decay_t<decltype(lhs)>;
+							using RhsNumT = std::decay_t<decltype(rhs)>;
+							// Find a common type for those literals.
+							using CommonTypeT = std::common_type_t<LhsNumT, RhsNumT>;
 
+							auto lhs_num  = static_cast<CommonTypeT>(lhs);
+							auto rhs_num = static_cast<CommonTypeT>(rhs);
 
-
-
-
-					using enum code::BuiltinBinary;
-					switch (operation) {
-					case IntegerLt:
-					case FloatLt:
-						return first < second;
-					case IntegerGt:
-					case FloatGt:
-						return first > second;
-					case IntegerLteq:
-					case FloatLteq:
-						return first <= second;
-					case IntegerGteq:
-					case FloatGteq:
-						return first >= second;
-					case IntegerEq:
-					case FloatEq:
-						return first == second;
-					case IntegerNeq:
-					case FloatNeq:
-						return first != second;
-					default:
-						CORE_UNREACHABLE();
-					}
+							using enum code::BuiltinBinary;
+							switch (operation) {
+							case IntegerLt:
+							case FloatLt:
+								return lhs_num < rhs_num;
+							case IntegerGt:
+							case FloatGt:
+								return lhs_num > rhs_num;
+							case IntegerLteq:
+							case FloatLteq:
+								return lhs_num <= rhs_num;
+							case IntegerGteq:
+							case FloatGteq:
+								return lhs_num >= rhs_num;
+							case IntegerEq:
+							case FloatEq:
+								return lhs_num == rhs_num;
+							case IntegerNeq:
+							case FloatNeq:
+								return lhs_num != rhs_num;
+							default:
+								CORE_UNREACHABLE();
+							}
+						},
+						first.getStorage(),
+						second.getStorage()
+					);
 				};
 
 				using namespace std::views;
@@ -349,7 +370,9 @@ namespace compiler::helios {
 					}
 
 					auto next_value = next_expr.value();
-					if (!compare(*prev_value.get<NumericValue>(), *next_value.get<NumericValue>(), comp)) {
+					if (!compare(
+							*prev_value.get<NumericValue>(), *next_value.get<NumericValue>(), comp
+						)) {
 						result = CompileTimeValue{ false };
 						return;
 					}
@@ -396,9 +419,9 @@ namespace compiler::helios {
 						return;
 					}
 
-					variant_match(sub_type_result.value().getStorage()) {
-						variant_case(tsh::SymbolType<>, type) { subtypes.emplace_back(type); }
-						variant_default { CORE_PANIC("Type evaluation returned not a type\n"); }
+					match_optional(sub_type_result.value().getType(ctx)) {
+						opt_some(sub_type) { subtypes.emplace_back(sub_type); }
+						opt_none { CORE_PANIC("Type evaluation returned not a type\n"); }
 					}
 				}
 
