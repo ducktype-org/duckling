@@ -146,7 +146,8 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<ctv::CompileTimeValue, i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
+		using ValueType
+			= std::variant<ctv::CompileTimeValue, i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
 		ValueType value;
 
 	public:

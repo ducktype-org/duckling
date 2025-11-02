@@ -44,20 +44,18 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(SequenceExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  // The unit expression *may* represent the type instead of the unit value,
-					  // but by default we assume it is the value, and lazily convert it to a type,
-					  // when it turns out that we expected a type instead of a value.
-					  // @TODO: #1373 reconsider this approach.
-					  ctx.query<tsh::QueryUnitType>({}),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ) {}
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  // The unit expression *may* represent the type instead of the unit value,
+				  // but by default we assume it is the value, and lazily convert it to a type,
+				  // when it turns out that we expected a type instead of a value.
+				  // @TODO: #1373 reconsider this approach.
+				  ctx.query<tsh::QueryUnitType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Immutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )) {}
 
 	void LiteralUnitExpr::debugPrint(std::ostream& out) const { out << "()"; }
 
@@ -67,49 +65,46 @@ namespace compiler::helios::code {
 	Box<Expr> LiteralUnitExpr::clone() const { return makeBox<LiteralUnitExpr>(expression_type); }
 
 	LiteralNumericExpr::LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue value):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  [&]() -> tsh::SymbolType<> {
-					  using namespace tsh;
-					  return std::visit(
-						  [&](auto&& actual_value) -> SymbolType<> {
-							  // TODOP: Variant visit?
-							  using T = std::decay_t<decltype(actual_value)>;
+		  Expr(tsh::ExpressionType<>(
+			  [&]() -> tsh::SymbolType<> {
+				  using namespace tsh;
+				  return std::visit(
+					  [&](auto&& actual_value) -> SymbolType<> {
+						  // TODOP: Variant visit?
+						  using T = std::decay_t<decltype(actual_value)>;
 
-							  if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
-								  return SymbolType{
-									  ctx.query<QueryIntegralType>(
-										  { sizeof(T) * 8, IntegralAbstractType::Signedness::Signed }
-									  ),
-									  ReferenceKind::Direct,
-									  Mutability::Immutable,
-								  };
-							  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
-								  return SymbolType{
-									  ctx.query<QueryIntegralType>(
-										  { sizeof(T) * 8,
-					                        IntegralAbstractType::Signedness::Unsigned }
-									  ),
-									  ReferenceKind::Direct,
-									  Mutability::Immutable,
-								  };
-							  } else if constexpr (std::is_floating_point_v<T>) {
-								  return SymbolType{
-									  ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
-									  ReferenceKind::Direct,
-									  Mutability::Immutable,
-								  };
-							  } else {
-								  CORE_PANIC("Unsupported numeric value type");
-							  }
-						  },
-						  value.getStorage()
-					  );
-				  }(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+						  if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryIntegralType>(
+									  { sizeof(T) * 8, IntegralAbstractType::Signedness::Signed }
+								  ),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryIntegralType>(
+									  { sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned }
+								  ),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else if constexpr (std::is_floating_point_v<T>) {
+							  return SymbolType{
+								  ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
+								  ReferenceKind::Direct,
+								  Mutability::Immutable,
+							  };
+						  } else {
+							  CORE_PANIC("Unsupported numeric value type");
+						  }
+					  },
+					  value.getStorage()
+				  );
+			  }(),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 
-			  )
-		  ),
+		  )),
 		  value(value) {}
 
 	LiteralNumericExpr::LiteralNumericExpr(
@@ -186,13 +181,11 @@ namespace compiler::helios::code {
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
-		  value_type(
-			  tsh::SymbolType{
-				  type,
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable,
-			  }
-		  ) {}
+		  value_type(tsh::SymbolType{
+			  type,
+			  tsh::ReferenceKind::Direct,
+			  tsh::Mutability::Mutable,
+		  }) {}
 
 	LiteralTypeExpr::LiteralTypeExpr(
 		tsh::ExpressionType<> expression_type, tsh::SymbolType<> value_type
@@ -534,12 +527,10 @@ namespace compiler::helios::code {
 	}
 
 	CallExpr::CallExpr(query::Context&, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
-		  Expr(
-			  tsh::ExpressionType(
-				  getCallResultType(callee->expression_type.getType()),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  )
-		  ),
+		  Expr(tsh::ExpressionType(
+			  getCallResultType(callee->expression_type.getType()),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
 		  callee(std::move(callee)),
 		  arguments(std::move(arguments)) {}
 
@@ -620,16 +611,14 @@ namespace compiler::helios::code {
 	ChainComparisonExpr::ChainComparisonExpr(
 		query::Context& ctx, std::vector<Box<Expr>> expressions, std::vector<BuiltinBinary> operators
 	):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryBoolType>({}),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  )
-		  ),
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Immutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
 		  expressions{ std::move(expressions) },
 		  operators{ std::move(operators) } {}
 

@@ -241,9 +241,7 @@ namespace compiler::lir {
 					variant_case_novalue(mir::MirUnitConst) {
 						CORE_PANIC("Cannot get location of MIR unit.");
 					}
-					variant_case(mir::MirConstant, ctv) {
-						return LIRValue{ ctv.value };
-					}
+					variant_case(mir::MirConstant, ctv) { return LIRValue{ ctv.value }; }
 					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
 					variant_case(mir::LocalRef, local) { return LIRValue{ getLocal(local) }; }
 					variant_case(mir::MirGlobal, global) { return LIRValue{ getGlobal(global) }; }

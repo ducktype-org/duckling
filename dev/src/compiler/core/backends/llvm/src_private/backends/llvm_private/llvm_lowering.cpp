@@ -63,16 +63,17 @@ namespace {
 							if (!llvm_type->isIntegerTy()) {
 								CORE_PANIC(
 									"LLVM lowering : Type mismatch. CTV is an integer, but LLVM "
-							        "type is not"
+									"type is not"
 								);
 							}
 							// TODO: Do that properly
-							return llvm::ConstantInt::get(llvm_type, static_cast<i64>(num_val), std::is_signed_v<NumT>);
-						} else if (std::is_floating_point_v<NumT>){
+							return llvm::ConstantInt::
+								get(llvm_type, static_cast<i64>(num_val), std::is_signed_v<NumT>);
+						} else if (std::is_floating_point_v<NumT>) {
 							if (!llvm_type->isFloatingPointTy()) {
 								CORE_PANIC(
 									"LLVM lowering : Type mismatch. CTV is an integer, but LLVM "
-							        "type is not"
+									"type is not"
 								);
 							}
 							// TODO: Do that properly
@@ -176,8 +177,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_default {
-				CORE_PANIC(
-					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
 				);
 			}
 		}

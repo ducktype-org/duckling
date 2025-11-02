@@ -177,7 +177,9 @@ namespace compiler::helios {
 									case IntegerPow:
 									case FloatPow:
 										return CompileTimeValue{ NumericValue{
-											static_cast<CommonTypeT>(std::pow(lhs_coerced, rhs_coerced)) } };
+											static_cast<CommonTypeT>(
+												std::pow(lhs_coerced, rhs_coerced)
+											) } };
 									default:
 										throw base::NotYetImplemented(
 											"Evaluation of other binary operators in compile time"
@@ -196,9 +198,8 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented(
-									"Other binary operators for bool type"
-								);
+								throw base::NotYetImplemented("Other binary operators for bool type"
+							    );
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -290,8 +291,9 @@ namespace compiler::helios {
 				variant_match(cond_ctv.getStorage()) {
 					variant_case(bool, val) { condition_is_true = val; }
 					variant_case(NumericValue, val) {
-						condition_is_true
-							= std::visit([&](auto&& num_val) { return (num_val != 0); }, val.getStorage());
+						condition_is_true = std::visit(
+							[&](auto&& num_val) { return (num_val != 0); }, val.getStorage()
+						);
 					}
 					variant_default {
 						result = query::QError(errors::Failed());
@@ -316,7 +318,7 @@ namespace compiler::helios {
 							// Find a common type for those literals.
 							using CommonTypeT = std::common_type_t<LhsNumT, RhsNumT>;
 
-							auto lhs_num  = static_cast<CommonTypeT>(lhs);
+							auto lhs_num = static_cast<CommonTypeT>(lhs);
 							auto rhs_num = static_cast<CommonTypeT>(rhs);
 
 							using enum code::BuiltinBinary;
@@ -409,7 +411,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?

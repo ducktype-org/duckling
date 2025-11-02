@@ -190,11 +190,9 @@ namespace compiler::helios::code {
 			else if (parsed_value <= std::numeric_limits<i64>::max())
 				return numeric_value::NumericValue{ static_cast<i64>(parsed_value) };
 
-			ctx.log(
-				makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-					position, "Integer literal overflow"
-				)
-			);
+			ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+				position, "Integer literal overflow"
+			));
 			return {};
 		}
 
@@ -262,9 +260,9 @@ namespace compiler::helios::code {
 
 				switch (type_specifier) {
 				case lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier: {
-					bool is_float = value.find_first_of(".eE") != std::string_view::npos;
-					parsed_numeric_value    = is_float ? deduceFloatType(value, position, ctx)
-					                         : deduceIntegerType(value, base, position, ctx);
+					bool is_float        = value.find_first_of(".eE") != std::string_view::npos;
+					parsed_numeric_value = is_float ? deduceFloatType(value, position, ctx)
+					                                : deduceIntegerType(value, base, position, ctx);
 					break;
 				}
 				case lang_def::NumericLiteralTypeSpecifier::i16:
@@ -300,12 +298,10 @@ namespace compiler::helios::code {
 				case lang_def::NumericLiteralTypeSpecifier::f80:
 				case lang_def::NumericLiteralTypeSpecifier::u128:
 				case lang_def::NumericLiteralTypeSpecifier::i128:
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"Unhandled type specifier in hout of expr: ",
-							lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"Unhandled type specifier in hout of expr: ",
+						lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+					));
 				}
 
 				if (parsed_numeric_value.has_value())  // If failed, the error is logged.
@@ -638,12 +634,10 @@ namespace compiler::helios::code {
 					)) {
 						opt_some(op) { operators.push_back(op); }
 						opt_none {
-							ctx.log(
-								makeBox<
+							ctx.log(makeBox<
 									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-									stmt->getSourcePosition(), "No builtin operator found"
-								)
-							);
+								stmt->getSourcePosition(), "No builtin operator found"
+							));
 							return;
 						}
 					}
