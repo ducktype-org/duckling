@@ -66,12 +66,26 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Represents C/C++ function, that can be called from bytecode by its name.
+	 * It's required that function accepts two parameters:
+	 * - std::byte* destination - a place to store the call result
+	 * - std::byte* arguments - arguments passed directly from the VM
+	 * It's also required, that the VM types are trivially copyable.
+	 */
+	struct ExternalCFunction final {
+		Identifier name;
+		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		FuncSignature signature;
+	};
+
+	/**
 	 * @brief Represents a group of types, globals and functions.
 	 * @note It's not guaranteed that every code collection is valid.
 	 */
 	struct CodeCollection final {
-		std::vector<Function>   functions;
-		std::vector<TypeOfData> types;
-		std::vector<GlobalData> global_data;
+		std::vector<Function>          functions;
+		std::vector<TypeOfData>        types;
+		std::vector<GlobalData>        global_data;
+		std::vector<ExternalCFunction> external_c_functions;
 	};
 }

@@ -11,10 +11,10 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
+#include <token_source/source.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/core/process/memory/memory.hpp>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
@@ -299,6 +299,7 @@ namespace vm::loader::parser {
 			Type,
 			FunctionName,
 			BuiltinFunctionName,
+			ExtCFunctionName,
 			MethodName,
 			Label,
 			VM_OPARG_GLOBAL_TYPES,

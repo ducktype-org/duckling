@@ -1,16 +1,16 @@
 #pragma once
 
-#include "component_hash.hpp"
 
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <filesystem/file.hpp>
+#include <hashing/component_hash.hpp>
 
 namespace compiler::frontend {
 
@@ -27,7 +27,7 @@ namespace compiler::frontend {
 		base::Optional<pst::PST<>> parse_tree;
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
-		base::Optional<ComponentHash>
+		base::Optional<hashing::ComponentHash>
 			component_hash;  //< Logical path hash for this file (module path + file name)
 
 		/**
@@ -122,7 +122,7 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] base::SharedView getCachedContent();
 
-		[[nodiscard]] const ComponentHash& getComponentHash();
+		[[nodiscard]] const hashing::ComponentHash& getComponentHash();
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;

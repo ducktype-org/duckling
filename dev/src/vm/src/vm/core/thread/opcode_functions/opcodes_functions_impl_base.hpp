@@ -45,6 +45,7 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
+
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
@@ -391,12 +392,12 @@ namespace vm {
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
 		// instructions. For future returns, the first instruction that should be executed after
-		// call is saved on frame so that op_ret's have to move forward zero instructions after
+		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
 			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
@@ -430,14 +431,28 @@ namespace vm {
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++) {
-				auto block = frame->block_stack.back();
-				frame->block_stack.pop_back();
-				thread.process_memory.freeBlockData(block);
-				thread.process_memory.decreaseBlockRefcount(block);
-			}
-			if (arg_count > 0)
-				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
+		{
+			auto ext_func_id = instr->arg0;
+			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
+
+			auto arg_count        = ext_func->parameters.size();
+			u64  result_value_idx = frame->block_stack.size() - arg_count - 1;
+
+			auto ext_result_destination = frame->block_stack[result_value_idx];
+			auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+
+			ext_func->function_pointer(
+				result_view.getBegin(), result_view.getBegin() + ext_func->result_type->getSize()
+			);
+
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
@@ -524,7 +539,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
-		{ performDeinit(instr, local_stack, frame, thread); }
+		{ performDeinit(frame, thread); }
 		FUNCTION_CONT(1);
 	}
 
@@ -630,6 +645,19 @@ namespace vm {
 			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
+			auto src_block     = frame->block_stack[src_block_idx];
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -920,7 +948,7 @@ namespace vm {
 			if (new_elem_count == 0) {
 				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
 				// null. This is one of two possible approaches:
-				// 1. Current approach: treat 0-sized arrays as non-existing, and set the pointer to
+				// 1. Current approach: treat 0-sized arrays as non-existent, and set the pointer to
 				// null-pointer (what we do here)
 				// 2. Alternative approach: Simply allow blocks of size 0 -- they would keep the
 				// C-nullptr as their data, but on DVM level we would still allow pointer

@@ -68,7 +68,7 @@ namespace vm {
 	// (CG, executor.cpp)
 	constexpr u64 OP_CASES_COUNT = countOpCases();
 
-	struct MicroInstruction {
+	struct MicroInstruction final {
 		union {
 			/**
 			 * @brief Index indicating which opcode it is.

@@ -5,6 +5,7 @@
 
 namespace base {
 	// @TODO: this solution is somewhat over engineered
+	// Maybe use base::strSplit()?
 	std::vector<std::string> vaArgSplit(std::string_view va_arg) {
 		std::vector<std::string> out;
 		auto                     len = va_arg.length();

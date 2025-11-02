@@ -1,8 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include <vm/api/api.hpp>
-#include <vm/api/data/api_error.hpp>
-
 #include <string>
 
 class VmPointersTest: public VmTestSuite {

@@ -7,6 +7,6 @@ function foo {} -> void {
 }
 
 function main { i64, ptr_argv } -> i64 {
-    call_builtin_func foo;
+    call_builtinfunc foo;
     ret;
 }
