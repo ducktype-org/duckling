@@ -125,15 +125,4 @@ namespace tsh {
 		SymbolType<ABSTRACT_TYPE> symbol_type;
 		ValueCategory             value_category;
 	};
-
-	/**
-	 * @brief Gets the symbol type of a declaration from the expression type of its value, taking
-	 * into account the mutability expected by the declaration's kind (var / let / const).
-	 * @param expr_type The type of the expression on the right of the declaration.
-	 * @param expected_mutability The expected mutability of the declared symbol based on var / let.
-	 * @return The symbol type of the declared symbol, with the appropriate mutability.
-	 */
-	SymbolType<> getDeclarationTypeFromExpressionType(
-		const ExpressionType<>& expr_type, Mutability expected_mutability
-	);
 }
