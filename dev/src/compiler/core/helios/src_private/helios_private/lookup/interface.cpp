@@ -2,19 +2,19 @@
 
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 namespace compiler::helios {
 
 	struct KeyOf_LookupInTypeInstance final {
-		tsh::AbstractType type; // should this be symbol type?
-		base::StrID name;
+		tsh::AbstractType type;  // should this be symbol type?
+		base::StrID       name;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
@@ -33,19 +33,14 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLookupInTypeInstance, KeyOf_LookupInTypeInstance, CRef<LookupResult>)
 
 	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, LookupResult) {
-		static auto provide(
-			query::Context& ctx,
-			const QKey& key
-		) -> PResult {
+		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
 			// @TODO: #1479 this a mock that works for now, make it better
 
 			const auto& interface = key.type.getInterface(ctx);
-			const auto& elements = interface.getElementsWithName(key.name);
+			const auto& elements  = interface.getElementsWithName(key.name);
 
 			LookupResult result;
-			for (const auto& element: elements) {
-				result.leaves.emplace_back(element.getSymbol());
-			}
+			for (const auto& element: elements) result.leaves.emplace_back(element.getSymbol());
 
 			return result;
 		}
@@ -54,7 +49,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInTypeInstance);
-
 
 	CRef<LookupResult> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
@@ -74,7 +68,6 @@ namespace compiler::helios {
 			}
 			variant_case(TypeInstanceInterface, type) {
 				return ctx.query<QueryLookupInTypeInstance>({ type.type, name });
-
 			}
 			variant_case(TypeMetaInterface, type) {
 				throw base::NotYetImplemented("HInterface::lookup for type");
