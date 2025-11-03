@@ -16,6 +16,7 @@ namespace base {
 	 *
 	 * It is not aware of any of the object semantics, it just stores see raw bytes and allows to
 	 * construct and destroy the object in place.
+	 * For this reason it should be moved in memory.
 	 *
 	 * Any wrong usage results in undefined behavior.
 	 * See also: https://en.cppreference.com/w/cpp/utility/launder.html
@@ -38,7 +39,7 @@ namespace base {
 
 		// We set it explicitly, to make sure that in release builds destructor is trivial:
 		IF_BUILD_TYPE_RELEASE(~ManualLifetimeStorage() noexcept = default;)
-		IF_BUILD_TYPE_DEV(~ManualLifetimeStorage() RELEASE_NOEXCEPT {
+		IF_BUILD_TYPE_DEV(~ManualLifetimeStorage() {
 			CORE_ASSERT(
 				state == State::Empty,
 				"Object is still constructed during destruction of ManualLifetimeStorage"
@@ -88,9 +89,13 @@ namespace base {
 			    "I'm more confident this is UB free."
 			);
 
-			return std::launder(reinterpret_cast<ManualLifetimeStorage*>(
+			auto result = std::launder(reinterpret_cast<ManualLifetimeStorage*>(
 				reinterpret_cast<std::byte*>(obj_ref.get()) - OFFSET
 			));
+			IF_BUILD_TYPE_DEV({
+				CORE_ASSERT(result->state == State::Constructed, "Object is not constructed (getSelf)");
+			})
+			return result;
 		}
 	};
 

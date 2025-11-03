@@ -14,141 +14,25 @@
 #include <utility>
 
 namespace base {
-	/**
-	 * A wrapper around base::HashMap, that keeps references (memory addresses) valid.
-	 * @tparam DATA_T The datatype to store
-	 * @tparam KEY_T Indentifies data
-	 * @tparam HASH_T Hash functor for hashing keys
-	 */
-	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
-	class StableHashMapOLD final {
-	public:
-		StableHashMapOLD() = default;
-
-		/**
-		 * Returns the data identified by the key.
-		 * @note throws `std::out_of_range` if key is not present
-		 * @param key Data key
-		 * @return A reference to the data.
-		 */
-		DATA_T& operator[](const KEY_T& key) { return *data[key]; }
-
-		/**
-		 * Returns the data identified by the key.
-		 * @note throws `std::out_of_range` if key is not present
-		 * @param key Data key
-		 * @return A reference to the data.
-		 */
-		const DATA_T& operator[](const KEY_T& key) const { return *data[key]; }
-
-		/**
-		 * Returns a reference to the data inside an optional. If the data identified by the key
-		 * does not exist returns an empty optional.
-		 * @param key Data key
-		 * @return An optional with a reference to the data.
-		 */
-		Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) {
-			if_opt_some(data.atMaybe(key), ptr) { return (*ptr).refMut(); }
-			return {};
-		}
-
-		/**
-		 * Returns a const reference to the data inside an optional. If the data identified by the
-		 * key does not exist returns an empty optional.
-		 * @param key Data key
-		 * @return An optional with a const reference to the data.
-		 */
-		Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const {
-			if_opt_some(data.atMaybe(key), ptr) { return (*ptr).ref(); }
-			return {};
-		}
-
-		/**
-		 * Returns a copy of a data inside an optional. If the data identified by the
-		 * key does not exist returns an empty optional.
-		 * @param key Data key
-		 * @return An optional with a copy of the data.
-		 */
-		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const
-			requires std::is_copy_constructible_v<DATA_T> {
-			if_opt_some(data.atMaybe(key), ptr) { return *(*ptr); }
-			return {};
-		}
-
-		/**
-		 * If the container doesn't store the key yet, then inserts value identified by the key.
-		 * @param key Data key
-		 * @param value The data
-		 */
-		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(K&& key, D&& value) {
-			return data.put(std::forward<K>(key), ::base::makeBox<DATA_T>(std::forward<D>(value)));
-		}
-
-		/**
-		 * @brief Erases value at @p key position if it exists.
-		 * The references to the erased value are invalidated.
-		 * @returns Whether a value was erased.
-		 */
-		bool erase(const KEY_T& key) { return data.erase(key); }
-
-		/**
-		 * Clears all data from the data structure.
-		 */
-		void clear() { data.clear(); }
-
-		/**
-		 * Check if key is stored in the container.
-		 * @param key The key to query
-		 * @return True if containers already stores the key, false otherwise.
-		 */
-		bool contains(const KEY_T& key) const { return data.contains(key); }
-
-		/**
-		 * Query the number of pairs stored in the container.
-		 * @return Number of pairs
-		 */
-		[[nodiscard]]
-		usize size() const {
-			return data.size();
-		}
-
-		/**
-		 * @brief Data iterator -- begin.
-		 */
-		auto begin() { return data.begin(); }
-
-		/**
-		 * @brief Data iterator -- end.
-		 */
-		auto end() { return data.end(); }
-
-		/**
-		 * @brief Const data iterator -- begin.
-		 */
-		auto begin() const { return data.begin(); }
-
-		/**
-		 * @brief Const data iterator -- end.
-		 */
-		auto end() const { return data.end(); }
-
-	private:
-		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;
-	};
 
 	/**
 	 * Custom, Stable hash map implementation.
 	 * Its performance is similar or better then std::unordered_map, while keeping references always
 	 * stable.
+	 * 
+	 * Pointer to the stored data will never be invalidated until the data is erased from the map.
+	 * Iterators can be invalidated when elements are added or removed from the map.
 	 */
 	template<
 		typename KEY_T,
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
-	class StableHashMap20 final {
+	class StableHashMap final {
 	public:
+		/**
+		 * Key Value pair stored in the map.
+		 */
 		struct KeyValuePair final {
 			const KEY_T key;
 			DATA_T      value;
@@ -176,10 +60,6 @@ namespace base {
 				  key_value(std::forward<K>(key), std::forward<D>(value)) {}
 		};
 
-		std::vector<MRef<Node>>                                   buckets;
-		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
-		u64                                                       element_count = 0;
-
 		[[nodiscard]]
 		static auto keyHash(const KEY_T& key) {
 			return HASH_T{}(key);
@@ -187,7 +67,7 @@ namespace base {
 
 		[[nodiscard]]
 		u64 keyToBucket(const KEY_T& key) const RELEASE_NOEXCEPT {
-			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap20");
+			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
 
 			u64  hash = keyHash(key);
 			auto res  = hash % buckets.size();
@@ -235,6 +115,7 @@ namespace base {
 			Ref          current_node = bucket;
 			const KEY_T& key          = new_node->key_value.key;
 
+			// iterate until the end of the bucket:
 			while (true) {
 				if (current_node->key_value.key == key) {
 					// this can be changed to an assertion:
@@ -263,11 +144,11 @@ namespace base {
 		}
 
 	public:
-		StableHashMap20(): buckets(INITIAL_BUCKETS) {}
+		StableHashMap(): buckets(INITIAL_BUCKETS) {}
 
-		StableHashMap20(const StableHashMap20&) = delete;
+		StableHashMap(const StableHashMap&) = delete;
 
-		StableHashMap20(StableHashMap20&& other) noexcept:
+		StableHashMap(StableHashMap&& other) noexcept:
 			  buckets(std::move(other.buckets)),
 			  node_allocator(std::move(other.node_allocator)),
 			  element_count(other.element_count) {
@@ -275,7 +156,7 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
-		~StableHashMap20() {
+		~StableHashMap() {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
@@ -287,6 +168,7 @@ namespace base {
 		}
 
 		/**
+		 * Forward iterator over the key-value pairs in the map.
 		 * This is a template, so we can can have const and non-const versions.
 		 */
 		template<class ValueT>
@@ -314,7 +196,7 @@ namespace base {
 				  buckets_size(buckets_size) {}
 
 
-			friend class StableHashMap20;
+			friend class StableHashMap;
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
@@ -411,7 +293,7 @@ namespace base {
 			auto new_node = node_allocator.allocateEmplace(Node{
 				nullptr, std::forward<K>(key), std::forward<D>(value) });
 
-			// @TODO: make this more efficient, by direct, one-pass implementation
+			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
 				return nullptr;
@@ -474,15 +356,19 @@ namespace base {
 			MRef<Node> current_node  = buckets.at(bucket_index);
 			MRef<Node> previous_node = nullptr;
 
+			// iterate over the bucket:
 			while (current_node) {
 				if (current_node->key_value.key == key) {
 					// found the node to erase
+
+					// relink the pointers in the bucket:
 					if (previous_node) {
 						previous_node->next = current_node->next;
 					} else {
 						// erasing first node in bucket
 						buckets.at(bucket_index) = current_node->next;
 					}
+
 					node_allocator.deallocateDestroy(current_node.toOpt().value());
 					element_count--;
 					return true;
@@ -493,6 +379,10 @@ namespace base {
 			return false;
 		}
 
+		/**
+		 * Clears the map, destroying all stored elements.
+		 * @note does not free the memory used to store the elements.
+		 */
 		void clear() RELEASE_NOEXCEPT {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
@@ -547,8 +437,22 @@ namespace base {
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
+
+	private:
+		/**
+		 * Array of bucket beginnings.
+		 */
+		std::vector<MRef<Node>> buckets;
+
+		/**
+		 * Memory pool allocator for node storage.
+		 */
+		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
+
+		/**
+		 * Number of elements stored in the map.
+		 */
+		u64 element_count = 0;
 	};
 
-	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
-	using StableHashMap = StableHashMap20<KEY_T, DATA_T, HASH_T>;
 }

@@ -2,14 +2,15 @@
 #include <base/misc/noexcept.hpp>
 #include <base/pointers/box.hpp>
 
-#include <cstddef>
-#include <new>
+// #include <cstddef>
+// #include <new>
 
 namespace base {
 
 	/**
-	 * A memory pool object of a single type allocator.
+	 * A memory pool object allocator of a single type.
 	 * It manages objects, not memory.
+	 * It is not a valid c++-allocator.
 	 *
 	 * @note After some IRL debates it was concluded that allocate/deallocate api should
 	 * work on plain Refs, and deallocation must internally search for a buffer and an index of the
@@ -24,13 +25,12 @@ namespace base {
 		constexpr static u64 BLOCK_ELEMENT_COUNT = BYTE_BLOCK_SIZE / sizeof(StorageT);
 		using ItemArray                          = std::array<StorageT, BLOCK_ELEMENT_COUNT>;
 
+		static_assert(sizeof(ItemArray) == BLOCK_ELEMENT_COUNT * sizeof(StorageT), "ItemArray size mismatch");
+
 		static_assert(BLOCK_ELEMENT_COUNT > 0, "BYTE_BLOCK_SIZE is too small for type T");
 
 		constexpr static u64 PADDING_BYTES_COUNT = BYTE_BLOCK_SIZE - sizeof(ItemArray);
 
-		/**
-		 * A single buffer (i.e. "pool") of objects.
-		 */
 		struct BufferNoPadding final {
 			ItemArray items;
 		};
@@ -43,6 +43,9 @@ namespace base {
 			char padding[N];  // NOLINT
 		};
 
+		/**
+		 * A single buffer (i.e. "pool") of objects.
+		 */
 		using Buffer = std::conditional_t<
 			PADDING_BYTES_COUNT == 0,
 			BufferNoPadding,
@@ -55,12 +58,12 @@ namespace base {
 		/**
 		 * Simple helper type that wraps index of a buffer and index of an item within that buffer.
 		 */
-		struct BufferIndex final {
+		struct BufferItemIndex final {
 			u64 buffer_idx = 0;
 			u64 item_idx   = 0;
 
-			BufferIndex next() const {
-				BufferIndex next_idx = *this;
+			BufferItemIndex next() const {
+				BufferItemIndex next_idx = *this;
 				next_idx.item_idx++;
 				if (next_idx.item_idx >= BLOCK_ELEMENT_COUNT) [[unlikely]] {
 					next_idx.buffer_idx++;
@@ -78,9 +81,9 @@ namespace base {
 			  buffers(std::move(other.buffers)),
 			  free_list(std::move(other.free_list)),
 			  allocated_count(other.allocated_count),
-			  next_buffer_idx(other.next_buffer_idx) {
+			  next_item_idx(other.next_item_idx) {
 			other.allocated_count = 0;
-			other.next_buffer_idx = BufferIndex{};
+			other.next_item_idx = BufferItemIndex{};
 		}
 
 		SingleTypeMemoryPoolAllocator& operator=(const SingleTypeMemoryPoolAllocator&) = delete;
@@ -93,7 +96,7 @@ namespace base {
 			allocated_count++;
 
 			// idx, in which we will allocate the new object:
-			BufferIndex allocation_idx;
+			BufferItemIndex allocation_idx;
 
 			// this will be unlikely in non-lsp scenarios:
 			if (not free_list.empty()) [[unlikely]] {
@@ -101,8 +104,8 @@ namespace base {
 				free_list.pop_back();
 			} else {
 				// else allocate in the next available slot:
-				allocation_idx  = next_buffer_idx;
-				next_buffer_idx = next_buffer_idx.next();
+				allocation_idx  = next_item_idx;
+				next_item_idx = next_item_idx.next();
 
 				// check if we need to allocate a new buffer:
 				if (allocation_idx.buffer_idx >= buffers.size()) [[unlikely]]
@@ -121,6 +124,8 @@ namespace base {
 		/**
 		 * Destroys the given object without deallocating its memory.
 		 * The allocator will treat the memory as still allocated.
+		 * It will be freed when the allocator is destroyed.
+		 *
 		 * @note If object pointed to by obj_ref was not allocated by this allocator,
 		 * behavior is undefined, EVEN IN DEV BUILDS.
 		 */
@@ -132,6 +137,8 @@ namespace base {
 
 		/**
 		 * Deallocates and destroys the given object.
+		 * Frees the memory for future allocations.
+		 *
 		 * @note If object pointed to by obj_ref was not allocated by this allocator,
 		 * behavior is undefined, EVEN IN DEV BUILDS.
 		 */
@@ -141,7 +148,7 @@ namespace base {
 			Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
 
 			// idx, in which the object is stored:
-			BufferIndex deallocation_idx;
+			BufferItemIndex deallocation_idx;
 
 			bool found = false;
 
@@ -167,7 +174,7 @@ namespace base {
 			free_list.push_back(deallocation_idx);
 		}
 
-		~SingleTypeMemoryPoolAllocator() RELEASE_NOEXCEPT {
+		~SingleTypeMemoryPoolAllocator() IF_BUILD_TYPE_RELEASE(noexcept) {
 			CORE_ASSERT(
 				allocated_count == 0,
 				"Not all allocated objects were deallocated before destruction of the allocator"
@@ -184,13 +191,16 @@ namespace base {
 		/**
 		 * List of free items in the pools.
 		 */
-		std::vector<BufferIndex> free_list;
+		std::vector<BufferItemIndex> free_list;
 
 		/**
 		 * Total number of allocated items in the pool.
 		 */
 		u64 allocated_count = 0;
 
-		BufferIndex next_buffer_idx = { 0, 0 };
+		/**
+		 * Next (buffer,item) index to allocate in, when free list is empty.
+		 */
+		BufferItemIndex next_item_idx = { 0, 0 };
 	};
 }
