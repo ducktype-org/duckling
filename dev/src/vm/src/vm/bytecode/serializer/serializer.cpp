@@ -7,6 +7,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <iomanip>
@@ -34,6 +35,8 @@ namespace vm::code {
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
+
+	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 

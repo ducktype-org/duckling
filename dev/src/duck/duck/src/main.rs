@@ -1,0 +1,78 @@
+use crate::{indent::indent, terminal::Terminal};
+
+pub mod driver;
+pub mod duck_cfg;
+pub mod duck_ctx;
+pub mod indent;
+mod terminal;
+
+pub use duck_ctx::DuckCtx;
+use tracing::debug;
+
+fn main() {
+    setup_logger();
+    let mut ctx = match DuckCtx::new() {
+        Ok(ctx) => ctx,
+        Err(err) => {
+            let stdout = Terminal::stdout();
+            let stderr = Terminal::stderr();
+            print_error_and_exit(err, &stdout, &stderr);
+        }
+    };
+    if let Err(e) = driver::run::run(&mut ctx) {
+        print_error_and_exit(e, ctx.console(), ctx.error_console())
+    }
+}
+
+fn setup_logger() {
+    use tracing_subscriber::{
+        EnvFilter, Layer,
+        fmt::{layer, time::Uptime},
+        prelude::*,
+        registry,
+    };
+    // @TODO: #1353 Something like `DUCK_DEBUG`? On the other hand it also affects loggers in quackpack (the library),
+    //        but the cli tool is called duck...
+    let subscriber = EnvFilter::from_env("QP_DEBUG");
+    let layer = layer()
+        .with_timer(Uptime::default())
+        .with_ansi(true)
+        .with_filter(subscriber);
+
+    registry().with(layer).init();
+    debug!("start = {:#?}", std::time::SystemTime::now());
+}
+
+fn print_error_and_exit(error: anyhow::Error, stdout: &Terminal, stderr: &Terminal) -> ! {
+    if let Some(clap_err) = error.downcast_ref::<clap::Error>() {
+        let error_msg = clap_err.render();
+        let term = if clap_err.use_stderr() {
+            stderr
+        } else {
+            stdout
+        };
+        term.print_no_nl(error_msg.ansi());
+
+        let code = if matches!(clap_err.kind(), clap::error::ErrorKind::DisplayHelp) {
+            0
+        } else {
+            1
+        };
+        std::process::exit(code)
+    }
+    print_error(error, stderr);
+    let code = 1;
+    std::process::exit(code)
+}
+
+fn print_error(error: anyhow::Error, term: &Terminal) {
+    for (i, e) in error.chain().enumerate() {
+        if i == 0 {
+            term.error(e);
+        } else {
+            term.print("");
+            term.print_no_nl(indent("Caused by:", 2));
+            term.print_no_nl(indent(&e.to_string(), 4));
+        }
+    }
+}

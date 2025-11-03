@@ -1,0 +1,6 @@
+[security.typos]
+max_distance = 1
+enabled = true
+
+[aliases]
+abababa = "echo"

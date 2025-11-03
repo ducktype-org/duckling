@@ -28,6 +28,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		bool isMutable() const {
+			return is_mutable;
+		}
+
+		[[nodiscard]]
 		base::StrID getName() const {
 			return name.value;
 		}
