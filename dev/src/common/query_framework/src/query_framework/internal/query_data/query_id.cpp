@@ -40,7 +40,7 @@ namespace query::internal {
 
 		using DataMap = base::HashMap<QueryID, QueryData>;
 
-		using hasStableHashMap = base::HashMap<QueryID, bool>;
+		using HasStableHashMap = base::HashMap<QueryID, bool>;
 
 		/**
 		 * @note Access to data is done this way, to make it safe to use before main.
@@ -51,13 +51,21 @@ namespace query::internal {
 			return data_map;
 		}
 
-		hasStableHashMap& hasStableHashMapInstance() {
-			static hasStableHashMap map{};
+		/**
+		 * This is temporary
+		 * We will not need that whe Query Tags are implemented and proper checking will be done
+		 * @TODO: #1433 Remove this when Query Tags are implemented
+		 */
+		HasStableHashMap& hasStableHashMapInstance() {
+			static HasStableHashMap map{};
 			return map;
 		}
 	}
 
-	const QueryData& QueryID::getData() const { return dataMap().at(*this); }
+	const QueryData& QueryID::getData() const {
+		CORE_ASSERT(dataMap().contains(*this), "QueryID not found in dataMap: ", this->asInt());
+		return dataMap().at(*this);
+	}
 
 	bool QueryID::hasStableHash() const { return hasStableHashMapInstance().at(*this); }
 

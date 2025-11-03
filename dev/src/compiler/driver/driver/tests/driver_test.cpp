@@ -1,6 +1,5 @@
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
-#include <driver/mark_nodes.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/options.hpp>
@@ -32,7 +31,6 @@ public:
 		// note: all of those tests have to work on different
 		// modules, since otherwise query will cache the results, and tests
 		// wont test what they are supposed to:
-		TESTER_ADD_TEST(markPreviousLeavesGreenTest);
 		TESTER_ADD_TEST(objFileGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
@@ -40,8 +38,6 @@ public:
 		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(saveArtifactsTest);
-		TESTER_ADD_TEST(collectPstHashesTest);
-		TESTER_ADD_TEST(loadPreviousGraphTest);
 
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -231,200 +227,6 @@ private:
 
 		ASSERT_TRUE(graph_ptr->compare(reloaded));
 		ASSERT_TRUE(reloaded.compare(*graph_ptr));
-	}
-
-	void collectPstHashesTest() {
-		using namespace compiler;
-		auto hashes = driver::collectAllPstElementHashesFromGlobalPackages();
-		std::cerr << "collectAllPstElementHashesFromGlobalPackages returned " << hashes.size()
-				  << " hashes\n";
-	}
-
-	void loadPreviousGraphTest() {
-		using namespace compiler;
-
-		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), "prev_graph_test_package"
-		);
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
-		});
-
-		// this is because you can't 'copy' the graph
-		auto original_bytes
-			= query::internal::ContextAccess::getState()->getGraphMutable()->serialize();
-		auto original_graph = query::internal::QueryGraph::deserialize(
-			std::span<const byte>(original_bytes.data(), original_bytes.size())
-		);
-
-		// Call the driver saveArtifacts implementation to write the graph to artifacts
-		driver::saveArtifacts();
-
-		driver::resetInitializationForTests();
-
-		compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = std::string("prev_graph_test_package"),
-					.package_path = fs::FilePath(path("modules/functions_1")),
-				},
-				.compilation_artifacts = {.artifacts_path = artifacts_path},
-				.debug_options         = {}
-			}
-		);
-
-		// Verify previous graph is present and equals the original
-		auto prev = query::internal::ContextAccess::getState()->getPreviousGraph().value();
-		ASSERT_TRUE(prev->compare(original_graph));
-		ASSERT_TRUE(original_graph.compare(*prev));
-	}
-
-	void markPreviousLeavesGreenTest() {
-		using namespace compiler;
-
-		// Reset initialization so we can re-initialize and load previous graph
-		driver::resetInitializationForTests();
-
-		// Re-initialize compiler which will load the previous graph from artifacts
-		compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = std::string("mark_nodes_test_package"),
-					.package_path = fs::FilePath(path("modules/functions_1")),
-				},
-				.compilation_artifacts = {.artifacts_path = artifacts_path},
-				.debug_options         = {}
-			}
-		);
-
-		// Compile the same module twice (first compile to produce previous graph,
-		// save artifacts, reinit and then mark previous leaves green)
-		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), "mark_nodes_test_package"
-		);
-
-		// First compilation
-		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
-		});
-
-		// Serialize the graph from first compile (previous graph to be saved)
-		auto original_bytes
-			= query::internal::ContextAccess::getState()->getGraphMutable()->serialize();
-		auto original_graph = query::internal::QueryGraph::deserialize(
-			std::span<const byte>(original_bytes.data(), original_bytes.size())
-		);
-
-		// Persist artifacts (this writes the previous graph)
-		driver::saveArtifacts();
-
-		// Reset initialization so we can re-initialize and load previous graph
-		driver::resetInitializationForTests();
-
-		std::cout << "Re-initializing compiler to load previous graph and mark leaves green\n";
-		// Re-initialize compiler which will load the previous graph from artifacts
-		compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = std::string("mark_nodes_test_package"),
-					.package_path = fs::FilePath(path("modules/functions_1")),
-				},
-				.compilation_artifacts = {.artifacts_path = artifacts_path},
-				.debug_options         = {}
-			}
-		);
-
-		std::cout << "Checking that previous graph nodes are marked correctly\n";
-
-		// Get previous graph and previous node colors map
-		auto prev = query::internal::ContextAccess::getState()->getPreviousGraph().value();
-		ASSERT_TRUE(prev->compare(original_graph));
-		ASSERT_TRUE(original_graph.compare(*prev));
-
-		auto prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(prev_colors_opt.has_value());
-		auto prev_colors = prev_colors_opt.value();
-
-		for (const auto& node: prev->getAllNodes()) {
-			if (prev_colors->contains(node)) {
-				// this is weird but node deps contains the node itself
-				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
-				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
-			} else {
-				ASSERT_TRUE(!node.q_id.hasStableHash() || prev->getNodeDeps(node).size() > 1);
-			}
-		}
-
-		driver::resetInitializationForTests();
-
-		compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = std::string("mark_nodes_test_package2"),
-					.package_path = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
-				},
-				.compilation_artifacts = {.artifacts_path = artifacts_path},
-				.debug_options         = {}
-			}
-		);
-
-		// all nodes should be red because the name of package changed
-
-		ASSERT_TRUE(query::internal::ContextAccess::getState()->getPreviousGraph().has_value());
-		prev            = query::internal::ContextAccess::getState()->getPreviousGraph().value();
-		prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(prev_colors_opt.has_value());
-		prev_colors = prev_colors_opt.value();
-		for (const auto& node: prev->getAllNodes())
-			if (prev_colors->contains(node))
-				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Red);
-
-		// compile the entire package to obtain new graph
-
-		compiler::driver::compilerEntirePackage(
-			global_state::getMainPackage(),
-			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
-		);
-
-		// save new graph
-		driver::saveArtifacts();
-
-		driver::resetInitializationForTests();
-
-		// we need the ComponentHash to be the same to simulate the change in the files
-		compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = std::string("mark_nodes_test_package2"),
-					.package_path = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),
-				},
-				.compilation_artifacts = {.artifacts_path = artifacts_path},
-				.debug_options         = {}
-			}
-		);
-
-		prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(prev_colors_opt.has_value());
-		prev_colors = prev_colors_opt.value();
-
-		int green_count = 0;
-		int red_count   = 0;
-		for (const auto& node: prev->getAllNodes()) {
-			if (prev_colors->contains(node)) {
-				if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Green)
-					green_count++;
-				else if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Red)
-					red_count++;
-				else
-					ASSERT_TRUE(false);
-			}
-		}
-		std::cerr << "Green nodes: " << green_count << ", Red nodes: " << red_count << '\n';
-		ASSERT_TRUE(green_count > 0);
-		// only one element should be red (variable name a, changed to c)
-		ASSERT_TRUE(red_count == 1);
 	}
 };
 

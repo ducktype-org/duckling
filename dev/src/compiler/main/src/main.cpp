@@ -20,6 +20,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
@@ -33,7 +34,6 @@
 #include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
-#include <random>
 
 /**
  * Simple function for showing compilation errors.
@@ -99,24 +99,6 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
 		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
 	};
-}
-
-/**
- * @brief Generates a random alphanumeric string of the specified length.
- * @param length The length of the random string to generate.
- * @return A random alphanumeric string.
- */
-std::string generateRandomString(size_t length) {
-	static constexpr std::string_view CHARS
-		= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	static std::random_device                    rd;
-	static std::mt19937                          generator(rd());
-	static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
-
-	std::string random_string;
-	random_string.reserve(length);
-	for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
-	return random_string;
 }
 
 /**
@@ -241,9 +223,9 @@ clah::Clah getClahForMain() {
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
-					auto package_name
-						= options.getValue<std::string>("name").copyValueOr(generateRandomString(32)
-		                );
+					auto package_name    = options.getValue<std::string>("name").copyValueOr(
+                        base::generateRandomString(32)
+                    );
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -392,9 +374,9 @@ clah::Clah getClahForMain() {
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
-					auto package_name
-						= options.getValue<std::string>("name").copyValueOr(generateRandomString(32)
-		                );
+					auto package_name    = options.getValue<std::string>("name").copyValueOr(
+                        base::generateRandomString(32)
+                    );
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(

@@ -191,10 +191,8 @@ namespace query::internal {
 		std::is_invocable_v<decltype(type::load), query::KHash<type::QKey>>,                      \
 		"Load function must be callable with hash of QKey"                                        \
 	);                                                                                            \
-	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::registerQuery(         \
-		type::QueryType::getData(),                                                               \
-		std::bool_constant<::query::HasStablePerfectHash<type::QKey>>::value                      \
-	);
+	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
+		registerQuery(type::QueryType::getData(), ::query::HasStablePerfectHash<type::QKey>);
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

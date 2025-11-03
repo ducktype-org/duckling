@@ -1,7 +1,6 @@
 #include "initialize.hpp"
 
-#include "mark_nodes.hpp"
-
+#include <driver_private/mark_nodes.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
@@ -74,23 +73,6 @@ namespace compiler::driver {
 				}
 			}
 		}
-	}
-
-	void resetInitializationForTests() {
-		using query::internal::ContextAccess;
-		using query::internal::QueryState;
-
-		// Clear root collection and packages so setRootCollection can be called again
-		global_state::setters::clearRootCollectionForTests();
-		global_state::setters::clearPackagesForTests();
-
-		// Reset main query state in-place
-		QueryState* state_raw = &*ContextAccess::getState();
-		state_raw->~QueryState();
-		new (state_raw) QueryState();
-
-		// Reset initialization flag so initializeTheCompiler can run again
-		is_initialized = false;
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {

@@ -36,8 +36,5 @@ namespace global_state {
 
 		/** Adds the main package to the global state. */
 		void addMainPackage(const std::string& name, const fs::FilePath& path);
-
-		/** Test helper: clear registered packages so tests can reinitialize. */
-		void clearPackagesForTests();
 	}
 }

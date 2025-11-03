@@ -17,10 +17,4 @@ namespace compiler::driver {
 	 * such as handling change in the source code input.
 	 */
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options);
-
-	/**
-	 * @brief Test helper: resets the initialization state of the compiler
-	 * so that tests can call `initializeTheCompiler` again in the same process.
-	 */
-	void resetInitializationForTests();
 }

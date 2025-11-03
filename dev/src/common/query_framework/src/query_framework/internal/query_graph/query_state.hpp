@@ -69,7 +69,7 @@ namespace query::internal {
 		 * The immutable graph that hold the state from previous compilation.
 		 * This is used for incremental compilation.
 		 */
-		base::Optional<QueryGraph> previous;
+		base::Optional<const QueryGraph> previous;
 
 	public:
 		QueryState()                             = default;

@@ -15,11 +15,5 @@ namespace global_state {
 		 * This should only be called by the driver.
 		 */
 		void setRootCollection(Box<artifacts::ArtifactCollection>);
-
-		/**
-		 * Test helper: clear the root collection so tests can reinitialize the driver
-		 * in the same process.
-		 */
-		void clearRootCollectionForTests();
 	}
 }

@@ -1,4 +1,4 @@
-#include "mark_nodes.hpp"
+#include <driver_private/mark_nodes.hpp>
 
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -21,10 +21,20 @@ namespace compiler::driver {
 
 		auto collect_from_pst = [&](auto& pst_ref) {
 			auto root = pst_ref->getRootElement();
-			if (auto maybe = root.illegalAccess()) out.insert(maybe.value()->getHash());
+			if (auto maybe = root.illegalAccess()) {
+				auto el = maybe.value();
+				out.insert(el->getHash());
+				// Test-only: print element hierarchical path hash string for visibility
+				//std::cout << el->getElementPathHash().str() << '\n';
+			}
 			auto elems = pst::viewAllSubTreeElements(root);
 			for (auto& el: elems)
-				if (auto maybe = el.illegalAccess()) out.insert(maybe.value()->getHash());
+				if (auto maybe = el.illegalAccess()) {
+					auto ptr = maybe.value();
+					out.insert(ptr->getHash());
+					// Test-only: print element hierarchical path hash string for visibility
+					//std::cout << ptr->getElementPathHash().str() << '\n';
+				}
 		};
 
 		// Process main source file if present

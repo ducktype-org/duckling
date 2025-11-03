@@ -21,7 +21,5 @@ namespace global_state {
 		void addMainPackage(const std::string& name, const fs::FilePath& path) {
 			packages.insert(packages.begin(), { base::StrID(name.c_str()), path });
 		}
-
-		void clearPackagesForTests() { packages.clear(); }
 	}
 }
