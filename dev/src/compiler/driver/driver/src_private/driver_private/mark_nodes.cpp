@@ -1,5 +1,4 @@
 #include <driver_private/mark_nodes.hpp>
-
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
@@ -24,16 +23,12 @@ namespace compiler::driver {
 			if (auto maybe = root.illegalAccess()) {
 				auto el = maybe.value();
 				out.insert(el->getHash());
-				// Test-only: print element hierarchical path hash string for visibility
-				//std::cout << el->getElementPathHash().str() << '\n';
 			}
 			auto elems = pst::viewAllSubTreeElements(root);
 			for (auto& el: elems)
 				if (auto maybe = el.illegalAccess()) {
 					auto ptr = maybe.value();
 					out.insert(ptr->getHash());
-					// Test-only: print element hierarchical path hash string for visibility
-					//std::cout << ptr->getElementPathHash().str() << '\n';
 				}
 		};
 
@@ -116,11 +111,9 @@ namespace compiler::driver {
 
 			if (hashes.contains(node.hash.val)) {
 				state->setPrevNodeColor(node, QueryState::PrevColor::Green);
-				std::cout << "Marked node as green: " << node.q_id.getData().name << '\n';
 			} else {
 				// Mark node as red
 				state->setPrevNodeColor(node, QueryState::PrevColor::Red);
-				std::cout << "Marked node as red: " << node.q_id.getData().name << '\n';
 			}
 		}
 	}
