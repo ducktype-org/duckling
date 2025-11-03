@@ -3,6 +3,7 @@
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
@@ -13,6 +14,8 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
+
+#include <query_framework/context.hpp>
 
 #include <variant>
 #include <vector>
@@ -255,13 +258,57 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Represents access into a variable (local or global), through a chain of fields.
+	 *
+	 * For example, for an access like `a.b.c`, where `a` is a local or global variable,
+	 * and `b` and `c` are fields within that variable, this structure would contain
+	 * the base variable (`a`) and the access chain (`[b, c]`).
+	 */
+	struct MirAccess final {
+		std::variant<MirLocalRef, MirGlobal> base;
+
+		/**
+		 * @brief The symbols of the fields accessed within the variable.
+		 */
+		std::vector<helios::SymID> access_chain;
+
+		/**
+		 * @brief The type of the final accessed field, stored for better caching / information flow.
+		 */
+		tsh::SymbolType<> type;
+
+		MirAccess(
+			query::Context& ctx, std::variant<MirLocalRef, MirGlobal> base, const helios::SymID field
+		):
+			  base(std::move(base)),
+			  access_chain({ field }),
+			  type(ctx.query<helios::QueryTypeOfSymbol>(field)->value()) {}
+
+		/**
+		 * Extends the MIRAccess structure by adding a new field to the access chain.
+		 * @param field The next field to access.
+		 * @return The extended MIRAccess structure.
+		 */
+		MirAccess& addField(query::Context& ctx, const helios::SymID field) {
+			access_chain.push_back(field);
+			type = ctx.query<helios::QueryTypeOfSymbol>(field)->value();
+			return *this;
+		}
+
+		/**
+		 * @brief Returns true if the accessed field is not of a unit type or a other data-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const {
+			return type.getType().carriesInformation();
+		}
+	};
+
+	/**
 	 * @brief Structure representing any MIR value.
 	 */
 	struct MIRValue final {
 	private:
-		// @TODO: literal, ...
-		// "LocalAccess" a.b.c
-		// "GlobalAccess" a.b.c
 		// MIR Locals are stored indirectly through MirLocalRef because
 		// they are owned by MIR Function, unlike MIR Globals.
 		using ValueType = std::variant<
@@ -270,6 +317,7 @@ namespace compiler::mir {
 			MirBoolConst,
 			MirLocalRef,
 			MirGlobal,
+			MirAccess,
 			BlockID,
 			MirFunctionLiteral>;
 
@@ -287,6 +335,8 @@ namespace compiler::mir {
 		MIRValue(MirLocalMutRef value): value(value) {}
 
 		MIRValue(MirGlobal value): value(value) {}
+
+		MIRValue(MirAccess value): value(value) {}
 
 		MIRValue(BlockID value): value(value) {}
 
@@ -333,14 +383,14 @@ namespace compiler::mir {
 				variant_case_novalue(MirUnitConst) { return false; }
 				variant_case(MirLocalRef, local) { return local->carriesInformation(); }
 				variant_case(MirGlobal, global) { return global.carriesInformation(); }
+				variant_case(MirAccess, access) { return access.carriesInformation(); }
 			}
 			return true;
 		}
 	};
 
 	/**
-	 * @brief Structure representing meta informations about operation
-	 * such as:
+	 * @brief Structure representing meta information about operation such as:
 	 * * does operation construct some variable
 	 * * does operation destruct some variable
 	 * * does operation move some variable

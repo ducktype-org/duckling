@@ -200,8 +200,27 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
-		void visitAccessExpr(const hc::AccessExpr&) override {
-			throw base::NotYetImplemented("access expr lowering");
+		void visitAccessExpr(const hc::AccessExpr& expr) override {
+			auto       sub_result = lowerSubExpr(*expr.base, continuation);
+			const auto sub_begin  = sub_result.begin;
+			const auto sub_value  = sub_result.getResult(function);
+
+			variant_match(sub_value.getVariant()) {
+				variant_case(MirLocalRef, local) {
+					valueOutput(sub_begin, MirAccess(function.getContext(), local, expr.field));
+				}
+				variant_case(MirGlobal, global) {
+					valueOutput(sub_begin, MirAccess(function.getContext(), global, expr.field));
+				}
+				variant_case(MirAccess, access) {
+					auto new_access = access;
+					valueOutput(sub_begin, new_access.addField(function.getContext(), expr.field));
+				}
+				variant_default {
+					// Access base is not a variable or in a variable.
+					CORE_UNREACHABLE();
+				}
+			}
 		}
 
 		void visitSequenceExpr(const hc::SequenceExpr&) override {

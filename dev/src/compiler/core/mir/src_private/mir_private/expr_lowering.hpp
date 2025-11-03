@@ -30,7 +30,7 @@ namespace compiler::mir {
 		/**
 		 * @brief Represents a finalizer instruction that saves the result of an expression.
 		 * Stores hole where instruction will be saved, instruction without output and type of
-		 * result. This instruction can be performed on provided varaible
+		 * result. This instruction can be performed on provided variable
 		 * (storeResultInGivenVariable) or generated temporary (getResult).
 		 */
 		struct Finalizer final {
@@ -44,7 +44,7 @@ namespace compiler::mir {
 		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value);
 
 		/**
-		 * @brief helper function returing type of result. Can be used if MIRValue is not stored.
+		 * @brief helper function returning type of result. Can be used if MIRValue is not stored.
 		 */
 		[[nodiscard]]
 		tsh::SymbolType<> getResultType();
