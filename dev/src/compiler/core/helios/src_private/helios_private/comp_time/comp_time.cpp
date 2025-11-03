@@ -378,8 +378,7 @@ namespace compiler::helios {
 			if (!call_expr) return query::QError(errors::Failed());
 
 			const auto* callee_ident
-				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.operator->());
-			// TODOP: This is strange ->(). Change that.
+				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
 			if (!callee_ident) return query::QError(errors::Failed());
 
 			const SymID function_sym_id = callee_ident->symbol;

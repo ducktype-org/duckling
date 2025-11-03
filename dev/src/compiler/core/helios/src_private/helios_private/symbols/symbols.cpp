@@ -779,7 +779,7 @@ namespace compiler::helios {
 
 			void visitCallExpr(const code::CallExpr& expr) override {
 				if (const auto* callee_ident
-				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.operator->())) {
+				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.get())) {
 					if (callee_ident->expression_type.getType().getKind() == tsh::Kind::Function)
 						called_functions.insert(callee_ident->symbol);
 				}
