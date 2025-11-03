@@ -16,6 +16,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
+#include "ctv/ctv.hpp"
 
 #include <iostream>
 #include <ranges>
@@ -305,6 +306,10 @@ namespace compiler::backend_vm {
 			AddLirFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
+				variant_case(ctv::CompileTimeValue, ctv)	 {
+					// TODOP: This is a mock. Add issue.
+					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(ctv) };
+				}
 				variant_case(i64, value) {
 					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
 				}

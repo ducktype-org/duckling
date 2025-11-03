@@ -20,15 +20,17 @@ namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
 	std::string CompileTimeValue::toString() const {
+		std::cout << "Variant index in CTV: " << value.index() << '\n'; 
 		// clang-format off
 		VARIANT_VISIT(value,
 			VISIT_CASE(bool, val, return std::string(val ? "true" : "false"))
 			VISIT_CASE(UnitCTV, _, return std::string("()"))
 			VISIT_CASE(NumericValue, val, return val.toString())
 			VISIT_CASE(tsh::SymbolType<>, val, return val.toString())
+
 		) 
 		// clang-format off
-		CORE_UNREACHABLE();
+		return "[ERROR]";
 }
 
 	base::Optional<tsh::SymbolType<>> CompileTimeValue::getType(query::Context& ctx) const {

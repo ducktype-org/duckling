@@ -30,6 +30,11 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <variant>
+
+#define DEBUG(CONTENT) std::cout << "[QUERY HOUT OF EXPR]: " << CONTENT << '\n';
+
+#define NDEBUG(CONTENT) std::cout << "[NUMERIC DEDUCTION]: " << CONTENT << '\n';
 
 namespace compiler::helios::code {
 	namespace {
@@ -91,6 +96,7 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseSignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
+			NDEBUG("Parse signed int");
 			// TODOP: i128 potentially?
 			i64  parsed_value = 0;
 			auto result
@@ -122,6 +128,7 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseUnsignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
+			NDEBUG("Parse unsigned int");
 			// TODOP: u128 potentially?
 			u64  parsed_value = 0;
 			auto result
@@ -151,6 +158,7 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseFloat(
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
+			NDEBUG("Parse float");
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
@@ -169,11 +177,13 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> deduceIntegerType(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
+			NDEBUG("Deduce integer type");
 			i64  parsed_value = 0;
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 			if (result.ec != std::errc()
 			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
+				NDEBUG("Deduce integer type from_chars error");
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 						position, "Invalid literal: deduced integer type"
@@ -183,22 +193,38 @@ namespace compiler::helios::code {
 			}
 
 			// TODOP: issue, add support for i8 and i128 types
-			if (parsed_value <= std::numeric_limits<i16>::max())
-				return numeric_value::NumericValue{ static_cast<i16>(parsed_value) };
-			else if (parsed_value <= std::numeric_limits<i32>::max())
-				return numeric_value::NumericValue{ static_cast<i32>(parsed_value) };
-			else if (parsed_value <= std::numeric_limits<i64>::max())
-				return numeric_value::NumericValue{ static_cast<i64>(parsed_value) };
-
-			ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-				position, "Integer literal overflow"
-			));
-			return {};
+			numeric_value::NumericValue numeric_result;
+			if (parsed_value <= std::numeric_limits<i16>::max()) {
+				NDEBUG("i16");
+				numeric_result = numeric_value::NumericValue{ static_cast<i16>(parsed_value) };
+			} else if (parsed_value <= std::numeric_limits<i32>::max()) {
+				NDEBUG("i32");
+				numeric_result = numeric_value::NumericValue{ static_cast<i32>(parsed_value) };
+			} else if (parsed_value <= std::numeric_limits<i64>::max()) {
+				NDEBUG("i64");
+				numeric_result = numeric_value::NumericValue{ static_cast<i64>(parsed_value) };
+			} else {
+				NDEBUG("Deduce integer type literal overflow");
+				ctx.log(
+					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+						position, "Integer literal overflow"
+					)
+				);
+				return {};
+			}
+			
+			// TODOP: Add issue number
+			// @TODO: For now, until the cast instuction are added we cast all the deduced types to
+			// i64 to avoid adding a type specifier to  every numeric literal in the tests.
+			return numeric_value::NumericValue{ std::visit(
+				[&](auto&& val) { return static_cast<i64>(val); }, numeric_result.getStorage()
+			) };
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
+			NDEBUG("Deduce float type");
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 			if (result.ec != std::errc()
@@ -233,10 +259,17 @@ namespace compiler::helios::code {
 			base::Optional<base::Box<Expr>> node;
 
 			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
+				DEBUG("Visit unit");
 				node = makeBox<LiteralUnitExpr>(ctx);
 			}
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
+				DEBUG("Visit expr value");
+				DEBUG("Called for:");
+				stmt->dprint(std::cout);
+				std::cout << "\n===========================\n";
+
+
 				auto value = stmt->getValue().value.strView();
 				auto type_specifier_strid
 					= stmt->getValue().type_specifier.copyValueOr(base::StrID(""));
@@ -257,7 +290,6 @@ namespace compiler::helios::code {
 				}
 
 				base::Optional<numeric_value::NumericValue> parsed_numeric_value;
-
 				switch (type_specifier) {
 				case lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier: {
 					bool is_float        = value.find_first_of(".eE") != std::string_view::npos;
@@ -298,14 +330,19 @@ namespace compiler::helios::code {
 				case lang_def::NumericLiteralTypeSpecifier::f80:
 				case lang_def::NumericLiteralTypeSpecifier::u128:
 				case lang_def::NumericLiteralTypeSpecifier::i128:
-					throw base::NotYetImplemented(base::strConcat(
-						"Unhandled type specifier in hout of expr: ",
-						lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"Unhandled type specifier in hout of expr: ",
+							lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+						)
+					);
 				}
 
-				if (parsed_numeric_value.has_value())  // If failed, the error is logged.
+				if (parsed_numeric_value.has_value()) {  // If failed, the error is logged.
+					DEBUG("Visit expr value: RETURN GOOD");
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
+				}
+				DEBUG("Visit expr value: RETURN BAD");
 				return;
 			}
 
@@ -320,12 +357,14 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> binaryBuiltin(
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
+				DEBUG("Visit binary builtin");
 				auto operation = findBinaryBuiltin(op, lhs.ref(), rhs.ref());
 				if (operation) {
 					return makeBox<BinaryOperatorExpr>(
 						ctx, operation.value(), std::move(lhs), std::move(rhs)
 					);
 				}
+				DEBUG("Visit binary builtin: RETURN BAD");
 				return {};
 			}
 
@@ -336,6 +375,7 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
 				auto operation = findUnaryBuiltin(op, expr.ref());
 
+				DEBUG("Visit unary builtin");
 				if (operation)
 					return makeBox<UnaryOperatorExpr>(operation.value(), std::move(expr));
 				else
@@ -343,6 +383,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
+				DEBUG("Visit binary op");
 				// handle variants:
 				if (stmt->getOperator().str() == "|") {
 					// @todo HOUT 2.0:
@@ -402,6 +443,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
+				DEBUG("Visit chain expr");
 				auto result = fromChainExpr(ctx, chain_expr);
 				if (result.hasError()) {
 					// Error has occurred.
@@ -411,12 +453,14 @@ namespace compiler::helios::code {
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
+				DEBUG("Visit round expr");
 				PstExprToHoutExprVisitor vis(ctx);
 				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
 				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, std::move(*vis.node));
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
+				DEBUG("Visit identifier literal");
 				// note: this is a mock, it should be unified with ChainExpr
 				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
@@ -432,6 +476,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
+				DEBUG("Visit keyword literal");
 				using enum tsh::IntegralAbstractType::Signedness;
 				switch (stmt->getKeyword()) {
 				// true, false:
@@ -634,10 +679,12 @@ namespace compiler::helios::code {
 					)) {
 						opt_some(op) { operators.push_back(op); }
 						opt_none {
-							ctx.log(makeBox<
+							ctx.log(
+								makeBox<
 									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-								stmt->getSourcePosition(), "No builtin operator found"
-							));
+									stmt->getSourcePosition(), "No builtin operator found"
+								)
+							);
 							return;
 						}
 					}
@@ -660,6 +707,7 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
+			DEBUG("VISITOR FAILED");
 			return query::QError(errors::Failed());
 		}
 	}
@@ -674,6 +722,10 @@ namespace compiler::helios {
 			CORE_ASSERT(
 				key.element.unlockOpt(ctx).has_value(), "Nullptr provided to QueryHoutOfExpr"
 			);
+
+			DEBUG("Called top level query for:");
+			key.element.unlock(ctx)->debugPrint(std::cout);
+			std::cout << '\n' << "======================" << '\n';
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);

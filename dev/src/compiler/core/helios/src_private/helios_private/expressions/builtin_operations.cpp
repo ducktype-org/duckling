@@ -5,7 +5,14 @@
 
 #include <typesystem/higher/types.hpp>
 
+#include "base/str/str_utils.hpp"
+
 #include <lang_definitions/key_spec_op.hpp>
+
+#include <iostream>
+
+
+#define DEBUG(CONTENT) std::cout << "[FIND BINARY BUILTIN]: " << CONTENT << '\n';
 
 namespace compiler::helios::code {
 
@@ -16,12 +23,25 @@ namespace compiler::helios::code {
 		// @todo: make it smarter?
 		// when refactoring it remember about unaryBuiltin
 
+		// TODOOOOOOO: This is broken!!!!
+		DEBUG("Called");
+		DEBUG("Lhs");
+		lhs->debugPrint(std::cout);
+		std::cout << '\n';
+		DEBUG("Rhs");
+		rhs->debugPrint(std::cout);
+		std::cout << '\n';
+
 		// Get argument types.
 		auto lhs_type = lhs->expression_type;
 		auto rhs_type = rhs->expression_type;
 
 		// Confirm appropriate types.
-		auto argument_kind                   = lhs_type.getType().getKind();
+		auto argument_kind = lhs_type.getType().getKind();
+		DEBUG("LHS arg kind");
+		DEBUG(base::enumToStr(argument_kind).strView());
+		DEBUG("RHS arg kind");
+		DEBUG(base::enumToStr(rhs_type.getType().getKind()).strView());
 		bool are_arguments_same_kind         = argument_kind == rhs_type.getType().getKind();
 		bool are_arguments_int_float_or_bool = argument_kind == tsh::Kind::Integral
 		                                    or argument_kind == tsh::Kind::Bool
@@ -30,6 +50,7 @@ namespace compiler::helios::code {
 		if (not are_arguments_same_kind or not are_arguments_int_float_or_bool) {
 			// @TODO: report an error?
 			// No builtins for types other than ints, floats and bools for now.
+			DEBUG("BINARY TYPE MISMATCH");
 			return {};
 		}
 
@@ -38,9 +59,29 @@ namespace compiler::helios::code {
 			auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
 			auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
+			DEBUG("LHS integral size");
+			DEBUG(usize(lhs_as_integer.getSize()));
+			DEBUG("RHS integral size");
+			DEBUG(usize(rhs_as_integer.getSize()));
+
 			// TODOP: Do sizes have to match?
 			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
 			    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
+				DEBUG("Integral: BINARY SIZE MISMATCH");
+				return {};
+			}
+		} else if (argument_kind == tsh::Kind::Float) {
+			auto lhs_as_integer = tsh::FloatAbstractType(lhs_type.getType());
+			auto rhs_as_integer = tsh::FloatAbstractType(rhs_type.getType());
+
+			DEBUG("LHS floating size");
+			DEBUG(usize(lhs_as_integer.getSize()));
+			DEBUG("RHS floating size");
+			DEBUG(usize(rhs_as_integer.getSize()));
+
+			// TODOP: Do sizes have to match?
+			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()) {
+				DEBUG("Floating point: BINARY SIZE MISMATCH");
 				return {};
 			}
 		}

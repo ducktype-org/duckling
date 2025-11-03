@@ -146,6 +146,7 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
+		// TODOP: Remove i64 and bool?
 		using ValueType
 			= std::variant<ctv::CompileTimeValue, i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
 		ValueType value;

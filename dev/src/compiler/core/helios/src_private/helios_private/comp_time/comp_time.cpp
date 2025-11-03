@@ -33,6 +33,11 @@
 #include <type_traits>
 #include <variant>
 
+static int counter = 0;
+
+#define DEBUG(CONTENT) \
+	std::cout << "[QUERY EVALUATE EXPRESSION " << counter << "]: " << CONTENT << '\n';
+
 namespace compiler::helios {
 	using namespace ctv;
 
@@ -59,34 +64,42 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralUnitExpr(const code::LiteralUnitExpr&) final {
+				DEBUG("Literal Unit");
 				result = CompileTimeValue{ CompileTimeValue::UnitCTV{} };
 			}
 
 			void visitLiteralNumericExpr(const code::LiteralNumericExpr& expr) final {
+				DEBUG("Literal Numeric");
 				result = CompileTimeValue{ expr.value };
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr& expr) final {
+				DEBUG("Literal Bool");
 				result = CompileTimeValue{ expr.value };
 			}
 
 			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
+				DEBUG("Literal String");
 				throw base::NotYetImplemented("Evaluation of string values in compile time");
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
+				DEBUG("Literal Type");
 				result = CompileTimeValue{ expr.value_type };
 			}
 
 			void visitCallExpr(const code::CallExpr&) final {
+				DEBUG("Call expr");
 				result = query::QError(CouldNotShortPath{});
 			}
 
 			void visitAccessExpr(const code::AccessExpr&) final {
+				DEBUG("Access Expr");
 				result = query::QError(CouldNotShortPath{});
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
+				DEBUG("Identifier expr");
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
@@ -103,6 +116,7 @@ namespace compiler::helios {
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
+				DEBUG("Binary operator");
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
 				if (lhs_result.hasError()) {
 					result = query::QError(errors::Failed());
@@ -114,6 +128,8 @@ namespace compiler::helios {
 					result = query::QError(errors::Failed());
 					return;
 				}
+
+				/// 123 + 123;
 
 				const auto& lhs_ctv = lhs_result.value();
 				const auto& rhs_ctv = rhs_result.value();
@@ -198,8 +214,9 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented("Other binary operators for bool type"
-							    );
+								throw base::NotYetImplemented(
+									"Other binary operators for bool type"
+								);
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -212,6 +229,7 @@ namespace compiler::helios {
 			}
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
+				DEBUG("Unary operator");
 				auto expr_result = evalHoutExpr(ctx, expr.expr.ref());
 				if (expr_result.hasError()) {
 					result = query::QError(errors::Failed(expr_result.error()));
@@ -247,6 +265,14 @@ namespace compiler::helios {
 									"is not implemented yet"
 								);
 							}
+						} else if constexpr (std::is_same_v<T, bool>) {
+							switch (expr.operation) {
+							case code::BuiltinUnary::BooleanNot:
+								return CompileTimeValue{ not val };
+							default:
+								return query::QError(errors::Failed());
+							}
+
 						} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
 							switch (expr.operation) {
 							case Ref:
@@ -280,6 +306,7 @@ namespace compiler::helios {
 			}
 
 			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
+				DEBUG("Ternary operator");
 				auto cond_result = evalHoutExpr(ctx, expr.condition.ref());
 				if (cond_result.hasError()) {
 					result = query::QError(errors::Failed(cond_result.error()));
@@ -308,6 +335,7 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
+				DEBUG("Comparison chain");
 				auto compare = [](const NumericValue& first,
 				                  const NumericValue& second,
 				                  code::BuiltinBinary operation) {
@@ -385,10 +413,12 @@ namespace compiler::helios {
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
+				DEBUG("Parenthesis expr");
 				result = evalHoutExpr(ctx, expr.inner.ref());
 			}
 
 			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) final {
+				DEBUG("Tuple constructor");
 				std::vector<tsh::SymbolType<>> subtypes;
 
 				for (auto& sub_type: expr.elements) {
@@ -411,8 +441,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+				DEBUG("Variant constructor");
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
@@ -436,6 +466,7 @@ namespace compiler::helios {
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
+				DEBUG("Sequence constructor");
 				result = evalHoutExpr(ctx, seq.expressions.back().ref());
 			}
 		};
@@ -445,6 +476,7 @@ namespace compiler::helios {
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
 		static CompTimeEvalResult evaluateFunctionWithVm(query::Context& ctx, CRef<code::Expr> expr) {
+			DEBUG("Evaluate function with VM");
 			// @todo: For now this works only with functions which don't call any other functions.
 			// This should change in #1203
 			using namespace compiler;
@@ -518,20 +550,37 @@ namespace compiler::helios {
 
 			if (tree_eval_result.hasError()) {
 				variant_match(tree_eval_result.error()) {
-					variant_case(errors::Failed, failed) { return query::QError(errors::Failed()); }
+					variant_case(errors::Failed, failed) {
+						DEBUG("Eval with tree eval has error");
+
+						return query::QError(errors::Failed());
+					}
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
+						DEBUG("Eval with tree eval could not shortpath");
 						return evaluateFunctionWithVm(ctx, expr);
 					}
 				}
 			}
+			DEBUG("Success!");
 			return tree_eval_result.value();
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			counter++;
+			DEBUG("Called for:");
+			key.element.unlock(ctx)->debugPrint(std::cout);
+			std::cout << '\n';
+			DEBUG("==================");
 			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (expr.hasError()) return query::QError(errors::Failed());
-			return evalHoutExpr(ctx, expr.value().ref());
+			if (expr.hasError()) {
+				counter--;
+				DEBUG("Query hout of expr is error");
+				return query::QError(errors::Failed());
+			}
+			auto res = evalHoutExpr(ctx, expr.value().ref());
+			counter--;
+			return res;
 		}
 
 		QUERY_AUTO_CACHE_COPY

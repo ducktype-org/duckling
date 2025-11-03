@@ -4,6 +4,7 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <iostream>
 #include <string>
 #include <type_traits>
 
@@ -13,6 +14,7 @@ namespace compiler::numeric_value {
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
 	[[nodiscard]] std::string NumericValue::toString() const {
+		std::cout << "Numeric value to string\n";
 		return std::visit(
 			[&](auto&& value) {
 				using T = std::decay_t<decltype(value)>;
