@@ -8,10 +8,10 @@
  *
  * This module has two seperate parts:
  * - low level implementations, handling the VMThread calls to the builtin functions,
-     and compiling the call_builtin_func opcode
+     and compiling the call_builtinfunc opcode
  * - high level builtin "stdlib" module with DBC code to better interact with the loader
  *
- * The high level builtin functions serves as wrappers for the low level "call_builtin_func" opcodes.
+ * The high level builtin functions serves as wrappers for the low level "call_builtinfunc" opcodes.
  * Other DBC programs should just call the stdlib functions the same way as any other function.
  *
  * For now both the high and low level builtins use the same prototypes.
@@ -19,16 +19,14 @@
  * The goal of this implementation is to have one source file for the builtin functions -
  * this file. They have to be consistent with the HELIOS builtin list and LLVM builtins manually.
  *
- * @warning The verification of the call_builtin_func opcode is not decided yet.
+ * @warning The verification of the call_builtinfunc opcode is not decided yet.
  */
 #pragma once
 
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 namespace vm {

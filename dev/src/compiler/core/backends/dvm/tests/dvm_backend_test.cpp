@@ -7,13 +7,11 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/str_utils.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
@@ -31,6 +29,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(unitsTest);
 	}
 
 protected:
@@ -46,7 +45,8 @@ private:
 		vm::code::CodeCollection                  code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
+			auto module
+				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
@@ -118,6 +118,8 @@ private:
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };
 
 

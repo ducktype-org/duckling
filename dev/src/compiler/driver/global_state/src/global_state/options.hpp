@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace global_state {
 	/**
@@ -21,6 +21,4 @@ namespace global_state {
 	 * @note This can be used for modification
 	 */
 	Ref<DynamicDebugOptions> getDynamicDebugOptions();
-
-
 }

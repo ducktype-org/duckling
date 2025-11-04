@@ -5,17 +5,14 @@
 
 #pragma once
 
-#include <pst_parser/access.hpp>
-#include <pst_parser/lang_parser_element.hpp>
-#include <pst_parser/pst.hpp>
-
-#include <base/ref.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 
 #include <string>
 #include <utility>
 
 namespace lsp {
-	struct Definition {
+	struct Definition final {
 		std::string             uri;
 		std::pair<usize, usize> start;  // line, char
 		std::pair<usize, usize> end;    // line, char

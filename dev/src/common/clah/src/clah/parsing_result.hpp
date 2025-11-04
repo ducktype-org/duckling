@@ -7,10 +7,10 @@
 #pragma once
 #include "parameter.hpp"
 
-#include <base/anycast.hpp>
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/misc/anycast.hpp>
+#include <base/types/ints.hpp>
 
 #include <any>
 #include <string>
@@ -35,7 +35,7 @@ namespace clah {
 	 * Throughout the docs, "X was passed" is meant to suggest the user has typed "X" into the
 	 * command-line arguments of the program.
 	 */
-	class ParsingResult {
+	class ParsingResult final {
 	public:
 		ParsingResult() = default;
 

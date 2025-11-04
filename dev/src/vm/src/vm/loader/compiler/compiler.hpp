@@ -7,6 +7,10 @@
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
+	namespace detail {
+		class MicroBytecodeBuilder;
+	}
+
 	/**
 	 * @class Compiler
 	 * @brief A stateful, incremental bytecode compiler.
@@ -17,6 +21,8 @@ namespace vm::loader::compiler {
 	 * code injection, compiling only the new elements (types, globals, and functions).
 	 */
 	class Compiler {
+		friend class detail::MicroBytecodeBuilder;
+
 	public:
 		Compiler() = default;
 
@@ -56,10 +62,18 @@ namespace vm::loader::compiler {
 			 */
 			base::HashMap<base::StrID, u64> method_name_to_id;
 			/**
-			 * @brief A complete list of all functions which will be added in the compilation process.
-			 * Used when lowering call instructions to translate the function name to it's index.
+			 * @brief A complete list of all bytecode functions which will be added in the
+			 * compilation process. Used when lowering call instructions to translate the function
+			 * name to it's index.
 			 */
 			ObjIdNameMap<code::Function> function_forward_declarations;
+
+			/**
+			 * @brief All available ExternCFunctions callable from the program.
+			 * Used when lowering call_cfunc instructions to translate the function name to it's
+			 * index.
+			 */
+			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
 		};
 
 		/**
@@ -70,10 +84,8 @@ namespace vm::loader::compiler {
 
 			/// The high level function definition.
 			const code::Function& function;
-			/// Function code after the label instructions have been removed.
-			std::vector<code::Instruction> instructions_without_labels;
-			/// A mapping from a label's name to it's instruction index in the function instruction list.
-			base::HashMap<base::StrID, usize> label_positions{};
+			/// Temporary label IDs used before label linking.
+			base::HashMap<base::StrID, usize> label_id_map;
 			/// A mapping from a local variable's name to its offset on the function's local stack.
 			base::HashMap<base::StrID, usize> local_offset_map{};
 			/// Total required size for the local stack frame, in bytes.
@@ -116,11 +128,10 @@ namespace vm::loader::compiler {
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
-		 * @brief Removes label instructions from the compiled functions code. Calculates label
-		 * positions. Populates the context's `instructions_without_labels` and `label_positions`
-		 * which is used when lowering instructions to microbytecode.
+		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
+		 * internal `low_program.extern_c_functions`.
 		 */
-		void splitCodeAndLabels(FunctionCompilationContext& ctx);
+		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
 		 * @brief Calculates the stack offsets of stack variables.
@@ -132,12 +143,24 @@ namespace vm::loader::compiler {
 		void calculateOffsets(FunctionCompilationContext& ctx);
 
 		/**
+		 * @brief Fills out label arguments from IDs to label offsets in micro-bytecode.
+		 * Since a single high bytecode instruction can lower into many micro instructions,
+		 * we do not know in advance where labels land after lowering.
+		 * Instead `MicroBytecodeBuilder` generates temporary label IDs and calculates label
+		 * offsets during building. This function uses this information to go through
+		 * the instructions again and fill out the correct offsets.
+		 */
+		void linkLabelArguments(
+			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
+		);
+
+		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the label-less
 		 * instructions and translates them into a sequence of `MicroInstruction`, resolving all
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		low::MicroBytecode lowerInstructions(const FunctionCompilationContext& ctx);
+		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)
@@ -150,11 +173,7 @@ namespace vm::loader::compiler {
 		 * @param opcode_arg The symbolic argument to translate.
 		 * @return The 64-bit numeric value of the argument.
 		 */
-		u64 lowerArgument(
-			const FunctionCompilationContext& local_ctx,
-			usize                             instruction_index,
-			const opargs::OpCodeArg&          opcode_arg
-		);
+		u64 lowerArgument(FunctionCompilationContext& local_ctx, const opargs::OpCodeArg& opcode_arg);
 	};
 
 }

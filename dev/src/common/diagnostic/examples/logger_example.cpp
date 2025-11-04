@@ -3,7 +3,9 @@
 
 // Extend Error, Warning, or Info.
 class MessageRelevantToThisSituation: public dia::Error {
-	// ...
+public:
+	explicit MessageRelevantToThisSituation(const dia::SourcePosition& position):
+		  dia::Error(position) {}
 
 protected:
 	[[nodiscard]]
@@ -38,6 +40,6 @@ int main() {
 	if (logger.bad()) {
 		bool detailed = false;
 		logger.dumpLog(detailed);  // prints errors with file, position, part of code, etc.
-		exit(1);
+		return 1;
 	}
 }

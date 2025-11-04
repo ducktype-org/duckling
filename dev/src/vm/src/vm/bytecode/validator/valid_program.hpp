@@ -54,16 +54,19 @@ namespace vm::code {
 
 		const ObjIdNameMap<Function>& functions() const;
 
+		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
+
 	private:
-		ObjIdNameMap<Function>   function_map;
-		ObjIdNameMap<GlobalData> globals_map;
-		TypeContext              type_context;
+		ObjIdNameMap<Function>          function_map;
+		ObjIdNameMap<ExternalCFunction> ext_c_function_map;
+		ObjIdNameMap<GlobalData>        globals_map;
+		TypeContext                     type_context;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
-		 * available in the program (including builtin functions). Used for type verification of
-		 * class and interface types to check if implementations of declared methods match the
-		 * expected signatures. This map basically stores forward declarations of functions
+		 * available in the program (not including builtin and external C functions). Used for type
+		 * verification of class and interface types to check if implementations of declared methods
+		 * match the expected signatures. This map basically stores forward declarations of functions
 		 * available in the program, since `function_map` building is done after type verification.
 		 */
 		base::HashMap<base::StrID, FuncSignature> available_functions;
@@ -95,5 +98,11 @@ namespace vm::code {
 		 * produce dead code.
 		 */
 		void insertFunctions(const std::vector<Function>& new_functions);
+
+		/**
+		 * @brief Inserts an ExternalCFunction. May invalidate state.
+		 * Cannot insert multiple ExternalCFunctions with the same name.
+		 */
+		void insertExternalCFunctions(const std::vector<ExternalCFunction>& new_functions);
 	};
 }

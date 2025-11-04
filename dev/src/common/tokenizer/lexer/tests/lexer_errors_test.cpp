@@ -1,7 +1,5 @@
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
-#include <tester/testing_utils.hpp>
 #include <token_source/source.hpp>
 
 #include <array>
@@ -73,6 +71,9 @@ class LexerErrorTests: public tester::TestSuite {
 		std::make_unique<Example<true>>("'+'"),
 		std::make_unique<Example<true>>("'\\n'"),
 	};
+
+	std::array<std::unique_ptr<GenExample>, 1> bad_type_specifier
+		= { std::make_unique<Example<false>>("123abc") };
 
 	Example<false> bad_char_start{ "\xCC\x80" };
 

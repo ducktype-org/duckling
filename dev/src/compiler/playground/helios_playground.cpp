@@ -1,13 +1,12 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
-#include <pst_parser/pst_query/pst_access_side_input.hpp>
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -53,7 +52,7 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = frontend::createModuleTree(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	defer(printContextErrors());
 
@@ -70,10 +69,10 @@ int notMain(int argc, const char* const* argv) {
 	printQueryDeps(deps);
 
 	for (auto& i: top_level->functions) {
-		std::cerr << "\nInputs of function: " << i.declaration.original_name.strView() << "\n";
+		std::cerr << "\nInputs of function: " << i.declaration->original_name.strView() << "\n";
 		auto i_deps
-			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOFFun>(
-				i.declaration.original_symbol, pst_access_id
+			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOfFun>(
+				i.declaration->original_symbol, pst_access_id
 			);
 		printQueryDeps(i_deps);
 	}

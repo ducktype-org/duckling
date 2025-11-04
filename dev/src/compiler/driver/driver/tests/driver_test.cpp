@@ -1,16 +1,11 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <global_state/options.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
-#include <linker/link.hpp>
 
-#include <base/string_id.hpp>
+#include <base/str/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -48,7 +43,8 @@ private:
 	void objFileGenerated() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_1")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_1")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -68,7 +64,8 @@ private:
 		defer(global_state::getDynamicDebugOptions()->llvm_dump_ir  = false;
 		      global_state::getDynamicDebugOptions()->llvm_dump_asm = false;);
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_2")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_2")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -91,7 +88,8 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_3")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/functions_3")));
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -107,7 +105,9 @@ private:
 
 		// this also checks if llvm IR lib compile and link into the executable:
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::LLVM
+			fs::File(path("modules/functions_4")),
+			driver::BackendType::LLVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -117,14 +117,17 @@ private:
 		);
 
 		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::DVM
+			fs::File(path("modules/functions_4")),
+			driver::BackendType::DVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 	}
 
 	void globalsTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals")));
+		auto module
+			= frontend::createModuleTreeWithRandomPackageID(fs::File(path("modules/globals")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -152,7 +155,9 @@ private:
 	void globalsInitializationTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals_initialization")));
+		auto module = frontend::createModuleTreeWithRandomPackageID(
+			fs::File(path("modules/globals_initialization"))
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto run_result = driver::runModuleOnDVM(ctx, module);

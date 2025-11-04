@@ -2,97 +2,203 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
+#include <token_source/source.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/core/process/memory/memory.hpp>
-
-#include <cstddef>
 
 namespace vm::loader::parser {
-	/**
-	 * @brief Parses number literal and returns it's bits stored in type T. If it contains a type
-	 * specifier like `i32`, `f`, etc., it will adjust the parsing behavior accordingly. By default,
-	 * it assumes 64-bit integer or double if it has a dot (works for hex and binary too). T has to
-	 * be type of size 64bits.
-	 */
 	namespace opargs_parsers {
+		namespace detail {
+			/**
+			 * @brief "Packs" bits of value `V` to 64-bit type`T`.
+			 * 32-bit values are zero-extended to 64-bits and bit casted to T
+			 * 64-bit values are just bit casted to T.
+			 */
+			template<typename T, typename V>
+			T packValue(V value) {
+				static_assert(sizeof(T) == 8, "T must be a 64-bit type");
+				if constexpr (sizeof(V) == 8) {
+					return std::bit_cast<T>(value);
+				} else if constexpr (sizeof(V) == 4) {
+					auto bits = std::bit_cast<u32>(value);
+					return std::bit_cast<T>(static_cast<u64>(bits));
+				}
+			}
+
+			/**
+			 * @brief Checks if the value fits in bounds of the given signed type.
+			 * Logs an error otherwise.
+			 */
+			template<typename SignedInt>
+			bool checkSignedBoundsAndLog(
+				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
+			) {
+				if (sign == 1) {
+					if (raw_val > static_cast<u64>(std::numeric_limits<SignedInt>::max())) {
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							base::strConcat(
+								"Numeric literal overflows a ",
+								base::toString(sizeof(SignedInt) * 8),
+								"-bit signed integer."
+							)
+						));
+						return false;
+					}
+				} else if (raw_val
+				           > (static_cast<u64>(std::numeric_limits<SignedInt>::max()) + 1ULL)) {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Numeric literal underflows a ",
+							base::toString(sizeof(SignedInt) * 8),
+							"-bit signed integer."
+						)
+					));
+					return false;
+				}
+				return true;
+			}
+
+			/**
+			 * @brief Checks if the value fits in bounds of the given unsigned type.
+			 * Logs an error otherwise.
+			 */
+			template<typename UnsignedInt>
+			bool checkUnsignedBoundsAndLog(
+				F8ParserState& state, const lexer::Token& token, u64 raw_val, i32 sign
+			) {
+				if (sign == -1) {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(), "Unsigned integer literal cannot be negative."
+					));
+					return false;
+				}
+				if (raw_val > std::numeric_limits<UnsignedInt>::max()) {
+					state.log(makeBox<InvalidLiteral>(
+						token.getPosition(),
+						base::strConcat(
+							"Numeric literal overflows a ",
+							base::toString(sizeof(UnsignedInt) * 8),
+							"-bit unsigned integer."
+						)
+					));
+					return false;
+				}
+				return true;
+			}
+		}
+
+		/**
+		 * @brief Parses number literal and returns it's bits stored in type T. If it contains a
+		 * type specifier like `i32`, `f64`, etc., it will adjust the parsing behavior accordingly.
+		 * By default, it assumes 64-bit integer or double if it has a dot or an `e` (works for hex
+		 * and binary too). T has to be type of size 64bits.
+		 */
 		template<class T>
-		std::pair<T, size_t> parseLiteral(F8ParserState& state) {
-			size_t literal_length = 0;
-			auto   previous_token = state.tokens().peek();
-			i32    sign           = 1;
-			if (previous_token.isOperatorSymbol()) {
-				if (previous_token.getValue().str() == "-") {
+		std::pair<T, usize> parseNumericLiteral(F8ParserState& state) {
+			usize literal_length = 0;
+			i32   sign           = 1;
+
+			const auto& maybe_sign_token = state.tokens().peek();
+			if (maybe_sign_token.isOperatorSymbol()) {
+				if (maybe_sign_token.getValue().str() == "-") {
 					sign = -1;
 					state.tokens().next();
 					literal_length++;
-				} else if (previous_token.getValue().str() == "+") {
+				} else if (maybe_sign_token.getValue().str() == "+") {
 					sign = 1;
 					state.tokens().next();
 					literal_length++;
 				}
 			}
-			auto token      = state.tokens().next();
-			auto next_token = state.tokens().peek();
-			// Consume the type specifier
-			auto&& str = token.getValue().str();
-			if constexpr (sizeof(T) != 8) {
-				state.log(makeBox<InvalidLiteral>(
-					token.getPosition(),
-					base::strConcat(
-						"Unsupported size for `", base::typeName<vm::opargs::Immediate>(), "`."
-					)
-				));
+
+			const auto& token = state.tokens().peek();
+			if (!token.isNumLiteralGroup()) {
+				state.log(makeBox<InvalidLiteral>(token.getPosition(), "Expected a numeric literal.")
+				);
 				return { T{ 0 }, 0 };
 			}
+			state.tokens().next();
+			literal_length += token.getValue().strView().length();
 
-			if (token.isNumLiteral())
-				literal_length += str.length() + next_token.getValue().str().length();
-			else
-				literal_length += str.length();
+			std::string_view number;
+			std::string_view suffix;
 
+			const auto& sub_tokens = token.getRecursive();
+			number                 = sub_tokens[0].getValue().strView();
+			suffix = sub_tokens.size() > 1 ? sub_tokens[1].getValue().strView() : "";
+
+			int base = 10;
+			// stoull crashes when '0b'/'0o' is a part of the string, thus we remove it.
+			if (number.starts_with("0b") || number.starts_with("0B")) {
+				base = 2;
+				number.remove_prefix(2);
+			} else if (number.starts_with("0o") || number.starts_with("0O")) {
+				base = 8;
+				number.remove_prefix(2);
+			} else if (number.starts_with("0x") || number.starts_with("0X")) {
+				base = 16;
+				number.remove_prefix(2);
+			}
+
+			T           result;
+			usize       pos = 0;
+			std::string str(number);
 			try {
-				T     result;
-				usize pos = 0;
-				if (next_token.isTypeSpecifier()) {
-					if (token.isNumLiteral()) state.tokens().next();
-					auto&& str_type = next_token.getValue().str();
-					if (str_type == "f" || str_type == "F") {
-						float value      = std::stof(str, &pos) * static_cast<float>(sign);
-						u32   float_bits = std::bit_cast<u32>(value);
-						result           = std::bit_cast<T>(static_cast<u64>(float_bits));
-					} else if (str_type == "d" || str_type == "D") {
+				if (!suffix.empty()) {  // Type specifier exists.
+					if (suffix.starts_with("f") && base != 10) {
+						state.log(makeBox<InvalidLiteral>(
+							token.getPosition(),
+							"Floating-point literals must be in decimal base for: "
+						));
+						return { T{ 0 }, 0 };
+					}
+
+					if (suffix == "f32") {
+						float value = std::stof(str, &pos) * static_cast<float>(sign);
+						result      = detail::packValue<T>(value);
+					} else if (suffix == "f64") {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
-						result       = std::bit_cast<T>(value);
-					} else if (str_type == "i32" || str_type == "I32") {
-						u32 bits = std::bit_cast<u32>(std::stoi(str, &pos) * sign);
-						result   = std::bit_cast<T>(static_cast<u64>(bits));
-					} else if (str_type == "i64" || str_type == "I64") {
-						u64 bits
-							= std::bit_cast<u64>(std::stoll(str, &pos) * static_cast<i64>(sign));
-						result = std::bit_cast<T>(bits);
-					} else if (str_type == "u32" || str_type == "U32") {
-						u32 bits = static_cast<u32>(std::stoul(str, &pos));
-						result   = std::bit_cast<T>(static_cast<u64>(bits));
-					} else if (str_type == "u64" || str_type == "U64") {
-						u64 bits = std::stoull(str, &pos);
-						result   = std::bit_cast<T>(bits);
+						result       = detail::packValue<T>(value);
+					} else if (suffix == "i32") {
+						u64 raw_val = std::stoull(str, &pos, base);
+						if (detail::checkSignedBoundsAndLog<i32>(state, token, raw_val, sign)) {
+							i32 value = static_cast<i32>(raw_val) * sign;
+							result    = detail::packValue<T>(value);
+						}
+					} else if (suffix == "i64") {
+						u64 raw_val = std::stoull(str, &pos, base);
+						if (detail::checkSignedBoundsAndLog<i64>(state, token, raw_val, sign)) {
+							i64 value = static_cast<i64>(raw_val) * sign;
+							result    = detail::packValue<T>(value);
+						}
+					} else if (suffix == "u32") {
+						u64 raw_val = std::stoull(str, &pos, base);
+						if (detail::checkUnsignedBoundsAndLog<u32>(state, token, raw_val, sign)) {
+							u32 value = static_cast<u32>(raw_val);
+							result    = detail::packValue<T>(value);
+						}
+					} else if (suffix == "u64") {
+						u64 raw_val = std::stoull(str, &pos, base);
+						if (detail::checkUnsignedBoundsAndLog<u64>(state, token, raw_val, sign))
+							result = detail::packValue<T>(raw_val);
 					} else {
 						state.log(makeBox<InvalidLiteral>(
 							token.getPosition(),
 							base::strConcat(
 								"Unknown type specifier `",
-								str_type,
+								suffix,
 								"` for `",
 								base::typeName<vm::opargs::Immediate>(),
 								"`."
@@ -101,21 +207,17 @@ namespace vm::loader::parser {
 						return { T{ 0 }, 0 };
 					}
 				} else {
-					// By default, we assume 64-bit integer or double if it has a dot
-					if (str.find('.') != std::string::npos) {
+					// By default, we assume 64-bit integer or a double if it has a dot.
+					if (str.find_first_of(".eE") != std::string::npos) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
-						result       = std::bit_cast<T>(value);
-					} else if (str.starts_with("0b") || str.starts_with("0B")) {
-						// For binary numbers, we parse them as 64-bit integers
-						u64 value = std::stoull(str.substr(2), &pos, 2);
-						result    = std::bit_cast<T>(value);
-						pos += 2;
+						result       = detail::packValue<T>(value);
 					} else {
-						i64 value = std::bit_cast<i64>(std::stoull(str, &pos, 0))
-						          * static_cast<i64>(sign);
-						result = std::bit_cast<T>(value);
+						u64 raw_val = std::stoull(str, &pos, base);
+						i64 value   = static_cast<i64>(raw_val) * sign;
+						result      = detail::packValue<T>(value);
 					}
 				}
+
 				if (pos == str.length())
 					return std::make_pair(result, literal_length);
 				else {
@@ -158,7 +260,7 @@ namespace vm::loader::parser {
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
 			auto pos            = state.getPosition();
-			auto parsed_literal = parseLiteral<u64>(state);
+			auto parsed_literal = parseNumericLiteral<u64>(state);
 			auto value          = parsed_literal.first;
 			auto arg            = opargs::Immediate{ value };
 			arg.bytecode_pos    = dia::SourcePosition(
@@ -197,6 +299,7 @@ namespace vm::loader::parser {
 			Type,
 			FunctionName,
 			BuiltinFunctionName,
+			ExtCFunctionName,
 			MethodName,
 			Label,
 			VM_OPARG_GLOBAL_TYPES,
@@ -222,19 +325,19 @@ namespace vm::loader::parser {
 
 #define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
 
-#define HANDLE_OPCODE_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
+#define HANDLE_INSTR_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
 		};
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 #undef MAKE_LINK
 	}
 
@@ -438,7 +541,7 @@ namespace vm::loader::parser {
 		switch (type) {
 		case lang_def::Keyword::BCPrimitive: {
 			lexer::Token value = state.tokens().next();
-			if (!value.isNumLiteral()) {
+			if (!value.isNumLiteralGroup()) {
 				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
@@ -464,7 +567,7 @@ namespace vm::loader::parser {
 				state.err->failAndLog(state.getPosition(), "expected identifier");
 			} else {
 				auto size = state.tokens().next();
-				if (!size.isNumLiteral()) {
+				if (!size.isNumLiteralGroup()) {
 					state.err->failAndLog(state.getPosition(), "expected number");
 				} else {
 					auto tp         = FixedSizeTableType{ name,
@@ -551,7 +654,7 @@ namespace vm::loader::parser {
 		}
 		case lang_def::Keyword::BCOpaque: {
 			lexer::Token value = state.tokens().next();
-			if (!value.isNumLiteral()) {
+			if (!value.isNumLiteralGroup()) {
 				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };

@@ -5,10 +5,9 @@
 
 #include "clah.hpp"
 
-#include <base/box.hpp>
-#include <base/optional.hpp>
-#include <base/str_utils.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
 
 #include <printer/stream_printer.hpp>
 
@@ -215,12 +214,12 @@ namespace clah {
 			return 0;
 		} catch (const clah::exceptions::ClahException& e) {
 			printer::StreamPrinter::print({
-				{ "[Clah error]: ", printer::Color::RED },
-				{ e.what(), printer::Color::DEFAULT },
-				{ "\n", printer::Color::DEFAULT },
-				{ "Use \"", printer::Color::DEFAULT },
-				{ argv[0], printer::Color::DEFAULT },
-				{ " --help\" for available options.\n", printer::Color::DEFAULT },
+				{ "[Clah error]: ", printer::Color::Red },
+				{ e.what(), printer::Color::Default },
+				{ "\n", printer::Color::Default },
+				{ "Use \"", printer::Color::Default },
+				{ argv[0], printer::Color::Default },
+				{ " --help\" for available options.\n", printer::Color::Default },
 			});
 			return 1;
 		}

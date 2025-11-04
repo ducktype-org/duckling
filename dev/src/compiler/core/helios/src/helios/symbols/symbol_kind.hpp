@@ -8,6 +8,7 @@ namespace compiler::helios {
 	enum class SymbolKind {
 		Namespace,
 		Function,
+		FunctionDeclaration,
 		Const,
 		Class,
 		Alias,
@@ -20,11 +21,12 @@ namespace compiler::helios {
 		// as for example there is no code-gen for builtin functions
 		BuiltinFunction,
 
-		// Class Symbols
+		// Class-specific Symbols
 		Method,
 		Field,
 		Constructor,
 		Destructor,
+
 		// ...
 	};
 }

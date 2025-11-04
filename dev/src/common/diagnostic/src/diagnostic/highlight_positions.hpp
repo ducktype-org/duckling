@@ -17,7 +17,7 @@ namespace dia {
 		printer::PrinterOStream&,
 		const std::vector<SourcePosition>& positions,
 		usize                              neighborhood    = (usize) -1,
-		printer::Color                     line_color      = printer::Color::BRIGHT_BLUE,
-		printer::Color                     highlight_color = printer::Color::BRIGHT_MAGENTA
+		printer::Color                     line_color      = printer::Color::BrightBlue,
+		printer::Color                     highlight_color = printer::Color::BrightMagenta
 	);
 }

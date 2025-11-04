@@ -22,3 +22,6 @@ const TupleCII = (6, 7);
 
 const TupleCSI = ("HUH", 14369);
 
+const const_no_type = 42;
+let let_no_type = 42;
+var var_no_type = 42;

@@ -4,13 +4,13 @@
 #include "simple.hpp"
 #include "symbol_kind.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/elements/hierarchy/declarations/class.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
-#include <pst_parser/elements/includes/basic.hpp>
-#include <pst_parser/pst_visitor.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -71,7 +71,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.base_class, base) {
 				if (auto ctv = ctx.query<QueryEvaluateExpression>({ base })) {
-					if (auto maybe_type = ctv.value().asType()) {
+					if (auto maybe_type = ctv.value().asType(ctx)) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the base class has any specifiers other than the abstract type.
 						class_info.base = maybe_type.value().getType();
@@ -88,7 +88,7 @@ namespace compiler::helios {
 				for (auto&& interface: *implements.unlock(ctx)) {
 					if (auto ctv
 					    = ctx.query<QueryEvaluateExpression>(interface.unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType()) {
+						if (auto maybe_type = ctv.value().asType(ctx)) {
 							// @TODO: Raise errors, here, or preferably earlier, if the symbol type
 							// of the base class has any specifiers other than the abstract type.
 							class_info.implements.push_back(maybe_type.value().getType());

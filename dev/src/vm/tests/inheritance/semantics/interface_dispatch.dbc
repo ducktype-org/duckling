@@ -89,6 +89,8 @@ function main { i64, ptr_argv } -> i64 {
     mov_lptr_lptr temp_this_child_cry, ptr_child;
     virtual_call_lptr_method ptr_child, cry; # Expected: 55
 
+    free_lptr actual_child;
+
     deinit;
     deinit;
     deinit;

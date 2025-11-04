@@ -5,7 +5,13 @@ original_location=$(pwd)
 cd "$(dirname "$0")"/../../ || exit 1
 
 # Gather C++ files
-files=$(python3 toolbox.py list-files --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
+files=$(python3 toolbox.py list-files --modified --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
+
+# Check if there is anything to format
+if [[ -z "${files}" ]]; then
+    echo "Nothing to format"
+    exit 0
+fi
 
 # Find binary
 clang_format=clang-format-19

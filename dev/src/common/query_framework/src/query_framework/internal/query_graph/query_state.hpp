@@ -3,8 +3,8 @@
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
-#include <base/maps.hpp>
-#include <base/ref.hpp>
+#include <base/collections/maps.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace query::internal {
 	class QueryState final {
@@ -28,6 +28,10 @@ namespace query::internal {
 			 * Used for cycle recovery.
 			 */
 			NodeID parent;
+
+			NodeData() = delete;
+
+			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
 
 		/**

@@ -154,6 +154,22 @@ namespace lexer {
 		MultiCharacterCharError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class UnknownLiteralTypeSpecifierError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Numeric literal with an unknown type specifier.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnknownLiteralTypeSpecifierError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	class UnmatchedBracketError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -270,6 +286,18 @@ namespace lexer {
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
+		// Look for numeric literals first since they may start with a '.'
+		else if (peek().isDigit() || (peek().is('.') && peek(1).isDigit())) {
+			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
+				binLiteralHandler(output);
+			else if (peek().is('0') && (peek(1).is('o') || peek(1).is('O')))
+				octLiteralHandler(output);
+			else if (peek().is('0') && (peek(1).is('x') || peek(1).is('X')))
+				hexLiteralHandler(output);
+			else
+				decLiteralHandler(output);
+
+		}
 		// @TODO: for now comments aren't saved as tokens
 		else if (isBlockCommentBegin()) {
 			blockCommentHandler(output);
@@ -287,13 +315,6 @@ namespace lexer {
 			bracketHandler(output);
 		} else if (peek().is(Class::special)) {
 			specialHandler(output);
-		} else if (peek().isDigit()) {
-			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
-				binLiteralHandler(output);
-			else if (peek().is('0') && peek(1).is('x'))
-				hexLiteralHandler(output);
-			else
-				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
 				logger->log(makeBox<TokenStartError>(source_start));
@@ -394,88 +415,109 @@ namespace lexer {
 		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), source_position));
 	}
 
-	void Lexer::binLiteralHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
+	base::Optional<Token> Lexer::typeSpecifierHandler() {
+		if (isEOF() || !peek().is(Class::name_start)) return {};
+		usize suffix_begin     = where;
+		auto  suffix_start_pos = currentPosition();
+		usize lookahead        = 0;
+
+		while (peek(lookahead).is(Class::name_continue)) lookahead++;
+
+		if (lookahead == 0) return {};
+
+		base::RawView suffix_view = file->getCharRange(where, where + lookahead);
+		auto specifier = lang_def::strAsNumericLiteralTypeSpecifier(base::StrID(suffix_view));
+		if (specifier != lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier) {
+			skip(lookahead);
+			usize               suffix_end = where - 1;
+			dia::SourcePosition source_position(suffix_start_pos, suffix_end);
+			addTokenMsg(suffix_begin, suffix_end, "numLiteralTypeSpecifier");
+			return Token::makeTypeSpecifier(
+				file->getCharRange(suffix_begin, suffix_end + 1), source_position
+			);
+		}
+		logger->log(makeBox<UnknownLiteralTypeSpecifierError>(suffix_start_pos));
+		skip(lookahead);
+		return {};
+	}
+
+	template<typename NumberParser>
+	void Lexer::numericLiteralHandler(Tokens& output, NumberParser parse_number) {
+		usize begin        = where;
 		auto  source_start = currentPosition();
 
-		skip(2);  // 0b
-		while (peek().isBinDigit()) next();
-		end = where - 1;
+		parse_number();
 
-		dia::SourcePosition source_position(source_start, end);
+		usize               number_end = where - 1;
+		dia::SourcePosition number_pos(source_start, number_end);
+		auto                value_token
+			= Token::makeNumLiteral(file->getCharRange(begin, number_end + 1), number_pos);
+		addTokenMsg(begin, number_end, "numLiteral");
 
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+		auto opt_type_specifier_token = typeSpecifierHandler();
 
-		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
+		usize               full_group_end = where - 1;
+		dia::SourcePosition full_pos(source_start, full_group_end);
+		auto                full_view = file->getCharRange(begin, full_group_end + 1);
+		match_optional(opt_type_specifier_token) {
+			opt_some_move(specifier) {
+				output.push_back(Token::makeNumLiteralGroup(
+					full_view, std::move(value_token), std::move(specifier), full_pos
+				));
+			}
+			opt_none {
+				output.push_back(
+					Token::makeNumLiteralGroup(full_view, std::move(value_token), full_pos)
+				);
+			}
+		}
+
+		addTokenMsg(begin, full_group_end, "numLiteralGroup");
+		return;
+	}
+
+	void Lexer::binLiteralHandler(Tokens& output) {
+		numericLiteralHandler(output, [&]() {
+			skip(2);  // 0b
+			while (peek().isBinDigit()) next();
+		});
+	}
+
+	void Lexer::octLiteralHandler(Tokens& output) {
+		numericLiteralHandler(output, [&]() {
+			skip(2);  // 0o
+			while (peek().isOctDigit()) next();
+		});
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
-		auto  sourceStart = currentPosition();
-
-		skip(2);  // 0x
-		while (peek().isHexDigit()) next();
-		end = where - 1;
-
-		dia::SourcePosition sourcePosition(sourceStart, end);
-
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
-
-		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
+		numericLiteralHandler(output, [&]() {
+			skip(2);  // 0x
+			while (peek().isHexDigit()) next();
+		});
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
-		auto  sourceStart = currentPosition();
-
-		bool was_dot = false;
-		bool was_e   = false;
-		next();  // first char - digit
-		while (!isEOF()) {
-			if (!peek().isDigit()) {
-				if (!was_dot && peek().is('.')) {
-					was_dot = true;
-				} else if (!was_e && peek().is('e')) {
-					was_e   = true;
-					was_dot = true;
-					if (peek(1).is('+') or peek(1).is('-')) next();
-				} else {
-					break;
+		numericLiteralHandler(output, [&]() {
+			bool was_dot = false;
+			bool was_e   = false;
+			next();  // first char - digit
+			while (!isEOF()) {
+				if (!peek().isDigit()) {
+					if (!was_dot && peek().is('.')) {  // Only one dot can appear.
+						was_dot = true;
+					} else if (!was_e
+					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
+						was_e   = true;
+						was_dot = true;
+						next();  // 'e'
+					} else {
+						break;
+					}
 				}
+				next();
 			}
-			next();
-		}
-
-		end = where - 1;
-
-		dia::SourcePosition source_position(sourceStart, end);
-
-		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
-
-		if (peek().is(unicode::Classifications::name_start)) typeSpecifierHandler(output);
-	}
-
-	void Lexer::typeSpecifierHandler(Tokens& output) {
-		usize begin = where;
-		usize end{};
-		auto  source_start = currentPosition();
-
-		next();  // first char - character
-		while (peek().is(Class::name_continue)) next();
-		end = where - 1;
-
-		dia::SourcePosition source_position(source_start, end);
-		std::string         message;
-		output.push_back(
-			Token::makeTypeSpecifier(file->getCharRange(begin, end + 1), source_position)
-		);
-		addTokenMsg(begin, end, "typeSpecifier");
+		});
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
@@ -613,7 +655,7 @@ namespace lexer {
 		if (token_messages) printer::StreamPrinter::printNL("group end");
 	}
 
-	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }
+	bool Lexer::isEOF() const { return peek().is(Class::END_OF_FILE_VALUE); }
 
 	bool Lexer::isEOL() const { return peek().is(Class::newline); }
 

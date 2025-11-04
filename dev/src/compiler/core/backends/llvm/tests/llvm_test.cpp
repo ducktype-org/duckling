@@ -6,8 +6,8 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
@@ -30,6 +30,8 @@ public:
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
+		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(ffiTest);
 	}
 
 private:
@@ -40,10 +42,12 @@ private:
 		std::vector<CRef<lir::Function>> ctors;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = frontend::createModuleTree(fs::File(path(module_path)));
+			auto module
+				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
+				if (!hout_glob.type.getType().carriesInformation()) continue;
 				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
@@ -173,6 +177,17 @@ private:
 	}
 
 	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+
+	void unitsTest() {
+		runTestForModule("modules/units/unit1", 2, 2);
+		runTestForModule("modules/units/unit2", 2, 2);
+		runTestForModule("modules/units/unit3", 1, 1);
+		runTestForModule("modules/units/unit4", 1, 2);
+		runTestForModule("modules/units/unit_simple", 2, 3);
+		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
+	}
+
+	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 };
 
 

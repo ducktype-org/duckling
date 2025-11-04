@@ -7,9 +7,7 @@
 #include <global_state/artifacts_location.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-
-#include <system_command/system_command.hpp>
+#include <lir/lir_structure/function_forward.hpp>
 
 namespace compiler::driver {
 

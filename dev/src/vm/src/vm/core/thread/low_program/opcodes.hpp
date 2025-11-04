@@ -27,13 +27,9 @@
 
 
 namespace vm::low {
-	enum class OpcodeFix8 : u16 {
-#define HANDLE_OPCODE(opcode) opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
-
-#undef HANDLE_OPCODE
-		Comment
+	enum class MicroOpcode : u64 {
+#define HANDLE_MICRO_INSTR(opcode) opcode,
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
 	};
-
-	u16 fix8FromInstr(const code::Instruction& instruction);
 }

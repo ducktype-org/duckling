@@ -10,7 +10,7 @@
 #include "internal/query_data/query_id.hpp"
 #include "internal/query_graph/node_making.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace query {
 
@@ -19,7 +19,7 @@ namespace query {
 		 * Helper class implementing query entry point
 		 * @note This exist only, so it can be easily friend-ed by queries.
 		 */
-		struct EntryPointHelper {
+		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
 				return QueryType::internal_query(

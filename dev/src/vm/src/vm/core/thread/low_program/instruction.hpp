@@ -5,7 +5,9 @@
  */
 #pragma once
 
-#include <base/ints.hpp>
+#include "opcodes.hpp"
+
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/memory/frame.hpp>
 
@@ -37,14 +39,13 @@ namespace {
 	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
 	 * Used for `vm::OP_CASES_COUNT`.
 	 *
-	 * @return constexpr u16
+	 * @return constexpr u64
 	 */
-	constexpr u16 countOpCases() {
-		u16 count = 0;
-#define HANDLE_OPCODE(opcode) count++;
-#include <vm/bytecode/opcode_definitions.hpp>
-
-#undef HANDLE_OPCODE
+	constexpr u64 countOpCases() {
+		u64 count = 0;
+#define HANDLE_MICRO_INSTR(opcode) count++;
+#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR
 		return count;
 	}
 }
@@ -65,9 +66,9 @@ namespace vm {
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr u16 OP_CASES_COUNT = countOpCases();
+	constexpr u64 OP_CASES_COUNT = countOpCases();
 
-	struct MicroInstruction {
+	struct MicroInstruction final {
 		union {
 			/**
 			 * @brief Index indicating which opcode it is.
@@ -84,15 +85,20 @@ namespace vm {
 
 		u64 arg0;
 		u64 arg1;
-	};
 
-	static_assert(sizeof(MicroInstruction) == 24, "MicroInstruction size is not 24 bytes");
+#if defined(BUILD_TYPE_DEV_DEBUG)
+		low::MicroOpcode opcode_id = low::MicroOpcode{ std::numeric_limits<u64>::max() };
+		std::string      representation{};
+#endif
+	};
 
 	/**
 	 * @brief Creates a low-level instruction with correct "union" type depending on the config.
 	 * @return MicroInstruction
 	 */
-	MicroInstruction makeLowInstruction(u64 opcode, u64 arg0 = 0, u64 arg1 = 0);
+	MicroInstruction makeLowInstruction(low::MicroOpcode opcode, u64 arg0 = 0, u64 arg1 = 0);
+
+	low::MicroOpcode getInstructionOpcode(const MicroInstruction& instruction);
 
 	/**
 	 * @brief For main purposes only.

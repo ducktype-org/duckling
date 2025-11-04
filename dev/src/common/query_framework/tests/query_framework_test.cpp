@@ -1,8 +1,7 @@
-#include <base/anycast.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
@@ -44,7 +43,7 @@ DECLARE_QUERY(FibonacciSum, Key2, u64);
  * Q1: *
  * * * */
 struct IMPLEMENT_QUERY(Fibonacci, u64) {
-	inline static std::map<UKHash, query::CacheEntry<QResult>> cache;
+	inline static std::map<KHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		if (key.v == 0)
@@ -56,14 +55,14 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 			     + context.query<Fibonacci>({ key.v - 2 });
 	}
 
-	static auto load(UKHash key_hash) -> LoadResult {
+	static auto load(KHash key_hash) -> LoadResult {
 		if (cache.contains(key_hash))
 			return cache.at(key_hash);
 		else
 			return {};
 	}
 
-	static auto store(UKHash key_hash, PResult res, query::ACD acd) -> QResult {
+	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key_hash, { .data = res, .acd = acd } });
 		return res;
 	}
@@ -94,9 +93,9 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 		return res;
 	}
 
-	static auto load([[maybe_unused]] UKHash key_hash) -> LoadResult { return {}; }
+	static auto load([[maybe_unused]] KHash key_hash) -> LoadResult { return {}; }
 
-	static auto store([[maybe_unused]] UKHash key_hash, PResult res, [[maybe_unused]] query::ACD acd)
+	static auto store([[maybe_unused]] KHash key_hash, PResult res, [[maybe_unused]] query::ACD acd)
 		-> QResult {
 		return QResult(res);
 	}
@@ -276,7 +275,23 @@ namespace context_leak {
 	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);
 }
 
-DECLARE_QUERY_SIDE_INPUT(SideInput, u64);
+struct KeyOf_SideInput {
+	u64 v;
+
+	KeyOf_SideInput(u64 v): v(v) {}
+
+	[[nodiscard]]
+	u64 queryUnstablePerfectHash() const {
+		CORE_PANIC("Unstable perfect hash should not be used for SideInput");
+	}
+
+	[[nodiscard]]
+	query::QueryStableHash queryStablePerfectHash() const {
+		return { v, 0, 0, 0 };
+	}
+};
+
+DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
 
 DECLARE_QUERY(EmptyQuery, u64, u64);
@@ -359,6 +374,44 @@ struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(DoNotCopyKeys);
 
+// New: key and query to test stable-vs-unstable perfect hash selection
+struct KeyStable {
+	u64                    unstable;
+	query::QueryStableHash stable;
+
+	[[nodiscard]]
+	u64 queryUnstablePerfectHash() const {
+		CORE_PANIC("Should never be called because stable hash is present (for now)");
+		return unstable;
+	}
+
+	[[nodiscard]]
+	query::QueryStableHash queryStablePerfectHash() const {
+		return stable;
+	}
+};
+
+DECLARE_QUERY(StableHashTest, KeyStable, u64);
+
+struct IMPLEMENT_QUERY(StableHashTest, u64) {
+	using KHash = query::KHash<QKey>;
+	// record the hash value passed to load()
+	static inline query::QueryStableHash last_hash;
+
+	static auto provide(Context&, QKey) -> PResult { return 0; }
+
+	static auto load(KHash key_hash) -> LoadResult {
+		last_hash = key_hash;
+		return {};
+	}
+
+	static auto store([[maybe_unused]] KHash key_hash, PResult res, query::ACD) -> QResult {
+		return res;
+	}
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(StableHashTest);
+
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS QueryTest
@@ -383,6 +436,7 @@ public:
 		TESTER_ADD_TEST(testQueryResultConcept);
 		TESTER_ADD_TEST(testQueryResult);
 		TESTER_ADD_TEST(testNoKeyCopy);
+		TESTER_ADD_TEST(stableHashTest);
 	}
 
 private:
@@ -668,8 +722,8 @@ private:
 		ASSERT_TRUE(!hr1.hasError());
 		ASSERT_EQUAL(1, hr1.value());
 
-		int                            temp_val = hr1.value();
-		base::Optional<base::Ref<int>> opt1     = base::Ref<int>(&temp_val);
+		int                      temp_val = hr1.value();
+		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
@@ -712,6 +766,21 @@ private:
 		assertEqual(
 			query::entryPoint<DoNotCopyKeys>(NoctrKey::keyCreate(4)), 3, "Should be fibonacci(4) = 3"
 		);
+	}
+
+	void stableHashTest() {
+		KeyStable key{ .unstable = 0x12'34u,
+			           .stable   = query::QueryStableHash{ 0x11'11u, 0x22'22u } };
+
+		query::entryPoint<StableHashTest>(key);
+
+		query::perfectHashKey(key);
+		std::cout << ImplementationOf_StableHashTest::CACHE_ON_DISK << "\n";
+		std::cout << "Last hash: " << ImplementationOf_StableHashTest::last_hash << "\n";
+		std::cout << "Expected : " << key.stable << "\n";
+		std::cout << "Unexpected: " << key.unstable << "\n";
+
+		ASSERT_TRUE(ImplementationOf_StableHashTest::last_hash == key.stable);
 	}
 };
 

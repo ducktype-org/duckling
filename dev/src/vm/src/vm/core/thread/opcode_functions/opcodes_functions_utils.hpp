@@ -2,8 +2,8 @@
 
 #include "../config.hpp"
 
-#include <base/ints.hpp>
-#include <base/raw_view.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/utils/interpret.hpp>
 
