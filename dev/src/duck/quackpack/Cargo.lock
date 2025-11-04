@@ -148,7 +148,6 @@ dependencies = [
  "serde",
  "symbol_table",
  "tempfile",
- "thiserror",
  "toml",
  "tracing",
 ]
