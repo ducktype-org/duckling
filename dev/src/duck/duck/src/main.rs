@@ -86,7 +86,7 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
     //     This is tricky, because contexts get some weird type and can't be downcasted, therefore this doesn't
     //     catch the contexts.
     //
-    // Tested on following the snippet:
+    // Tested on the following snippet:
     // ```rust
     // let x: QuackResult<()> = Err(InternalError::from(anyhow!("error")).into());
     // x.context("b").context("a")?;
