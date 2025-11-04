@@ -59,7 +59,7 @@ fun get_f64() -> f64 = {
     return 3;
 }
 
-fun get_f32() -> f64 = {
+fun get_f32() -> f32 = {
     return 3;
 }
 
