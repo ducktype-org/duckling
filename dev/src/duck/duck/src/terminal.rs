@@ -142,6 +142,8 @@ impl Terminal {
         error => "Error:" + red + bold,
         warning => "Warning:" + yellow + bold,
         info => "Info:" + cyan + bold,
+        note => "Note:" + cyan + bold,
+        hint => "Hint:" + cyan + bold,
         critical => "Critical:" + red + reverse + bold,
     }
 }
