@@ -27,7 +27,7 @@ class SecondClass extends FirstClassEver {}
 let a: FirstClassEver = FirstClassEver(1, 2.0);
 let b = a;
 
-# @TODO: #520 Support lookup in types; type interfaces
+# @TODO: #520 #1479 Support lookup in types; type interfaces
 # Classes as members
 
 # class ClassWithMember {
