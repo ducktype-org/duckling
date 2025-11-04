@@ -180,7 +180,7 @@ void server(i32 port) {
 				for (auto& src_file: src_files) {
 					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
 					auto pst_root   = pst->getRootElement();
-					auto element    = lsp::findElement(pst_root, offset);
+					auto element    = lsp::findElement(pst_root, offset, true);
 					auto definition = lsp::findDefinition(element, ctx);
 					if (definition.has_value())
 						out.push_back("{" + definition.value().toJSON() + "}");

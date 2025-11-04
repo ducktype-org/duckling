@@ -65,14 +65,23 @@ namespace lsp {
 	}
 
 	pst::AccessLocked<pst::LangElement> findElement(
-		pst::AccessLocked<pst::LangElement> root, usize offset
+		pst::AccessLocked<pst::LangElement> root, usize offset, bool include_symbold_before_offset
 	) {
 		auto element = root.illegalAccess().value();
 
+		/**
+		 * This is useful for LSP "go to definition" feature, where the cursor can be placed
+		 * adjacent to the symbol (like on the right), but in terms of offsets, it is just after the symbol.
+		 * Under the assumption that the children are in the right order (from left to right in the source code),
+		 * we can include the offsets with 1 more character to the right and nothing will break because
+		 * we return when we find the first matching child.
+		 */
+		usize addend = include_symbold_before_offset ? 1 : 0;
+
 		for (auto sub: element->viewChildren()) {
 			auto curr_position = sub.illegalAccess().value()->getSourcePosition();
-			if (curr_position.getStart() <= offset && curr_position.getEnd() >= offset)
-				return findElement(sub, offset);
+			if (curr_position.getStart() <= offset && curr_position.getEnd() + addend >= offset)
+				return findElement(sub, offset, include_symbold_before_offset);
 		}
 		return element;
 	}

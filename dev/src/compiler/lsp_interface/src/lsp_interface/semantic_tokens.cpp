@@ -7,8 +7,12 @@
 
 #include "utils.hpp"
 
+#include <frontend/module_tree/queries.hpp>
+
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 #include <map>
@@ -110,16 +114,17 @@ namespace lsp {
 	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
-			auto pst = file->getPST();
-			// @TODO figure out logging strategy
-			if (pst->getLogger()->bad()) {
-				std::stringstream ss;
-				pst->getLogger()->dumpLog(true, ss);
-				std::cerr << ss.str() << "\n";
-				continue;
-			};
-			auto element = pst->getRootElement();
-			getSemanticTokens(element, tokens);
+			query::utils::withContextDo([&file, &tokens](query::Context& ctx) {
+				auto pst = ctx.query<compiler::frontend::QueryFilePST>(file->getFileID());
+				// @TODO figure out logging strategy
+				if (pst->getLogger()->bad()) {
+					std::stringstream ss;
+					pst->getLogger()->dumpLog(true, ss);
+					std::cerr << ss.str() << "\n";
+				};
+				auto element = pst->getRootElement();
+				getSemanticTokens(element, tokens);
+			});
 		}
 
 		std::vector<std::string> token_strings(tokens.size());

@@ -7,6 +7,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/string_id.hpp>
 
+#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
@@ -654,13 +655,7 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
-		for (auto& source_file: source_files) {
-			source_file->update();
-			root_element_file_back_map.put(
-				source_file->getPST()->getRootElement().illegalAccess().value()->getID(),
-				source_file->getFileID()
-			);
-		}
+		for (auto& source_file: source_files) source_file->update();
 	}
 
 	// ----------------------
@@ -769,7 +764,12 @@ namespace compiler::frontend {
 
 		// @note: unstable ref here is only possible, because
 		// PResult is already a reference
-		QUERY_AUTO_CACHE_COPY
+		//
+		// In the `file->getPST();` there is already caching mechanism implemented
+		// which checks if the PST was compiled for the SourceFile. 
+		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't 
+		// invalidate the query cache of this query, so we have to disable caching here.
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);

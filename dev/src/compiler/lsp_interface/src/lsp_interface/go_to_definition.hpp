@@ -26,13 +26,14 @@ namespace lsp {
 	 * @brief Find the element at the given offset in a subtree with a given root.
 	 * @param root The root element of a subtree to search in.
 	 * @param offset The offset to search for. Offset is a index in the source file.
+	 * @param include_symbold_before_offset If true, include in search symbols that end at offset - 1.
 	 * @return The element at the given offset.
 	 * @note This function will find the minimal element whose source position contains the given
 	 * offset. If offset is not contained in the root element, it will return the root element
 	 * itself.
 	 */
 	pst::AccessLocked<pst::LangElement> findElement(
-		pst::AccessLocked<pst::LangElement> root, usize offset
+		pst::AccessLocked<pst::LangElement> root, usize offset, bool include_symbold_before_offset
 	);
 
 	/**
