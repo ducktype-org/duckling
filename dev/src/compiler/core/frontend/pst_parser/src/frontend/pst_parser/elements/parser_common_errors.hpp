@@ -19,7 +19,6 @@ namespace pst::error {
 		BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-
 	class DuplicateSemicolon final: public dia::Warning {
 	protected:
 		[[nodiscard]]
