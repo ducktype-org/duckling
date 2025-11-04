@@ -1470,7 +1470,7 @@ private:
 				= get_function_by_order(7);             // fun goo(x: i64, y: bool) -> i64
 
 			// Helper to get the function symbol called in a global variable's initializer
-			auto get_funciton_sym_by_var_sym = [](auto var_sym) {
+			auto get_function_sym_by_var_sym = [](auto var_sym) {
 				auto expr      = getExprOfVariable(var_sym);
 				Ref  call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr);
 
@@ -1486,21 +1486,21 @@ private:
 			auto call_foo_class_sym = getChain("CALL_FOO_CLASS", root_scope).back();
 			auto call_foo_i64_sym   = getChain("CALL_FOO_I64", root_scope).back();
 
-			ASSERT_EQUAL(foo_bool, get_funciton_sym_by_var_sym(call_foo_bool_sym));
-			ASSERT_EQUAL(foo_float, get_funciton_sym_by_var_sym(call_foo_float_sym));
-			ASSERT_EQUAL(foo_class, get_funciton_sym_by_var_sym(call_foo_class_sym));
-			ASSERT_EQUAL(foo_i64, get_funciton_sym_by_var_sym(call_foo_i64_sym));
+			ASSERT_EQUAL(foo_bool, get_function_sym_by_var_sym(call_foo_bool_sym));
+			ASSERT_EQUAL(foo_float, get_function_sym_by_var_sym(call_foo_float_sym));
+			ASSERT_EQUAL(foo_class, get_function_sym_by_var_sym(call_foo_class_sym));
+			ASSERT_EQUAL(foo_i64, get_function_sym_by_var_sym(call_foo_i64_sym));
 
 			// Test overload resolution by named parameters
 			auto call_goo_x_sym = getChain("CALL_GOO_X", root_scope).back();
 			auto call_goo_y_sym = getChain("CALL_GOO_Y", root_scope).back();
 
-			ASSERT_EQUAL(goo_x, get_funciton_sym_by_var_sym(call_goo_x_sym));
-			ASSERT_EQUAL(goo_y, get_funciton_sym_by_var_sym(call_goo_y_sym));
+			ASSERT_EQUAL(goo_x, get_function_sym_by_var_sym(call_goo_x_sym));
+			ASSERT_EQUAL(goo_y, get_function_sym_by_var_sym(call_goo_y_sym));
 
 			// Test overload resolution with coercion (f32 -> f64 is preferred over f32 -> i64)
 			auto call_goo_f64_sym = getChain("CALL_GOO_F64", root_scope).back();
-			ASSERT_EQUAL(goo_f64, get_funciton_sym_by_var_sym(call_goo_f64_sym));
+			ASSERT_EQUAL(goo_f64, get_function_sym_by_var_sym(call_goo_f64_sym));
 		}
 		{
 			auto [module_id, root_scope]

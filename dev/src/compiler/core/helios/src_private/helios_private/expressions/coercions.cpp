@@ -34,10 +34,8 @@ namespace compiler::helios {
 	) {
 		if (from == to) return Coercion(from, to);
 
-		if (ctx.query<tsh::QueryImplicitCoercibilityOnAbstractType>({ from.getType(), to.getType() }
-		    )) {
+		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
 			return Coercion(from, to);
-		}
 		return query::QError{ InvalidCoercion{} };
 	}
 

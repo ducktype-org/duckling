@@ -9,7 +9,7 @@
 
 namespace compiler::helios::code {
 
-	struct ToManyCallArguments {};
+	struct TooManyCallArguments {};
 
 	struct DuplicateNamedArgument {};
 
@@ -24,7 +24,7 @@ namespace compiler::helios::code {
 	struct RepeatedNamedArgument {};
 
 	using MatchFailure = std::variant<
-		ToManyCallArguments,
+		TooManyCallArguments,
 		DuplicateNamedArgument,
 		UnknownNamedArgument,
 		TypeMismatch,
