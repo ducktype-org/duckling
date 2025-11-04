@@ -22,7 +22,7 @@ namespace pst {
 
 		state.parse(out).goDown();
 
-		// @TODO: this may not work in case of compilation error
+		// @TODO: #1484 Rethink parser errors
 		while (state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
