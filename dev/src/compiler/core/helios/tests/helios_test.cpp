@@ -171,7 +171,7 @@ private:
 	}
 
 	/**
-	 * Simple checks that type instances interfaces return expected results.
+	 * Simple checks that type instance interfaces return expected results.
 	 * @note For now only checks interfaces of class types.
 	 */
 	void testTypeInstanceInterface() {
