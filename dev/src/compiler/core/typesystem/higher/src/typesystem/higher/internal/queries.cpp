@@ -14,7 +14,7 @@ namespace tsh::internal {
 			auto& field_syms = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 			                       ->expect("Handling ERRORS in TS is not supported yet...")
 			                       .members;
-			// @TODO: Add methods to the interface, when obtaining their signature is supported.
+			// @TODO: #1485 Add methods to the interface, when obtaining their signature is supported.
 
 			std::vector<InterfaceElement> elements;
 
