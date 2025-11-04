@@ -13,7 +13,7 @@
 namespace compiler::helios {
 
 	struct KeyOf_LookupInTypeInstance final {
-		tsh::AbstractType type;  // should this be symbol type?
+		tsh::AbstractType type;
 		base::StrID       name;
 
 		[[nodiscard]]
@@ -52,7 +52,7 @@ namespace compiler::helios {
 
 	CRef<LookupResult> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
-	) {
+	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
 				return ctx.query<QueryLookupInScope>({ scope.scope, name, params.with_wildcards });
@@ -84,7 +84,7 @@ namespace compiler::helios {
 		query::Context&            ctx,
 		base::StrID                name,
 		AdditionalLookupParameters params
-	) {
+	) const {
 		auto lookup_result = lookup(ctx, name, params);
 		auto get_as_single = lookup_result->getAsSingle();
 
