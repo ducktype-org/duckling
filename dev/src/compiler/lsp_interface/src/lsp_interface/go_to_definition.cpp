@@ -71,10 +71,10 @@ namespace lsp {
 
 		/**
 		 * This is useful for LSP "go to definition" feature, where the cursor can be placed
-		 * adjacent to the symbol (like on the right), but in terms of offsets, it is just after the symbol.
-		 * Under the assumption that the children are in the right order (from left to right in the source code),
-		 * we can include the offsets with 1 more character to the right and nothing will break because
-		 * we return when we find the first matching child.
+		 * adjacent to the symbol (like on the right), but in terms of offsets, it is just after the
+		 * symbol. Under the assumption that the children are in the right order (from left to right
+		 * in the source code), we can include the offsets with 1 more character to the right and
+		 * nothing will break because we return when we find the first matching child.
 		 */
 		usize addend = include_symbold_before_offset ? 1 : 0;
 

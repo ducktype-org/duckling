@@ -766,8 +766,8 @@ namespace compiler::frontend {
 		// PResult is already a reference
 		//
 		// In the `file->getPST();` there is already caching mechanism implemented
-		// which checks if the PST was compiled for the SourceFile. 
-		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't 
+		// which checks if the PST was compiled for the SourceFile.
+		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't
 		// invalidate the query cache of this query, so we have to disable caching here.
 		QUERY_AUTO_NO_CACHE
 	};

@@ -116,7 +116,6 @@ namespace lsp {
 		for (auto& file: files) {
 			query::utils::withContextDo([&file, &tokens](query::Context& ctx) {
 				auto pst = ctx.query<compiler::frontend::QueryFilePST>(file->getFileID());
-				// @TODO figure out logging strategy
 				if (pst->getLogger()->bad()) {
 					std::stringstream ss;
 					pst->getLogger()->dumpLog(true, ss);
