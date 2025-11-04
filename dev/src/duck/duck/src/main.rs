@@ -7,6 +7,7 @@ pub mod indent;
 mod terminal;
 
 pub use duck_ctx::DuckCtx;
+pub use quackpack::InternalError;
 use tracing::debug;
 
 fn main() {
@@ -71,8 +72,58 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
             term.error(e);
         } else {
             term.print("");
-            term.print_no_nl(indent("Caused by:", 2));
-            term.print_no_nl(indent(&e.to_string(), 4));
+            term.print(indent("Caused by:", 2));
+            term.print(indent(&e.to_string(), 4));
+        }
+    }
+
+    // NOTE: This is tricky with contexts. Effectively they get some special type so even doing
+    // `.with_context(|| InternalError::from(...))` won't show them here.
+    // I see two solutions:
+    //  1. (current): get the highest `InternalError` (remember that the original error is at the bottom of the stack,
+    //     and at the top is the last context). This works even with `InternalError` in contexts.
+    //  2. use `.downcast_ref::<InternalError>()` with `.flat_map()` to get all `InternalError`s.
+    //     This is tricky, because contexts get some weird type and can't be downcasted, therefore this doesn't
+    //     catch the contexts.
+    //
+    // Tested on the following snippet:
+    // ```rust
+    // let x: QuackResult<()> = Err(InternalError::from(anyhow!("error")).into());
+    // x.context("b").context("a")?;
+    // ```
+    // With some playing with error and context types to see what gets printed.
+    //
+    // Note that both options show at most one `InternalError`, but first shows one always,
+    // whereas second only if `InternalError` is at the bottom of the stack.
+    //
+    // Docs: https://docs.rs/anyhow/latest/anyhow/trait.Context.html#effect-on-downcasting
+    if let Some(e) = error.downcast_ref::<InternalError>() {
+        // Add a newline between backtrace and a critical errors.
+        term.print("");
+        term.critical(format!("got internal error: {e}"));
+        term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
+    }
+
+    // Second approach.
+    #[cfg(false)]
+    {
+        let mut has_internal_errors = false;
+        for (i, e) in error
+            .chain()
+            .flat_map(|e| e.downcast_ref::<InternalError>())
+            .enumerate()
+        {
+            has_internal_errors = true;
+            // Add a newline between backtrace and a critical errors.
+            if i == 0 {
+                term.print("");
+            }
+            term.critical(format!("got internal error: {e}"));
+        }
+        if has_internal_errors {
+            term.note(
+                "Please file a bug report at: https://github.com/ducktype-org/duckling/issues/",
+            );
         }
     }
 }
