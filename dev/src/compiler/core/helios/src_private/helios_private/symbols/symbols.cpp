@@ -27,6 +27,7 @@
 #include <vector>
 
 #define DEBUG(CONTENT) std::cout << "[QUERY CONST VALUE]: " << CONTENT << '\n';
+
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs

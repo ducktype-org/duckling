@@ -1,3 +1,6 @@
+#include "ctv/numeric_value.hpp"
+#include "helios/hout/elements/expr.hpp"
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -35,8 +38,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include "ctv/numeric_value.hpp"
-#include "helios/hout/elements/expr.hpp"
 
 using namespace compiler::helios::test_utils;
 
@@ -531,7 +532,8 @@ private:
 				if (gb.original_name == name) {
 					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
 						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
-						auto val = ctv.get<compiler::numeric_value::NumericValue>()->coerceTo<i64>();
+						auto val
+							= ctv.get<compiler::numeric_value::NumericValue>()->coerceTo<i64>();
 						if (!val.has_value()) {
 							this->fail(base::strConcat(
 								"Got a constant with a different type than expected", name.strView()

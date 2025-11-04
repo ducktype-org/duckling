@@ -214,9 +214,8 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented(
-									"Other binary operators for bool type"
-								);
+								throw base::NotYetImplemented("Other binary operators for bool type"
+							    );
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -441,7 +440,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) final {
 				DEBUG("Variant constructor");
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {

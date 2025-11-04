@@ -232,7 +232,7 @@ namespace compiler::mir {
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
 
-			auto assing_instr = last_block->addHole();
+			auto assign_instr = last_block->addHole();
 
 			auto lowerexpr_res = lowerExpr(
 				*global_init_expr.get(),
@@ -241,7 +241,7 @@ namespace compiler::mir {
 				function_builder.getTopLevelScope()
 			);
 
-			assing_instr.fill(Instruction{
+			assign_instr.fill(Instruction{
 				Operation::Assign,
 				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
 				{ lowerexpr_res.getResult(function_builder) },

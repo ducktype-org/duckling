@@ -1,4 +1,6 @@
-#include "mir_structure.hpp"
+// #include "mir_structure.hpp"
+
+#include "mir/mir_structure/mir_structure.hpp"
 
 #include <helios/symbols/simple.hpp>
 
@@ -198,6 +200,7 @@ namespace compiler::mir {
 	void MIRValue::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
 			variant_case(LocalRef, local) { local->debugPrint(output); }
+			variant_case(MirIntegerConst, value) { output << value.value; }
 			variant_case(MirConstant, value) { output << value.value.toString(); }
 			variant_case(MirBoolConst, value) { output << (value.value ? "true" : "false"); }
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }

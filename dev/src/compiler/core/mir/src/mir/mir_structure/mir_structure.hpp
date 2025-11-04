@@ -100,6 +100,12 @@ namespace compiler::mir {
 
 	struct MirUnitConst final {};
 
+	struct MirIntegerConst final {
+		i64 value;
+	};
+
+	// TODOP: Add and link an issue, this is just temporary.
+	// TODOP: Maybe remove this completely in this PR.
 	struct MirConstant final {
 		ctv::CompileTimeValue value;
 
@@ -268,6 +274,7 @@ namespace compiler::mir {
 		// "GlobalAccess" a.b.c
 		using ValueType = std::variant<
 			MirUnitConst,
+			MirIntegerConst,
 			MirConstant,
 			MirBoolConst,
 			LocalRef,
@@ -279,6 +286,8 @@ namespace compiler::mir {
 
 	public:
 		MIRValue(MirUnitConst value): value(value) {}
+
+		MIRValue(MirIntegerConst value): value(value) {}
 
 		MIRValue(MirConstant value): value(value) {}
 

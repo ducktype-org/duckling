@@ -212,7 +212,7 @@ namespace compiler::helios::code {
 				);
 				return {};
 			}
-			
+
 			// TODOP: Add issue number
 			// @TODO: For now, until the cast instuction are added we cast all the deduced types to
 			// i64 to avoid adding a type specifier to  every numeric literal in the tests.
@@ -330,12 +330,10 @@ namespace compiler::helios::code {
 				case lang_def::NumericLiteralTypeSpecifier::f80:
 				case lang_def::NumericLiteralTypeSpecifier::u128:
 				case lang_def::NumericLiteralTypeSpecifier::i128:
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"Unhandled type specifier in hout of expr: ",
-							lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"Unhandled type specifier in hout of expr: ",
+						lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+					));
 				}
 
 				if (parsed_numeric_value.has_value()) {  // If failed, the error is logged.
@@ -679,12 +677,10 @@ namespace compiler::helios::code {
 					)) {
 						opt_some(op) { operators.push_back(op); }
 						opt_none {
-							ctx.log(
-								makeBox<
+							ctx.log(makeBox<
 									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-									stmt->getSourcePosition(), "No builtin operator found"
-								)
-							);
+								stmt->getSourcePosition(), "No builtin operator found"
+							));
 							return;
 						}
 					}

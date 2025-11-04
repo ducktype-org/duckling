@@ -20,7 +20,7 @@ namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
 	std::string CompileTimeValue::toString() const {
-		std::cout << "Variant index in CTV: " << value.index() << '\n'; 
+		std::cout << "Variant index in CTV: " << value.index() << '\n';
 		// clang-format off
 		VARIANT_VISIT(value,
 			VISIT_CASE(bool, val, return std::string(val ? "true" : "false"))
