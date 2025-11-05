@@ -158,6 +158,6 @@ namespace base {
 	 * @param length The length of the random string to generate.
 	 * @return A random alphanumeric string.
 	 */
-	std::string generateRandomString(size_t length);
+	std::string generateRandomString(u64 length);
 
 }

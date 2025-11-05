@@ -107,18 +107,10 @@ namespace query::internal {
 		 * @brief Get all Nodes in the graph.
 		 * @return A vector of all NodeIDs in the graph.
 		 */
-		[[nodiscard]] std::vector<NodeID> getAllNodes() const {
-			std::vector<NodeID> nodes;
-			nodes.reserve(node_deps.size());
-			for (const auto& [node, _]: node_deps) nodes.push_back(node);
-			return nodes;
-		}
+		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
 
 		/** @brief Check if a node has any dependencies. */
-		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const {
-			auto it = node_deps.find(node_id);
-			return it != node_deps.end() && !it->second.empty();
-		}
+		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
 
 		~QueryGraph() = default;
 	};

@@ -4,7 +4,8 @@
 
 namespace compiler::driver {
 	/**
-	 * Flush global artifacts and persist additional driver-managed data (e.g. query graph)
+	 * Exit the driver: persist artifacts and any driver-managed data (e.g. query graph),
+	 * then flush to disk.
 	 */
-	void saveArtifacts();
+	void exit();
 }

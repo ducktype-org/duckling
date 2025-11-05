@@ -48,7 +48,8 @@ public:
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
 				},
-				.debug_options         = {}
+				.debug_options         = {},
+				.incremental           = {}
 			}
 		);
 	}
@@ -205,7 +206,7 @@ private:
 		auto original = query::internal::ContextAccess::getState()->getGraphMutable()->serialize();
 
 		// Call the driver saveArtifacts implementation
-		driver::saveArtifacts();
+		driver::exit();
 
 		// Print path where artifact should have been saved for human inspection
 		std::filesystem::path root_path = artifacts_path.getPath();

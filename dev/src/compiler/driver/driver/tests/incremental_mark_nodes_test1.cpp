@@ -46,7 +46,8 @@ private:
                     .package_path = fs::FilePath(path("modules/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
-                .debug_options         = {}
+				.debug_options         = {},
+				.incremental           = {}
             }
         );
 
@@ -60,7 +61,7 @@ private:
 		});
 
 		// Save artifacts (writes previous graph blob to artifacts)
-		driver::saveArtifacts();
+		driver::exit();
 
 		// Smoke check: artifacts file exists
 		auto artc_path = artifacts_path.getPath() / "query" / "query.artc";

@@ -37,17 +37,17 @@ private:
                     .package_path = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
-                .debug_options         = {}
+				.debug_options         = {},
+				.incremental           = {}
             }
         );
 
 		ASSERT_TRUE(query::internal::ContextAccess::getState()->getPreviousGraph().has_value());
-		auto prev = query::internal::ContextAccess::getState()->getPreviousGraph().value();
-		auto prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(prev_colors_opt.has_value());
+		auto prev        = query::internal::ContextAccess::getState()->getPreviousGraph().value();
+		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(!prev_colors->empty());
 
 		// All node should be red since package name changed
-		auto prev_colors = prev_colors_opt.value();
 		for (const auto& node: prev->getAllNodes())
 			if (prev_colors->contains(node))
 				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Red);
@@ -62,7 +62,7 @@ private:
 		// we need to do this to Registering query: DoWithContext with
 		query::utils::withContextDo([&](query::Context&) {});
 
-		driver::saveArtifacts();
+		driver::exit();
 	}
 };
 

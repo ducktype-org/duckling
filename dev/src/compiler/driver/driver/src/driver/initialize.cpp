@@ -11,8 +11,7 @@
 #include <artifacts/artifacts.hpp>
 #include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>
-#include <query_framework/internal/context_access.hpp>
-#include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/external/api.hpp>
 
 namespace compiler::driver {
 
@@ -68,10 +67,15 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  graph = query::internal::QueryGraph::deserialize(span);
-					query::internal::ContextAccess::getState()->setPreviousGraph(std::move(graph));
+					auto                  graph = query::external::deserialize(span);
+					auto inputs = collectAllPstElementHashesFromGlobalPackages();
+					query::external::setPreviousGraph(std::move(graph), std::move(inputs));
 				}
 			}
+		}
+
+		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
+			if (inc_options.enabled) loadPreviousQueryGraphIfExists();
 		}
 	}
 
@@ -92,8 +96,7 @@ namespace compiler::driver {
 				handleDebugOptions(options.debug_options);
 				handleArtifactsOptions(options.compilation_artifacts);
 				handlePackageOptions(options.main_package_info);
-				loadPreviousQueryGraphIfExists();
-				markPreviousGraphNodesInputs();
+				handleIncrementalOptions(options.incremental);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

@@ -40,6 +40,7 @@ namespace query::internal {
 
 		using DataMap = base::HashMap<QueryID, QueryData>;
 
+		// @TODO: #1433 Remove this when Query Tags are implemented
 		using HasStableHashMap = base::HashMap<QueryID, bool>;
 
 		/**

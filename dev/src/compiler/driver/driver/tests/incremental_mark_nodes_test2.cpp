@@ -38,7 +38,8 @@ private:
                     .package_path = fs::FilePath(path("modules/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
-                .debug_options         = {}
+				.debug_options         = {},
+				.incremental           = {}
             }
         );
 
@@ -48,9 +49,8 @@ private:
 		auto prev = prev_opt.value();
 
 		// Verify node colors: previously-leaf nodes are green and dependency count checks hold
-		auto prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(prev_colors_opt.has_value());
-		auto prev_colors = prev_colors_opt.value();
+		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(!prev_colors->empty());
 
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {

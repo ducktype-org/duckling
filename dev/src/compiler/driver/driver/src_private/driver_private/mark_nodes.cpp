@@ -2,18 +2,24 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <global_state/packages.hpp>
 
+#include <base/pointers/ref.hpp>
+
 #include <filesystem/file.hpp>
-#include <query_framework/internal/context_access.hpp>
-#include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/external/api.hpp>
+#include <query_framework/internal/query_data/query_id.hpp>
+
+#include <vector>
 
 namespace compiler::driver {
 
 	// Traverse module tree recursively and collect PST element hashes.
 	static void collectFromModule(
-		compiler::frontend::ModuleID module_id, std::unordered_set<pst::LangElement::HashType>& out
+		compiler::frontend::ModuleID                       module_id,
+		base::Ref<std::vector<pst::LangElement::HashType>> out
 	) {
 		using namespace compiler::frontend;
 		auto module_ref = getModuleRef(module_id);
@@ -22,13 +28,13 @@ namespace compiler::driver {
 			auto root = pst_ref->getRootElement();
 			if (auto maybe = root.illegalAccess()) {
 				auto el = maybe.value();
-				out.insert(el->getHash());
+				out->push_back(el->getHash());
 			}
 			auto elems = pst::viewAllSubTreeElements(root);
 			for (auto& el: elems)
 				if (auto maybe = el.illegalAccess()) {
 					auto ptr = maybe.value();
-					out.insert(ptr->getHash());
+					out->push_back(ptr->getHash());
 				}
 		};
 
@@ -45,6 +51,8 @@ namespace compiler::driver {
 
 		// Process other source files
 		for (auto& sf_ref: module_ref->getSourceFiles()) {
+			// We using mutable reference for calculating the PST and hashes.
+			// This is done before query-based compilation starts, so it won't break anything.
 			auto sf_mut
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					sf_ref->getFileID()
@@ -58,8 +66,8 @@ namespace compiler::driver {
 			collectFromModule(submodule->getModuleID(), out);
 	}
 
-	std::unordered_set<pst::LangElement::HashType> collectAllPstElementHashesFromGlobalPackages() {
-		std::unordered_set<pst::LangElement::HashType> result;
+	std::vector<query::external::InputData> collectAllPstElementHashesFromGlobalPackages() {
+		std::vector<pst::LangElement::HashType> hashes;
 
 		const auto& packages = global_state::getPackages();
 		for (const auto& pkg: packages) {
@@ -67,55 +75,14 @@ namespace compiler::driver {
 			fs::File              file(pkg.package_path);
 			auto                  root_module
 				= compiler::frontend::createModuleTree(file, pkg.package_name.strView());
-			collectFromModule(root_module, result);
+			collectFromModule(root_module, base::Ref(&hashes));
 		}
 
-		return result;
-	}
+		std::vector<query::external::InputData> out;
+		out.reserve(hashes.size());
+		for (const auto& h: hashes) out.emplace_back(pst::internal::PSTAccessSideInput::getID(), h);
 
-	void markPreviousGraphNodesInputs() {
-		using namespace query::internal;
-
-		auto state = ContextAccess::getState();
-
-		// Attempt to fetch previous graph
-		auto maybe_prev = state->getPreviousGraph();
-		if (!maybe_prev.has_value()) return;
-
-		// Collect PST element hashes from global packages
-		auto hashes = collectAllPstElementHashesFromGlobalPackages();
-
-		auto prev_graph = maybe_prev.value();
-
-		// Get all nodes from the previous graph
-		auto nodes = prev_graph->getAllNodes();
-
-		for (const auto& node: nodes) {
-			if (node.q_id.getData().type != query::internal::QueryType::SideInput
-			    && node.q_id.getData().type != query::internal::QueryType::Input) {
-				continue;
-			}
-
-			//  @TODO: #1433 use tags
-			CORE_ASSERT(
-				node.q_id.hasStableHash(),
-				"Side Input nodes must have stable hashes: ",
-				node.q_id.getData().name
-			);
-
-			CORE_ASSERT(
-				!prev_graph->hasDependencies(node),
-				"Input nodes should not have dependencies: ",
-				node.q_id.getData().name
-			);
-
-			if (hashes.contains(node.hash.val)) {
-				state->setPrevNodeColor(node, QueryState::PrevColor::Green);
-			} else {
-				// Mark node as red
-				state->setPrevNodeColor(node, QueryState::PrevColor::Red);
-			}
-		}
+		return out;
 	}
 
 }  // namespace compiler::driver

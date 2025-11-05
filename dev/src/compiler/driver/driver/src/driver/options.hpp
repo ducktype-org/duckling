@@ -60,6 +60,10 @@ namespace compiler::driver {
 			bool dump_llvm_asm = false;
 		};
 
+		struct IncrementalOptions final {
+			bool enabled = true;
+		};
+
 		struct ArtifactsOptions final {
 			fs::FilePath artifacts_path;
 
@@ -119,7 +123,8 @@ namespace compiler::driver {
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
 			// options_types::CompilationOptions compilation_options;
-			options_types::DebugOptions debug_options;
+			options_types::DebugOptions       debug_options;
+			options_types::IncrementalOptions incremental;
 		};
 
 		/**

@@ -38,7 +38,8 @@ private:
                     .package_path = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
-                .debug_options         = {}
+				.debug_options         = {},
+				.incremental           = {}
             }
         );
 
@@ -46,9 +47,8 @@ private:
 		ASSERT_TRUE(prev_graph_opt.has_value());
 		auto prev = prev_graph_opt.value();
 
-		auto prev_colors_opt = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(prev_colors_opt.has_value());
-		auto prev_colors = prev_colors_opt.value();
+		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
+		ASSERT_TRUE(!prev_colors->empty());
 
 		int green_count = 0;
 		int red_count   = 0;

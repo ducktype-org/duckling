@@ -54,11 +54,20 @@ namespace query::internal {
 		base::HashMap<NodeID, NodeData> node_data;
 
 		/**
-		 * The colors of nodes from previous compilation.
-		 * Green - node is up to date
-		 * Red   - node is outdated
+		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
 		 */
-		base::HashMap<NodeID, PrevColor> previous_node_colors;
+		struct PreviousCompilation final {
+			const QueryGraph                 graph;
+			base::HashMap<NodeID, PrevColor> node_colors;
+
+			PreviousCompilation() = delete;
+
+			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+				  graph(std::move(g)),
+				  node_colors(std::move(colors)) {}
+
+			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors() {}
+		};
 
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.
@@ -66,10 +75,9 @@ namespace query::internal {
 		QueryGraph query_graph;
 
 		/**
-		 * The immutable graph that hold the state from previous compilation.
-		 * This is used for incremental compilation.
+		 * The previous compilation data if any.
 		 */
-		base::Optional<const QueryGraph> previous;
+		base::Optional<PreviousCompilation> previous;
 
 	public:
 		QueryState()                             = default;
@@ -97,7 +105,7 @@ namespace query::internal {
 		[[nodiscard]]
 		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const {
 			if (!previous.has_value()) return base::Optional<base::CRef<QueryGraph>>{};
-			return &previous.value();
+			return &previous.value().graph;
 		}
 
 		/**
@@ -123,19 +131,25 @@ namespace query::internal {
 
 		/**
 		 * @brief Sets the color of a node from the previous compilation.
+		 * Should only be used by incremental handling logic.
 		 */
 		void setPrevNodeColor(internal::NodeID node, PrevColor color) {
-			previous_node_colors.insert_or_assign(node, color);
+			CORE_ASSERT(
+				previous.has_value(), "PreviousCompilation is not set when setting node color"
+			);
+			previous->node_colors.insert_or_assign(node, color);
 		}
 
 		/**
 		 * @brief Returns previous_node_colors map use this for Tests.
+		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
-		base::Optional<base::CRef<base::HashMap<NodeID, PrevColor>>> getPreviousNodeColors() const {
-			if (previous_node_colors.empty())
-				return base::Optional<base::CRef<base::HashMap<NodeID, PrevColor>>>{};
-			return &previous_node_colors;
+		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const {
+			CORE_ASSERT(
+				previous.has_value(), "PreviousCompilation is not set when accessing node colors"
+			);
+			return &previous.value().node_colors;
 		}
 
 		/**

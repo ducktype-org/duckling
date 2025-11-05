@@ -6,6 +6,7 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
+#include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <driver/statistics/statistics.hpp>
@@ -221,6 +222,12 @@ clah::Clah getClahForMain() {
 							 "Also compiles to assembly file (alongside main compilation)."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
@@ -237,6 +244,9 @@ clah::Clah getClahForMain() {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
 							.debug_options = getDebugOptionsFromClap(options),
+							.incremental   = { .enabled = options.isFlag("no-incremental")
+									                                  ? false
+									                                  : true },
 						}
 					);
 
@@ -250,6 +260,9 @@ clah::Clah getClahForMain() {
 
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
+
+
+					compiler::driver::exit();
 
 					return 0;
 				})
@@ -292,6 +305,12 @@ clah::Clah getClahForMain() {
 							 "Doesn't link the C standard library into the final executable."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
@@ -307,7 +326,10 @@ clah::Clah getClahForMain() {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.debug_options = getDebugOptionsFromClap(options)
+							.debug_options = getDebugOptionsFromClap(options),
+							.incremental   = { .enabled = options.isFlag("no-incremental")
+									                                  ? false
+									                                  : true },
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -356,6 +378,8 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("print-graph"))
 						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
+					compiler::driver::exit();
+
 					return 0;
 				})
 		)
@@ -372,6 +396,12 @@ clah::Clah getClahForMain() {
 	                     .addLongName("add-builtin-library")
 	                     .addShortDesc("Links builtin library into the final executable.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
@@ -380,17 +410,20 @@ clah::Clah getClahForMain() {
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = package_name,
-					.package_path = path_to_compile.getFilePath(),
-				},
-				.compilation_artifacts = {
-					.artifacts_path = fs::FilePath("./duck_build/"),
-				},
-				.debug_options = getDebugOptionsFromClap(options),
-			}
-		);
+				compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.main_package_info = {
+								.package_name = package_name,
+								.package_path = path_to_compile.getFilePath(),
+							},
+							.compilation_artifacts = {
+								.artifacts_path = fs::FilePath("./duck_build/"),
+							},
+							.debug_options = getDebugOptionsFromClap(options),
+							.incremental   = { .enabled = options.isFlag("no-incremental")
+									                                  ? false
+									                                  : true },
+						}
+					);
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
@@ -405,6 +438,8 @@ clah::Clah getClahForMain() {
 						}
 					});
 
+
+					compiler::driver::exit();
 					return exit_code;
 				})
 		)

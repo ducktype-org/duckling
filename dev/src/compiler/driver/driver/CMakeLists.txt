@@ -5,6 +5,7 @@ add_library(Driver
 	src_private/driver_private/operations.cpp
 	src_private/driver_private/statistics_private/statistics.cpp
 	src_private/driver_private/mark_nodes.cpp
+	src_private/driver_private/save_artifacts.cpp
 	
 	src/driver/statistics/statistics.cpp
 	src/driver/backend_type.cpp

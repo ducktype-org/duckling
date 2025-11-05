@@ -33,15 +33,15 @@ std::vector<std::string> base::strSplit(const std::string_view str, const std::s
  * @param length The length of the random string to generate.
  * @return A random alphanumeric string.
  */
-std::string base::generateRandomString(size_t length) {
+std::string base::generateRandomString(u64 length) {
 	static constexpr std::string_view CHARS
 		= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	static std::random_device                    rd;
-	static std::mt19937                          generator(rd());
-	static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
+	static std::random_device                 rd;
+	static std::mt19937                       generator(rd());
+	static std::uniform_int_distribution<u64> distribution(0, CHARS.size() - 1);
 
 	std::string random_string;
 	random_string.reserve(length);
-	for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
+	for (u64 i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
 	return random_string;
 }

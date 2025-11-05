@@ -239,4 +239,16 @@ namespace query::internal {
 
 		return graph;
 	}
+
+	std::vector<NodeID> QueryGraph::getAllNodes() const {
+		std::vector<NodeID> nodes;
+		nodes.reserve(node_deps.size());
+		for (const auto& [node, _]: node_deps) nodes.push_back(node);
+		return nodes;
+	}
+
+	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
+		auto it = node_deps.find(node_id);
+		return it != node_deps.end() && !it->second.empty();
+	}
 }

@@ -4,7 +4,7 @@
 
 #include <filesystem/file.hpp>
 
-#include <string>
+#include <string_view>
 #include <vector>
 
 namespace global_state {
@@ -32,9 +32,9 @@ namespace global_state {
 		/**
 		 * Adds a package to the global state.
 		 */
-		void addPackage(const std::string& name, const fs::FilePath& path);
+		void addPackage(std::string_view name, const fs::FilePath& path);
 
 		/** Adds the main package to the global state. */
-		void addMainPackage(const std::string& name, const fs::FilePath& path);
+		void addMainPackage(std::string_view name, const fs::FilePath& path);
 	}
 }
