@@ -6,13 +6,13 @@
 
 template<usize Size>
 struct BigObject final {
-	u64 data[Size] = {};
+	u64 data[Size] = {}; // NOLINT
 
 	BigObject(u64 a): data{ a } {}
 
 	bool operator==(const BigObject& other) const {
 		for (usize i = 0; i < Size; i++)
-			if (data[i] != other.data[i]) return false;
+			if (data[i] != other.data[i]) return false; // NOLINT
 		return true;
 	}
 };
@@ -153,11 +153,13 @@ public:
 
 		base::StableHashMap<u64, u64> moved_map = std::move(map);
 
+		// NOLINTBEGIN(bugprone-use-after-move)
 		ASSERT_EQUAL(map.size(), 0);
 
 		ASSERT_TRUE(not map.contains(1));
 		ASSERT_TRUE(not map.contains(2));
 		ASSERT_TRUE(not map.contains(3));
+		// NOLINTEND(bugprone-use-after-move)
 
 		ASSERT_EQUAL(moved_map.size(), 3);
 		ASSERT_TRUE(moved_map.contains(1));

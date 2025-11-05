@@ -17,7 +17,7 @@ struct Derived: public Base {
 
 	bool operator==(int a) const { return x == a and y == a * 2; }
 
-	virtual ~Derived() = default;
+	~Derived() override = default;
 };
 
 struct DestructionTracker final {
