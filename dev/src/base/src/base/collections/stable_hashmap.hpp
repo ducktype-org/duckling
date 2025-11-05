@@ -106,36 +106,15 @@ namespace base {
 		}
 
 		/**
-		 * Appends new node to the bucket identified by node reference.
-		 * Panics if node with the same key already exists.
+		 * Links new node to the bucket.
+		 * Does not perform any links correctness checks.
 		 */
-		void addToBucketNode(Ref<Node> bucket, Ref<Node> new_node) RELEASE_NOEXCEPT {
-			CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
-
-			Ref          current_node = bucket;
-			const KEY_T& key          = new_node->key_value.key;
-
-			// iterate until the end of the bucket:
-			while (true) {
-				if (current_node->key_value.key == key) {
-					// this can be changed to an assertion:
-					CORE_PANIC("Duplicate key insertion in MyCustomHashMap");
-				}
-				if (current_node->next)
-					current_node = current_node->next.toOpt().value();
-				else
-					break;
-			}
-			CORE_ASSERT(current_node->next == nullptr, "this must be the last node in the bucket");
-			current_node->next = new_node;
-		}
-
 		void addToBucket(u64 bucket_index, Ref<Node> new_node) RELEASE_NOEXCEPT {
-			MRef maybe_initial_node = buckets.at(bucket_index);
-			if (maybe_initial_node)
-				addToBucketNode(maybe_initial_node.toOpt().value(), new_node);
-			else
-				buckets.at(bucket_index) = new_node;
+			CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
+			CORE_ASSERT(bucket_index < buckets.size(), "Bucket index out of bounds");
+
+			new_node->next = buckets[bucket_index];
+			buckets[bucket_index] = new_node;
 		}
 
 		void maybeRehash() RELEASE_NOEXCEPT {
@@ -272,6 +251,12 @@ namespace base {
 		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(Node{
 				nullptr, std::forward<K>(key), std::forward<D>(value) });
+			
+			// Note that this can in theory have some observable side effects:
+			CORE_ASSERT(
+				not this->contains(new_node->key_value.key),
+				"Key already exists in StableHashMap"
+			);
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
 
