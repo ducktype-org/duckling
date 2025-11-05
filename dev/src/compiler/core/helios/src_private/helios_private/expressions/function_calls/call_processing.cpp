@@ -200,7 +200,7 @@ namespace compiler::helios::code {
 	 * @brief Given Box<Expr> of all the arguments and arguments origin constructs a helios
 	 * CallExpr. The expressions will be moved from the arguments.
 	 */
-	Box<CallExpr> constructeCallExpr(
+	Box<CallExpr> constructCallExpr(
 		query::Context&                                  ctx,
 		SymID                                            fun,
 		std::vector<Box<Expr>>&                          positional_arguments,
@@ -309,7 +309,7 @@ namespace compiler::helios::code {
 			return query::QError(errors::Failed());
 		}
 		if (exact_match.size() == 1) {
-			return constructeCallExpr(
+			return constructCallExpr(
 				ctx,
 				exact_match.back().function,
 				positional_arguments,
@@ -324,7 +324,7 @@ namespace compiler::helios::code {
 			return query::QError(errors::Failed());
 		}
 		if (coercion_match.size() == 1) {
-			return constructeCallExpr(
+			return constructCallExpr(
 				ctx,
 				coercion_match.back().function,
 				positional_arguments,
