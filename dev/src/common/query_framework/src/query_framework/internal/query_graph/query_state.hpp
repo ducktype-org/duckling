@@ -141,6 +141,15 @@ namespace query::internal {
 		}
 
 		/**
+		 * Performs a red-green sweep starting from the specified node in the current query graph.
+		 * This function propagates the red/green markings through the graph to determine which
+		 * nodes need to be recomputed.
+		 * @return true if start_node do not need recomputation (is green), false otherwise (is red
+		 * or not exists in previous graph).
+		 */
+		bool redGreenSweep(NodeID start_node);
+
+		/**
 		 * @brief Returns previous_node_colors map. Used for Tests.
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */

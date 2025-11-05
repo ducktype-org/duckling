@@ -10,6 +10,7 @@
 #include <tester/tester.hpp>
 
 #include <filesystem>
+#include <iostream>
 
 using namespace compiler;
 
@@ -68,13 +69,48 @@ private:
 
 		// Probably because of linker optimizations the INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE
 		// won't initialise without actually running a query
+		// Compile entire package and save artifacts
+		compiler::driver::compilerEntirePackage(
+			global_state::getMainPackage(),
+			driver::BackendType::LLVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
+		);
+		// we need to do this to Registering query: DoWithContext with
+		query::utils::withContextDo([&](query::Context&) {});
+
+		// Check if red green sweep marks only one node as red
+
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_2")), "mark_nodes_test_packag1e1e"
+			fs::File(path("modules/incremental/changed_functions/functions_1")),
+			"mark_nodes_test_package2"
 		);
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
-		});
+		// Build a NodeID for the CompileModule query with the exact key we used
+		compiler::driver::KeyOf_CompileModule key{
+			.module_id    = module,
+			.backend_type = compiler::driver::BackendType::LLVM,
+		};
+		query::internal::NodeID root_node{
+			compiler::driver::CompileModule::getID(),
+			query::internal::KeyHash{ key.queryStablePerfectHash() },
+		};
+
+		// Check if red-green sweep marks all direct dependencies of the root node as green
+		int red_dep_count   = 0;
+		int green_dep_count = 0;
+		for (const auto& dep_node: prev->getNodeDeps(root_node)) {
+			if (!prev_colors->contains(dep_node))
+				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
+			ASSERT_TRUE(prev_colors->contains(dep_node));
+			if (prev_colors->at(dep_node) == query::internal::QueryState::PrevColor::Red)
+				red_dep_count++;
+			else
+				green_dep_count++;
+		}
+		std::cout << "Red direct dependencies of root node: " << red_dep_count << "\n";
+		std::cout << "Green direct dependencies of root node: " << green_dep_count << "\n";
+		ASSERT_TRUE(red_dep_count > 1);
+		ASSERT_TRUE(green_dep_count > red_dep_count);
 
 		// delete the artifacts directory after test
 		std::filesystem::remove_all(artifacts_path.getPath());

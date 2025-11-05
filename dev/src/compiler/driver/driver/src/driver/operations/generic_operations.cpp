@@ -4,6 +4,7 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -23,6 +24,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <fstream>
+#include <iostream>
 #include <utility>
 
 namespace compiler::driver {
@@ -110,6 +112,19 @@ namespace compiler::driver {
 			}
 
 			return output;
+		}
+
+		// Load precompiled artifact from disk without performing any compilation.
+		static auto loadFromDisc(const QKey& key) -> artifacts::FileArtifact {
+			std::cout << "Loading CompileModule artifact from disk for module "
+					  << getModuleRef(key.module_id)->getName().strView() << " and backend "
+					  << backendTypeToStr(key.backend_type) << "\n";
+
+			auto output_name
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+
+			return getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str(
+			)));
 		}
 	};
 

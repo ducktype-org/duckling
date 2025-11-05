@@ -27,6 +27,15 @@
 
 namespace query::internal {
 
+	// Concept: implementation provides loadFromDisc with exact signature and return type
+	template<typename Impl>
+	concept HasLoadFromDisc = requires(const typename Impl::QKey& key) { Impl::loadFromDisc(key); };
+
+	template<typename Impl>
+	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
+		{ Impl::loadFromDisc(key) } -> std::same_as<typename Impl::PResult>;
+	};
+
 	/**
 	 * @brief Internal function implementing the call to a query.
 	 *
@@ -61,6 +70,19 @@ namespace query::internal {
 
 			// @FUTURE: provide legit acd here
 			ACD acd;
+
+			// Before computing, try to reuse result from disk if available and safe to do so.
+			// Conditions:
+			//  - QueryImplType provides loadFromDisc(QKey) -> PResult
+			//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
+			if constexpr (HasLoadFromDiscWithSignature<QueryImplType>) {
+				if (ContextAccess::getState()->redGreenSweep(node_id)) {
+					QUERY_DEBUG_LOG(
+						"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Loading from disk.\n"
+					);
+					return QueryImplType::store(perfect_hash, QueryImplType::loadFromDisc(key), acd);
+				}
+			}
 
 
 			// Use of defer here makes it also called when an exception is thrown.
@@ -192,7 +214,12 @@ namespace query::internal {
 		"Load function must be callable with hash of QKey"                                        \
 	);                                                                                            \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
-		registerQuery(type::QueryType::getData(), ::query::HasStablePerfectHash<type::QKey>);
+		registerQuery(type::QueryType::getData(), ::query::HasStablePerfectHash<type::QKey>);     \
+	static_assert(                                                                                \
+		!::query::internal::HasLoadFromDisc<type>                                                 \
+			|| ::query::internal::HasLoadFromDiscWithSignature<type>,                             \
+		"If defined, loadFromDisc must have signature: static PResult loadFromDisc(const QKey&)"  \
+	);
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is
