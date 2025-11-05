@@ -78,12 +78,12 @@ namespace compiler::helios::code {
 		 * Same as in ExactMatch.
 		 */
 		SymID function;
-	
+
 		/**
 		 * Same as in ExactMatch.
 		 */
 		std::vector<ArgumentOrigin> argument_origin;
-	
+
 		/**
 		 * The coercion that was validated for each argument, because the coercion logic requires
 		 * this "coercion ticket" to actually perform the coercion.
@@ -198,10 +198,10 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin constructs a helios
-	 * CallExpr. The expressions will be moved from the arguments.
-	 * @p argument_origin define the actual structure of the arguments, while @p positional_arguments and @p named_arguments
-	 * define their content.
+	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
+	 * constructs a helios CallExpr. The expressions will be moved from the arguments.
+	 * @p argument_origin define the actual structure of the arguments, while @p
+	 * positional_arguments and @p named_arguments define their content.
 	 */
 	Box<CallExpr> constructCallExpr(
 		query::Context&                                  ctx,
