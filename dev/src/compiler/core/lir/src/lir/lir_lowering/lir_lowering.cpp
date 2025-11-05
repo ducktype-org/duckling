@@ -23,7 +23,6 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_impl.hpp>

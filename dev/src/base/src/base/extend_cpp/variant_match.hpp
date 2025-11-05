@@ -157,7 +157,7 @@ namespace base {
 #define VARIANT_VISIT(value, code) \
 	{ std::visit(::base::internal::VisitOverloaded{ code }, (value)); }
 
-#define VISIT_CASE(type, name, code) [&]([[maybe_unused]] type name) { code; },
+#define VISIT_CASE(type, name, code) [&](type name) { code; },
 
 
 /**

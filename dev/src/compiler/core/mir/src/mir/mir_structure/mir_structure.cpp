@@ -1,6 +1,4 @@
-// #include "mir_structure.hpp"
-
-#include "mir/mir_structure/mir_structure.hpp"
+#include "mir_structure.hpp"
 
 #include <helios/symbols/simple.hpp>
 

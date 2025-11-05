@@ -1,19 +1,12 @@
 #include "vm_evaluator.hpp"
 
-#include "ctv/numeric_value.hpp"
-#include "typesystem/higher/types.hpp"
-
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
-#include "base/str/string_id.hpp"
-#include "base/types/bits_and_bytes.hpp"
+#include <typesystem/higher/types.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <expected>
-#include <type_traits>
 
 namespace {
 	using namespace compiler::helios;
@@ -23,6 +16,7 @@ namespace {
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
+	// TODOP: Maybe revert this change, as theres no way to test it without support in backend.
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
 		vm::PID pid, const CompileTimeValue& ctv
 	) {
@@ -173,8 +167,8 @@ namespace {
 			if (spawn_result) pid = spawn_result->pid;
 		}
 
-		// @todo: Kill the CompTime VM process in the destructor once we get rid of the
-		// deadlock. This should happen after #1222.
+		// @todo: Kill the CompTime VM process in the destructor once we get rid of the deadlock.
+		// This should happen after #1222.
 		~VmManager() = default;
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
@@ -191,9 +185,9 @@ namespace compiler::helios {
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {
-		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process)
-		// once upon the first call to executeInVm and its lifetime extends for the duration of
-		// the program. When deinitialized, it kills the spawned process.
+		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process) once
+		// upon the first call to executeInVm and its lifetime extends for the duration of the
+		// program. When deinitialized, it kills the spawned process.
 		static VmManager vm_manager;
 		auto             maybe_pid = vm_manager.getPID();
 		if (!maybe_pid)

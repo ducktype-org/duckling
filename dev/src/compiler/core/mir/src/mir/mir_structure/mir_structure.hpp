@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ctv/ctv.hpp"
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
+#include <ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
@@ -15,7 +15,6 @@
 #include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
-#include <type_traits>
 #include <variant>
 #include <vector>
 

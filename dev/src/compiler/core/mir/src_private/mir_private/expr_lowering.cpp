@@ -1,11 +1,5 @@
 #include "expr_lowering.hpp"
 
-#include "ctv/ctv.hpp"
-#include "ctv/numeric_value.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -17,7 +11,6 @@
 #include <query_framework/query_impl.hpp>
 
 #include <ranges>
-#include <type_traits>
 #include <variant>
 
 namespace compiler::mir {
@@ -250,7 +243,7 @@ namespace compiler::mir {
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			// The left-over value. We mantain that this has to partake in only one comparison,
+			// The left-over value. We maintain that this has to partake in only one comparison,
 			// which will be placed in prev_cmp_hole.boolean
 			auto [prev_block, prev_value] = lower_subexpr_with_result(
 				chain_expr.expressions.back().ref(), last_comparison_block
@@ -271,7 +264,7 @@ namespace compiler::mir {
 					{},
 					{ boolean_output, prev_block->getID(), continuation->getID() },
 					{},
-					expr_scope });  // We exaluate prev_value only after this comparison is true, as
+					expr_scope });  // We evaluate prev_value only after this comparison is true, as
 				                    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
@@ -285,7 +278,7 @@ namespace compiler::mir {
 				prev_block    = new_block;
 				prev_cmp_hole = new_cmp_hole;
 
-				// expr_result participated in the previous comparion fulfilling the invariant.
+				// expr_result participated in the previous comparison fulfilling the invariant.
 				prev_value = new_value;
 			}
 
@@ -404,7 +397,7 @@ namespace compiler::mir {
 				}
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{
-						ctx.query<tsh::QueryIntegralType>(64),
+						ctx.query<tsh::QueryIntegralType>({ 64 }),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};

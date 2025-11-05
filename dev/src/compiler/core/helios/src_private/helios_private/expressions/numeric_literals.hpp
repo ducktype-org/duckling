@@ -1,12 +1,7 @@
 #pragma once
 
-#include "ctv/numeric_value.hpp"
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expressions/value.hpp"
-
-#include "base/collections/optional.hpp"
-
-#include "query_framework/context.hpp"
+#include <ctv/numeric_value.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/value.hpp>
 
 namespace compiler::helios::code {
 	/**
@@ -24,7 +19,6 @@ namespace compiler::helios::code {
 	 * @param literal_expr An PST expression representing the numeric literal.
 	 * @return An optional containing the parsed numeric value, or an empty optional if parsing
 	 * failed. Errors are logged to the context.
-	 * TODOP: Maybe change that to AccessLocked?
 	 */
 	base::Optional<numeric_value::NumericValue> fromExprValue(
 		query::Context& ctx, pst::AccessLocked<pst::expr::ExprValue> literal_expr

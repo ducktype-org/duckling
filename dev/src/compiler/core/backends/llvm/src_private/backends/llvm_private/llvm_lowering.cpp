@@ -1,8 +1,5 @@
-#include "ctv/numeric_value.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
-
-#include <type_traits>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -25,6 +22,7 @@ LLVM_INCLUDE_END()
 
 #include "module_impl.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 

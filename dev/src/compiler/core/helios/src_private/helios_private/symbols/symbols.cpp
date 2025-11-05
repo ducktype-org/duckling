@@ -26,8 +26,6 @@
 #include <functional>
 #include <vector>
 
-#define DEBUG(CONTENT) std::cout << "[QUERY CONST VALUE]: " << CONTENT << '\n';
-
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs
@@ -618,7 +616,6 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
-			DEBUG("Called");
 
 			const auto const_symbol
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(

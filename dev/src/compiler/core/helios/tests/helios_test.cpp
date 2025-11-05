@@ -1,6 +1,3 @@
-#include "ctv/numeric_value.hpp"
-#include "helios/hout/elements/expr.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -27,7 +24,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/str/str_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -41,8 +37,6 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include <string_view>
-
 using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {
@@ -51,42 +45,42 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(testImport);
-		// TESTER_ADD_TEST(testEdgeEvals);
-		// TESTER_ADD_TEST(testConstants);
+		TESTER_ADD_TEST(testImport);
+		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testNumericLiterals);
-		// TESTER_ADD_TEST(testClassSymbolData);
-		// TESTER_ADD_TEST(testTypeInstanceInterface);
-		// TESTER_ADD_TEST(testHoutVariables);
-		// TESTER_ADD_TEST(testExprTree);
-		// TESTER_ADD_TEST(testExprClone);
-		// TESTER_ADD_TEST(testSimpleHOUT);
-		// TESTER_ADD_TEST(testSingleFileModuleHOUT);
-		// TESTER_ADD_TEST(testModuleHOUT);
-		// TESTER_ADD_TEST(testDependencyHOUT);
-		// TESTER_ADD_TEST(testHoutVisitor);
-		// TESTER_ADD_TEST(testTypeOf);
-		// TESTER_ADD_TEST(testKeywordLiterals);
-		// TESTER_ADD_TEST(testFunctionParameters);
-		// TESTER_ADD_TEST(testExprScopes);
-		// TESTER_ADD_TEST(testFunctionCallExpr);
-		// TESTER_ADD_TEST(testFunctions);
-		// TESTER_ADD_TEST(testBuiltinFunctions);
-		// TESTER_ADD_TEST(testMangler);
-		// TESTER_ADD_TEST(testManglerSpecialMembers);
-		// TESTER_ADD_TEST(testGlobalVariableExpressions);
-		// TESTER_ADD_TEST(testTypeOfConstAndVar);
-		// TESTER_ADD_TEST(testDebugPrint);
-		// TESTER_ADD_TEST(testStmtSpecifiers);
+		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testTypeInstanceInterface);
+		TESTER_ADD_TEST(testHoutVariables);
+		TESTER_ADD_TEST(testExprTree);
+		TESTER_ADD_TEST(testExprClone);
+		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testSingleFileModuleHOUT);
+		TESTER_ADD_TEST(testModuleHOUT);
+		TESTER_ADD_TEST(testDependencyHOUT);
+		TESTER_ADD_TEST(testHoutVisitor);
+		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testKeywordLiterals);
+		TESTER_ADD_TEST(testFunctionParameters);
+		TESTER_ADD_TEST(testExprScopes);
+		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testManglerSpecialMembers);
+		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
+		TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testStmtSpecifiers);
 
-		// // error tests
-		// TESTER_ADD_TEST(testErrorBadExpr);
-		// TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
+		// error tests
+		TESTER_ADD_TEST(testErrorBadExpr);
+		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 
-		// // this is at the end
-		// // so we test all the scopes created in helios tests:
-		// TESTER_ADD_TEST(testScopeParentsAndDepth);
-		// TESTER_ADD_TEST(testScopeSymbolsConsistency);
+		// this is at the end
+		// so we test all the scopes created in helios tests:
+		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
@@ -160,7 +154,7 @@ private:
 
 		// TODOP: Uncomment when f16 exists.
 		// ASSERT_EQUAL(0.5, getConstValueAs<f32>("NEEDS_F16", root_scope));
-		
+
 		// TODOP: Figure out what to do with this. Maybe we need minimization after all.
 		// ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
 		// ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
@@ -172,7 +166,7 @@ private:
 		// ASSERT_EQUAL(26, getConstValueAs<i16>("hex", root_scope));
 		// ASSERT_EQUAL(15, getConstValueAs<i16>("oct", root_scope));
 		// ASSERT_EQUAL(21, getConstValueAs<i16>("bin", root_scope));
-		
+
 		// TODOP: This works nicely
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
@@ -426,47 +420,40 @@ private:
 
 			// Build call arguments for square function
 			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
-			call_args.emplace_back(
-				makeBox<compiler::helios::code::AccessExpr>(
-					ctx,
-					makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1),
-					base::StrID("field")
-				)
-			);
+			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
+				ctx,
+				makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1),
+				base::StrID("field")
+			));
 
 			// Build sequence expressions
 			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
-			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::TupleTypeConstructorExpr>(
-					ctx, std::move(tuple_elements)
-				)
-			);
-			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::BinaryOperatorExpr>(
+			sequence_exprs.emplace_back(makeBox<compiler::helios::code::TupleTypeConstructorExpr>(
+				ctx, std::move(tuple_elements)
+			));
+			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+				ctx,
+				compiler::helios::code::BuiltinBinary::IntegerAdd,
+				makeBox<compiler::helios::code::ParenthesisExpr>(
 					ctx,
-					compiler::helios::code::BuiltinBinary::IntegerAdd,
-					makeBox<compiler::helios::code::ParenthesisExpr>(
-						ctx,
-						makeBox<compiler::helios::code::UnaryOperatorExpr>(
-							compiler::helios::code::BuiltinUnary::IntegerNegation,
-							makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
-						)
-					),
-					makeBox<compiler::helios::code::CallExpr>(
-						ctx,
-						makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
-						std::move(call_args)
+					makeBox<compiler::helios::code::UnaryOperatorExpr>(
+						compiler::helios::code::BuiltinUnary::IntegerNegation,
+						makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
 					)
+				),
+				makeBox<compiler::helios::code::CallExpr>(
+					ctx,
+					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					std::move(call_args)
 				)
-			);
+			));
 
 			// Build variant subtypes
 			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
 			variant_subtypes.emplace_back(
 				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
 			);
-			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
+			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
 			);
 			variant_subtypes.emplace_back(
 				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, tpc::StringValue("hello"))
@@ -682,12 +669,9 @@ private:
 						auto val
 							= ctv.get<compiler::numeric_value::NumericValue>()->coerceTo<i64>();
 						if (!val.has_value()) {
-							this->fail(
-								base::strConcat(
-									"Got a constant with a different type than expected",
-									name.strView()
-								)
-							);
+							this->fail(base::strConcat(
+								"Got a constant with a different type than expected", name.strView()
+							));
 						}
 						ASSERT_EQUAL(exp_val, val);
 						return;
@@ -1164,18 +1148,16 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		auto find_function
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1298,18 +1280,16 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto find_function
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1359,11 +1339,9 @@ private:
 			std::vector<char> globals = { 'A', 'B', 'C' };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
-					ASSERT_TRUE(
-						compiler::helios::isGlobalVar(
-							ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
-						)
-					);
+					ASSERT_TRUE(compiler::helios::isGlobalVar(
+						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+					));
 
 				for (const auto& fun: hout_unit.functions) {
 					if (fun.declaration->original_name.str() == "foo0") {
@@ -1654,9 +1632,9 @@ private:
 	}
 
 	void testErrorAmbiguousCallableCandidates() {
-		auto [module_id, root_scope] = getModule(
-			fs::File(path("test_modules/error_generating/ambiguous_callable_candidates"))
-		);
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_callable_candidates")
+		    ));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.

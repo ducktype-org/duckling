@@ -12,20 +12,11 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include "base/str/str_utils.hpp"
-#include "base/str/string_id.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include "diagnostic/source_position.hpp"
-#include "query_framework/context.hpp"
 #include <query_framework/query_impl.hpp>
-
-#include <string>
-#include <type_traits>
-
-#define DEBUG(CONTENT) std::cout << "[QUERY HOUT OF EXPR]: " << CONTENT << '\n';
 
 namespace compiler::helios::code {
 	namespace {
@@ -83,24 +74,16 @@ namespace compiler::helios::code {
 			base::Optional<base::Box<Expr>> node;
 
 			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
-				DEBUG("Visit unit");
 				node = makeBox<LiteralUnitExpr>(ctx);
 			}
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				DEBUG("Visit expr value");
-				DEBUG("Called for:");
-				stmt->dprint(std::cout);
-				std::cout << "\n===========================\n";
-
 				auto parsed_numeric_value = fromExprValue(ctx, stmt);
 
 				if (parsed_numeric_value.has_value()) {
-					DEBUG("Visit expr value: RETURN GOOD");
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
 				} else {
 					// Error was logged in parseNumericLiteral.
-					DEBUG("Visit expr value: RETURN BAD");
 					return;
 				}
 			}
@@ -116,14 +99,12 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> binaryBuiltin(
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
-				DEBUG("Visit binary builtin");
 				auto operation = findBinaryBuiltin(op, lhs.ref(), rhs.ref());
 				if (operation) {
 					return makeBox<BinaryOperatorExpr>(
 						ctx, operation.value(), std::move(lhs), std::move(rhs)
 					);
 				}
-				DEBUG("Visit binary builtin: RETURN BAD");
 				return {};
 			}
 
@@ -134,7 +115,6 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
 				auto operation = findUnaryBuiltin(op, expr.ref());
 
-				DEBUG("Visit unary builtin");
 				if (operation)
 					return makeBox<UnaryOperatorExpr>(operation.value(), std::move(expr));
 				else
@@ -142,7 +122,6 @@ namespace compiler::helios::code {
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
-				DEBUG("Visit binary op");
 				// handle variants:
 				if (stmt->getOperator().str() == "|") {
 					// @todo HOUT 2.0:
@@ -202,7 +181,6 @@ namespace compiler::helios::code {
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
-				DEBUG("Visit chain expr");
 				auto result = fromChainExpr(ctx, chain_expr);
 				if (result.hasError()) {
 					// Error has occurred.
@@ -212,14 +190,12 @@ namespace compiler::helios::code {
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
-				DEBUG("Visit round expr");
 				PstExprToHoutExprVisitor vis(ctx);
 				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
 				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, std::move(*vis.node));
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				DEBUG("Visit identifier literal");
 				// note: this is a mock, it should be unified with ChainExpr
 				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
@@ -235,7 +211,6 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
-				DEBUG("Visit keyword literal");
 				using enum tsh::IntegralAbstractType::Signedness;
 				switch (stmt->getKeyword()) {
 				// true, false:
@@ -464,7 +439,6 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
-			DEBUG("VISITOR FAILED");
 			return query::QError(errors::Failed());
 		}
 	}
@@ -479,10 +453,6 @@ namespace compiler::helios {
 			CORE_ASSERT(
 				key.element.unlockOpt(ctx).has_value(), "Nullptr provided to QueryHoutOfExpr"
 			);
-
-			DEBUG("Called top level query for:");
-			key.element.unlock(ctx)->debugPrint(std::cout);
-			std::cout << '\n' << "======================" << '\n';
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);

@@ -6,18 +6,12 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "ctv/numeric_value.hpp"
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/higher/value_category.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <query_framework/context.hpp>
-
-#include <type_traits>
 
 namespace compiler::helios::code {
 
@@ -29,8 +23,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
-
-
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
@@ -70,9 +62,7 @@ namespace compiler::helios::code {
 				  using namespace tsh;
 				  return std::visit(
 					  [&](auto&& actual_value) -> SymbolType<> {
-						  // TODOP: Variant visit?
 						  using T = std::decay_t<decltype(actual_value)>;
-
 						  if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
 							  return SymbolType{
 								  ctx.query<QueryIntegralType>(
@@ -103,7 +93,6 @@ namespace compiler::helios::code {
 				  );
 			  }(),
 			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-
 		  )),
 		  value(value) {}
 

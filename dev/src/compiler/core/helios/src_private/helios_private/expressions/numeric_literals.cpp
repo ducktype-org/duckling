@@ -1,5 +1,3 @@
-
-/// NUMERIC LITERAL PARSING ///
 #include "numeric_literals.hpp"
 
 #include <ctv/numeric_value.hpp>
@@ -11,8 +9,6 @@
 #include <charconv>
 #include <limits>
 #include <type_traits>
-
-#define NDEBUG(CONTENT) std::cout << "[NUMERIC DEDUCTION]: " << CONTENT << '\n';
 
 namespace compiler::helios::code {
 	namespace {
@@ -33,7 +29,6 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseSignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			NDEBUG("Parse signed int");
 			// TODOP: i128 potentially?
 			i64  parsed_value = 0;
 			auto result
@@ -65,7 +60,6 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseUnsignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			NDEBUG("Parse unsigned int");
 			// TODOP: u128 potentially?
 			u64  parsed_value = 0;
 			auto result
@@ -95,7 +89,6 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseFloat(
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			NDEBUG("Parse float");
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
@@ -114,13 +107,11 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> deduceIntegerType(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			NDEBUG("Deduce integer type");
 			i64  parsed_value = 0;
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 			if (result.ec != std::errc()
 			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
-				NDEBUG("Deduce integer type from_chars error");
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 						position, "Invalid literal: deduced integer type"
@@ -132,16 +123,12 @@ namespace compiler::helios::code {
 			// TODOP: issue, add support for i8 and i128 types
 			numeric_value::NumericValue numeric_result;
 			if (parsed_value <= std::numeric_limits<i16>::max()) {
-				NDEBUG("i16");
 				numeric_result = numeric_value::NumericValue{ static_cast<i16>(parsed_value) };
 			} else if (parsed_value <= std::numeric_limits<i32>::max()) {
-				NDEBUG("i32");
 				numeric_result = numeric_value::NumericValue{ static_cast<i32>(parsed_value) };
 			} else if (parsed_value <= std::numeric_limits<i64>::max()) {
-				NDEBUG("i64");
 				numeric_result = numeric_value::NumericValue{ static_cast<i64>(parsed_value) };
 			} else {
-				NDEBUG("Deduce integer type literal overflow");
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 						position, "Integer literal overflow"
@@ -153,7 +140,6 @@ namespace compiler::helios::code {
 			// TODOP: Add issue number
 			// @TODO: For now, until the cast instuction are added we cast all the deduced types to
 			// i64 to avoid adding a type specifier to  every numeric literal in the tests.
-			NDEBUG("CASTING TO I64");
 			return numeric_value::NumericValue{ std::visit(
 				[&](auto&& val) { return static_cast<i64>(val); }, numeric_result.getStorage()
 			) };
@@ -162,7 +148,6 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			NDEBUG("Deduce float type");
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 			if (result.ec != std::errc()
@@ -189,14 +174,7 @@ namespace compiler::helios::code {
 		query::Context& ctx, pst::AccessLocked<pst::expr::ExprValue> literal_expr_locked
 	) {
 		auto literal_expr = literal_expr_locked.unlock(ctx);
-
-		NDEBUG("Visit expr value");
-		NDEBUG("Called for:");
-		literal_expr->dprint(std::cout);
-		std::cout << "\n===========================\n";
-
-
-		auto value = literal_expr->getValue().value.strView();
+		auto value        = literal_expr->getValue().value.strView();
 		auto type_specifier_strid
 			= literal_expr->getValue().type_specifier.copyValueOr(base::StrID(""));
 		auto type_specifier = lang_def::strAsNumericLiteralTypeSpecifier(type_specifier_strid);
@@ -251,5 +229,4 @@ namespace compiler::helios::code {
 		}
 		return {};
 	}
-
 }

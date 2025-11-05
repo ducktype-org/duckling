@@ -1,18 +1,10 @@
 #include "ctv.hpp"
 
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <typesystem/higher/queries/types.hpp>
-
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-#include "base/str/str_utils.hpp"
 
 #include <query_framework/context.hpp>
 
-#include <concepts>
 #include <string>
-#include <type_traits>
 
 namespace compiler::ctv {
 	CompileTimeValue::CompileTimeValue() = default;
@@ -20,18 +12,17 @@ namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
 	std::string CompileTimeValue::toString() const {
-		std::cout << "Variant index in CTV: " << value.index() << '\n';
-		// clang-format off
-		VARIANT_VISIT(value,
-			VISIT_CASE(bool, val, return std::string(val ? "true" : "false"))
-			VISIT_CASE(UnitCTV, _, return std::string("()"))
-			VISIT_CASE(NumericValue, val, return val.toString())
-			VISIT_CASE(tsh::SymbolType<>, val, return val.toString())
-
-		) 
-		// clang-format off
-		return "[ERROR]";
-}
+		variant_match(value) {
+			variant_case_novalue(UnitCTV) { return "()"; }
+			variant_case(NumericValue, val) { return val.toString(); }
+			variant_case(bool, val) { return val ? "true" : "false"; }
+			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
+			variant_default {
+				throw base::NotYetImplemented("Converting other CTV types to string");
+			}
+		}
+		return "";
+	}
 
 	base::Optional<tsh::SymbolType<>> CompileTimeValue::getType(query::Context& ctx) const {
 		variant_match(value) {

@@ -1,9 +1,8 @@
 #pragma once
 
 #include "../../scope_symbol_id.hpp"
-#include "ctv/ctv.hpp"
-#include "ctv/numeric_value.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
