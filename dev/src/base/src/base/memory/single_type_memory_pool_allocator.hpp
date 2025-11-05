@@ -167,8 +167,7 @@ namespace base {
 					found = true;
 
 					CORE_ASSERT(
-						obj_ref.get()
-							== buffers[buffer_idx]->items[deallocation_idx.item_idx].get(),
+						obj_ref.get() == buffers[buffer_idx]->items[deallocation_idx.item_idx].get(),
 						"Calculated deallocation index does not point to the given object"
 					);
 

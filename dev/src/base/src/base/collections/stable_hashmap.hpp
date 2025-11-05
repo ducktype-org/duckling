@@ -113,7 +113,7 @@ namespace base {
 			CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
 			CORE_ASSERT(bucket_index < buckets.size(), "Bucket index out of bounds");
 
-			new_node->next = buckets[bucket_index];
+			new_node->next        = buckets[bucket_index];
 			buckets[bucket_index] = new_node;
 		}
 
@@ -251,11 +251,10 @@ namespace base {
 		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(Node{
 				nullptr, std::forward<K>(key), std::forward<D>(value) });
-			
+
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
-				not this->contains(new_node->key_value.key),
-				"Key already exists in StableHashMap"
+				not this->contains(new_node->key_value.key), "Key already exists in StableHashMap"
 			);
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
