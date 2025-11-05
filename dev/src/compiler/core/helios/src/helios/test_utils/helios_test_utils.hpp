@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ctv/numeric_value.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/module_id.hpp>
@@ -10,6 +11,8 @@
 
 #include <filesystem/file.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+
+#include <type_traits>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -49,22 +52,25 @@ namespace compiler::helios::test_utils {
 	 */
 	template<typename T>
 	T getConstValueAs(const std::string_view chain, ScopeID scope) {
+		static_assert(
+			std::is_constructible_v<ctv::CompileTimeValue, T>
+				|| std::is_constructible_v<numeric_value::NumericValue, T>,
+			"getConstValueAs was called with a type which doesn't exist in CTV and NumericValue"
+		);
+
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
-		if constexpr (std::is_same_v<T, ctv::CompileTimeValue::UnitCTV>)
-			maybe_value = ctv_result.get<ctv::CompileTimeValue::UnitCTV>();
-		else if constexpr (std::is_same_v<T, i64>)
-			// TODOP: Fix that
-			maybe_value = ctv_result.get<numeric_value::NumericValue>().value().coerceTo<i64>();
-		else if constexpr (std::is_same_v<T, bool>)
-			maybe_value = ctv_result.get<bool>();
-		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
+		if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>) {
+			auto maybe_numeric_value = ctv_result.get<numeric_value::NumericValue>();
+			maybe_value              = maybe_numeric_value->get<T>();
+		} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
 			query::utils::withContextDo([&](query::Context& ctx) {
 				maybe_value = ctv_result.getType(ctx);
 			});
-		else
-			static_assert(false, "Unsupported type for getConstValueAs");
+		} else {
+			maybe_value = ctv_result.get<T>();
+		}
 
 		CORE_ASSERT(
 			maybe_value.has_value(),
