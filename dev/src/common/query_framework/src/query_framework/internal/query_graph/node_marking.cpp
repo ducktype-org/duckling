@@ -1,11 +1,12 @@
 #include "node_marking.hpp"
 
-#include <algorithm>
-#include <query_framework/external/api.hpp> // for query::external::InputData definition
+#include "base/except/exceptions.hpp"
+
+#include <query_framework/external/api.hpp>  // for query::external::InputData definition
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <algorithm>
 
 namespace query::internal {
 
@@ -26,7 +27,7 @@ namespace query::internal {
 		);
 
 		// Collect previous nodes of interest (Input and SideInput)
-		auto all_nodes = prev_graph->getAllNodes();
+		auto                all_nodes = prev_graph->getAllNodes();
 		std::vector<NodeID> prev_inputs;
 		prev_inputs.reserve(all_nodes.size());
 		for (const auto& node: all_nodes) {
@@ -52,17 +53,14 @@ namespace query::internal {
 		}
 
 		// Sort previous nodes by (hash, q_id)
-		std::ranges::sort(
-			prev_inputs,
-			[](const NodeID& a, const NodeID& b) {
-				if (a.hash.val == b.hash.val) return a.q_id.asInt() < b.q_id.asInt();
-				return a.hash.val < b.hash.val;
-			}
-		);
+		std::ranges::sort(prev_inputs, [](const NodeID& a, const NodeID& b) {
+			if (a.hash.val == b.hash.val) return a.q_id.asInt() < b.q_id.asInt();
+			return a.hash.val < b.hash.val;
+		});
 
 		// Two-pointer merge-like pass to mark colors
-		usize i = 0; // index into inputs
-		usize j = 0; // index into prev_inputs
+		usize i = 0;  // index into inputs
+		usize j = 0;  // index into prev_inputs
 
 		auto cmp_pair = [](const base::Bit256& h1, u64 id1, const base::Bit256& h2, u64 id2) {
 			if (h1 == h2) return id1 < id2;
@@ -88,7 +86,8 @@ namespace query::internal {
 		}
 
 		// Remaining nodes are red
-		for (; j < prev_inputs.size(); ++j) state->setPrevNodeColor(prev_inputs[j], QueryState::PrevColor::Red);
+		for (; j < prev_inputs.size(); ++j)
+			state->setPrevNodeColor(prev_inputs[j], QueryState::PrevColor::Red);
 	}
 
 }  // namespace query::internal

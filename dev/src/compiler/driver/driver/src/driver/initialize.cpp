@@ -67,8 +67,8 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  graph = query::external::deserialize(span);
-					auto inputs = collectAllPstElementHashesFromGlobalPackages();
+					auto                  graph  = query::external::deserialize(span);
+					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
 					query::external::setPreviousGraph(std::move(graph), std::move(inputs));
 				}
 			}

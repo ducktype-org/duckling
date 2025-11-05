@@ -8,15 +8,15 @@
 
 namespace query::external {
 
-    void setPreviousGraph(::query::internal::QueryGraph&& graph, std::vector<InputData>&& inputs) {
-        auto state = ::query::internal::ContextAccess::getState();
-        state->setPreviousGraph(std::move(graph));
+	void setPreviousGraph(::query::internal::QueryGraph&& graph, std::vector<InputData>&& inputs) {
+		auto state = ::query::internal::ContextAccess::getState();
+		state->setPreviousGraph(std::move(graph));
 
-        ::query::internal::markPreviousGraphNodesInputs(std::move(inputs));
-    }
+		::query::internal::markPreviousGraphNodesInputs(std::move(inputs));
+	}
 
-    ::query::internal::QueryGraph deserialize(std::span<const std::byte> data) {
-        return ::query::internal::QueryGraph::deserialize(data);
-    }
+	::query::internal::QueryGraph deserialize(std::span<const std::byte> data) {
+		return ::query::internal::QueryGraph::deserialize(data);
+	}
 
 }  // namespace query::external

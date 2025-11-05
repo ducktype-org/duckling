@@ -2,12 +2,12 @@
 
 #include <base/types/bit256.hpp>
 
-#include <query_framework/query_hash.hpp>
-#include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/query_hash.hpp>
 
-#include <span>
 #include <cstddef>
+#include <span>
 #include <vector>
 
 /**
@@ -20,9 +20,11 @@ namespace query::external {
 	struct InputData final {
 		// Same data carried by internal::NodeID
 		query::internal::QueryID q_id;
-		query::QueryStableHash              hash;
+		query::QueryStableHash   hash;
 
-		InputData(query::internal::QueryID q_id, query::QueryStableHash hash): q_id(q_id), hash(hash) {}
+		InputData(query::internal::QueryID q_id, query::QueryStableHash hash):
+			  q_id(q_id),
+			  hash(hash) {}
 	};
 
 	/**
