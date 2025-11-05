@@ -19,7 +19,7 @@ namespace base {
 	 * Custom, Stable hash map implementation.
 	 * Its performance is similar or better then std::unordered_map, while keeping references always
 	 * stable.
-	 * 
+	 *
 	 * Pointer to the stored data will never be invalidated until the data is erased from the map.
 	 * Iterators can be invalidated when elements are added or removed from the map.
 	 */

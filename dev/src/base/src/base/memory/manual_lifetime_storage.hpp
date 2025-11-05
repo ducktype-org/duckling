@@ -22,7 +22,8 @@ namespace base {
 	 * See also: https://en.cppreference.com/w/cpp/utility/launder.html
 	 */
 	template<class T>
-	requires base::IsPlainType<T> struct ManualLifetimeStorage final { // NOLINT (non-initialization od data in constructor)
+	requires base::IsPlainType<T>
+	struct ManualLifetimeStorage final {  // NOLINT (non-initialization od data in constructor)
 	private:
 		alignas(T) std::byte data[sizeof(T)] = {};  // NOLINT
 
@@ -86,14 +87,16 @@ namespace base {
 			static_assert(
 				OFFSET == 0,
 				"This might not hold actually, but should. Is left here for clarity, and with it "
-			    "I'm more confident this is UB free."
+				"I'm more confident this is UB free."
 			);
 
 			auto result = std::launder(reinterpret_cast<ManualLifetimeStorage*>(
 				reinterpret_cast<std::byte*>(obj_ref.get()) - OFFSET
 			));
 			IF_BUILD_TYPE_DEV({
-				CORE_ASSERT(result->state == State::Constructed, "Object is not constructed (getSelf)");
+				CORE_ASSERT(
+					result->state == State::Constructed, "Object is not constructed (getSelf)"
+				);
 			})
 			return result;
 		}

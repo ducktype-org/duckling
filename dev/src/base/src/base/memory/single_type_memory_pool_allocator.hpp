@@ -25,7 +25,9 @@ namespace base {
 		constexpr static u64 BLOCK_ELEMENT_COUNT = BYTE_BLOCK_SIZE / sizeof(StorageT);
 		using ItemArray                          = std::array<StorageT, BLOCK_ELEMENT_COUNT>;
 
-		static_assert(sizeof(ItemArray) == BLOCK_ELEMENT_COUNT * sizeof(StorageT), "ItemArray size mismatch");
+		static_assert(
+			sizeof(ItemArray) == BLOCK_ELEMENT_COUNT * sizeof(StorageT), "ItemArray size mismatch"
+		);
 
 		static_assert(BLOCK_ELEMENT_COUNT > 0, "BYTE_BLOCK_SIZE is too small for type T");
 
@@ -83,7 +85,7 @@ namespace base {
 			  allocated_count(other.allocated_count),
 			  next_item_idx(other.next_item_idx) {
 			other.allocated_count = 0;
-			other.next_item_idx = BufferItemIndex{};
+			other.next_item_idx   = BufferItemIndex{};
 		}
 
 		SingleTypeMemoryPoolAllocator& operator=(const SingleTypeMemoryPoolAllocator&) = delete;
@@ -104,8 +106,8 @@ namespace base {
 				free_list.pop_back();
 			} else {
 				// else allocate in the next available slot:
-				allocation_idx  = next_item_idx;
-				next_item_idx = next_item_idx.next();
+				allocation_idx = next_item_idx;
+				next_item_idx  = next_item_idx.next();
 
 				// check if we need to allocate a new buffer:
 				if (allocation_idx.buffer_idx >= buffers.size()) [[unlikely]]

@@ -46,7 +46,7 @@ public:
 		{
 			std::minstd_rand rng(42);
 
-			base::StableHashMap20<BigObject<13>, BigObject<16>> map;
+			base::StableHashMap<BigObject<13>, BigObject<16>> map;
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
@@ -112,7 +112,7 @@ public:
 	}
 
 	void containsTest() {
-		base::StableHashMap20<u64, u64> map;
+		base::StableHashMap<u64, u64> map;
 		map.put(1ull, 10ull);
 
 		ASSERT_TRUE(map.contains(1ull));
@@ -130,7 +130,7 @@ public:
 	}
 
 	void clearTest() {
-		base::StableHashMap20<u64, u64> map;
+		base::StableHashMap<u64, u64> map;
 		map.put(1ull, 10ull);
 		map.put(2ull, 20ull);
 		map.put(3ull, 30ull);
@@ -146,12 +146,12 @@ public:
 	}
 
 	void moveTest() {
-		base::StableHashMap20<u64, u64> map;
+		base::StableHashMap<u64, u64> map;
 		map.put(1ull, 10ull);
 		map.put(2ull, 20ull);
 		map.put(3ull, 30ull);
 
-		base::StableHashMap20<u64, u64> moved_map = std::move(map);
+		base::StableHashMap<u64, u64> moved_map = std::move(map);
 
 		ASSERT_EQUAL(map.size(), 0);
 
