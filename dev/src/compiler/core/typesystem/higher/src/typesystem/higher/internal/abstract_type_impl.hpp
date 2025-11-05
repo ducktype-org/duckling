@@ -301,8 +301,9 @@ namespace tsh::internal {
 			// as well as promoting to greater sizes and to floating point
 			// numbers for physics simulations or similar
 			return target.getKind() == Kind::Bool
-			    || (target.getKind() == Kind::Integral
-			        && IntegralAbstractType(target).getSize() > size)
+			    || (target.getKind() == Kind::Integral)
+			    // && IntegralAbstractType(target).getSize() > size)
+			    // @TODO: #1461 Make implicit narrowing conversion illegal
 			    || target.getKind() == Kind::Float;
 		}
 

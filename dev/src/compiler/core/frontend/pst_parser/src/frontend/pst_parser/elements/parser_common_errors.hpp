@@ -18,4 +18,20 @@ namespace pst::error {
 
 		BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
+
+	class DuplicateSemicolon final: public dia::Warning {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Duplicate semicolon";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		DuplicateSemicolon(dia::SourcePosition pos): dia::Warning(pos) {}
+	};
 }
