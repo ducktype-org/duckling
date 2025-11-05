@@ -13,15 +13,15 @@ using namespace tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
 
-class TypeSystemOverloadResolutionTest final: public tester::TestSuite {
+class TypeSystemClassFieldsTest final: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS TypeSystemOverloadResolutionTest
+#define TESTER_CLASS TypeSystemClassFieldsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(overloadResolutionTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(classFieldsTest); }
 
 private:
-	void overloadResolutionTest() {
+	void classFieldsTest() {
 		auto [_, root_scope] = getModule(fs::File(path("class_definitions")));
 		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
@@ -57,7 +57,7 @@ private:
 	}
 
 public:
-	~TypeSystemOverloadResolutionTest() override = default;
+	~TypeSystemClassFieldsTest() override = default;
 };
 
 TESTER_COMMON_MAIN("/src/compiler/core/typesystem/higher/tests/")

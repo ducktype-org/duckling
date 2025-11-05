@@ -1,0 +1,10 @@
+fun ambiguous() -> i32 = {
+    return 1;
+}
+
+fun ambiguous(x: i64 = 42) -> i32 = {
+    return 2;
+}
+
+# This call should fail: both functions match exactly
+var AMBIGUOUS_CALL: i32 = ambiguous();
