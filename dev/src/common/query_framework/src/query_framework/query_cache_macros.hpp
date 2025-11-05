@@ -23,7 +23,8 @@
 	);                                                                          \
 	static_assert(                                                              \
 		std::is_copy_constructible_v<PResult>,                                  \
-		"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"
+		"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"        \
+	);
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
