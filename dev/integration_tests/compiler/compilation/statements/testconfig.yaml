@@ -3,11 +3,16 @@
 Tests:
   conditional: # if, if-else
     Cases: 
-      default:
+      llvm:
+        backend: llvm
         ExitCode: 99
-  loops: # while
+      dvm:
+        backend: dvm
+        ExitCode: 99
+  loops-performance: # while
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: "20 \n100000001 \n"
         ExitCode: 0
