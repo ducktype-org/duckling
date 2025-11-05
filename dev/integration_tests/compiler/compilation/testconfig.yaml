@@ -34,13 +34,11 @@ Tests:
         backend: dvm
         Output:
           String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
-          # I don't know there is a whitespace at the end of each line.
-          # @TODO: #1347 fix trailing space in llvm
         ExitCode: 76
       llvm:
         backend: llvm
         Output:
-          String: "4 \n1 \n23 \n4 \n1 \n4 \n4 \n8 \n4 \n8 \n76 \n"
+          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
         ExitCode: 76
 
 SubDirs:

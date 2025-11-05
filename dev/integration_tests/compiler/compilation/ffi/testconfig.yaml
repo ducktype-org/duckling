@@ -11,6 +11,6 @@ Tests:
     Cases:
       default:
         Output:
-          String: "Hello from C!\nHello from C!\n1 \nHello from C!\n"
+          String: "Hello from C!\nHello from C!\n1\nHello from C!\n"
         ExitCode: 0
 
