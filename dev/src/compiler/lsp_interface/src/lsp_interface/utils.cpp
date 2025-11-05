@@ -3,6 +3,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -87,13 +88,12 @@ namespace lsp {
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
-			if (ext_is_ok(path.extension())) {
-				query::utils::withContextDo([&vfile](query::Context& ctx) {
-					auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
-					for (auto& src_file: src_files)
-						ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
-				});
-			}
+			CORE_ASSERT(ext_is_ok(path.extension()), "Files should already have Duckling extensions.");
+			query::utils::withContextDo([&vfile](query::Context& ctx) {
+				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
+				for (auto& src_file: src_files)
+					ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+			});
 			return;
 		}
 
