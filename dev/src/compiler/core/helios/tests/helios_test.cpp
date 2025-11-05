@@ -19,6 +19,7 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -48,6 +49,7 @@ public:
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testTypeInstanceInterface);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
@@ -166,6 +168,41 @@ private:
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
 
 		query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
+	}
+
+	/**
+	 * Simple checks that type instance interfaces return expected results.
+	 * @note For now only checks interfaces of class types.
+	 */
+	void testTypeInstanceInterface() {
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/classes_2")));
+
+		const auto simple_class = getChain("SimpleClass", root_scope).back();
+		const auto simple_class_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(simple_class)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<tsh::ClassAbstractType>();
+
+		const auto h_interface
+			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto a_result = h_interface.lookup(ctx, base::StrID("a"));
+			ASSERT_TRUE(a_result->isSingle());
+			auto a_symbol = a_result->leaves.at(0);
+
+			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
+
+			// @TODO: #1485 uncomment when methods are added to type interfaces
+			// auto get_a_result = h_interface.lookup(ctx, base::StrID("get_a"));
+			// ASSERT_TRUE(get_a_result->isSingle());
+			// auto get_a_symbol = get_a_result->leaves.at(0);
+			// ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
+
+			auto empty_result = h_interface.lookup(ctx, base::StrID("non_existent_symbol"));
+			ASSERT_TRUE(empty_result->isEmpty());
+		});
 	}
 
 	void testTypeOf() {
