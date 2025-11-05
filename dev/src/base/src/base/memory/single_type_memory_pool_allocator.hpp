@@ -165,6 +165,13 @@ namespace base {
 					deallocation_idx.item_idx
 						= static_cast<u64>(obj_storage.get() - buffer_pointer_start);
 					found = true;
+
+					CORE_ASSERT(
+						obj_ref.get()
+							== &buffers[buffer_idx]->items[deallocation_idx.item_idx].get(),
+						"Calculated deallocation index does not point to the given object"
+					);
+
 					break;
 				}
 			}
@@ -176,8 +183,8 @@ namespace base {
 			free_list.push_back(deallocation_idx);
 		}
 
-		~SingleTypeMemoryPoolAllocator() IF_BUILD_TYPE_RELEASE(noexcept) {
-			CORE_ASSERT(
+		~SingleTypeMemoryPoolAllocator() {
+			CORE_ASSERT_NOEXCEPT(
 				allocated_count == 0,
 				"Not all allocated objects were deallocated before destruction of the allocator"
 			);

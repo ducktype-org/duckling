@@ -41,7 +41,7 @@ namespace base {
 		// We set it explicitly, to make sure that in release builds destructor is trivial:
 		IF_BUILD_TYPE_RELEASE(~ManualLifetimeStorage() noexcept = default;)
 		IF_BUILD_TYPE_DEV(~ManualLifetimeStorage() {
-			CORE_ASSERT(
+			CORE_ASSERT_NOEXCEPT(
 				state == State::Empty,
 				"Object is still constructed during destruction of ManualLifetimeStorage"
 			);
