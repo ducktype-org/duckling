@@ -11,7 +11,7 @@ compiled_to_llvm: "./build/package_llvm.exe"
 compiled_to_dvm: "./build/query/query*/*.dbc" # ??
 
 Clean: "@{clean_cmd}"
-PreCase: "@{clean_cmd} &&
+PreCase: "@{clean_cmd} && mkdir build &&
   @{compile_duckc};
   case '@{backend}' in
     dvm)       @{compile_dvm} && @{compile_dvm_backend_cmd} ;;
