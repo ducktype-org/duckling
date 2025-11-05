@@ -172,7 +172,6 @@ void server(i32 port) {
 			if (!path.exists()) return crow::response(404, "File not found");
 
 			const auto file        = fs::File(path);
-			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 			std::vector<std::string> out;
 
 			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
