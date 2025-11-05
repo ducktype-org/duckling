@@ -18,29 +18,29 @@
 #include <base/str/string_id.hpp>
 
 #include <ranges>
-#include <string>
-#include <variant>
 
 namespace tsh {
-	enum class Visibility { Public, Protected, Private };
+	enum class ClassMemberVisibility { Public, Protected, Private };
 
 	/**
 	 * @brief A single element of an interface, defined by its symbol (not name).
 	 */
 	class InterfaceElement final {
 	public:
-		/**
-		 * @brief A record which describes a parameter of a function.
-		 *
-		 * A parameter is described with its name, type, and whether it has a default value.
+		/** 
+		 * Kind of type interface element.
 		 */
-		struct Parameter final {
-			base::StrID          name;
-			SymbolType<>         type;
-			bool                 has_default_value;
-			std::strong_ordering operator<=>(const Parameter& other) const = default;
-		};
+		enum class InterfaceElementKind {
+			Field,
+			Method,
 
+			/**
+			 * Other elements are symbols that are not "part of" a type
+			 * in a direct way, but are declared within the class body.
+			 * For example: constants, using declarations
+			 */
+			Other,
+		};
 	private:
 		/**
 		 * @brief The symbol corresponding to this element.
@@ -61,18 +61,7 @@ namespace tsh {
 		 */
 		u32 declaration_order;
 
-		/**
-		 * @brief The input parameters of this element of the interface.
-		 * If the optional is empty, then the element is a field.
-		 *
-		 * Otherwise, if the vector inside the optional is empty, then it is a parameterless method.
-		 */
-		base::Optional<std::vector<Parameter>> parameters;
-
-		/**
-		 * @brief The type of a field or the return type of a method.
-		 */
-		SymbolType<> result_type;
+		InterfaceElementKind kind;
 
 		/**
 		 * @brief The visibility of an element of the interface.
@@ -82,9 +71,12 @@ namespace tsh {
 		 * It's better to say "this element is present, but it is private and you cannot use it"
 		 * rather than "this element is not recognised, go figure out why".
 		 */
-		Visibility visibility;
+		ClassMemberVisibility visibility;
+
+		// @TODO PR: add method/field distinction?
 
 	public:
+
 		/**
 		 * @brief Construct an element of an interface of a type.
 		 * @param symbol The symbol of this element.
@@ -98,15 +90,13 @@ namespace tsh {
 			const compiler::helios::SymID          symbol,
 			const AbstractType                     source,
 			const u32                              declaration_order,
-			base::Optional<std::vector<Parameter>> parameters,
-			const SymbolType<>                     result_type,
-			const Visibility                       visibility
+			const InterfaceElementKind kind,
+			const ClassMemberVisibility                       visibility
 		):
 			  symbol(symbol),
 			  source(source),
 			  declaration_order(declaration_order),
-			  parameters(std::move(parameters)),
-			  result_type(result_type),
+			  kind(kind),
 			  visibility(visibility) {}
 
 		/**
@@ -138,7 +128,7 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		bool isField() const {
-			return parameters.empty();
+			return kind == InterfaceElementKind::Field;
 		}
 
 		/**
@@ -152,28 +142,9 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		bool isMethod() const {
-			return parameters.has_value();
+			return kind == InterfaceElementKind::Method;
 		}
 
-		/**
-		 * @brief Gets the parameter types of this element.
-		 * @return The parameter types of this element.
-		 */
-		[[nodiscard]]
-		base::Optional<CRef<std::vector<Parameter>>> getParameters() const {
-			return parameters.has_value()
-			         ? base::Optional<CRef<std::vector<Parameter>>>(&parameters.value())
-			         : base::Optional<CRef<std::vector<Parameter>>>();
-		}
-
-		/**
-		 * @brief Gets the result type of this element.
-		 * @return The result type of this element.
-		 */
-		[[nodiscard]]
-		SymbolType<> getResultType() const {
-			return result_type;
-		}
 
 		/**
 		 * @brief Gets the entire type of this element.
@@ -193,7 +164,7 @@ namespace tsh {
 		 * @return The visibility of this element.
 		 */
 		[[nodiscard]]
-		Visibility getVisibility() const {
+		ClassMemberVisibility getVisibility() const {
 			return visibility;
 		}
 
