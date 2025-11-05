@@ -279,114 +279,17 @@ namespace tsh {
 			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
 		}
 
-		/*-------------------------*\
-		|    OVERLOAD RESOLUTION    |
-		\*-------------------------*/
+		// @TODO PR: we want to change it into lookup 
+		// /**
+		//  * @brief Gets the elements which match a name.
+		//  *
+		//  * @note This should be the primary method of resolving fields (as opposed to methods).
+		//  *
+		//  * @param name The requested name of an element.
+		//  * @param ctx The query context for implicit coercion checks.
+		//  * @return The elements which match the name.
+		//  */
+		// ResolutionResult resolve(base::StrID name, query::Context& ctx) const;
 
-		/**
-		 * @brief A record which describes a named argument provided to a function call.
-		 *
-		 * A named argument is described with its name and type.
-		 */
-		struct NamedArgument final {
-			base::StrID  name;
-			AbstractType type;
-		};
-
-		/**
-		 * @brief A resolution result which means that no match was found.
-		 */
-		struct NoMatch final {
-			/**
-			 * @brief Elements with the requested name.
-			 */
-			std::vector<InterfaceElement> non_matches;
-		};
-
-		/**
-		 * @brief A resolution result which means that a single match was found.
-		 */
-		struct SingleMatch final {
-			/**
-			 * @brief The best match.
-			 */
-			InterfaceElement best_match;
-
-			/**
-			 * @brief Other members of the same name which matched less accurately.
-			 */
-			std::vector<InterfaceElement> alternative_matches;
-
-			/**
-			 * @brief Elements with the requested name which did not match.
-			 */
-			std::vector<InterfaceElement> non_matches;
-		};
-
-		/**
-		 * @brief A resolution result which means that member resolution is ambiguous.
-		 *
-		 * @note An exact match is still possible when the resolution is ambiguous. Consider
-		 * the overloaded function `foo` with signatures `foo(a : i32, b : bool = true)` and
-		 * `foo(a : i32, c : char = 'a')`. A call of `foo(2)` matches both signatures perfectly,
-		 * but remains ambiguous.
-		 */
-		struct AmbiguousMatch final {
-			/**
-			 * @brief The conflicting matches.
-			 */
-			std::vector<InterfaceElement> conflicting_matches;
-
-			/**
-			 * @brief Other members of the same name which matched less accurately.
-			 */
-			std::vector<InterfaceElement> alternative_matches;
-
-			/**
-			 * @brief Elements with the requested name which did not match.
-			 */
-			std::vector<InterfaceElement> non_matches;
-		};
-
-		using ResolutionResult = std::variant<NoMatch, SingleMatch, AmbiguousMatch>;
-
-		/**
-		 * @brief Gets the elements which match a name.
-		 *
-		 * @note This should be the primary method of resolving fields (as opposed to methods).
-		 *
-		 * @param name The requested name of an element.
-		 * @param ctx The query context for implicit coercion checks.
-		 * @return The elements which match the name.
-		 */
-		ResolutionResult resolve(base::StrID name, query::Context& ctx) const;
-
-		/**
-		 * @brief Auxiliary function to stringify a member lookup request.
-		 * @param request_name The name of the requested member.
-		 * @param argument_info The arguments provided.
-		 * Empty optional if no arguments list was provided.
-		 * Optional with empty argument lists if an empty argument list was provided.
-		 * The first list represents the types of the positional arguments,
-		 * while the second list represents the named arguments.
-		 * @return The stringified signature.
-		 *
-		 * For example:
-		 *
-		 * The request `obj.mem` for member `mem` in object `obj` corresponds to
-		 * `name = mem` and `argument_info = {}`, and stringifies to `"mem"`.
-		 *
-		 * The request `obj.foo()` corresponds to
-		 * `name = foo` and `argument_info = {{},{}}`, and stringifies to `foo()`.
-		 *
-		 * The request `obj.foo(1, 3.14, print_result = true)` corresponds to
-		 * `name = foo` and `argument_info = {{i32, f32}, {{"print_result", bool}}}`
-		 * (notation simplified), and stringifies to `foo(i32, f32, print_result : bool)`.
-		 */
-		static std::string stringifyRequestSignature(
-			base::StrID request_name,
-			const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>&
-				argument_info
-		);
 	};
 }

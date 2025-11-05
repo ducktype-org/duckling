@@ -64,12 +64,12 @@ namespace tsh {
 	using NamedArgument    = TypeInterface::NamedArgument;
 	using Parameter        = InterfaceElement::Parameter;
 
-	ResolutionResult TypeInterface::resolve(const base::StrID name, query::Context&) const {
-		const std::vector<InterfaceElement>& elements_matching_name = getElementsWithName(name);
-		if (elements_matching_name.empty()) return NoMatch{ {} };
-		if (elements_matching_name.size() == 1)
-			return SingleMatch{ *elements_matching_name.begin(), {}, {} };
-		return AmbiguousMatch{ elements_matching_name, {}, {} };
-	}
+	// ResolutionResult TypeInterface::resolve(const base::StrID name, query::Context&) const {
+	// 	const std::vector<InterfaceElement>& elements_matching_name = getElementsWithName(name);
+	// 	if (elements_matching_name.empty()) return NoMatch{ {} };
+	// 	if (elements_matching_name.size() == 1)
+	// 		return SingleMatch{ .best_match=*elements_matching_name.begin(), .alternative_matches={}, .non_matches={} };
+	// 	return AmbiguousMatch{ .conflicting_matches=elements_matching_name, .alternative_matches={}, .non_matches={} };
+	// }
 
 }
