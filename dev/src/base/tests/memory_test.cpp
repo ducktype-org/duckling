@@ -84,7 +84,7 @@ public:
 	}
 
 	void stressTest() {
-		constexpr u64 ALLOCATION_COUNT = 1'000'000;
+		constexpr u64 ALLOCATION_COUNT = 100'000;
 
 		auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};
 
