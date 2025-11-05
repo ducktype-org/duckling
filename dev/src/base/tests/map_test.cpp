@@ -153,13 +153,14 @@ public:
 
 		base::StableHashMap<u64, u64> moved_map = std::move(map);
 
-		// NOLINTBEGIN(bugprone-use-after-move)
+		// we don't lint here, so we can use map after move:
+		// NOLINTBEGIN
 		ASSERT_EQUAL(map.size(), 0);
 
 		ASSERT_TRUE(not map.contains(1));
 		ASSERT_TRUE(not map.contains(2));
 		ASSERT_TRUE(not map.contains(3));
-		// NOLINTEND(bugprone-use-after-move)
+		// NOLINTEND
 
 		ASSERT_EQUAL(moved_map.size(), 3);
 		ASSERT_TRUE(moved_map.contains(1));
