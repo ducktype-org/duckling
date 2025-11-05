@@ -58,7 +58,7 @@ namespace lsp {
 			if (!virtual_path.exists()) fs::FileManager::createVirtualFolder(virtual_path);
 			for (const auto& sub_path: file.listFilePaths()) {
 				fs::FilePath relative_sub_path
-					= sub_path.strView().substr(1, sub_path.strView().length());
+					= sub_path.strView().substr(1, sub_path.strView().length() - 1);
 				initFiles(relative_sub_path, virtual_root);
 			}
 			return virtual_path;
