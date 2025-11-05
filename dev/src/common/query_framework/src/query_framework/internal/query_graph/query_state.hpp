@@ -141,7 +141,7 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Returns previous_node_colors map use this for Tests.
+		 * @brief Returns previous_node_colors map. Used for Tests.
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
