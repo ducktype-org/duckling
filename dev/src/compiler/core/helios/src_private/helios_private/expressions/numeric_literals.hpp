@@ -1,0 +1,32 @@
+#pragma once
+
+#include "ctv/numeric_value.hpp"
+#include "frontend/pst_parser/access.hpp"
+#include "frontend/pst_parser/elements/hierarchy/expressions/value.hpp"
+
+#include "base/collections/optional.hpp"
+
+#include "query_framework/context.hpp"
+
+namespace compiler::helios::code {
+	/**
+	 * TODOP: Add issue, add u prefixes for unsigned integers.
+	 *
+	 * @brief Parses a PST numeric literal expression into a compile-time numeric value.
+	 * Handles different bases (decimal, hex, binary, octal), type specifiers (e.g., i32,
+	 * f64), and type deduction for literals without an explicit type.
+	 *
+	 * @note: For a literal without an explicit type specifier, returns a numeric value containing
+	 * the minimal type in which a value can be stored. For example, for `150` it will return a
+	 * numeric value containing the smallest possible type `i16`.
+	 *
+	 * @param ctx The query context for logging errors.
+	 * @param literal_expr An PST expression representing the numeric literal.
+	 * @return An optional containing the parsed numeric value, or an empty optional if parsing
+	 * failed. Errors are logged to the context.
+	 * TODOP: Maybe change that to AccessLocked?
+	 */
+	base::Optional<numeric_value::NumericValue> fromExprValue(
+		query::Context& ctx, pst::AccessLocked<pst::expr::ExprValue> literal_expr
+	);
+}
