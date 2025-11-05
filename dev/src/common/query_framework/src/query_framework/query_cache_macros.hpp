@@ -57,22 +57,21 @@
  * on cache hit.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_REF                                                                           \
-	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>, std::hash<KHash>, 1'024 * 64> \
-				cache;                                                                                 \
-	static auto load(KHash key_hash) -> LoadResult {                                                   \
-		if (auto value = cache.atMaybe(key_hash)) {                                                    \
-			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd };                       \
-		}                                                                                              \
-		return {};                                                                                     \
-	}                                                                                                  \
-	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {                        \
-		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });             \
-		return CRef<PResult>(&ref->value.data);                                                        \
-	}                                                                                                  \
-	static_assert(                                                                                     \
-		std::is_same_v<CRef<PResult>, QResult>,                                                        \
-		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"                                 \
+#define QUERY_AUTO_CACHE_REF                                                               \
+	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
+	static auto load(KHash key_hash) -> LoadResult {                                       \
+		if (auto value = cache.atMaybe(key_hash)) {                                        \
+			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd };           \
+		}                                                                                  \
+		return {};                                                                         \
+	}                                                                                      \
+	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {            \
+		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
+		return CRef<PResult>(&ref->value.data);                                            \
+	}                                                                                      \
+	static_assert(                                                                         \
+		std::is_same_v<CRef<PResult>, QResult>,                                            \
+		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"                     \
 	);
 
 
