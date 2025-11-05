@@ -6,13 +6,13 @@
 
 template<usize Size>
 struct BigObject final {
-	u64 data[Size] = {}; // NOLINT
+	u64 data[Size] = {};  // NOLINT
 
 	BigObject(u64 a): data{ a } {}
 
 	bool operator==(const BigObject& other) const {
 		for (usize i = 0; i < Size; i++)
-			if (data[i] != other.data[i]) return false; // NOLINT
+			if (data[i] != other.data[i]) return false;  // NOLINT
 		return true;
 	}
 };
