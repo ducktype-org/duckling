@@ -34,18 +34,19 @@ namespace lsp {
 	}
 
 	std::string Definition::toJSON() {
-		constexpr std::string_view JSON_TEMPLATE
-			= "\"uri\": \"{}\",\n"
-			  "\"range\": {{\n"
-			  "    \"start\": {{\n"
-			  "        \"line\": {},\n"
-			  "        \"character\": {}\n"
-			  "    }},\n"
-			  "    \"end\": {{\n"
-			  "        \"line\": {},\n"
-			  "        \"character\": {}\n"
-			  "    }}\n"
-			  "}}\n";
+		constexpr std::string_view JSON_TEMPLATE = R"-----(
+"uri": "{}",
+"range": {{
+	"start": {{
+		"line": {},
+		"character": {}
+	}},
+	"end": {{
+		"line": {},
+		"character": {}
+	}}
+}}
+)-----";
 
 		return std::format(
 			JSON_TEMPLATE,
