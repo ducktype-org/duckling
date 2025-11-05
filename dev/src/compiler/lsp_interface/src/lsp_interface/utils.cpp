@@ -11,7 +11,8 @@
 #include <filesystem/file_path.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#define ext_is_ok(ext) ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift" || ext == ".ds"
+#define ext_is_ok(ext) \
+	ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift" || ext == ".ds"
 
 namespace lsp {
 	std::string jsonList(const std::vector<std::string>& list) {
@@ -88,7 +89,9 @@ namespace lsp {
 		auto vfile = fs::File(path);
 
 		if (vfile.isFile()) {
-			CORE_ASSERT(ext_is_ok(path.extension()), "Files should already have Duckling extensions.");
+			CORE_ASSERT(
+				ext_is_ok(path.extension()), "Files should already have Duckling extensions."
+			);
 			query::utils::withContextDo([&vfile](query::Context& ctx) {
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
 				for (auto& src_file: src_files)

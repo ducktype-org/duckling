@@ -35,24 +35,25 @@ namespace lsp {
 	 * @brief Recursively finds Duckling module files and adds them to the module tree.
 	 *
 	 * @param path Path to the file/folder to be searched for module files.
-	 * 
+	 *
 	 * @note Only files with the .dmf extension are considered module files.
 	 * @note In the LS daemon context, the path should be within the virtual file system.
 	 */
-	void         initModules(const fs::FilePath& path);
+	void initModules(const fs::FilePath& path);
 
 	/**
 	 * @brief Recursively queries PSTs of the files.
 	 *
 	 * @param path Path to the file/folder to query the PST for or continue recursion from.
-	 * 
+	 *
 	 * @note The PSTs are queried only for Duckling files.
 	 * @note In the LS daemon context, the path should be within the virtual file system.
 	 */
-	void         initPSTs(const fs::FilePath& path);
+	void initPSTs(const fs::FilePath& path);
 
 	/**
-	 * @brief Puts or updates a file in the virtual file system, notifies module tree and updates its PST.
+	 * @brief Puts or updates a file in the virtual file system, notifies module tree and updates
+	 * its PST.
 	 *
 	 * @param virtual_root The root of the virtual file system.
 	 * @param path The path to the file to be updated.
