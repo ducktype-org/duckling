@@ -42,6 +42,7 @@ namespace tsh {
 				key.source.getType(),
 				key.target.getType(),
 			});
+			// #TODO: #1488
 			//    and (key.source.getMutability() == Mutability::Mutable
 			//         or key.target.getMutability() == Mutability::Immutable);
 		}
