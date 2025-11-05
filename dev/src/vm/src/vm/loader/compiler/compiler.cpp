@@ -3,6 +3,7 @@
 #include "instruction_lowering.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
@@ -20,10 +21,6 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
-#include <vm/loader/errors.hpp>
-#include <vm/loader/loader.hpp>
-#include <vm/loader/parser/elements.hpp>
-#include <vm/loader/parser/errors.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -69,6 +66,9 @@ namespace vm::loader::compiler {
 				return base::safeIntConv<u64>(
 					static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
 				);
+			}
+			variant_case(vm::opargs::ExtCFunctionName, func) {
+				return u64(*program_ctx.ext_c_functions.idOf(func.function_name));
 			}
 			variant_case(vm::opargs::MethodName, method) {
 				return base::safeIntConv<u64>(program_ctx.method_name_to_id[method.method_name]);
@@ -222,11 +222,19 @@ namespace vm::loader::compiler {
 					for (usize i = 0; i < number_of_params; i++) pop();
 					index++;
 				}
-				variant_case(Op_call_builtin_func, instr) {
+				variant_case(Op_call_builtinfunc, instr) {
 					for (usize i = 0;
 					     i < builtins::getBuiltinFunctionSignature(instr.arg0.function_name)
 					             .value()
 					             ->parameters.size();
+					     i++) {
+						pop();
+					}
+					index++;
+				}
+				variant_case(Op_call_cfunc, instr) {
+					for (usize i = 0; i < program_ctx.ext_c_functions.at(instr.arg0.function_name)
+					                          ->signature.parameters.size();
 					     i++) {
 						pop();
 					}
@@ -325,8 +333,40 @@ namespace vm::loader::compiler {
 		}
 	}
 
+	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
+	) {
+		for (const auto& new_func: new_functions) {
+			program_ctx.ext_c_functions.insert(new_func, new_func.name);
+			std::vector<TypeCRef> params = new_func.signature.parameters
+			                             | std::views::transform([this](const auto& param_name) {
+											   return low_program.types->at(param_name);
+										   })
+			                             | std::ranges::to<std::vector<TypeCRef>>();
+			auto param_size_sum = std::ranges::fold_left(
+				params | std::views::transform([](const auto& param) { return param->getSize(); }),
+				0,
+				std::plus()
+			);
+			low_program.extern_c_functions.insert(
+				low::LowExternCFunction{
+					.name               = new_func.name,
+					.function_pointer   = new_func.function_pointer,
+					.parameter_size_sum = param_size_sum,
+					.parameters         = std::move(params),
+					.result_type        = low_program.types->at(new_func.signature.result_type),
+				},
+				new_func.name
+			);
+		}
+	}
+
 	void Compiler::recompile(const code::ValidProgram& high_program) {
 		compileNewTypes(high_program.getTypeContext());
+
+		auto new_c_functions = high_program.extCFunctions()
+		                     | std::views::drop(low_program.extern_c_functions.size())
+		                     | std::ranges::to<std::vector<code::ExternalCFunction>>();
+		compileNewExtCFunctions(new_c_functions);
 
 		auto new_globals = high_program.globals() | std::views::drop(low_program.global_data.size())
 		                 | std::ranges::to<std::vector<code::GlobalData>>();
@@ -340,4 +380,5 @@ namespace vm::loader::compiler {
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
+
 }

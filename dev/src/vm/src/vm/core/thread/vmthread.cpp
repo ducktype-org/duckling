@@ -19,16 +19,12 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/vmprocess.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 
-#include <cstring>
 #include <iostream>
 #include <mutex>
-#include <stdexcept>
 #include <string>
-#include <utility>
 #include <variant>
 #include <vector>
 

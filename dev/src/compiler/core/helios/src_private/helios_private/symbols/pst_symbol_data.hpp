@@ -1,7 +1,7 @@
 #pragma once
 
+#include <frontend/pst_parser/access.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <pst_parser/access.hpp>
 
 namespace compiler::helios {
 	/**

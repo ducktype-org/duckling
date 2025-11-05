@@ -44,6 +44,9 @@ namespace compiler::driver {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
+
+		[[nodiscard]]
+		base::Bit256 queryStablePerfectHash() const;
 	};
 
 	/**

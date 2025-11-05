@@ -116,7 +116,7 @@ namespace base {
  * 	variant_case(variant_option_type, variable_name) {
  * 		code using variable name as variant_option_type type;
  * 	}
- * 	variant_case(variant_option_type) {
+ * 	variant_case_novalue(variant_option_type) {
  * 		code;
  * 	}
  * 	variant_default {

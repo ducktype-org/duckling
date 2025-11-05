@@ -1,9 +1,9 @@
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
+#include <frontend/pst_parser/access.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
-#include <pst_parser/access.hpp>
 
 #include <base/collections/optional.hpp>
 

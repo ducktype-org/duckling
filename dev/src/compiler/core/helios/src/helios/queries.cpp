@@ -1,6 +1,12 @@
 #include "queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -13,12 +19,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/actions/return.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/expressions/assignment.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
@@ -378,7 +378,7 @@ namespace compiler::helios {
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
-				if (not stmt_maker.empty)
+				if (stmt_maker.out.has_value())
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
 			return block;
@@ -418,7 +418,6 @@ namespace compiler::helios {
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 			query::Context&                 ctx;
-			bool                            empty = false;
 			base::Optional<Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
@@ -447,9 +446,9 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitAlias(pst::Access<pst::Alias>) override { empty = true; }
+			void visitAlias(pst::Access<pst::Alias>) override {}
 
-			void visitUsing(pst::Access<pst::Using>) override { empty = true; }
+			void visitUsing(pst::Access<pst::Using>) override {}
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 				CORE_ASSERT(
@@ -497,9 +496,10 @@ namespace compiler::helios {
 					return;  // fail
 				}
 
-				auto new_value_coerced = coerceExpression(std::move(new_value_expr), location_type);
+				auto coercion
+					= canCoerce(ctx, new_value_expr->expression_type.getSymbolType(), location_type);
 
-				if (new_value_coerced.hasError()) {
+				if (coercion.hasError()) {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							assignment->getSourcePosition(),
@@ -516,11 +516,9 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
+				auto new_value_coerced = coercion.value().coerce(std::move(new_value_expr));
 
-
-				output(code::AssignmentStmt(
-					std::move(location_expr), std::move(new_value_coerced.value())
-				));
+				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
@@ -597,7 +595,6 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt({}, symbol_type, symbol));
-					return;
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
@@ -606,9 +603,10 @@ namespace compiler::helios {
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 
-					auto initial_value_coerced
-						= coerceExpression(std::move(initial_value), symbol_type);
-					if (initial_value_coerced.hasError()) {
+					auto coercion = canCoerce(
+						ctx, initial_value->expression_type.getSymbolType(), symbol_type
+					);
+					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
@@ -626,12 +624,12 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						std::move(initial_value_coerced.value()), symbol_type, symbol
+						coercion.value().coerce(std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const>) override { empty = true; }
+			void visitConst(pst::Access<pst::Const>) override {}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

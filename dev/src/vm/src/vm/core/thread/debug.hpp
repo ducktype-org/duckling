@@ -1,6 +1,8 @@
 #pragma once
 
 #ifdef BUILD_TYPE_DEV_DEBUG
+	#include <iostream>  // IWYU pragma: keep
+
 namespace config {
 	inline bool debug_mode = false;
 }

@@ -11,10 +11,10 @@
 #include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/pst.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <pst_parser/pst.hpp>
 #include <timer/timer.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -186,7 +186,8 @@ clah::Clah getClahForMain() {
 
 							   // @TODO: error handling
 							   using namespace compiler;
-							   auto root = frontend::createModuleTree(path_to_compile);
+							   auto root
+								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
 								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
 							   for (const auto& hout_unit: hout_units)
@@ -229,7 +230,7 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = frontend::createModuleTree(path_to_compile);
+					auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
@@ -348,7 +349,8 @@ clah::Clah getClahForMain() {
 			}
 		);
 
-							   auto root = frontend::createModuleTree(path_to_compile);
+							   auto root
+								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 							   int exit_code = 0;
 							   query::utils::withContextDo([&](query::Context& ctx) {
