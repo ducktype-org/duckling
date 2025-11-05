@@ -1,6 +1,5 @@
 #include "packages.hpp"
 
-#include <base/misc/raw_view.hpp>
 #include <base/str/string_id.hpp>
 
 #include <string_view>
@@ -22,21 +21,12 @@ namespace global_state {
 
 	namespace setters {
 		void addPackage(std::string_view name, const fs::FilePath& path) {
-			packages.push_back(
-				{ base::StrID(base::RawView(reinterpret_cast<const byte*>(name.data()), name.size())
-			      ),
-			      path }
-			);
+			packages.push_back({ base::StrID(name.data()), path });
 		}
 
 		void addMainPackage(std::string_view name, const fs::FilePath& path) {
 			CORE_ASSERT(!main_package_set, "Main package has already been added!");
-			packages.insert(
-				packages.begin(),
-				{ base::StrID(base::RawView(reinterpret_cast<const byte*>(name.data()), name.size())
-			      ),
-			      path }
-			);
+			packages.insert(packages.begin(), { base::StrID(name.data()), path });
 			main_package_set = true;
 		}
 	}
