@@ -1,7 +1,5 @@
 #include "node_marking.hpp"
 
-#include "base/except/exceptions.hpp"
-
 #include <query_framework/external/api.hpp>  // for query::external::InputData definition
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
