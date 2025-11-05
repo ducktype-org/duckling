@@ -50,37 +50,37 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
-		// TESTER_ADD_TEST(testClassSymbolData);
-		// TESTER_ADD_TEST(testHoutVariables);
-		// TESTER_ADD_TEST(testExprTree);
-		// TESTER_ADD_TEST(testExprClone);
-		// TESTER_ADD_TEST(testSimpleHOUT);
-		// TESTER_ADD_TEST(testSingleFileModuleHOUT);
-		// TESTER_ADD_TEST(testModuleHOUT);
-		// TESTER_ADD_TEST(testDependencyHOUT);
-		// TESTER_ADD_TEST(testHoutVisitor);
-		// TESTER_ADD_TEST(testTypeOf);
-		// TESTER_ADD_TEST(testKeywordLiterals);
-		// TESTER_ADD_TEST(testFunctionParameters);
-		// TESTER_ADD_TEST(testExprScopes);
-		// TESTER_ADD_TEST(testFunctionCallExpr);
-		// TESTER_ADD_TEST(testFunctions);
-		// TESTER_ADD_TEST(testBuiltinFunctions);
-		// TESTER_ADD_TEST(testMangler);
-		// TESTER_ADD_TEST(testManglerSpecialMembers);
-		// TESTER_ADD_TEST(testGlobalVariableExpressions);
-		// TESTER_ADD_TEST(testTypeOfConstAndVar);
-		// TESTER_ADD_TEST(testDebugPrint);
-		// TESTER_ADD_TEST(testStmtSpecifiers);
+		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testHoutVariables);
+		TESTER_ADD_TEST(testExprTree);
+		TESTER_ADD_TEST(testExprClone);
+		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testSingleFileModuleHOUT);
+		TESTER_ADD_TEST(testModuleHOUT);
+		TESTER_ADD_TEST(testDependencyHOUT);
+		TESTER_ADD_TEST(testHoutVisitor);
+		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testKeywordLiterals);
+		TESTER_ADD_TEST(testFunctionParameters);
+		TESTER_ADD_TEST(testExprScopes);
+		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testManglerSpecialMembers);
+		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
+		TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testStmtSpecifiers);
 
-		// // error tests
-		// TESTER_ADD_TEST(testErrorBadExpr);
-		// TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
+		// error tests
+		TESTER_ADD_TEST(testErrorBadExpr);
+		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 
-		// // this is at the end
-		// // so we test all the scopes created in helios tests:
-		// TESTER_ADD_TEST(testScopeParentsAndDepth);
-		// TESTER_ADD_TEST(testScopeSymbolsConsistency);
+		// this is at the end
+		// so we test all the scopes created in helios tests:
+		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
@@ -549,11 +549,11 @@ private:
 			this->fail(base::strConcat("No constant of name: ", name.strView()));
 		};
 
-		// test_value("sm1_v", 123'123);
-		// test_value("sm11_v", 7'812'313);
-		// test_value("it_through_alias", 19'923);
-		// test_value("sm1_through_sm11", 123'123);
-		// test_value("sm2_v", 777'666);
+		test_value("sm1_v", 123'123);
+		test_value("sm11_v", 7'812'313);
+		test_value("it_through_alias", 19'923);
+		test_value("sm1_through_sm11", 123'123);
+		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
 	}
 
