@@ -64,7 +64,7 @@ endif (USE_MARCH_NATIVE)
 
 
 # std can use NDEBUG for internal assert purposes, so we should define it here
-# Release uses -O3 by default, but we want to use -O2 for now
+# std can use NDEBUG for internal assert purposes, so we should define it here
 set(CMAKE_CXX_FLAGS_DEV        "-O0 -DBUILD_TYPE_DEV")
 set(CMAKE_CXX_FLAGS_DEVDEBUG   "-O0 -DBUILD_TYPE_DEV -g -DBUILD_TYPE_DEV_DEBUG")
 set(CMAKE_CXX_FLAGS_DEVOPT     "-O3 -DBUILD_TYPE_DEV")
