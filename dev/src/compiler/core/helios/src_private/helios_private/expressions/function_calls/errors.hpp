@@ -9,19 +9,19 @@
 
 namespace compiler::helios::code {
 
-	struct TooManyCallArguments {};
+	struct TooManyCallArguments final {};
 
-	struct DuplicateNamedArgument {};
+	struct DuplicateNamedArgument final {};
 
-	struct UnknownNamedArgument {};
+	struct UnknownNamedArgument final {};
 
-	struct TypeMismatch {};
+	struct TypeMismatch final {};
 
-	struct MissingCallArgument {};
+	struct MissingCallArgument final {};
 
-	struct PositionalAfterNamedArgument {};
+	struct PositionalAfterNamedArgument final {};
 
-	struct RepeatedNamedArgument {};
+	struct RepeatedNamedArgument final {};
 
 	using MatchFailure = std::variant<
 		TooManyCallArguments,

@@ -41,18 +41,18 @@ namespace compiler::helios::code {
 	 * - argument 2: DefaultArgumentOrigin(ref to expression `"hello"`)
 	 */
 
-	struct PositionalArgumentOrigin {
+	struct PositionalArgumentOrigin final {
 		// We can't keep a direct reference to the argument because we would like to move
 		// from the positional arguments vector later, so we just keep the index.
 		usize index_in_positional_args;
 	};
 
-	struct NamedArgumentOrigin {
+	struct NamedArgumentOrigin final {
 		// Same as above.
 		usize index_in_named_args;
 	};
 
-	struct DefaultArgumentOrigin {
+	struct DefaultArgumentOrigin final {
 		// This is a shortcut to avoid keeping the entire function declaration around.
 		CRef<Expr> default_value_expr;
 	};
@@ -62,7 +62,7 @@ namespace compiler::helios::code {
 
 	// =================== Match Result Variants ===================
 
-	struct ExactMatch {
+	struct ExactMatch final {
 		/**
 		 * The function that was matched.
 		 */
@@ -73,24 +73,25 @@ namespace compiler::helios::code {
 		std::vector<ArgumentOrigin> argument_origin;
 	};
 
-	struct CoercionMatch {
+	struct CoercionMatch final {
 		/**
 		 * Same as in ExactMatch.
 		 */
 		SymID function;
+	
 		/**
 		 * Same as in ExactMatch.
 		 */
 		std::vector<ArgumentOrigin> argument_origin;
+	
 		/**
 		 * The coercion that was validated for each argument, because the coercion logic requires
 		 * this "coercion ticket" to actually perform the coercion.
 		 */
-		// base::HashMap<usize, Coercion> coercions;
 		std::vector<Coercion> coercions;
 	};
 
-	struct NoMatch {
+	struct NoMatch final {
 		MatchFailure reason;
 	};
 
@@ -197,8 +198,10 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Given Box<Expr> of all the arguments and arguments origin constructs a helios
+	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin constructs a helios
 	 * CallExpr. The expressions will be moved from the arguments.
+	 * @p argument_origin define the actual structure of the arguments, while @p positional_arguments and @p named_arguments
+	 * define their content.
 	 */
 	Box<CallExpr> constructCallExpr(
 		query::Context&                                  ctx,
@@ -299,7 +302,7 @@ namespace compiler::helios::code {
 				variant_case(ExactMatch, data) { exact_match.push_back(std::move(data)); }
 				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
-					// For now ignore it.
+					// For now ignore it, it is handled by the logic bellow.
 				}
 			}
 		}
