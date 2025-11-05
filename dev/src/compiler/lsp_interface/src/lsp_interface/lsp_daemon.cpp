@@ -60,8 +60,8 @@ void server(i32 port) {
 
 
 	/** @brief Route to init a directory contents recursively in the virtual file system.
-	 * * URL: /init_directory/[base64 relative path]
-	 * @param base64_path The base64 encoded relative path of the root directory of the workspace.
+	 * * URL: /init_directory/[base64 path]
+	 * @param base64_path The base64 encoded absolute path of the root directory of the workspace.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
 	CROW_ROUTE(app, "/init_directory/<string>")
