@@ -36,6 +36,7 @@ mod tests {
     #[test]
     fn validate_parser() {
         cli().debug_assert();
+        cli_no_err().debug_assert();
     }
 
     #[test]
