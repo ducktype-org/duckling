@@ -1,3 +1,4 @@
+#include "typesystem/lower/queries.hpp"
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
@@ -512,6 +513,127 @@ namespace compiler::backend_llvm {
 				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNot(argument);
 				storeOutput(lir_instruction.output.value(), value, builder);
+				break;
+			}
+			case Cast: {
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto output   = lir_instruction.output.value();
+
+				// get cast parameters:
+				auto cast_params = std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
+
+				
+				CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
+
+				auto llvm_dst_ty = typeFromLayout(builder.getContext(),cast_params->target_layout);
+				
+				llvm::Value* value = nullptr;
+				variant_match(cast_params->source_layout()) {
+					variant_case_novalue(tsl::IntegralTypeLayout) {
+						// integral-like layout (covers byte, bool, char and normal ints)
+						auto src_bits = static_cast<unsigned>(static_cast<usize>(cast_params->source_layout.getSize()));
+						auto dst_bits = static_cast<unsigned>(static_cast<usize>(cast_params->target_layout.getSize()));
+
+						// signedness comes from the symbol-level type information
+						bool src_signed = false;
+						if (cast_params->source_type.getType().getKind() == tsh::Kind::Integral) {
+							src_signed = (tsh::IntegralAbstractType(cast_params->source_type.getType()).getSignedness()
+											  == tsh::IntegralAbstractType::Signedness::Signed);
+						}
+
+						// target kind determined from symbol-level type
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Integral) {
+							if (dst_bits > src_bits) {
+								value = src_signed ? builder.CreateSExt(argument, llvm_dst_ty)
+												   : builder.CreateZExt(argument, llvm_dst_ty);
+							} else if (dst_bits < src_bits) {
+								value = builder.CreateTrunc(argument, llvm_dst_ty);
+							} else {
+								value = argument;
+							}
+							break;
+						}
+
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Float) {
+							// integral -> float
+							value = src_signed ? builder.CreateSIToFP(argument, llvm_dst_ty)
+											   : builder.CreateUIToFP(argument, llvm_dst_ty);
+							break;
+						}
+
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Pointer
+							|| cast_params->target_type.getType().getKind() == tsh::Kind::RawPointer) {
+							// int -> pointer: adjust integer to pointer-size then inttoptr
+							unsigned ptr_bits = static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							llvm::Value* int_for_ptr = nullptr;
+							if (ptr_bits > src_bits) {
+								int_for_ptr = src_signed ? builder.CreateSExt(argument, ptr_int_ty)
+														 : builder.CreateZExt(argument, ptr_int_ty);
+							} else if (ptr_bits < src_bits) {
+								int_for_ptr = builder.CreateTrunc(argument, ptr_int_ty);
+							} else {
+								int_for_ptr = argument;
+							}
+							value = builder.CreateIntToPtr(int_for_ptr, llvm_dst_ty);
+							break;
+						}
+
+						CORE_PANIC("Unsupported cast from integral-layout to target kind");
+					}
+
+					variant_case_novalue(tsl::FloatTypeLayout) {
+						// float-layout -> either float->float, or float->int
+						auto src_bits = static_cast<unsigned>(static_cast<usize>(cast_params->source_layout.getSize()));
+						auto dst_bits = static_cast<unsigned>(static_cast<usize>(cast_params->target_layout.getSize()));
+
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Float) {
+							if (dst_bits > src_bits) value = builder.CreateFPExt(argument, llvm_dst_ty);
+							else if (dst_bits < src_bits) value = builder.CreateFPTrunc(argument, llvm_dst_ty);
+							else value = argument;
+							break;
+						}
+
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Integral) {
+							// float -> int: signedness comes from target symbol
+							bool to_signed = (tsh::IntegralAbstractType(cast_params->target_type.getType())
+												  .getSignedness()
+											  == tsh::IntegralAbstractType::Signedness::Signed);
+							value = to_signed ? builder.CreateFPToSI(argument, llvm_dst_ty)
+											  : builder.CreateFPToUI(argument, llvm_dst_ty);
+							break;
+						}
+
+						CORE_PANIC("Unsupported cast from float-layout to target kind");
+					}
+
+					variant_case_novalue(tsl::PointerTypeLayout) {
+						// pointer-layout -> pointer or int
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Pointer
+							|| cast_params->target_type.getType().getKind() == tsh::Kind::RawPointer) {
+							value = builder.CreateBitCast(argument, llvm_dst_ty);
+							break;
+						}
+
+						if (cast_params->target_type.getType().getKind() == tsh::Kind::Integral) {
+							unsigned ptr_bits = static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							auto dst_bits = static_cast<unsigned>(static_cast<usize>(cast_params->target_layout.getSize()));
+							if (dst_bits < ptr_bits) value = builder.CreateTrunc(int_from_ptr, llvm_dst_ty);
+							else if (dst_bits > ptr_bits) value = builder.CreateZExt(int_from_ptr, llvm_dst_ty);
+							else value = int_from_ptr;
+							break;
+						}
+
+						CORE_PANIC("Unsupported cast from pointer-layout to target kind");
+					}
+
+					// For other layouts (variant, class, tuple, etc.) fallback to symbol-kind based panic
+					variant_default { CORE_PANIC("Unsupported cast source layout in LLVM lowering"); }
+				}
+
+				storeOutput(output, value, builder);
 				break;
 			}
 			case Call: {

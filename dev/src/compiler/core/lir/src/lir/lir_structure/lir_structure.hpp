@@ -58,6 +58,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	BooleanOr,
 	BooleanNot,
 
+	Cast,
+
 	Call,
 
 	ReturnVoid,
@@ -235,6 +237,22 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Some instructions are parametrized by extra parameters.
+	 * For example, cast instruction needs to know
+	 * from which type to which type it is casting.
+	 */
+	struct NoInstrParameters final {};
+
+	struct CastParameters final {
+		tsh::SymbolType<> source_type;
+		tsh::SymbolType<> target_type;
+		tsl::TypeLayout   source_layout;
+		tsl::TypeLayout   target_layout;
+	};
+
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+
+	/**
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
@@ -242,19 +260,26 @@ namespace compiler::lir {
 		using OutputType    = base::Optional<std::variant<LocalRef, LirGlobal>>;
 		OutputType            output;
 		std::vector<LIRValue> arguments;
+		InstrParameters       extra_params{ NoInstrParameters{} };
 
 		// @TODO: each Instruction should have source position reference
 
 		Instruction()                   = default;
 		Instruction(const Instruction&) = default;
-		Instruction(Instruction&&)      = default;
+		Instruction(Instruction&&)       noexcept = default;
 
-		Instruction& operator=(Instruction&&) noexcept = default;
+		// Instruction& operator=(Instruction&&) noexcept = default;
 
-		Instruction(const Operation operation, OutputType output, std::vector<LIRValue> arguments):
+		Instruction(
+			const Operation       operation,
+			OutputType            output,
+			std::vector<LIRValue> arguments,
+			InstrParameters       extra_parameters = NoInstrParameters{}
+		):
 			  operation(operation),
 			  output(std::move(output)),
-			  arguments(std::move(arguments)) {}
+			  arguments(std::move(arguments)),
+			  extra_params(std::move(extra_parameters)) {}
 	};
 
 	/**

@@ -465,4 +465,27 @@ namespace compiler::helios::code {
 			std::vector<BuiltinBinary>   operators
 		);
 	};
+
+	/**
+	 */
+	struct CastExpr final: public Expr {
+		Box<Expr>         source_expr;
+		tsh::SymbolType<> target_type;
+
+		CastExpr(query::Context& ctx, Box<Expr> source_expr, tsh::SymbolType<> target_type);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CastExpr(
+			tsh::ExpressionType<> expression_type,
+			Box<Expr>             source_expr,
+			tsh::SymbolType<>     target_type
+		);
+	};
 }

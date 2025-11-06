@@ -463,6 +463,27 @@ namespace compiler::lir {
 					curr_block->instructions.emplace_back(Operation::Call, output, std::move(args));
 					return curr_block;
 				}
+				case mir::Operation::Cast: {
+					auto cast_parameters
+						= std::get_if<mir::CastParameters>(&mir_instruction.extra_params);
+					if (not cast_parameters) CORE_PANIC("Cast instruction without CastParameters");
+
+					auto args   = getLocations(mir_instruction.arguments);
+					auto output = getOutput(mir_instruction.output);
+					curr_block->instructions.emplace_back(
+						Operation::Cast,
+						output,
+						std::move(args),
+						CastParameters{
+							.source_type = cast_parameters->source_type,
+							.target_type = cast_parameters->target_type,
+							.source_layout
+							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type),
+							.target_layout
+							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type) }
+					);
+					return curr_block;
+				}
 				default:
 					throw base::NotYetImplemented(base::strConcat(
 						"instruction ",
