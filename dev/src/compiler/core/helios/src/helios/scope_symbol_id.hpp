@@ -74,3 +74,16 @@ namespace compiler::helios {
 	};
 
 }
+
+namespace std {
+	/**
+	 * @brief Hash template specialization so SymID can be used in std::unordered_set and
+	 * base::HashMap.
+	 */
+	template<>
+	struct hash<compiler::helios::SymID> {
+		std::size_t operator()(const compiler::helios::SymID& s) const noexcept {
+			return s.queryUnstablePerfectHash();
+		}
+	};
+}
