@@ -390,9 +390,6 @@ namespace compiler::mir {
 		 */
 		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
-				variant_case_novalue(MirConstant) {
-					throw base::NotYetImplemented("locationType for generic MirConstant");
-				}
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{
 						ctx.query<tsh::QueryIntegralType>({ 64 }),

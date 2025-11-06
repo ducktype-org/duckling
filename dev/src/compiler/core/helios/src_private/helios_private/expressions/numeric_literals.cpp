@@ -9,31 +9,11 @@
 #include <query_framework/query_impl.hpp>
 
 #include <charconv>
-#include <limits>
 #include <string_view>
 #include <system_error>
-#include <type_traits>
 
 namespace compiler::helios::code {
 	namespace {
-		/**
-		 * @brief Checks if the integral type fits in the given type.
-		 * @return True if the given integral value fits in the requested type, false otherwise.
-		 */
-		template<typename TargetType, typename SourceType>
-		requires(std::is_integral_v<TargetType> && std::is_integral_v<SourceType>)
-		bool fitsIn(SourceType value) {
-			if constexpr (std::is_signed_v<TargetType> == std::is_signed_v<SourceType>) {
-				return value >= static_cast<SourceType>(std::numeric_limits<TargetType>::min())
-				    && value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
-			} else if constexpr (std::is_unsigned_v<SourceType> && std::is_unsigned_v<TargetType>) {
-				return value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
-			} else {
-				return value >= 0
-				    && static_cast<SourceType>(value) <= std::numeric_limits<TargetType>::max();
-			}
-		}
-
 		/**
 		 * @brief Checks the given `from_chars_result` and logs compiler errors in case of errors.
 		 * @return True `from_chars` succeeded, false if an error occurred, an appropriate compiler
@@ -89,7 +69,7 @@ namespace compiler::helios::code {
 
 			if (!handleFromCharsResult(result, value, position, ctx)) return {};
 
-			if (!fitsIn<TargetInt>(parsed_value)) {
+			if (!base::fitsIn<TargetInt>(parsed_value)) {
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 						position, "Literal doesn't fit in the declared signed integer type"
@@ -110,7 +90,7 @@ namespace compiler::helios::code {
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 
 			if (!handleFromCharsResult(result, value, position, ctx)) return {};
-			if (!fitsIn<TargetUInt>(parsed_value)) {
+			if (!base::fitsIn<TargetUInt>(parsed_value)) {
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 						position, "Literal doesn't fit in the declared unsigned integer type"
@@ -129,7 +109,7 @@ namespace compiler::helios::code {
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
 			if (!handleFromCharsResult(result, value, position, ctx)) return {};
-			// @note: No need to check with fitsIn, since casting to smaller types is always
+			// @note: No need to check with fitsIn, since casting to smaller types is always okay.
 			return numeric_value::NumericValue(static_cast<TargetFloat>(parsed_value));
 		}
 
@@ -141,21 +121,8 @@ namespace compiler::helios::code {
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 			if (!handleFromCharsResult(result, value, position, ctx)) return {};
 
-			numeric_value::NumericValue numeric_result;
-			if (fitsIn<i16>(parsed_value)) {
-				numeric_result = numeric_value::NumericValue{ static_cast<i16>(parsed_value) };
-			} else if (fitsIn<i32>(parsed_value)) {
-				numeric_result = numeric_value::NumericValue{ static_cast<i32>(parsed_value) };
-			} else if (fitsIn<i64>(parsed_value)) {
-				numeric_result = numeric_value::NumericValue{ static_cast<i64>(parsed_value) };
-			} else {
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						position, "Integer literal overflow"
-					)
-				);
-				return {};
-			}
+			numeric_value::NumericValue numeric_result
+				= numeric_value::NumericValue::createMinimized(parsed_value);
 
 			// @TODO: #859 For now, until the cast instuction are added we cast all the deduced
 			// types to i64 to avoid adding a type specifier to every numeric literal in the tests.
@@ -170,12 +137,7 @@ namespace compiler::helios::code {
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 			if (!handleFromCharsResult(result, value, position, ctx)) return {};
-
-			if (static_cast<f128>(static_cast<f32>(parsed_value)) == parsed_value)
-				return numeric_value::NumericValue{ static_cast<f32>(parsed_value) };
-			else if (static_cast<f128>(static_cast<f64>(parsed_value)) == parsed_value)
-				return numeric_value::NumericValue{ static_cast<f64>(parsed_value) };
-			return numeric_value::NumericValue{ parsed_value };  // Full precision needed
+			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
 
 	}
@@ -232,10 +194,12 @@ namespace compiler::helios::code {
 		case lang_def::NumericLiteralTypeSpecifier::f80:
 		case lang_def::NumericLiteralTypeSpecifier::u128:
 		case lang_def::NumericLiteralTypeSpecifier::i128:
-			throw base::NotYetImplemented(base::strConcat(
-				"Unhandled type specifier in hout of expr: ",
-				lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
-			));
+			throw base::NotYetImplemented(
+				base::strConcat(
+					"Unhandled type specifier in hout of expr: ",
+					lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+				)
+			);
 		}
 		return {};
 	}

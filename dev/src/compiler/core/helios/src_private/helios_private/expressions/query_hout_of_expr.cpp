@@ -83,7 +83,7 @@ namespace compiler::helios::code {
 				if (parsed_numeric_value.has_value()) {
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
 				} else {
-					// Error was logged in parseNumericLiteral.
+					// Error was logged in fromExprValue.
 					return;
 				}
 			}
