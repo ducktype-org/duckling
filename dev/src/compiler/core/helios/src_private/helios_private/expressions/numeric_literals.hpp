@@ -5,8 +5,6 @@
 
 namespace compiler::helios::code {
 	/**
-	 * TODOP: Add issue, add u prefixes for unsigned integers.
-	 *
 	 * @brief Parses a PST numeric literal expression into a compile-time numeric value.
 	 * Handles different bases (decimal, hex, binary, octal), type specifiers (e.g., i32,
 	 * f64), and type deduction for literals without an explicit type.

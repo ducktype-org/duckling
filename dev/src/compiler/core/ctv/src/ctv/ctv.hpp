@@ -8,8 +8,6 @@
 
 #include <string>
 
-// TODOP: All Comment in this file.
-// TODOP: Macrofy this
 namespace compiler::ctv {
 	using numeric_value::NumericValue;
 
@@ -46,6 +44,10 @@ namespace compiler::ctv {
 		 */
 		[[nodiscard]] std::string toString() const;
 
+		/**
+		 * @brief Retrieves the value of the given type from the CTV.
+		 * @return A stored value or an empty optional if the CTV didn't store the requested type.
+		 */
 		template<typename T>
 		requires(base::IS_VARIANT_MEMBER_V<T, Storage>)
 		[[nodiscard]] base::Optional<T> get() const {
@@ -55,7 +57,6 @@ namespace compiler::ctv {
 			return {};
 		}
 
-		// TODOP: Probably remove that.
 		/**
 		 * @brief Retrieves the value of type from the CTV.
 		 * @note Possibly converts tuple and unit values to types. @TODO: #1373 reconsider this.

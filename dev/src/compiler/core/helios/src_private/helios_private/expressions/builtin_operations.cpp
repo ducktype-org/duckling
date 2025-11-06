@@ -36,7 +36,6 @@ namespace compiler::helios::code {
 			auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
 			auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
-			// TODOP: Do sizes have to match?
 			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
 			    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
 				return {};
@@ -45,7 +44,6 @@ namespace compiler::helios::code {
 			auto lhs_as_integer = tsh::FloatAbstractType(lhs_type.getType());
 			auto rhs_as_integer = tsh::FloatAbstractType(rhs_type.getType());
 
-			// TODOP: Do sizes have to match?
 			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()) return {};
 		}
 

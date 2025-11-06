@@ -18,8 +18,6 @@ namespace vm::code {
 
 	TypeContext getBuiltinTypes() {
 		static const std::array builtin_types = {
-			// TODOP: Change the name of those. They should be names p16/...(primitive). It's
-			// misleading.
 			TypeOfData(PrimitiveType(base::StrID("byte"), 1)),
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
 			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),

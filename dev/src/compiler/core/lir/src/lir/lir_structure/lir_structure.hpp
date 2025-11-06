@@ -146,7 +146,6 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		// TODOP: Add CTV. Link issue.
 		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
 		ValueType value;
 

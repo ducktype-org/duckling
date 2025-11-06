@@ -3,16 +3,25 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
+#include "diagnostic/source_position.hpp"
+#include "query_framework/context.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <charconv>
 #include <limits>
+#include <string_view>
+#include <system_error>
 #include <type_traits>
 
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief Checks if the integral type fits in the given type.
+		 * @return True if the given integral value fits in the requested type, false otherwise.
+		 */
 		template<typename TargetType, typename SourceType>
+		requires(std::is_integral_v<TargetType> && std::is_integral_v<SourceType>)
 		bool fitsIn(SourceType value) {
 			if constexpr (std::is_signed_v<TargetType> == std::is_signed_v<SourceType>) {
 				return value >= static_cast<SourceType>(std::numeric_limits<TargetType>::min())
@@ -25,24 +34,60 @@ namespace compiler::helios::code {
 			}
 		}
 
+		/**
+		 * @brief Checks the given `from_chars_result` and logs compiler errors in case of errors.
+		 * @return True `from_chars` succeeded, false if an error occurred, an appropriate compiler
+		 * error is logged.
+		 */
+		bool handleFromCharsResult(
+			const std::from_chars_result& result,
+			std::string_view              value,
+			const dia::SourcePosition&    position,
+			query::Context&               ctx
+		) {
+			if (result.ec != std::errc()) {
+				if (result.ec
+				    == std::errc::invalid_argument) {  // Not a number at all. This will be returned
+					                                   // when trying to parse "abc".
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							position, "Invalid numeric literal"
+						)
+					);
+				} else if (result.ec == std::errc::result_out_of_range) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							position, "Numeric literal value is to large to be processed."
+						)
+					);
+				}
+				return false;
+			}
+
+			// Checks if the whole number was parsed. For example for a literal like this "123abc"
+			// `from_chars` won't return the `std::errc::invalid_argument`, but return a parsed
+			// "123" literal and stop on the first non numeric char. Here we check that the whole
+			// string was parsed.
+			if (result.ptr != value.data() + value.size()) {
+				ctx.log(
+					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+						position, "Invalid numeric literal"
+					)
+				);
+				return false;
+			}
+			return true;
+		}
+
 		template<typename TargetInt>
 		base::Optional<numeric_value::NumericValue> parseSignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			// TODOP: i128 potentially?
 			i64  parsed_value = 0;
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 
-			if (result.ec != std::errc()
-			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						position, "Invalid literal: signed integer"
-					)
-				);
-				return {};
-			}
+			if (!handleFromCharsResult(result, value, position, ctx)) return {};
 
 			if (!fitsIn<TargetInt>(parsed_value)) {
 				ctx.log(
@@ -60,20 +105,11 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseUnsignedInteger(
 			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			// TODOP: u128 potentially?
 			u64  parsed_value = 0;
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 
-			if (result.ec != std::errc()
-			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						position, "Invalid literal: unsigned integer"
-					)
-				);
-				return {};
-			}
+			if (!handleFromCharsResult(result, value, position, ctx)) return {};
 			if (!fitsIn<TargetUInt>(parsed_value)) {
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -92,15 +128,8 @@ namespace compiler::helios::code {
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
-			if (result.ec != std::errc()
-			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						position, "Invalid literal: floating point"
-					)
-				);
-				return {};
-			}
+			if (!handleFromCharsResult(result, value, position, ctx)) return {};
+			// @note: No need to check with fitsIn, since casting to smaller types is always
 			return numeric_value::NumericValue(static_cast<TargetFloat>(parsed_value));
 		}
 
@@ -110,23 +139,14 @@ namespace compiler::helios::code {
 			i64  parsed_value = 0;
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
-			if (result.ec != std::errc()
-			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						position, "Invalid literal: deduced integer type"
-					)
-				);
-				return {};
-			}
+			if (!handleFromCharsResult(result, value, position, ctx)) return {};
 
-			// TODOP: issue, add support for i8 and i128 types
 			numeric_value::NumericValue numeric_result;
-			if (parsed_value <= std::numeric_limits<i16>::max()) {
+			if (fitsIn<i16>(parsed_value)) {
 				numeric_result = numeric_value::NumericValue{ static_cast<i16>(parsed_value) };
-			} else if (parsed_value <= std::numeric_limits<i32>::max()) {
+			} else if (fitsIn<i32>(parsed_value)) {
 				numeric_result = numeric_value::NumericValue{ static_cast<i32>(parsed_value) };
-			} else if (parsed_value <= std::numeric_limits<i64>::max()) {
+			} else if (fitsIn<i64>(parsed_value)) {
 				numeric_result = numeric_value::NumericValue{ static_cast<i64>(parsed_value) };
 			} else {
 				ctx.log(
@@ -137,9 +157,8 @@ namespace compiler::helios::code {
 				return {};
 			}
 
-			// TODOP: Add issue number
-			// @TODO: For now, until the cast instuction are added we cast all the deduced types to
-			// i64 to avoid adding a type specifier to  every numeric literal in the tests.
+			// @TODO: #859 For now, until the cast instuction are added we cast all the deduced
+			// types to i64 to avoid adding a type specifier to every numeric literal in the tests.
 			return numeric_value::NumericValue{ std::visit(
 				[&](auto&& val) { return static_cast<i64>(val); }, numeric_result.getStorage()
 			) };
@@ -150,17 +169,8 @@ namespace compiler::helios::code {
 		) {
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
-			if (result.ec != std::errc()
-			    || result.ptr != value.data() + value.size()) {  // Bad format. TODOP: Add comment.
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						position, "Invalid literal: deduced floating point type"
-					)
-				);
-				return {};
-			}
+			if (!handleFromCharsResult(result, value, position, ctx)) return {};
 
-			// TODOP: Issue, add support for f16.
 			if (static_cast<f128>(static_cast<f32>(parsed_value)) == parsed_value)
 				return numeric_value::NumericValue{ static_cast<f32>(parsed_value) };
 			else if (static_cast<f128>(static_cast<f64>(parsed_value)) == parsed_value)

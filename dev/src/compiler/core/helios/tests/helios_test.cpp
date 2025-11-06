@@ -167,7 +167,6 @@ private:
 		// ASSERT_EQUAL(15, getConstValueAs<i16>("oct", root_scope));
 		// ASSERT_EQUAL(21, getConstValueAs<i16>("bin", root_scope));
 
-		// TODOP: This works nicely
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.

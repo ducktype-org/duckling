@@ -52,7 +52,8 @@ namespace {
 					);
 				}
 
-				// TODOP: Mock, add issue.
+				// TODO: #1499. For now every numeric value is casted to i64 (including floating
+				// point literals).
 				i64 coerced_value = numeric.coerceTo<i64>().value();
 				return llvm::ConstantInt::getSigned(llvm_type, coerced_value);
 			}

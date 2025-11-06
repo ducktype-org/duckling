@@ -63,7 +63,6 @@ namespace compiler::helios {
 			query::QResult<tsh::SymbolType<>, errors::Failed> symbol_type_qresult
 				= query::QError(errors::Failed());
 
-			// TODOP: Check if the type is infered correctly.
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {
 					setSymbolTypeByTypeExpr(

@@ -131,6 +131,7 @@ namespace compiler::helios {
 									auto lhs_coerced = maybe_lhs_coerced.value();
 									auto rhs_coerced = maybe_rhs_coerced.value();
 
+									// TODOP: Rethink the approach. Maybe we should do the type maxing.
 									// TODOP: Check for over/underflows?
 									using enum code::BuiltinBinary;
 									switch (expr.operation) {
