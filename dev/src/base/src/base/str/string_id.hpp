@@ -104,6 +104,27 @@ namespace base {
 			return view().stdString();
 		}
 
+		// Ranges-friendly API (contiguous range over characters)
+		[[nodiscard]]
+		usize size() const noexcept {
+			return view().stringView().size();
+		}
+
+		[[nodiscard]]
+		const char* data() const noexcept {
+			return strView().data();
+		}
+
+		[[nodiscard]]
+		const char* begin() const noexcept {
+			return data();
+		}
+
+		[[nodiscard]]
+		const char* end() const noexcept {
+			return data() + size();
+		}
+
 		[[nodiscard]]
 		bool isBad() const {
 			return id.isBad();
