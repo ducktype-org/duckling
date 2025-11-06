@@ -573,16 +573,20 @@ private:
 		IF_BUILD_TYPE_DEV({
 			ASSERT_TRUE(
 				(ModuleTree::getComponentHash(subsub->getModuleID()).elements
-		     	== std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub" })
+			     == std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub" })
 			);
 			ModuleTreeModifier::setParent(mt1, subsub);
 			ASSERT_TRUE(
 				(ModuleTree::getComponentHash(sub2->getModuleID()).elements
-		     	== std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub", "root", "sub2" })
+			     == std::vector<std::string>{ "root_package_id11e3",
+			                                  "sub1",
+			                                  "subsub",
+			                                  "root",
+			                                  "sub2" })
 			);
 			ASSERT_TRUE(
 				(ModuleTree::getComponentHash(mt2->getModuleID()).elements
-		     	== std::vector<std::string>{ "root_package_id11e4", "root" })
+			     == std::vector<std::string>{ "root_package_id11e4", "root" })
 			);
 		});
 	}
