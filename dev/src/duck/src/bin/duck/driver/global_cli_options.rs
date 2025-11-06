@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use anyhow::anyhow;
 use clap::ArgMatches;
 
 use crate::DuckCtx;
 use crate::InternalError;
-use crate::duck::terminal::Verbosity;
+use duck_lib::terminal::Verbosity;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {

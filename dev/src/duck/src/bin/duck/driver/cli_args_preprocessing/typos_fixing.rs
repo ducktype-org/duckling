@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::ArgMatches;
 use itertools::Itertools;
@@ -8,7 +8,7 @@ use tracing::debug;
 
 use crate::{
     DuckCtx,
-    duck::driver::{
+    driver::{
         cli,
         cli_args_preprocessing::{
             builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},

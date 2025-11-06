@@ -65,7 +65,6 @@ impl DuckCfg {
     }
 }
 
-#[cfg(test)]
 mod test_utils {
     use std::collections::HashMap;
 

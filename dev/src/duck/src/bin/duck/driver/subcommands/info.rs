@@ -1,8 +1,8 @@
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::{Arg, ArgMatches, Command};
 
-use crate::{DuckCtx, duck::driver::cli_ext::subcommand};
+use crate::{DuckCtx, driver::cli_ext::subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("info")

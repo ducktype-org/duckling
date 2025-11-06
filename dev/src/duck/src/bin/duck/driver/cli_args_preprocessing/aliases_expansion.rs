@@ -1,9 +1,9 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use crate::{
     DuckCtx,
-    duck::driver::{
+    driver::{
         cli,
         cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
     },
@@ -131,7 +131,7 @@ mod tests {
 
     use crate::{
         DuckCtx,
-        duck::driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
+        driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
     };
 
     #[test]

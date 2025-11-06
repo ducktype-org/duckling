@@ -1,9 +1,9 @@
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::Command;
 
 use crate::DuckCtx;
-use crate::duck::driver::cli_ext::{CommandExt, subcommand};
+use crate::driver::cli_ext::{CommandExt, subcommand};
 use clap::ArgMatches;
 
 pub fn get_parser() -> Command {

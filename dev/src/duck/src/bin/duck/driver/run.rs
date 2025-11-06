@@ -4,17 +4,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::QuackResult;
-use crate::{
-    DuckCtx,
-    duck::driver::{
+use duck_lib::QuackResult;
+use duck_lib::DuckCtx;
+use crate::driver::{
         cli,
         cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
         cli_no_err,
         global_cli_options::GlobalCliOptions,
         subcommands::exec_for,
-    },
-};
+    };
+
 use anyhow::{Context, bail};
 use clap::ArgMatches;
 use rustvil::{fs::PathExt, os::CommandExt};

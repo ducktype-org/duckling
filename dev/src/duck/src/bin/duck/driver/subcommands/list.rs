@@ -1,10 +1,10 @@
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::{ArgMatches, Command};
 
 use crate::{
     DuckCtx,
-    duck::driver::cli_ext::{flag, optional, subcommand},
+    driver::cli_ext::{flag, optional, subcommand},
 };
 
 pub fn get_parser() -> Command {

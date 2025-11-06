@@ -1,8 +1,13 @@
-use duck_lib::{indent::indent, terminal::Terminal};
+use duck_lib::{terminal::Terminal};
 
+pub mod indent;
+pub mod driver;
+
+use indent::indent;
 use duck_lib::DuckCtx;
 use duck_lib::InternalError;
 use tracing::debug;
+
 
 fn main() {
     setup_logger();
@@ -14,7 +19,7 @@ fn main() {
             print_error_and_exit(err, &stdout, &stderr);
         }
     };
-    if let Err(e) = duck_lib::duck::driver::run::run(&mut ctx) {
+    if let Err(e) = driver::run::run(&mut ctx) {
         print_error_and_exit(e, ctx.console(), ctx.error_console())
     }
 }

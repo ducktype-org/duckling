@@ -1,12 +1,12 @@
 use std::ffi::OsString;
 
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::{ArgMatches, Command, value_parser};
 
 use crate::{
     DuckCtx,
-    duck::driver::cli_ext::{CommandExt, flag, multi, subcommand},
+    driver::cli_ext::{CommandExt, flag, multi, subcommand},
 };
 
 pub fn get_parser() -> Command {

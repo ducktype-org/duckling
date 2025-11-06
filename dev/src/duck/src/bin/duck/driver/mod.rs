@@ -9,7 +9,7 @@ pub mod subcommands;
 
 use cli_ext::CommandExt;
 
-use crate::duck::driver::styles::get_styles;
+use crate::driver::styles::get_styles;
 
 fn cli() -> Command {
     Command::new(crate_name!())

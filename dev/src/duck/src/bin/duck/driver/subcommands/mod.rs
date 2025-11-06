@@ -1,4 +1,4 @@
-use crate::QuackResult;
+use duck_lib::QuackResult;
 use clap::{ArgMatches, Command};
 
 use crate::DuckCtx;
