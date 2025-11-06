@@ -150,5 +150,15 @@ namespace query::internal {
 		 * or not exists in previous graph).
 		 */
 		bool redGreenSweep(NodeID start_node);
+
+		/**
+		 * Merges the previous query graph into the current query graph.
+		 * This function updates the current graph with the nodes and edges from the previous graph.
+		 * @param start_node The starting node for the merge operation.
+		 * @note This function should be called after the red-green sweep to ensure that only the
+		 * relevant nodes are merged.
+		 * This function will only merge nodes that are not merged yet.
+		 */
+		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
 	};
 }

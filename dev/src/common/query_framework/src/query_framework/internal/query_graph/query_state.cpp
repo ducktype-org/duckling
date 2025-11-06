@@ -146,6 +146,61 @@ namespace query::internal {
 			stack.pop_back();
 		}
 
+		// Merge previous graph into current if start_node is green
+		if(node_colors.at(start_node) == PrevColor::Green)
+			mergePreviousGraphIntoCurrentGraph(start_node);
+
 		return node_colors.at(start_node) == PrevColor::Green;
+	}
+
+	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {
+		// If there is no previous compilation graph, there's nothing to merge
+		if (!previous.has_value()) return;
+
+		// If the start node already exists in the current graph, it's already merged
+		if (query_graph.node_deps.contains(start_node)) return;
+
+		const auto& prev_graph = previous->graph;
+
+		// If the start node does not exist in previous graph, nothing to merge
+		if (!prev_graph.nodeExists(start_node)) return;
+
+		// Iterative DFS to copy nodes and their dependencies from previous graph
+		struct Frame {
+			NodeID node;
+		};
+
+		std::vector<Frame>         stack;
+
+		stack.push_back(Frame{ .node = start_node });
+
+		while (!stack.empty()) {
+			const auto frame = stack.back();
+			stack.pop_back();
+
+			const NodeID node = frame.node;
+
+			// If we already created this node in current graph, skip
+			if (query_graph.node_deps.contains(node)) continue;
+
+			// Insert the node with an empty dependency list first (ensures parent exists for addDependency)
+			query_graph.node_deps.insert_or_assign(node, std::vector<NodeID>{});
+
+			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
+			CORE_ASSERT(
+				prev_graph.node_deps.contains(node),
+				"Node to merge should exist in previous graph"
+			);
+			const auto& prev_deps = prev_graph.node_deps.at(node);
+
+			// For each child, add the dependency edge and ensure the child will be processed
+			for (const auto& child: prev_deps) {
+				// Add edge in current graph (child doesn't have to exist yet)
+				query_graph.addDependency(node, child);
+
+				// If child is not in current graph yet, schedule it for creation
+				if (!query_graph.node_deps.contains(child)) stack.push_back(Frame{ .node = child });
+			}
+		}
 	}
 }

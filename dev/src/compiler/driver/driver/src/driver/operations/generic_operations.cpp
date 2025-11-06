@@ -116,9 +116,9 @@ namespace compiler::driver {
 
 		// Load precompiled artifact from disk without performing any compilation.
 		static auto loadFromDisc(const QKey& key) -> artifacts::FileArtifact {
-			std::cout << "Loading CompileModule artifact from disk for module "
+			std::cout << "\n\nLoading CompileModule artifact from disk for module "
 					  << getModuleRef(key.module_id)->getName().strView() << " and backend "
-					  << backendTypeToStr(key.backend_type) << "\n";
+					  << backendTypeToStr(key.backend_type) << "\n\n";
 
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);

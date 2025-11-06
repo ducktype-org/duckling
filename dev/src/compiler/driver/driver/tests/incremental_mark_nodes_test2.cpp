@@ -41,7 +41,7 @@ private:
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
 				.debug_options         = {},
-				.incremental           = {}
+				.incremental           = { .enabled = true }
             }
         );
 
