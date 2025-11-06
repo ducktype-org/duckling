@@ -12,7 +12,7 @@ namespace compiler::driver {
 	 */
 	constexpr std::string_view LLVM_IR_LIB = R"-----(
 
-@.str = private unnamed_addr constant [6 x i8] c"%ld \0A\00", align 1
+@.str = private unnamed_addr constant [5 x i8] c"%ld\0A\00", align 1
 @.str.1 = private unnamed_addr constant [4 x i8] c"%ld\00", align 1
 
 define noundef i64 @builtin_output_i64(i64 noundef %0) {

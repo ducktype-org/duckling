@@ -25,9 +25,13 @@ export async function handleDefinition(
 ) : Promise<Location | Location[] | null> {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
+
     const text = document.getText();
     const offset = positionToOffset(params.position, text);
-    let definition = await compilerDaemonClient.getDefinition(params, offset, connection);
 
+    let definition = await compilerDaemonClient.getDefinition(params, offset, connection);
+    if (!definition) return null;
+
+    console.log("Definition received from compiler daemon: ", definition);
     return definition;
 }

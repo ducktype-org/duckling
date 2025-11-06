@@ -1,5 +1,8 @@
 compile_duckc: "cmake --build @{build_dir} -- duckc"
+compile_dvm: "cmake --build @{build_dir} -- VM"
+
 duckc_path: "@{build_dir}/bin/duckc"
+dvm_path: "@{build_dir}/bin/VM"
 
 PreTest: "@{compile_duckc}"
 

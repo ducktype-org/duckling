@@ -3,30 +3,40 @@
 Tests:
   ternary:
     Cases:
-      default:
+      dvm:
+        backend: dvm
         Output:
-          String: "9 \n9 \n9 \n18 \n4 \n"
+          String: "9\n9\n9\n18\n4\n"
+      llvm:
+        backend: llvm
+        Output:
+          String: "9\n9\n9\n18\n4\n"
   single-comparison: # Any type of comparison between two values.
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: ""
         ExitCode: 0
+
   comparison-chain:
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: ""
         ExitCode: 0
   unit_simple:
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
-          String: "1 \n"
+          String: "1\n"
         ExitCode: 0
   unit_simple_multiple_modules:
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
-          String: "1 \n"
+          String: "1\n"
         ExitCode: 0
