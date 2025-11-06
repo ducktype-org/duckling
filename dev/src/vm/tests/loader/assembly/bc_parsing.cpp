@@ -1,7 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include <vm/api/data/api_error.hpp>
-#include <vm/loader/errors.hpp>
 #include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
 

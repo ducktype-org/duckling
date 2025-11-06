@@ -5,21 +5,20 @@
 
 #include "chain_expr.hpp"
 
-#include "call_processing.hpp"
-
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -304,8 +303,8 @@ namespace compiler::helios::code {
 			if (res.hasError()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						ident->getName().position,
-						base::strConcat("Failed to find correct function: ", ident->getName().value)
+						ident->getSourcePosition(),
+						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
 					)
 				);
 				return query::QError(errors::Failed());
@@ -484,9 +483,7 @@ namespace compiler::helios::code {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 						expr_access->getName().position,
-						base::strConcat(
-							"Failed to find correct function: '", expr_access->getName().value
-						)
+						base::strConcat("Failed to call: \"", expr_access->getName().value, "\"")
 					)
 				);
 				return query::QError(errors::Failed());

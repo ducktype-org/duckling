@@ -3,6 +3,8 @@ add_library(QueryFramework
 	src/query_framework/internal/query_graph/query_graph.cpp
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
+	src/query_framework/internal/query_graph/node_marking.cpp
+	src/query_framework/external/api.cpp
 	src/query_framework/utils/with_context_do.cpp
 	src/query_framework/context.cpp
 	src/query_framework/q_stats/q_stats.cpp

@@ -10,7 +10,7 @@ fun main() -> i64 = {
     }
 
     # Testing using if with a local variable
-    let a: bool = true;
+    var a: bool = true;
     if (a) {
     } else {
         return 4;
@@ -32,7 +32,7 @@ fun main() -> i64 = {
         }
     }
 
-    let output: i64 = 0; 
+    var output: i64 = 0;
     # Non empty both cases
     if (true) {
         output = 9;            # output = 9

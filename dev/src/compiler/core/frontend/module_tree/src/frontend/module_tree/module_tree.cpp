@@ -7,6 +7,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/string_id.hpp>
 
+#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
@@ -51,29 +52,11 @@ namespace {
 		std::smatch match;
 		return !std::regex_match(dirname, match, reject_directory_regex);
 	}
-
-	/**
-	 * @brief Generates a random alphanumeric string of the specified length.
-	 * @param length The length of the random string to generate.
-	 * @return A random alphanumeric string.
-	 */
-	std::string generateRandomString(size_t length) {
-		static constexpr std::string_view CHARS
-			= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-		static std::random_device                    rd;
-		static std::mt19937                          generator(rd());
-		static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
-
-		std::string random_string;
-		random_string.reserve(length);
-		for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
-		return random_string;
-	}
 }
 
 namespace compiler::frontend {
 
-	const ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
+	const hashing::ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
 		Ref<ModuleTree> module = module_id.ref;
 		if (!module->m_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
@@ -112,7 +95,7 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, generateRandomString(32), file_reject, dir_reject);
+		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree() = default;
@@ -199,7 +182,7 @@ namespace compiler::frontend {
 
 	void ModuleTree::updateComponentHash() {
 		// Get parent component hash if existsS
-		base::Optional<ComponentHash> parent_hash;
+		base::Optional<hashing::ComponentHash> parent_hash;
 		if (m_parent.has_value()) {
 			CORE_ASSERT(
 				m_parent.value()->m_component_hash.has_value(),
@@ -209,7 +192,7 @@ namespace compiler::frontend {
 		} else {
 			// root module tree, use package id as base
 			CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for module tree!");
-			m_component_hash.emplace(ComponentHash(m_package_id), m_name);
+			m_component_hash.emplace(hashing::ComponentHash(m_package_id), m_name);
 		}
 	}
 
@@ -312,7 +295,7 @@ namespace compiler::frontend {
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
-		builder->setPackageID(generateRandomString(32));
+		builder->setPackageID(base::generateRandomString(32));
 		return builder;
 	}
 
@@ -763,7 +746,12 @@ namespace compiler::frontend {
 
 		// @note: unstable ref here is only possible, because
 		// PResult is already a reference
-		QUERY_AUTO_CACHE_COPY
+		//
+		// In the `file->getPST();` there is already caching mechanism implemented
+		// which checks if the PST was compiled for the SourceFile.
+		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't
+		// invalidate the query cache of this query, so we have to disable caching here.
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);

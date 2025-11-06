@@ -62,10 +62,18 @@ namespace vm::loader::compiler {
 			 */
 			base::HashMap<base::StrID, u64> method_name_to_id;
 			/**
-			 * @brief A complete list of all functions which will be added in the compilation process.
-			 * Used when lowering call instructions to translate the function name to it's index.
+			 * @brief A complete list of all bytecode functions which will be added in the
+			 * compilation process. Used when lowering call instructions to translate the function
+			 * name to it's index.
 			 */
 			ObjIdNameMap<code::Function> function_forward_declarations;
+
+			/**
+			 * @brief All available ExternCFunctions callable from the program.
+			 * Used when lowering call_cfunc instructions to translate the function name to it's
+			 * index.
+			 */
+			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
 		};
 
 		/**
@@ -118,6 +126,12 @@ namespace vm::loader::compiler {
 		 * functions.
 		 */
 		void compileNewFunctions(const std::vector<code::Function>& new_functions);
+
+		/**
+		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
+		 * internal `low_program.extern_c_functions`.
+		 */
+		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
 		 * @brief Calculates the stack offsets of stack variables.

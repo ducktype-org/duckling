@@ -8,9 +8,6 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
@@ -34,8 +31,8 @@ namespace vm {
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
-		std::unique_lock                                             lock(rw_global);
-		std::expected<CRef<low::LowVMProgram>, loader::LoaderLogger> code_result = [&] {
+		std::unique_lock                          lock(rw_global);
+		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
 				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
 				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
@@ -44,7 +41,6 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
-			loaded_program = *code_result;
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -58,10 +54,9 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
-		if (!loaded_program.has_value()) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		bool response
-			= getMainVMThread().spawnThreadAndRun(*loaded_program, func_name, run_arguments);
+			= getMainVMThread().spawnThreadAndRun(loaded_program, func_name, run_arguments);
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -137,7 +132,7 @@ namespace vm {
 		return api::response::Empty{};
 	}
 
-	base::Optional<api::ApiError> VMProcess::validateMemoryRequest() {
+	base::Optional<api::ApiError> VMProcess::assertProcessCanRespond() {
 		api::ProcStatus status = getStatus();
 
 		if (std::holds_alternative<api::Parsing>(status)
@@ -195,7 +190,7 @@ namespace vm {
 			}
 
 			variant_case(api::request::LoadCode, load_request) {
-				return loadProgram(load_request.code_collections).transform_error([](auto err) {
+				return loadProgram(load_request.code_collection).transform_error([](auto err) {
 					return api::ApiError{ err };
 				});
 			}
@@ -232,12 +227,12 @@ namespace vm {
 			variant_case_novalue(api::request::Detach) { return detach(); }
 
 			variant_case(api::request::TypeMetadata, type_request) {
-				match_optional(validateMemoryRequest()) {
+				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						auto res = (*loaded_program)
-						               ->getTypes()
-						               .atMaybe(base::StrID(type_request.type_name.c_str()));
+						auto res = loaded_program->getTypes().atMaybe(
+							base::StrID(type_request.type_name.c_str())
+						);
 						match_optional(res) {
 							opt_some(value) { return api::response::Type{ value }; }
 
@@ -251,33 +246,26 @@ namespace vm {
 			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
-				match_optional(validateMemoryRequest()) {
+				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
-						match_optional(loaded_program) {
-							opt_some(program) {
-								auto maybe_type = program->getTypes().atMaybe(
-									base::StrID(vmvalue_request.type_name.c_str())
-								);
-								match_optional(maybe_type) {
-									opt_some(type) {
-										auto vm_value = createOwnedVmValue(type);
-										return api::response::VmValue{ std::move(vm_value) };
-									}
-									opt_none {
-										return std::unexpected(api::ApiError{
-											api::OtherError{ "Type not found" } });
-									}
-								}
+						auto maybe_type = loaded_program->getTypes().atMaybe(
+							base::StrID(vmvalue_request.type_name.c_str())
+						);
+						match_optional(maybe_type) {
+							opt_some(type) {
+								auto vm_value = createOwnedVmValue(type);
+								return api::response::VmValue{ std::move(vm_value) };
 							}
 							opt_none {
 								return std::unexpected(api::ApiError{
-									api::OtherError{ "Program non loaded hence type not found" } });
+									api::OtherError{ "Type not found" } });
 							}
 						}
 					}
 				}
 			}
+
 			variant_case(api::request::StatusRequest, status_request) {
 				return api::Response(getStatus());
 			}
@@ -288,6 +276,7 @@ namespace vm {
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
+
 		CORE_UNREACHABLE();
 	}
 
@@ -313,7 +302,10 @@ namespace vm {
 
 	PID VMProcess::getPID() const { return my_pid; }
 
-	VMProcess::VMProcess(const PID my_pid): my_pid(my_pid), status(api::ExecutionNotStarted{}) {
+	VMProcess::VMProcess(const PID my_pid):
+		  my_pid(my_pid),
+		  status(api::ExecutionNotStarted{}),
+		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 	}
 
@@ -365,8 +357,7 @@ namespace vm {
 		try {
 			// There might be numerous runtime exceptions during the deinitialization,
 			// any of those means there was an issue during the validation.
-			if (loaded_program.has_value())
-				getMainVMThread().execGlobalDestructors(*loaded_program);
+			getMainVMThread().execGlobalDestructors(loaded_program);
 
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 

@@ -362,41 +362,6 @@ namespace tsh {
 		ResolutionResult resolve(base::StrID name, query::Context& ctx) const;
 
 		/**
-		 * @brief Gets the elements which match a name and given arguments.
-		 *
-		 * @note This should not be used to resolve fields. This function assumes that it is
-		 * resolving a method, with perhaps an empty parameter list.
-		 *
-		 * @param name The requested name of an element.
-		 * @param positional_arg_types The types of the supplied positional arguments.
-		 * @param named_args The supplied named arguments.
-		 * @param ctx The query context for implicit coercion checks.
-		 * @return The elements which match the name.
-		 */
-		ResolutionResult resolve(
-			base::StrID                       name,
-			const std::vector<AbstractType>&  positional_arg_types,
-			const std::vector<NamedArgument>& named_args,
-			query::Context&                   ctx
-		) const;
-
-		/**
-		 * @brief Gets the elements which match a name and a single given argument.
-		 *
-		 * Only methods which can take exactly one argument are considered. In particular, methods
-		 * which *might* take one argument (for example, all other arguments are defaulted), are
-		 * not considered and do not affect resolution ambiguity.
-		 *
-		 * @param name The requested name of an element.
-		 * @param single_arg_type The type of a single argument.
-		 * @param ctx The query context for implicit coercion checks.
-		 * @return The elements which match the name.
-		 */
-		ResolutionResult resolve(
-			base::StrID name, AbstractType single_arg_type, query::Context& ctx
-		) const;
-
-		/**
 		 * @brief Auxiliary function to stringify a member lookup request.
 		 * @param request_name The name of the requested member.
 		 * @param argument_info The arguments provided.

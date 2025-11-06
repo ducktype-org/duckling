@@ -3,6 +3,7 @@ import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
+import { initPromise, initComplete } from './server';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -81,15 +82,20 @@ export class CompilerDaemonClient {
 	// This function is called to update the file in the daemon
 	public async putFile(filePath: string, fileContent: string, connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
+		if (!initComplete) {
+			console.log("Waiting for init to complete...");
+			await initPromise;
+		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 
-		function handleResponse(res: Response) {
+		async function handleResponse(res: Response) {
 			if (res.status != 200) {
-				throw new Error(`Error: ${res.status}`);
+				const text = await res.text();
+				throw new Error(`Error: ${res.status} ${text}`);
 			}
 		}
 
@@ -127,57 +133,35 @@ export class CompilerDaemonClient {
 	// This function is called to update the workspace in the daemon
 	public async putWorkspace(connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
-		const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
 		
-		for (let i = 0; i < files.length; i++) {
+		const folders = (await connection.workspace.getWorkspaceFolders())?.map(folder => folder.uri) ?? [];
+		for (const folder of folders) {
 			try {
-				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
-				var base64FileContent: string = Buffer.from(files[i].content).toString('base64');
-
-				var response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
+				var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
+				var response = fetch(`${DAEMON_ADRESS}/init_directory/${base64FilePath}`);
 				var res = await response;
 				if (res.status != 200) {
 					throw new Error(`Error: ${res.status}`);
 				}
 			} catch (error) {
 				if (error instanceof Error) {
-					console.error(`Error processing file ${files[i].path}: ${error.message}`);
+					console.error(`Error processing file ${folder}: ${error.message}`);
 				} else {
-					console.error(`Error processing file ${files[i].path}: ${String(error)}`);
+					console.error(`Error processing file ${folder}: ${String(error)}`);
 				}
 			}
 		}
-		return;
-	}
 
-	// This function is called to update the module trees inside of the daemon
-	public async makeModuleTrees(connection: Connection): Promise<void> {
-		await this.waitForReady(connection);
-		const files = await filterDucklingFiles(await getWorkspaceFiles(connection));
-		
-		for (let i = 0; i < files.length; i++) {
-			try {
-				var base64FilePath: string = Buffer.from(uriToFilePath(files[i].path)).toString('base64');
-
-				var response = fetch(`${DAEMON_ADRESS}/make_module_tree/${base64FilePath}`);
-				var res = await response;
-				if (res.status != 200) {
-					throw new Error(`Error: ${res.status}`);
-				}
-			} catch (error) {
-				if (error instanceof Error) {
-					console.error(`Error building tree from path ${files[i].path}: ${error.message}`);
-				} else {
-					console.error(`Error processing file ${files[i].path}: ${String(error)}`);
-				}
-			}
-		}
 		return;
 	}
 
 	// This function is called to get the semantic tokens from the daemon for a file
 	public async getSemanticTokens(filePath: string, connection: Connection): Promise<Token[]> {
 		await this.waitForReady(connection);
+		if (!initComplete) {
+			console.log("Waiting for init to complete...");
+			await initPromise;
+		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
@@ -208,7 +192,7 @@ export class CompilerDaemonClient {
 				tokenType: token.tokenType,
 				tokenModifiers: token.tokenModifiers
 			}));
-
+			
 			return tokens;
 		} catch (error) {
 			if (error instanceof Error) {
@@ -314,12 +298,12 @@ export class CompilerDaemonClient {
 			uri: definition.uri,
 			range: {
 				start: {
-					line: definition.range.start.line,
-					character: definition.range.start.character
+					line: definition.range.start.line-1,
+					character: definition.range.start.character-1
 				},
 				end: {
-					line: definition.range.end.line,
-					character: definition.range.end.character
+					line: definition.range.end.line-1,
+					character: definition.range.end.character-1
 				}
 			}
 		}));

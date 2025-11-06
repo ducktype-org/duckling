@@ -34,6 +34,8 @@ namespace fs {
 			return PathType::Virtual;
 		else if (hasTemporaryPrefix(path))
 			return PathType::Temporary;
+		else if (!path.is_absolute())
+			return PathType::Relative;
 		else
 			return PathType::Physical;
 	}
@@ -60,6 +62,11 @@ namespace fs {
 
 	FilePath FilePath::toVirtualPath() const {
 		if (type == PathType::Virtual) CORE_PANIC("Path is already virtual: " + path.string());
+		if (type == PathType::Relative)
+			CORE_PANIC(
+				"Cannot convert relative path to virtual: " + path.string()
+				+ " use absolute() first."
+			);
 		if (type != PathType::Physical)
 			CORE_PANIC("Can only convert physical paths to virtual: " + path.string());
 
@@ -95,12 +102,11 @@ namespace fs {
 	}
 
 	FilePath FilePath::absolute() const {
-		if (type == PathType::Virtual) {
-			// Virtual paths are already absolute in their own context
-			return *this;
-		}
+		if (type != PathType::Relative) return *this;
 		return std::filesystem::absolute(path);
 	}
+
+	bool FilePath::isAbsolute() const noexcept { return type != PathType::Relative; }
 
 	bool FilePath::exists() const {
 		if (type == PathType::Virtual)

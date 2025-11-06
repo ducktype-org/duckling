@@ -1,11 +1,13 @@
 #pragma once
 
-
-#include <filesystem/file.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <vm/api/api.hpp>
 
+#include <expected>
 #include <shared_mutex>
+#include <unordered_map>
 
 namespace vm {
 	class VMProcess;

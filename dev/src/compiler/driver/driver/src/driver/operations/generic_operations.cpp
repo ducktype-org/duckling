@@ -4,16 +4,17 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
-#include <frontend/module_tree/component_hash.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
+#include <hashing/component_hash.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
@@ -60,9 +61,13 @@ namespace compiler::driver {
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
-			auto module_name = base::StrID(
-				base::strConcat("module_", key.module_id.queryUnstablePerfectHash()).c_str()
-			);
+			auto module_name
+				= base::StrID(base::strConcat(
+								  "module_",
+								  compiler::frontend::ModuleTree::getComponentHash(key.module_id)
+									  .hash.toStringHex()
+				)
+			                      .c_str());
 
 			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name);
 
@@ -111,11 +116,13 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	void compilerEntirePackage(
-		const fs::File&               package_location,
-		BackendType                   backend,
-		const linker::LinkingOptions& linking_options
+		const global_state::PackageInfo& package_info,
+		BackendType                      backend,
+		const linker::LinkingOptions&    linking_options
 	) {
-		auto root = frontend::createModuleTreeWithRandomPackageID(package_location);
+		auto root = frontend::createModuleTree(
+			package_info.package_path, package_info.package_name.strView()
+		);
 
 		std::vector<artifacts::FileArtifact> objects;
 

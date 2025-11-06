@@ -5,8 +5,8 @@ fun foo() -> i64 = {
  
 fun main() -> i64 = {
     # Instantiating variables
-    let a: i64 = 2;
-    let b: i64 = 1;
+    var a: i64 = 2;
+    var b: i64 = 1;
     
     # Printing a literal
     builtin_output_i64(4);                # 4

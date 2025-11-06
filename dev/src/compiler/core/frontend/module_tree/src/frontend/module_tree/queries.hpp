@@ -3,7 +3,7 @@
 #include "file_id.hpp"
 #include "module_id.hpp"
 
-#include <pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
