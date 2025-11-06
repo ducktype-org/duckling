@@ -422,52 +422,46 @@ namespace compiler::backend_llvm {
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
 		) {
 			auto llvm_dst_ty = typeFromLayout(builder.getContext(), cast_params.target_layout);
+			auto src_bits
+				= base::safeIntConv<unsigned>(static_cast<usize>(cast_params.source_layout.getSize()
+			    ));
+			auto dst_bits
+				= base::safeIntConv<unsigned>(static_cast<usize>(cast_params.target_layout.getSize()
+			    ));
+
+			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+				if (type.getType().getKind() == tsh::Kind::Integral) {
+					return (
+						tsh::IntegralAbstractType(type.getType()).getSignedness()
+						== tsh::IntegralAbstractType::Signedness::Signed
+					);
+				}
+				// Char, bool, etc. are treated as unsigned
+				return false;
+			};
 
 			variant_match(cast_params.source_layout()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
-					// integral-like layout (covers byte, bool, char and normal ints)
-					auto src_bits = static_cast<usize>(cast_params.source_layout.getSize());
-					auto dst_bits = static_cast<usize>(cast_params.target_layout.getSize());
-
 					// signedness comes from the symbol-level type information
-					bool src_signed = false;
-					if (cast_params.source_type.getType().getKind() == tsh::Kind::Integral) {
-						src_signed
-							= (tsh::IntegralAbstractType(cast_params.source_type.getType())
-						           .getSignedness()
-						       == tsh::IntegralAbstractType::Signedness::Signed);
-					}
+					bool src_signed = is_signed(cast_params.source_type);
 
 					variant_match(cast_params.target_layout()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
-							if (dst_bits > src_bits) {
-								return src_signed ? builder.CreateSExt(argument, llvm_dst_ty)
-								                  : builder.CreateZExt(argument, llvm_dst_ty);
-							} else if (dst_bits < src_bits) {
-								return builder.CreateTrunc(argument, llvm_dst_ty);
-							} else {
-								return argument;
-							}
+							// ================== Int -> Int ==================
+							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
 						}
 						variant_case_novalue(tsl::FloatTypeLayout) {
-							// integral -> float
+							// ================== Int -> Float ==================
 							return src_signed ? builder.CreateSIToFP(argument, llvm_dst_ty)
 							                  : builder.CreateUIToFP(argument, llvm_dst_ty);
 						}
 						variant_case_novalue(tsl::PointerTypeLayout) {
-							// int -> pointer: adjust integer to pointer-size then inttoptr
+							// ================== Int -> Pointer ==================
 							auto ptr_bits
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
 							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
-							llvm::Value* int_for_ptr = nullptr;
-							if (ptr_bits > src_bits) {
-								int_for_ptr = src_signed ? builder.CreateSExt(argument, ptr_int_ty)
-								                         : builder.CreateZExt(argument, ptr_int_ty);
-							} else if (ptr_bits < src_bits) {
-								int_for_ptr = builder.CreateTrunc(argument, ptr_int_ty);
-							} else {
-								int_for_ptr = argument;
-							}
+							llvm::Value* int_for_ptr
+								= builder.CreateIntCast(argument, ptr_int_ty, src_signed);
 							return builder.CreateIntToPtr(int_for_ptr, llvm_dst_ty);
 						}
 						variant_default {
@@ -477,78 +471,93 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					// float-layout -> either float->float, or float->int
-					auto src_bits = static_cast<unsigned>(
-						static_cast<usize>(cast_params.source_layout.getSize())
-					);
-					auto dst_bits = static_cast<unsigned>(
-						static_cast<usize>(cast_params.target_layout.getSize())
-					);
-
 					variant_match(cast_params.target_layout()) {
 						variant_case_novalue(tsl::FloatTypeLayout) {
-							if (cast_params.target_type.getType().getKind() == tsh::Kind::Float) {
-								if (dst_bits > src_bits)
-									return builder.CreateFPExt(argument, llvm_dst_ty);
-								else if (dst_bits < src_bits)
-									return builder.CreateFPTrunc(argument, llvm_dst_ty);
-								else
-									return argument;
-							}
+							// ================== Float -> Float ==================
 
-							if (cast_params.target_type.getType().getKind() == tsh::Kind::Integral) {
-								// float -> int: signedness comes from target symbol
-								bool to_signed
-									= (tsh::IntegralAbstractType(cast_params.target_type.getType())
-								           .getSignedness()
-								       == tsh::IntegralAbstractType::Signedness::Signed);
-								value = to_signed ? builder.CreateFPToSI(argument, llvm_dst_ty)
-								                  : builder.CreateFPToUI(argument, llvm_dst_ty);
-								break;
-							}
-
-							CORE_PANIC("Unsupported cast from float-layout to target kind");
+							if (dst_bits > src_bits)
+								return builder.CreateFPExt(argument, llvm_dst_ty);
+							else if (dst_bits < src_bits)
+								return builder.CreateFPTrunc(argument, llvm_dst_ty);
+							else
+								return argument;
 						}
+						variant_case_novalue(tsl::IntegralTypeLayout) {
+							// ================== Float -> Int ==================
 
-						variant_case_novalue(tsl::PointerTypeLayout) {
-							// pointer-layout -> pointer or int
-							if (cast_params.target_type.getType().getKind() == tsh::Kind::Pointer
-							    || cast_params.target_type.getType().getKind()
-							           == tsh::Kind::RawPointer) {
-								value = builder.CreateBitCast(argument, llvm_dst_ty);
-								break;
+
+							// Here is a problem when the float is NaN or out of range of the int
+							// then the behavior is undefined.
+							bool to_signed = is_signed(cast_params.target_type);
+
+							// The solution that other languages use is to have saturating casts.
+							bool use_saturating_float_casts = true;
+
+							if (not use_saturating_float_casts) {
+								return to_signed ? builder.CreateFPToSI(argument, llvm_dst_ty)
+								                 : builder.CreateFPToUI(argument, llvm_dst_ty);
 							}
 
-							if (cast_params.target_type.getType().getKind() == tsh::Kind::Integral) {
-								unsigned ptr_bits
-									= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-								auto ptr_int_ty
-									= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
-								auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
-								auto dst_bits     = static_cast<unsigned>(
-                                    static_cast<usize>(cast_params.target_layout.getSize())
-                                );
-								if (dst_bits < ptr_bits)
-									value = builder.CreateTrunc(int_from_ptr, llvm_dst_ty);
-								else if (dst_bits > ptr_bits)
-									value = builder.CreateZExt(int_from_ptr, llvm_dst_ty);
-								else
-									value = int_from_ptr;
-								break;
-							}
+							// Use LLVM saturating fptosi/fptoui intrinsics when available.
+							std::string instr = to_signed ? "fptosi" : "fptoui";
 
-							CORE_PANIC("Unsupported cast from pointer-layout to target kind");
+							// scalar
+							llvm::FunctionType* fnTy = llvm::FunctionType::get(
+								llvm_dst_ty, { argument->getType() }, false
+							);
+
+							// name =  llvm.{fptosi, fptoui}.sat.i{int_width}.f{float_width}
+							std::string name = base::strConcat(
+								"llvm.",
+								instr,
+								".sat.i",
+								std::to_string(dst_bits),
+								".f",
+								std::to_string(src_bits)
+							);
+
+							llvm::FunctionCallee fdecl = module->getOrInsertFunction(name, fnTy);
+							return builder.CreateCall(fdecl, { argument });
 						}
-
-						// For other layouts (variant, class, tuple, etc.) fallback to symbol-kind
-						// based panic
 						variant_default {
-							CORE_PANIC("Unsupported cast source layout in LLVM lowering");
+							CORE_PANIC("Unsupported cast from float-layout to target layout");
 						}
 					}
 				}
-			}
 
+				variant_case_novalue(tsl::PointerTypeLayout) {
+					variant_match(cast_params.target_layout()) {
+						variant_case_novalue(tsl::IntegralTypeLayout) {
+							// ================== Pointer -> Int  ==================
+							unsigned ptr_bits
+								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							return builder.CreateIntCast(int_from_ptr, llvm_dst_ty, false);
+						}
+						variant_case_novalue(tsl::PointerTypeLayout) {
+							// =================== Pointer -> Pointer ==================
+							return builder.CreateBitCast(argument, llvm_dst_ty);
+						}
+						variant_case_novalue(tsl::FloatTypeLayout) {
+							// ================== Pointer -> Float ==================
+							auto ptr_bits
+								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							return builder.CreateUIToFP(int_from_ptr, llvm_dst_ty);
+						}
+						variant_default {
+							CORE_PANIC("Unsupported cast from pointer-layout to target layout");
+						}
+					}
+				}
+				// For other layouts (variant, class, tuple, etc.) fallback to symbol-kind
+				// based panic
+				variant_default { CORE_PANIC("Unsupported cast source layout in LLVM lowering"); }
+			}
+			CORE_UNREACHABLE();
+		}
 
 #define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                        \
 	{                                                                               \
@@ -559,234 +568,233 @@ namespace compiler::backend_llvm {
 		break;                                                                      \
 	}
 
-			/**
-			 * @brief Lowers LIRInstruction to LLVM instructions and appends them
-			 * to the end of the block given by @p builder.
-			 */
-			void lirInstruction2LLVM(
-				const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
-			) {
-				using enum lir::Operation;
-				switch (lir_instruction.operation) {
-				case ReturnVoid: {
-					builder.CreateRetVoid();
-					break;
-				}
-				case ReturnValue: {
-					builder.CreateRet(lirValue2LLVM(lir_instruction.arguments.at(0), builder));
-					break;
-				}
-				case Jump: {
-					builder.CreateBr(
-						block_mapping[lir_instruction.arguments.at(0).get<lir::BlockRef>()].get()
-					);
-					break;
-				}
-				case Branch: {
-					// here for lir locals we need more stuff:
-					const auto cond = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
-					const auto true_block
-						= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
-					const auto false_block
-						= block_mapping[lir_instruction.arguments.at(2).get<lir::BlockRef>()];
-					builder.CreateCondBr(cond, true_block.get(), false_block.get());
-					break;
-				}
-				case Assign: {
-					const auto value = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
-					storeOutput(lir_instruction.output.value(), value, builder);
-					break;
-				}
-				case IntegerAdd:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
-				case IntegerSub:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(Sub)
-				case IntegerMul:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(Mul)
-				case IntegerUDiv:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(UDiv)
-				case IntegerSDiv:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(SDiv)
-				case IntegerUMod:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
-				case IntegerSMod:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
-				case IntegerULt:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
-				case IntegerSLt:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
-				case IntegerULteq:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULE)
-				case IntegerSLteq:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLE)
-				case IntegerUGt:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGT)
-				case IntegerSGt:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGT)
-				case IntegerUGteq:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGE)
-				case IntegerSGteq:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGE)
-				case IntegerEq:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpEQ)
-				case IntegerNeq:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
-				case IntegerNeg: {
-					const auto output   = lir_instruction.output.value();
-					const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
-					const auto value    = builder.CreateNeg(argument);
-					storeOutput(output, value, builder);
-					break;
-				}
-				case BooleanAnd:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
-				case BooleanOr:
-					LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
-				case BooleanNot: {
-					const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
-					const auto value    = builder.CreateNot(argument);
-					storeOutput(lir_instruction.output.value(), value, builder);
-					break;
-				}
-				case Cast: {
-					const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
-					const auto output   = lir_instruction.output.value();
-
-					// get cast parameters:
-					auto cast_params
-						= std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
-
-					CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
-
-					storeOutput(output, value, builder);
-					break;
-				}
-				case Call: {
-					CORE_ASSERT(
-						lir_instruction.arguments.size() > 0, "call instruction without callee"
-					);
-
-					auto callee = getOrInsertFunctionPrototypeFromLiteral(
-						module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
-					);
-
-					const auto args = lirValueList2LLVM(
-						std::vector(
-							lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
-						),
-						builder
-					);
-
-					if (lir_instruction.output.has_value()) {
-						const auto output = lir_instruction.output.value();
-						const auto value  = builder.CreateCall(callee, args);
-						storeOutput(output, value, builder);
-					} else {
-						CORE_ASSERT(
-							callee.getFunctionType()->getReturnType()->isVoidTy(),
-							"call to non void function without output – this may be valid, feel "
-							"free "
-							"to remove assertion if the compiler internals change."
-						);
-						builder.CreateCall(callee, args);
-					}
-
-					break;
-				}
-				default:
-					std::cerr << "unknown lir operation (skip): "
-							  << base::enumToStr(lir_instruction.operation).strView() << "\n";
-					// throw base::NotYetImplemented("some lir operation in llvm backend");
-				}
+		/**
+		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
+		 * to the end of the block given by @p builder.
+		 */
+		void lirInstruction2LLVM(
+			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
+		) {
+			using enum lir::Operation;
+			switch (lir_instruction.operation) {
+			case ReturnVoid: {
+				builder.CreateRetVoid();
+				break;
 			}
-
-		public:
-			/**
-			 * @brief lowers LIRFunction to LLVM Function and adds
-			 * it to the llvm module.
-			 *
-			 * @return llvm::Function*
-			 */
-			llvm::Function* createFunction() {
-				Ref fun = llvm::cast<llvm::Function>(
-					getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
+			case ReturnValue: {
+				builder.CreateRet(lirValue2LLVM(lir_instruction.arguments.at(0), builder));
+				break;
+			}
+			case Jump: {
+				builder.CreateBr(
+					block_mapping[lir_instruction.arguments.at(0).get<lir::BlockRef>()].get()
 				);
-				CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
+				break;
+			}
+			case Branch: {
+				// here for lir locals we need more stuff:
+				const auto cond = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto true_block
+					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
+				const auto false_block
+					= block_mapping[lir_instruction.arguments.at(2).get<lir::BlockRef>()];
+				builder.CreateCondBr(cond, true_block.get(), false_block.get());
+				break;
+			}
+			case Assign: {
+				const auto value = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				storeOutput(lir_instruction.output.value(), value, builder);
+				break;
+			}
+			case IntegerAdd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
+			case IntegerSub:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Sub)
+			case IntegerMul:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Mul)
+			case IntegerUDiv:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(UDiv)
+			case IntegerSDiv:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(SDiv)
+			case IntegerUMod:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
+			case IntegerSMod:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
+			case IntegerULt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
+			case IntegerSLt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
+			case IntegerULteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULE)
+			case IntegerSLteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLE)
+			case IntegerUGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGT)
+			case IntegerSGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGT)
+			case IntegerUGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpUGE)
+			case IntegerSGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSGE)
+			case IntegerEq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpEQ)
+			case IntegerNeq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
+			case IntegerNeg: {
+				const auto output   = lir_instruction.output.value();
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto value    = builder.CreateNeg(argument);
+				storeOutput(output, value, builder);
+				break;
+			}
+			case BooleanAnd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
+			case BooleanOr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
+			case BooleanNot: {
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto value    = builder.CreateNot(argument);
+				storeOutput(lir_instruction.output.value(), value, builder);
+				break;
+			}
+			case Cast: {
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto output   = lir_instruction.output.value();
 
-				generateMainBlocksAndLocals(fun.get());
+				// get cast parameters:
+				auto cast_params = std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
 
-				for (auto& block: lir_function->block_order) {
-					auto              llvm_block = block_mapping[block];
-					llvm::IRBuilder<> builder(llvm_block.get());
-					for (const auto& instruction: block->instructions)
-						lirInstruction2LLVM(instruction, builder);
-					lirInstruction2LLVM(block->terminator, builder);
+				CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
+
+				const auto value = castOperation(argument, builder, *cast_params);
+
+				storeOutput(output, value, builder);
+				break;
+			}
+			case Call: {
+				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
+
+				auto callee = getOrInsertFunctionPrototypeFromLiteral(
+					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
+				);
+
+				const auto args = lirValueList2LLVM(
+					std::vector(
+						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
+					),
+					builder
+				);
+
+				if (lir_instruction.output.has_value()) {
+					const auto output = lir_instruction.output.value();
+					const auto value  = builder.CreateCall(callee, args);
+					storeOutput(output, value, builder);
+				} else {
+					CORE_ASSERT(
+						callee.getFunctionType()->getReturnType()->isVoidTy(),
+						"call to non void function without output – this may be valid, feel "
+						"free "
+						"to remove assertion if the compiler internals change."
+					);
+					builder.CreateCall(callee, args);
 				}
 
-				return fun.get();
+				break;
+			}
+			default:
+				std::cerr << "unknown lir operation (skip): "
+						  << base::enumToStr(lir_instruction.operation).strView() << "\n";
+				// throw base::NotYetImplemented("some lir operation in llvm backend");
 			}
 		}
 
-		Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
-			init();
-			llvm::LLVMContext& context = getLLVMContext();
+	public:
+		/**
+		 * @brief lowers LIRFunction to LLVM Function and adds
+		 * it to the llvm module.
+		 *
+		 * @return llvm::Function*
+		 */
+		llvm::Function* createFunction() {
+			Ref fun = llvm::cast<llvm::Function>(
+				getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
+			);
+			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
 
-			Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
-			return makeBox<ModuleImpl>(std::move(llvm_module));
-		}
+			generateMainBlocksAndLocals(fun.get());
 
-		Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
-			auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
-			if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
-			llvm::SMDiagnostic error;
-			auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
-			if (!m) {
-				std::string              error_message;
-				llvm::raw_string_ostream error_stream(error_message);
-				error.print("LLVM IR parsing error", error_stream);
-				CORE_PANIC(error_message);
+			for (auto& block: lir_function->block_order) {
+				auto              llvm_block = block_mapping[block];
+				llvm::IRBuilder<> builder(llvm_block.get());
+				for (const auto& instruction: block->instructions)
+					lirInstruction2LLVM(instruction, builder);
+				lirInstruction2LLVM(block->terminator, builder);
 			}
 
-			auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
-			return makeBox<ModuleImpl>(std::move(llvm_module));
+			return fun.get();
 		}
 
-		llvm::Function* addFunctionToModuleInternal(
-			query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
-		) {
-			LirFunction2LLVM lir2llvm{
-				getLLVMContext(), ctx, lir_function, module->module.refMut()
-			};
-			return lir2llvm.createFunction();
-		}
-
-		void addFunctionToModuleImpl(
-			query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
-		) {
-			addFunctionToModuleInternal(ctx, module, lir_function);
-		}
-
-		void addFunctionToModuleCtorsImpl(
-			query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
-		) {
-			auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
-			// 65535 is the default priority for global constructors in LLVM.
-			// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
-			// global variable associated with the constructor. However, the problem is that the
-			// order of functions with the same priority is not defined. Therefore, we probably want
-			// to create one global constructor that calls the constructor of each variable in the
-			// module.
-			llvm::appendToGlobalCtors(*module->module.refMut(), fun, 65'535);
-		}
-
-		void addFunctionToModuleDtorsImpl(
-			query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
-		) {
-			auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
-			llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
-		}
-
-		void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global) {
-			addGlobalVariable(module->module.refMut(), lir_global);
-		}
 	}
+
+	Box<ModuleImpl>
+		initModuleImpl(base::StrID module_id) {
+		init();
+		llvm::LLVMContext& context = getLLVMContext();
+
+		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
+		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
+
+	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
+		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
+		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
+		llvm::SMDiagnostic error;
+		auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
+		if (!m) {
+			std::string              error_message;
+			llvm::raw_string_ostream error_stream(error_message);
+			error.print("LLVM IR parsing error", error_stream);
+			CORE_PANIC(error_message);
+		}
+
+		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
+		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
+
+	llvm::Function* addFunctionToModuleInternal(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		return lir2llvm.createFunction();
+	}
+
+	void addFunctionToModuleImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		addFunctionToModuleInternal(ctx, module, lir_function);
+	}
+
+	void addFunctionToModuleCtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		// 65535 is the default priority for global constructors in LLVM.
+		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
+		// global variable associated with the constructor. However, the problem is that the
+		// order of functions with the same priority is not defined. Therefore, we probably want
+		// to create one global constructor that calls the constructor of each variable in the
+		// module.
+		llvm::appendToGlobalCtors(*module->module.refMut(), fun, 65'535);
+	}
+
+	void addFunctionToModuleDtorsImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
+	}
+
+	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global) {
+		addGlobalVariable(module->module.refMut(), lir_global);
+	}
+}
