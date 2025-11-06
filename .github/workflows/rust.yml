@@ -26,10 +26,8 @@ jobs:
     strategy:
       matrix:
         project:
-          - name: duck
-            path: dev/src/duck/duck
-          - name: quackpack
-            path: dev/src/duck/quackpack
+          - name: duck & quackpack
+            path: dev/src/duck/
       fail-fast: false
 
     timeout-minutes: 15

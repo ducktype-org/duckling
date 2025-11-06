@@ -45,7 +45,7 @@ namespace dia {
 	}
 
 	void FakeLocation::printPrefixInfo(printer::PrinterOStream& out) const {
-		out << "In and unspecified location: ";
+		out << "In an unspecified location: ";
 	}
 
 	void FakeLocation::printMessage(

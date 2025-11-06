@@ -3,7 +3,7 @@
 clean_cmd: "rm -rf build"
 compile_gcc_sample: "gcc -c -o build/c_lib.o c_lib.c"
 Clean: "@{clean_cmd}"
-PreTest: "@{clean_cmd} && mkdir build && @{compile_gcc_sample} && @{duckc_path} compile_package ffi -a build --external-static-library build/c_lib.o"
+PreTest: "@{clean_cmd} && mkdir build && @{compile_gcc_sample} && @{duckc_path} compile_package ffi -a build -n package_ffi --external-static-library build/c_lib.o"
 Run: "./build/package_llvm.exe"
 
 Tests:
@@ -11,6 +11,6 @@ Tests:
     Cases:
       default:
         Output:
-          String: "Hello from C!\nHello from C!\n1 \nHello from C!\n"
+          String: "Hello from C!\nHello from C!\n1\nHello from C!\n"
         ExitCode: 0
 
