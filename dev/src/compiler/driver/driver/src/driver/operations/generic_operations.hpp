@@ -9,6 +9,7 @@
 #include "../backend_type.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
+#include <global_state/packages.hpp>
 #include <linker/link.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -22,9 +23,9 @@ namespace compiler::driver {
 	 * and also for LLVM backend it links them into a single binary.
 	 */
 	void compilerEntirePackage(
-		const fs::File&               package_location,
-		BackendType                   backend,
-		const linker::LinkingOptions& linking_options
+		const global_state::PackageInfo& package_info,
+		BackendType                      backend,
+		const linker::LinkingOptions&    linking_options
 	);
 
 	struct RunOutput final {

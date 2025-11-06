@@ -52,24 +52,6 @@ namespace {
 		std::smatch match;
 		return !std::regex_match(dirname, match, reject_directory_regex);
 	}
-
-	/**
-	 * @brief Generates a random alphanumeric string of the specified length.
-	 * @param length The length of the random string to generate.
-	 * @return A random alphanumeric string.
-	 */
-	std::string generateRandomString(size_t length) {
-		static constexpr std::string_view CHARS
-			= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-		static std::random_device                    rd;
-		static std::mt19937                          generator(rd());
-		static std::uniform_int_distribution<size_t> distribution(0, CHARS.size() - 1);
-
-		std::string random_string;
-		random_string.reserve(length);
-		for (size_t i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
-		return random_string;
-	}
 }
 
 namespace compiler::frontend {
@@ -113,7 +95,7 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, generateRandomString(32), file_reject, dir_reject);
+		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree() = default;
@@ -313,7 +295,7 @@ namespace compiler::frontend {
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
-		builder->setPackageID(generateRandomString(32));
+		builder->setPackageID(base::generateRandomString(32));
 		return builder;
 	}
 

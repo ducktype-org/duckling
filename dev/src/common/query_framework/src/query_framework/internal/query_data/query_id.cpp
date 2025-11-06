@@ -40,6 +40,9 @@ namespace query::internal {
 
 		using DataMap = base::HashMap<QueryID, QueryData>;
 
+		// @TODO: #1433 Remove this when Query Tags are implemented
+		using HasStableHashMap = base::HashMap<QueryID, bool>;
+
 		/**
 		 * @note Access to data is done this way, to make it safe to use before main.
 		 * @note data is not stored directly in QueryID, to keep QueryID light.
@@ -48,14 +51,30 @@ namespace query::internal {
 			static DataMap data_map{};
 			return data_map;
 		}
+
+		/**
+		 * This is temporary
+		 * We will not need that whe Query Tags are implemented and proper checking will be done
+		 * @TODO: #1433 Remove this when Query Tags are implemented
+		 */
+		HasStableHashMap& hasStableHashMapInstance() {
+			static HasStableHashMap map{};
+			return map;
+		}
 	}
 
-	const QueryData& QueryID::getData() const { return dataMap().at(*this); }
+	const QueryData& QueryID::getData() const {
+		CORE_ASSERT(dataMap().contains(*this), "QueryID not found in dataMap: ", this->asInt());
+		return dataMap().at(*this);
+	}
 
-	QueryID registerQuery(QueryData query_data) {
+	bool QueryID::hasStableHash() const { return hasStableHashMapInstance().at(*this); }
+
+	QueryID registerQuery(QueryData query_data, bool has_stable_hash) {
 		auto ret_id = next;
 		next        = QueryIDMaker::next(ret_id);
 		dataMap().put(ret_id, query_data);
+		hasStableHashMapInstance().put(ret_id, has_stable_hash);
 		return ret_id;
 	}
 
