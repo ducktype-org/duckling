@@ -43,7 +43,7 @@ public:
 		TESTER_ADD_TEST(basicCompilationTest<unsigned char COMMA 'A'>);
 		TESTER_ADD_TEST(basicCompilationTest<Derived COMMA 123>);
 		TESTER_ADD_TEST(destructorIsCalledTest);
-		TESTER_ADD_TEST(stressTest);
+		TESTER_ADD_TEST(largeTest);
 	}
 
 	template<class T, auto initial_value>
@@ -83,7 +83,7 @@ public:
 		ASSERT_EQUAL(DestructionTracker::destroyed_count, 5);
 	}
 
-	void stressTest() {
+	void largeTest() {
 		constexpr u64 ALLOCATION_COUNT = 100'000;
 
 		auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};

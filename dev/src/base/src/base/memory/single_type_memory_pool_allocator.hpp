@@ -2,9 +2,6 @@
 #include <base/misc/noexcept.hpp>
 #include <base/pointers/box.hpp>
 
-// #include <cstddef>
-// #include <new>
-
 namespace base {
 
 	/**
@@ -82,9 +79,9 @@ namespace base {
 		SingleTypeMemoryPoolAllocator(SingleTypeMemoryPoolAllocator&& other) noexcept:
 			  buffers(std::move(other.buffers)),
 			  free_list(std::move(other.free_list)),
-			  allocated_count(other.allocated_count),
+			  IF_BUILD_TYPE_DEV(allocated_count(other.allocated_count)),
 			  next_item_idx(other.next_item_idx) {
-			other.allocated_count = 0;
+			IF_BUILD_TYPE_DEV(other.allocated_count = 0;)
 			other.next_item_idx   = BufferItemIndex{};
 		}
 
@@ -95,7 +92,7 @@ namespace base {
 		 * Allocates a new object in the pool and constructs it with the given arguments.
 		 */
 		Ref<T> allocateEmplace(auto&&... args) {
-			allocated_count++;
+			IF_BUILD_TYPE_DEV(allocated_count++;);
 
 			// idx, in which we will allocate the new object:
 			BufferItemIndex allocation_idx;
@@ -132,7 +129,7 @@ namespace base {
 		 * behavior is undefined, EVEN IN DEV BUILDS.
 		 */
 		void justDestroy(Ref<T> obj_ref) {
-			allocated_count--;
+			IF_BUILD_TYPE_DEV(allocated_count--;)
 			Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
 			obj_storage->destroy();
 		}
@@ -145,7 +142,7 @@ namespace base {
 		 * behavior is undefined, EVEN IN DEV BUILDS.
 		 */
 		void deallocateDestroy(Ref<T> obj_ref) {
-			allocated_count--;
+			IF_BUILD_TYPE_DEV(allocated_count--;)
 
 			Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
 
@@ -182,12 +179,16 @@ namespace base {
 			free_list.push_back(deallocation_idx);
 		}
 
-		~SingleTypeMemoryPoolAllocator() {
-			CORE_ASSERT_NOEXCEPT(
-				allocated_count == 0,
-				"Not all allocated objects were deallocated before destruction of the allocator"
-			);
-		}
+		IF_BUILD_TYPE_DEV(
+			~SingleTypeMemoryPoolAllocator() {
+				
+				CORE_ASSERT_NOEXCEPT(
+					allocated_count == 0,
+					"Not all allocated objects were deallocated before destruction of the allocator"
+				);
+			}
+		)
+		IF_BUILD_TYPE_RELEASE(~SingleTypeMemoryPoolAllocator() = default;)
 
 	private:
 		/**
@@ -203,8 +204,9 @@ namespace base {
 
 		/**
 		 * Total number of allocated items in the pool.
+		 * It it used only in dev builds to assert correct usage.
 		 */
-		u64 allocated_count = 0;
+		IF_BUILD_TYPE_DEV(u64 allocated_count = 0;)
 
 		/**
 		 * Next (buffer,item) index to allocate in, when free list is empty.

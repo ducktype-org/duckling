@@ -10,7 +10,6 @@
 #include <base/pointers/box.hpp>
 
 #include <iterator>
-#include <type_traits>
 #include <utility>
 
 namespace base {
@@ -18,10 +17,10 @@ namespace base {
 	/**
 	 * Custom, Stable hash map implementation.
 	 * Its performance is similar or better then std::unordered_map, while keeping references always
-	 * stable.
+	 * stable (what std::unordered_map does as well).
 	 *
-	 * Pointer to the stored data will never be invalidated until the data is erased from the map.
-	 * Iterators can be invalidated when elements are added or removed from the map.
+	 * Pointer to the stored data are never invalidated until the data is erased from the map.
+	 * Usage of iterators after elements are added or removed from the map is undefined.
 	 */
 	template<
 		typename KEY_T,
@@ -107,7 +106,7 @@ namespace base {
 
 		/**
 		 * Links new node to the bucket.
-		 * Does not perform any links correctness checks.
+		 * Does not perform any link correctness checks.
 		 */
 		void addToBucket(u64 bucket_index, Ref<Node> new_node) RELEASE_NOEXCEPT {
 			CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
@@ -191,10 +190,7 @@ namespace base {
 				  buckets_size(0) {}
 
 			Iterator(const Iterator&) = default;
-			// Iterator(Iterator&&) = default;
 			Iterator& operator=(const Iterator&) = default;
-
-			// Iterator& operator=(Iterator&&) = default;
 
 			reference operator*() const { return current_node->key_value; }
 
