@@ -27,6 +27,7 @@
 #include <query_framework/query_impl.hpp>
 
 #include <functional>
+#include <unordered_set>
 #include <vector>
 
 namespace compiler::helios {
@@ -744,7 +745,7 @@ namespace compiler::helios {
 			  public code::HoutStmtVisitorEmpty,
 			  public code::HoutExprVisitorEmpty {
 		public:
-			std::set<SymID> called_functions;
+			std::unordered_set<SymID> called_functions;
 
 			void visitReturnStmt(const code::ReturnStmt& stmt) override {
 				stmt.value->acceptVisitor(*this);
@@ -843,7 +844,7 @@ namespace compiler::helios {
 			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
@@ -855,9 +856,9 @@ namespace compiler::helios {
 				"Query transitive function dependencies called on non-function symbol"
 			);
 
-			std::vector<SymID> worklist;
-			std::set<SymID>    visited_functions;
-			std::vector<SymID> all_dependencies;
+			std::vector<SymID>        worklist;
+			std::unordered_set<SymID> visited_functions;
+			std::vector<SymID>        all_dependencies;
 
 			worklist.push_back(key);  // Insert root function SymID.
 			visited_functions.insert(key);
@@ -870,7 +871,7 @@ namespace compiler::helios {
 
 				auto direct_dependencies = ctx.query<QueryDirectFunctionCalls>(current_func);
 
-				for (const SymID& dependency: direct_dependencies) {
+				for (const SymID& dependency: *direct_dependencies) {
 					if (!visited_functions.contains(dependency)) {
 						visited_functions.insert(dependency);
 						worklist.push_back(dependency);
@@ -880,7 +881,7 @@ namespace compiler::helios {
 			return all_dependencies;
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);

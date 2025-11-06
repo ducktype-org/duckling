@@ -13,6 +13,8 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/collections/maps.hpp"
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -373,10 +375,9 @@ namespace compiler::helios {
 		 * @brief Evaluates a HOUT call expression using VM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
-		static CompTimeEvalResult evaluateFunctionWithVm(query::Context& ctx, CRef<code::Expr> expr) {
-			const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-			if (!call_expr) return query::QError(errors::Failed());
-
+		static CompTimeEvalResult evaluateFunctionWithVm(
+			query::Context& ctx, CRef<code::CallExpr> call_expr
+		) {
 			const auto* callee_ident
 				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
 			if (!callee_ident) return query::QError(errors::Failed());
@@ -393,7 +394,7 @@ namespace compiler::helios {
 
 			std::string                      func_to_call_name;
 			std::vector<CRef<lir::Function>> all_lir_functions;
-			for (const SymID& func_id: dependencies) {
+			for (const SymID& func_id: *dependencies) {
 				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
 				auto mir_func_result  = ctx.query<mir::LowerToMirFunction>({ hout_func_result });
 				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
@@ -460,7 +461,9 @@ namespace compiler::helios {
 					variant_case(errors::Failed, failed) { return query::QError(errors::Failed()); }
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
-						return evaluateFunctionWithVm(ctx, expr);
+						const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
+						if (!call_expr) return query::QError(errors::Failed());
+						return evaluateFunctionWithVm(ctx, call_expr);
 					}
 				}
 			}
