@@ -60,6 +60,11 @@
                     "description": "Traces the communication between VS Code and the Duckling language server."
                 }
             }
+        },
+        "configurationDefaults": {
+            "[duckling]": {
+                "editor.semanticHighlighting.enabled": true
+            }
         }
     },
     "scripts": {
