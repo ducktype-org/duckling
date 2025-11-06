@@ -103,18 +103,13 @@ namespace query::internal {
 		 * @brief Returns the graph from previous compilation.
 		 */
 		[[nodiscard]]
-		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const {
-			if (!previous.has_value()) return base::Optional<base::CRef<QueryGraph>>{};
-			return &previous.value().graph;
-		}
+		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
 
 		/**
 		 * @brief Returns the current size of the query stack.
 		 */
 		[[nodiscard]]
-		u64 queryStackSize() const {
-			return query_stack_size;
-		}
+		u64 queryStackSize() const;
 
 		/**
 		 * @brief Marks beginning of new query calculation.
@@ -133,12 +128,19 @@ namespace query::internal {
 		 * @brief Sets the color of a node from the previous compilation.
 		 * Should only be used by incremental handling logic.
 		 */
-		void setPrevNodeColor(internal::NodeID node, PrevColor color) {
-			CORE_ASSERT(
-				previous.has_value(), "PreviousCompilation is not set when setting node color"
-			);
-			previous->node_colors.insert_or_assign(node, color);
-		}
+		void setPrevNodeColor(internal::NodeID node, PrevColor color);
+
+		/**
+		 * @brief Returns previous_node_colors map. Used for Tests.
+		 * Does not perform any red-green logic, just returns the map as-is.
+		 */
+		[[nodiscard]]
+		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+
+		/**
+		 * @brief Sets the previous query graph.
+		 */
+		void setPreviousGraph(QueryGraph&& graph);
 
 		/**
 		 * Performs a red-green sweep starting from the specified node in the current query graph.
@@ -148,25 +150,5 @@ namespace query::internal {
 		 * or not exists in previous graph).
 		 */
 		bool redGreenSweep(NodeID start_node);
-
-		/**
-		 * @brief Returns previous_node_colors map. Used for Tests.
-		 * Does not perform any red-green logic, just returns the map as-is.
-		 */
-		[[nodiscard]]
-		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const {
-			CORE_ASSERT(
-				previous.has_value(), "PreviousCompilation is not set when accessing node colors"
-			);
-			return &previous.value().node_colors;
-		}
-
-		/**
-		 * @brief Sets the previous query graph.
-		 */
-		void setPreviousGraph(QueryGraph&& graph) {
-			CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
-			previous.emplace(std::move(graph));
-		}
 	};
 }

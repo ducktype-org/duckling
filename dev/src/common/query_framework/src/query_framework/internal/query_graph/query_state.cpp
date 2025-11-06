@@ -36,6 +36,31 @@ namespace query::internal {
 		node_data.at(node).color = Color::Done;
 	}
 
+	base::Optional<base::CRef<QueryGraph>> QueryState::getPreviousGraph() const {
+		if (!previous.has_value()) return base::Optional<base::CRef<QueryGraph>>{};
+		return &previous.value().graph;
+	}
+
+	u64 QueryState::queryStackSize() const { return query_stack_size; }
+
+	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {
+		CORE_ASSERT(previous.has_value(), "PreviousCompilation is not set when setting node color");
+		previous->node_colors.insert_or_assign(node, color);
+	}
+
+	base::CRef<base::HashMap<NodeID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
+	) const {
+		CORE_ASSERT(
+			previous.has_value(), "PreviousCompilation is not set when accessing node colors"
+		);
+		return &previous.value().node_colors;
+	}
+
+	void QueryState::setPreviousGraph(QueryGraph&& graph) {
+		CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
+		previous.emplace(std::move(graph));
+	}
+
 	bool QueryState::redGreenSweep(NodeID start_node) {
 		// No previous compilation graph -> cannot decide incremental reuse, mark as needs recompute
 		if (!previous.has_value()) return false;

@@ -10,8 +10,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "9 \n9 \n9 \n18 \n4 \n"
-
+          String: "9\n9\n9\n18\n4\n"
   single-comparison: # Any type of comparison between two values.
     Cases:
       llvm:
@@ -32,12 +31,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1 \n"
+          String: "1\n"
         ExitCode: 0
   unit_simple_multiple_modules:
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "1 \n"
+          String: "1\n"
         ExitCode: 0

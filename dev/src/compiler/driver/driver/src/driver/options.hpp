@@ -60,6 +60,10 @@ namespace compiler::driver {
 			bool dump_llvm_asm = false;
 		};
 
+		/**
+		 * Options related to incremental compilation.
+		 * @param enabled Whether incremental compilation is enabled.
+		 */
 		struct IncrementalOptions final {
 			bool enabled = true;
 		};

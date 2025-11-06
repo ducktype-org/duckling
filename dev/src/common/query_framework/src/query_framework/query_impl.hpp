@@ -214,12 +214,7 @@ namespace query::internal {
 		"Load function must be callable with hash of QKey"                                        \
 	);                                                                                            \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
-		registerQuery(type::QueryType::getData(), ::query::HasStablePerfectHash<type::QKey>);     \
-	static_assert(                                                                                \
-		!::query::internal::HasLoadFromDisc<type>                                                 \
-			|| ::query::internal::HasLoadFromDiscWithSignature<type>,                             \
-		"If defined, loadFromDisc must have signature: static PResult loadFromDisc(const QKey&)"  \
-	);
+		registerQuery(type::QueryType::getData(), ::query::HasStablePerfectHash<type::QKey>);
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

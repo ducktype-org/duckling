@@ -1,6 +1,6 @@
 #include "initialize.hpp"
 
-#include <driver_private/mark_nodes.hpp>
+#include <driver_private/collect_input.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
@@ -57,6 +57,11 @@ namespace compiler::driver {
 			);
 		}
 
+		/**
+		 * Checks if a previous query graph exists in Artifacts,
+		 * and if so, loads it into the query framework for incremental compilation.
+		 * This function is using query framework external API.
+		 */
 		void loadPreviousQueryGraphIfExists() {
 			auto root            = global_state::getRootCollection();
 			auto maybe_query_col = root->subCollectionAtMaybe(base::StrID("query"));

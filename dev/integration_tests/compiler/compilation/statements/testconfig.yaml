@@ -14,6 +14,6 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "20 \n100000001 \n"
+          String: "20\n100000001\n"
         ExitCode: 0
         TimeOut: 1 # 10^8/3 loops should definitely be done in this time.
