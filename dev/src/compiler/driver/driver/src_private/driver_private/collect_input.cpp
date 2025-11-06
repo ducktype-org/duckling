@@ -1,4 +1,4 @@
-#include <driver_private/mark_nodes.hpp>
+#include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>

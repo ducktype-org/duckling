@@ -1,6 +1,6 @@
 #include "initialize.hpp"
 
-#include <driver_private/mark_nodes.hpp>
+#include <driver_private/collect_input.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
