@@ -41,6 +41,8 @@ namespace compiler::driver {
 		// Process main source file if present
 		if (module_ref->hasMainSourceFile()) {
 			auto sf = module_ref->getMainSourceFile();
+			// We using mutable reference for calculating the PST and hashes.
+			// This is done before query-based compilation starts, so it won't break anything.
 			auto sf_mut
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					sf->getFileID()

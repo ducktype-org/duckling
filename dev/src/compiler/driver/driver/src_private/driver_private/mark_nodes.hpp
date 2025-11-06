@@ -10,7 +10,8 @@
 namespace compiler::driver {
 
 	/**
-	 * Collect hashes of all PST elements across all modules in global packages.
+	 * Collect InputData "ids" (i.e. pst side input hashes) of all PST elements across all modules
+	 * in global packages.
 	 * @return A vector of InputData containing PST element hashes and their corresponding QueryIDs.
 	 */
 	std::vector<query::external::InputData> collectAllPstElementHashesFromGlobalPackages();
