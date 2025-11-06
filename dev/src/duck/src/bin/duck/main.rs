@@ -1,13 +1,7 @@
-use crate::{indent::indent, terminal::Terminal};
+use duck_lib::{indent::indent, terminal::Terminal};
 
-pub mod driver;
-pub mod duck_cfg;
-pub mod duck_ctx;
-pub mod indent;
-mod terminal;
-
-pub use duck_ctx::DuckCtx;
-pub use quackpack::InternalError;
+use duck_lib::DuckCtx;
+use duck_lib::InternalError;
 use tracing::debug;
 
 fn main() {
@@ -20,7 +14,7 @@ fn main() {
             print_error_and_exit(err, &stdout, &stderr);
         }
     };
-    if let Err(e) = driver::run::run(&mut ctx) {
+    if let Err(e) = duck_lib::duck::driver::run::run(&mut ctx) {
         print_error_and_exit(e, ctx.console(), ctx.error_console())
     }
 }

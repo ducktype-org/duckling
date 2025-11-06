@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-name = "quackpack"
-path = "src/quackpack/lib.rs"
+name = "duck_lib"
+path = "src/lib/lib.rs"
 
 [[bin]]
 name = "duck"
