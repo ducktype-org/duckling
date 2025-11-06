@@ -189,7 +189,7 @@ namespace base {
 				  buckets_array_ptr(nullptr),
 				  buckets_size(0) {}
 
-			Iterator(const Iterator&) = default;
+			Iterator(const Iterator&)            = default;
 			Iterator& operator=(const Iterator&) = default;
 
 			reference operator*() const { return current_node->key_value; }

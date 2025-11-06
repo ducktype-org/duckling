@@ -82,7 +82,7 @@ namespace base {
 			  IF_BUILD_TYPE_DEV(allocated_count(other.allocated_count)),
 			  next_item_idx(other.next_item_idx) {
 			IF_BUILD_TYPE_DEV(other.allocated_count = 0;)
-			other.next_item_idx   = BufferItemIndex{};
+			other.next_item_idx = BufferItemIndex{};
 		}
 
 		SingleTypeMemoryPoolAllocator& operator=(const SingleTypeMemoryPoolAllocator&) = delete;
@@ -179,15 +179,12 @@ namespace base {
 			free_list.push_back(deallocation_idx);
 		}
 
-		IF_BUILD_TYPE_DEV(
-			~SingleTypeMemoryPoolAllocator() {
-				
-				CORE_ASSERT_NOEXCEPT(
-					allocated_count == 0,
-					"Not all allocated objects were deallocated before destruction of the allocator"
-				);
-			}
-		)
+		IF_BUILD_TYPE_DEV(~SingleTypeMemoryPoolAllocator() {
+			CORE_ASSERT_NOEXCEPT(
+				allocated_count == 0,
+				"Not all allocated objects were deallocated before destruction of the allocator"
+			);
+		})
 		IF_BUILD_TYPE_RELEASE(~SingleTypeMemoryPoolAllocator() = default;)
 
 	private:
