@@ -268,6 +268,12 @@ namespace compiler::frontend {
 		);
 
 		/**
+		 * Create a ModuleTree backed by a single virtual source file with provided content.
+		 * Used by REPL to feed dynamic content into module / query pipeline.
+		 */
+		static Ref<ModuleTree> createFromContents(std::string_view contents, std::string_view package_id = "");
+
+		/**
 		 * Adds a source file to the module being built.
 		 * @param file The source file to add.
 		 */

@@ -235,20 +235,20 @@ clah::Clah getClahForMain() {
                     );
 
 					compiler::driver::initializeTheCompiler(
-						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
-							},
-							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
-							},
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
-						}
-					);
+					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+						.main_package_info = {
+							.package_name = package_name,
+							.package_path = path_to_compile.getFilePath(),
+						},
+						.compilation_artifacts = {
+							.artifacts_path = fs::FilePath("./duck_build/"),
+						},
+						.debug_options = getDebugOptionsFromClap(options),
+						.incremental = {.enabled = options.isFlag("no-incremental")
+																  ? false
+																  : true },
+					}
+				);
 
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
@@ -318,21 +318,21 @@ clah::Clah getClahForMain() {
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					compiler::driver::initializeTheCompiler(
-						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
-							},
-							.compilation_artifacts = {
-								.artifacts_path =
-									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
-							},
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
-						}
-					);
+					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+						.main_package_info = {
+							.package_name = package_name,
+							.package_path = path_to_compile.getFilePath(),
+						},
+						.compilation_artifacts = {
+							.artifacts_path =
+								options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+						},
+						.debug_options = getDebugOptionsFromClap(options),
+						.incremental = {.enabled = options.isFlag("no-incremental")
+																  ? false
+																  : true },
+					}
+				);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 
@@ -397,20 +397,20 @@ clah::Clah getClahForMain() {
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(
-				compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
-							},
-							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
-							},
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
-						}
-					);
+					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+								.main_package_info = {
+									.package_name = package_name,
+									.package_path = path_to_compile.getFilePath(),
+								},
+								.compilation_artifacts = {
+									.artifacts_path = fs::FilePath("./duck_build/"),
+								},
+								.debug_options = getDebugOptionsFromClap(options),
+								.incremental = {.enabled = options.isFlag("no-incremental")
+																		  ? false
+																		  : true },
+					}
+				);
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
@@ -425,19 +425,78 @@ clah::Clah getClahForMain() {
 						}
 					});
 
-
-					compiler::driver::exit();
 					return exit_code;
 				})
 		)
-	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
+	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   // Initialize compiler in PackageCompilationMode so REPL artifacts
+		                       // are stored separately
 							   compiler::driver::initializeTheCompiler(
-								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-									   .debug_options = getDebugOptionsFromClap(options),
+					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+						.main_package_info = {
+							.package_name = base::generateRandomString(16),
+							.package_path = fs::FilePath("."),
+						},
+						.compilation_artifacts = {
+							.artifacts_path = fs::FilePath("./duck_repl_build/"),
+						},
+						.debug_options = getDebugOptionsFromClap(options),
+						.incremental = {.enabled = true },
+					}
+					);
+
+							   std::cout << "Duckling REPL\n";
+							   std::cout << "Enter your code and finish with ';' on a new line\n";
+							   std::cout << "Type 'exit' or 'quit' to exit the REPL\n\n";
+
+							   std::string line;
+							   std::string accumulated_input;
+
+							   while (true) {
+								   std::cout
+									   << (accumulated_input.empty() ? "duckling> " : "      ... ");
+
+								   if (!std::getline(std::cin, line)) break;
+
+								   if (accumulated_input.empty()
+			                           && (line == "exit" || line == "quit")) {
+									   std::cout << "Goodbye!\n";
+									   break;
 								   }
-							   );
+
+								   if (!accumulated_input.empty()) accumulated_input += "\n";
+								   accumulated_input += line;
+
+								   // Attempt parse when line ends with ';'
+								   if (!line.empty() && line.back() == ';') {
+									   try {
+										   // Treat the accumulated input as a single virtual file
+					                       // and parse it
+										   auto pst = pst::PST<>::fromContents(accumulated_input);
+
+										   if (pst.getLogger()->messageCount() != 0) {
+											   std::cout << "Errors and messages:\n";
+											   pst.getLogger()->dumpLog(true, std::cout);
+											   std::cout << "\n\n";
+										   }
+
+										   std::cout << "Parsed tree:\n";
+										   pst.dprint(std::cout);
+										   std::cout << "\n\n";
+									   } catch (const std::exception& e) {
+										   std::cerr << "Parsing exception: " << e.what() << "\n";
+									   } catch (...) { std::cerr << "Unknown parsing error\n"; }
+
+									   accumulated_input.clear();
+								   }
+							   }
+
 							   return 0;
+						   }))
+	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
+	                       .setHandler([](const clah::ParsingResult&) -> int {
+							   throw base::LogicError("Command `throw` thrown successfully!");
 						   }));
 }
 

@@ -37,6 +37,12 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 
 	/**
+	 * @brief Query REPL statement/module to HOUTUnit. For REPL sessions we treat the
+	 * provided in-memory module/sourcefile similarly to a module and produce HOUTUnit.
+	 */
+	DECLARE_QUERY(QueryReplStatementTo, frontend::ModuleID, HOUTUnit)
+
+	/**
 	 * @brief Query declaration of function: types, args and its names.
 	 * @note Unlike QueryCodeOfFun, this query works for all SymID-s that represent functions,
 	 * be it user-defined, extern, built-in, or generated.

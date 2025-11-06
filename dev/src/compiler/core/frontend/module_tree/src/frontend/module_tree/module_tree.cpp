@@ -956,3 +956,20 @@ namespace compiler::frontend {
 		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }
+
+base::Ref<compiler::frontend::ModuleTree> compiler::frontend::ModuleTreeBuilder::createFromContents(
+	std::string_view contents, std::string_view package_id
+) {
+	base::Box<compiler::frontend::ModuleTreeBuilder> builder = compiler::frontend::ModuleTreeBuilder::create();
+	if (package_id == "") builder->setPackageID(base::generateRandomString(32));
+	else builder->setPackageID(package_id);
+
+	// Create a virtual file with provided contents and set it as main source file
+	auto virtual_file = fs::FileManager::createRandomVirtualFile(contents);
+	builder->setMainSourceFile(virtual_file); // Most likely will be changed in future.
+
+    // Use a simple deterministic name for now; can be made unique if needed.
+    builder->setName(base::StrID("repl"));
+
+	return builder->finalize();
+}
