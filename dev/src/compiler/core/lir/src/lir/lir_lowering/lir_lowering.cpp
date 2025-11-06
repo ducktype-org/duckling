@@ -241,9 +241,6 @@ namespace compiler::lir {
 					variant_case_novalue(mir::MirUnitConst) {
 						CORE_PANIC("Cannot get location of MIR unit.");
 					}
-					variant_case(mir::MirConstant, ctv) {
-						throw base::NotYetImplemented("Location of generic MirConstant");
-					}
 					variant_case(mir::MirIntegerConst, integer) {
 						return LIRValue{ integer.value };
 					}
@@ -374,8 +371,6 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
-					// TODOP: Think about that
-					variant_case_novalue(mir::MirConstant) { return true; }
 					variant_case(mir::LocalRef, local) {
 						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral

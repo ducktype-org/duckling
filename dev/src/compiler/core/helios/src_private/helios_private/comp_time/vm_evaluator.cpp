@@ -16,7 +16,6 @@ namespace {
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
-	// TODOP: Maybe revert this change, as theres no way to test it without support in backend.
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
 		vm::PID pid, const CompileTimeValue& ctv
 	) {

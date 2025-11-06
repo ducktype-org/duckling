@@ -103,14 +103,6 @@ namespace compiler::mir {
 		i64 value;
 	};
 
-	// TODOP: Add and link an issue, this is just temporary.
-	// TODOP: Maybe remove this completely in this PR.
-	struct MirConstant final {
-		ctv::CompileTimeValue value;
-
-		MirConstant(ctv::CompileTimeValue ctv): value(ctv) {}
-	};
-
 	struct MirBoolConst final {
 		bool value;
 	};
@@ -274,7 +266,6 @@ namespace compiler::mir {
 		using ValueType = std::variant<
 			MirUnitConst,
 			MirIntegerConst,
-			MirConstant,
 			MirBoolConst,
 			LocalRef,
 			BlockID,
@@ -287,8 +278,6 @@ namespace compiler::mir {
 		MIRValue(MirUnitConst value): value(value) {}
 
 		MIRValue(MirIntegerConst value): value(value) {}
-
-		MIRValue(MirConstant value): value(value) {}
 
 		MIRValue(MirBoolConst value): value(value) {}
 
