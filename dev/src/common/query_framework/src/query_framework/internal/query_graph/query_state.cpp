@@ -147,7 +147,7 @@ namespace query::internal {
 		}
 
 		// Merge previous graph into current if start_node is green
-		if(node_colors.at(start_node) == PrevColor::Green)
+		if (node_colors.at(start_node) == PrevColor::Green)
 			mergePreviousGraphIntoCurrentGraph(start_node);
 
 		return node_colors.at(start_node) == PrevColor::Green;
@@ -170,7 +170,7 @@ namespace query::internal {
 			NodeID node;
 		};
 
-		std::vector<Frame>         stack;
+		std::vector<Frame> stack;
 
 		stack.push_back(Frame{ .node = start_node });
 
@@ -183,13 +183,13 @@ namespace query::internal {
 			// If we already created this node in current graph, skip
 			if (query_graph.node_deps.contains(node)) continue;
 
-			// Insert the node with an empty dependency list first (ensures parent exists for addDependency)
+			// Insert the node with an empty dependency list first (ensures parent exists for
+			// addDependency)
 			query_graph.node_deps.insert_or_assign(node, std::vector<NodeID>{});
 
 			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
 			CORE_ASSERT(
-				prev_graph.node_deps.contains(node),
-				"Node to merge should exist in previous graph"
+				prev_graph.node_deps.contains(node), "Node to merge should exist in previous graph"
 			);
 			const auto& prev_deps = prev_graph.node_deps.at(node);
 
