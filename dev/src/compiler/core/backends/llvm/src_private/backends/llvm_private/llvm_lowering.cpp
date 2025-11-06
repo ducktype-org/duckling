@@ -733,11 +733,9 @@ namespace compiler::backend_llvm {
 
 			return fun.get();
 		}
+	};
 
-	}
-
-	Box<ModuleImpl>
-		initModuleImpl(base::StrID module_id) {
+	Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
