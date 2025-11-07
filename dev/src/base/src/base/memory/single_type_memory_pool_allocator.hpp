@@ -131,7 +131,7 @@ namespace base {
 		 * @note If object pointed to by obj_ref was not allocated by this allocator,
 		 * behavior is undefined, EVEN IN DEV BUILDS.
 		 *
-		 * @note This could be made static in release builds, 
+		 * @note This could be made static in release builds,
 		 * but we don't do it for simplicity.
 		 * It can be made static later if needed.
 		 */

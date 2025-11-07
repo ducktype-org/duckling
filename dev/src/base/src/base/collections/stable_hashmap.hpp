@@ -156,6 +156,9 @@ namespace base {
 			/**
 			 * This stores the pointer to data stored in the `buckets` member.
 			 * We need it to here to be able to iterate to the next bucket when needed.
+			 *
+			 * We can't just store reference to buckets themselves, since the iterator
+			 * has to remain valid even if the map is moved.
 			 */
 			const MRef<Node>* buckets_array_ptr;
 
