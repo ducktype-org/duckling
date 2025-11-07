@@ -1,11 +1,11 @@
 #include "query_state.hpp"
 
-#include "base/collections/maps.hpp"
-#include "base/except/exceptions.hpp"
+#include <base/collections/maps.hpp>
+#include <base/except/exceptions.hpp>
 
-#include "query_framework/internal/query_data/query_data.hpp"
-#include "query_framework/internal/query_data/query_id.hpp"
-#include "query_framework/internal/query_graph/node_id.hpp"
+#include <query_framework/internal/query_data/query_data.hpp>
+#include <query_framework/internal/query_data/query_id.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
 
 #include <iostream>
 #include <unordered_set>
