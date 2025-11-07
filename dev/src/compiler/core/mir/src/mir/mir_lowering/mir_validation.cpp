@@ -8,9 +8,6 @@
 #include <variant>
 
 namespace compiler::mir {
-
-
-	// @TODO: (this PR) handle field access.
 	bool validateMoves(const Function& fun) {
 		using LocalSet      = std::unordered_set<LocalID>;
 		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;

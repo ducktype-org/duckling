@@ -370,7 +370,7 @@ namespace compiler::backend_llvm {
 				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LirPlace, place) {
-					// @TODO: (this PR) handle field access.
+					// @TODO: #500 handle field access.
 					variant_match(place.base) {
 						variant_case(lir::LirLocalRef, lir_local) {
 							// We store local values behind pointers to stack-allocated memory.
@@ -406,7 +406,7 @@ namespace compiler::backend_llvm {
 		}
 
 		void storeOutput(lir::LirPlace output, Ref<llvm::Value> value, llvm::IRBuilder<>& builder) {
-			// @TODO: (this PR) handle field access.
+			// @TODO: #500 handle field access.
 			variant_match(output.base) {
 				variant_case(lir::LirLocalRef, lir_local) {
 					builder.CreateStore(value.get(), local_register_map[lir_local].get());

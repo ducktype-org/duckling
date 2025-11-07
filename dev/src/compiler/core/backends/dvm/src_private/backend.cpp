@@ -297,7 +297,7 @@ namespace compiler::backend_vm {
 					auto vm_type = getTypeFromLayout(*global.layout);
 					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
-				// @TODO: (this PR) handle access into fields.
+				// @TODO: #500 handle access into fields.
 			}
 			CORE_UNREACHABLE();
 		}
@@ -320,7 +320,7 @@ namespace compiler::backend_vm {
 							auto vm_type = getTypeFromLayout(*global.layout);
 							return outputToOpArg(vm_type, global.mangled_name, true);
 						}
-						// @TODO: (this PR) handle access into fields.
+						// @TODO: #500 handle access into fields.
 					}
 				}
 				variant_case(lir::BlockRef, block_ref) {

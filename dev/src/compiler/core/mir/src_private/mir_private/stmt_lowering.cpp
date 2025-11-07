@@ -67,7 +67,6 @@ namespace compiler::mir {
 				auto return_value = function.addNoLifetimeTmp(res_type);
 
 				// Set move flag only if value exists.
-				// @TODO: (this PR) handle member access
 				std::vector flags = { flagConstruct(return_value) };
 				if (possible_result.has_value())
 					flags.push_back(flagMove(possible_result->get<MirPlace>().getBase<MirLocalRef>()
@@ -140,7 +139,6 @@ namespace compiler::mir {
 				// to it in-place or with extra move.
 				possible_condition_res = function.addNoLifetimeBoolTmp();
 
-				// @TODO: (this PR) handle member access
 				lowered_condition.storeResultInGivenVariable(
 					possible_condition_res->get<MirPlace>(),
 					get_condition_return,
@@ -200,7 +198,6 @@ namespace compiler::mir {
 			} else {
 				possible_result = function.addNoLifetimeBoolTmp();
 
-				// @TODO: (this PR) handle member access
 				expr_result.storeResultInGivenVariable(
 					possible_result->get<MirPlace>(),
 					get_condition_return,
