@@ -23,12 +23,14 @@ namespace base {
 	 */
 	template<class T>
 	requires base::IsPlainType<T>
-	struct ManualLifetimeStorage final {  // NOLINT (non-initialization od data in constructor)
+	struct ManualLifetimeStorage final {  // NOLINT (non-initialization of data in constructor)
 	private:
 		alignas(T) std::byte data[sizeof(T)] = {};  // NOLINT
 
-		enum class State { Empty, Constructed };
+		enum class State : bool { Empty, Constructed };
 		IF_BUILD_TYPE_DEV(State state = State::Empty;)
+
+		static_assert(std::is_standard_layout_v<ManualLifetimeStorage>, "ManualLifetimeStorage should be standard layout");
 
 	public:
 		ManualLifetimeStorage() = default;
