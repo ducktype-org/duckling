@@ -7,7 +7,8 @@ namespace base {
 	/**
 	 * A memory pool object allocator of a single type.
 	 * It manages objects, not memory.
-	 * On destruction frees the allocated memory, panics (in dev-builds) if not all allocated objects have been deallocated.
+	 * On destruction frees the allocated memory, panics (in dev-builds) if not all allocated
+	 * objects have been deallocated.
 	 *
 	 * It is not a valid c++-allocator.
 	 *
@@ -82,7 +83,7 @@ namespace base {
 			  buffers(std::move(other.buffers)),
 			  free_list(std::move(other.free_list)),
 			  IF_BUILD_TYPE_DEV(allocated_count(other.allocated_count) COMMA)
-			  next_item_idx(other.next_item_idx) {
+				  next_item_idx(other.next_item_idx) {
 			IF_BUILD_TYPE_DEV(other.allocated_count = 0;)
 			other.next_item_idx = BufferItemIndex{};
 		}
@@ -156,7 +157,7 @@ namespace base {
 			// naively find the buffer and the index within the buffer:
 			for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
 				StorageT* buffer_pointer_start = std::begin(buffers[buffer_idx]->items);
-				StorageT* buffer_pointer_end = std::end(buffers[buffer_idx]->items);
+				StorageT* buffer_pointer_end   = std::end(buffers[buffer_idx]->items);
 				if (std::less_equal<>{}(buffer_pointer_start, obj_storage.get())
 				    and std::less<>{}(obj_storage.get(), buffer_pointer_end)) {
 					deallocation_idx.buffer_idx = buffer_idx;

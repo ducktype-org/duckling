@@ -241,7 +241,8 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(
-				nullptr, std::forward<K>(key), std::forward<D>(value));
+				nullptr, std::forward<K>(key), std::forward<D>(value)
+			);
 
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
@@ -266,7 +267,8 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(
-				nullptr, std::forward<K>(key), std::forward<D>(value));
+				nullptr, std::forward<K>(key), std::forward<D>(value)
+			);
 
 			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {

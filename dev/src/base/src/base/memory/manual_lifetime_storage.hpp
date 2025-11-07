@@ -6,9 +6,9 @@
 #include <base/misc/noexcept.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <cstddef>
 #include <new>
 #include <utility>
-#include <cstddef>
 
 namespace base {
 
@@ -36,7 +36,10 @@ namespace base {
 		 * Since it needs the ManualLifetimeStorage to be a complete type.
 		 */
 		static void deferred() {
-			static_assert(std::is_standard_layout_v<ManualLifetimeStorage>, "ManualLifetimeStorage should be standard layout");
+			static_assert(
+				std::is_standard_layout_v<ManualLifetimeStorage>,
+				"ManualLifetimeStorage should be standard layout"
+			);
 		}
 
 	public:
