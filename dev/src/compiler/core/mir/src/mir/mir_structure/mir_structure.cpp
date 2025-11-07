@@ -162,10 +162,9 @@ namespace compiler::mir {
 		if (detailed) {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: ";
-			os << this->type.toString();
-			os << ", Lifetime Scope: " << this->scope.value()->id;
-			if (parameter_index.has_value())
-				os << ", Parameter Index: " << parameter_index.value();
+			os << type.toString();
+			os << ", Lifetime Scope: " << scope.value()->id;
+			if (parameter_index.has_value()) os << ", Parameter Index: " << parameter_index.value();
 		}
 	}
 
@@ -174,7 +173,7 @@ namespace compiler::mir {
 		if (detailed) {
 			os << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
 			os << ", Type: ";
-			os << this->type.toString();
+			os << type.toString();
 		}
 	}
 
@@ -190,16 +189,19 @@ namespace compiler::mir {
 
 	void MirPlace::debugPrint(std::ostream& os, bool detailed) const {
 		variant_match(base) {
-			variant_case(MirLocalRef, local) { local->debugPrint(os); }
-			variant_case(MirGlobal, global) { global.debugPrint(os); }
+			variant_case(MirLocalRef, local) { local->debugPrint(os, detailed); }
+			variant_case(MirGlobal, global) { global.debugPrint(os, detailed); }
 		}
-		for (const auto& arg: access_chain) {
-			os << "." << name(arg).strView();
+		for (const auto& arg: access_chain) os << "." << name(arg).strView();
+		if (detailed and not access_chain.empty()) {
+			os << ": Unstable hash: " << access_chain.back().queryUnstablePerfectHash();
+			os << ", Type: ";
+			os << type.toString();
 		}
 	}
 
 	void MIRValue::debugPrint(std::ostream& os) const {
-		variant_match(this->value) {
+		variant_match(value) {
 			variant_case_novalue(MirUnitConst) { os << "()"; }
 			variant_case(MirIntegerConst, value) { os << value.value; }
 			variant_case(MirBoolConst, value) { os << (value.value ? "true" : "false"); }

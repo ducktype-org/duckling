@@ -104,13 +104,13 @@ namespace compiler::backend_vm {
 			CRef<lir::Function> lir_func;
 			Function            bytecode_func;
 
-			base::HashMap<usize, base::StrID>     block_id_to_label;
+			base::HashMap<usize, base::StrID>        block_id_to_label;
 			base::Map<lir::LirLocalRef, base::StrID> lir_local_to_name;
 			base::Map<lir::LirLocalRef, TypeOfData>  lir_local_types;
 
 			// Used to create unique names for temporary values.
 			usize                                                     next_call_id = 0;
-			base::Map<lir::LirLocalRef, u64>                             variable_to_id;
+			base::Map<lir::LirLocalRef, u64>                          variable_to_id;
 			base::Map<lir::BlockRef, u64>                             block_to_id;
 			const base::HashMap<base::StrID, TypeOfData>              TYPE_OF_DATA;
 			const base::HashMap<base::StrID, vm::code::FuncSignature> SIGNATURES;

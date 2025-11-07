@@ -142,7 +142,8 @@ namespace compiler::mir {
 				lowered_condition.storeResultInGivenVariable(
 					possible_condition_res->get<MirPlace>(),
 					get_condition_return,
-					{ flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()) },
+					{ flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()
+				    ) },
 					condition_scope
 				);
 			}
@@ -285,9 +286,7 @@ namespace compiler::mir {
 					);
 					output({ left_result.begin });
 				}
-				variant_default {
-					CORE_PANIC("Assignment to unsupported MIRValue kind.");
-				}
+				variant_default { CORE_PANIC("Assignment to unsupported MIRValue kind."); }
 			}
 		}
 	};

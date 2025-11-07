@@ -110,8 +110,8 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type       = MirValueType(res_right, function.getContext());
-			const auto other_argument_type = MirValueType(res_left, function.getContext());
+			const auto argument_type       = typeOfMirValue(res_right, function.getContext());
+			const auto other_argument_type = typeOfMirValue(res_left, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different argument types"
@@ -400,7 +400,7 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::SymbolType<> MirValueType(const MIRValue value, query::Context& ctx) {
+		static tsh::SymbolType<> typeOfMirValue(const MIRValue value, query::Context& ctx) {
 			variant_match(value.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{

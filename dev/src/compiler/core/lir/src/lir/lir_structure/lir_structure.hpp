@@ -251,7 +251,7 @@ namespace compiler::lir {
 				  access_chain.size() == 0
 					  ? getBaseLayout()
 					  : ctx.query<tsl::QuerySymbolTypeLayout>(
-							ctx.query<helios::QueryTypeOfSymbol>(access_chain.back())->value()
+							ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->value()
 						)
 			  ) {}
 

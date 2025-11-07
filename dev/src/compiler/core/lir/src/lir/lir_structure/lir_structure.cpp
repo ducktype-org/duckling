@@ -25,7 +25,7 @@ namespace compiler::lir {
 
 	base::Map<LirLocalRef, u64> Function::getLocalVariableIDs() const {
 		base::Map<LirLocalRef, usize> local_ids;
-		usize                      next_id = 0;
+		usize                         next_id = 0;
 		for (const auto& local: local_list) {
 			local_ids.put(&local, next_id);
 			next_id++;
@@ -75,7 +75,7 @@ namespace compiler::lir {
 		std::ostream&   output;
 
 		base::Map<LirLocalRef, usize> local_id;
-		base::Map<BlockRef, usize> block_id;
+		base::Map<BlockRef, usize>    block_id;
 
 		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
@@ -105,9 +105,7 @@ namespace compiler::lir {
 				variant_case(LirLocalRef, local) { printLocal(local, loc_output); }
 				variant_case(LirGlobal, global) { printGlobal(global, loc_output); }
 			}
-			for (const auto& arg: output.access_chain) {
-				loc_output << "." << name(arg).strView();
-			}
+			for (const auto& arg: output.access_chain) loc_output << "." << name(arg).strView();
 		}
 
 		void printValue(const LIRValue& location) {
@@ -119,9 +117,7 @@ namespace compiler::lir {
 						variant_case(LirLocalRef, local) { printLocal(local, output); }
 						variant_case(LirGlobal, global) { printGlobal(global, output); }
 					}
-					for (const auto& arg: place.access_chain) {
-						output << "." << name(arg).strView();
-					}
+					for (const auto& arg: place.access_chain) output << "." << name(arg).strView();
 				}
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {

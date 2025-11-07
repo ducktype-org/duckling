@@ -304,7 +304,7 @@ namespace compiler::mir {
 		 * Construct a MirPlace from a local or global variable.
 		 * @param base The base of the MirPlace, which is a local or global variable.
 		 */
-		explicit MirPlace(BaseVariant base): base(std::move(base)), type(getBaseType()) {}
+		explicit MirPlace(BaseVariant base): base(base), type(getBaseType()) {}
 
 		/**
 		 * Extend the MirPlace structure by adding a new field to the access chain.
@@ -320,13 +320,19 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		bool isLocal() const { return std::holds_alternative<MirLocalRef>(base); }
+		bool isLocal() const {
+			return std::holds_alternative<MirLocalRef>(base);
+		}
 
 		[[nodiscard]]
-		bool isGlobal() const { return std::holds_alternative<MirGlobal>(base); }
+		bool isGlobal() const {
+			return std::holds_alternative<MirGlobal>(base);
+		}
 
 		[[nodiscard]]
-		bool hasAccess() const { return !access_chain.empty(); }
+		bool hasAccess() const {
+			return !access_chain.empty();
+		}
 
 		/**
 		 * @brief Returns true if the accessed field is not of a unit type or other data-less type.

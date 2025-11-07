@@ -196,21 +196,24 @@ namespace compiler::lir {
 			 * @param mir_local
 			 * @return LocalRef
 			 */
+			[[nodiscard]]
 			LirLocalRef getLocal(const mir::MirLocalRef mir_local) const {
 				return mir_to_lir_local.at(mir_local);
 			}
 
+			[[nodiscard]]
 			LirGlobal getGlobal(const mir::MirGlobal& mir_global) const {
 				return LirGlobal::fromMIR(ctx, mir_global);
 			}
 
+			[[nodiscard]]
 			LirPlace getPlace(mir::MirPlace mir_place) const {
 				variant_match(mir_place.base) {
 					variant_case(mir::MirLocalRef, local) {
-						return LirPlace(ctx, getLocal(local), mir_place.access_chain);
+						return { ctx, getLocal(local), mir_place.access_chain };
 					}
 					variant_case(mir::MirGlobal, global) {
-						return LirPlace(ctx, getGlobal(global), mir_place.access_chain);
+						return { ctx, getGlobal(global), mir_place.access_chain };
 					}
 				}
 				CORE_UNREACHABLE();
@@ -222,6 +225,7 @@ namespace compiler::lir {
 			 * @param output The MIR location to convert, possibly empty.
 			 * @return The corresponding LIR location, possibly empty.
 			 */
+			[[nodiscard]]
 			base::Optional<LirPlace> getOutput(const base::Optional<mir::MirPlace>& output) const {
 				if (!output.has_value()) return {};
 				if (!output->carriesInformation()) return {};
