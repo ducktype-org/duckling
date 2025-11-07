@@ -170,6 +170,11 @@ namespace base {
 			return ptr;
 		}
 
+		T* get() const {
+			assertNotNull();
+			return ptr;
+		}
+
 		T& operator*() const {
 			assertNotNull();
 			return *ptr;
