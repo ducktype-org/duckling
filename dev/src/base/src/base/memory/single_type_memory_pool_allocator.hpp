@@ -156,8 +156,8 @@ namespace base {
 				StorageT* buffer_pointer_start = buffers[buffer_idx]->items.data();
 				StorageT* buffer_pointer_end
 					= buffers[buffer_idx]->items.data() + buffers[buffer_idx]->items.size();
-				if (buffer_pointer_start <= obj_storage.get()
-				    and obj_storage.get() < buffer_pointer_end) {
+				if (std::less_equal<>{}(buffer_pointer_start, obj_storage.get())
+				    and std::less<>{}(obj_storage.get(), buffer_pointer_end)) {
 					deallocation_idx.buffer_idx = buffer_idx;
 					deallocation_idx.item_idx
 						= static_cast<u64>(obj_storage.get() - buffer_pointer_start);
