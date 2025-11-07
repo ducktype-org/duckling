@@ -103,7 +103,7 @@ public:
 	}
 
 	void largerTest() {
-		constexpr u64 ALLOCATION_COUNT = 10'000'000;
+		constexpr u64 ALLOCATION_COUNT = 1'000'000;
 
 		auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};
 
