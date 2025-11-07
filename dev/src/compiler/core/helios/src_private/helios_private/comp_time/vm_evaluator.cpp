@@ -94,6 +94,8 @@ namespace {
 	 */
 	class VmManager {
 		base::Optional<vm::PID> pid{};
+		// Code already added into this VMs process.
+		vm::code::CodeCollection loaded_code;
 
 	public:
 		VmManager() {
@@ -107,9 +109,67 @@ namespace {
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
 
+		vm::code::CodeCollection& getLoadedCode() { return loaded_code; }
+
+		void expandLoadedCode(vm::code::CodeCollection& new_code) {
+			loaded_code.functions.insert(
+				loaded_code.functions.end(), new_code.functions.begin(), new_code.functions.end()
+			);
+			loaded_code.types.insert(
+				loaded_code.types.end(), new_code.types.begin(), new_code.types.end()
+			);
+			loaded_code.global_data.insert(
+				loaded_code.global_data.end(),
+				new_code.global_data.begin(),
+				new_code.global_data.end()
+			);
+			loaded_code.external_c_functions.insert(
+				loaded_code.external_c_functions.end(),
+				new_code.external_c_functions.begin(),
+				new_code.external_c_functions.end()
+			);
+		}
+
 		VmManager(const VmManager&)            = delete;
 		VmManager& operator=(const VmManager&) = delete;
 	};
+
+	template<typename T, typename KeyExtractor>
+	std::vector<T> filterOutExisting(
+		const std::vector<T>& source, const std::vector<T>& existing_items, KeyExtractor extractor
+	) {
+		auto existing_keys_view = existing_items | std::views::transform(extractor);
+		std::unordered_set<base::StrID> existing_keys(
+			existing_keys_view.begin(), existing_keys_view.end()
+		);
+		auto new_items_view = source | std::views::filter([&](const T& item) {
+								  return !existing_keys.contains(extractor(item));
+							  });
+		return new_items_view | std::ranges::to<std::vector<T>>();
+	}
+
+	vm::code::CodeCollection filterCodeCollection(
+		const vm::code::CodeCollection& code_to_load, const vm::code::CodeCollection& already_loaded
+	) {
+		auto by_name = [](const auto& item) -> base::StrID {
+			using T = std::decay_t<decltype(item)>;
+			if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
+				return vm::code::typeName(item);
+			else
+				return item.name;
+		};
+
+		return vm::code::CodeCollection{
+			.functions
+			= filterOutExisting(code_to_load.functions, already_loaded.functions, by_name),
+			.types = filterOutExisting(code_to_load.types, already_loaded.types, by_name),
+			.global_data
+			= filterOutExisting(code_to_load.global_data, already_loaded.global_data, by_name),
+			.external_c_functions = filterOutExisting(
+				code_to_load.external_c_functions, already_loaded.external_c_functions, by_name
+			)
+		};
+	}
 }
 
 namespace compiler::helios {
@@ -119,9 +179,9 @@ namespace compiler::helios {
 		const std::vector<CompileTimeValue>& args,
 		const tsh::SymbolType<>&             return_type
 	) {
-		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process) once
-		// upon the first call to executeInVm and its lifetime extends for the duration of the
-		// program. When deinitialized, it kills the spawned process.
+		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process)
+		// once upon the first call to executeInVm and its lifetime extends for the duration of
+		// the program. When deinitialized, it kills the spawned process.
 		static VmManager vm_manager;
 		auto             maybe_pid = vm_manager.getPID();
 		if (!maybe_pid)
@@ -130,28 +190,21 @@ namespace compiler::helios {
 			));
 		vm::PID pid = maybe_pid.value();
 
-		auto load_result = vm::api::loadCode(pid, { code });
+		// @note: Remove functions/types/globals etc. that already exist in this VM instance
+		// (from previous compile time evaluations). Inserting duplicate elements will cause the
+		// whole code collection to be rejected.
+		auto filtered_code = filterCodeCollection(code, vm_manager.getLoadedCode());
+		auto load_result   = vm::api::loadCode(pid, { filtered_code });
 		if (!load_result) {
-			variant_match(load_result.error()) {
-				variant_case(vm::api::LoadProgramError, load_error) {
-					// @note: Since we use one process for all evaluations in the VM, if two
-					// constant expressions call the same function we're gonna get a load error
-					// because of the duplicated function.
-					if (load_error.why.find(vm::code::DuplicatedFunctionError::ERR_MSG)
-					    != std::string::npos) {
-						return std::unexpected(VmEvaluationError(
-							VmEvaluationError::Kind::CodeLoadFailed,
-							"Failed to load code into VM: " + load_error.why
-						));
-					}
-				}
-				variant_default {
-					return std::unexpected(VmEvaluationError(
-						VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
-					));
-				}
-			}
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+			));
 		}
+
+		// If the code load succeeded, we expand the VMs manger context. If any of the functions
+		// was rejected the internal VMs state won't be changed.
+		vm_manager.expandLoadedCode(filtered_code);
+
 
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());

@@ -1,0 +1,10 @@
+fun main() = {
+	var c: i32 = 0;
+	return;
+}
+
+fun second() = {
+    var b: i32 = 0;
+    var c: i32 = 0;
+    return;
+}
