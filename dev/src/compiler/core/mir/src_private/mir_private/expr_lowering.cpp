@@ -400,7 +400,7 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::SymbolType<> typeOfMirValue(const MIRValue value, query::Context& ctx) {
+		static tsh::SymbolType<> typeOfMirValue(const MIRValue& value, query::Context& ctx) {
 			variant_match(value.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{

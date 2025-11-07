@@ -451,14 +451,16 @@ namespace tsl {
 			  TypeLayoutABC(other.getSize(), other.getSourceType()),
 			  pointee(std::move(other.pointee)) {}
 
-		void operator=(const PointerTypeLayout& other) {
+		PointerTypeLayout& operator=(const PointerTypeLayout& other) {
 			TypeLayoutABC::operator=(other);
 			pointee = other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{};
+			return *this;
 		}
 
-		void operator=(PointerTypeLayout&& other) noexcept {
+		PointerTypeLayout& operator=(PointerTypeLayout&& other) noexcept {
 			TypeLayoutABC::operator=(other);
 			pointee = std::move(other.pointee);
+			return *this;
 		}
 
 		[[nodiscard]]
@@ -466,7 +468,10 @@ namespace tsl {
 			return pointee.toOpt().value();
 		}
 
-		bool hasPointee() const { return pointee; }
+		[[nodiscard]]
+		bool hasPointee() const {
+			return pointee;
+		}
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
