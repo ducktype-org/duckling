@@ -79,7 +79,7 @@ namespace base {
 		SingleTypeMemoryPoolAllocator(SingleTypeMemoryPoolAllocator&& other) noexcept:
 			  buffers(std::move(other.buffers)),
 			  free_list(std::move(other.free_list)),
-			  IF_BUILD_TYPE_DEV(allocated_count(other.allocated_count)),
+			  IF_BUILD_TYPE_DEV(allocated_count(other.allocated_count) COMMA)
 			  next_item_idx(other.next_item_idx) {
 			IF_BUILD_TYPE_DEV(other.allocated_count = 0;)
 			other.next_item_idx = BufferItemIndex{};
