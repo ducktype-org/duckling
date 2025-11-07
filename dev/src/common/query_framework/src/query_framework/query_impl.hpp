@@ -29,7 +29,7 @@ namespace query::internal {
 
 	// Concept: implementation provides loadFromDisc with either exact PResult signature
 	// or Optional<PResult> signature (used to signal absence of on-disk artifact).
-	// TODO: #1433 replace this with proper query tag
+	// @TODO: #1433 replace this with proper query tag
 	template<typename Impl>
 	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
 		{ Impl::loadFromDisc(key) };
