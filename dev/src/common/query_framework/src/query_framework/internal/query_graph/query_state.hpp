@@ -8,6 +8,15 @@
 
 namespace query::internal {
 	class QueryState final {
+	public:
+		/**
+		 * @brief Color of a node in graph from previous compilation.
+		 * Red   - node is outdated
+		 * Green - node is up to date
+		 */
+		enum class PrevColor { Red, Green };
+
+	private:
 		/**
 		 * @brief Color of a node in the graph that is used for cycle detection.
 		 */
@@ -45,9 +54,30 @@ namespace query::internal {
 		base::HashMap<NodeID, NodeData> node_data;
 
 		/**
+		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
+		 */
+		struct PreviousCompilation final {
+			const QueryGraph                 graph;
+			base::HashMap<NodeID, PrevColor> node_colors;
+
+			PreviousCompilation() = delete;
+
+			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+				  graph(std::move(g)),
+				  node_colors(std::move(colors)) {}
+
+			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors() {}
+		};
+
+		/**
 		 * The query graph that holds the dependencies and structure of the queries.
 		 */
 		QueryGraph query_graph;
+
+		/**
+		 * The previous compilation data if any.
+		 */
+		base::Optional<PreviousCompilation> previous;
 
 	public:
 		QueryState()                             = default;
@@ -70,12 +100,16 @@ namespace query::internal {
 		}
 
 		/**
+		 * @brief Returns the graph from previous compilation.
+		 */
+		[[nodiscard]]
+		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
+
+		/**
 		 * @brief Returns the current size of the query stack.
 		 */
 		[[nodiscard]]
-		u64 queryStackSize() const {
-			return query_stack_size;
-		}
+		u64 queryStackSize() const;
 
 		/**
 		 * @brief Marks beginning of new query calculation.
@@ -89,5 +123,23 @@ namespace query::internal {
 		 * @brief Marks exit of a query calculation.
 		 */
 		void setExit(internal::NodeID node);
+
+		/**
+		 * @brief Sets the color of a node from the previous compilation.
+		 * Should only be used by incremental handling logic.
+		 */
+		void setPrevNodeColor(internal::NodeID node, PrevColor color);
+
+		/**
+		 * @brief Returns previous_node_colors map. Used for Tests.
+		 * Does not perform any red-green logic, just returns the map as-is.
+		 */
+		[[nodiscard]]
+		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+
+		/**
+		 * @brief Sets the previous query graph.
+		 */
+		void setPreviousGraph(QueryGraph&& graph);
 	};
 }

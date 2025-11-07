@@ -10,6 +10,11 @@ namespace global_state {
 	 */
 	Ref<artifacts::ArtifactCollection> getRootCollection();
 
+	/**
+	 * Returns true if the root collection has been set.
+	 */
+	bool hasRootCollection();
+
 	namespace setters {
 		/**
 		 * This should only be called by the driver.

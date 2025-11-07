@@ -11,6 +11,8 @@ namespace global_state {
 		return root_collection.refMut().toOpt().value();
 	}
 
+	bool hasRootCollection() { return root_collection.toOpt().has_value(); }
+
 	namespace setters {
 		/**
 		 * This should only be called by the driver.
