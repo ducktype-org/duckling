@@ -35,11 +35,6 @@ namespace base {
 		struct KeyValuePair final {
 			const KEY_T key;
 			DATA_T      value;
-
-			template<class K = KEY_T, class D = DATA_T>
-			KeyValuePair(K&& key, D&& value) noexcept:
-				  key(std::forward<K>(key)),
-				  value(std::forward<D>(value)) {}
 		};
 
 	private:
@@ -245,8 +240,8 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
-			auto new_node = node_allocator.allocateEmplace(Node{
-				nullptr, std::forward<K>(key), std::forward<D>(value) });
+			auto new_node = node_allocator.allocateEmplace(
+				nullptr, std::forward<K>(key), std::forward<D>(value));
 
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
@@ -270,8 +265,8 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
-			auto new_node = node_allocator.allocateEmplace(Node{
-				nullptr, std::forward<K>(key), std::forward<D>(value) });
+			auto new_node = node_allocator.allocateEmplace(
+				nullptr, std::forward<K>(key), std::forward<D>(value));
 
 			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
@@ -367,8 +362,9 @@ namespace base {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
+					MRef next_node = current_node->next;
 					node_allocator.justDestroy(current_node.toOpt().value());
-					current_node = current_node->next;
+					current_node = next_node;
 				}
 				bucket = nullptr;
 			}

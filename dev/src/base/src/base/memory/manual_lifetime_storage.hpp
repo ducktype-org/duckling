@@ -9,6 +9,7 @@
 #include <new>
 #include <utility>
 #include <cstddef>
+
 namespace base {
 
 	/**
@@ -30,7 +31,13 @@ namespace base {
 		enum class State : bool { Empty, Constructed };
 		IF_BUILD_TYPE_DEV(State state = State::Empty;)
 
-		static_assert(std::is_standard_layout_v<ManualLifetimeStorage>, "ManualLifetimeStorage should be standard layout");
+		/**
+		 * This method exist only to defer the evaluation of the static_assert below,
+		 * Since it needs the ManualLifetimeStorage to be a complete type.
+		 */
+		static void deferred() {
+			static_assert(std::is_standard_layout_v<ManualLifetimeStorage>, "ManualLifetimeStorage should be standard layout");
+		}
 
 	public:
 		ManualLifetimeStorage() = default;

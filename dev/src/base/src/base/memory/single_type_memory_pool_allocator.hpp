@@ -7,6 +7,8 @@ namespace base {
 	/**
 	 * A memory pool object allocator of a single type.
 	 * It manages objects, not memory.
+	 * On destruction frees the allocated memory, panics (in dev-builds) if not all allocated objects have been deallocated.
+	 *
 	 * It is not a valid c++-allocator.
 	 *
 	 * @note After some IRL debates it was concluded that allocate/deallocate api should
@@ -153,9 +155,8 @@ namespace base {
 
 			// naively find the buffer and the index within the buffer:
 			for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
-				StorageT* buffer_pointer_start = buffers[buffer_idx]->items.data();
-				StorageT* buffer_pointer_end
-					= buffers[buffer_idx]->items.data() + buffers[buffer_idx]->items.size();
+				StorageT* buffer_pointer_start = std::begin(buffers[buffer_idx]->items);
+				StorageT* buffer_pointer_end = std::end(buffers[buffer_idx]->items);
 				if (std::less_equal<>{}(buffer_pointer_start, obj_storage.get())
 				    and std::less<>{}(obj_storage.get(), buffer_pointer_end)) {
 					deallocation_idx.buffer_idx = buffer_idx;
