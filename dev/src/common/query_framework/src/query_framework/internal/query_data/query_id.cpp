@@ -70,6 +70,8 @@ namespace query::internal {
 
 	bool QueryID::hasStableHash() const { return hasStableHashMapInstance().at(*this); }
 
+	bool QueryID::registered() const { return dataMap().contains(*this); }
+
 	QueryID registerQuery(QueryData query_data, bool has_stable_hash) {
 		auto ret_id = next;
 		next        = QueryIDMaker::next(ret_id);

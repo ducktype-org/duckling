@@ -15,6 +15,8 @@
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <hashing/component_hash.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -115,16 +117,24 @@ namespace compiler::driver {
 		}
 
 		// Load precompiled artifact from disk without performing any compilation.
-		static auto loadFromDisc(const QKey& key) -> artifacts::FileArtifact {
-			std::cout << "\n\nLoading CompileModule artifact from disk for module "
-					  << getModuleRef(key.module_id)->getName().strView() << " and backend "
-					  << backendTypeToStr(key.backend_type) << "\n\n";
-
+		// Returns Optional empty if the underlying file does not exist anymore.
+		static auto loadFromDisc(const QKey& key) -> base::Optional<artifacts::FileArtifact> {
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
-			return getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str(
-			)));
+			auto collection = getQueryArtifactsCollection();
+			auto output     = collection->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
+			if (output.FILE.exists()) {
+				std::cerr << "\n\nLoading CompileModule artifact from disk for module "
+						  << getModuleRef(key.module_id)->getName().strView() << " and backend "
+						  << backendTypeToStr(key.backend_type) << "\n\n";
+				return output;
+			} else {
+				std::cerr << "\n\nCompileModule artifact file not found on disk for module "
+						  << getModuleRef(key.module_id)->getName().strView() << " and backend "
+						  << backendTypeToStr(key.backend_type) << "\n\n";
+			}
+			return {};
 		}
 	};
 

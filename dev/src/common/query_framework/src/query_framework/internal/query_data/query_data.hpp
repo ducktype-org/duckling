@@ -11,6 +11,7 @@ namespace query::internal {
 		Normal,
 		SideInput,
 		Input,
+		Dummy  //> Query with that type should never be called or implemented.
 	};
 
 	/**

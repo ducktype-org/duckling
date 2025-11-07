@@ -35,6 +35,9 @@ namespace query::internal {
 		[[nodiscard]]
 		bool hasStableHash() const;
 
+		// @TODO: #1433 determinate if we should keep this method
+		[[nodiscard]] bool registered() const;
+
 		[[nodiscard]]
 		constexpr bool operator==(const QueryID& other) const {
 			return val == other.val;
