@@ -5,6 +5,7 @@
 #include <query_framework/internal/query_graph/query_graph.hpp>
 
 #include <algorithm>
+#include <iostream>
 
 namespace query::internal {
 
@@ -29,6 +30,9 @@ namespace query::internal {
 		std::vector<NodeID> prev_inputs;
 		prev_inputs.reserve(all_nodes.size());
 		for (const auto& node: all_nodes) {
+			// Skip unregistered nodes - these are dummy nodes with unstable hashes
+			if (!node.q_id.registered()) continue;
+
 			if (node.q_id.getData().type != query::internal::QueryType::SideInput
 			    && node.q_id.getData().type != query::internal::QueryType::Input) {
 				continue;
