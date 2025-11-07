@@ -88,7 +88,7 @@ namespace query::internal {
 						// We merge only node_id and its dependencies
 						ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
 						return QueryImplType::store(perfect_hash, loaded.value(), acd);
-					}  // fall through to provide() loading from disk failure
+					}  // fall through to provide() if loading from disk failure
 				}
 			}
 
