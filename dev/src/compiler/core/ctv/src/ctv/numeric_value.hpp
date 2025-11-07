@@ -35,6 +35,7 @@ namespace compiler::numeric_value {
 		 * @return The NumericValue storing the minimized type.
 		 */
 		template<typename T>
+		requires(std::is_arithmetic_v<T>)
 		[[nodiscard]] static NumericValue createMinimized(T value) {
 			if constexpr (std::is_integral_v<T>) {
 				// Prioritize signed types as they're more general.

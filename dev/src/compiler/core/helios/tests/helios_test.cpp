@@ -103,7 +103,7 @@ private:
 	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
-		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
+		ASSERT_EQUAL(1'107, getConstValueAs<i32>("M", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("N.X", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("A", root_scope));
 		ASSERT_EQUAL(-3, getConstValueAs<i64>("B", root_scope));
@@ -148,24 +148,24 @@ private:
 
 		// Test minimization logic.
 		// TODOP: How to test that with the current constraints.
-		// ASSERT_EQUAL(128, getConstValueAs<i16>("NEEDS_I16", root_scope));
-		// ASSERT_EQUAL(32'768, getConstValueAs<i32>("NEEDS_I32", root_scope));
-		// ASSERT_EQUAL(2'147'483'648, getConstValueAs<i64>("NEEDS_I64", root_scope));
+		ASSERT_EQUAL(128, getConstValueAs<i16>("NEEDS_I16", root_scope));
+		ASSERT_EQUAL(32'767, getConstValueAs<i32>("NEEDS_I32", root_scope));
+		ASSERT_EQUAL(2'147'483'648, getConstValueAs<i64>("NEEDS_I64", root_scope));
 
 		// TODOP: Uncomment when f16 exists.
 		// ASSERT_EQUAL(0.5, getConstValueAs<f32>("NEEDS_F16", root_scope));
 
 		// TODOP: Figure out what to do with this. Maybe we need minimization after all.
-		// ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
-		// ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
-		// ASSERT_EQUAL(
-		// 	1.0L + 1.0L / 1152921504606846976.0L, getConstValueAs<f128>("NEEDS_F128", root_scope)
-		// );
+		ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
+		ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
+		ASSERT_EQUAL(
+			1.0L + 1.0L / 1152921504606846976.0L, getConstValueAs<f128>("NEEDS_F128", root_scope)
+		);
 
 		// TODOP: Figure out what to do with this, with the current casting logic.
-		// ASSERT_EQUAL(26, getConstValueAs<i16>("hex", root_scope));
-		// ASSERT_EQUAL(15, getConstValueAs<i16>("oct", root_scope));
-		// ASSERT_EQUAL(21, getConstValueAs<i16>("bin", root_scope));
+		ASSERT_EQUAL(26, getConstValueAs<i16>("hex", root_scope));
+		ASSERT_EQUAL(15, getConstValueAs<i16>("oct", root_scope));
+		ASSERT_EQUAL(21, getConstValueAs<i16>("bin", root_scope));
 
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
@@ -378,8 +378,9 @@ private:
 
 	void testEdgeEvals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/edge_evals")));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("M1", root_scope));
-		ASSERT_EQUAL(6, getConstValueAs<i64>("M2", root_scope));
+		// @TODO: #859 his const values should be of i16 type. Change the test when casts are added
+		ASSERT_EQUAL(1, getConstValueAs<i16>("M1", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i16>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
 		// These do not work anymore.

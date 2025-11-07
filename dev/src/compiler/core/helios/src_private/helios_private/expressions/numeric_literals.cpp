@@ -194,12 +194,10 @@ namespace compiler::helios::code {
 		case lang_def::NumericLiteralTypeSpecifier::f80:
 		case lang_def::NumericLiteralTypeSpecifier::u128:
 		case lang_def::NumericLiteralTypeSpecifier::i128:
-			throw base::NotYetImplemented(
-				base::strConcat(
-					"Unhandled type specifier in hout of expr: ",
-					lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
-				)
-			);
+			throw base::NotYetImplemented(base::strConcat(
+				"Unhandled type specifier in hout of expr: ",
+				lang_def::numericLiteralTypeSpecifierToStr(type_specifier)
+			));
 		}
 		return {};
 	}

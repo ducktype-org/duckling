@@ -52,7 +52,11 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralNumericExpr(const code::LiteralNumericExpr& expr) final {
-				result = CompileTimeValue{ expr.value };
+				// TODOP: This is a mock because casts...
+				result = CompileTimeValue{ std::visit(
+					[&](auto&& val) { return NumericValue::createMinimized(val); },
+					expr.value.getStorage()
+				) };
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr& expr) final {
@@ -92,6 +96,7 @@ namespace compiler::helios {
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
+				using enum code::BuiltinBinary;
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
 				if (lhs_result.hasError()) {
 					result = query::QError(errors::Failed());
@@ -119,11 +124,14 @@ namespace compiler::helios {
 								[&](auto&& lhs_val, auto&& rhs_val) -> TreeEvalResult {
 									using LhsNumT = std::decay_t<decltype(lhs_val)>;
 									using RhsNumT = std::decay_t<decltype(rhs_val)>;
-									// Find a common type for those literals.
-									using CommonTypeT = std::common_type_t<LhsNumT, RhsNumT>;
+									// Type potentially to big to prevent overflow.
+									using ResultT = std::conditional_t<
+										std::is_integral_v<LhsNumT> && std::is_integral_v<RhsNumT>,
+										i64,
+										f128>;
 
-									auto maybe_lhs_coerced = lhs.template coerceTo<CommonTypeT>();
-									auto maybe_rhs_coerced = rhs.template coerceTo<CommonTypeT>();
+									auto maybe_lhs_coerced = lhs.template coerceTo<ResultT>();
+									auto maybe_rhs_coerced = rhs.template coerceTo<ResultT>();
 
 									// Failed to coerce.
 									if (!maybe_lhs_coerced || !maybe_rhs_coerced)
@@ -131,51 +139,48 @@ namespace compiler::helios {
 									auto lhs_coerced = maybe_lhs_coerced.value();
 									auto rhs_coerced = maybe_rhs_coerced.value();
 
-									// TODOP: Rethink the approach. Maybe we should do the type
-							        // maxing.
-							        // TODOP: Check for over/underflows?
-									using enum code::BuiltinBinary;
+									ResultT result;
 									switch (expr.operation) {
 									case IntegerAdd:
 									case FloatAdd:
-										return CompileTimeValue{ NumericValue{ lhs_coerced
-									                                           + rhs_coerced } };
+										result = lhs_coerced + rhs_coerced;
+										break;
 									case IntegerSub:
 									case FloatSub:
-										return CompileTimeValue{ NumericValue{ lhs_coerced
-									                                           - rhs_coerced } };
+										result = lhs_coerced - rhs_coerced;
+										break;
 									case IntegerMul:
 									case FloatMul:
-										return CompileTimeValue{ NumericValue{ lhs_coerced
-									                                           * rhs_coerced } };
+										result = lhs_coerced * rhs_coerced;
+										break;
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_coerced == 0)
 											return query::QError(errors::Failed());
-										return CompileTimeValue{ NumericValue{ lhs_coerced
-									                                           / rhs_coerced } };
+										result = lhs_coerced / rhs_coerced;
+										break;
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_coerced == 0)
 											return query::QError(errors::Failed());
-										if constexpr (std::is_integral_v<CommonTypeT>) {
-											return CompileTimeValue{ NumericValue{
-												lhs_coerced % rhs_coerced } };
-										} else {
-											return CompileTimeValue{ NumericValue{
-												std::fmod(lhs_coerced, rhs_coerced) } };
-										}
+										if constexpr (std::is_integral_v<ResultT>)
+											result = lhs_coerced % rhs_coerced;
+										else
+											result = std::fmod(lhs_coerced, rhs_coerced);
+										break;
 									case IntegerPow:
 									case FloatPow:
-										return CompileTimeValue{ NumericValue{
-											static_cast<CommonTypeT>(
-												std::pow(lhs_coerced, rhs_coerced)
-											) } };
+										result = static_cast<ResultT>(
+											std::pow(lhs_coerced, rhs_coerced)
+										);
+										break;
 									default:
 										throw base::NotYetImplemented(
 											"Evaluation of other binary operators in compile time"
 										);
 									}
+
+									return CompileTimeValue{ NumericValue::createMinimized(result) };
 								},
 								lhs.getStorage(),
 								rhs.getStorage()
