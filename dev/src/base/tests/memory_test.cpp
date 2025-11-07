@@ -44,6 +44,7 @@ public:
 		TESTER_ADD_TEST(basicCompilationTest<Derived COMMA 123>);
 		TESTER_ADD_TEST(destructorIsCalledTest);
 		TESTER_ADD_TEST(largeTest);
+		TESTER_ADD_TEST(largerTest);
 	}
 
 	template<class T, auto initial_value>
