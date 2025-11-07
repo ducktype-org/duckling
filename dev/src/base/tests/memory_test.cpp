@@ -100,6 +100,25 @@ public:
 
 		for (u64 i = 0; i < ALLOCATION_COUNT; i++) allocator.deallocateDestroy(allocated_ptrs[i]);
 	}
+
+	void largerTest() {
+		constexpr u64 ALLOCATION_COUNT = 10'000'000;
+
+		auto allocator = base::SingleTypeMemoryPoolAllocator<u64>{};
+
+		std::vector<base::Ref<u64>> allocated_ptrs;
+		allocated_ptrs.reserve(ALLOCATION_COUNT);
+
+		for (u64 i = 0; i < ALLOCATION_COUNT; i++) {
+			auto ptr = allocator.allocateEmplace(i);
+			allocated_ptrs.push_back(ptr);
+		}
+
+		for (u64 i = 0; i < ALLOCATION_COUNT; i++) ASSERT_TRUE(*allocated_ptrs[i] == i);
+
+		// notice that here we use justDestroy, instead of deallocateDestroy:
+		for (u64 i = 0; i < ALLOCATION_COUNT; i++) allocator.justDestroy(allocated_ptrs[i]);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");

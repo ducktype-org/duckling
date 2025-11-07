@@ -153,6 +153,10 @@ namespace base {
 			// mref, since we have to represent "end" iterator.
 			MRef<Node> current_node;
 
+			/**
+			 * This stores the pointer to data stored in the `buckets` member.
+			 * We need it to here to be able to iterate to the next bucket when needed.
+			 */
 			const MRef<Node>* buckets_array_ptr;
 
 			u64 buckets_size;

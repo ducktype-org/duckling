@@ -35,7 +35,7 @@ namespace base {
 		 * This method exist only to defer the evaluation of the static_assert below,
 		 * Since it needs the ManualLifetimeStorage to be a complete type.
 		 */
-		static void deferred() {
+		static void deferredIsStandardLayoutCheck() {
 			static_assert(
 				std::is_standard_layout_v<ManualLifetimeStorage>,
 				"ManualLifetimeStorage should be standard layout"
@@ -61,6 +61,10 @@ namespace base {
 
 		template<class... Args>
 		void construct(Args&&... args) {
+			// we use it here, to make sure the static_assert will be always evaluated:
+			// (it is assumed that this method will be always used when using ManualLifetimeStorage)
+			deferredIsStandardLayoutCheck();
+
 			IF_BUILD_TYPE_DEV({
 				CORE_ASSERT(state == State::Empty, "Object is already constructed");
 				state = State::Constructed;
