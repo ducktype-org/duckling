@@ -10,6 +10,7 @@
 namespace compiler::mir {
 
 
+	// @TODO: (this PR) handle field access.
 	bool validateMoves(const Function& fun) {
 		using LocalSet      = std::unordered_set<LocalID>;
 		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;
@@ -36,21 +37,22 @@ namespace compiler::mir {
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
-						used_variables.at(block.first).insert(arg.get<MirLocalRef>()->id);
+						used_variables.at(block.first)
+							.insert(arg.get<MirPlace>().getBase<MirLocalRef>()->id);
 
-						if (moved_variables.at(block.first).contains(arg.get<MirLocalRef>()->id))
+						if (moved_variables.at(block.first)
+						        .contains(arg.get<MirPlace>().getBase<MirLocalRef>()->id))
 							return false;  // It is already moved.
 					}
 				}
 
 				// Output can't be local, already moved, variable.
-				if (instr.output.has_value()
-				    && std::holds_alternative<MirLocalRef>(instr.output.value())) {
+				if (instr.output.has_value() && instr.output.value().isLocal()) {
 					used_variables.at(block.first)
-						.insert(std::get<MirLocalRef>(instr.output.value())->id);
+						.insert(instr.output.value().getBase<MirLocalRef>()->id);
 
 					if (moved_variables.at(block.first)
-					        .contains(std::get<MirLocalRef>(instr.output.value())->id))
+					        .contains(instr.output.value().getBase<MirLocalRef>()->id))
 						return false;  // It is already moved.
 				}
 
@@ -69,15 +71,17 @@ namespace compiler::mir {
 								instr.arguments,
 								[&](const auto& arg) {
 									return arg.isLocal()
-							            && (arg.template get<MirLocalRef>()->id == flag.local->id);
+							            && arg.template get<MirPlace>()
+							                       .template getBase<MirLocalRef>()
+							                       ->id
+							                   == flag.local->id;
 								}
 							)
 						    != 1)
 							return false;  // Used 0 or 2 or more times as argument.
 
-						if (instr.output.has_value()
-						    && std::holds_alternative<MirLocalRef>(instr.output.value())
-						    && std::get<MirLocalRef>(instr.output.value())->id == flag.local->id)
+						if (instr.output.has_value() && instr.output.value().isLocal()
+						    && instr.output.value().getBase<MirLocalRef>()->id == flag.local->id)
 							return false;  // Moved local used as output.
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {

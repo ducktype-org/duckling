@@ -136,7 +136,7 @@ private:
 			// Check that the first instruction assigns to a global
 			{
 				const auto& instr = foo_mir.blocks[BlockID(7)].instructions.at(0);
-				ASSERT_TRUE(std::holds_alternative<compiler::mir::MirGlobal>(instr.output.value()));
+				ASSERT_TRUE(instr.output.value().isGlobal());
 			}
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
@@ -370,9 +370,11 @@ private:
 			for (auto block_id: foo_mir.block_order) {
 				const auto& block          = foo_mir.blocks[block_id];
 				auto        validate_value = [&](const compiler::mir::MIRValue& value) {
-                    if (auto local = std::get_if<compiler::mir::MirLocalRef>(&value.getVariant())) {
-                        if ((*local)->parameter_index.has_value())
-                            ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+                    if (value.isLocal()) {
+                        if (const auto local = value.get<compiler::mir::MirPlace>()
+                                                   .getBase<compiler::mir::MirLocalRef>();
+                            local->parameter_index.has_value())
+                            ASSERT_EQUAL(local->parameter_index.value(), 2);
                     }
 				};
 

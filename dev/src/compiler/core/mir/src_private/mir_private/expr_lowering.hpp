@@ -70,7 +70,7 @@ namespace compiler::mir {
 		 * @note may use InstructionHole stored in stucture, probably use only once.
 		 */
 		void storeResultInGivenVariable(
-			const Instruction::Output&        target,
+			const MirPlace&                   target,
 			BlockBuilder::InstructionHole&    hole,
 			const std::vector<OperationFlag>& flags,
 			ScopeRef                          scope

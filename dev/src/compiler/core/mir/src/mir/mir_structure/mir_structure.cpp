@@ -81,63 +81,56 @@ namespace compiler::mir {
 			return instructions.at(0).scope;
 	}
 
-	void Function::debugPrint(std::ostream& output) const {
-		output << "[MIR] Function " << name.strView() << ": ";
-		output << "(";
+	void Function::debugPrint(std::ostream& os) const {
+		os << "[MIR] Function " << name.strView() << ": ";
+		os << "(";
 		std::string_view separator = "";
 		for (auto& type: this->parameter_types) {
-			output << separator << type.toString();
+			os << separator << type.toString();
 			separator = ", ";
 		}
-		output << ")";
-		output << " -> " << this->return_type.toString() << "\n";
+		os << ")";
+		os << " -> " << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
-			output << "    ";
-			local.debugPrint(output, true);
-			output << "\n";
+			os << "    ";
+			local.debugPrint(os, true);
+			os << "\n";
 		}
-		output << "No Lifetime Scope: " << no_lifetime_scope->id << "\n";
-		output << "{\n";
+		os << "No Lifetime Scope: " << no_lifetime_scope->id << "\n";
+		os << "{\n";
 
 		for (const auto block_id: block_order) {
 			const auto& block = blocks[block_id];
 
-			output << "  block " << u64(block.id);
-			if (block.id == block_order[0]) output << " [entry]";
-			output << ":\n";
+			os << "  block " << u64(block.id);
+			if (block.id == block_order[0]) os << " [entry]";
+			os << ":\n";
 			for (const auto& instruction: block.instructions) {
-				output << "    ";
-				instruction.debugPrint(output);
-				output << "\n";
+				os << "    ";
+				instruction.debugPrint(os);
+				os << "\n";
 			}
-			output << "    ";
-			block.terminator.debugPrint(output);
-			output << "\n";
+			os << "    ";
+			block.terminator.debugPrint(os);
+			os << "\n";
 		}
-		output << "}\n";
+		os << "}\n";
 	}
 
-	void Instruction::debugPrint(std::ostream& output) const {
+	void Instruction::debugPrint(std::ostream& os) const {
 		// save flags to restore
-		auto output_flags = output.flags();
+		auto output_flags = os.flags();
 
-		output << std::left << std::setw(12);
-		std::stringstream output_value;
-		if (this->output.has_value()) {
-			variant_match(this->output.value()) {
-				variant_case(MirLocalRef, local) { local->debugPrint(output_value); }
-				variant_case(MirGlobal, global) { global.debugPrint(output_value); }
-				variant_default {
-					CORE_PANIC("MIR debug print: Unexpected Instruction output value alternative");
-				}
-			}
-			output_value << " :=";
+		os << std::left << std::setw(12);
+		if (output.has_value()) {
+			output.value().debugPrint(os);
+			os << " :=";
 		}
-		output << output_value.str() << " ";
+		os << " ";
 
-		output << std::left << std::setw(15);
-		output << base::enumToStr(operation).strView() << "  ";
+		os << std::left << std::setw(15);
+		os << base::enumToStr(operation).strView() << "  ";
 
 		std::stringstream args;
 
@@ -148,40 +141,40 @@ namespace compiler::mir {
 			separator = ", ";
 		}
 
-		output << std::left << std::setw(15);
-		output << args.str() << "  ";
+		os << std::left << std::setw(15);
+		os << args.str() << "  ";
 
 		separator = "";
-		output << "Flags[";
+		os << "Flags[";
 		for ([[maybe_unused]] const auto& flag: flags) {
-			output << separator;
-			flag.debugPrint(output);
+			os << separator;
+			flag.debugPrint(os);
 			separator = ", ";
 		}
-		output << "], scope:" << scope->id;
+		os << "], scope:" << scope->id;
 
 		// restore flags
-		output.flags(output_flags);
+		os.flags(output_flags);
 	}
 
-	void MirLocal::debugPrint(std::ostream& output, bool detailed) const {
-		output << "Local(" << u64(id) << ")";
+	void MirLocal::debugPrint(std::ostream& os, bool detailed) const {
+		os << "Local(" << u64(id) << ")";
 		if (detailed) {
-			output << ": Helios Name: " << getName().strView();
-			output << ", Type: ";
-			output << this->type.toString();
-			output << ", Lifetime Scope: " << this->scope.value()->id;
+			os << ": Helios Name: " << getName().strView();
+			os << ", Type: ";
+			os << this->type.toString();
+			os << ", Lifetime Scope: " << this->scope.value()->id;
 			if (parameter_index.has_value())
-				output << ", Parameter Index: " << parameter_index.value();
+				os << ", Parameter Index: " << parameter_index.value();
 		}
 	}
 
-	void MirGlobal::debugPrint(std::ostream& output, bool detailed) const {
-		output << "Global(" << name(helios_id).strView() << ")";
+	void MirGlobal::debugPrint(std::ostream& os, bool detailed) const {
+		os << "Global(" << name(helios_id).strView() << ")";
 		if (detailed) {
-			output << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
-			output << ", Type: ";
-			output << this->type.toString();
+			os << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
+			os << ", Type: ";
+			os << this->type.toString();
 		}
 	}
 
@@ -195,35 +188,44 @@ namespace compiler::mir {
 		this->scope.emplace(scope);
 	}
 
-	void MIRValue::debugPrint(std::ostream& output) const {
+	void MirPlace::debugPrint(std::ostream& os, bool detailed) const {
+		variant_match(base) {
+			variant_case(MirLocalRef, local) { local->debugPrint(os); }
+			variant_case(MirGlobal, global) { global.debugPrint(os); }
+		}
+		for (const auto& arg: access_chain) {
+			os << "." << name(arg).strView();
+		}
+	}
+
+	void MIRValue::debugPrint(std::ostream& os) const {
 		variant_match(this->value) {
-			variant_case_novalue(MirUnitConst) { output << "()"; }
-			variant_case(MirIntegerConst, value) { output << value.value; }
-			variant_case(MirBoolConst, value) { output << (value.value ? "true" : "false"); }
-			variant_case(MirLocalRef, local) { local->debugPrint(output); }
-			variant_case(MirGlobal, global) { global.debugPrint(output); }
-			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
+			variant_case_novalue(MirUnitConst) { os << "()"; }
+			variant_case(MirIntegerConst, value) { os << value.value; }
+			variant_case(MirBoolConst, value) { os << (value.value ? "true" : "false"); }
+			variant_case(MirPlace, place) { place.debugPrint(os); }
+			variant_case(BlockID, block) { os << "Block(" << u64(block) << ")"; }
 			variant_case(MirFunctionLiteral, func) {
-				output << "Function(" << name(func.helios_id).strView() << ")";
+				os << "Function(" << name(func.helios_id).strView() << ")";
 			}
 			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
 	}
 
-	void OperationFlag::debugPrint(std::ostream& output) const {
+	void OperationFlag::debugPrint(std::ostream& os) const {
 		switch (flag) {
 		case Flag::Construct:
-			output << "Construct";
+			os << "Construct";
 			break;
 		case Flag::Destruct:
-			output << "Destruct";
+			os << "Destruct";
 			break;
 		case Flag::Move:
-			output << "Move";
+			os << "Move";
 			break;
 		}
-		output << " ";
-		local->debugPrint(output);
+		os << " ";
+		local->debugPrint(os);
 	}
 
 	base::OkBad Function::validateBlockIDs() const {

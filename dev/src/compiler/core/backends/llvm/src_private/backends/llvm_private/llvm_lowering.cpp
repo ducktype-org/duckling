@@ -124,7 +124,7 @@ namespace compiler::backend_llvm {
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
 
 	auto typeFromLayout(llvm::LLVMContext& context, const tsl::TypeLayout& layout) -> llvm::Type* {
-		variant_match(layout()) {
+		variant_match(layout.getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(
@@ -290,9 +290,9 @@ namespace compiler::backend_llvm {
 			}
 		}
 
-		base::Map<lir::LocalRef, u64> lir_local_ids;
+		base::Map<lir::LirLocalRef, u64> lir_local_ids;
 
-		std::string llvmLocalName(lir::LocalRef lir_local) {
+		std::string llvmLocalName(lir::LirLocalRef lir_local) {
 			// @TODO.. this might have to change in the future
 			if (lir_local->helios_id)
 				return base::strConcat("helios_", lir_local_ids[lir_local]);
@@ -304,7 +304,7 @@ namespace compiler::backend_llvm {
 		 * @brief Maps lir locals to LLVM registers storing
 		 * pointers to them.
 		 */
-		base::Map<lir::LocalRef, Ref<llvm::Instruction>> local_register_map;
+		base::Map<lir::LirLocalRef, Ref<llvm::Instruction>> local_register_map;
 
 		/**
 		 * Fills local_register_map and block_mapping.
@@ -369,21 +369,27 @@ namespace compiler::backend_llvm {
 					return llvm::ConstantInt::getSigned(i64Type(context), value);
 				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
-				variant_case(lir::LocalRef, lir_local) {
-					// We store local values behind pointers to stack-allocated memory.
-					// We need to load them before using them.
-					const auto local_ptr = local_register_map[lir_local].get();
-					return builder.CreateLoad(
-						typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
-					);
+				variant_case(lir::LirPlace, place) {
+					// @TODO: (this PR) handle field access.
+					variant_match(place.base) {
+						variant_case(lir::LirLocalRef, lir_local) {
+							// We store local values behind pointers to stack-allocated memory.
+							// We need to load them before using them.
+							const auto local_ptr = local_register_map[lir_local].get();
+							return builder.CreateLoad(
+								typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
+							);
+						}
+						variant_case(lir::LirGlobal, lir_global) {
+							auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
+							return builder.CreateLoad(
+								typeFromLayout(builder.getContext(), *lir_global.layout),
+								global_ptr.get()
+							);
+						}
+					}
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
-				variant_case(lir::LirGlobal, lir_global) {
-					auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
-					return builder.CreateLoad(
-						typeFromLayout(builder.getContext(), *lir_global.layout), global_ptr.get()
-					);
-				}
 				variant_default { CORE_PANIC("unknown lir location type"); }
 			}
 			CORE_UNREACHABLE();
@@ -399,13 +405,10 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-		void storeOutput(
-			std::variant<lir::LocalRef, lir::LirGlobal> output,
-			Ref<llvm::Value>                            value,
-			llvm::IRBuilder<>&                          builder
-		) {
-			variant_match(output) {
-				variant_case(lir::LocalRef, lir_local) {
+		void storeOutput(lir::LirPlace output, Ref<llvm::Value> value, llvm::IRBuilder<>& builder) {
+			// @TODO: (this PR) handle field access.
+			variant_match(output.base) {
+				variant_case(lir::LirLocalRef, lir_local) {
 					builder.CreateStore(value.get(), local_register_map[lir_local].get());
 				}
 				variant_case(lir::LirGlobal, global_lir) {

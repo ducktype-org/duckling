@@ -61,19 +61,21 @@ namespace compiler::mir {
 
 				// Retrieve type: if res is value It is local, otherwise only last instruction is
 				// stored.
-				auto res_type = possible_result.has_value() ? possible_result->get<MirLocalRef>()->type
+				auto res_type = possible_result.has_value() ? possible_result->get<MirPlace>().type
 				                                            : expr_res.getResultType();
 
 				auto return_value = function.addNoLifetimeTmp(res_type);
 
 				// Set move flag only if value exists.
-				std::vector<OperationFlag> flags = { flagConstruct(return_value) };
+				// @TODO: (this PR) handle member access
+				std::vector flags = { flagConstruct(return_value) };
 				if (possible_result.has_value())
-					flags.push_back(flagMove(possible_result->get<MirLocalRef>()));
+					flags.push_back(flagMove(possible_result->get<MirPlace>().getBase<MirLocalRef>()
+					));
 
 
 				expr_res.storeResultInGivenVariable(
-					return_value, retrieve_value, flags, return_scope
+					MirPlace(return_value), retrieve_value, flags, return_scope
 				);
 
 				possible_result = return_value;
@@ -138,10 +140,11 @@ namespace compiler::mir {
 				// to it in-place or with extra move.
 				possible_condition_res = function.addNoLifetimeBoolTmp();
 
+				// @TODO: (this PR) handle member access
 				lowered_condition.storeResultInGivenVariable(
-					possible_condition_res->get<MirLocalRef>(),
+					possible_condition_res->get<MirPlace>(),
 					get_condition_return,
-					{ flagConstruct(possible_condition_res->get<MirLocalRef>()) },
+					{ flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()) },
 					condition_scope
 				);
 			}
@@ -149,7 +152,11 @@ namespace compiler::mir {
 			condition_block->setTerminator(Instruction{
 				Operation::Branch,
 				{},
-				{ *possible_condition_res, then_body->getID(), else_body->getID() },
+				{
+					*possible_condition_res,
+					then_body->getID(),
+					else_body->getID(),
+				},
 				{},
 				condition_scope,
 			});
@@ -193,10 +200,11 @@ namespace compiler::mir {
 			} else {
 				possible_result = function.addNoLifetimeBoolTmp();
 
+				// @TODO: (this PR) handle member access
 				expr_result.storeResultInGivenVariable(
-					possible_result->get<MirLocalRef>(),
+					possible_result->get<MirPlace>(),
 					get_condition_return,
-					{ flagConstruct(possible_result->get<MirLocalRef>()) },
+					{ flagConstruct(possible_result->get<MirPlace>().getBase<MirLocalRef>()) },
 					condition_scope
 				);
 			}
@@ -204,7 +212,11 @@ namespace compiler::mir {
 			condition_continuation_block->setTerminator({
 				Operation::Branch,
 				{},
-				{ possible_result.value(), loop_body.begin->getID(), continuation->getID() },
+				{
+					possible_result.value(),
+					loop_body.begin->getID(),
+					continuation->getID(),
+				},
 				{},
 				condition_scope,
 			});
@@ -234,7 +246,10 @@ namespace compiler::mir {
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 
 					expr_result.storeResultInGivenVariable(
-						local, local_construction_hole, { flagConstruct(local) }, assignment_scope
+						MirPlace(local),
+						local_construction_hole,
+						{ flagConstruct(local) },
+						assignment_scope
 					);
 					output({ expr_result.begin });
 					return;
@@ -266,20 +281,17 @@ namespace compiler::mir {
 				"a global variable."
 			);
 
-			std::visit(
-				[&](auto&& ref) {
-					using T = std::decay_t<decltype(ref)>;
-					if constexpr (std::is_same_v<T, MirLocalRef> || std::is_same_v<T, MirGlobal>) {
-						right_result.storeResultInGivenVariable(
-							ref, target_construction_hole, {}, assignment_scope
-						);
-						output({ left_result.begin });
-					} else {
-						CORE_PANIC("Assignment to unsupported MIRValue type");
-					}
-				},
-				left_val.getVariant()
-			);
+			variant_match(left_val.getVariant()) {
+				variant_case(MirPlace, place) {
+					right_result.storeResultInGivenVariable(
+						place, target_construction_hole, {}, assignment_scope
+					);
+					output({ left_result.begin });
+				}
+				variant_default {
+					CORE_PANIC("Assignment to unsupported MIRValue kind.");
+				}
+			}
 		}
 	};
 

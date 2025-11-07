@@ -178,8 +178,8 @@ namespace compiler::lir {
 			base::StableVector<LirLocal> locals;
 
 			// locals mapping:
-			base::Map<mir::MirLocalRef, LocalRef> mir_to_lir_local;
-			base::Map<mir::MirLocalRef, LocalRef> mir_to_lifetime_flag;
+			base::Map<mir::MirLocalRef, LirLocalRef> mir_to_lir_local;
+			base::Map<mir::MirLocalRef, LirLocalRef> mir_to_lifetime_flag;
 
 			base::StableVector<Block> blocks;
 
@@ -196,10 +196,24 @@ namespace compiler::lir {
 			 * @param mir_local
 			 * @return LocalRef
 			 */
-			LocalRef getLocal(mir::MirLocalRef mir_local) { return mir_to_lir_local.at(mir_local); }
+			LirLocalRef getLocal(const mir::MirLocalRef mir_local) const {
+				return mir_to_lir_local.at(mir_local);
+			}
 
-			LirGlobal getGlobal(mir::MirGlobal mir_global) {
+			LirGlobal getGlobal(const mir::MirGlobal& mir_global) const {
 				return LirGlobal::fromMIR(ctx, mir_global);
+			}
+
+			LirPlace getPlace(mir::MirPlace mir_place) const {
+				variant_match(mir_place.base) {
+					variant_case(mir::MirLocalRef, local) {
+						return LirPlace(ctx, getLocal(local), mir_place.access_chain);
+					}
+					variant_case(mir::MirGlobal, global) {
+						return LirPlace(ctx, getGlobal(global), mir_place.access_chain);
+					}
+				}
+				CORE_UNREACHABLE();
 			}
 
 			/**
@@ -208,23 +222,10 @@ namespace compiler::lir {
 			 * @param output The MIR location to convert, possibly empty.
 			 * @return The corresponding LIR location, possibly empty.
 			 */
-			base::Optional<std::variant<LocalRef, LirGlobal>> getOutput(
-				const base::Optional<std::variant<mir::MirLocalRef, mir::MirGlobal>>& output
-			) {
+			base::Optional<LirPlace> getOutput(const base::Optional<mir::MirPlace>& output) const {
 				if (!output.has_value()) return {};
-
-				variant_match(output.value()) {
-					variant_case(mir::MirLocalRef, local) {
-						if (!local->carriesInformation()) return {};
-						return getLocal(local);
-					}
-					variant_case(mir::MirGlobal, global) {
-						if (!global.carriesInformation()) return {};
-						return getGlobal(global);
-					}
-				}
-
-				CORE_UNREACHABLE();
+				if (!output->carriesInformation()) return {};
+				return getPlace(*output);
 			}
 
 			/**
@@ -245,8 +246,7 @@ namespace compiler::lir {
 						return LIRValue{ integer.value };
 					}
 					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
-					variant_case(mir::MirLocalRef, local) { return LIRValue{ getLocal(local) }; }
-					variant_case(mir::MirGlobal, global) { return LIRValue{ getGlobal(global) }; }
+					variant_case(mir::MirPlace, place) { return LIRValue{ getPlace(place) }; }
 					variant_case(mir::BlockID, block) {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
 					}
@@ -254,6 +254,7 @@ namespace compiler::lir {
 						return getFunctionLiteralfromHELIOSID(ctx, func.helios_id);
 					}
 				}
+
 				CORE_PANIC("Unhandled variant in getLocation");
 			}
 
@@ -372,8 +373,8 @@ namespace compiler::lir {
 			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
-					variant_case(mir::MirLocalRef, local) {
-						const auto arg_type = local->type.getType();
+					variant_case(mir::MirPlace, place) {
+						const auto arg_type = place.type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralAbstractType(arg_type).getSignedness()
 						           == tsh::IntegralAbstractType::Signedness::Signed;

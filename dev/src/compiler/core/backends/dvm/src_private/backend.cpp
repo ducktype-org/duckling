@@ -51,7 +51,7 @@ namespace {
 namespace compiler::backend_vm {
 	namespace {
 		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
-			variant_match(layout()) {
+			variant_match(layout.getVariant()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
 					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
@@ -105,12 +105,12 @@ namespace compiler::backend_vm {
 			Function            bytecode_func;
 
 			base::HashMap<usize, base::StrID>     block_id_to_label;
-			base::Map<lir::LocalRef, base::StrID> lir_local_to_name;
-			base::Map<lir::LocalRef, TypeOfData>  lir_local_types;
+			base::Map<lir::LirLocalRef, base::StrID> lir_local_to_name;
+			base::Map<lir::LirLocalRef, TypeOfData>  lir_local_types;
 
 			// Used to create unique names for temporary values.
 			usize                                                     next_call_id = 0;
-			base::Map<lir::LocalRef, u64>                             variable_to_id;
+			base::Map<lir::LirLocalRef, u64>                             variable_to_id;
 			base::Map<lir::BlockRef, u64>                             block_to_id;
 			const base::HashMap<base::StrID, TypeOfData>              TYPE_OF_DATA;
 			const base::HashMap<base::StrID, vm::code::FuncSignature> SIGNATURES;
@@ -288,8 +288,8 @@ namespace compiler::backend_vm {
 		) {
 			if (!lir_instruction.output.has_value()) return {};
 
-			variant_match(lir_instruction.output.value()) {
-				variant_case(lir::LocalRef, local) {
+			variant_match(lir_instruction.output.value().base) {
+				variant_case(lir::LirLocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
 					return outputToOpArg(var_type, ctx.lir_local_to_name[local]);
 				}
@@ -297,6 +297,7 @@ namespace compiler::backend_vm {
 					auto vm_type = getTypeFromLayout(*global.layout);
 					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
+				// @TODO: (this PR) handle access into fields.
 			}
 			CORE_UNREACHABLE();
 		}
@@ -309,19 +310,24 @@ namespace compiler::backend_vm {
 					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
-				variant_case(lir::LocalRef, local_ref) {
-					auto&& var_type = ctx.lir_local_types[local_ref];
-					return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
+				variant_case(lir::LirPlace, place) {
+					variant_match(place.base) {
+						variant_case(lir::LirLocalRef, local_ref) {
+							auto&& var_type = ctx.lir_local_types[local_ref];
+							return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
+						}
+						variant_case(lir::LirGlobal, global) {
+							auto vm_type = getTypeFromLayout(*global.layout);
+							return outputToOpArg(vm_type, global.mangled_name, true);
+						}
+						// @TODO: (this PR) handle access into fields.
+					}
 				}
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
 					return vm::opargs::FunctionName(function.mangled_name);
-				}
-				variant_case(lir::LirGlobal, global) {
-					auto vm_type = getTypeFromLayout(*global.layout);
-					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}

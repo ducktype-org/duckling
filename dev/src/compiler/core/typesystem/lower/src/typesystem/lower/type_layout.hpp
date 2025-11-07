@@ -447,14 +447,26 @@ namespace tsl {
 			  TypeLayoutABC(other.getSize(), other.getSourceType()),
 			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
 
-		Ref<TypeLayout> operator->() const { return pointee.toOpt().value(); }
+		PointerTypeLayout(PointerTypeLayout&& other) noexcept:
+			  TypeLayoutABC(other.getSize(), other.getSourceType()),
+			  pointee(std::move(other.pointee)) {}
+
+		void operator=(const PointerTypeLayout& other) {
+			TypeLayoutABC::operator=(other);
+			pointee = other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{};
+		}
+
+		void operator=(PointerTypeLayout&& other) noexcept {
+			TypeLayoutABC::operator=(other);
+			pointee = std::move(other.pointee);
+		}
 
 		[[nodiscard]]
 		Ref<TypeLayout> getPointee() const {
-			return operator->();
+			return pointee.toOpt().value();
 		}
 
-		bool hasPointee() { return pointee; }
+		bool hasPointee() const { return pointee; }
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
@@ -502,15 +514,38 @@ namespace tsl {
 	 *
 	 * @note Use operator() when matching against the variant's options.
 	 */
-	class TypeLayout: public TypeLayoutDirectVariant {
+	class TypeLayout final {
 	public:
-		// Use when matching against the variant's options.
-		TypeLayoutDirectVariant& operator()() { return *this; }
+		TypeLayoutDirectVariant variant;
 
-		// Use when matching against the variant's options.
-		const TypeLayoutDirectVariant& operator()() const { return *this; }
+		TypeLayout(EmptyTypeLayout layout): variant(std::move(layout)) {}
 
-		using TypeLayoutDirectVariant::TypeLayoutDirectVariant;
+		TypeLayout(IntegralTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(FloatTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(VariantTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(TupleTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(DynamicArrayTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(ClassTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(FunctionalTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(PointerTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(StringTypeLayout layout): variant(std::move(layout)) {}
+
+		[[nodiscard]]
+		bool operator==(const TypeLayout&) const
+			= default;
+
+		[[nodiscard]]
+		const TypeLayoutDirectVariant& getVariant() const {
+			return variant;
+		}
 
 		/**
 		 * @copydoc TypeLayoutABC::getSize
