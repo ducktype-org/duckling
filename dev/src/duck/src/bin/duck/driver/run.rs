@@ -4,15 +4,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use duck_lib::QuackResult;
-use duck_lib::DuckCtx;
 use crate::driver::{
-        cli,
-        cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
-        cli_no_err,
-        global_cli_options::GlobalCliOptions,
-        subcommands::exec_for,
-    };
+    cli,
+    cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
+    cli_no_err,
+    global_cli_options::GlobalCliOptions,
+    subcommands::exec_for,
+};
+use duck_lib::DuckCtx;
+use duck_lib::QuackResult;
 
 use anyhow::{Context, bail};
 use clap::ArgMatches;

@@ -226,6 +226,11 @@ impl TomlConfig {
     pub fn get_root_table(&self) -> &Table {
         &self.content
     }
+
+    pub fn get_path(&self, key: &str) -> QuackResult<Option<PathBuf>> {
+        let path = self.get_str(key)?;
+        Ok(path.map(PathBuf::from))
+    }
 }
 
 impl Display for TomlConfig {

@@ -1,6 +1,6 @@
-use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use duck_lib::QuackResult;
 
 use crate::{
     DuckCtx,

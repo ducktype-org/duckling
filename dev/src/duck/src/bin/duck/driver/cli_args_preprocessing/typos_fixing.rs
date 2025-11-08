@@ -1,8 +1,8 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::ArgMatches;
+use duck_lib::QuackResult;
 use itertools::Itertools;
 use tracing::debug;
 
@@ -152,7 +152,7 @@ fn parse_fixed_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
         .try_get_matches_from(new_cli_args)?)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test_utils"))]
 mod tests {
     use super::*;
 

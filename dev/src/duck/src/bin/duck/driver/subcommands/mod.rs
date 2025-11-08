@@ -1,5 +1,5 @@
-use duck_lib::QuackResult;
 use clap::{ArgMatches, Command};
+use duck_lib::QuackResult;
 
 use crate::DuckCtx;
 

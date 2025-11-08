@@ -1,6 +1,5 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use duck_lib::QuackResult;
 use crate::{
     DuckCtx,
     driver::{
@@ -10,6 +9,7 @@ use crate::{
 };
 use anyhow::bail;
 use clap::ArgMatches;
+use duck_lib::QuackResult;
 use itertools::chain;
 use tracing::debug;
 
@@ -125,7 +125,7 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test_utils"))]
 mod tests {
     use std::collections::HashMap;
 

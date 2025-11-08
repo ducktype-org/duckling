@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 
-use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::{ArgMatches, Command, value_parser};
+use duck_lib::QuackResult;
 
 use crate::{
     DuckCtx,

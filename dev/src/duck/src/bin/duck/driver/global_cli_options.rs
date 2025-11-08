@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
-use duck_lib::QuackResult;
 use anyhow::anyhow;
 use clap::ArgMatches;
+use duck_lib::QuackResult;
 
 use crate::DuckCtx;
 use crate::InternalError;

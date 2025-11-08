@@ -1,6 +1,6 @@
-use duck_lib::QuackResult;
 use anyhow::bail;
 use clap::Command;
+use duck_lib::QuackResult;
 
 use crate::DuckCtx;
 use crate::driver::cli_ext::{CommandExt, subcommand};

@@ -1,13 +1,12 @@
-use duck_lib::{terminal::Terminal};
+use duck_lib::terminal::Terminal;
 
-pub mod indent;
 pub mod driver;
+pub mod indent;
 
-use indent::indent;
 use duck_lib::DuckCtx;
 use duck_lib::InternalError;
+use indent::indent;
 use tracing::debug;
-
 
 fn main() {
     setup_logger();

@@ -1,4 +1,5 @@
-use crate::quackpack::{paths::config_file, toml_config::TomlConfig};
+use crate::duck::toml_config::TomlConfig;
+use crate::quackpack::paths::config_file;
 use anyhow::Context;
 use rustvil::os::env::Env;
 use tracing::debug;
@@ -63,8 +64,13 @@ impl DuckCfg {
             .get_str(&format!("aliases.{key}"))
             .with_context(|| format!("when trying to get alias expansions `{key}`"))
     }
+
+    pub fn toml_config(&self) -> &TomlConfig {
+        &self.inner
+    }
 }
 
+#[cfg(feature = "test_utils")]
 mod test_utils {
     use std::collections::HashMap;
 
