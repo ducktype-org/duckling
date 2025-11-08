@@ -5,6 +5,8 @@
 
 #include "chain_expr.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
@@ -361,7 +363,7 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(Box<Expr> /* current_expr */, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr> hout_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
 
@@ -371,6 +373,32 @@ namespace compiler::helios::code {
 			// @TODO #520 improve type lookup and provide correct
 			// candidates for processFunctionCall
 			// @TODO write tests for this case, when it will be implemented
+
+			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.get())) {
+				auto args = call_expr->getArgs().unlock(query_ctx);
+				if (args->size() != 1) {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+							call_expr->getSourcePosition(),
+							"Type literal expects a single type argument"
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+				// Iterating over a single argument list, because the pst arguments
+				// have only iterator accessor.
+				for (auto&& arg: *args) {
+					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
+					);
+					if (arg_expr.hasError()) return query::QError(errors::Failed());
+
+					auto cast_expr = makeBox<CastExpr>(
+						query_ctx, std::move(arg_expr.value()), literal_type_expr->value_type
+					);
+					return ChainState::ofExpr(std::move(cast_expr));
+				}
+			}
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 

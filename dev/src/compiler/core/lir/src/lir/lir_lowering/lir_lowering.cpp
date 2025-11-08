@@ -14,6 +14,7 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "typesystem/lower/type_layout.hpp"
 
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -475,12 +476,14 @@ namespace compiler::lir {
 						output,
 						std::move(args),
 						CastParameters{
-							.source_type = cast_parameters->source_type,
-							.target_type = cast_parameters->target_type,
-							.source_layout
-							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type),
-							.target_layout
-							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type) }
+							.source_type   = cast_parameters->source_type,
+							.target_type   = cast_parameters->target_type,
+							.source_layout = std::make_shared<tsl::TypeLayout>(
+								ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type)
+							),
+							.target_layout = std::make_shared<tsl::TypeLayout>(
+								ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type)
+							) }
 					);
 					return curr_block;
 				}

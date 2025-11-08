@@ -244,10 +244,10 @@ namespace compiler::lir {
 	struct NoInstrParameters final {};
 
 	struct CastParameters final {
-		tsh::SymbolType<> source_type;
-		tsh::SymbolType<> target_type;
-		tsl::TypeLayout   source_layout;
-		tsl::TypeLayout   target_layout;
+		tsh::SymbolType<>     source_type;
+		tsh::SymbolType<>     target_type;
+		std::shared_ptr<tsl::TypeLayout> source_layout;
+		std::shared_ptr<tsl::TypeLayout> target_layout;
 	};
 
 	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
@@ -268,7 +268,7 @@ namespace compiler::lir {
 		Instruction(const Instruction&) = default;
 		Instruction(Instruction&&)       noexcept = default;
 
-		// Instruction& operator=(Instruction&&) noexcept = default;
+		Instruction& operator=(Instruction&&) noexcept = default;
 
 		Instruction(
 			const Operation       operation,

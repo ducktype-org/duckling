@@ -627,7 +627,7 @@ namespace compiler::helios::code {
 		  target_type(target_type) {}
 
 	void CastExpr::debugPrint(std::ostream& out) const {
-		out << "castexpr<" << target_type.toString() << ">(";
+		out << "cast[to=" << target_type.toString() << "](";
 		source_expr->debugPrint(out);
 		out << ")";
 	}

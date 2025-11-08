@@ -119,7 +119,7 @@ namespace compiler::mir {
 	}
 
 	void debugPrintInstrParameters(std::ostream& output, const InstrParameters& instr_params) {
-		output << " params:{";
+		output << " Params{";
 		variant_match(instr_params) {
 			variant_case_novalue(NoInstrParameters) { /* nothing */ }
 			variant_case(CastParameters, params) {

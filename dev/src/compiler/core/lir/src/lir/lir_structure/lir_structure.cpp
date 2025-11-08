@@ -123,13 +123,16 @@ namespace compiler::lir {
 		}
 
 		void printInstructionExtraParams(const InstrParameters& instr_params) {
+			output << "  ";
 			variant_match(instr_params) {
 				variant_case_novalue(NoInstrParameters) { /* nothing */ }
 				variant_case(CastParameters, params) {
-					output << " from:" << params.source_type.toString()
-						   << ", to:" << params.target_type.toString();
+					output << "{ from:" << params.source_type.toString()
+						   << ", to:" << params.target_type.toString()
+						   << " }";
 				}
 			}
+			output << " ";
 		}
 
 		void printInstruction(const Instruction& instruction) {
@@ -147,7 +150,6 @@ namespace compiler::lir {
 			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation).strView() << "  ";
 
-			printInstructionExtraParams(instruction.extra_params);
 
 			std::string_view sep = "";
 			for (auto arg: instruction.arguments) {
@@ -158,6 +160,8 @@ namespace compiler::lir {
 
 			// restore flags
 			output.flags(output_flags);
+
+			printInstructionExtraParams(instruction.extra_params);
 		}
 
 		void debugPrint(const Function& function) {

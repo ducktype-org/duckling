@@ -1,5 +1,3 @@
-#include "typesystem/lower/queries.hpp"
-
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
@@ -144,6 +142,11 @@ namespace compiler::backend_llvm {
 				default:
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
+			}
+			variant_case(tsl::PointerTypeLayout, pointer_layout) {
+				return llvm::PointerType::getUnqual(
+					typeFromLayout(context, *pointer_layout.getPointee())
+				);
 			}
 			variant_default {
 				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
@@ -421,13 +424,17 @@ namespace compiler::backend_llvm {
 		llvm::Value* castOperation(
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
 		) {
-			auto llvm_dst_ty = typeFromLayout(builder.getContext(), cast_params.target_layout);
+			const auto& target_layout = *cast_params.target_layout;
+			const auto& source_layout = *cast_params.source_layout;
+			const auto& source_type   = cast_params.source_type;
+			const auto& target_type   = cast_params.target_type;
+
+			auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
+
 			auto src_bits
-				= base::safeIntConv<unsigned>(static_cast<usize>(cast_params.source_layout.getSize()
-			    ));
+				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout.getSize()));
 			auto dst_bits
-				= base::safeIntConv<unsigned>(static_cast<usize>(cast_params.target_layout.getSize()
-			    ));
+				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout.getSize()));
 
 			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
 				if (type.getType().getKind() == tsh::Kind::Integral) {
@@ -440,12 +447,12 @@ namespace compiler::backend_llvm {
 				return false;
 			};
 
-			variant_match(cast_params.source_layout()) {
+			variant_match(source_layout()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
-					bool src_signed = is_signed(cast_params.source_type);
+					bool src_signed = is_signed(source_type);
 
-					variant_match(cast_params.target_layout()) {
+					variant_match(target_layout()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Int -> Int ==================
 							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
@@ -471,7 +478,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					variant_match(cast_params.target_layout()) {
+					variant_match(target_layout()) {
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Float -> Float ==================
 
@@ -488,7 +495,7 @@ namespace compiler::backend_llvm {
 
 							// Here is a problem when the float is NaN or out of range of the int
 							// then the behavior is undefined.
-							bool to_signed = is_signed(cast_params.target_type);
+							bool to_signed = is_signed(target_type);
 
 							// The solution that other languages use is to have saturating casts.
 							bool use_saturating_float_casts = true;
@@ -502,7 +509,7 @@ namespace compiler::backend_llvm {
 							std::string instr = to_signed ? "fptosi" : "fptoui";
 
 							// scalar
-							llvm::FunctionType* fnTy = llvm::FunctionType::get(
+							llvm::FunctionType* func_type = llvm::FunctionType::get(
 								llvm_dst_ty, { argument->getType() }, false
 							);
 
@@ -516,7 +523,8 @@ namespace compiler::backend_llvm {
 								std::to_string(src_bits)
 							);
 
-							llvm::FunctionCallee fdecl = module->getOrInsertFunction(name, fnTy);
+							llvm::FunctionCallee fdecl
+								= module->getOrInsertFunction(name, func_type);
 							return builder.CreateCall(fdecl, { argument });
 						}
 						variant_default {
@@ -526,10 +534,10 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::PointerTypeLayout) {
-					variant_match(cast_params.target_layout()) {
+					variant_match(target_layout()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
-							unsigned ptr_bits
+							auto ptr_bits
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
 							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
 							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);

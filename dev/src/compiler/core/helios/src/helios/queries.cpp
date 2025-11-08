@@ -516,7 +516,7 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
-				auto new_value_coerced = coercion.value().coerce(std::move(new_value_expr));
+				auto new_value_coerced = coercion.value().coerce(ctx, std::move(new_value_expr));
 
 				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
@@ -624,7 +624,7 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						coercion.value().coerce(std::move(initial_value)), symbol_type, symbol
+						coercion.value().coerce(ctx, std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}
