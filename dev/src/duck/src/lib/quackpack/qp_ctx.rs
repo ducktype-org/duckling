@@ -12,6 +12,7 @@ use crate::{
     quackpack::paths::{
         artifacts_dir, download_dir, fetcher_lockfile, global_venv_dir, metadata_db, storage_dir,
     },
+    terminal::Terminal,
 };
 
 pub struct QPCtx<'duck> {
@@ -76,6 +77,14 @@ macro_rules! dir_ensurers {
 }
 
 impl<'duck> QPCtx<'duck> {
+    pub fn new(duck_ctx: &'duck DuckCtx) -> Self {
+        Self { inner: duck_ctx }
+    }
+
+    pub fn console(&self) -> &Terminal {
+        self.inner.console()
+    }
+
     fn ensure_dir(&self, path: &Path) -> QuackResult<()> {
         create_dir_all(path)?;
         Ok(())
