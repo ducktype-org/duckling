@@ -122,19 +122,23 @@ namespace compiler::driver {
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
-			auto collection = getQueryArtifactsCollection();
-			auto output     = collection->fileArtifactAtOrNew(base::StrID(output_name.c_str()));
-			if (output.FILE.exists()) {
-				std::cerr << "\n\nLoading CompileModule artifact from disk for module "
-						  << getModuleRef(key.module_id)->getName().strView() << " and backend "
-						  << backendTypeToStr(key.backend_type) << "\n\n";
-				return output;
-			} else {
-				std::cerr << "\n\nCompileModule artifact file not found on disk for module "
-						  << getModuleRef(key.module_id)->getName().strView() << " and backend "
-						  << backendTypeToStr(key.backend_type) << "\n\n";
+			auto collection   = getQueryArtifactsCollection();
+			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+
+			if (!output_maybe.has_value()) {
+				std::cerr
+					<< "\n\nCompileModule artifact not found in artifacts collection for module "
+					<< getModuleRef(key.module_id)->getName().strView() << " and backend "
+					<< backendTypeToStr(key.backend_type) << "\n\n";
+				return {};
 			}
-			return {};
+
+			auto output = *output_maybe.value();
+
+			std::cerr << "\n\nLoading CompileModule artifact from disk for module "
+					  << getModuleRef(key.module_id)->getName().strView() << " and backend "
+					  << backendTypeToStr(key.backend_type) << "\n\n";
+			return output;
 		}
 	};
 

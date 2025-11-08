@@ -1,3 +1,4 @@
+#include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -111,6 +112,9 @@ private:
 		auto        path = art.FILE.getFilePath().getPath();
 		ASSERT_TRUE(std::filesystem::exists(path));
 		ASSERT_TRUE(std::filesystem::file_size(path) > 0);
+
+		// Save artifacts (writes previous graph blob to artifacts)
+		driver::exit();
 	}
 };
 

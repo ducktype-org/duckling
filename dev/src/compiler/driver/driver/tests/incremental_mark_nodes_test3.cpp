@@ -1,3 +1,4 @@
+#include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -106,6 +107,9 @@ private:
 		std::cout << "Green direct dependencies of root node: " << green_dep_count << "\n";
 		ASSERT_TRUE(red_dep_count > 1);
 		ASSERT_TRUE(green_dep_count > red_dep_count);
+
+		// Save artifacts (writes previous graph blob to artifacts)
+		driver::exit();
 
 		// delete the artifacts directory after test
 		std::filesystem::remove_all(artifacts_path.getPath());
