@@ -160,7 +160,7 @@ namespace compiler::mir {
 
 				auto lowered_block = lowerSubExpr(case_expr, block);
 
-				lowered_block.storeResultInGivenVariable(
+				lowered_block.storeResultInGivenPlace(
 					MirPlace(target_location),
 					assign_hole,
 					{ flagConstruct(target_location) },
@@ -472,7 +472,7 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
-	void ExprLowerRes::storeResultInGivenVariable(
+	void ExprLowerRes::storeResultInGivenPlace(
 		const MirPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,

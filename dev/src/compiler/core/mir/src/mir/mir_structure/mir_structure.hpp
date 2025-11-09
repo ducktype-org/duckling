@@ -3,7 +3,6 @@
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
-#include <helios/symbols/query_type_of_symbol.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
@@ -15,7 +14,7 @@
 #include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context_fd.hpp>
 
 #include <utility>
 #include <variant>
@@ -268,7 +267,10 @@ namespace compiler::mir {
 	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
 	 */
 	struct MirPlace final {
+		// MIR Locals are stored indirectly through MirLocalRef because
+		// they are owned by MIR Function, unlike MIR Globals.
 		using BaseVariant = std::variant<MirLocalRef, MirGlobal>;
+
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
 		 */
@@ -312,12 +314,7 @@ namespace compiler::mir {
 		 * @param field The next field to access.
 		 * @return The extended MirPlace structure.
 		 */
-		MirPlace withField(query::Context& ctx, const helios::SymID field) const {
-			MirPlace result = *this;
-			result.access_chain.push_back(field);
-			result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->value();
-			return result;
-		}
+		MirPlace withField(query::Context& ctx, helios::SymID field) const;
 
 		[[nodiscard]]
 		bool isLocal() const {
@@ -350,8 +347,6 @@ namespace compiler::mir {
 	 */
 	struct MIRValue final {
 	private:
-		// MIR Locals are stored indirectly through MirLocalRef because
-		// they are owned by MIR Function, unlike MIR Globals.
 		using ValueType
 			= std::variant<MirUnitConst, MirIntegerConst, MirBoolConst, MirPlace, BlockID, MirFunctionLiteral>;
 

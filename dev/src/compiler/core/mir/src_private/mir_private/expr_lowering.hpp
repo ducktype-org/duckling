@@ -22,7 +22,7 @@ namespace compiler::mir {
 	 * For complete lowering, call the dedicated function that stores the result
 	 * in the desired location while (if possible) avoiding the creation of unnecessary temporaries.
 	 *
-	 * In most cases, use getResult() or storeResultInGivenVariable().
+	 * In most cases, use getResult() or storeResultInGivenPlace().
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
@@ -31,7 +31,7 @@ namespace compiler::mir {
 		 * @brief Represents a finalizer instruction that saves the result of an expression.
 		 * Stores hole where instruction will be saved, instruction without output and type of
 		 * result. This instruction can be performed on provided variable
-		 * (storeResultInGivenVariable) or generated temporary (getResult).
+		 * (storeResultInGivenPlace) or generated temporary (getResult).
 		 */
 		struct Finalizer final {
 			BlockBuilder::InstructionHole hole;
@@ -56,7 +56,7 @@ namespace compiler::mir {
 		base::Optional<MIRValue> getResultIfStored();
 
 		/**
-		 * @brief If result of expr is value already returns it,
+		 * @brief If result of the expression is a value already returns it,
 		 * Otherwise creates temporary, makes last instruction save res there and returns it.
 		 * @note may use InstructionHole stored in structure, probably use only once.
 		 */
@@ -64,12 +64,12 @@ namespace compiler::mir {
 		MIRValue getResult(FunctionBuilder& function);
 
 		/**
-		 * @brief If result of expr is value it creates
-		 * instruction that will assign result to it. Otherwise it makes the last instruction of the
-		 * expression save result directly to the target.
-		 * @note may use InstructionHole stored in stucture, probably use only once.
+		 * @brief If the result of the expression is a value, it creates an
+		 * instruction that will assign the result to it. Otherwise, it makes the last instruction
+		 * of the expression save its result directly to the target.
+		 * @note May use InstructionHole stored in structure, should only be called once.
 		 */
-		void storeResultInGivenVariable(
+		void storeResultInGivenPlace(
 			const MirPlace&                   target,
 			BlockBuilder::InstructionHole&    hole,
 			const std::vector<OperationFlag>& flags,

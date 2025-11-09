@@ -288,6 +288,7 @@ namespace compiler::backend_vm {
 		) {
 			if (!lir_instruction.output.has_value()) return {};
 
+			// @TODO: #500 handle access into fields.
 			variant_match(lir_instruction.output.value().base) {
 				variant_case(lir::LirLocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
@@ -297,7 +298,6 @@ namespace compiler::backend_vm {
 					auto vm_type = getTypeFromLayout(*global.layout);
 					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
-				// @TODO: #500 handle access into fields.
 			}
 			CORE_UNREACHABLE();
 		}
@@ -311,6 +311,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LirPlace, place) {
+					// @TODO: #500 handle access into fields.
 					variant_match(place.base) {
 						variant_case(lir::LirLocalRef, local_ref) {
 							auto&& var_type = ctx.lir_local_types[local_ref];
@@ -320,7 +321,6 @@ namespace compiler::backend_vm {
 							auto vm_type = getTypeFromLayout(*global.layout);
 							return outputToOpArg(vm_type, global.mangled_name, true);
 						}
-						// @TODO: #500 handle access into fields.
 					}
 				}
 				variant_case(lir::BlockRef, block_ref) {

@@ -5,10 +5,8 @@
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
-#include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
@@ -16,14 +14,10 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context_fd.hpp>
 
 #include <memory>
 #include <utility>
-
-namespace compiler::mir {
-	struct MirPlace;
-}
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
@@ -244,16 +238,7 @@ namespace compiler::lir {
 		 */
 		tsl::TypeLayout layout;
 
-		LirPlace(query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain):
-			  base(std::move(base)),
-			  access_chain(std::move(access_chain)),
-			  layout(
-				  this->access_chain.size() == 0
-					  ? getBaseLayout()
-					  : ctx.query<tsl::QuerySymbolTypeLayout>(
-							ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->value()
-						)
-			  ) {}
+		LirPlace(query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain);
 
 		[[nodiscard]]
 		bool isLocal() const {

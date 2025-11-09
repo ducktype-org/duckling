@@ -102,6 +102,19 @@ namespace compiler::lir {
 		CORE_UNREACHABLE();
 	}
 
+	LirPlace::LirPlace(
+		query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain
+	):
+		  base(std::move(base)),
+		  access_chain(std::move(access_chain)),
+		  layout(
+			  this->access_chain.size() == 0
+				  ? getBaseLayout()
+				  : ctx.query<tsl::QuerySymbolTypeLayout>(
+						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->value()
+					)
+		  ) {}
+
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
 	 * that have direct counterpart.

@@ -447,16 +447,6 @@ namespace tsl {
 			  TypeLayoutABC(other.getSize(), other.getSourceType()),
 			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
 
-		PointerTypeLayout(PointerTypeLayout&& other) noexcept:
-			  TypeLayoutABC(other.getSize(), other.getSourceType()),
-			  pointee(std::move(other.pointee)) {}
-
-		PointerTypeLayout& operator=(const PointerTypeLayout& other) {
-			TypeLayoutABC::operator=(other);
-			pointee = other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{};
-			return *this;
-		}
-
 		PointerTypeLayout& operator=(PointerTypeLayout&& other) noexcept {
 			TypeLayoutABC::operator=(other);
 			pointee = std::move(other.pointee);
@@ -517,7 +507,7 @@ namespace tsl {
 	/**
 	 * @brief The ADT representing the layout of a type.
 	 *
-	 * @note Use operator() when matching against the variant's options.
+	 * @note Use getVariant() when matching against the variant's options.
 	 */
 	class TypeLayout final {
 	public:

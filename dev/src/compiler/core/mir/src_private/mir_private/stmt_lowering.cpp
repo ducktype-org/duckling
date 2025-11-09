@@ -73,7 +73,7 @@ namespace compiler::mir {
 					));
 
 
-				expr_res.storeResultInGivenVariable(
+				expr_res.storeResultInGivenPlace(
 					MirPlace(return_value), retrieve_value, flags, return_scope
 				);
 
@@ -139,7 +139,7 @@ namespace compiler::mir {
 				// to it in-place or with extra move.
 				possible_condition_res = function.addNoLifetimeBoolTmp();
 
-				lowered_condition.storeResultInGivenVariable(
+				lowered_condition.storeResultInGivenPlace(
 					possible_condition_res->get<MirPlace>(),
 					get_condition_return,
 					{ flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()
@@ -199,7 +199,7 @@ namespace compiler::mir {
 			} else {
 				possible_result = function.addNoLifetimeBoolTmp();
 
-				expr_result.storeResultInGivenVariable(
+				expr_result.storeResultInGivenPlace(
 					possible_result->get<MirPlace>(),
 					get_condition_return,
 					{ flagConstruct(possible_result->get<MirPlace>().getBase<MirLocalRef>()) },
@@ -243,7 +243,7 @@ namespace compiler::mir {
 					auto assignment_scope = function.newScope(parent_scope);
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 
-					expr_result.storeResultInGivenVariable(
+					expr_result.storeResultInGivenPlace(
 						MirPlace(local),
 						local_construction_hole,
 						{ flagConstruct(local) },
@@ -281,7 +281,7 @@ namespace compiler::mir {
 
 			variant_match(left_val.getVariant()) {
 				variant_case(MirPlace, place) {
-					right_result.storeResultInGivenVariable(
+					right_result.storeResultInGivenPlace(
 						place, target_construction_hole, {}, assignment_scope
 					);
 					output({ left_result.begin });
