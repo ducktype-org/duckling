@@ -298,7 +298,9 @@ namespace compiler::mir {
 		std::vector<helios::SymID> access_chain;
 
 		/**
-		 * @brief The type of the final accessed field, stored for better caching / information flow.
+		 * @brief The type of the final accessed field.
+		 * @note This type may be different from the type of the base variable,
+		 * especially when the access chain is not empty.
 		 */
 		tsh::SymbolType<> type;
 
@@ -525,8 +527,6 @@ namespace compiler::mir {
 		/**
 		 * @brief Last instruction of the block.
 		 * It has to be terminating instruction (branch, return, etc).
-		 *
-		 * @todo: Decide if we want to move it to instruction vector.
 		 */
 		Instruction terminator;
 

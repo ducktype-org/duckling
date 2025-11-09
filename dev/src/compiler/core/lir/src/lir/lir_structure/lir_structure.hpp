@@ -107,7 +107,7 @@ namespace compiler::lir {
 		 */
 		base::Optional<helios::SymID> helios_id;
 
-		// a copy of type-layout here might be suboptimal
+		// @TODO: #1520 Introduce interning, store layouts cheaper.
 		tsl::TypeLayout layout;
 
 		/**
@@ -159,6 +159,7 @@ namespace compiler::lir {
 		 */
 		helios::SymID helios_id;
 
+		// @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
 		std::shared_ptr<tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
@@ -213,7 +214,6 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Get the type layout of the base variable.
-		 * @TODO: this PR: is this useful?
 		 */
 		tsl::TypeLayout getBaseLayout() {
 			variant_match(base) {
@@ -234,7 +234,10 @@ namespace compiler::lir {
 		std::vector<helios::SymID> access_chain;
 
 		/**
-		 * @brief Type layout of the place.
+		 * @brief The type layout of the final accessed field.
+		 * @note This type layout may be different from the layout of the base variable,
+		 * especially when the access chain is not empty.
+		 * @TODO: #1520 Introduce interning, store layouts cheaper.
 		 */
 		tsl::TypeLayout layout;
 
