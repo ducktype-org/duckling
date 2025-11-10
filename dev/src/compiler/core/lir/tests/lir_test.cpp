@@ -232,9 +232,11 @@ private:
 			// only parameter of index 2 is ever used:
 
 			auto validate_value = [&](const compiler::lir::LIRValue& value) {
-				if (auto local = std::get_if<compiler::lir::LocalRef>(&value.getVariant())) {
-					if ((*local)->parameter_index.has_value())
-						ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+				if (value.isLocal()) {
+					if (auto local = value.get<lir::LirPlace>().getBase<lir::LirLocalRef>();
+					    local->parameter_index.has_value()) {
+						ASSERT_EQUAL(local->parameter_index.value(), 2);
+					}
 				}
 			};
 
@@ -276,8 +278,7 @@ private:
 			for (const auto& block: foo_lir->blocks) {
 				for (const auto& instr: block.instructions) {
 					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
-							found_global_assign = true;
+						if (instr.output.value().isGlobal()) found_global_assign = true;
 					}
 				}
 			}
@@ -288,8 +289,7 @@ private:
 			for (const auto& block: g_ctor->blocks) {
 				for (const auto& instr: block.instructions) {
 					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
-							found_global_assign_ctor = true;
+						if (instr.output.value().isGlobal()) found_global_assign_ctor = true;
 					}
 				}
 			}

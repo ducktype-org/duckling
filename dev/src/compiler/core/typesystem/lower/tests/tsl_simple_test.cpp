@@ -56,7 +56,7 @@ private:
 				unit_layout.getSourceType() == ctx.query<QueryUnitType>({}),
 				"Layout should have source type as constructed."
 			);
-			variant_match(unit_layout()) {
+			variant_match(unit_layout.getVariant()) {
 				variant_case(EmptyTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
@@ -77,7 +77,7 @@ private:
 					small_layout.getSourceType() == small_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(small_layout()) {
+				variant_match(small_layout.getVariant()) {
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
@@ -96,7 +96,7 @@ private:
 					int_layout.getSourceType() == int_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(int_layout()) {
+				variant_match(int_layout.getVariant()) {
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
@@ -115,7 +115,7 @@ private:
 					float_layout.getSourceType() == float_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(float_layout()) {
+				variant_match(float_layout.getVariant()) {
 					variant_case(FloatTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of float type should be float."); }
 				}
@@ -133,7 +133,7 @@ private:
 				functional_layout.getSourceType() == function_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(functional_layout()) {
+			variant_match(functional_layout.getVariant()) {
 				variant_case(FunctionalTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of function type should be functional."); }
 			}
@@ -149,7 +149,7 @@ private:
 				raw_pointer_layout.getSourceType() == raw_pointer_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(raw_pointer_layout()) {
+			variant_match(raw_pointer_layout.getVariant()) {
 				variant_case(PointerTypeLayout, l) {
 					assertFalse(l.hasPointee(), "Raw pointer layout should not have pointee.");
 				}
@@ -168,7 +168,7 @@ private:
 				unit_pointer_layout.getSourceType() == unit_pointer_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(unit_pointer_layout()) {
+			variant_match(unit_pointer_layout.getVariant()) {
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
 					assertTrue(
@@ -191,7 +191,7 @@ private:
 				string_layout.getSourceType() == string_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(string_layout()) {
+			variant_match(string_layout.getVariant()) {
 				variant_case(StringTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of string type should be string-like."); }
 			}
@@ -234,7 +234,7 @@ private:
 				variant_layout.getSourceType() == variant_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(variant_layout()) {
+			variant_match(variant_layout.getVariant()) {
 				variant_case(VariantTypeLayout, l) {
 					assertTrue(
 						l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
@@ -281,7 +281,7 @@ private:
 				tuple_layout.getSourceType() == tuple_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(tuple_layout()) {
+			variant_match(tuple_layout.getVariant()) {
 				variant_case(TupleTypeLayout, l) {
 					assertTrue(
 						l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
@@ -348,7 +348,7 @@ private:
 				"Layout should have source type as constructed."
 			);
 
-			variant_match(my_class_layout()) {
+			variant_match(my_class_layout.getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
 						l.getFieldOffset(a_field_symbol) == Bytes(0)

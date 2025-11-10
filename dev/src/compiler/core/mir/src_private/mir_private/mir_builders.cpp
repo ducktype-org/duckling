@@ -172,7 +172,7 @@ namespace compiler::mir {
 	/**
 	 * Adds a local variable to MIR function, from helios_id representing it.
 	 */
-	MutLocalRef FunctionBuilder::addLocal(const helios::SymID helios_id) {
+	MirLocalMutRef FunctionBuilder::addLocal(const helios::SymID helios_id) {
 		local_list.emplaceBack(MirLocal{
 			helios_id,
 			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
@@ -185,7 +185,7 @@ namespace compiler::mir {
 	/**
 	 * Adds a local parameter variable to MIR function from helios_id representing it.
 	 */
-	MutLocalRef FunctionBuilder::addParameter(const helios::SymID helios_id, u64 parameter_index) {
+	MirLocalMutRef FunctionBuilder::addParameter(const helios::SymID helios_id, u64 parameter_index) {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 		local_list.emplaceBack(MirLocal{
 			helios_id,
@@ -201,7 +201,7 @@ namespace compiler::mir {
 	 * Creates a temporary local value, and also sets its lifetime scope.
 	 */
 	[[nodiscard]]
-	MutLocalRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
+	MirLocalMutRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
 		local_list.emplaceBack(MirLocal{ type });
 		auto tmp = local_list.last();
 		tmp->setLifetimeScope(scope);
@@ -214,7 +214,7 @@ namespace compiler::mir {
 	 * Sets its lifetime scope to no_lifetime_scope.
 	 */
 	[[nodiscard]]
-	MutLocalRef FunctionBuilder::addNoLifetimeTmp(const tsh::SymbolType<> type) {
+	MirLocalMutRef FunctionBuilder::addNoLifetimeTmp(const tsh::SymbolType<> type) {
 		return addTmp(type, no_lifetime_scope);
 	}
 
@@ -225,7 +225,7 @@ namespace compiler::mir {
 	 * the result of the condition.
 	 */
 	[[nodiscard]]
-	MutLocalRef FunctionBuilder::addNoLifetimeBoolTmp() {
+	MirLocalMutRef FunctionBuilder::addNoLifetimeBoolTmp() {
 		auto type = tsh::SymbolType<>(
 			ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
 		);
@@ -238,7 +238,7 @@ namespace compiler::mir {
 	 * @return The local variable reference, if found.
 	 */
 	[[nodiscard]]
-	base::Optional<MutLocalRef> FunctionBuilder::findLocal(const helios::SymID helios_id) {
+	base::Optional<MirLocalMutRef> FunctionBuilder::findLocal(const helios::SymID helios_id) {
 		// @TODO: Optimize into a hashmap.
 		for (auto& local: local_list)
 			if (local.helios_id == helios_id) return &local;
