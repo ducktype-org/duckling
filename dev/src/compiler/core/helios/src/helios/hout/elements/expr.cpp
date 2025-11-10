@@ -509,14 +509,18 @@ namespace compiler::helios::code {
 	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, const SymID field):
 		  Expr(base->expression_type),
 		  base(std::move(base)),
-		  field(field) {}
+		  field(field) {
+		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
+	}
 
 	AccessExpr::AccessExpr(
 		const tsh::ExpressionType<>& expression_type, Box<Expr> base, const SymID field
 	):
 		  Expr(expression_type),
 		  base(std::move(base)),
-		  field(field) {}
+		  field(field) {
+		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
+	}
 
 	void AccessExpr::debugPrint(std::ostream& out) const {
 		base->debugPrint(out);
