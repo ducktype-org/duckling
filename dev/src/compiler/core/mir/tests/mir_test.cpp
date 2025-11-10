@@ -372,7 +372,7 @@ private:
 				auto        validate_value = [&](const compiler::mir::MIRValue& value) {
                     if (value.isLocal()) {
                         if (const auto local = value.get<compiler::mir::MIRPlace>()
-                                                   .getBase<compiler::mir::MIRLocalRef>();
+                                                    .getBase<compiler::mir::MIRLocalRef>();
                             local->parameter_index.has_value())
                             ASSERT_EQUAL(local->parameter_index.value(), 2);
                     }

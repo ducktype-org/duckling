@@ -47,5 +47,4 @@ namespace compiler::mir {
 	 * @note Exposed in the interface mostly for tests
 	 */
 	Function lowerToPreMIRFunction(query::Context&, const helios::HOUTFunction& function);
-
 }
