@@ -1,12 +1,13 @@
 #include "abstract_type_impl.hpp"
 
 #include <helios/symbols/query_class_symbol_data.hpp>
+#include <typesystem/higher/queries/implicit_coercibility.hpp>
 
 #include <query_framework/context.hpp>
 
 #include <utility>
 
-namespace tsh::internal {
+namespace tsh {
 	/**
 	 * @brief Gets the global AbstractTypeImpl storage structure.
 	 * @return The global AbstractTypeImpl storage structure.
