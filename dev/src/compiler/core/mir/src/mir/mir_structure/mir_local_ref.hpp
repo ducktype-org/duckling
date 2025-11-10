@@ -3,19 +3,19 @@
 #include <base/pointers/ref.hpp>
 
 namespace compiler::mir {
-	struct MirLocal;
-	struct MirGlobal;
+	struct MIRLocal;
+	struct MIRGlobal;
 
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 * This is useful because MIR Locals are owned by MIR Functions, unlike MIR Globals.
 	 */
-	using MirLocalRef = CRef<MirLocal>;
+	using MIRLocalRef = CRef<MIRLocal>;
 
 	/**
 	 * @brief Mutable reference to MIR Local variable data.
 	 * This is useful because MIR Locals are owned by MIR Functions, unlike MIR Globals.
 	 * Used in the lowering process only.
 	 */
-	using MirLocalMutRef = Ref<MirLocal>;
+	using MIRLocalMutRef = Ref<MIRLocal>;
 }

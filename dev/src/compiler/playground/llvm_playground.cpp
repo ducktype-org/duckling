@@ -51,18 +51,18 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 			llvm_module.addGlobalToModule(lir_glob);
 
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
-						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
 
 					mir_func->debugPrint(std::cerr);
 					std::cerr << "\n\n\n";
 
-					auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+					auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n\n\n";
@@ -96,7 +96,7 @@ int main(int argc, const char* argv[]) {
 				compiler::helios::mangler::getSpecialMangledName<
 					compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
 					ctx,
-					compiler::helios::mangler::special_symbol_keys::LirModuleID{
+					compiler::helios::mangler::special_symbol_keys::LIRModuleID{
 						frontend::moduleName(root) }
 				)
 			);
@@ -118,7 +118,7 @@ int main(int argc, const char* argv[]) {
 				compiler::helios::mangler::getSpecialMangledName<
 					compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
 					ctx,
-					compiler::helios::mangler::special_symbol_keys::LirModuleID{
+					compiler::helios::mangler::special_symbol_keys::LIRModuleID{
 						frontend::moduleName(root) }
 				)
 			);
@@ -136,12 +136,12 @@ int main(int argc, const char* argv[]) {
 	}
 
 	for (auto& fun: top_level->functions) {
-		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMirFunction>({ fun })->value();
+		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->value();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n\n\n";
 
-		auto lir_fun = query::entryPoint<compiler::lir::LowerToLirFunction>({ mir_fun });
+		auto lir_fun = query::entryPoint<compiler::lir::LowerToLIRFunction>({ mir_fun });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			lir_fun->debugPrint(ctx, std::cerr);

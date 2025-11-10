@@ -61,7 +61,7 @@ namespace compiler::mir {
 
 				// Retrieve type: if res is value It is local, otherwise only last instruction is
 				// stored.
-				auto res_type = possible_result.has_value() ? possible_result->get<MirPlace>().type
+				auto res_type = possible_result.has_value() ? possible_result->get<MIRPlace>().type
 				                                            : expr_res.getResultType();
 
 				auto return_value = function.addNoLifetimeTmp(res_type);
@@ -69,12 +69,12 @@ namespace compiler::mir {
 				// Set move flag only if value exists.
 				std::vector flags = { flagConstruct(return_value) };
 				if (possible_result.has_value())
-					flags.push_back(flagMove(possible_result->get<MirPlace>().getBase<MirLocalRef>()
+					flags.push_back(flagMove(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()
 					));
 
 
 				expr_res.storeResultInGivenPlace(
-					MirPlace(return_value), retrieve_value, flags, return_scope
+					MIRPlace(return_value), retrieve_value, flags, return_scope
 				);
 
 				possible_result = return_value;
@@ -140,10 +140,10 @@ namespace compiler::mir {
 				possible_condition_res = function.addNoLifetimeBoolTmp();
 
 				lowered_condition.storeResultInGivenPlace(
-					possible_condition_res->get<MirPlace>(),
+					possible_condition_res->get<MIRPlace>(),
 					get_condition_return,
 					{
-						flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()
+						flagConstruct(possible_condition_res->get<MIRPlace>().getBase<MIRLocalRef>()
 				        ),
 					},
 					condition_scope
@@ -202,9 +202,9 @@ namespace compiler::mir {
 				possible_result = function.addNoLifetimeBoolTmp();
 
 				expr_result.storeResultInGivenPlace(
-					possible_result->get<MirPlace>(),
+					possible_result->get<MIRPlace>(),
 					get_condition_return,
-					{ flagConstruct(possible_result->get<MirPlace>().getBase<MirLocalRef>()) },
+					{ flagConstruct(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()) },
 					condition_scope
 				);
 			}
@@ -246,7 +246,7 @@ namespace compiler::mir {
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 
 					expr_result.storeResultInGivenPlace(
-						MirPlace(local),
+						MIRPlace(local),
 						local_construction_hole,
 						{ flagConstruct(local) },
 						assignment_scope
@@ -282,7 +282,7 @@ namespace compiler::mir {
 			);
 
 			variant_match(left_val.getVariant()) {
-				variant_case(MirPlace, place) {
+				variant_case(MIRPlace, place) {
 					right_result.storeResultInGivenPlace(
 						place, target_construction_hole, {}, assignment_scope
 					);

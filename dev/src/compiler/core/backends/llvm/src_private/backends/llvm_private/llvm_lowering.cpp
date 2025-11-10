@@ -204,7 +204,7 @@ namespace compiler::backend_llvm {
 		return callee;
 	}
 
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLIRFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		return getOrInsertFunctionPrototypeFromLiteral(
@@ -213,7 +213,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Ref<llvm::Constant> getOrInsertGlobalVariable(
-		Ref<llvm::Module> module, const lir::LirGlobal& lir_global
+		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
 		auto mangled_name = lir_global.mangled_name.strView();
 
@@ -227,7 +227,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Ref<llvm::GlobalVariable> addGlobalVariable(
-		Ref<llvm::Module> module, const lir::LirGlobal& lir_global
+		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
 		getOrInsertGlobalVariable(module, lir_global);
 		Ref<llvm::GlobalVariable> global
@@ -236,7 +236,7 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-		global->setConstant(lir_global.type == lir::LirGlobalType::Constant);
+		global->setConstant(lir_global.type == lir::LIRGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
 		if (lir_global.initial_value.has_value()) {
 			global->setInitializer(
@@ -255,13 +255,13 @@ namespace compiler::backend_llvm {
 	 * and generates LLVM function in given module based
 	 * on provided LIRFunction.
 	 */
-	struct LirFunction2LLVM {
+	struct LIRFunction2LLVM {
 		llvm::LLVMContext&  context;
 		query::Context&     ctx;
 		CRef<lir::Function> lir_function;
 		Ref<llvm::Module>   module;
 
-		LirFunction2LLVM(
+		LIRFunction2LLVM(
 			llvm::LLVMContext&  context,
 			query::Context&     ctx,
 			CRef<lir::Function> lir_function,
@@ -290,9 +290,9 @@ namespace compiler::backend_llvm {
 			}
 		}
 
-		base::Map<lir::LirLocalRef, u64> lir_local_ids;
+		base::Map<lir::LIRLocalRef, u64> lir_local_ids;
 
-		std::string llvmLocalName(lir::LirLocalRef lir_local) {
+		std::string llvmLocalName(lir::LIRLocalRef lir_local) {
 			// @TODO.. this might have to change in the future
 			if (lir_local->helios_id)
 				return base::strConcat("helios_", lir_local_ids[lir_local]);
@@ -304,7 +304,7 @@ namespace compiler::backend_llvm {
 		 * @brief Maps lir locals to LLVM registers storing
 		 * pointers to them.
 		 */
-		base::Map<lir::LirLocalRef, Ref<llvm::Instruction>> local_register_map;
+		base::Map<lir::LIRLocalRef, Ref<llvm::Instruction>> local_register_map;
 
 		/**
 		 * Fills local_register_map and block_mapping.
@@ -369,10 +369,10 @@ namespace compiler::backend_llvm {
 					return llvm::ConstantInt::getSigned(i64Type(context), value);
 				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
-				variant_case(lir::LirPlace, place) {
+				variant_case(lir::LIRPlace, place) {
 					// @TODO: #500 handle field access.
 					variant_match(place.base) {
-						variant_case(lir::LirLocalRef, lir_local) {
+						variant_case(lir::LIRLocalRef, lir_local) {
 							// We store local values behind pointers to stack-allocated memory.
 							// We need to load them before using them.
 							const auto local_ptr = local_register_map[lir_local].get();
@@ -380,7 +380,7 @@ namespace compiler::backend_llvm {
 								typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
 							);
 						}
-						variant_case(lir::LirGlobal, lir_global) {
+						variant_case(lir::LIRGlobal, lir_global) {
 							auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 							return builder.CreateLoad(
 								typeFromLayout(builder.getContext(), *lir_global.layout),
@@ -405,13 +405,13 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-		void storeOutput(lir::LirPlace output, Ref<llvm::Value> value, llvm::IRBuilder<>& builder) {
+		void storeOutput(lir::LIRPlace output, Ref<llvm::Value> value, llvm::IRBuilder<>& builder) {
 			// @TODO: #500 handle field access.
 			variant_match(output.base) {
-				variant_case(lir::LirLocalRef, lir_local) {
+				variant_case(lir::LIRLocalRef, lir_local) {
 					builder.CreateStore(value.get(), local_register_map[lir_local].get());
 				}
-				variant_case(lir::LirGlobal, global_lir) {
+				variant_case(lir::LIRGlobal, global_lir) {
 					auto global = getOrInsertGlobalVariable(module, global_lir);
 					builder.CreateStore(value.get(), global.get());
 				}
@@ -562,7 +562,7 @@ namespace compiler::backend_llvm {
 		 */
 		llvm::Function* createFunction() {
 			Ref fun = llvm::cast<llvm::Function>(
-				getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
+				getOrInsertFunctionPrototypeFromLIRFunction(module, *lir_function).getCallee()
 			);
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
 
@@ -607,7 +607,7 @@ namespace compiler::backend_llvm {
 	llvm::Function* addFunctionToModuleInternal(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	) {
-		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		LIRFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		return lir2llvm.createFunction();
 	}
 
@@ -636,7 +636,7 @@ namespace compiler::backend_llvm {
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LirGlobal& lir_global) {
+	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
 		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 }
