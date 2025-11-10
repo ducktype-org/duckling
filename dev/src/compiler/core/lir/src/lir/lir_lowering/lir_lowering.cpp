@@ -4,11 +4,11 @@
  *
  * @note when adding new cases to logic in this file you should most likely edit:
  * - mir2lirOperation -- for new operations
- * - Mir2Lir::getLocation -- for new location
- * - Mir2Lir::lowerFlags -- for flag handling
- * - Mir2Lir::lowerInstruction -- for new instructions
- * - Mir2Lir::lowerTerminator -- for new terminators
- * - LowerToLirFunction::provide -- for some new steps
+ * - MIR2LIR::getLocation -- for new location
+ * - MIR2LIR::lowerFlags -- for flag handling
+ * - MIR2LIR::lowerInstruction -- for new instructions
+ * - MIR2LIR::lowerTerminator -- for new terminators
+ * - LowerToLIRFunction::provide -- for some new steps
  */
 
 #include "lir_lowering.hpp"
@@ -38,7 +38,7 @@ namespace compiler::lir {
 	 */
 	using MutBlockRef = Ref<Block>;
 
-	u64 KeyOf_LowerToLirFunction::queryUnstablePerfectHash() const {
+	u64 KeyOf_LowerToLIRFunction::queryUnstablePerfectHash() const {
 		return function->queryUnstablePerfectHash();
 	}
 
@@ -47,53 +47,53 @@ namespace compiler::lir {
 	/**
 	 * @brief Creates LIR local data from MIR local data.
 	 * @todo change argument to MIR local reference.
-	 * @important remember that LirLocal should only be stored in a LIR function.
+	 * @important remember that LIRLocal should only be stored in a LIR function.
 	 *
 	 * @param ctx
 	 * @param mir_local
-	 * @return LirLocal
+	 * @return LIRLocal
 	 */
-	LirLocal LirLocal::fromMIR(query::Context& ctx, mir::MirLocalRef mir_local) {
+	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
-		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
+		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
-	LirLocal LirLocal::boolLocal(query::Context& ctx) {
+	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
 		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
-		return LirLocal{ bool_layout };
+		return LIRLocal{ bool_layout };
 	}
 
-	LirGlobal LirGlobal::fromMIR(query::Context& ctx, mir::MirGlobal mir_global) {
+	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 
-		return LirGlobal{ mir_global.helios_id, type_layout, mangled_name };
+		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
 	}
 
-	LirGlobal LirGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
+	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
 
 		variant_match(hout_global.value) {
 			variant_case(helios::HOUTGlobalConst, name) {
-				return LirGlobal{
+				return LIRGlobal{
 					hout_global.helios_symbol, type_layout, mangled_name,
-					LirGlobalType::Constant,   name.value,
+					LIRGlobalType::Constant,   name.value,
 				};
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {
-				return LirGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LirGlobalType::Variable
+				return LIRGlobal{
+					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
 				};
 			}
 			variant_default {
 				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LirGlobal::fromHOUT: ",
+					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
 					hout_global.original_name.strView()
 				);
 			}
@@ -102,7 +102,7 @@ namespace compiler::lir {
 		CORE_UNREACHABLE();
 	}
 
-	LirPlace::LirPlace(
+	LIRPlace::LIRPlace(
 		query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain
 	):
 		  base(std::move(base)),
@@ -173,26 +173,26 @@ namespace compiler::lir {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(LowerToLirFunction, Function) {
+	struct IMPLEMENT_QUERY(LowerToLIRFunction, Function) {
 		/**
 		 * @brief Helper struct for easy state encapsulation used.
-		 * by LowerToLirFunction query.
+		 * by LowerToLIRFunction query.
 		 * @note This is not a typical struct, and
 		 * should be seen as a set of functions operating on some common state.
 		 * Order of those functions matter, as they build components of LIR function
 		 * step by step.
 		 */
-		struct Mir2Lir {
+		struct MIR2LIR {
 			Context& ctx;
 			QKey     key;
 
-			Mir2Lir(Context& ctx, QKey key): ctx(ctx), key(key) {}
+			MIR2LIR(Context& ctx, QKey key): ctx(ctx), key(key) {}
 
-			base::StableVector<LirLocal> locals;
+			base::StableVector<LIRLocal> locals;
 
 			// locals mapping:
-			base::Map<mir::MirLocalRef, LirLocalRef> mir_to_lir_local;
-			base::Map<mir::MirLocalRef, LirLocalRef> mir_to_lifetime_flag;
+			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lir_local;
+			base::Map<mir::MIRLocalRef, LIRLocalRef> mir_to_lifetime_flag;
 
 			base::StableVector<Block> blocks;
 
@@ -210,22 +210,22 @@ namespace compiler::lir {
 			 * @return LocalRef
 			 */
 			[[nodiscard]]
-			LirLocalRef getLocal(const mir::MirLocalRef mir_local) const {
+			LIRLocalRef getLocal(const mir::MIRLocalRef mir_local) const {
 				return mir_to_lir_local.at(mir_local);
 			}
 
 			[[nodiscard]]
-			LirGlobal getGlobal(const mir::MirGlobal& mir_global) const {
-				return LirGlobal::fromMIR(ctx, mir_global);
+			LIRGlobal getGlobal(const mir::MIRGlobal& mir_global) const {
+				return LIRGlobal::fromMIR(ctx, mir_global);
 			}
 
 			[[nodiscard]]
-			LirPlace getPlace(mir::MirPlace mir_place) const {
+			LIRPlace getPlace(mir::MIRPlace mir_place) const {
 				variant_match(mir_place.base) {
-					variant_case(mir::MirLocalRef, local) {
+					variant_case(mir::MIRLocalRef, local) {
 						return { ctx, getLocal(local), mir_place.access_chain };
 					}
-					variant_case(mir::MirGlobal, global) {
+					variant_case(mir::MIRGlobal, global) {
 						return { ctx, getGlobal(global), mir_place.access_chain };
 					}
 				}
@@ -239,7 +239,7 @@ namespace compiler::lir {
 			 * @return The corresponding LIR location, possibly empty.
 			 */
 			[[nodiscard]]
-			base::Optional<LirPlace> getOutput(const base::Optional<mir::MirPlace>& output) const {
+			base::Optional<LIRPlace> getOutput(const base::Optional<mir::MIRPlace>& output) const {
 				if (!output.has_value()) return {};
 				if (!output->carriesInformation()) return {};
 				return getPlace(*output);
@@ -256,18 +256,18 @@ namespace compiler::lir {
 				if (!loc.carriesInformation()) return {};
 
 				variant_match(loc.getVariant()) {
-					variant_case_novalue(mir::MirUnitConst) {
+					variant_case_novalue(mir::MIRUnitConst) {
 						CORE_PANIC("Cannot get location of MIR unit.");
 					}
-					variant_case(mir::MirIntegerConst, integer) {
+					variant_case(mir::MIRIntegerConst, integer) {
 						return LIRValue{ integer.value };
 					}
-					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
-					variant_case(mir::MirPlace, place) { return LIRValue{ getPlace(place) }; }
+					variant_case(mir::MIRBoolConst, boolean) { return LIRValue{ boolean.value }; }
+					variant_case(mir::MIRPlace, place) { return LIRValue{ getPlace(place) }; }
 					variant_case(mir::BlockID, block) {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
 					}
-					variant_case(mir::MirFunctionLiteral, func) {
+					variant_case(mir::MIRFunctionLiteral, func) {
 						return getFunctionLiteralfromHELIOSID(ctx, func.helios_id);
 					}
 				}
@@ -287,14 +287,14 @@ namespace compiler::lir {
 					// Discard data-less variables.
 					if (!mir_local.carriesInformation()) continue;
 
-					auto lir_local = LirLocal::fromMIR(ctx, &mir_local);
+					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
 					locals.pushBack(std::move(lir_local));
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
 					if (!mir_local.type.hasNoOpDestructor()) {
-						auto lifetime_flag = LirLocal::boolLocal(ctx);
+						auto lifetime_flag = LIRLocal::boolLocal(ctx);
 						locals.pushBack(std::move(lifetime_flag));
 						auto flag_index = locals.lastIndex();
 						mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
@@ -389,8 +389,8 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
-					variant_case_novalue(mir::MirIntegerConst) { return true; }
-					variant_case(mir::MirPlace, place) {
+					variant_case_novalue(mir::MIRIntegerConst) { return true; }
+					variant_case(mir::MIRPlace, place) {
 						const auto arg_type = place.type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralAbstractType(arg_type).getSignedness()
@@ -485,7 +485,7 @@ namespace compiler::lir {
 					throw base::NotYetImplemented(base::strConcat(
 						"instruction ",
 						base::enumToStr(mir_instruction.operation),
-						" in LowerToLirFunction"
+						" in LowerToLIRFunction"
 					));
 				}
 			}
@@ -526,12 +526,12 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
-					CORE_PANIC("FunctionEnd is illegal outside of MirLowering phase");
+					CORE_PANIC("FunctionEnd is illegal outside of MIRLowering phase");
 					break;
 				}
 				// @TODO: add more cases
 				default:
-					throw base::NotYetImplemented("terminator in LowerToLirFunction");
+					throw base::NotYetImplemented("terminator in LowerToLIRFunction");
 				}
 			}
 
@@ -595,7 +595,7 @@ namespace compiler::lir {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// LirFunction is build-inplace here, and for this reason
+			// LIRFunction is build-inplace here, and for this reason
 			// achieves legal state only at the end.
 			// for this reason additional assertions should be put inplace, to
 			// ensure that the state is legal.
@@ -608,7 +608,7 @@ namespace compiler::lir {
 			//   * going thru all instructions
 			//   * generating lir-instructions and lir-blocks from each mir-instruction
 
-			Mir2Lir mir2lir{ ctx, key };
+			MIR2LIR mir2lir{ ctx, key };
 
 			// call order matters:
 			mir2lir.makeLocals();
@@ -627,7 +627,7 @@ namespace compiler::lir {
 		QUERY_AUTO_CACHE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLIRFunction);
 
 	Function createFunctionInvoker(
 		query::Context&                    ctx,

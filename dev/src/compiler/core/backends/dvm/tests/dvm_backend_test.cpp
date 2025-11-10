@@ -33,7 +33,7 @@ public:
 	}
 
 protected:
-	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
+	void testWithLIR(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
 
 private:
 	auto getModuleFromPath(std::string module_path) {
@@ -51,12 +51,12 @@ private:
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
-				auto lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						globals.emplace_back(
 							lir_glob,
 							// @TODO: add legit dtors when implemented #929
@@ -81,8 +81,8 @@ private:
 				}
 			}
 			for (auto& fun: top_level->functions) {
-				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
-				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>(
+				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
+				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
 					{ &mir_fun->expect("Couldn\'t compile") }
 				);
 				funcs.emplace_back(lir_fun);
