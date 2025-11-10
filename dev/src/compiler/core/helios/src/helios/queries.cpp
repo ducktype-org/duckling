@@ -599,7 +599,6 @@ namespace compiler::helios {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 					          .expect("Not handling errors here yet... (variable initial value)");
-
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 

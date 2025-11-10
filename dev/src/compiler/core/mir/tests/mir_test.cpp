@@ -102,7 +102,7 @@ private:
 			// Test locals:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 
-			auto i32_type = ctx.query<QueryIntegralType>(32);
+			auto i32_type = ctx.query<QueryIntegralType>(64);
 
 			{
 				auto a = foo_mir.local_list[0];
@@ -169,27 +169,29 @@ private:
 
 			auto first_block_id = goo_mir.block_order[0];
 			/**
-			     Local(4) :=  Assign           23               Flags[Construct Local(4)], scope:36
-			    Local(4) :=  Assign           24               Flags[], scope:35
-			    Local(5) :=  Call             Function(hoo)    Flags[Construct Local(5)], scope:34
-			    Local(5) :=  Assign           15               Flags[], scope:34
-			     FunctionEnd                       Flags[], scope:32
+	Local(5) :=  Cast             23               Flags[], Params{from:const i64, to:i32}, scope:40
+			     Nop                               Flags[], Params{}, scope:40
+	Local(5) :=  Cast             24               Flags[], Params{from:const i64, to:i32}, scope:39
+			     Nop                               Flags[], Params{}, scope:39
+	Local(6) :=  Call             Function(hoo)    Flags[Construct Local(6)], Params{}, scope:38
+	Local(6) :=  Assign           15               Flags[], Params{}, scope:38
+			     FunctionEnd                       Flags[], Params{}, scope:36
 			 */
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 4);
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 6);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
-				compiler::mir::Operation::Assign
-			);
-			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(1).operation,
-				compiler::mir::Operation::Assign
+				compiler::mir::Operation::Cast
 			);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(2).operation,
+				compiler::mir::Operation::Cast
+			);
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(4).operation,
 				compiler::mir::Operation::Call
 			);
 			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(3).operation,
+				goo_mir.blocks[first_block_id].instructions.at(5).operation,
 				compiler::mir::Operation::Assign
 			);
 		});
