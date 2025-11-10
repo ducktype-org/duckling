@@ -44,9 +44,15 @@ namespace lsp {
 			return sT::Operator;
 		case lTT::Comment:
 			return sT::Comment;
-		// case lTT::Special: return;
-		// case lTT::Empty: return;
-		// case lTT::Sentinel: return;
+		case lTT::TypeSpecifier:
+			return sT::Type;
+		case lTT::Identifier:
+			// Further classification would require semantic analysis.
+			return sT::Variable;
+		case lTT::Sentinel:
+			return sT::Operator;
+			// case lTT::Special:
+			// case lTT::Empty:
 		// case lTT::Error: return;
 		default:
 			return sT::Unknown;

@@ -1,5 +1,6 @@
 #include <base/except/exceptions.hpp>
 
+#include <iostream>
 #include <ostream>
 #include <version>  // IWYU pragma: keep
 
@@ -42,6 +43,8 @@ namespace base {
 		// @TODO: use printer/error framework here
 		out << what_str;
 	}
+
+	void Panic::printToCerr() const { print(std::cerr); }
 
 	LogicError::LogicError(std::string message): message(std::move(message)) {}
 

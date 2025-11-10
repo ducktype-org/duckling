@@ -14,6 +14,9 @@
 #include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/context_fd.hpp>
+
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -197,10 +200,10 @@ namespace compiler::mir {
 		friend struct ExprBlockVisitor;
 		friend struct StmtBlockVisitor;
 		friend struct LocalVarCollectionVisitor;
-		friend LocalRef;
+		friend MirLocalRef;
 
 	public:
-		void debugPrint(std::ostream& output, bool detailed = false) const;
+		void debugPrint(std::ostream& os, bool detailed = false) const;
 
 		[[nodiscard]]
 		base::StrID getName() const;
@@ -246,7 +249,7 @@ namespace compiler::mir {
 			  helios_id(helios_id),
 			  type(type) {}
 
-		void debugPrint(std::ostream& output, bool detailed = false) const;
+		void debugPrint(std::ostream& os, bool detailed = false) const;
 
 		/**
 		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
@@ -258,21 +261,99 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Represents access into a variable (local or global), or its component.
+	 *
+	 * For example, for an access like `a.b.c`, where `a` is a local or global variable,
+	 * and `b` and `c` are fields within that variable, this structure would contain
+	 * the base variable (`a`) and the access chain (`[b, c]`).
+	 *
+	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
+	 */
+	struct MirPlace final {
+		// MIR Locals are stored indirectly through MirLocalRef because
+		// they are owned by MIR Function, unlike MIR Globals.
+		using BaseVariant = std::variant<MirLocalRef, MirGlobal>;
+
+		/**
+		 * @brief Base of the LIR place, either local or global variable.
+		 */
+		BaseVariant base;
+
+		/**
+		 * @brief Get the type of the base variable.
+		 */
+		tsh::SymbolType<> getBaseType() {
+			variant_match(base) {
+				variant_case(MirLocalRef, local) { return local->type; }
+				variant_case(MirGlobal, global) { return global.type; }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		template<class T>
+		const T& getBase() const {
+			return std::get<T>(base);
+		}
+
+		/**
+		 * @brief The symbols of the fields accessed within the variable.
+		 */
+		std::vector<helios::SymID> access_chain;
+
+		/**
+		 * @brief The type of the final accessed field.
+		 * @note This type may be different from the type of the base variable,
+		 * especially when the access chain is not empty.
+		 */
+		tsh::SymbolType<> type;
+
+		/**
+		 * Construct a MirPlace from a local or global variable.
+		 * @param base The base of the MirPlace, which is a local or global variable.
+		 */
+		explicit MirPlace(BaseVariant base): base(base), type(getBaseType()) {}
+
+		/**
+		 * Extend the MirPlace structure by adding a new field to the access chain.
+		 * @param ctx The query context for type resolution.
+		 * @param field The next field to access.
+		 * @return The extended MirPlace structure.
+		 */
+		MirPlace withField(query::Context& ctx, helios::SymID field) const;
+
+		[[nodiscard]]
+		bool isLocal() const {
+			return std::holds_alternative<MirLocalRef>(base);
+		}
+
+		[[nodiscard]]
+		bool isGlobal() const {
+			return std::holds_alternative<MirGlobal>(base);
+		}
+
+		[[nodiscard]]
+		bool hasAccess() const {
+			return !access_chain.empty();
+		}
+
+		/**
+		 * @brief Returns true if the accessed field is not of a unit type or other data-less type.
+		 */
+		[[nodiscard]]
+		bool carriesInformation() const {
+			return type.getType().carriesInformation();
+		}
+
+		void debugPrint(std::ostream& os, bool detailed = false) const;
+	};
+
+	/**
 	 * @brief Structure representing any MIR value.
 	 */
 	struct MIRValue final {
 	private:
-		// @TODO: literal, ...
-		// "LocalAccess" a.b.c
-		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<
-			MirUnitConst,
-			MirIntegerConst,
-			MirBoolConst,
-			LocalRef,
-			BlockID,
-			MirFunctionLiteral,
-			MirGlobal>;
+		using ValueType
+			= std::variant<MirUnitConst, MirIntegerConst, MirBoolConst, MirPlace, BlockID, MirFunctionLiteral>;
 
 		ValueType value;
 
@@ -283,17 +364,19 @@ namespace compiler::mir {
 
 		MIRValue(MirBoolConst value): value(value) {}
 
-		MIRValue(LocalRef value): value(value) {}
+		MIRValue(MirLocalRef value): value(MirPlace(value)) {}
 
-		MIRValue(MutLocalRef value): value(value) {}
+		MIRValue(MirLocalMutRef value): value(MirPlace(value)) {}
+
+		MIRValue(MirGlobal value): value(MirPlace(value)) {}
+
+		MIRValue(MirPlace value): value(value) {}
 
 		MIRValue(BlockID value): value(value) {}
 
 		MIRValue(MirFunctionLiteral value): value(value) {}
 
-		MIRValue(MirGlobal value): value(value) {}
-
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& os) const;
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -314,12 +397,12 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		bool isLocal() const {
-			return std::holds_alternative<LocalRef>(value);
+			return std::holds_alternative<MirPlace>(value) && std::get<MirPlace>(value).isLocal();
 		}
 
 		[[nodiscard]]
 		bool isGlobal() const {
-			return std::holds_alternative<MirGlobal>(value);
+			return std::holds_alternative<MirPlace>(value) && std::get<MirPlace>(value).isGlobal();
 		}
 
 		/**
@@ -332,46 +415,45 @@ namespace compiler::mir {
 		bool carriesInformation() const {
 			variant_match(value) {
 				variant_case_novalue(MirUnitConst) { return false; }
-				variant_case(MirGlobal, global) { return global.carriesInformation(); }
-				variant_case(LocalRef, local) { return local->carriesInformation(); }
+				variant_case(MirPlace, access) { return access.carriesInformation(); }
+				variant_default { return true; }
 			}
-			return true;
+			CORE_UNREACHABLE();
 		}
 	};
 
 	/**
-	 * @brief Structure representing meta informations about operation
-	 * such as:
+	 * @brief Structure representing meta information about operation such as:
 	 * * does operation construct some variable
 	 * * does operation destruct some variable
 	 * * does operation move some variable
 	 */
 	struct OperationFlag final {
 		enum class Flag { Construct, Destruct, Move };
-		Flag     flag;
-		LocalRef local;
+		Flag        flag;
+		MirLocalRef local;
 
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& os) const;
 	};
 
 	/**
 	 * @brief Creates construct flag for given local.
 	 */
-	constexpr OperationFlag flagConstruct(LocalRef local) {
+	constexpr OperationFlag flagConstruct(MirLocalRef local) {
 		return { .flag = OperationFlag::Flag::Construct, .local = local };
 	}
 
 	/**
 	 * @brief Creates destruct flag for given local.
 	 */
-	constexpr OperationFlag flagDestruct(LocalRef local) {
+	constexpr OperationFlag flagDestruct(MirLocalRef local) {
 		return { .flag = OperationFlag::Flag::Destruct, .local = local };
 	}
 
 	/**
 	 * @brief Creates move flag for given local.
 	 */
-	constexpr OperationFlag flagMove(LocalRef local) {
+	constexpr OperationFlag flagMove(MirLocalRef local) {
 		return { .flag = OperationFlag::Flag::Move, .local = local };
 	}
 
@@ -393,11 +475,9 @@ namespace compiler::mir {
 	 * @brief Single instruction of MIR code.
 	 */
 	struct Instruction final {
-		using Output = std::variant<LocalRef, MirGlobal>;
-
 		Operation operation = Operation::Uninitialized;
 
-		base::Optional<Output> output;
+		base::Optional<MirPlace> output;
 
 		std::vector<MIRValue> arguments;
 
@@ -423,21 +503,21 @@ namespace compiler::mir {
 		Instruction(Instruction&&) = default;
 
 		Instruction(
-			Operation                  operation,
-			base::Optional<Output>     output,
+			const Operation            operation,
+			base::Optional<MirPlace>   output,
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
-			ScopeRef                   scope,
+			const ScopeRef             scope,
 			InstrParameters            extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
-			  output(output),
+			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  extra_params(extra_parameters),
 			  scope(scope) {}
 
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& os) const;
 	};
 
 	/**
@@ -468,8 +548,6 @@ namespace compiler::mir {
 		/**
 		 * @brief Last instruction of the block.
 		 * It has to be terminating instruction (branch, return, etc).
-		 *
-		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
 
@@ -563,7 +641,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& os) const;
 
 		/**
 		 * @brief Checks if the id's from the HashMap match the id's in the blocks,

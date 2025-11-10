@@ -137,18 +137,18 @@ namespace compiler::mir {
 		/**
 		 * Adds a local variable to MIR function, from helios_id representing it.
 		 */
-		MutLocalRef addLocal(const helios::SymID helios_id);
+		MirLocalMutRef addLocal(const helios::SymID helios_id);
 
 		/**
 		 * Adds a local parameter variable to MIR function from helios_id representing it.
 		 */
-		MutLocalRef addParameter(const helios::SymID helios_id, u64 parameter_index);
+		MirLocalMutRef addParameter(const helios::SymID helios_id, u64 parameter_index);
 
 		/**
 		 * Creates a temporary local value, and also sets its lifetime scope.
 		 */
 		[[nodiscard]]
-		MutLocalRef addTmp(const tsh::SymbolType<> type, ScopeRef scope);
+		MirLocalMutRef addTmp(const tsh::SymbolType<> type, ScopeRef scope);
 
 		/**
 		 * Creates a temporary local value, i.e. local value
@@ -156,7 +156,7 @@ namespace compiler::mir {
 		 * Sets its lifetime scope to no_lifetime_scope.
 		 */
 		[[nodiscard]]
-		MutLocalRef addNoLifetimeTmp(const tsh::SymbolType<> type);
+		MirLocalMutRef addNoLifetimeTmp(const tsh::SymbolType<> type);
 
 		/**
 		 * Add a temporary local value of type bool.
@@ -165,7 +165,7 @@ namespace compiler::mir {
 		 * the result of the condition.
 		 */
 		[[nodiscard]]
-		MutLocalRef addNoLifetimeBoolTmp();
+		MirLocalMutRef addNoLifetimeBoolTmp();
 
 		/**
 		 * Finds the location of a local variable in the function. Does not check the global scope.
@@ -173,7 +173,7 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		base::Optional<MutLocalRef> findLocal(const helios::SymID helios_id);
+		base::Optional<MirLocalMutRef> findLocal(const helios::SymID helios_id);
 
 		[[nodiscard]]
 		BlockBuilderRef newBlock();

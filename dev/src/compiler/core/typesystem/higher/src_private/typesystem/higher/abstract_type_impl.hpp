@@ -1,11 +1,14 @@
 #pragma once
 
-#include "../all.hpp"
-#include "../mutability.hpp"
 #include "queries.hpp"
 
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/kind.hpp>
+#include <typesystem/higher/mutability.hpp>
+#include <typesystem/higher/type_interface.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/pointers/box.hpp>
 
@@ -14,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-namespace tsh::internal {
+namespace tsh {
 	/**
 	 * @brief The AbstractTypeImpl class and its subclasses are a heavy type implementation
 	 * hierarchy.
@@ -33,7 +36,7 @@ namespace tsh::internal {
 	 * compiler must be forwarded in the corresponding AbstractType subclass.
 	 *
 	 * The AbstractTypeImpl hierarchy should not be included in any header files. It is the
-	 * internal representation used by the Type System and should only be used in source code files
+	 * private representation used by the Type System and should only be used in source code files
 	 * of the Type System.
 	 */
 	class AbstractTypeImpl {

@@ -371,10 +371,10 @@ namespace compiler::helios::code {
 	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
-		Box<Expr>   base;
-		base::StrID field;
+		Box<Expr> base;
+		SymID     field;
 
-		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+		AccessExpr(query::Context& ctx, Box<Expr> base, SymID field);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -384,7 +384,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		AccessExpr(tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field);
+		AccessExpr(const tsh::ExpressionType<>& expression_type, Box<Expr> base, SymID field);
 	};
 
 	/**
