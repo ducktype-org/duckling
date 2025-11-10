@@ -17,8 +17,8 @@ namespace compiler::mir {
 		BlockLocalSet used_variables;  // variables which must be valid, at the begining of Block.
 
 		for (const auto& block: fun.blocks) {  // Fill with blocks.
-			moved_variables.emplace(block.first, LocalSet());
-			used_variables.emplace(block.first, LocalSet());
+			moved_variables.emplace(block.key, LocalSet());
+			used_variables.emplace(block.key, LocalSet());
 		}
 		base::HashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
@@ -34,22 +34,26 @@ namespace compiler::mir {
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
-						used_variables.at(block.first)
-							.insert(arg.get<MirPlace>().getBase<MirLocalRef>()->id);
+						used_variables.at(block.key).insert(
+							arg.get<MirPlace>().getBase<MirLocalRef>()->id
+						);
 
-						if (moved_variables.at(block.first)
-						        .contains(arg.get<MirPlace>().getBase<MirLocalRef>()->id))
+						if (moved_variables.at(block.key).contains(
+								arg.get<MirPlace>().getBase<MirLocalRef>()->id
+							))
 							return false;  // It is already moved.
 					}
 				}
 
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value() && instr.output.value().isLocal()) {
-					used_variables.at(block.first)
-						.insert(instr.output.value().getBase<MirLocalRef>()->id);
+					used_variables.at(block.key).insert(
+						instr.output.value().getBase<MirLocalRef>()->id
+					);
 
-					if (moved_variables.at(block.first)
-					        .contains(instr.output.value().getBase<MirLocalRef>()->id))
+					if (moved_variables.at(block.key).contains(
+							instr.output.value().getBase<MirLocalRef>()->id
+						))
 						return false;  // It is already moved.
 				}
 
@@ -59,10 +63,10 @@ namespace compiler::mir {
 						// its argument and appear exactly one time there. It can't be
 						// output of instruction. It may change in the future.
 
-						if (moved_variables[block.first].contains(flag.local->id))
+						if (moved_variables[block.key].contains(flag.local->id))
 							return false;  // Already moved.
 
-						moved_variables[block.first].insert(flag.local->id);
+						moved_variables[block.key].insert(flag.local->id);
 
 						if (std::ranges::count_if(
 								instr.arguments,
@@ -83,17 +87,17 @@ namespace compiler::mir {
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {
 						// Assume constructors are valid (every use is after construct).
-						construction_block.emplace(flag.local->id, block.first);
+						construction_block.emplace(flag.local->id, block.key);
 					}
 					// Ommit destruct flag - LIR will handle it.
 				}
 				return true;
 			};
 
-			for (const auto& instruction: block.second->instructions)
+			for (const auto& instruction: block.value.instructions)
 				if (!process_instruction(instruction)) return false;
 
-			if (!process_instruction(block.second->terminator)) return false;
+			if (!process_instruction(block.value.terminator)) return false;
 		}
 
 		// Now we perform global analysys.
