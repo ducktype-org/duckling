@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../type_interface.hpp"
+#include <typesystem/higher/type_interface.hpp>
 
 #include <query_framework/query_int.hpp>
 
-namespace tsh::internal {
+namespace tsh {
 	class ClassAbstractTypeImpl;
 
 	/**
@@ -23,7 +23,7 @@ namespace tsh::internal {
 	};
 
 	/**
-	 * TS-internal query to get the interface of a class.
+	 * TSH-private query to get the interface of a class.
 	 *
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their interfaces is trivial.
