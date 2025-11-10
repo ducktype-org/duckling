@@ -246,6 +246,7 @@ namespace compiler::lir {
 	struct CastParameters final {
 		tsh::SymbolType<>                source_type;
 		tsh::SymbolType<>                target_type;
+		// @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
 		std::shared_ptr<tsl::TypeLayout> source_layout;
 		std::shared_ptr<tsl::TypeLayout> target_layout;
 	};
