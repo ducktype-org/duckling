@@ -60,7 +60,7 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		u64 keyToBucket(const KEY_T& key) const RELEASE_NOEXCEPT {
+		u64 keyToBucket(const KEY_T& key) const noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(keyHash(std::declval<KEY_T>()))) {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
 
 			u64  hash = keyHash(key);
