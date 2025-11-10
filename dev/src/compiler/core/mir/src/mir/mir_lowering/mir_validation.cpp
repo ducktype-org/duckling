@@ -34,22 +34,26 @@ namespace compiler::mir {
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
-						used_variables.at(block.key)
-							.insert(arg.get<MirPlace>().getBase<MirLocalRef>()->id);
+						used_variables.at(block.key).insert(
+							arg.get<MirPlace>().getBase<MirLocalRef>()->id
+						);
 
-						if (moved_variables.at(block.key)
-						        .contains(arg.get<MirPlace>().getBase<MirLocalRef>()->id))
+						if (moved_variables.at(block.key).contains(
+								arg.get<MirPlace>().getBase<MirLocalRef>()->id
+							))
 							return false;  // It is already moved.
 					}
 				}
 
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value() && instr.output.value().isLocal()) {
-					used_variables.at(block.key)
-						.insert(instr.output.value().getBase<MirLocalRef>()->id);
+					used_variables.at(block.key).insert(
+						instr.output.value().getBase<MirLocalRef>()->id
+					);
 
-					if (moved_variables.at(block.key)
-					        .contains(instr.output.value().getBase<MirLocalRef>()->id))
+					if (moved_variables.at(block.key).contains(
+							instr.output.value().getBase<MirLocalRef>()->id
+						))
 						return false;  // It is already moved.
 				}
 
