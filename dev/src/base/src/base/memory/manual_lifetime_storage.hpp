@@ -35,7 +35,7 @@ namespace base {
 		 * This method exist only to defer the evaluation of the static_assert below,
 		 * Since it needs the ManualLifetimeStorage to be a complete type.
 		 */
-		static void deferredIsStandardLayoutCheck() {
+		static constexpr void deferredIsStandardLayoutCheck() noexcept {
 			static_assert(
 				std::is_standard_layout_v<ManualLifetimeStorage>,
 				"ManualLifetimeStorage should be standard layout"

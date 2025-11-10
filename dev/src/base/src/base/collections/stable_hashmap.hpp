@@ -55,12 +55,14 @@ namespace base {
 		};
 
 		[[nodiscard]]
-		static auto keyHash(const KEY_T& key) {
+		static auto keyHash(const KEY_T& key
+		) noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
 			return HASH_T{}(key);
 		}
 
 		[[nodiscard]]
-		u64 keyToBucket(const KEY_T& key) const noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(keyHash(std::declval<KEY_T>()))) {
+		u64 keyToBucket(const KEY_T& key) const
+			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(keyHash(std::declval<KEY_T>()))) {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
 
 			u64  hash = keyHash(key);
@@ -143,6 +145,8 @@ namespace base {
 		/**
 		 * Forward iterator over the key-value pairs in the map.
 		 * This is a template, so we can can have const and non-const versions.
+		 * @future: Support sentinel iterators that are never invalidated.
+		 * .end() functions should return them.
 		 */
 		template<class ValueT>
 		class Iterator final {
