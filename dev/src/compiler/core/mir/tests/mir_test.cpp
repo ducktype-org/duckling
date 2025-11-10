@@ -370,12 +370,12 @@ private:
 			for (auto block_id: foo_mir.block_order) {
 				const auto& block          = foo_mir.blocks[block_id];
 				auto        validate_value = [&](const compiler::mir::MIRValue& value) {
-                    if (value.isLocal()) {
-                        if (const auto local = value.get<compiler::mir::MIRPlace>()
-                                                    .getBase<compiler::mir::MIRLocalRef>();
-                            local->parameter_index.has_value())
-                            ASSERT_EQUAL(local->parameter_index.value(), 2);
-                    }
+					if (value.isLocal()) {
+						if (const auto local = value.get<compiler::mir::MIRPlace>()
+						                           .getBase<compiler::mir::MIRLocalRef>();
+						    local->parameter_index.has_value())
+							ASSERT_EQUAL(local->parameter_index.value(), 2);
+					}
 				};
 
 				for (const auto& instr: block.instructions) {
