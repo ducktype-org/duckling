@@ -134,7 +134,6 @@ namespace compiler::lir {
 		/**
 		 * @note Do not use this function outside of LIR lowering.
 		 */
-
 		static LirLocal fromMIR(query::Context& ctx, mir::MirLocalRef mir_local);
 
 		/**
