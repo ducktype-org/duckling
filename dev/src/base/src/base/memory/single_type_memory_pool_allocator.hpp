@@ -207,7 +207,7 @@ namespace base {
 
 		/**
 		 * Total number of allocated items in the pool.
-		 * It it used only in dev builds to assert correct usage.
+		 * It is used only in dev builds to assert correct usage.
 		 */
 		IF_BUILD_TYPE_DEV(u64 allocated_count = 0;)
 

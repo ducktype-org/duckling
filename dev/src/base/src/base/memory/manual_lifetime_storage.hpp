@@ -15,9 +15,9 @@ namespace base {
 	/**
 	 * Explicit lifetime management for a single object.
 	 *
-	 * It is not aware of any of the object semantics, it just stores see raw bytes and allows to
+	 * It is not aware of any of the object semantics, it just stores the raw bytes and allows to
 	 * construct and destroy the object in place.
-	 * For this reason it should be moved in memory.
+	 * For this reason it must not be moved in memory.
 	 *
 	 * Any wrong usage results in undefined behavior.
 	 * See also: https://en.cppreference.com/w/cpp/utility/launder.html
@@ -32,7 +32,7 @@ namespace base {
 		IF_BUILD_TYPE_DEV(State state = State::Empty;)
 
 		/**
-		 * This method exist only to defer the evaluation of the static_assert below,
+		 * This method exists only to defer the evaluation of the static_assert below,
 		 * Since it needs the ManualLifetimeStorage to be a complete type.
 		 */
 		static constexpr void deferredIsStandardLayoutCheck() noexcept {
