@@ -404,9 +404,14 @@ namespace compiler::helios::code {
 			                         .lookup(query_ctx, expr_access->getName().value);
 
 			const auto& looked_up_symbols = lookup_result->getAsSingle();
+			// Note that if multiple symbols were found, it results in an error and enters
+			// the following if statement. This is temporary, as symbol ambiguity should be
+			// handled differently than through dynamic field access.
 
 			if (looked_up_symbols.hasError()) {
-				// @TODO: #1472 Handle dynamic field/method names.
+				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
+				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
+				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
 				return query::QError(errors::Failed());
 			}
 
@@ -418,6 +423,7 @@ namespace compiler::helios::code {
 				result_sequence.push_back(std::move(current_expr));
 				return ChainState::ofNamespaceLike(sym);
 			}
+			// @TODO: #1412 #1485 Support lookup of other kinds of symbols in classes.
 			return query::QError(errors::Failed());
 		}
 

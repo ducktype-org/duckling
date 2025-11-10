@@ -443,9 +443,15 @@ namespace tsl {
 		MBox<TypeLayout> pointee;
 
 	public:
+		// @TODO: #1520 Explicitly delete all copy constructors and assignment operators
+		// when interning is introduced. Maybe delete the move counterparts as well.
 		PointerTypeLayout(const PointerTypeLayout& other):
-			  TypeLayoutABC(other.getSize(), other.getSourceType()),
+			  TypeLayoutABC(other),
 			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
+
+		PointerTypeLayout(PointerTypeLayout&& other) = default;
+
+		PointerTypeLayout& operator=(const PointerTypeLayout& other) = delete;
 
 		PointerTypeLayout& operator=(PointerTypeLayout&& other) noexcept {
 			TypeLayoutABC::operator=(other);
@@ -543,26 +549,34 @@ namespace tsl {
 		}
 
 		/**
-		 * @copydoc TypeLayoutABC::getSize
+		 * @brief Get the total size of a layout, in bits.
+		 * @return The total size of a layout, in bits.
 		 */
 		[[nodiscard]]
 		Bits getSize() const;
 
 		/**
-		 * @copydoc TypeLayoutABC::getSourceType
+		 * @brief Get the source type of a layout.
+		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
 		tsh::AbstractType getSourceType() const;
 
 		/**
-		 * @copydoc TypeLayoutABC::toStringDefinition
+		 * @brief Get a string describing the layout in a human-friendly format.
+		 * @param ctx The query context for fetching layouts of components in composite layouts.
+		 * @param recursive Whether the layout string should contain full layout strings of
+		 * composite component types. Setting this to `false` will result in the use of IDs instead.
+		 * @param indent The indent at which to print. Mostly used internally for recursive prints.
+		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
 			const;
 
 		/**
-		 * @copydoc TypeLayoutABC::toStringIdentification
+		 * @brief Get a relatively short string identifying the type layout.
+		 * @return A string identifying the type layout.
 		 */
 		[[nodiscard]]
 		std::string toStringIdentification() const;

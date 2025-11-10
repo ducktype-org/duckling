@@ -142,8 +142,10 @@ namespace compiler::mir {
 				lowered_condition.storeResultInGivenPlace(
 					possible_condition_res->get<MirPlace>(),
 					get_condition_return,
-					{ flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()
-				    ) },
+					{
+						flagConstruct(possible_condition_res->get<MirPlace>().getBase<MirLocalRef>()
+				        ),
+					},
 					condition_scope
 				);
 			}
