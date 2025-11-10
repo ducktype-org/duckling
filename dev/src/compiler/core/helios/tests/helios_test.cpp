@@ -23,6 +23,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -298,7 +299,7 @@ private:
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
-		const auto sym_v1     = getChain("V1", root_scope).back();
+		const auto a_obj      = getChain("aObj", root_scope).back();
 		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -322,9 +323,17 @@ private:
 			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 2));
 
 			// Build call arguments for square function
+			const compiler::helios::SymID a_field
+				= ctx.query<compiler::helios::QueryTypeOfSymbol>(a_obj)
+			          ->value()
+			          .getType()
+			          .getInterface(ctx)
+			          .getElementsWithName(base::StrID("a"))
+			          .back()
+			          .getSymbol();
 			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
 			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1), sym_v1
+				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
 			));
 
 			// Build sequence expressions
