@@ -19,7 +19,7 @@ namespace base {
 	 * Its performance is similar or better then std::unordered_map, while keeping references always
 	 * stable (what std::unordered_map does as well).
 	 *
-	 * Pointer to the stored data are never invalidated until the data is erased from the map.
+	 * Pointers to the stored data are never invalidated until the data is erased from the map.
 	 * Usage of iterators after elements are added or removed from the map is undefined.
 	 */
 	template<
