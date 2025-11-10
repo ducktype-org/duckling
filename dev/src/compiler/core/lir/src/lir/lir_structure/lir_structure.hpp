@@ -244,8 +244,8 @@ namespace compiler::lir {
 	struct NoInstrParameters final {};
 
 	struct CastParameters final {
-		tsh::SymbolType<>     source_type;
-		tsh::SymbolType<>     target_type;
+		tsh::SymbolType<>                source_type;
+		tsh::SymbolType<>                target_type;
 		std::shared_ptr<tsl::TypeLayout> source_layout;
 		std::shared_ptr<tsl::TypeLayout> target_layout;
 	};
@@ -264,9 +264,9 @@ namespace compiler::lir {
 
 		// @TODO: each Instruction should have source position reference
 
-		Instruction()                   = default;
-		Instruction(const Instruction&) = default;
-		Instruction(Instruction&&)       noexcept = default;
+		Instruction()                       = default;
+		Instruction(const Instruction&)     = default;
+		Instruction(Instruction&&) noexcept = default;
 
 		Instruction& operator=(Instruction&&) noexcept = default;
 

@@ -13,8 +13,8 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include <utility>
 #include <regex>
+#include <utility>
 
 class LLVMBackendTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -197,22 +197,29 @@ private:
 
 		std::string ir = llvm_module.dumpLLVMToString();
 
-		bool has_i64_to_f64 = std::regex_search(ir, std::regex{R"(sitofp\s+i64\s+%[^\s]+\s+to\s+double)"});
+		bool has_i64_to_f64
+			= std::regex_search(ir, std::regex{ R"(sitofp\s+i64\s+%[^\s]+\s+to\s+double)" });
 		assertTrue(has_i64_to_f64, "Expected sitofp i64->f64 in IR");
 
-		bool has_f64_to_i32_sat = std::regex_search(ir, std::regex{R"(call\s+i32\s+@llvm\.fptosi\.sat\.i32\.f64\(double %\S+\))"});
+		bool has_f64_to_i32_sat = std::regex_search(
+			ir, std::regex{ R"(call\s+i32\s+@llvm\.fptosi\.sat\.i32\.f64\(double %\S+\))" }
+		);
 		assertTrue(has_f64_to_i32_sat, "Expected call to llvm.fptosi.sat.i32.f64 in IR");
 
-		bool has_i64_to_i32 = std::regex_search(ir, std::regex{R"(trunc\s+i64\s+%\S+\s+to\s+i32)"});
+		bool has_i64_to_i32
+			= std::regex_search(ir, std::regex{ R"(trunc\s+i64\s+%\S+\s+to\s+i32)" });
 		assertTrue(has_i64_to_i32, "Expected trunc i64->i32 in IR");
 
-		bool has_i32_to_i64 = std::regex_search(ir, std::regex{R"((sext|zext)\s+i32\s+%\S+\s+to\s+i64)"});
+		bool has_i32_to_i64
+			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i32\s+%\S+\s+to\s+i64)" });
 		assertTrue(has_i32_to_i64, "Expected sext/zext i32-> i64 in IR");
 
-		bool has_i8_to_i32 = std::regex_search(ir, std::regex{R"((sext|zext)\s+i1\s+%\S+\s+to\s+i32)"});
+		bool has_i8_to_i32
+			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i1\s+%\S+\s+to\s+i32)" });
 		assertTrue(has_i8_to_i32, "Expected sext/zext i1-> i32 in IR");
 
-		bool has_i16_to_i64 = std::regex_search(ir, std::regex{R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)"});
+		bool has_i16_to_i64
+			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });
 		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
 	}
 };

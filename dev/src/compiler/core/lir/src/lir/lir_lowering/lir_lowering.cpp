@@ -14,7 +14,6 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
-#include "typesystem/lower/type_layout.hpp"
 
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -23,6 +22,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
+#include <typesystem/lower/type_layout.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 

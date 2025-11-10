@@ -1,6 +1,0 @@
-fun main() -> f64 = {
-    var a: i64 = 10;
-    var x: i32 = a;
-    var z: f64 = x;
-    return z;
-}

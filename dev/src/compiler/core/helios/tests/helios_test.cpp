@@ -1591,8 +1591,7 @@ private:
 			= [&](const base::StrID& varname) -> CRef<compiler::helios::code::Expr> {
 			for (const auto& st_box: function.body->statements) {
 				if (auto var_ptr
-				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get()
-				    )) {
+				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get())) {
 					if (compiler::helios::name(var_ptr->helios_symbol) == varname) {
 						CORE_ASSERT(var_ptr->initial_value.has_value(), "Expected initializer");
 						return var_ptr->initial_value->ref();

@@ -1,7 +1,6 @@
 #include "expr_lowering.hpp"
 
-#include "helios/hout/elements/expr.hpp"
-
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -339,14 +338,14 @@ namespace compiler::mir {
 			return noValueOutput(
 				lowered.begin,
 				cast,
-				Instruction{
-					Operation::Cast,
-					{},
-					{ res_lowered },
-					{},
-					expr_scope,
-					CastParameters{ .source_type = expr.source_expr->expression_type.getSymbolType(),
-			                        .target_type   = expr.target_type } },
+				Instruction{ Operation::Cast,
+			                 {},
+			                 { res_lowered },
+			                 {},
+			                 expr_scope,
+			                 CastParameters{ .source_type
+			                                 = expr.source_expr->expression_type.getSymbolType(),
+			                                 .target_type = expr.target_type } },
 				expr.expression_type.getSymbolType()
 			);
 		}
