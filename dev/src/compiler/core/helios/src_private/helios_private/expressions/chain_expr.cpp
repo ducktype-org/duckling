@@ -359,7 +359,7 @@ namespace compiler::helios::code {
 
 		/**
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
-		 * for example we have two call expr like a[i]() or b()()
+		 * for example we have two call expr like a[i]() or b()() or keyword expr and call expr
 		 */
 		auto processPSTExpr(Box<Expr> hout_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
@@ -372,13 +372,13 @@ namespace compiler::helios::code {
 			// candidates for processFunctionCall
 			// @TODO write tests for this case, when it will be implemented
 
+			// This is a temporary mock implementation
 			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.get())) {
 				auto args = call_expr->getArgs().unlock(query_ctx);
 				if (args->size() != 1) {
 					query_ctx.log(
 						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-							call_expr->getSourcePosition(),
-							"Type literal expects a single type argument"
+							call_expr->getSourcePosition(), "Type cast expects a single argument"
 						)
 					);
 					return query::QError(errors::Failed());

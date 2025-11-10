@@ -310,20 +310,33 @@ namespace compiler::lir {
 	};
 
 	/**
-	 * @brief Some instructions are parametrized by extra parameters.
-	 * For example, cast instruction needs to know
-	 * from which type to which type it is casting.
+	 * @brief Used to inform that the instruction doesn't require any additional parameters.
 	 */
 	struct NoInstrParameters final {};
 
 	struct CastParameters final {
+		/**
+		 * @brief The source type of the cast operation.
+		 */
 		tsh::SymbolType<> source_type;
+		/**
+		 * @brief The target type of the cast operation.
+		 */
 		tsh::SymbolType<> target_type;
-		// @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
+		/**
+		 * @brief The source type layout of the cast operation.
+		 * @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
+		 */
 		std::shared_ptr<tsl::TypeLayout> source_layout;
+		/**
+		 * @brief The target type layout of the cast operation.
+		 */
 		std::shared_ptr<tsl::TypeLayout> target_layout;
 	};
 
+	/**
+	 * @brief Additional parameters for LIR instructions that depend on the operation type.
+	 */
 	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
 
 	/**

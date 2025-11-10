@@ -458,17 +458,26 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Some instructions are parametrized by extra parameters.
-	 * For example, cast instruction needs to know
-	 * from which type to which type it is casting.
+	 * @brief Used to inform that the instruction doesn't require any additional parameters.
 	 */
 	struct NoInstrParameters final {};
 
 	struct CastParameters final {
+		/**
+		 * @brief The source type of the cast operation.
+		 */
 		tsh::SymbolType<> source_type;
+		/**
+		 * @brief The target type of the cast operation.
+		 */
 		tsh::SymbolType<> target_type;
 	};
 
+	/**
+	 * @brief Additional parameters for MIR instructions that depend on the operation type.
+	 * For example, cast instruction needs to know
+	 * from which type to which type it is casting.
+	 */
 	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
 
 	/**

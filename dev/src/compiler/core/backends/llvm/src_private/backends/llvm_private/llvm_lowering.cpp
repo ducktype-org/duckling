@@ -500,13 +500,13 @@ namespace compiler::backend_llvm {
 							// then the behavior is undefined.
 							bool to_signed = is_signed(target_type);
 
-							// The solution that other languages use is to have saturating casts.
-							bool use_saturating_float_casts = true;
+							// Some other solution to consider in the future;
+							// bool use_saturating_float_casts = true;
 
-							if (not use_saturating_float_casts) {
-								return to_signed ? builder.CreateFPToSI(argument, llvm_dst_ty)
-								                 : builder.CreateFPToUI(argument, llvm_dst_ty);
-							}
+							// if (not use_saturating_float_casts) {
+							// 	return to_signed ? builder.CreateFPToSI(argument, llvm_dst_ty)
+							// 	                 : builder.CreateFPToUI(argument, llvm_dst_ty);
+							// }
 
 							// Use LLVM saturating fptosi/fptoui intrinsics when available.
 							std::string instr = to_signed ? "fptosi" : "fptoui";

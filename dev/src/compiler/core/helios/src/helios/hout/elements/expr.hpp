@@ -467,6 +467,10 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Represents a type cast expression for builtin types, such as "i64(..)".
+	 *
+	 * CastExpr performs a conversion of the source expression to the specified target type.
+	 * The result is an expression of the target type.
 	 */
 	struct CastExpr final: public Expr {
 		Box<Expr>         source_expr;

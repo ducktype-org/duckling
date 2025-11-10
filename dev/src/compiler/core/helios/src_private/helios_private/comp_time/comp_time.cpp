@@ -368,16 +368,8 @@ namespace compiler::helios {
 				result = evalHoutExpr(ctx, seq.expressions.back().ref());
 			}
 
-			void visitCastExpr(const code::CastExpr& expr) final {
-				// Evaluate the source expression and propagate its compile-time value.
-				// For a simple tree-eval short-path, we treat the cast as a no-op on
-				// the runtime value (type-level casts are handled elsewhere).
-				auto src_result = evalHoutExpr(ctx, expr.source_expr.ref());
-				if (src_result.hasError()) {
-					result = query::QError(errors::Failed(src_result.error()));
-					return;
-				}
-				result = src_result.value();
+			void visitCastExpr(const code::CastExpr&) final {
+				result = query::QError(errors::Failed());
 			}
 		};
 
