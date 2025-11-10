@@ -317,8 +317,8 @@ namespace compiler::lir {
 	struct NoInstrParameters final {};
 
 	struct CastParameters final {
-		tsh::SymbolType<>                source_type;
-		tsh::SymbolType<>                target_type;
+		tsh::SymbolType<> source_type;
+		tsh::SymbolType<> target_type;
 		// @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
 		std::shared_ptr<tsl::TypeLayout> source_layout;
 		std::shared_ptr<tsl::TypeLayout> target_layout;
@@ -333,7 +333,7 @@ namespace compiler::lir {
 		Operation                operation = Operation::Uninitialized;
 		base::Optional<LirPlace> output;
 		std::vector<LIRValue>    arguments;
-		InstrParameters       extra_params{ NoInstrParameters{} };
+		InstrParameters          extra_params{ NoInstrParameters{} };
 
 		// @TODO: each Instruction should have source position reference
 
@@ -344,10 +344,10 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) noexcept = default;
 
 		Instruction(
-			const Operation       operation,
-			base::Optional<LirPlace>            output,
-			std::vector<LIRValue> arguments,
-			InstrParameters       extra_parameters = NoInstrParameters{}
+			const Operation          operation,
+			base::Optional<LirPlace> output,
+			std::vector<LIRValue>    arguments,
+			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
 			  output(std::move(output)),

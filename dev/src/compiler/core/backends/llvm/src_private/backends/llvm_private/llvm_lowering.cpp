@@ -450,12 +450,12 @@ namespace compiler::backend_llvm {
 				return false;
 			};
 
-			variant_match(source_layout()) {
+			variant_match(source_layout.getVariant()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
 					bool src_signed = is_signed(source_type);
 
-					variant_match(target_layout()) {
+					variant_match(target_layout.getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Int -> Int ==================
 							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
@@ -481,7 +481,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					variant_match(target_layout()) {
+					variant_match(target_layout.getVariant()) {
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Float -> Float ==================
 
@@ -537,7 +537,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::PointerTypeLayout) {
-					variant_match(target_layout()) {
+					variant_match(target_layout.getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
 							auto ptr_bits

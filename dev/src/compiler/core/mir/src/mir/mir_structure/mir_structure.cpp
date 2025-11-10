@@ -127,7 +127,7 @@ namespace compiler::mir {
 			variant_case_novalue(NoInstrParameters) { /* nothing */ }
 			variant_case(CastParameters, params) {
 				os << "from:" << params.source_type.toString()
-					   << ", to:" << params.target_type.toString();
+				   << ", to:" << params.target_type.toString();
 			}
 		}
 		os << "},";
