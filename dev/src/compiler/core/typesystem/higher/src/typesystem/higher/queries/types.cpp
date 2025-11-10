@@ -1,13 +1,13 @@
 #include "types.hpp"
 
-#include "../internal/abstract_type_impl.hpp"
+#include <typesystem/higher/abstract_type_impl.hpp>
 
 #include <query_framework/query_impl.hpp>
 
 namespace tsh {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto unit_impl = internal::UnitAbstractTypeImpl{};
+			static auto unit_impl = UnitAbstractTypeImpl{};
 			return &unit_impl;
 		}
 
@@ -18,7 +18,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryVoidType, VoidAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto void_impl = internal::VoidAbstractTypeImpl{};
+			static auto void_impl = VoidAbstractTypeImpl{};
 			return &void_impl;
 		}
 
@@ -29,7 +29,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryByteType, ByteAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto byte_impl = internal::ByteAbstractTypeImpl{};
+			static auto byte_impl = ByteAbstractTypeImpl{};
 			return &byte_impl;
 		}
 
@@ -40,7 +40,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryBoolType, BoolAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto bool_impl = internal::BoolAbstractTypeImpl{};
+			static auto bool_impl = BoolAbstractTypeImpl{};
 			return &bool_impl;
 		}
 
@@ -51,7 +51,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryCharType, CharAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto char_impl = internal::CharAbstractTypeImpl{};
+			static auto char_impl = CharAbstractTypeImpl{};
 			return &char_impl;
 		}
 
@@ -190,8 +190,8 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			static auto raw_pointer_impl
-				= std::array{ internal::RawPointerAbstractTypeImpl{ Mutability::Immutable },
-				              internal::RawPointerAbstractTypeImpl{ Mutability::Mutable } };
+				= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
+				              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
 			return &raw_pointer_impl.at(key);
 		}
 
@@ -202,7 +202,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			auto pointer_pimpl = makeBox<internal::PointerAbstractTypeImpl>(key);
+			auto pointer_pimpl = makeBox<PointerAbstractTypeImpl>(key);
 			auto ref           = pointer_pimpl.refMut().get();
 			pushType(std::move(pointer_pimpl));
 			return ref;
@@ -215,7 +215,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto string_impl = internal::StringAbstractTypeImpl{};
+			static auto string_impl = StringAbstractTypeImpl{};
 			return &string_impl;
 		}
 
@@ -226,7 +226,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			auto dynamic_array_pimpl = makeBox<internal::DynamicArrayAbstractTypeImpl>(key);
+			auto dynamic_array_pimpl = makeBox<DynamicArrayAbstractTypeImpl>(key);
 			auto ref                 = dynamic_array_pimpl.refMut().get();
 			pushType(std::move(dynamic_array_pimpl));
 			return ref;
@@ -239,7 +239,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			auto tuple_pimpl = makeBox<internal::TupleAbstractTypeImpl>(key.components);
+			auto tuple_pimpl = makeBox<TupleAbstractTypeImpl>(key.components);
 			auto ref         = tuple_pimpl.refMut().get();
 			pushType(std::move(tuple_pimpl));
 			return ref;
@@ -252,7 +252,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			auto variant_pimpl = makeBox<internal::VariantAbstractTypeImpl>(key.underlying_types);
+			auto variant_pimpl = makeBox<VariantAbstractTypeImpl>(key.underlying_types);
 			auto ref           = variant_pimpl.refMut().get();
 			pushType(std::move(variant_pimpl));
 			return ref;
@@ -266,9 +266,8 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
-			auto function_pimpl
-				= makeBox<internal::FunctionAbstractTypeImpl>(params, result, pure, free);
-			auto ref = function_pimpl.refMut().get();
+			auto function_pimpl = makeBox<FunctionAbstractTypeImpl>(params, result, pure, free);
+			auto ref            = function_pimpl.refMut().get();
 			pushType(std::move(function_pimpl));
 			return ref;
 		}
@@ -280,7 +279,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			auto class_pimpl = makeBox<internal::ClassAbstractTypeImpl>(key);
+			auto class_pimpl = makeBox<ClassAbstractTypeImpl>(key);
 			auto ref         = class_pimpl.refMut().get();
 			pushType(std::move(class_pimpl));
 			return ref;
@@ -293,7 +292,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto namespace_impl = internal::NamespaceAbstractTypeImpl{};
+			static auto namespace_impl = NamespaceAbstractTypeImpl{};
 			return &namespace_impl;
 		}
 
@@ -304,7 +303,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryModuleType, ModuleAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto module_impl = internal::ModuleAbstractTypeImpl{};
+			static auto module_impl = ModuleAbstractTypeImpl{};
 			return &module_impl;
 		}
 
@@ -315,7 +314,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryMetaType, MetaAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto meta_impl = internal::MetaAbstractTypeImpl{};
+			static auto meta_impl = MetaAbstractTypeImpl{};
 			return &meta_impl;
 		}
 
@@ -326,7 +325,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryImportType, ImportAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto import_impl = internal::ImportAbstractTypeImpl{};
+			static auto import_impl = ImportAbstractTypeImpl{};
 			return &import_impl;
 		}
 
