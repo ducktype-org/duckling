@@ -374,18 +374,18 @@ namespace tsl {
 		);
 	}
 
-	Bits TypeLayout::getSize() const { return VISIT(*this, l, return l.getSize()); }
+	Bits TypeLayout::getSize() const { return VISIT(variant, l, return l.getSize()); }
 
 	tsh::AbstractType TypeLayout::getSourceType() const {
-		return VISIT(*this, l, return l.getSourceType());
+		return VISIT(variant, l, return l.getSourceType());
 	}
 
 	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
 		const {
-		return VISIT(*this, l, return l.toStringDefinition(ctx, recursive, indent));
+		return VISIT(variant, l, return l.toStringDefinition(ctx, recursive, indent));
 	}
 
 	std::string TypeLayout::toStringIdentification() const {
-		return VISIT(*this, l, return l.toStringIdentification());
+		return VISIT(variant, l, return l.toStringIdentification());
 	}
 }

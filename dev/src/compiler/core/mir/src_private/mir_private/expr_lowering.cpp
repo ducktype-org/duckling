@@ -110,8 +110,8 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type       = locationType(res_right, function.getContext());
-			const auto other_argument_type = locationType(res_left, function.getContext());
+			const auto argument_type       = typeOfMirValue(res_right, function.getContext());
+			const auto other_argument_type = typeOfMirValue(res_left, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different argument types"
@@ -160,8 +160,11 @@ namespace compiler::mir {
 
 				auto lowered_block = lowerSubExpr(case_expr, block);
 
-				lowered_block.storeResultInGivenVariable(
-					target_location, assign_hole, { flagConstruct(target_location) }, expr_scope
+				lowered_block.storeResultInGivenPlace(
+					MirPlace(target_location),
+					assign_hole,
+					{ flagConstruct(target_location) },
+					expr_scope
 				);
 
 
@@ -200,8 +203,20 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
-		void visitAccessExpr(const hc::AccessExpr&) override {
-			throw base::NotYetImplemented("access expr lowering");
+		void visitAccessExpr(const hc::AccessExpr& expr) override {
+			auto       sub_result = lowerSubExpr(*expr.base, continuation);
+			const auto sub_begin  = sub_result.begin;
+			auto       sub_value  = sub_result.getResult(function);
+
+			variant_match(std::move(sub_value.getVariant())) {
+				variant_case(MirPlace, place) {
+					valueOutput(sub_begin, place.withField(function.getContext(), expr.field));
+				}
+				variant_default {
+					// Access base is not a place.
+					CORE_UNREACHABLE();
+				}
+			}
 		}
 
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
@@ -380,13 +395,13 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * Get the type of a location, assuming that it is a local value.
-		 * @param location A MIR location which holds a local value.
+		 * Get the type of a MIR value.
+		 * @param value A MIR value.
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx) {
-			variant_match(location.getVariant()) {
+		static tsh::SymbolType<> typeOfMirValue(const MIRValue& value, query::Context& ctx) {
+			variant_match(value.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{
 						ctx.query<tsh::QueryIntegralType>({ 64 }),
@@ -401,8 +416,7 @@ namespace compiler::mir {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(LocalRef, local) { return local->type; }
-				variant_case(MirGlobal, global) { return global.type; }
+				variant_case(MirPlace, place) { return place.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();
@@ -458,8 +472,8 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
-	void ExprLowerRes::storeResultInGivenVariable(
-		const Instruction::Output&        target,
+	void ExprLowerRes::storeResultInGivenPlace(
+		const MirPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,
 		ScopeRef                          scope
@@ -478,10 +492,10 @@ namespace compiler::mir {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
 
 				hole.fillNop(scope);
-				std::visit([&](auto&& val) { res_data.instr.output.emplace(val); }, target);
+				res_data.instr.output.emplace(target);
 				res_data.hole.fill(res_data.instr);
 				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
-				std::visit([&](auto&& val) { value = val; }, target);
+				value = target;
 			}
 		}
 	}
