@@ -3,5 +3,4 @@ add_library(CTV STATIC
     src/ctv/numeric_value.cpp
 )
 
-# TODOP: CTV tests
 make_module(CTV USES Base TypeSystemHigher)

@@ -152,9 +152,6 @@ private:
 		ASSERT_EQUAL(32'767, getConstValueAs<i32>("NEEDS_I32", root_scope));
 		ASSERT_EQUAL(2'147'483'648, getConstValueAs<i64>("NEEDS_I64", root_scope));
 
-		// TODOP: Uncomment when f16 exists.
-		// ASSERT_EQUAL(0.5, getConstValueAs<f32>("NEEDS_F16", root_scope));
-
 		// TODOP: Figure out what to do with this. Maybe we need minimization after all.
 		ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
 		ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
